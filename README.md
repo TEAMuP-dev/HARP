@@ -13,11 +13,12 @@ A repository for a custom ARA plugin with juce, tracktion, and libtorch working 
 - Update your ARA_SDK path in [CMakeLists.txt](CMakeLists.txt)
 
 ### CMake
-Here are the commands used in VSCode (Cmake Tools extension) and Windows 10
+Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 
+Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
 - Configure
     
 ```php
-"C:\Program Files\CMake\bin\cmake.EXE" --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/plugin_sandbox/build -G "Visual Studio 17 2022" -T host=x64 -A win32
+"C:\Program Files\CMake\bin\cmake.EXE" --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/plugin_sandbox/build -G "Visual Studio 17 2022" -T host=x64 -A win64
 ```
 - Build
 ```php
