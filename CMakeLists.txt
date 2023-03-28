@@ -6,7 +6,7 @@ add_subdirectory(JUCE)
 
 juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
 
-# add_subdirectory(tracktion_engine/modules)
+add_subdirectory(tracktion_engine/modules)
 
 # # tacktion module
 # juce_add_module(
@@ -105,7 +105,7 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        # tracktion::tracktion_engine
+        tracktion::tracktion_engine
         # tractkion::tracktion_core
         # tracktion::3rd_party
         # tracktion::tracktion_graph

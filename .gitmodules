@@ -2,6 +2,6 @@
     path = JUCE
     url = https://github.com/juce-framework/JUCE.git
     branch = develop
-[submodule "JUCE"]
-	path = JUCE
-	url = https://github.com/juce-framework/JUCE.git
+[submodule "tracktion_engine"]
+	path = tracktion_engine
+	url = https://github.com/Tracktion/tracktion_engine.git
