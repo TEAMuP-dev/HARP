@@ -9,7 +9,7 @@ add_subdirectory(JUCE)
 
 juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
 
-# add_subdirectory(tracktion_engine/modules)
+add_subdirectory(tracktion_engine/modules)
 
 # juce_add_plugin(AudioPluginExampleCMAKE64
 #     # VERSION ...                               # Set this if the plugin version is different to the project version
