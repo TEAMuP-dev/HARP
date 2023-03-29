@@ -51,7 +51,7 @@ juce_add_plugin(AudioPluginExampleCMAKE64
     # AU_SANDBOX_SAFE TRUE
     # APP_SANDBOX_ENABLED TRUE
     # HARDENED_RUNTIME_ENABLED TRUE
-    # IS_ARA_EFFECT TRUE                          # Are we using ARA?
+    IS_ARA_EFFECT TRUE                          # Are we using ARA?
     # ARA_FACTORY_ID "..."                      # Optional custom ARA factory ID (otherwise generated from bundle ID and version)
     # ARA_DOCUMENT_ARCHIVE_ID "..."             # Optional custom ARA document archive ID (otherwise generated from bundle ID)
                                                 # This must be manually updated whenever changing the archive in non-backwards compatible ways!
@@ -102,7 +102,7 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        # tracktion::tracktion_engine
+        tracktion::tracktion_engine
 
         # tractkion::tracktion_core
         # tracktion::3rd_party
