@@ -2,18 +2,14 @@ cmake_minimum_required(VERSION 3.15)
 
 project(AUDIO_PLUGIN_EXAMPLE_CMAKE_64 VERSION 333.0.1)
 
+find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
 add_subdirectory(JUCE)
 
 juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
 
-add_subdirectory(tracktion_engine/modules)
-
-# # tacktion module
-# juce_add_module(
-#     # ALIAS_NAMESPACE juce
-#     juce_traction_engine
-#     # traction_enine/modules/tracktion_graph
-# )
+# add_subdirectory(tracktion_engine/modules)
 
 # juce_add_plugin(AudioPluginExampleCMAKE64
 #     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -32,6 +28,7 @@ add_subdirectory(tracktion_engine/modules)
 #                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
 #     FORMATS AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
 #     PRODUCT_NAME "AudioPluginExampleCMAKE64")        # The name of the final executable, which can differ from the target name
+
 juce_add_plugin(AudioPluginExampleCMAKE64
     # VERSION ...                               # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
@@ -48,13 +45,13 @@ juce_add_plugin(AudioPluginExampleCMAKE64
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
                                                 # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
                                                 # compatibility - GarageBand 10.3 does not support ARA anyways.
-    FORMATS VST3                                # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
+    FORMATS AU VST3 Standalone                             # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
     PRODUCT_NAME ARA_sandbox                # The name of the final executable, which can differ from the target name
     # VST3_CATEGORIES "Tools"
     # AU_SANDBOX_SAFE TRUE
     # APP_SANDBOX_ENABLED TRUE
     # HARDENED_RUNTIME_ENABLED TRUE
-    IS_ARA_EFFECT TRUE                          # Are we using ARA?
+    # IS_ARA_EFFECT TRUE                          # Are we using ARA?
     # ARA_FACTORY_ID "..."                      # Optional custom ARA factory ID (otherwise generated from bundle ID and version)
     # ARA_DOCUMENT_ARCHIVE_ID "..."             # Optional custom ARA document archive ID (otherwise generated from bundle ID)
                                                 # This must be manually updated whenever changing the archive in non-backwards compatible ways!
@@ -105,7 +102,8 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        tracktion::tracktion_engine
+        # tracktion::tracktion_engine
+
         # tractkion::tracktion_core
         # tracktion::3rd_party
         # tracktion::tracktion_graph
@@ -113,4 +111,19 @@ target_link_libraries(AudioPluginExampleCMAKE64
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags)
+        juce::juce_recommended_warning_flags
+        ${TORCH_LIBRARIES}
+        )
+# set_property(TARGET AudioPluginExampleCMAKE64 PROPERTY CXX_STANDARD 17)
+
+# The following code block is suggested to be used on Windows.
+# According to https://github.com/pytorch/pytorch/issues/25457,
+# the DLLs need to be copied to avoid memory errors.
+if (MSVC)
+  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+  add_custom_command(TARGET AudioPluginExampleCMAKE64
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                     ${TORCH_DLLS}
+                     $<TARGET_FILE_DIR:AudioPluginExampleCMAKE64>)
+endif (MSVC)
