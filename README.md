@@ -12,6 +12,13 @@ A repository for a custom ARA plugin with juce, tracktion, and libtorch working 
     - (don't forget its submodules)
 - Update your ARA_SDK path in [CMakeLists.txt](CMakeLists.txt)
 
+### Tracktion
+- tracktion_engine is a submodule. The JUCE package that exists as a submodule in tracktion_engine is not needed (I think)
+
+### Libtorch
+- Libtorch is in C:\libtorch. Change your path in CMakeLists.txt accordingly
+- Libtorch builds successfully with a normal VST plugin (see Frank's repo), but gives errors when used with ARA. 
+
 ### CMake
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 
 Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
@@ -24,13 +31,5 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 ```php
 "C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/plugin_sandbox/build --config Debug --target ALL_BUILD -j 14 --
 ```
-
-## Problems
-- The generated VST3 plugin is not visible in Cubase or Ableton.
-    - The suggestion to build it in Release mode also didn't work
-- Still working on tracktion integration
-- Libtorch --> TODO
-
-
 
 
