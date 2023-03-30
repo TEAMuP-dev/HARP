@@ -52,8 +52,6 @@
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
 #include <ARA_Library/PlugIn/ARAPlug.h>
-#include <torch/script.h>
-
 //==============================================================================
 class ARADemoPluginAudioModification  : public ARAAudioModification
 {

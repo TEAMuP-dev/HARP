@@ -6,6 +6,7 @@
   ==============================================================================
 */
 
+#include <torch/script.h>
 #include <JuceHeader.h>
 #include "ARAPluginDemo.h"
 
