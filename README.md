@@ -17,7 +17,7 @@ A repository for a custom ARA plugin with juce, tracktion, and libtorch working 
 
 ### Libtorch
 - Libtorch is in C:\libtorch. Change your path in CMakeLists.txt accordingly
-- Libtorch builds successfully with a normal VST plugin (see Frank's repo), but gives errors when used with ARA. 
+- It's important to maintain the order of the `include` statements in `Main.cpp` (torch before juce) 
 
 ### CMake
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 
