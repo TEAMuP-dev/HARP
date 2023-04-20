@@ -52,6 +52,8 @@
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
 #include <ARA_Library/PlugIn/ARAPlug.h>
+#include <torch/script.h>
+
 //==============================================================================
 class ARADemoPluginAudioModification  : public ARAAudioModification
 {
@@ -543,7 +545,7 @@ public:
                         AlwaysNonRealtime alwaysNonRealtime) override
     {
         sampleRate = sampleRateIn;
-        previewBuffer = std::make_unique<AudioBuffer<float>> (numChannels, (int) (2 * sampleRateIn));
+        previewBuffer = std::make_unique<AudioBuffer<float>> (numChannels, (int) (4 * sampleRateIn));
 
         ignoreUnused (maximumExpectedSamplesPerBlock, alwaysNonRealtime);
     }
@@ -620,7 +622,8 @@ public:
                         || lastPlaybackRegion != previewedRegion
                         || lastPreviewDimmed != previewDimmed)
                     {
-                        Range<double> previewRangeInPlaybackTime { previewTime - 0.25, previewTime + 0.25 };
+                        Range<double> previewRangeInPlaybackTime { previewTime - 0.5, previewTime + 0.5 };
+
                         previewBuffer->clear();
                         const auto rangeInOutput = readPlaybackRangeIntoBuffer (previewRangeInPlaybackTime,
                                                                                 previewedRegion,
@@ -642,6 +645,7 @@ public:
                     else
                     {
                         previewLooper.writeInto (buffer);
+                        // buffer.applyGain(6.0f);
 
                         if (! std::exchange (wasPreviewing, true))
                         {
@@ -1455,7 +1459,7 @@ public:
                     Justification::topLeft);
 
         if (audioModification->isDimmed())
-            g.drawText ("DIMMED", getLocalBounds(), Justification::bottomLeft);
+            g.drawText ("using libtorch", getLocalBounds(), Justification::bottomLeft);
 
         g.setColour (isSelected ? Colours::white : Colours::black);
         g.drawRect (getLocalBounds());

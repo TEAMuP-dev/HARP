@@ -7,7 +7,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 add_subdirectory(JUCE)
 
-juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+juce_set_ara_sdk_path("/Users/aldo/Documents/research/ARA_SDK")
+
 
 add_subdirectory(tracktion_engine/modules)
 
