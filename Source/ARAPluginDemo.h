@@ -586,6 +586,11 @@ public:
                 }
             };
 
+            torch::Tensor zeroTensor = torch::zeros({1, buffer.getNumSamples()});
+            // for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            //     buffer.copyFrom(channel, 0, zeroTensor.data_ptr<float>(), buffer.getNumSamples());
+            // }
+
             if (positionInfo.getIsPlaying())
             {
                 fadeOutIfNecessary();

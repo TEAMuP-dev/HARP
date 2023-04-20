@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(AUDIO_PLUGIN_EXAMPLE_CMAKE_64 VERSION 333.0.1)
+set(CMAKE_OSX_ARCHITECTURES "x86_64")
+set(CMAKE_CXX_STANDARD 14)
 
-find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
+
+find_package(Torch REQUIRED PATHS "/Users/aldo/Documents/research/libtorch" NO_DEFAULT_PATH)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 add_subdirectory(JUCE)
