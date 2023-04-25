@@ -19,6 +19,13 @@ A repository for a custom ARA plugin with juce, tracktion, and libtorch working 
 - Libtorch is in C:\libtorch. Change your path in CMakeLists.txt accordingly
 - It's important to maintain the order of the `include` statements in `Main.cpp` (torch before juce) 
 
+### Downloading libtorch for MacOS
+We're currently having trouble making ARA work for x86 Mac builds, so make sure you build 
+For ARM MacOS builds, you can download an ARM build here: https://github.com/mlverse/libtorch-mac-m1/releases/tag/LibTorch-for-R. 
+This should be a drop-in replacement for a regular libtorch build. 
+
+To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`. 
+
 ### CMake
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 
 Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.

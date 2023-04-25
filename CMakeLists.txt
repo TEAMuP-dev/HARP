@@ -1,17 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(AUDIO_PLUGIN_EXAMPLE_CMAKE_64 VERSION 333.0.1)
-set(CMAKE_OSX_ARCHITECTURES "x86_64")
+set(CMAKE_OSX_ARCHITECTURES "arm64")
 set(CMAKE_CXX_STANDARD 14)
 
-
-find_package(Torch REQUIRED PATHS "/Users/aldo/Documents/research/libtorch" NO_DEFAULT_PATH)
+find_package(Torch REQUIRED PATHS "/Users/hugo/projects/plugin_sandbox/libtorch" NO_DEFAULT_PATH)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 add_subdirectory(JUCE)
 
-juce_set_ara_sdk_path("/Users/aldo/Documents/research/ARA_SDK")
-
+juce_set_ara_sdk_path("/Users/hugo/projects/plugin_sandbox/ARA_SDK")
 
 add_subdirectory(tracktion_engine/modules)
 
