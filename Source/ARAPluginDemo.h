@@ -587,9 +587,9 @@ public:
             };
 
             torch::Tensor zeroTensor = torch::zeros({1, buffer.getNumSamples()});
-            // for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-            //     buffer.copyFrom(channel, 0, zeroTensor.data_ptr<float>(), buffer.getNumSamples());
-            // }
+            for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+                buffer.copyFrom(channel, 0, zeroTensor.data_ptr<float>(), buffer.getNumSamples());
+            }
 
             if (positionInfo.getIsPlaying())
             {
@@ -650,7 +650,6 @@ public:
                     else
                     {
                         previewLooper.writeInto (buffer);
-                        // buffer.applyGain(6.0f);
 
                         if (! std::exchange (wasPreviewing, true))
                         {
