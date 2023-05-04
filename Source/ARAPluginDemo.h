@@ -54,6 +54,23 @@
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <torch/script.h>
 
+#include "DeepModel.h"
+
+using std::unique_ptr;
+
+std::string size2string(torch::IntArrayRef size) {
+    std::stringstream ss;
+    ss << "(";
+    for (int i = 0; i < size.size(); i++) {
+        ss << size[i];
+        if (i < size.size() - 1) {
+            ss << ", ";
+        }
+    }
+    ss << ")";
+    return ss.str();
+}
+
 //==============================================================================
 class ARADemoPluginAudioModification  : public ARAAudioModification
 {
@@ -63,16 +80,157 @@ public:
                                     const ARAAudioModification* optionalModificationToClone)
         : ARAAudioModification (audioSource, hostRef, optionalModificationToClone)
     {
-        if (optionalModificationToClone != nullptr)
-            dimmed = static_cast<const ARADemoPluginAudioModification*> (optionalModificationToClone)->dimmed;
+        // if (optionalModificationToClone != nullptr)
+            // do something with the optionalModificationToClone
+            // dimmed = static_cast<const ARADemoPluginAudioModification*> (optionalModificationToClone)->dimmed;
+
+        DBG("ARADemoPluginAudioModification::created");
+        DBG("ARADemoPluginAudioModification::the audio source is " << audioSource->getName());
+
+        init();
+        process(audioSource);
     }
 
-    bool isDimmed() const           { return dimmed; }
-    void setDimmed (bool shouldDim) { dimmed = shouldDim; }
+    // instantiates model and any other resources
+    // todo: might need to do this in thread
+    void init() {
+        DBG("loading model");
+        if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/reduceamp.pt")){ //change model here
+            DBG("failed to load model");
+        }
+        else {
+            DBG("model loaded");
+        }
+    }
+    
+    bool isDimmed() const noexcept { return false; }
+
+    void setDimmed(bool dimmed) const noexcept { return; }
+
+    // processes the audio source 
+    // todo: might need to do this in thread
+    void process(ARAAudioSource* audioSource) {
+        if (!mModel.is_loaded())
+        {
+            return;
+        }
+
+        DBG("ARADemoPluginAudioModification:: create reader for " << audioSource->getName());
+        mAudioSourceReader = std::make_unique<ARAAudioSourceReader> (audioSource);
+        
+        if (! mAudioSourceReader->isValid())
+            DBG("ARADemoPluginAudioModification:: invlaid audio source reader");
+        else
+        {
+            auto numChannels = mAudioSourceReader->numChannels;
+            auto numSamples = mAudioSourceReader->lengthInSamples;
+
+            DBG("ARADemoPluginAudioModification:: audio source: " 
+                << audioSource->getName() 
+                << " channels: "
+                << juce::String(numChannels)
+                << " length in samples: "
+                << juce::String(numSamples));
+
+            mAudioBuffer.reset(new juce::AudioBuffer<float>(numChannels, numSamples));
+
+            // reading into audio buffer
+            mAudioSourceReader->read(mAudioBuffer.get(), 0, static_cast<int>(numSamples), 0, true, true);  
+
+            // write input to file for debugging 
+            juce::File inputFile ("/Users/aldo/Documents/research/plugin_sandbox/input.wav");
+            saveAudioBufferToFile(inputFile);
+
+            // build our IValue (mixdown to mono for now)
+            // TODO: support multichannel
+            IValue input = {
+                DeepModel::to_tensor(*mAudioBuffer).mean(0, true)
+            };
+            DBG("built input tensor with shape " << size2string(input.toTensor().sizes()));
+
+
+            // forward pass
+            auto output = mModel.forward({input}).toTensor();
+            DBG("got output tensor with shape " << size2string(output.sizes()));
+
+            // we're expecting audio out
+            DeepModel::to_buffer(output, *mAudioBuffer);
+            DBG("got output buffer with shape " << mAudioBuffer->getNumChannels() << " x " << mAudioBuffer->getNumSamples());
+
+            // write output to a file
+            juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");
+            saveAudioBufferToFile(outputFile);
+        }
+    }
+
+    juce::AudioBuffer<float>* getModifiedAudioBuffer() {
+        return mAudioBuffer.get();
+    }
+
 
 private:
-    bool dimmed = false;
+    DeepModel mModel;
+
+    unique_ptr<ARAAudioSourceReader> mAudioSourceReader { nullptr };
+    unique_ptr<juce::AudioBuffer<float>> mAudioBuffer { nullptr };
+
+    void saveAudioBufferToFile(const juce::File& outputFile)
+    {
+        if (mAudioBuffer == nullptr)
+        {
+            DBG("audio buffer is empty");
+            return;
+        }
+
+        juce::WavAudioFormat wavFormat;
+        juce::TemporaryFile tempFile(outputFile);
+        juce::File tempOutputFile = tempFile.getFile();
+        std::unique_ptr<juce::FileOutputStream> outputFileStream(tempOutputFile.createOutputStream());
+
+        if (outputFileStream != nullptr)
+        {
+            juce::AudioFormatWriter* writer = wavFormat.createWriterFor(outputFileStream.get(),
+                                                                        44100,
+                                                                        static_cast<unsigned int>(mAudioBuffer->getNumChannels()),
+                                                                        16,
+                                                                        {},
+                                                                        0);
+
+            if (writer != nullptr)
+            {
+                outputFileStream.release(); // The writer will take ownership of the output stream
+                bool success = writer->writeFromAudioSampleBuffer(*mAudioBuffer, 0, mAudioBuffer->getNumSamples());
+
+                if (success)
+                {
+                    delete writer; // Release the writer before replacing the file
+                    if (tempFile.overwriteTargetFileWithTemporary())
+                    {
+                        DBG("Audio buffer saved to file.");
+                    }
+                    else
+                    {
+                        DBG("Failed to overwrite target file with temporary file.");
+                    }
+                }
+                else
+                {
+                    DBG("Failed to write audio buffer to file.");
+                }
+            }
+            else
+            {
+                DBG("Failed to create audio format writer.");
+            }
+        }
+        else
+        {
+            DBG("Failed to create output file stream.");
+        }
+    }
+
 };
+
 
 //==============================================================================
 struct PreviewState
@@ -276,12 +434,12 @@ class PossiblyBufferedReader
 public:
     PossiblyBufferedReader() = default;
 
-    explicit PossiblyBufferedReader (std::unique_ptr<BufferingAudioReader> readerIn)
+    explicit PossiblyBufferedReader (unique_ptr<BufferingAudioReader> readerIn)
         : setTimeoutFn ([ptr = readerIn.get()] (int ms) { ptr->setReadTimeout (ms); }),
           reader (std::move (readerIn))
     {}
 
-    explicit PossiblyBufferedReader (std::unique_ptr<AudioFormatReader> readerIn)
+    explicit PossiblyBufferedReader (unique_ptr<AudioFormatReader> readerIn)
         : setTimeoutFn(),
           reader (std::move (readerIn))
     {}
@@ -295,7 +453,7 @@ public:
 
 private:
     std::function<void (int)> setTimeoutFn;
-    std::unique_ptr<AudioFormatReader> reader;
+    unique_ptr<AudioFormatReader> reader;
 };
 
 struct ProcessingLockInterface
@@ -317,20 +475,29 @@ public:
                         AudioProcessor::ProcessingPrecision,
                         AlwaysNonRealtime alwaysNonRealtime) override
     {
+        // DBG("PlaybackRenderer::prepareToPlay");
         numChannels = numChannelsIn;
         sampleRate = sampleRateIn;
         maximumSamplesPerBlock = maximumSamplesPerBlockIn;
         tempBuffer.reset (new AudioBuffer<float> (numChannels, maximumSamplesPerBlock));
 
+        // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ", sampleRate: " << sampleRate << ", maximumSamplesPerBlock: " << maximumSamplesPerBlock);
+
         useBufferedAudioSourceReader = alwaysNonRealtime == AlwaysNonRealtime::no;
+
+        // DBG("using buffered audio source reader: " << (int)useBufferedAudioSourceReader);
 
         for (const auto playbackRegion : getPlaybackRegions())
         {
             auto audioSource = playbackRegion->getAudioModification()->getAudioSource();
 
+            // DBG("audio source is " << audioSource->getName());
+
             if (audioSourceReaders.find (audioSource) == audioSourceReaders.end())
             {
                 auto reader = std::make_unique<ARAAudioSourceReader> (audioSource);
+
+                // DBG("created reader for " << audioSource->getName());
 
                 if (! useBufferedAudioSourceReader)
                 {
@@ -341,6 +508,7 @@ public:
                 {
                     const auto readAheadSize = jmax (4 * maximumSamplesPerBlock,
                                                      roundToInt (2.0 * sampleRate));
+                    // DBG("read ahead size: " << readAheadSize);
                     audioSourceReaders.emplace (audioSource,
                                                 PossiblyBufferedReader { std::make_unique<BufferingAudioReader> (reader.release(),
                                                                                                                  *sharedTimesliceThread,
@@ -352,6 +520,7 @@ public:
 
     void releaseResources() override
     {
+        // DBG("releasing resources");
         audioSourceReaders.clear();
         tempBuffer.reset();
     }
@@ -381,6 +550,7 @@ public:
 
             for (const auto& playbackRegion : getPlaybackRegions())
             {
+                DBG("evaluating playback region: " << playbackRegion->getRegionSequence()->getName() << " " << playbackRegion->getRegionSequence()->getDocument()->getName());
                 // Evaluate region borders in song time, calculate sample range to render in song time.
                 // Note that this example does not use head- or tailtime, so the includeHeadAndTail
                 // parameter is set to false here - this might need to be adjusted in actual plug-ins.
@@ -388,8 +558,10 @@ public:
                 auto renderRange = blockRange.getIntersectionWith (playbackSampleRange);
 
                 if (renderRange.isEmpty())
+                {
+                    DBG("render range is empty wrt to playback range");
                     continue;
-
+                } 
                 // Evaluate region borders in modification/source time and calculate offset between
                 // song and source samples, then clip song samples accordingly
                 // (if an actual plug-in supports time stretching, this must be taken into account here).
@@ -400,7 +572,10 @@ public:
                 renderRange = renderRange.getIntersectionWith (modificationSampleRange.movedToStartAt (playbackSampleRange.getStart()));
 
                 if (renderRange.isEmpty())
+                {
+                    DBG("render range is empty wrt to modification range"); 
                     continue;
+                }
 
                 // Get the audio source for the region and find the reader for that source.
                 // This simplified example code only produces audio if sample rate and channel count match -
@@ -411,6 +586,7 @@ public:
                 if (std::make_tuple (audioSource->getChannelCount(), audioSource->getSampleRate()) != std::make_tuple (numChannels, sampleRate)
                     || (readerIt == audioSourceReaders.end()))
                 {
+                    DBG("mismatched channel count or sample rate, or no reader found");
                     success = false;
                     continue;
                 }
@@ -427,15 +603,35 @@ public:
                 // first region can write directly into output, later regions need to use local buffer.
                 auto& readBuffer = (didRenderAnyRegion) ? *tempBuffer : buffer;
 
-                if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                // DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
+
+                // if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                // {
+                //     DBG("reader failed to read");
+                //     success = false;
+                //     continue;
+                // }
+                
+                // replace the readBuffer with the modified buffer
+                // TODO: we should be doing this with audiosources, that's what they're meant to do
+                // not thru pointer arithmetic
+                auto *modBuffer = playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getModifiedAudioBuffer();
+                if (modBuffer != nullptr)
                 {
-                    success = false;
-                    continue;
+                    // TODO: let's try to not do this with raw mem
+                    // AudioBuffer<float>&
+                    for (int c = 0; c < numChannels - 1; c++)
+                        readBuffer.copyFrom (c, 
+                                             0, 
+                                             *modBuffer,
+                                             0, // TODO: this should be C but output is downmixed rn
+                                             startInSource,
+                                             numSamplesToRead);
                 }
 
                 // Apply dim if enabled
-                if (playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed())
-                    readBuffer.applyGain (startInBuffer, numSamplesToRead, 0.25f);  // dim by about 12 dB
+                // if (playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed())
+                //     readBuffer.applyGain (startInBuffer, numSamplesToRead, 0.25f);  // dim by about 12 dB
 
                 // Mix output of all regions
                 if (didRenderAnyRegion)
@@ -463,8 +659,16 @@ public:
 
         // If no playback or no region did intersect, clear buffer now.
         if (! didRenderAnyRegion)
+        {
+            DBG("no region did intersect or no playback");
             buffer.clear();
+        }
 
+        if (success)
+            DBG("success");
+        else
+            DBG("fail");
+            
         return success;
     }
 
@@ -479,7 +683,7 @@ private:
     int numChannels = 2;
     double sampleRate = 48000.0;
     int maximumSamplesPerBlock = 128;
-    std::unique_ptr<AudioBuffer<float>> tempBuffer;
+    unique_ptr<AudioBuffer<float>> tempBuffer;
 };
 
 class EditorRenderer  : public ARAEditorRenderer,
@@ -587,9 +791,9 @@ public:
             };
 
             torch::Tensor zeroTensor = torch::zeros({1, buffer.getNumSamples()});
-            for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                buffer.copyFrom(channel, 0, zeroTensor.data_ptr<float>(), buffer.getNumSamples());
-            }
+            // for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            //     buffer.copyFrom(channel, 0, zeroTensor.data_ptr<float>(), buffer.getNumSamples());
+            // }
 
             if (positionInfo.getIsPlaying())
             {
@@ -620,8 +824,7 @@ public:
                 if (regionIsAssignedToEditor)
                 {
                     const auto previewTime = previewState->previewTime.load();
-                    const auto previewDimmed = previewedRegion->getAudioModification<ARADemoPluginAudioModification>()
-                                                              ->isDimmed();
+                    const auto previewDimmed = previewedRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed();
 
                     if (lastPreviewTime != previewTime
                         || lastPlaybackRegion != previewedRegion
@@ -696,12 +899,12 @@ private:
     ARAPlaybackRegion* lastPlaybackRegion = nullptr;
     bool lastPreviewDimmed = false;
     bool wasPreviewing = false;
-    std::unique_ptr<AudioBuffer<float>> previewBuffer;
+    unique_ptr<AudioBuffer<float>> previewBuffer;
     Looper previewLooper;
 
     double sampleRate = 48000.0;
     SharedResourcePointer<SharedTimeSliceThread> timeSliceThread;
-    std::map<ARAAudioSource*, std::unique_ptr<BufferingAudioReader>> audioSourceReaders;
+    std::map<ARAAudioSource*, unique_ptr<BufferingAudioReader>> audioSourceReaders;
 
     std::set<ARARegionSequence*> regionSequences;
 };
@@ -768,7 +971,7 @@ protected:
                 continue;
 
             const bool dimChanged = (dimmed != audioModification->isDimmed());
-            audioModification->setDimmed (dimmed);
+            audioModification->setDimmed(dimmed);
 
             // If the dim state changed, send a sample content change notification without notifying the host
             if (dimChanged)
@@ -867,8 +1070,7 @@ class ARADemoPluginAudioProcessorImpl  : public AudioProcessor,
 public:
     //==============================================================================
     ARADemoPluginAudioProcessorImpl()
-        : AudioProcessor (getBusesProperties())
-    {}
+        : AudioProcessor (getBusesProperties()){}
 
     ~ARADemoPluginAudioProcessorImpl() override = default;
 
@@ -1330,7 +1532,7 @@ private:
     int64 hash = 0;
     AudioFormatManager dummyManager;
     AudioThumbnailCache thumbnailCache;
-    std::map<ARAAudioSource*, std::unique_ptr<AudioThumbnail>> thumbnails;
+    std::map<ARAAudioSource*, unique_ptr<AudioThumbnail>> thumbnails;
 };
 
 class PlaybackRegionView : public Component,
@@ -1390,7 +1592,7 @@ public:
     {
         // Set the dim flag on our region's audio modification when double-clicked
         auto audioModification = playbackRegion.getAudioModification<ARADemoPluginAudioModification>();
-        audioModification->setDimmed (! audioModification->isDimmed());
+        // audioModification->setDimmed (! audioModification->isDimmed());
 
         // Send a content change notification for the modification and all associated playback regions
         audioModification->notifyContentChanged (ARAContentUpdateScopes::samplesAreAffected(), true);
@@ -1439,7 +1641,7 @@ public:
         g.fillAll (convertOptionalARAColour (playbackRegion.getEffectiveColor(), Colours::black));
 
         const auto* audioModification = playbackRegion.getAudioModification<ARADemoPluginAudioModification>();
-        g.setColour (audioModification->isDimmed() ? Colours::darkgrey.darker() : Colours::darkgrey.brighter());
+        // g.setColour (audioModification->isDimmed() ? Colours::darkgrey.darker() : Colours::darkgrey.brighter());
 
         if (audioModification->getAudioSource()->isSampleAccessEnabled())
         {
@@ -1649,7 +1851,7 @@ private:
     TimeToViewScaling& timeToViewScaling;
     ARARegionSequence& regionSequence;
     WaveformCache& waveformCache;
-    std::unordered_map<ARAPlaybackRegion*, std::unique_ptr<PlaybackRegionView>> playbackRegionViews;
+    std::unordered_map<ARAPlaybackRegion*, unique_ptr<PlaybackRegionView>> playbackRegionViews;
     double playbackDuration = 0.0;
 };
 
@@ -2281,8 +2483,8 @@ private:
     std::vector<ARARegionSequence*> hiddenRegionSequences;
 
     WaveformCache waveformCache;
-    std::map<RegionSequenceViewKey, std::unique_ptr<TrackHeader>> trackHeaders;
-    std::map<RegionSequenceViewKey, std::unique_ptr<RegionSequenceView>> regionSequenceViews;
+    std::map<RegionSequenceViewKey, unique_ptr<TrackHeader>> trackHeaders;
+    std::map<RegionSequenceViewKey, unique_ptr<RegionSequenceView>> regionSequenceViews;
     RulersHeader rulersHeader;
     RulersView rulersView;
     VerticalLayoutViewport viewport;
@@ -2337,7 +2539,7 @@ public:
     }
 
 private:
-    std::unique_ptr<Component> documentView;
+    unique_ptr<Component> documentView;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADemoPluginProcessorEditor)
 };

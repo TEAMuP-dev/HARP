@@ -46,7 +46,7 @@ juce_add_plugin(AudioPluginExampleCMAKE64
                                                 # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
                                                 # compatibility - GarageBand 10.3 does not support ARA anyways.
     FORMATS AU VST3 Standalone                             # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-    PRODUCT_NAME ARA_sandbox                # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME tensor-juce                # The name of the final executable, which can differ from the target name
     # VST3_CATEGORIES "Tools"
     # AU_SANDBOX_SAFE TRUE
     # APP_SANDBOX_ENABLED TRUE
@@ -65,7 +65,9 @@ juce_generate_juce_header(AudioPluginExampleCMAKE64)
 
 target_sources(AudioPluginExampleCMAKE64
     PRIVATE
-        Source/Main.cpp)
+        Source/Main.cpp
+        Source/DeepModel.h
+)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
