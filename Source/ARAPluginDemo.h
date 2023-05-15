@@ -95,7 +95,7 @@ public:
     // todo: might need to do this in thread
     void init() {
         DBG("loading model");
-        if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/reduceamp.pt")){ //change model here
+        if (!mModel.load("/Users/hugo/projects/plugin_sandbox/reduceamp.pt")){ //change model here
             DBG("failed to load model");
         }
         else {
@@ -598,40 +598,37 @@ public:
                 const int numSamplesToRead = (int) renderRange.getLength();
                 const int startInBuffer = (int) (renderRange.getStart() - blockRange.getStart());
                 auto startInSource = renderRange.getStart() + modificationSampleOffset;
-
+                
                 // Read samples:
                 // first region can write directly into output, later regions need to use local buffer.
                 auto& readBuffer = (didRenderAnyRegion) ? *tempBuffer : buffer;
-
-                // DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
-
-                // if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
-                // {
-                //     DBG("reader failed to read");
-                //     success = false;
-                //     continue;
-                // }
                 
-                // replace the readBuffer with the modified buffer
-                // TODO: we should be doing this with audiosources, that's what they're meant to do
-                // not thru pointer arithmetic
+                // apply the modified buffer
                 auto *modBuffer = playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getModifiedAudioBuffer();
                 if (modBuffer != nullptr)
                 {
-                    // TODO: let's try to not do this with raw mem
-                    // AudioBuffer<float>&
-                    for (int c = 0; c < numChannels - 1; c++)
+                    // TODO: should we check if we have enough samples to read in the readBuffer? 
+                    jassert (numSamplesToRead <= modBuffer->getNumSamples());
+                    for (int c = 0; c < numChannels - 1; c++){
                         readBuffer.copyFrom (c, 
                                              0, 
                                              *modBuffer,
                                              0, // TODO: this should be C but output is downmixed rn
-                                             startInSource,
-                                             numSamplesToRead);
+                                             static_cast<int>(startInSource),
+                                             numSamplesToRead
+                        );
+                        success = true; 
+                    }
+                } else { // buffer isn't ready, read from source
+                    DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
+                    if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                    {
+                        DBG("reader failed to read");
+                        success = false;
+                        continue;
+                    }
                 }
 
-                // Apply dim if enabled
-                // if (playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed())
-                //     readBuffer.applyGain (startInBuffer, numSamplesToRead, 0.25f);  // dim by about 12 dB
 
                 // Mix output of all regions
                 if (didRenderAnyRegion)
@@ -663,11 +660,6 @@ public:
             DBG("no region did intersect or no playback");
             buffer.clear();
         }
-
-        if (success)
-            DBG("success");
-        else
-            DBG("fail");
             
         return success;
     }
