@@ -19,7 +19,15 @@ A repository for a custom ARA plugin with juce, tracktion, and libtorch working 
 - Libtorch is in C:\libtorch. Change your path in CMakeLists.txt accordingly
 - It's important to maintain the order of the `include` statements in `Main.cpp` (torch before juce) 
 
+### Downloading libtorch for MacOS
+We're currently having trouble making ARA work for x86 Mac builds, so make sure you build 
+For ARM MacOS builds, you can download an ARM build here: https://github.com/mlverse/libtorch-mac-m1/releases/tag/LibTorch-for-R. 
+This should be a drop-in replacement for a regular libtorch build. 
+
+To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`. 
+
 ### CMake
+#### Windows
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 
 Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
 - Configure
@@ -31,5 +39,44 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 ```php
 "C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/plugin_sandbox/build --config Debug --target ALL_BUILD -j 14 --
 ```
+#### Mac
+On Mac M1 computers here are the commands you can usse for configuration and building. This project will only run on M1 Macs currently due to building issues for ARA on x86. This is building from inside of a build folder in the project. 
+- Configure
+```
+cmake -DCMAKE_OSX_ARCHITECTURES=arm64 ../
+```
+
+-Build 
+```
+make -jNUM_PROCESSORS
+```
 
 
+## Debugging 
+### Mac
+1. download visual studio code for mac https://code.visualstudio.com/ 
+2. install Microsoft's C/C++ extension 
+3. open the "Run and Debug" tab in vsc, and press "create a launch.json file" using the LLDB
+4. create a configuration for attaching to a process, here's an example launch.json you could use 
+
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "lldb reaper",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/Applications/REAPER.app/Contents/MacOS/REAPER",
+            "args": [],
+            "cwd": "${fileDirname}",
+            "MIMode": "lldb",
+            "miDebuggerArgs": "--symbol-file=build/AudioPluginExampleCMAKE64_artefacts/Debug/VST3/ARA_sandbox.vst3/Contents/MacOS/ARA_sandbox"
+        }
+    ]
+}
+```
+***make sure to include the `miDebuggerArgs` argument***
+
+5. build the plugin using this flag `-DCMAKE_BUILD_TYPE=Debug`
+6. run the debugger and add break poitns 

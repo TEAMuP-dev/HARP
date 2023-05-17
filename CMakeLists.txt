@@ -1,39 +1,39 @@
-cmake_minimum_required(VERSION 3.15)
-
-project(AUDIO_PLUGIN_EXAMPLE_CMAKE_64 VERSION 333.0.1)
-
-find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-
+cmake_minimum_required(VERSION 3.21)
+set(PROJECT_NAME "tensor-juce-ARA")
+project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
-juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # windows library location
+    message("Building for Windows...")
+    # libtorch settings 
+    find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    # ara settings
+    juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # mac and linux library location
+    message("Building for UNIX...")
+    # libtorch settings 
+    find_package(Torch REQUIRED PATHS "/usr/local/lib/libtorch" NO_DEFAULT_PATH)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    # ara settings
+    juce_set_ara_sdk_path("/usr/local/lib/ARA_SDK")
+
+else()
+    message(FATAL_ERROR "Unsupported platform.")
+
+endif()
+
 
 add_subdirectory(tracktion_engine/modules)
-
-# juce_add_plugin(AudioPluginExampleCMAKE64
-#     # VERSION ...                               # Set this if the plugin version is different to the project version
-#     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
-#     # ICON_SMALL ...
-#     # COMPANY_NAME ...                          # Specify the name of the plugin's author
-#     # IS_SYNTH TRUE/FALSE                       # Is this a synth or an effect?
-#     # NEEDS_MIDI_INPUT TRUE/FALSE               # Does the plugin need midi input?
-#     # NEEDS_MIDI_OUTPUT TRUE/FALSE              # Does the plugin need midi output?
-#     # IS_MIDI_EFFECT TRUE/FALSE                 # Is this plugin a MIDI effect?
-#     IS_ARA_EFFECT TRUE
-#     # EDITOR_WANTS_KEYBOARD_FOCUS TRUE/FALSE    # Does the editor need keyboard focus?
-#     # COPY_PLUGIN_AFTER_BUILD TRUE/FALSE        # Should the plugin be installed to a default location after building?
-#     PLUGIN_MANUFACTURER_CODE Team               # A four-character manufacturer id with at least one upper-case character
-#     PLUGIN_CODE Dem0                            # A unique four-character plugin id with exactly one upper-case character
-#                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
-#     FORMATS AU VST3 Standalone                  # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-#     PRODUCT_NAME "AudioPluginExampleCMAKE64")        # The name of the final executable, which can differ from the target name
 
 juce_add_plugin(AudioPluginExampleCMAKE64
     # VERSION ...                               # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
-    COMPANY_NAME ""             # Specify the name of the plugin's author
+    COMPANY_NAME "TEAMuP"             # Specify the name of the plugin's author
     # IS_SYNTH FALSE                              # Is this a synth or an effect?
     # NEEDS_MIDI_INPUT FALSE                      # Does the plugin need midi input?
     # NEEDS_MIDI_OUTPUT FALSE                     # Does the plugin need midi output?
@@ -46,7 +46,7 @@ juce_add_plugin(AudioPluginExampleCMAKE64
                                                 # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
                                                 # compatibility - GarageBand 10.3 does not support ARA anyways.
     FORMATS AU VST3 Standalone                             # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
-    PRODUCT_NAME ARA_sandbox                # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME tensor-juce                # The name of the final executable, which can differ from the target name
     # VST3_CATEGORIES "Tools"
     # AU_SANDBOX_SAFE TRUE
     # APP_SANDBOX_ENABLED TRUE
@@ -65,10 +65,9 @@ juce_generate_juce_header(AudioPluginExampleCMAKE64)
 
 target_sources(AudioPluginExampleCMAKE64
     PRIVATE
-        # Source/ARAPluginDemo.h
-        Source/Main.cpp)
-        # PluginEditor.cpp
-        # PluginProcessor.cpp)
+        Source/Main.cpp
+        Source/DeepModel.h
+)
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -79,13 +78,9 @@ target_sources(AudioPluginExampleCMAKE64
 
 target_compile_definitions(AudioPluginExampleCMAKE64
     PUBLIC
-        # JUCE_PLUGINHOST_ARA=1
-        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
         JUCE_VST3_CAN_REPLACE_VST2=0)
-
-# juce_add_binary_data(AudioPluginData SOURCES ...)
 
 target_link_libraries(AudioPluginExampleCMAKE64
     PRIVATE
