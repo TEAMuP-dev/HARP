@@ -582,10 +582,27 @@ public:
                 const auto audioSource = playbackRegion->getAudioModification()->getAudioSource();
                 const auto readerIt = audioSourceReaders.find (audioSource);
 
-                if (std::make_tuple (audioSource->getChannelCount(), audioSource->getSampleRate()) != std::make_tuple (numChannels, sampleRate)
-                    || (readerIt == audioSourceReaders.end()))
+                // Check if the reader is found
+                if (readerIt == audioSourceReaders.end())
                 {
-                    DBG("PlaybackRenderer::processBlock mismatched channel count or sample rate, or no reader found");
+                    DBG("PlaybackRenderer::processBlock reader not found");
+                    success = false;
+                    continue;
+                }
+
+                // Check if the number of channels of the audioSource or the host's Master bus are > 2.
+                // For now, we only support mono or stereo audio.
+                if (audioSource->getChannelCount() > 2 || numChannels > 2)
+                {
+                    DBG("PlaybackRenderer::processBlock we currently only support mono or stereo audio");
+                    success = false;
+                    continue;
+                }
+                
+                // The sampleRates still need to be the same though. To be fixed. 
+                if (audioSource->getSampleRate() != sampleRate)
+                {
+                    DBG("PlaybackRenderer::processBlock different sample rate between host and audioSource");
                     success = false;
                     continue;
                 }
@@ -675,8 +692,8 @@ public:
         // If no playback or no region did intersect, clear buffer now.
         if (! didRenderAnyRegion)
         {
-            DBG("no region did intersect or no playback");
-            buffer.clear();
+            DBG("no region region rendered");
+            buffer.clear();  
         }
         return success;
     }
