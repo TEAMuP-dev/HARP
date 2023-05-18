@@ -87,13 +87,13 @@ public:
         DBG("ARADemoPluginAudioModification::created");
         DBG("ARADemoPluginAudioModification::the audio source is " << audioSource->getName());
 
-        init();
-        process(audioSource);
+        init(audioSource);
+        // process();
     }
 
     // instantiates model and any other resources
     // todo: might need to do this in thread
-    void init() {
+    void init(ARAAudioSource* audioSource) {
         DBG("loading model");
         if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/reduceamp.pt")){ //change model here
             DBG("failed to load model");
@@ -101,21 +101,25 @@ public:
         else {
             DBG("model loaded");
         }
+
+        DBG("ARADemoPluginAudioModification:: create reader for " << audioSource->getName());
+        mAudioSourceReader = std::make_unique<ARAAudioSourceReader> (audioSource);
+        mAudioSourceName = audioSource->getName();
+
+        
     }
     
     bool isDimmed() const           { return dimmed; }
     void setDimmed (bool shouldDim) { dimmed = shouldDim; }
+    std::string getSourceName() {return mAudioSourceName;}
 
     // processes the audio source 
     // todo: might need to do this in thread
-    void process(ARAAudioSource* audioSource) {
+    void process() {
         if (!mModel.is_loaded())
         {
             return;
         }
-
-        DBG("ARADemoPluginAudioModification:: create reader for " << audioSource->getName());
-        mAudioSourceReader = std::make_unique<ARAAudioSourceReader> (audioSource);
         
         if (! mAudioSourceReader->isValid())
             DBG("ARADemoPluginAudioModification:: invlaid audio source reader");
@@ -125,7 +129,7 @@ public:
             auto numSamples = mAudioSourceReader->lengthInSamples;
 
             DBG("ARADemoPluginAudioModification:: audio source: " 
-                << audioSource->getName() 
+                << mAudioSourceName
                 << " channels: "
                 << juce::String(numChannels)
                 << " length in samples: "
@@ -159,6 +163,8 @@ public:
             // write output to a file
             juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");
             saveAudioBufferToFile(outputFile);
+
+            mIsModified = true;
         }
     }
 
@@ -166,10 +172,13 @@ public:
         return mAudioBuffer.get();
     }
 
+    bool getIsModified(){return mIsModified;}
 
 private:
     DeepModel mModel;
     bool dimmed = false;
+    bool mIsModified = false;
+    std::string mAudioSourceName;
     unique_ptr<ARAAudioSourceReader> mAudioSourceReader { nullptr };
     unique_ptr<juce::AudioBuffer<float>> mAudioBuffer { nullptr };
 
@@ -517,6 +526,8 @@ public:
         }
     }
 
+
+
     void releaseResources() override
     {
         // DBG("PlaybackRenderer::releaseResources releasing resources");
@@ -605,7 +616,7 @@ public:
 
                 // apply to modified buffer 
                 auto *modBuffer = playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getModifiedAudioBuffer();
-                if (modBuffer != nullptr)
+                if (modBuffer != nullptr && playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getIsModified())
                 {
                     jassert (numSamplesToRead <= modBuffer->getNumSamples());
                     // we could handle more cases with channel mismatches better 
@@ -731,6 +742,19 @@ public:
     void didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion*) noexcept override
     {
         asyncConfigCallback.startConfigure();
+    }
+
+    void executeProcess() 
+    {
+        DBG("EditorRenderer::executeProcess executing process");
+        auto myCallback = [](ARAPlaybackRegion* playbackRegion) -> bool {
+            auto audioModification = playbackRegion->getAudioModification<ARADemoPluginAudioModification>();
+            std::cout << "EditorRenderer::processing playbackRegion " << audioModification->getSourceName() << std::endl;
+            audioModification->process();
+            return true;
+        };
+
+        forEachPlaybackRegion(myCallback);
     }
 
     /*  An ARA host could be using either the `addPlaybackRegion()` or `addRegionSequence()` interface
@@ -1513,7 +1537,7 @@ struct WaveformCache : private ARAAudioSource::Listener
         removeAudioSource (audioSource);
     }
 
-    AudioThumbnail& getOrCreateThumbnail(ARAAudioSource* audioSource, juce::AudioBuffer<float>* buffer)
+    AudioThumbnail& getOrCreateThumbnail(ARAAudioSource* audioSource, ARADemoPluginAudioModification* audioModification)
     {
         const auto iter = thumbnails.find(audioSource);
 
@@ -1524,8 +1548,11 @@ struct WaveformCache : private ARAAudioSource::Listener
         auto& result = *thumb;
 
         ++hash;
-
-        thumb->setSource(buffer, audioSource->getSampleRate(), hash);     
+        if (audioModification->getIsModified())
+            thumb->setSource(audioModification->getModifiedAudioBuffer(), audioSource->getSampleRate(), hash);     
+        
+        else
+            thumb->setReader (new ARAAudioSourceReader (audioSource), hash);
 
         audioSource->addListener(this);
         thumbnails.emplace(audioSource, std::move(thumb));
@@ -1562,12 +1589,11 @@ public:
 
         auto audioModification = playbackRegion.getAudioModification();
         auto araDemoPluginAudioModification = dynamic_cast<ARADemoPluginAudioModification*>(audioModification);
-
-        mDeepAudio = araDemoPluginAudioModification->getModifiedAudioBuffer();
+        
         
         audioSource = playbackRegion.getAudioModification()->getAudioSource();
 
-        waveformCache.getOrCreateThumbnail (audioSource, mDeepAudio).addChangeListener (this);
+        waveformCache.getOrCreateThumbnail (audioSource, araDemoPluginAudioModification).addChangeListener (this);
 
         audioSource->addListener (this);
         playbackRegion.addListener (this);
@@ -1585,7 +1611,7 @@ public:
         playbackRegion.removeListener (this);
         araEditorView.removeListener (this);
 
-        waveformCache.getOrCreateThumbnail (audioSource, mDeepAudio).removeChangeListener (this);
+        waveformCache.getOrCreateThumbnail (audioSource, dynamic_cast<ARADemoPluginAudioModification*>(playbackRegion.getAudioModification())).removeChangeListener (this);
     }
 
     void mouseDown (const MouseEvent& m) override
@@ -1664,7 +1690,7 @@ public:
 
         if (audioModification->getAudioSource()->isSampleAccessEnabled())
         {
-            auto& thumbnail = waveformCache.getOrCreateThumbnail (playbackRegion.getAudioModification()->getAudioSource(), mDeepAudio);
+            auto& thumbnail = waveformCache.getOrCreateThumbnail (playbackRegion.getAudioModification()->getAudioSource(), dynamic_cast<ARADemoPluginAudioModification*>(playbackRegion.getAudioModification()));
             thumbnail.drawChannels (g,
                                     getLocalBounds(),
                                     playbackRegion.getStartInAudioModificationTime(),
@@ -2518,22 +2544,43 @@ private:
 
 
 class ARADemoPluginProcessorEditor  : public AudioProcessorEditor,
-                                      public AudioProcessorEditorARAExtension
+                                      public AudioProcessorEditorARAExtension,
+                                      public Button::Listener 
 {
 public:
-    explicit ARADemoPluginProcessorEditor (ARADemoPluginAudioProcessorImpl& p)
+    explicit ARADemoPluginProcessorEditor (ARADemoPluginAudioProcessorImpl& p, EditorRenderer* er)
         : AudioProcessorEditor (&p),
           AudioProcessorEditorARAExtension (&p)
     {
         if (auto* editorView = getARAEditorView())
             documentView = std::make_unique<DocumentView> (*editorView, p.playHeadState);
-
+        mEditorRenderer = er;
         addAndMakeVisible (documentView.get());
+
+        // Initialize your button
+        testButton.setButtonText("process audio");
+        addAndMakeVisible(testButton);  // Add button as a child component
+
+        testButton.setColour (TextButton::buttonColourId, Colours::lightgrey);
+        testButton.setColour (TextButton::textColourOffId, Colours::black);
+        testButton.setColour (TextButton::buttonOnColourId, Colours::grey);
+        testButton.setColour (TextButton::textColourOnId, Colours::black);
+
+        testButton.addListener(this);
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setResizable (true, false);
         setSize (800, 300);
+    }
+
+    void buttonClicked(Button* button) override
+    {
+        if (button == &testButton)
+        {
+            DBG("ARADemoPluginProcessorEditor::buttonClicked button listener activated");
+            mEditorRenderer->executeProcess();
+        }
     }
 
     //==============================================================================
@@ -2554,12 +2601,31 @@ public:
 
     void resized() override
     {
+        int toolbarHeight = 60; 
+
+        auto buttonArea = getLocalBounds().removeFromTop(toolbarHeight);
+
+        int buttonWidth = 160;  // Set this to the desired button width
+        int buttonHeight = 30;  // Set this to the desired button height
+
+        int xPos = (buttonArea.getWidth() - buttonWidth) / 2;
+        int yPos = (toolbarHeight - buttonHeight) / 2;
+
+        testButton.setBounds(xPos, yPos, buttonWidth, buttonHeight);
+
         if (documentView != nullptr)
-            documentView->setBounds (getLocalBounds());
+            documentView->setBounds (0, toolbarHeight, getWidth(), getHeight() - toolbarHeight);
     }
+
+
+
 
 private:
     unique_ptr<Component> documentView;
+    juce::TextButton testButton;
+    juce::TextButton smallButtons[2][2];
+    EditorRenderer* mEditorRenderer;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADemoPluginProcessorEditor)
 };
@@ -2568,5 +2634,5 @@ class ARADemoPluginAudioProcessor  : public ARADemoPluginAudioProcessorImpl
 {
 public:
     bool hasEditor() const override               { return true; }
-    AudioProcessorEditor* createEditor() override { return new ARADemoPluginProcessorEditor (*this); }
+    AudioProcessorEditor* createEditor() override { return new ARADemoPluginProcessorEditor (*this, dynamic_cast<EditorRenderer*>(getEditorRenderer())); }
 };
