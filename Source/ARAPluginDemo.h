@@ -95,7 +95,7 @@ public:
     // todo: might need to do this in thread
     void init() {
         DBG("loading model");
-        if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/model.pt")){ //change model here
+        if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/reduceamp.pt")){ //change model here
             DBG("failed to load model");
         }
         else {
@@ -535,6 +535,7 @@ public:
 
         const auto numSamples = buffer.getNumSamples();
         jassert (numSamples <= maximumSamplesPerBlock);
+        jassert (numChannels == buffer.getNumChannels());
         jassert (realtime == AudioProcessor::Realtime::no || useBufferedAudioSourceReader);
         const auto timeInSamples = positionInfo.getTimeInSamples().orFallback (0);
         const auto isPlaying = positionInfo.getIsPlaying();
@@ -574,7 +575,7 @@ public:
                     DBG("PlaybackRenderer::processBlock render range is empty wrt to modification range"); 
                     continue;
                 }
-
+                // ! -----------------------------------------------------------------------------------------
                 // Get the audio source for the region and find the reader for that source.
                 // This simplified example code only produces audio if sample rate and channel count match -
                 // a robust plug-in would need to do conversion, see ARA SDK documentation.
@@ -588,6 +589,7 @@ public:
                     success = false;
                     continue;
                 }
+                // ! -----------------------------------------------------------------------------------------
 
                 auto& reader = readerIt->second;
                 reader.setReadTimeout (realtime == AudioProcessor::Realtime::no ? 100 : 0);
@@ -601,31 +603,46 @@ public:
                 // first region can write directly into output, later regions need to use local buffer.
                 auto& readBuffer = (didRenderAnyRegion) ? *tempBuffer : buffer;
 
-                // DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
-
-                // if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
-                // {
-                //     DBG("reader failed to read");
-                //     success = false;
-                //     continue;
-                // }
-                
-                // replace the readBuffer with the modified buffer
-                // TODO: we should be doing this with audiosources, that's what they're meant to do
-                // not thru pointer arithmetic
+                // apply to modified buffer 
                 auto *modBuffer = playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getModifiedAudioBuffer();
                 if (modBuffer != nullptr)
                 {
-                    // TODO: let's try to not do this with raw mem
-                    // AudioBuffer<float>&
-                    for (int c = 0; c < numChannels - 1; ++c)
-                        readBuffer.copyFrom (c, 
-                                             0, 
-                                             *modBuffer,
-                                             0, // TODO: this should be C but output is downmixed rn
-                                             startInSource,
-                                             numSamplesToRead);
+                    jassert (numSamplesToRead <= modBuffer->getNumSamples());
+                    // we could handle more cases with channel mismatches better 
+                    if (modBuffer->getNumChannels() == numChannels)
+                    {
+                        for (int c = 0; c < numChannels; ++c)
+                            readBuffer.copyFrom (c, 
+                                                0, 
+                                                *modBuffer,
+                                                c,
+                                                static_cast<int>(startInSource),
+                                                numSamplesToRead);
+                    }
+
+                    else if (modBuffer->getNumChannels() == 1)
+                    {
+                        for (int c = 0; c < numChannels; ++c)
+                            readBuffer.copyFrom (c, 
+                                                0, 
+                                                *modBuffer,
+                                                0,
+                                                static_cast<int>(startInSource),
+                                                numSamplesToRead);
+                    }
+
                 }
+                else 
+                { // buffer isn't ready, read from original audio source
+                    DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
+                    if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                    {
+                        DBG("reader failed to read");
+                        success = false;
+                        continue;
+                    }
+                }
+                
 
                 // Apply dim if enabled
                 if (playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed())
@@ -661,12 +678,6 @@ public:
             DBG("no region did intersect or no playback");
             buffer.clear();
         }
-
-        if (success)
-            DBG("success");
-        else
-            DBG("fail");
-            
         return success;
     }
 
@@ -1204,7 +1215,7 @@ public:
     {
         void paint (Graphics& g) override
         {
-            g.setColour (Colours::yellow.darker (0.2f));
+            g.setColour (Colours::darkred);
             const auto bounds = getLocalBounds().toFloat();
             g.drawRoundedRectangle (bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), 6.0f, 2.0f);
         }
@@ -1649,7 +1660,7 @@ public:
         g.fillAll (convertOptionalARAColour (playbackRegion.getEffectiveColor(), Colours::black));
 
         const auto* audioModification = playbackRegion.getAudioModification<ARADemoPluginAudioModification>();
-        g.setColour (audioModification->isDimmed() ? Colours::darkgrey.darker() : Colours::darkgrey.brighter());
+        g.setColour (audioModification->isDimmed() ? Colours::whitesmoke.darker() : Colours::whitesmoke.brighter());
 
         if (audioModification->getAudioSource()->isSampleAccessEnabled())
         {
@@ -1720,7 +1731,7 @@ private:
 
         void paint (Graphics& g) override
         {
-            g.setColour (Colours::yellow.withAlpha (0.5f));
+            g.setColour (Colours::darkred.withAlpha (0.5f));
             g.fillRect (getLocalBounds());
         }
 
@@ -2113,7 +2124,7 @@ class OverlayComponent : public Component,
 public:
     class PlayheadMarkerComponent : public Component
     {
-        void paint (Graphics& g) override { g.fillAll (Colours::yellow.darker (0.2f)); }
+        void paint (Graphics& g) override { g.fillAll (Colours::darkred.darker (0.2f)); }
     };
 
     OverlayComponent (PlayHeadState& playHeadStateIn, TimeToViewScaling& timeToViewScalingIn)
