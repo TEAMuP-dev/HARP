@@ -55,6 +55,7 @@
 #include <torch/script.h>
 
 #include "DeepModel.h"
+#include "toolbarUI.h"
 
 using std::unique_ptr;
 
@@ -744,9 +745,20 @@ public:
         asyncConfigCallback.startConfigure();
     }
 
-    void executeProcess() 
+    void executeProcess(juce::String modeName, double temp1, double temp2, int phint, int pwidth) 
     {
         DBG("EditorRenderer::executeProcess executing process");
+        DBG("mode: " 
+            << modeName
+            << "  temp1: "
+            << juce::String(temp1)
+            << " temp2: "
+            << juce::String(temp2)
+            << " phint: "
+            << juce::String(phint)
+            << " pwidth: "
+            <<juce::String(pwidth));
+
         auto myCallback = [](ARAPlaybackRegion* playbackRegion) -> bool {
             auto audioModification = playbackRegion->getAudioModification<ARADemoPluginAudioModification>();
             std::cout << "EditorRenderer::processing playbackRegion " << audioModification->getSourceName() << std::endl;
@@ -2545,7 +2557,9 @@ private:
 
 class ARADemoPluginProcessorEditor  : public AudioProcessorEditor,
                                       public AudioProcessorEditorARAExtension,
-                                      public Button::Listener 
+                                      public Button::Listener,
+                                      public Slider::Listener,
+                                      public ComboBox::Listener
 {
 public:
     explicit ARADemoPluginProcessorEditor (ARADemoPluginAudioProcessorImpl& p, EditorRenderer* er)
@@ -2557,16 +2571,71 @@ public:
         mEditorRenderer = er;
         addAndMakeVisible (documentView.get());
 
-        // Initialize your button
-        testButton.setButtonText("process audio");
-        addAndMakeVisible(testButton);  // Add button as a child component
-
+        // initialize your button
+        testButton.setLookAndFeel(&buttonLookAndFeel);
+        testButton.setButtonText("generate");
         testButton.setColour (TextButton::buttonColourId, Colours::lightgrey);
         testButton.setColour (TextButton::textColourOffId, Colours::black);
         testButton.setColour (TextButton::buttonOnColourId, Colours::grey);
         testButton.setColour (TextButton::textColourOnId, Colours::black);
-
         testButton.addListener(this);
+        addAndMakeVisible(testButton);  
+
+
+        // initalize knobs 
+        temp1Dial.setLookAndFeel(&toolbarSliderStyle);
+        temp1Dial.setSliderStyle(Slider::Rotary);
+        temp1Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        temp1Dial.setTextValueSuffix ("t0: ");
+        temp1Dial.setRange(0.0, 2.0, 0.01);
+        temp1Dial.setValue(1.0);
+        temp1Dial.addListener(this);
+        addAndMakeVisible(temp1Dial);
+
+        temp2Dial.setLookAndFeel(&toolbarSliderStyle);
+        temp2Dial.setSliderStyle(Slider::Rotary);
+        temp2Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        temp2Dial.setTextValueSuffix ("t1: ");
+        temp2Dial.setRange(0.0, 2.0, 0.01);
+        temp2Dial.setValue(1.0);
+        temp2Dial.addListener(this);
+        addAndMakeVisible(temp2Dial);
+
+        stepsDial.setLookAndFeel(&toolbarSliderStyle);
+        stepsDial.setSliderStyle(Slider::Rotary);
+        stepsDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        stepsDial.setTextValueSuffix ("steps: ");
+        stepsDial.setRange(12, 64, 1);
+        stepsDial.setValue(26);
+        stepsDial.addListener(this);
+        addAndMakeVisible(stepsDial);
+
+        phintDial.setLookAndFeel(&toolbarSliderStyle);
+        phintDial.setSliderStyle(Slider::Rotary);
+        phintDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        phintDial.setTextValueSuffix ("phint: ");
+        phintDial.setRange(1, 64, 1);
+        phintDial.setValue(32);
+        phintDial.addListener(this);
+        addAndMakeVisible(phintDial);
+
+        pwidthDial.setLookAndFeel(&toolbarSliderStyle);
+        pwidthDial.setSliderStyle(Slider::Rotary);
+        pwidthDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        pwidthDial.setTextValueSuffix ("pwidth: ");
+        pwidthDial.setRange(1, 16, 1);
+        pwidthDial.setValue(8);
+        pwidthDial.addListener(this);
+        addAndMakeVisible(pwidthDial);
+
+        modeBox.setLookAndFeel(&comboBoxLookAndFeel);
+        modeBox.addItem("daydream", 1);
+        modeBox.addItem("deep sleep", 2);
+        modeBox.setSelectedId(1);
+        modeBox.addListener(this);
+        addAndMakeVisible(modeBox);
+
+
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
@@ -2579,7 +2648,32 @@ public:
         if (button == &testButton)
         {
             DBG("ARADemoPluginProcessorEditor::buttonClicked button listener activated");
-            mEditorRenderer->executeProcess();
+            mEditorRenderer->executeProcess(modeBox.getText(), 
+                                            temp1Dial.getValue(),
+                                            temp2Dial.getValue(),
+                                            phintDial.getValue(),
+                                            pwidthDial.getValue());
+        }
+    }
+
+    void comboBoxChanged (ComboBox* box) override
+    {
+        if (box == &modeBox)
+        {
+            DBG ("ARADemoPluginProcessorEditor::comboBoxChanged mode changed: " << box->getSelectedId());
+        }
+    }
+
+    void sliderValueChanged(Slider* slider) override
+    {
+        if (slider == &temp1Dial)
+        {
+            DBG("ARADemoPluginProcessorEditor::sliderValueChanged temp1 dial value:  " << slider->getValue());
+        }
+
+        else if (slider == &temp2Dial)
+        {
+            DBG("ARADemoPluginProcessorEditor::sliderValueChanged temp2 dial value:  " << slider->getValue());
         }
     }
 
@@ -2601,17 +2695,29 @@ public:
 
     void resized() override
     {
-        int toolbarHeight = 60; 
+        int toolbarHeight = 70; 
+        int knobSize = 60;
+        int buttonWidth = 100;  
+        int buttonHeight = 40;  
+        int comboWidth = 120;  
+        int comboHeight = 40;  
+
 
         auto buttonArea = getLocalBounds().removeFromTop(toolbarHeight);
+        int xCenter = (buttonArea.getWidth()) / 2;
+        int yCenter = (toolbarHeight) / 2;
 
-        int buttonWidth = 160;  // Set this to the desired button width
-        int buttonHeight = 30;  // Set this to the desired button height
+        // testButton.setBounds(xCenter-buttonWidth/2 - (buttonWidth/2 + knobSize), yCenter-buttonHeight/2, buttonWidth, buttonHeight);
+        modeBox.setBounds(xCenter-comboWidth - knobSize, yCenter - comboHeight/2, comboWidth, comboHeight);
+        temp1Dial.setBounds(xCenter-knobSize/2, yCenter - knobSize/2, knobSize, knobSize);
+        temp2Dial.setBounds(xCenter-knobSize/2 + knobSize, yCenter - knobSize/2, knobSize, knobSize);
+        stepsDial.setBounds(xCenter-knobSize/2 + (2 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        phintDial.setBounds(xCenter-knobSize/2 + (3 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        pwidthDial.setBounds(xCenter-knobSize/2 + (4 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        testButton.setBounds(xCenter-buttonWidth/2 + (buttonWidth/2 + 5*knobSize), yCenter-buttonHeight/2, buttonWidth, buttonHeight);
 
-        int xPos = (buttonArea.getWidth() - buttonWidth) / 2;
-        int yPos = (toolbarHeight - buttonHeight) / 2;
 
-        testButton.setBounds(xPos, yPos, buttonWidth, buttonHeight);
+
 
         if (documentView != nullptr)
             documentView->setBounds (0, toolbarHeight, getWidth(), getHeight() - toolbarHeight);
@@ -2623,8 +2729,25 @@ public:
 private:
     unique_ptr<Component> documentView;
     juce::TextButton testButton;
-    juce::TextButton smallButtons[2][2];
+
+    juce::Slider temp1Dial;
+    juce::Slider temp2Dial;
+    juce::Slider stepsDial;
+    juce::Slider phintDial;
+    juce::Slider pwidthDial;
+
+    juce::ComboBox modeBox;
+
+    ToolbarSliderStyle toolbarSliderStyle;
+    ButtonLookAndFeel buttonLookAndFeel;
+    ComboBoxLookAndFeel comboBoxLookAndFeel;
+
+
+
+
     EditorRenderer* mEditorRenderer;
+
+
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADemoPluginProcessorEditor)
