@@ -35,20 +35,28 @@ public:
 
     // read audio file to a vector of bytes
     bool read_audio_file_to_base64(const string& filePath, string& output) const {
-        std::ifstream file;
-        file.open(filePath, std::ios::binary);
-        if (!file.is_open()) {
+        std::ifstream file(filePath, std::ios::binary);
+
+        if (!file) {
             // Handle file opening error
+            DBG("Error: Failed to open file.");
             return false;
         }
 
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        file.close();
+        // get the file size
+        file.seekg(0, std::ios::end);
+        const std::streamsize fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
 
-        std::vector<unsigned char> bytes(buffer.str().begin(), buffer.str().end());
+        std::vector<char> buffer(fileSize);
+        if (!file.read(buffer.data(), fileSize)) {
+            std::cerr << "Failed to read file: " << filePath << std::endl;
+            return false;
+        }
 
+        std::vector<unsigned char> bytes(buffer.begin(), buffer.end());
         output = utility::conversions::to_base64(bytes);
+
         return true;
     }
 
