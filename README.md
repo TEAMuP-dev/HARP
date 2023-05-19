@@ -26,6 +26,16 @@ This should be a drop-in replacement for a regular libtorch build.
 
 To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`. 
 
+### REST SDK
+
+install `cpprestsdk` and `openssl`. 
+
+i'm having trouble linking to the right version of ssl, so i had to do this on mac to get it working: 
+```
+ cmake .. -DOPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@1.1/1.1.1t/ -DOPENSSL_LIBRARIES=/opt/homebrew/Cellar/openssl@1.1/1.1.1t
+ ```
+
+
 ### CMake
 #### Windows
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 

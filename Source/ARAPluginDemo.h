@@ -54,22 +54,11 @@
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <torch/script.h>
 
-#include "DeepModel.h"
+// #include "TorchModel.h"
+#include "WebModel.h"
 
 using std::unique_ptr;
 
-std::string size2string(torch::IntArrayRef size) {
-    std::stringstream ss;
-    ss << "(";
-    for (int i = 0; i < size.size(); i++) {
-        ss << size[i];
-        if (i < size.size() - 1) {
-            ss << ", ";
-        }
-    }
-    ss << ")";
-    return ss.str();
-}
 
 //==============================================================================
 class ARADemoPluginAudioModification  : public ARAAudioModification
@@ -95,7 +84,13 @@ public:
     // todo: might need to do this in thread
     void init() {
         DBG("loading model");
-        if (!mModel.load("/Users/hugo/projects/plugin_sandbox/reduceamp.pt")){ //change model here
+
+        // map<string, any> params {{"path", "/Users/hugo/projects/plugin_sandbox/reduceamp.pt"}};
+        map<string, any> params {
+            {"url", string("https://localhost:7860")},
+            {"api_name", string("/ez_vamp")}
+        } ;
+        if (!mModel.load(params)){ //change model here
             DBG("failed to load model");
         }
         else {
@@ -110,7 +105,7 @@ public:
     // processes the audio source 
     // todo: might need to do this in thread
     void process(ARAAudioSource* audioSource) {
-        if (!mModel.is_loaded())
+        if (!mModel.ready())
         {
             return;
         }
@@ -124,6 +119,8 @@ public:
         {
             auto numChannels = mAudioSourceReader->numChannels;
             auto numSamples = mAudioSourceReader->lengthInSamples;
+            auto sampleRate = audioSource->getSampleRate();
+            
 
             DBG("ARADemoPluginAudioModification:: audio source: " 
                 << audioSource->getName() 
@@ -138,28 +135,14 @@ public:
             mAudioSourceReader->read(mAudioBuffer.get(), 0, static_cast<int>(numSamples), 0, true, true);  
 
             // write input to file for debugging 
-            juce::File inputFile ("/Users/aldo/Documents/research/plugin_sandbox/input.wav");
-            saveAudioBufferToFile(inputFile);
+            // juce::File inputFile ("/Users/aldo/Documents/research/plugin_sandbox/input.wav");
+            // saveAudioBufferToFile(inputFile);
 
-            // build our IValue (mixdown to mono for now)
-            // TODO: support multichannel
-            IValue input = {
-                DeepModel::to_tensor(*mAudioBuffer).mean(0, true)
-            };
-            DBG("built input tensor with shape " << size2string(input.toTensor().sizes()));
-
-
-            // forward pass
-            auto output = mModel.forward({input}).toTensor();
-            DBG("got output tensor with shape " << size2string(output.sizes()));
-
-            // we're expecting audio out
-            DeepModel::to_buffer(output, *mAudioBuffer);
-            DBG("got output buffer with shape " << mAudioBuffer->getNumChannels() << " x " << mAudioBuffer->getNumSamples());
+            mModel.process(mAudioBuffer.get(), sampleRate);
 
             // write output to a file
-            juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");
-            saveAudioBufferToFile(outputFile);
+            // juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");
+            // saveAudioBufferToFile(outputFile);
         }
     }
 
@@ -169,65 +152,12 @@ public:
 
 
 private:
-    DeepModel mModel;
+    WebWave2Wave mModel;
 
     unique_ptr<ARAAudioSourceReader> mAudioSourceReader { nullptr };
     unique_ptr<juce::AudioBuffer<float>> mAudioBuffer { nullptr };
 
-    void saveAudioBufferToFile(const juce::File& outputFile)
-    {
-        if (mAudioBuffer == nullptr)
-        {
-            DBG("audio buffer is empty");
-            return;
-        }
 
-        juce::WavAudioFormat wavFormat;
-        juce::TemporaryFile tempFile(outputFile);
-        juce::File tempOutputFile = tempFile.getFile();
-        std::unique_ptr<juce::FileOutputStream> outputFileStream(tempOutputFile.createOutputStream());
-
-        if (outputFileStream != nullptr)
-        {
-            juce::AudioFormatWriter* writer = wavFormat.createWriterFor(outputFileStream.get(),
-                                                                        44100,
-                                                                        static_cast<unsigned int>(mAudioBuffer->getNumChannels()),
-                                                                        16,
-                                                                        {},
-                                                                        0);
-
-            if (writer != nullptr)
-            {
-                outputFileStream.release(); // The writer will take ownership of the output stream
-                bool success = writer->writeFromAudioSampleBuffer(*mAudioBuffer, 0, mAudioBuffer->getNumSamples());
-
-                if (success)
-                {
-                    delete writer; // Release the writer before replacing the file
-                    if (tempFile.overwriteTargetFileWithTemporary())
-                    {
-                        DBG("Audio buffer saved to file.");
-                    }
-                    else
-                    {
-                        DBG("Failed to overwrite target file with temporary file.");
-                    }
-                }
-                else
-                {
-                    DBG("Failed to write audio buffer to file.");
-                }
-            }
-            else
-            {
-                DBG("Failed to create audio format writer.");
-            }
-        }
-        else
-        {
-            DBG("Failed to create output file stream.");
-        }
-    }
 
 };
 
