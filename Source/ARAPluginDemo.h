@@ -87,8 +87,8 @@ public:
 
         // map<string, any> params {{"path", "/Users/hugo/projects/plugin_sandbox/reduceamp.pt"}};
         map<string, any> params {
-            {"url", string("https://localhost:7860")},
-            {"api_name", string("/ez_vamp")}
+            {"url", string("http://127.0.0.1:7860")},
+            {"api_name", string("/api/predict/")}
         } ;
         if (!mModel.load(params)){ //change model here
             DBG("failed to load model");

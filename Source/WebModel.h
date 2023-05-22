@@ -64,24 +64,44 @@ public:
     bool process_bytes(const string& audioWavBytes, const string& outputFileName) const {
         // Create an HTTP client object
         try {
-            http_client client(U(m_url));
+
+            http_client_config config;
+            config.set_validate_certificates(false);
+
+            http_client client(U(m_url+m_api_name), config);
             // DBG("Sending request to " + m_url + m_api_name);
+
+            int file_size = audioWavBytes.size();
 
             // Create a JSON object with the request data
             web::json::value requestData;
             requestData[U("data")] = web::json::value::array({ web::json::value::object({
-                { U("name"), web::json::value::string(U("audio.wav")) },
-                { U("data"), web::json::value::string(audioWavBytes) }
-            }) });
+                { U("fn_index"), web::json::value::number(4) },
+                { U("data"), web::json::value::object({
+                        {U("orig_name"), web::json::value::string("audio.wav")},
+                        {U("data"), web::json::value::string(audioWavBytes)},
+                        {U("is_file"), web::json::value::boolean(false)},
+                        {U("size"), web::json::value::number(file_size)},
+                    }),
+                },
+                }) 
+            });
 
             // Create the HTTP request and set the request URI
             http_request request(methods::POST);
-            request.set_request_uri(m_api_name);
+            // request.set_request_uri(m_api_name);
+            request.headers().set_content_type(U("application/json"));
             request.set_body(requestData);
 
             // Send the HTTP request and wait for the response
             pplx::task<http_response> response = client.request(request);
             response.wait();
+            
+            if (response.get().status_code() != 200) {
+                DBG("Error: " + std::to_string(response.get().status_code()));
+                DBG("Error: " + response.get().extract_utf8string().get());
+                return false;
+            }
 
             // Save the response data to a file
             std::ofstream outputFile(outputFileName);
@@ -120,6 +140,7 @@ public:
             DBG("Failed to read audio file to base64.");
             return;
         }
+        DBG("Read audio file to base64. Size: " + std::to_string(audioWavBytes.size()) + " bytes.");
 
         // process the bytes
         juce::File tempOutputFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("output.wav");
@@ -127,6 +148,7 @@ public:
             DBG("Failed to process bytes.");
             return;
         }
+
 
         // read the output file to a buffer
         // TODO: we're gonna have to resample here? 
