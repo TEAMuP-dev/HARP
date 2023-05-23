@@ -60,7 +60,8 @@ public:
     //! forward pass 
     IValue forward(const std::vector<IValue> &inputs) const {
         return m_model->forward(inputs);
-   }
+   }    
+ 
 
     static torch::Tensor to_tensor(const juce::AudioBuffer<float> &buffer) {
         torch::TensorOptions tensorOptions = torch::TensorOptions()
