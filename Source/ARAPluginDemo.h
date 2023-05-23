@@ -49,6 +49,7 @@
 
 #pragma once
 
+#include <any>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
 #include <ARA_Library/PlugIn/ARAPlug.h>
@@ -116,7 +117,7 @@ public:
 
     // processes the audio source 
     // todo: might need to do this in thread
-    void process() {
+    void process(std::map<std::string, std::any> &params) {
         if (!mModel.is_loaded())
         {
             return;
@@ -154,7 +155,7 @@ public:
 
 
             // forward pass
-            auto output = mModel.forward({input}).toTensor();
+            auto output = mModel.forward({input}, params).toTensor();
             DBG("got output tensor with shape " << size2string(output.sizes()));
 
             // we're expecting audio out
@@ -745,24 +746,14 @@ public:
         asyncConfigCallback.startConfigure();
     }
 
-    void executeProcess(juce::String modeName, double temp1, double temp2, int phint, int pwidth) 
+    void executeProcess(std::map<std::string, std::any> &params) 
     {
         DBG("EditorRenderer::executeProcess executing process");
-        DBG("mode: " 
-            << modeName
-            << "  temp1: "
-            << juce::String(temp1)
-            << " temp2: "
-            << juce::String(temp2)
-            << " phint: "
-            << juce::String(phint)
-            << " pwidth: "
-            <<juce::String(pwidth));
 
-        auto myCallback = [](ARAPlaybackRegion* playbackRegion) -> bool {
+        auto myCallback = [&params](ARAPlaybackRegion* playbackRegion) -> bool {
             auto audioModification = playbackRegion->getAudioModification<ARADemoPluginAudioModification>();
             std::cout << "EditorRenderer::processing playbackRegion " << audioModification->getSourceName() << std::endl;
-            audioModification->process();
+            audioModification->process(params);
             return true;
         };
 
@@ -2648,11 +2639,15 @@ public:
         if (button == &testButton)
         {
             DBG("ARADemoPluginProcessorEditor::buttonClicked button listener activated");
-            mEditorRenderer->executeProcess(modeBox.getText(), 
-                                            temp1Dial.getValue(),
-                                            temp2Dial.getValue(),
-                                            phintDial.getValue(),
-                                            pwidthDial.getValue());
+            
+            std::map<std::string, std::any> params = {
+                {"modeMode", modeBox.getText()},
+                {"temp1", temp1Dial.getValue()},
+                {"temp2", temp2Dial.getValue()},
+                {"phint", phintDial.getValue()},
+                {"pwidth", pwidthDial.getValue()}
+            };
+            mEditorRenderer->executeProcess(params);
         }
     }
 

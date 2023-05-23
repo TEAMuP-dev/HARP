@@ -38,9 +38,27 @@ public:
    bool is_loaded() const { return m_loaded; }
 
    //! forward pass 
-   IValue forward(const std::vector<IValue> &inputs) const {
+   IValue forward(const std::vector<IValue> &inputs, std::map<std::string, std::any> &params) const {
+        juce::String modeName = std::any_cast<juce::String>(params["modelMode"]);
+        double temp1 = std::any_cast<double>(params["temp1"]);
+        double temp2 = std::any_cast<double>(params["temp2"]);
+        int phint = std::any_cast<int>(params["phint"]);
+        int pwidth = std::any_cast<int>(params["pwidth"]);
+
+        DBG("mode: " 
+            << modeName
+            << "  temp1: "
+            << juce::String(temp1)
+            << " temp2: "
+            << juce::String(temp2)
+            << " phint: "
+            << juce::String(phint)
+            << " pwidth: "
+            <<juce::String(pwidth));
+        
         return m_model->forward(inputs);
-   }
+   }    
+ 
 
     static torch::Tensor to_tensor(const juce::AudioBuffer<float> &buffer) {
         torch::TensorOptions tensorOptions = torch::TensorOptions()
