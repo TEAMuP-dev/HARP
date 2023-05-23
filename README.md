@@ -26,15 +26,16 @@ This should be a drop-in replacement for a regular libtorch build.
 
 To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`. 
 
-### REST SDK
+### Setting up PyBind
 
-install `cpprestsdk` and `openssl`. 
+1. make a clean python environment using conda
+2. activate that python environment before building
+3. pip install `gradio-client` in that environment
 
-i'm having trouble linking to the right version of ssl, so i had to do this on mac to get it working: 
+call cmake: 
 ```
- cmake .. -DOPENSSL_ROOT_DIR=/opt/homebrew/Cellar/openssl@1.1/1.1.1t/ -DOPENSSL_LIBRARIES=/opt/homebrew/Cellar/openssl@1.1/1.1.1t
- ```
-
+cmake -DPYTHON_EXECUTABLE=$(python3 -c "import sys; print(sys.executable)") ..
+```
 
 ### CMake
 #### Windows

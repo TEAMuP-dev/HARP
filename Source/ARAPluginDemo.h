@@ -138,7 +138,7 @@ public:
             // juce::File inputFile ("/Users/aldo/Documents/research/plugin_sandbox/input.wav");
             // saveAudioBufferToFile(inputFile);
 
-            mModel.process(mAudioBuffer.get(), sampleRate);
+            mModel.process(mAudioBuffer.get(), sampleRate, {});
 
             // write output to a file
             // juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");

@@ -90,21 +90,42 @@ protected:
     bool load_buffer_from_file(
         const juce::File& inputFile,
         juce::AudioBuffer<float> &buffer,
-        int& sampleRate
+        int targetSampleRate
     ) const {
         juce::WavAudioFormat wavFormat;
-        auto inputStream = inputFile.createInputStream();
-        std::unique_ptr<juce::AudioFormatReader> reader(wavFormat.createReaderFor(inputStream.get(), true));
 
+        // NOTE: the input stream will be destroyed by the AudioFormatReader. 
+        auto *reader = wavFormat.createReaderFor(
+                new juce::FileInputStream(inputFile), true
+        );
         if (reader == nullptr)
         {
             DBG("Failed to create audio format reader.");
             return false;
         }
+        DBG("Loaded audio file with sample rate: " + std::to_string(reader->sampleRate));
 
-        sampleRate = reader->sampleRate;
-        buffer.setSize(reader->numChannels, reader->lengthInSamples);
-        reader->read(&buffer, 0, reader->lengthInSamples, 0, true, true);
+        auto *readerSource = new juce::AudioFormatReaderSource(reader, true);
+        auto resamplingSource = std::make_unique<juce::ResamplingAudioSource>(
+                readerSource, true, 2
+        );
+
+        double resamplingRatio = static_cast<double>(targetSampleRate) / static_cast<double>(reader->sampleRate);
+        resamplingSource->setResamplingRatio(resamplingRatio);
+        resamplingSource->prepareToPlay(reader->lengthInSamples, reader->sampleRate);
+        DBG("Resampling ratio: " + std::to_string(resamplingRatio));
+
+        // resize the buffer to account for resampling
+        int resampledBufferLength = static_cast<int>(
+            static_cast<double>(reader->lengthInSamples) 
+            * resamplingRatio
+        );
+        DBG("Resampled buffer length: " + std::to_string(resampledBufferLength));
+
+        DBG("resizing buffer to " + std::to_string(reader->numChannels) + " channels and " + std::to_string(resampledBufferLength) + " samples");
+        buffer.setSize(reader->numChannels, resampledBufferLength);
+
+        resamplingSource->getNextAudioBlock(juce::AudioSourceChannelInfo(buffer));
 
         return true;
     }
@@ -113,5 +134,10 @@ public:
 
     // process a buffer of audio data with the model. 
     // data should be written to the bufferToProcess
-    virtual void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate) const = 0;
+    // TODO: buffer should be pass by ref
+    virtual void process(
+        juce::AudioBuffer<float> *bufferToProcess, 
+        int sampleRate,
+        const map<string, any> &kwargs
+    ) const = 0;
 };

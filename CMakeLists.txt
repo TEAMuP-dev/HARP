@@ -30,22 +30,8 @@ else()
 
 endif()
 
-# for huggingface requests: cpprestsdk
-find_package(OpenSSL REQUIRED)
-find_package(cpprestsdk REQUIRED)
+add_subdirectory(pybind11)
 
-IF (OPENSSL_FOUND)
-    include_directories(${OPENSSL_INCLUDE_DIR})
-    list(APPEND LIB_LIST ${OPENSSL_LIBRARIES})
-    message(STATUS "OpenSSL Version: ${OPENSSL_VERSION} ${OPENSSL_INCLUDE_DIR} ${OPENSSL_LIBRARIES}")
-ELSE() # Handle Apple + homebrew
-    message(STATUS "OPENSSL not found")
-    set(OPENSSL_ROOT_DIR /opt/homebrew/Cellar/openssl@3/3.1.0)
-    find_package(OpenSSL REQUIRED)
-    #set(OPENSSL_INCLUDE_DIR ${OPEN_SSL_ROOT_DIR}/include)
-    #set(OPENSSL_LIBRARY_DIRS ${OPEN_SSL_ROOT_DIR}/lib)
-    message(STATUS "!! Version: ${OPENSSL_VERSION} ${OPENSSL_INCLUDE_DIR} ${OPENSSL_LIBRARIES}")
-ENDIF()
 
 
 add_subdirectory(tracktion_engine/modules)
@@ -132,8 +118,7 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_recommended_warning_flags
         ${TORCH_LIBRARIES}
 
-        cpprestsdk::cpprest
-        ${OPENSSL_LIBRARIES}
+        pybind11::embed
         )
 # set_property(TARGET AudioPluginExampleCMAKE64 PROPERTY CXX_STANDARD 17)
 

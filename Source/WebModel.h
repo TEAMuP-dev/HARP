@@ -1,15 +1,14 @@
 #pragma once 
 
 #include <fstream>
-#include <cpprest/http_client.h>
-#include <cpprest/filestream.h>
-// #include <cpprest/base64.h>
 
-using namespace web::http;
-using namespace web::http::client;
+
+#define PYBIND11_ASSERT_GIL_HELD_INCREF_DECREF 1
 
 #include "Model.h"
-
+#include <pybind11/embed.h>
+namespace py = pybind11;
+using namespace pybind11::literals;
 
 class WebModel : public Model
 {
@@ -33,88 +32,6 @@ public:
         return m_loaded;
     }
 
-    // read audio file to a vector of bytes
-    bool read_audio_file_to_base64(const string& filePath, string& output) const {
-        std::ifstream file(filePath, std::ios::binary);
-
-        if (!file) {
-            // Handle file opening error
-            DBG("Error: Failed to open file.");
-            return false;
-        }
-
-        // get the file size
-        file.seekg(0, std::ios::end);
-        const std::streamsize fileSize = file.tellg();
-        file.seekg(0, std::ios::beg);
-
-        std::vector<char> buffer(fileSize);
-        if (!file.read(buffer.data(), fileSize)) {
-            std::cerr << "Failed to read file: " << filePath << std::endl;
-            return false;
-        }
-
-        std::vector<unsigned char> bytes(buffer.begin(), buffer.end());
-        output = utility::conversions::to_base64(bytes);
-
-        return true;
-    }
-
-
-    bool process_bytes(const string& audioWavBytes, const string& outputFileName) const {
-        // Create an HTTP client object
-        try {
-
-            http_client_config config;
-            config.set_validate_certificates(false);
-
-            http_client client(U(m_url+m_api_name), config);
-            // DBG("Sending request to " + m_url + m_api_name);
-
-            int file_size = audioWavBytes.size();
-
-            // Create a JSON object with the request data
-            web::json::value requestData;
-            requestData[U("data")] = web::json::value::array({ web::json::value::object({
-                { U("fn_index"), web::json::value::number(4) },
-                { U("data"), web::json::value::object({
-                        {U("orig_name"), web::json::value::string("audio.wav")},
-                        {U("data"), web::json::value::string(audioWavBytes)},
-                        {U("is_file"), web::json::value::boolean(false)},
-                        {U("size"), web::json::value::number(file_size)},
-                    }),
-                },
-                }) 
-            });
-
-            // Create the HTTP request and set the request URI
-            http_request request(methods::POST);
-            // request.set_request_uri(m_api_name);
-            request.headers().set_content_type(U("application/json"));
-            request.set_body(requestData);
-
-            // Send the HTTP request and wait for the response
-            pplx::task<http_response> response = client.request(request);
-            response.wait();
-            
-            if (response.get().status_code() != 200) {
-                DBG("Error: " + std::to_string(response.get().status_code()));
-                DBG("Error: " + response.get().extract_utf8string().get());
-                return false;
-            }
-
-            // Save the response data to a file
-            std::ofstream outputFile(outputFileName);
-            outputFile << response.get().extract_utf8string().get();
-            outputFile.close();
-            return true;
-        } catch (const std::exception& e) {
-            DBG("Error: " + string(e.what()));
-            return false;
-        }
-    }
-
-
 private:
     string m_url {};
     string m_api_name {};
@@ -126,7 +43,11 @@ class WebWave2Wave : public WebModel, public Wave2Wave
 {
 public:
 
-    virtual void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate) const override {
+    virtual void process(
+        juce::AudioBuffer<float> *bufferToProcess, 
+        int sampleRate, 
+        const map<string, any> &kwargs
+    ) const override {
         // save the buffer to file
         juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("input.wav");
         if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
@@ -134,33 +55,50 @@ public:
             return;
         }
 
-        // read the file to a vector of bytes
-        string audioWavBytes;
-        if (!read_audio_file_to_base64(tempFile.getFullPathName().toStdString(), audioWavBytes)) {
-            DBG("Failed to read audio file to base64.");
-            return;
-        }
-        DBG("Read audio file to base64. Size: " + std::to_string(audioWavBytes.size()) + " bytes.");
-
-        // process the bytes
+        // a tarrget output file
         juce::File tempOutputFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("output.wav");
-        if (!process_bytes(audioWavBytes, tempOutputFile.getFullPathName().toStdString())){
-            DBG("Failed to process bytes.");
-            return;
+
+        // run the python script
+        py::scoped_interpreter guard{}; 
+
+        // Create a Python list to hold the command line arguments
+        // Create a Python dictionary to hold the keyworded arguments
+        pybind11::dict pykwargs;
+        pykwargs["audio_path"] = tempFile.getFullPathName().toStdString();
+        pykwargs["init_temp"] = 1.0;
+        pykwargs["final_temp"] = 1.0;
+        pykwargs["periodic_hint_freq"] = 7;
+        pykwargs["periodic_hint_width"] = 1;
+        pykwargs["num_steps"] = 1;
+
+
+
+        try {
+            // your pybind11 code
+            py::object Client = py::module_::import("gradio_client").attr("Client");
+            py::object client = Client(py::str("http://localhost:7860/"));
+            DBG("Client created");
+
+            string output_audio_path = client.attr("predict")(
+                *(pykwargs.attr("values")()),
+                "api_name"_a="/ez_vamp"
+            ).cast<string>();
+            py::print(output_audio_path);
+
+            DBG("Predicted");
+
+            // read the output file to a buffer
+            // TODO: the sample rate should not be the incoming sample rate, but rather the 
+            // output sample rate of the daw? 
+            load_buffer_from_file(juce::File(output_audio_path), *bufferToProcess, sampleRate);
+
+            // delete the temp input file
+            tempFile.deleteFile();
+            tempOutputFile.deleteFile();
+        } catch (const py::error_already_set& e) {
+            DBG("Exception: " << e.what());
+            // Additional error handling or logging if needed
         }
-
-
-        // read the output file to a buffer
-        // TODO: we're gonna have to resample here? 
-        int newSampleRate;
-        load_buffer_from_file(tempOutputFile, *bufferToProcess, newSampleRate);
-        jassert (newSampleRate == sampleRate);
-
-        // delete the temp input file
-        tempFile.deleteFile();
-        tempOutputFile.deleteFile();
-
-
         return;
     }
 
