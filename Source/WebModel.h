@@ -64,12 +64,18 @@ public:
         // Create a Python list to hold the command line arguments
         // Create a Python dictionary to hold the keyworded arguments
         pybind11::dict pykwargs;
-        pykwargs["audio_path"] = tempFile.getFullPathName().toStdString();
-        pykwargs["init_temp"] = 1.0;
-        pykwargs["final_temp"] = 1.0;
-        pykwargs["periodic_hint_freq"] = 7;
-        pykwargs["periodic_hint_width"] = 1;
-        pykwargs["num_steps"] = 1;
+        try {
+            pykwargs["audio_path"] = tempFile.getFullPathName().toStdString();
+            pykwargs["init_temp"] = any_cast<double>(kwargs.at("temp1"));
+            pykwargs["final_temp"] = any_cast<double>(kwargs.at("temp2"));
+            pykwargs["periodic_hint_freq"] = (int)any_cast<double>(kwargs.at("phint"));
+            pykwargs["periodic_hint_width"] = (int)any_cast<double>(kwargs.at("pwidth"));
+            pykwargs["num_steps"] = 36;
+            pykwargs["stretch_factor"] = 1;
+        } catch (const std::runtime_error& e) {
+            DBG("Exception: " << e.what());
+            return;
+        }
 
 
 

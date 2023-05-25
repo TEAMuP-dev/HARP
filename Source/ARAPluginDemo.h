@@ -53,7 +53,8 @@
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
 #include <ARA_Library/PlugIn/ARAPlug.h>
-#include <torch/script.h>
+
+#include "juce_audio_basics/juce_audio_basics.h"
 
 // #include "TorchModel.h"
 #include "WebModel.h"
@@ -139,7 +140,10 @@ public:
 
             // reading into audio buffer
             mAudioSourceReader->read(mAudioBuffer.get(), 0, static_cast<int>(numSamples), 0, true, true);  
-            mModel.process(mAudioBuffer.get(), sampleRate, {});
+            mModel.process(mAudioBuffer.get(), sampleRate, params);
+
+            // connect the modified buffer to the source
+
 
 
             mIsModified = true;
@@ -163,7 +167,7 @@ private:
     unique_ptr<ARAAudioSourceReader> mAudioSourceReader { nullptr };
     unique_ptr<juce::AudioBuffer<float>> mAudioBuffer { nullptr };
 
-
+    // juce::MemoryAudioSource mModifiedSource;
 
 };
 
@@ -415,7 +419,6 @@ public:
         numChannels = numChannelsIn;
         sampleRate = sampleRateIn;
         maximumSamplesPerBlock = maximumSamplesPerBlockIn;
-        tempBuffer.reset (new AudioBuffer<float> (numChannels, maximumSamplesPerBlock));
 
         // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ", sampleRate: " << sampleRate << ", maximumSamplesPerBlock: " << maximumSamplesPerBlock);
 
@@ -452,6 +455,10 @@ public:
                 }
             }
         }
+
+
+
+
     }
 
 
@@ -469,8 +476,10 @@ public:
     {
         const auto lock = lockInterface.getProcessingLock();
 
-        if (! lock.isLocked())
+        if (! lock.isLocked()) {
+            DBG("PlaybackRenderer::processBlock could not acquire processing lock");
             return true;
+        }
 
         const auto numSamples = buffer.getNumSamples();
         jassert (numSamples <= maximumSamplesPerBlock);
@@ -623,13 +632,21 @@ public:
 private:
     //==============================================================================
     ProcessingLockInterface& lockInterface;
+
     SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
     std::map<ARAAudioSource*, PossiblyBufferedReader> audioSourceReaders;
+
     bool useBufferedAudioSourceReader = true;
+
     int numChannels = 2;
     double sampleRate = 48000.0;
     int maximumSamplesPerBlock = 128;
+
     unique_ptr<AudioBuffer<float>> tempBuffer;
+
+    unique_ptr<juce::ResamplingAudioSource> resampler;
+    unique_ptr<juce::MemoryAudioSource> memorySource;
+
 };
 
 class EditorRenderer  : public ARAEditorRenderer,
