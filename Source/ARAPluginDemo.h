@@ -62,8 +62,6 @@
 
 using std::unique_ptr;
 
-
-
 class ARADemoPluginAudioModification  : public ARAAudioModification
 {
 public:
@@ -422,7 +420,7 @@ public:
 
         // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ", sampleRate: " << sampleRate << ", maximumSamplesPerBlock: " << maximumSamplesPerBlock);
 
-        useBufferedAudioSourceReader = alwaysNonRealtime == AlwaysNonRealtime::no;
+        bool useBufferedAudioSourceReader = alwaysNonRealtime == AlwaysNonRealtime::no;
 
         // DBG("PlaybackRenderer::prepareToPlay using buffered audio source reader: " << (int)useBufferedAudioSourceReader);
 
@@ -432,41 +430,56 @@ public:
 
             // DBG("PlaybackRenderer::prepareToPlay audio source is " << audioSource->getName());
 
-            if (audioSourceReaders.find (audioSource) == audioSourceReaders.end())
+            if (resamplingSources.find (audioSource) == resamplingSources.end())
             {
-                auto reader = std::make_unique<ARAAudioSourceReader> (audioSource);
 
-                // DBG("PlaybackRenderer::prepareToPlay created reader for " << audioSource->getName());
-
+                std::unique_ptr<juce::AudioFormatReaderSource> readerSource {nullptr};
+                
                 if (! useBufferedAudioSourceReader)
                 {
-                    audioSourceReaders.emplace (audioSource,
-                                                PossiblyBufferedReader { std::move (reader) });
+                    readerSource = std::make_unique<juce::AudioFormatReaderSource>(
+                        new ARAAudioSourceReader (audioSource),
+                        true
+                    );
+
+
                 }
                 else
                 {
                     const auto readAheadSize = jmax (4 * maximumSamplesPerBlock,
                                                      roundToInt (2.0 * sampleRate));
-                    // DBG("PlaybackRenderer::prepareToPlay read ahead size: " << readAheadSize);
-                    audioSourceReaders.emplace (audioSource,
-                                                PossiblyBufferedReader { std::make_unique<BufferingAudioReader> (reader.release(),
-                                                                                                                 *sharedTimesliceThread,
-                                                                                                                 readAheadSize) });
+
+                    readerSource = std::make_unique<juce::AudioFormatReaderSource>(
+                            new BufferingAudioReader(new ARAAudioSourceReader (audioSource),
+                                    *sharedTimesliceThread,
+                                    readAheadSize),
+                            true
+                    );
                 }
+
+                auto resamplingSource = std::make_unique<ResamplingAudioSource>(
+                    readerSource.get(), false, numChannels
+                );
+
+                resamplingSource->setResamplingRatio (sampleRate / audioSource->getSampleRate());
+
+                readerSource->prepareToPlay(maximumSamplesPerBlock, sampleRate);
+                resamplingSource->prepareToPlay (maximumSamplesPerBlock, sampleRate);
+
+                positionableSources.emplace(audioSource, std::move(readerSource));
+                resamplingSources.emplace(audioSource, std::move(resamplingSource));
             }
         }
 
-
-
-
     }
-
 
 
     void releaseResources() override
     {
         // DBG("PlaybackRenderer::releaseResources releasing resources");
-        audioSourceReaders.clear();
+        resamplingSources.clear();
+        positionableSources.clear();
+
         tempBuffer.reset();
     }
 
@@ -484,7 +497,7 @@ public:
         const auto numSamples = buffer.getNumSamples();
         jassert (numSamples <= maximumSamplesPerBlock);
         jassert (numChannels == buffer.getNumChannels());
-        jassert (realtime == AudioProcessor::Realtime::no || useBufferedAudioSourceReader);
+        // jassert (realtime == AudioProcessor::Realtime::no || useBufferedAudioSourceReader); TODO: bring me back? 
         const auto timeInSamples = positionInfo.getTimeInSamples().orFallback (0);
         const auto isPlaying = positionInfo.getIsPlaying();
 
@@ -524,29 +537,30 @@ public:
                     continue;
                 }
                 // ! -----------------------------------------------------------------------------------------
-                // Get the audio source for the region and find the reader for that source.
-                // This simplified example code only produces audio if sample rate and channel count match -
-                // a robust plug-in would need to do conversion, see ARA SDK documentation.
-                const auto audioSource = playbackRegion->getAudioModification()->getAudioSource();
-                const auto readerIt = audioSourceReaders.find (audioSource);
+    
+                // find our resampled source
+                const auto resamplingSourceIt = resamplingSources.find(
+                    playbackRegion->getAudioModification()->getAudioSource()
+                );
+                auto& resamplingSource = resamplingSourceIt->second;
 
-                // TODO: need to resample herre. 
-                if (std::make_tuple (audioSource->getChannelCount(), audioSource->getSampleRate()) != std::make_tuple (numChannels, sampleRate)
-                    || (readerIt == audioSourceReaders.end()))
-                {
-                    DBG("PlaybackRenderer::processBlock mismatched channel count or sample rate, or no reader found");
-                    success = false;
-                    continue;
-                }
-                // ! -----------------------------------------------------------------------------------------
+                const auto positionableSourceIt = positionableSources.find(
+                    playbackRegion->getAudioModification()->getAudioSource()
+                );
+                auto& positionableSource = positionableSourceIt->second;
 
-                auto& reader = readerIt->second;
-                reader.setReadTimeout (realtime == AudioProcessor::Realtime::no ? 100 : 0);
+
+                // TODO: the buffering audio reader should have a time out. dont' think it currently has one
+                // if we're in realtime mode, timeout should be 0. else, can be 100 ms
+
+                // calculate buffer offsets
 
                 // Calculate buffer offsets.
                 const int numSamplesToRead = (int) renderRange.getLength();
                 const int startInBuffer = (int) (renderRange.getStart() - blockRange.getStart());
                 auto startInSource = renderRange.getStart() + modificationSampleOffset;
+
+                positionableSource->setNextReadPosition (startInSource);
                 
                 // Read samples:
                 // first region can write directly into output, later regions need to use local buffer.
@@ -584,12 +598,18 @@ public:
                 else 
                 { // buffer isn't ready, read from original audio source
                     DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
-                    if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
-                    {
-                        DBG("reader failed to read");
-                        success = false;
-                        continue;
-                    }
+                    
+                    resamplingSource->getNextAudioBlock(
+                        juce::AudioSourceChannelInfo(readBuffer)
+                    );
+
+
+                //     if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                //     {
+                //         DBG("reader failed to read");
+                //         success = false;
+                //         continue;
+                //     }
                 }
                 
 
@@ -634,18 +654,14 @@ private:
     ProcessingLockInterface& lockInterface;
 
     SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
-    std::map<ARAAudioSource*, PossiblyBufferedReader> audioSourceReaders;
-
-    bool useBufferedAudioSourceReader = true;
+    std::map<ARAAudioSource*, unique_ptr<juce::ResamplingAudioSource>> resamplingSources;
+    std::map<ARAAudioSource*, unique_ptr<AudioFormatReaderSource>> positionableSources;
 
     int numChannels = 2;
     double sampleRate = 48000.0;
     int maximumSamplesPerBlock = 128;
 
     unique_ptr<AudioBuffer<float>> tempBuffer;
-
-    unique_ptr<juce::ResamplingAudioSource> resampler;
-    unique_ptr<juce::MemoryAudioSource> memorySource;
 
 };
 
@@ -2486,7 +2502,6 @@ private:
     int viewportHeightOffset = 0;
 };
 
-
 class ARADemoPluginProcessorEditor  : public AudioProcessorEditor,
                                       public AudioProcessorEditorARAExtension,
                                       public Button::Listener,
@@ -2520,7 +2535,7 @@ public:
         temp1Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
         temp1Dial.setTextValueSuffix ("t0: ");
         temp1Dial.setRange(0.0, 2.0, 0.01);
-        temp1Dial.setValue(1.0);
+        temp1Dial.setValue(0.9);
         temp1Dial.addListener(this);
         addAndMakeVisible(temp1Dial);
 
@@ -2529,7 +2544,7 @@ public:
         temp2Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
         temp2Dial.setTextValueSuffix ("t1: ");
         temp2Dial.setRange(0.0, 2.0, 0.01);
-        temp2Dial.setValue(1.0);
+        temp2Dial.setValue(1.2);
         temp2Dial.addListener(this);
         addAndMakeVisible(temp2Dial);
 
@@ -2538,7 +2553,7 @@ public:
         stepsDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
         stepsDial.setTextValueSuffix ("steps: ");
         stepsDial.setRange(12, 64, 1);
-        stepsDial.setValue(26);
+        stepsDial.setValue(36);
         stepsDial.addListener(this);
         addAndMakeVisible(stepsDial);
 
@@ -2546,8 +2561,8 @@ public:
         phintDial.setSliderStyle(Slider::Rotary);
         phintDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
         phintDial.setTextValueSuffix ("phint: ");
-        phintDial.setRange(1, 64, 1);
-        phintDial.setValue(32);
+        phintDial.setRange(1, 256, 1);
+        phintDial.setValue(13);
         phintDial.addListener(this);
         addAndMakeVisible(phintDial);
 
@@ -2555,8 +2570,8 @@ public:
         pwidthDial.setSliderStyle(Slider::Rotary);
         pwidthDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
         pwidthDial.setTextValueSuffix ("pwidth: ");
-        pwidthDial.setRange(1, 16, 1);
-        pwidthDial.setValue(8);
+        pwidthDial.setRange(0, 16, 1);
+        pwidthDial.setValue(0);
         pwidthDial.addListener(this);
         addAndMakeVisible(pwidthDial);
 

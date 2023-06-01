@@ -41,7 +41,23 @@ private:
 
 class WebWave2Wave : public WebModel, public Wave2Wave
 {
+private: 
+    py::object Client;
+
 public:
+
+    WebWave2Wave() { // TODO: should be a singleton
+        // initialize the python interpreter
+        py::initialize_interpreter();
+        // your pybind11 code
+        DBG("Importing client");
+        Client = py::module_::import("gradio_client").attr("Client");
+    }
+
+    ~WebWave2Wave() {
+        // finalize the python interpreter
+        py::finalize_interpreter();
+    }
 
     virtual void process(
         juce::AudioBuffer<float> *bufferToProcess, 
@@ -58,40 +74,44 @@ public:
         // a tarrget output file
         juce::File tempOutputFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("output.wav");
 
-        // run the python script
-        py::scoped_interpreter guard{}; 
 
         // Create a Python list to hold the command line arguments
         // Create a Python dictionary to hold the keyworded arguments
         pybind11::dict pykwargs;
         try {
+            pykwargs["use_coarse2fine"] = true;
             pykwargs["audio_path"] = tempFile.getFullPathName().toStdString();
+            pykwargs["input_pitch_shift_semitones"] = 0;
+            pykwargs["random_mask_intensity"] = 1.0;
+            pykwargs["periodic_hint_freq"] = (int)any_cast<double>(kwargs.at("phint"));
+            pykwargs["periodic_hint_width"] = 1;
+            pykwargs["onset_mask_width"] = (int)any_cast<double>(kwargs.at("pwidth"));
+            pykwargs["ncc"] = 0;
+            pykwargs["stretch_factor"] = 1.0;
+            pykwargs["prefix_hint"] = 0.0;
+            pykwargs["suffix_hint"] = 0.0;
             pykwargs["init_temp"] = any_cast<double>(kwargs.at("temp1"));
             pykwargs["final_temp"] = any_cast<double>(kwargs.at("temp2"));
-            pykwargs["periodic_hint_freq"] = (int)any_cast<double>(kwargs.at("phint"));
-            pykwargs["periodic_hint_width"] = (int)any_cast<double>(kwargs.at("pwidth"));
             pykwargs["num_steps"] = 36;
-            pykwargs["stretch_factor"] = 1;
+            pykwargs["mask_dropout"] = 0.0;
         } catch (const std::runtime_error& e) {
             DBG("Exception: " << e.what());
             return;
         }
 
-
-
         try {
-            // your pybind11 code
-            py::object Client = py::module_::import("gradio_client").attr("Client");
+            DBG("creating client");
             py::object client = Client(py::str("http://localhost:7860/"));
-            DBG("Client created");
+            DBG("created client");
 
+            DBG("predicting");
             string output_audio_path = client.attr("predict")(
                 *(pykwargs.attr("values")()),
-                "api_name"_a="/ez_vamp"
+                "api_name"_a="/vamp"
             ).cast<string>();
             py::print(output_audio_path);
-
             DBG("Predicted");
+
 
             // read the output file to a buffer
             // TODO: the sample rate should not be the incoming sample rate, but rather the 
@@ -109,3 +129,4 @@ public:
     }
 
 };
+ 
