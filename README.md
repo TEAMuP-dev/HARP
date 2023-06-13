@@ -26,6 +26,17 @@ This should be a drop-in replacement for a regular libtorch build.
 
 To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`. 
 
+### Setting up PyBind
+
+1. make a clean python environment using conda
+2. activate that python environment before building
+3. pip install `gradio-client` in that environment
+
+call cmake: 
+```
+cmake -DPYTHON_EXECUTABLE=$(python3 -c "import sys; print(sys.executable)") ..
+```
+
 ### CMake
 #### Windows
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10. 

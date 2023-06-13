@@ -3,6 +3,10 @@ set(PROJECT_NAME "tensor-juce-ARA")
 project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...")
@@ -25,6 +29,9 @@ else()
     message(FATAL_ERROR "Unsupported platform.")
 
 endif()
+
+add_subdirectory(pybind11)
+
 
 
 add_subdirectory(tracktion_engine/modules)
@@ -66,7 +73,9 @@ juce_generate_juce_header(AudioPluginExampleCMAKE64)
 target_sources(AudioPluginExampleCMAKE64
     PRIVATE
         Source/Main.cpp
-        Source/DeepModel.h
+        Source/TorchModel.h
+        Source/WebModel.h
+        Source/Model.h
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -79,7 +88,7 @@ target_sources(AudioPluginExampleCMAKE64
 target_compile_definitions(AudioPluginExampleCMAKE64
     PUBLIC
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
-        JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
+        JUCE_USE_CURL=1    # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 target_link_libraries(AudioPluginExampleCMAKE64
@@ -108,6 +117,8 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
         ${TORCH_LIBRARIES}
+
+        pybind11::embed
         )
 # set_property(TARGET AudioPluginExampleCMAKE64 PROPERTY CXX_STANDARD 17)
 

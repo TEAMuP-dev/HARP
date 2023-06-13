@@ -7,40 +7,61 @@
 
 #include "juce_audio_basics/juce_audio_basics.h"
 
+#include "Model.h"
+
 using std::unique_ptr;
 using std::shared_ptr;
 using torch::jit::IValue;
 using torch::jit::script::Module;
 
+std::string size2string(torch::IntArrayRef size) {
+    std::stringstream ss;
+    ss << "(";
+    for (int i = 0; i < size.size(); i++) {
+        ss << size[i];
+        if (i < size.size() - 1) {
+            ss << ", ";
+        }
+    }
+    ss << ")";
+    return ss.str();
+}
 
-class DeepModel
+
+class TorchModel : public Model
 {
 public:
-   DeepModel() = default;
+    TorchModel() = default;
 
-   //! loads a torchscript model from file. 
-   bool load(const std::string &modelPath) {
+    //! loads a torchscript model from file. 
+    bool load(const map<string, any> &params) override {
+        if (!params.contains("modelPath")) {
+            return false;
+        }
+        auto modelPath = any_cast<string>(params.at("modelPath"));
+
         try {
-             m_model = std::make_unique<Module>(torch::jit::load(modelPath));
-             m_model->eval();
-             m_loaded = true;
-             
+                m_model = std::make_unique<Module>(torch::jit::load(modelPath));
+                m_model->eval();
+                m_loaded = true;
+                
         }
         catch (const c10::Error &e) {
-             std::cerr << "Error loading the model\n";
-             std::cerr << e.what() << "\n";
-             return false;
+                std::cerr << "Error loading the model\n";
+                std::cerr << e.what() << "\n";
+                return false;
         }
         return true;
    }
 
-   //! checks if a model is loaded onto memory. 
-   bool is_loaded() const { return m_loaded; }
+    //! checks if a model is loaded onto memory. 
+    virtual bool ready() const override { return m_loaded; }
 
-   //! forward pass 
-   IValue forward(const std::vector<IValue> &inputs) const {
+    //! forward pass 
+    IValue forward(const std::vector<IValue> &inputs) const {
         return m_model->forward(inputs);
-   }
+   }    
+ 
 
     static torch::Tensor to_tensor(const juce::AudioBuffer<float> &buffer) {
         torch::TensorOptions tensorOptions = torch::TensorOptions()
@@ -74,8 +95,31 @@ protected:
 };
 
 
+class TorchWave2Wave : public TorchModel, public Wave2Wave {
+public:
+    TorchWave2Wave() = default;
 
-class Resampler : DeepModel {
+    void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate) const override { 
+        // build our IValue (mixdown to mono for now)
+        // TODO: support multichannel
+        IValue input = {
+            TorchModel::to_tensor(*bufferToProcess).mean(0, true)
+        };
+        DBG("built input tensor with shape " << size2string(input.toTensor().sizes()));
+
+        // forward pass
+        auto output = forward({input}).toTensor();
+        DBG("got output tensor with shape " << size2string(output.sizes()));
+
+        // we're expecting audio out
+        TorchModel::to_buffer(output, *bufferToProcess);
+        DBG("got output buffer with shape " << bufferToProcess->getNumChannels() << " x " << bufferToProcess->getNumSamples());
+
+    }
+};
+
+
+class Resampler : TorchModel {
 public:
     Resampler() = default;
 

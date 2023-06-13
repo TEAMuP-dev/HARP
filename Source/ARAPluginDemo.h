@@ -49,28 +49,18 @@
 
 #pragma once
 
+#include <any>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
 #include <ARA_Library/PlugIn/ARAPlug.h>
-#include <torch/script.h>
 
-#include "DeepModel.h"
+#include "juce_audio_basics/juce_audio_basics.h"
+
+// #include "TorchModel.h"
+#include "WebModel.h"
+#include "toolbarUI.h"
 
 using std::unique_ptr;
-
-std::string size2string(torch::IntArrayRef size) {
-    std::stringstream ss;
-    ss << "(";
-    for (int i = 0; i < size.size(); i++) {
-        ss << size[i];
-        if (i < size.size() - 1) {
-            ss << ", ";
-        }
-    }
-    ss << ")";
-    return ss.str();
-}
-
 
 class ARADemoPluginAudioModification  : public ARAAudioModification
 {
@@ -87,45 +77,58 @@ public:
         DBG("ARADemoPluginAudioModification::created");
         DBG("ARADemoPluginAudioModification::the audio source is " << audioSource->getName());
 
-        init();
-        process(audioSource);
+        init(audioSource);
+        // process();
     }
 
     // instantiates model and any other resources
     // todo: might need to do this in thread
-    void init() {
+    void init(ARAAudioSource* audioSource) {
         DBG("loading model");
-        if (!mModel.load("/Users/aldo/Documents/research/plugin_sandbox/model.pt")){ //change model here
+
+        // map<string, any> params {{"path", "/Users/hugo/projects/plugin_sandbox/reduceamp.pt"}};
+        map<string, any> params {
+            {"url", string("http://127.0.0.1:7860")},
+            {"api_name", string("/api/predict/")}
+        } ;
+        if (!mModel.load(params)){ //change model here
             DBG("failed to load model");
         }
         else {
             DBG("model loaded");
         }
+
+        DBG("ARADemoPluginAudioModification:: create reader for " << audioSource->getName());
+        mAudioSourceReader = std::make_unique<ARAAudioSourceReader> (audioSource);
+        mSampleRate = audioSource->getSampleRate();
+        mAudioSourceName = audioSource->getName();
+
+        
     }
     
     bool isDimmed() const           { return dimmed; }
     void setDimmed (bool shouldDim) { dimmed = shouldDim; }
+    std::string getSourceName() {return mAudioSourceName;}
 
     // processes the audio source 
     // todo: might need to do this in thread
-    void process(ARAAudioSource* audioSource) {
-        if (!mModel.is_loaded())
+    void process(std::map<std::string, std::any> &params) {
+        if (!mModel.ready())
         {
             return;
         }
-
-        DBG("ARADemoPluginAudioModification:: create reader for " << audioSource->getName());
-        mAudioSourceReader = std::make_unique<ARAAudioSourceReader> (audioSource);
         
         if (! mAudioSourceReader->isValid())
-            DBG("ARADemoPluginAudioModification:: invlaid audio source reader");
+            DBG("ARADemoPluginAudioModification:: invalid audio source reader");
         else
         {
             auto numChannels = mAudioSourceReader->numChannels;
             auto numSamples = mAudioSourceReader->lengthInSamples;
+            auto sampleRate = mSampleRate;
+            
 
             DBG("ARADemoPluginAudioModification:: audio source: " 
-                << audioSource->getName() 
+                << mAudioSourceName
                 << " channels: "
                 << juce::String(numChannels)
                 << " length in samples: "
@@ -135,30 +138,13 @@ public:
 
             // reading into audio buffer
             mAudioSourceReader->read(mAudioBuffer.get(), 0, static_cast<int>(numSamples), 0, true, true);  
+            mModel.process(mAudioBuffer.get(), sampleRate, params);
 
-            // write input to file for debugging 
-            juce::File inputFile ("/Users/aldo/Documents/research/plugin_sandbox/input.wav");
-            saveAudioBufferToFile(inputFile);
-
-            // build our IValue (mixdown to mono for now)
-            // TODO: support multichannel
-            IValue input = {
-                DeepModel::to_tensor(*mAudioBuffer).mean(0, true)
-            };
-            DBG("built input tensor with shape " << size2string(input.toTensor().sizes()));
+            // connect the modified buffer to the source
 
 
-            // forward pass
-            auto output = mModel.forward({input}).toTensor();
-            DBG("got output tensor with shape " << size2string(output.sizes()));
 
-            // we're expecting audio out
-            DeepModel::to_buffer(output, *mAudioBuffer);
-            DBG("got output buffer with shape " << mAudioBuffer->getNumChannels() << " x " << mAudioBuffer->getNumSamples());
-
-            // write output to a file
-            juce::File outputFile ("/Users/aldo/Documents/research/plugin_sandbox/output.wav");
-            saveAudioBufferToFile(outputFile);
+            mIsModified = true;
         }
     }
 
@@ -166,67 +152,20 @@ public:
         return mAudioBuffer.get();
     }
 
+    bool getIsModified(){return mIsModified;}
 
 private:
-    DeepModel mModel;
+    WebWave2Wave mModel;
+
     bool dimmed = false;
+    bool mIsModified = false;
+
+    std::string mAudioSourceName;
+    int mSampleRate;
     unique_ptr<ARAAudioSourceReader> mAudioSourceReader { nullptr };
     unique_ptr<juce::AudioBuffer<float>> mAudioBuffer { nullptr };
 
-    void saveAudioBufferToFile(const juce::File& outputFile)
-    {
-        if (mAudioBuffer == nullptr)
-        {
-            DBG("audio buffer is empty");
-            return;
-        }
-
-        juce::WavAudioFormat wavFormat;
-        juce::TemporaryFile tempFile(outputFile);
-        juce::File tempOutputFile = tempFile.getFile();
-        std::unique_ptr<juce::FileOutputStream> outputFileStream(tempOutputFile.createOutputStream());
-
-        if (outputFileStream != nullptr)
-        {
-            juce::AudioFormatWriter* writer = wavFormat.createWriterFor(outputFileStream.get(),
-                                                                        44100,
-                                                                        static_cast<unsigned int>(mAudioBuffer->getNumChannels()),
-                                                                        16,
-                                                                        {},
-                                                                        0);
-
-            if (writer != nullptr)
-            {
-                outputFileStream.release(); // The writer will take ownership of the output stream
-                bool success = writer->writeFromAudioSampleBuffer(*mAudioBuffer, 0, mAudioBuffer->getNumSamples());
-
-                if (success)
-                {
-                    delete writer; // Release the writer before replacing the file
-                    if (tempFile.overwriteTargetFileWithTemporary())
-                    {
-                        DBG("Audio buffer saved to file.");
-                    }
-                    else
-                    {
-                        DBG("Failed to overwrite target file with temporary file.");
-                    }
-                }
-                else
-                {
-                    DBG("Failed to write audio buffer to file.");
-                }
-            }
-            else
-            {
-                DBG("Failed to create audio format writer.");
-            }
-        }
-        else
-        {
-            DBG("Failed to create output file stream.");
-        }
-    }
+    // juce::MemoryAudioSource mModifiedSource;
 
 };
 
@@ -478,11 +417,10 @@ public:
         numChannels = numChannelsIn;
         sampleRate = sampleRateIn;
         maximumSamplesPerBlock = maximumSamplesPerBlockIn;
-        tempBuffer.reset (new AudioBuffer<float> (numChannels, maximumSamplesPerBlock));
 
         // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ", sampleRate: " << sampleRate << ", maximumSamplesPerBlock: " << maximumSamplesPerBlock);
 
-        useBufferedAudioSourceReader = alwaysNonRealtime == AlwaysNonRealtime::no;
+        bool useBufferedAudioSourceReader = alwaysNonRealtime == AlwaysNonRealtime::no;
 
         // DBG("PlaybackRenderer::prepareToPlay using buffered audio source reader: " << (int)useBufferedAudioSourceReader);
 
@@ -492,35 +430,56 @@ public:
 
             // DBG("PlaybackRenderer::prepareToPlay audio source is " << audioSource->getName());
 
-            if (audioSourceReaders.find (audioSource) == audioSourceReaders.end())
+            if (resamplingSources.find (audioSource) == resamplingSources.end())
             {
-                auto reader = std::make_unique<ARAAudioSourceReader> (audioSource);
 
-                // DBG("PlaybackRenderer::prepareToPlay created reader for " << audioSource->getName());
-
+                std::unique_ptr<juce::AudioFormatReaderSource> readerSource {nullptr};
+                
                 if (! useBufferedAudioSourceReader)
                 {
-                    audioSourceReaders.emplace (audioSource,
-                                                PossiblyBufferedReader { std::move (reader) });
+                    readerSource = std::make_unique<juce::AudioFormatReaderSource>(
+                        new ARAAudioSourceReader (audioSource),
+                        true
+                    );
+
+
                 }
                 else
                 {
                     const auto readAheadSize = jmax (4 * maximumSamplesPerBlock,
                                                      roundToInt (2.0 * sampleRate));
-                    // DBG("PlaybackRenderer::prepareToPlay read ahead size: " << readAheadSize);
-                    audioSourceReaders.emplace (audioSource,
-                                                PossiblyBufferedReader { std::make_unique<BufferingAudioReader> (reader.release(),
-                                                                                                                 *sharedTimesliceThread,
-                                                                                                                 readAheadSize) });
+
+                    readerSource = std::make_unique<juce::AudioFormatReaderSource>(
+                            new BufferingAudioReader(new ARAAudioSourceReader (audioSource),
+                                    *sharedTimesliceThread,
+                                    readAheadSize),
+                            true
+                    );
                 }
+
+                auto resamplingSource = std::make_unique<ResamplingAudioSource>(
+                    readerSource.get(), false, numChannels
+                );
+
+                resamplingSource->setResamplingRatio (sampleRate / audioSource->getSampleRate());
+
+                readerSource->prepareToPlay(maximumSamplesPerBlock, sampleRate);
+                resamplingSource->prepareToPlay (maximumSamplesPerBlock, sampleRate);
+
+                positionableSources.emplace(audioSource, std::move(readerSource));
+                resamplingSources.emplace(audioSource, std::move(resamplingSource));
             }
         }
+
     }
+
 
     void releaseResources() override
     {
         // DBG("PlaybackRenderer::releaseResources releasing resources");
-        audioSourceReaders.clear();
+        resamplingSources.clear();
+        positionableSources.clear();
+
         tempBuffer.reset();
     }
 
@@ -530,12 +489,15 @@ public:
     {
         const auto lock = lockInterface.getProcessingLock();
 
-        if (! lock.isLocked())
+        if (! lock.isLocked()) {
+            DBG("PlaybackRenderer::processBlock could not acquire processing lock");
             return true;
+        }
 
         const auto numSamples = buffer.getNumSamples();
         jassert (numSamples <= maximumSamplesPerBlock);
-        jassert (realtime == AudioProcessor::Realtime::no || useBufferedAudioSourceReader);
+        jassert (numChannels == buffer.getNumChannels());
+        // jassert (realtime == AudioProcessor::Realtime::no || useBufferedAudioSourceReader); TODO: bring me back? 
         const auto timeInSamples = positionInfo.getTimeInSamples().orFallback (0);
         const auto isPlaying = positionInfo.getIsPlaying();
 
@@ -574,62 +536,83 @@ public:
                     DBG("PlaybackRenderer::processBlock render range is empty wrt to modification range"); 
                     continue;
                 }
+                // ! -----------------------------------------------------------------------------------------
+    
+                // find our resampled source
+                const auto resamplingSourceIt = resamplingSources.find(
+                    playbackRegion->getAudioModification()->getAudioSource()
+                );
+                auto& resamplingSource = resamplingSourceIt->second;
 
-                // Get the audio source for the region and find the reader for that source.
-                // This simplified example code only produces audio if sample rate and channel count match -
-                // a robust plug-in would need to do conversion, see ARA SDK documentation.
-                const auto audioSource = playbackRegion->getAudioModification()->getAudioSource();
-                const auto readerIt = audioSourceReaders.find (audioSource);
+                const auto positionableSourceIt = positionableSources.find(
+                    playbackRegion->getAudioModification()->getAudioSource()
+                );
+                auto& positionableSource = positionableSourceIt->second;
 
-                if (std::make_tuple (audioSource->getChannelCount(), audioSource->getSampleRate()) != std::make_tuple (numChannels, sampleRate)
-                    || (readerIt == audioSourceReaders.end()))
-                {
-                    DBG("PlaybackRenderer::processBlock mismatched channel count or sample rate, or no reader found");
-                    success = false;
-                    continue;
-                }
 
-                auto& reader = readerIt->second;
-                reader.setReadTimeout (realtime == AudioProcessor::Realtime::no ? 100 : 0);
+                // TODO: the buffering audio reader should have a time out. dont' think it currently has one
+                // if we're in realtime mode, timeout should be 0. else, can be 100 ms
+
+                // calculate buffer offsets
 
                 // Calculate buffer offsets.
                 const int numSamplesToRead = (int) renderRange.getLength();
                 const int startInBuffer = (int) (renderRange.getStart() - blockRange.getStart());
                 auto startInSource = renderRange.getStart() + modificationSampleOffset;
 
+                positionableSource->setNextReadPosition (startInSource);
+                
                 // Read samples:
                 // first region can write directly into output, later regions need to use local buffer.
                 auto& readBuffer = (didRenderAnyRegion) ? *tempBuffer : buffer;
-
-                // DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
-
-                // if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
-                // {
-                //     DBG("reader failed to read");
-                //     success = false;
-                //     continue;
-                // }
                 
-                // replace the readBuffer with the modified buffer
-                // TODO: we should be doing this with audiosources, that's what they're meant to do
-                // not thru pointer arithmetic
+                // apply the modified buffer
                 auto *modBuffer = playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getModifiedAudioBuffer();
-                if (modBuffer != nullptr)
+                if (modBuffer != nullptr && playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->getIsModified())
                 {
-                    // TODO: let's try to not do this with raw mem
-                    // AudioBuffer<float>&
-                    for (int c = 0; c < numChannels - 1; ++c)
-                        readBuffer.copyFrom (c, 
-                                             0, 
-                                             *modBuffer,
-                                             0, // TODO: this should be C but output is downmixed rn
-                                             startInSource,
-                                             numSamplesToRead);
-                }
+                    jassert (numSamplesToRead <= modBuffer->getNumSamples());
+                    // we could handle more cases with channel mismatches better 
+                    if (modBuffer->getNumChannels() == numChannels)
+                    {
+                        for (int c = 0; c < numChannels; ++c)
+                            readBuffer.copyFrom (c, 
+                                                0, 
+                                                *modBuffer,
+                                                c,
+                                                static_cast<int>(startInSource),
+                                                numSamplesToRead);
+                    }
 
-                // Apply dim if enabled
-                if (playbackRegion->getAudioModification<ARADemoPluginAudioModification>()->isDimmed())
-                    readBuffer.applyGain (startInBuffer, numSamplesToRead, 0.25f);  // dim by about 12 dB
+                    else if (modBuffer->getNumChannels() == 1)
+                    {
+                        for (int c = 0; c < numChannels; ++c)
+                            readBuffer.copyFrom (c, 
+                                                0, 
+                                                *modBuffer,
+                                                0,
+                                                static_cast<int>(startInSource),
+                                                numSamplesToRead);
+                    }
+
+                }
+                else 
+                { // buffer isn't ready, read from original audio source
+                    DBG("reading " << numSamplesToRead << " samples from " << startInSource << " into " << startInBuffer);
+                    
+                    resamplingSource->getNextAudioBlock(
+                        juce::AudioSourceChannelInfo(readBuffer)
+                    );
+
+
+                //     if (! reader.get()->read (&readBuffer, startInBuffer, numSamplesToRead, startInSource, true, true))
+                //     {
+                //         DBG("reader failed to read");
+                //         success = false;
+                //         continue;
+                //     }
+                }
+                
+
 
                 // Mix output of all regions
                 if (didRenderAnyRegion)
@@ -661,12 +644,6 @@ public:
             DBG("no region did intersect or no playback");
             buffer.clear();
         }
-
-        if (success)
-            DBG("success");
-        else
-            DBG("fail");
-            
         return success;
     }
 
@@ -675,13 +652,17 @@ public:
 private:
     //==============================================================================
     ProcessingLockInterface& lockInterface;
+
     SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
-    std::map<ARAAudioSource*, PossiblyBufferedReader> audioSourceReaders;
-    bool useBufferedAudioSourceReader = true;
+    std::map<ARAAudioSource*, unique_ptr<juce::ResamplingAudioSource>> resamplingSources;
+    std::map<ARAAudioSource*, unique_ptr<AudioFormatReaderSource>> positionableSources;
+
     int numChannels = 2;
     double sampleRate = 48000.0;
     int maximumSamplesPerBlock = 128;
+
     unique_ptr<AudioBuffer<float>> tempBuffer;
+
 };
 
 class EditorRenderer  : public ARAEditorRenderer,
@@ -720,6 +701,20 @@ public:
     void didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion*) noexcept override
     {
         asyncConfigCallback.startConfigure();
+    }
+
+    void executeProcess(std::map<std::string, std::any> &params) 
+    {
+        DBG("EditorRenderer::executeProcess executing process");
+
+        auto myCallback = [&params](ARAPlaybackRegion* playbackRegion) -> bool {
+            auto audioModification = playbackRegion->getAudioModification<ARADemoPluginAudioModification>();
+            std::cout << "EditorRenderer::processing playbackRegion " << audioModification->getSourceName() << std::endl;
+            audioModification->process(params);
+            return true;
+        };
+
+        forEachPlaybackRegion(myCallback);
     }
 
     /*  An ARA host could be using either the `addPlaybackRegion()` or `addRegionSequence()` interface
@@ -1204,7 +1199,7 @@ public:
     {
         void paint (Graphics& g) override
         {
-            g.setColour (Colours::yellow.darker (0.2f));
+            g.setColour (Colours::darkred);
             const auto bounds = getLocalBounds().toFloat();
             g.drawRoundedRectangle (bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), 6.0f, 2.0f);
         }
@@ -1502,7 +1497,7 @@ struct WaveformCache : private ARAAudioSource::Listener
         removeAudioSource (audioSource);
     }
 
-    AudioThumbnail& getOrCreateThumbnail(ARAAudioSource* audioSource, juce::AudioBuffer<float>* buffer)
+    AudioThumbnail& getOrCreateThumbnail(ARAAudioSource* audioSource, ARADemoPluginAudioModification* audioModification)
     {
         const auto iter = thumbnails.find(audioSource);
 
@@ -1513,8 +1508,11 @@ struct WaveformCache : private ARAAudioSource::Listener
         auto& result = *thumb;
 
         ++hash;
-
-        thumb->setSource(buffer, audioSource->getSampleRate(), hash);     
+        if (audioModification->getIsModified())
+            thumb->setSource(audioModification->getModifiedAudioBuffer(), audioSource->getSampleRate(), hash);     
+        
+        else
+            thumb->setReader (new ARAAudioSourceReader (audioSource), hash);
 
         audioSource->addListener(this);
         thumbnails.emplace(audioSource, std::move(thumb));
@@ -1551,12 +1549,11 @@ public:
 
         auto audioModification = playbackRegion.getAudioModification();
         auto araDemoPluginAudioModification = dynamic_cast<ARADemoPluginAudioModification*>(audioModification);
-
-        mDeepAudio = araDemoPluginAudioModification->getModifiedAudioBuffer();
+        
         
         audioSource = playbackRegion.getAudioModification()->getAudioSource();
 
-        waveformCache.getOrCreateThumbnail (audioSource, mDeepAudio).addChangeListener (this);
+        waveformCache.getOrCreateThumbnail (audioSource, araDemoPluginAudioModification).addChangeListener (this);
 
         audioSource->addListener (this);
         playbackRegion.addListener (this);
@@ -1574,7 +1571,7 @@ public:
         playbackRegion.removeListener (this);
         araEditorView.removeListener (this);
 
-        waveformCache.getOrCreateThumbnail (audioSource, mDeepAudio).removeChangeListener (this);
+        waveformCache.getOrCreateThumbnail (audioSource, dynamic_cast<ARADemoPluginAudioModification*>(playbackRegion.getAudioModification())).removeChangeListener (this);
     }
 
     void mouseDown (const MouseEvent& m) override
@@ -1649,11 +1646,11 @@ public:
         g.fillAll (convertOptionalARAColour (playbackRegion.getEffectiveColor(), Colours::black));
 
         const auto* audioModification = playbackRegion.getAudioModification<ARADemoPluginAudioModification>();
-        g.setColour (audioModification->isDimmed() ? Colours::darkgrey.darker() : Colours::darkgrey.brighter());
+        g.setColour (audioModification->isDimmed() ? Colours::whitesmoke.darker() : Colours::whitesmoke.brighter());
 
         if (audioModification->getAudioSource()->isSampleAccessEnabled())
         {
-            auto& thumbnail = waveformCache.getOrCreateThumbnail (playbackRegion.getAudioModification()->getAudioSource(), mDeepAudio);
+            auto& thumbnail = waveformCache.getOrCreateThumbnail (playbackRegion.getAudioModification()->getAudioSource(), dynamic_cast<ARADemoPluginAudioModification*>(playbackRegion.getAudioModification()));
             thumbnail.drawChannels (g,
                                     getLocalBounds(),
                                     playbackRegion.getStartInAudioModificationTime(),
@@ -1720,7 +1717,7 @@ private:
 
         void paint (Graphics& g) override
         {
-            g.setColour (Colours::yellow.withAlpha (0.5f));
+            g.setColour (Colours::darkred.withAlpha (0.5f));
             g.fillRect (getLocalBounds());
         }
 
@@ -2113,7 +2110,7 @@ class OverlayComponent : public Component,
 public:
     class PlayheadMarkerComponent : public Component
     {
-        void paint (Graphics& g) override { g.fillAll (Colours::yellow.darker (0.2f)); }
+        void paint (Graphics& g) override { g.fillAll (Colours::darkred.darker (0.2f)); }
     };
 
     OverlayComponent (PlayHeadState& playHeadStateIn, TimeToViewScaling& timeToViewScalingIn)
@@ -2505,24 +2502,130 @@ private:
     int viewportHeightOffset = 0;
 };
 
-
 class ARADemoPluginProcessorEditor  : public AudioProcessorEditor,
-                                      public AudioProcessorEditorARAExtension
+                                      public AudioProcessorEditorARAExtension,
+                                      public Button::Listener,
+                                      public Slider::Listener,
+                                      public ComboBox::Listener
 {
 public:
-    explicit ARADemoPluginProcessorEditor (ARADemoPluginAudioProcessorImpl& p)
+    explicit ARADemoPluginProcessorEditor (ARADemoPluginAudioProcessorImpl& p, EditorRenderer* er)
         : AudioProcessorEditor (&p),
           AudioProcessorEditorARAExtension (&p)
     {
         if (auto* editorView = getARAEditorView())
             documentView = std::make_unique<DocumentView> (*editorView, p.playHeadState);
-
+        mEditorRenderer = er;
         addAndMakeVisible (documentView.get());
+
+        // initialize your button
+        testButton.setLookAndFeel(&buttonLookAndFeel);
+        testButton.setButtonText("generate");
+        testButton.setColour (TextButton::buttonColourId, Colours::lightgrey);
+        testButton.setColour (TextButton::textColourOffId, Colours::black);
+        testButton.setColour (TextButton::buttonOnColourId, Colours::grey);
+        testButton.setColour (TextButton::textColourOnId, Colours::black);
+        testButton.addListener(this);
+        addAndMakeVisible(testButton);  
+
+
+        // initalize knobs 
+        temp1Dial.setLookAndFeel(&toolbarSliderStyle);
+        temp1Dial.setSliderStyle(Slider::Rotary);
+        temp1Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        temp1Dial.setTextValueSuffix ("t0: ");
+        temp1Dial.setRange(0.0, 2.0, 0.01);
+        temp1Dial.setValue(0.9);
+        temp1Dial.addListener(this);
+        addAndMakeVisible(temp1Dial);
+
+        temp2Dial.setLookAndFeel(&toolbarSliderStyle);
+        temp2Dial.setSliderStyle(Slider::Rotary);
+        temp2Dial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        temp2Dial.setTextValueSuffix ("t1: ");
+        temp2Dial.setRange(0.0, 2.0, 0.01);
+        temp2Dial.setValue(1.2);
+        temp2Dial.addListener(this);
+        addAndMakeVisible(temp2Dial);
+
+        stepsDial.setLookAndFeel(&toolbarSliderStyle);
+        stepsDial.setSliderStyle(Slider::Rotary);
+        stepsDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        stepsDial.setTextValueSuffix ("steps: ");
+        stepsDial.setRange(12, 64, 1);
+        stepsDial.setValue(36);
+        stepsDial.addListener(this);
+        addAndMakeVisible(stepsDial);
+
+        phintDial.setLookAndFeel(&toolbarSliderStyle);
+        phintDial.setSliderStyle(Slider::Rotary);
+        phintDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        phintDial.setTextValueSuffix ("phint: ");
+        phintDial.setRange(1, 256, 1);
+        phintDial.setValue(13);
+        phintDial.addListener(this);
+        addAndMakeVisible(phintDial);
+
+        pwidthDial.setLookAndFeel(&toolbarSliderStyle);
+        pwidthDial.setSliderStyle(Slider::Rotary);
+        pwidthDial.setTextBoxStyle (juce::Slider::TextBoxAbove, false, 90, 20);
+        pwidthDial.setTextValueSuffix ("pwidth: ");
+        pwidthDial.setRange(0, 16, 1);
+        pwidthDial.setValue(0);
+        pwidthDial.addListener(this);
+        addAndMakeVisible(pwidthDial);
+
+        modeBox.setLookAndFeel(&comboBoxLookAndFeel);
+        modeBox.addItem("daydream", 1);
+        modeBox.addItem("deep sleep", 2);
+        modeBox.setSelectedId(1);
+        modeBox.addListener(this);
+        addAndMakeVisible(modeBox);
+
+
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setResizable (true, false);
         setSize (800, 300);
+    }
+
+    void buttonClicked(Button* button) override
+    {
+        if (button == &testButton)
+        {
+            DBG("ARADemoPluginProcessorEditor::buttonClicked button listener activated");
+            
+            std::map<std::string, std::any> params = {
+                {"modeMode", modeBox.getText()},
+                {"temp1", temp1Dial.getValue()},
+                {"temp2", temp2Dial.getValue()},
+                {"phint", phintDial.getValue()},
+                {"pwidth", pwidthDial.getValue()}
+            };
+            mEditorRenderer->executeProcess(params);
+        }
+    }
+
+    void comboBoxChanged (ComboBox* box) override
+    {
+        if (box == &modeBox)
+        {
+            DBG ("ARADemoPluginProcessorEditor::comboBoxChanged mode changed: " << box->getSelectedId());
+        }
+    }
+
+    void sliderValueChanged(Slider* slider) override
+    {
+        if (slider == &temp1Dial)
+        {
+            DBG("ARADemoPluginProcessorEditor::sliderValueChanged temp1 dial value:  " << slider->getValue());
+        }
+
+        else if (slider == &temp2Dial)
+        {
+            DBG("ARADemoPluginProcessorEditor::sliderValueChanged temp2 dial value:  " << slider->getValue());
+        }
     }
 
     //==============================================================================
@@ -2543,12 +2646,60 @@ public:
 
     void resized() override
     {
+        int toolbarHeight = 70; 
+        int knobSize = 60;
+        int buttonWidth = 100;  
+        int buttonHeight = 40;  
+        int comboWidth = 120;  
+        int comboHeight = 40;  
+
+
+        auto buttonArea = getLocalBounds().removeFromTop(toolbarHeight);
+        int xCenter = (buttonArea.getWidth()) / 2;
+        int yCenter = (toolbarHeight) / 2;
+
+        // testButton.setBounds(xCenter-buttonWidth/2 - (buttonWidth/2 + knobSize), yCenter-buttonHeight/2, buttonWidth, buttonHeight);
+        modeBox.setBounds(xCenter-comboWidth - knobSize, yCenter - comboHeight/2, comboWidth, comboHeight);
+        temp1Dial.setBounds(xCenter-knobSize/2, yCenter - knobSize/2, knobSize, knobSize);
+        temp2Dial.setBounds(xCenter-knobSize/2 + knobSize, yCenter - knobSize/2, knobSize, knobSize);
+        stepsDial.setBounds(xCenter-knobSize/2 + (2 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        phintDial.setBounds(xCenter-knobSize/2 + (3 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        pwidthDial.setBounds(xCenter-knobSize/2 + (4 * knobSize), yCenter - knobSize/2, knobSize, knobSize);
+        testButton.setBounds(xCenter-buttonWidth/2 + (buttonWidth/2 + 5*knobSize), yCenter-buttonHeight/2, buttonWidth, buttonHeight);
+
+
+
+
         if (documentView != nullptr)
-            documentView->setBounds (getLocalBounds());
+            documentView->setBounds (0, toolbarHeight, getWidth(), getHeight() - toolbarHeight);
     }
+
+
+
 
 private:
     unique_ptr<Component> documentView;
+    juce::TextButton testButton;
+
+    juce::Slider temp1Dial;
+    juce::Slider temp2Dial;
+    juce::Slider stepsDial;
+    juce::Slider phintDial;
+    juce::Slider pwidthDial;
+
+    juce::ComboBox modeBox;
+
+    ToolbarSliderStyle toolbarSliderStyle;
+    ButtonLookAndFeel buttonLookAndFeel;
+    ComboBoxLookAndFeel comboBoxLookAndFeel;
+
+
+
+
+    EditorRenderer* mEditorRenderer;
+
+
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ARADemoPluginProcessorEditor)
 };
@@ -2557,5 +2708,5 @@ class ARADemoPluginAudioProcessor  : public ARADemoPluginAudioProcessorImpl
 {
 public:
     bool hasEditor() const override               { return true; }
-    AudioProcessorEditor* createEditor() override { return new ARADemoPluginProcessorEditor (*this); }
+    AudioProcessorEditor* createEditor() override { return new ARADemoPluginProcessorEditor (*this, dynamic_cast<EditorRenderer*>(getEditorRenderer())); }
 };
