@@ -10,32 +10,28 @@
 \DoxyCodeLine{00025\ }
 \DoxyCodeLine{00026\ \textcolor{keyword}{using\ namespace\ }juce;}
 \DoxyCodeLine{00027\ }
-\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}\ \ :\ \textcolor{keyword}{private}\ AsyncUpdater}
-\DoxyCodeLine{00029\ \{}
-\DoxyCodeLine{00030\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}\ (std::function<\textcolor{keywordtype}{void}()>\ callbackIn)}
-\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ :\ callback\ (std::move\ (callbackIn))\ \{\}}
-\DoxyCodeLine{00033\ }
-\DoxyCodeLine{00034\ \ \ \ \ \mbox{\hyperlink{class_async_configuration_callback}{\string~AsyncConfigurationCallback}}()\textcolor{keyword}{\ override\ }\{\ cancelPendingUpdate();\ \}}
-\DoxyCodeLine{00035\ }
-\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ RequiresLock>}
-\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{auto}\ withLock\ (RequiresLock\&\&\ fn)}
-\DoxyCodeLine{00038\ \ \ \ \ \{}
-\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedTryLockType\ scope\ (processingFlag);}
-\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fn\ (scope.isLocked());}
-\DoxyCodeLine{00041\ \ \ \ \ \}}
-\DoxyCodeLine{00042\ }
-\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ startConfigure()\ \{\ triggerAsyncUpdate();\ \}}
-\DoxyCodeLine{00044\ }
-\DoxyCodeLine{00045\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ handleAsyncUpdate()\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00047\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedLockType\ scope\ (processingFlag);}
-\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ callback();}
-\DoxyCodeLine{00050\ \ \ \ \ \}}
-\DoxyCodeLine{00051\ }
-\DoxyCodeLine{00052\ \ \ \ \ std::function<void()>\ callback;}
-\DoxyCodeLine{00053\ \ \ \ \ SpinLock\ processingFlag;}
-\DoxyCodeLine{00054\ \};}
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}\ :\ \textcolor{keyword}{private}\ AsyncUpdater\ \{}
+\DoxyCodeLine{00029\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}(std::function<\textcolor{keywordtype}{void}()>\ callbackIn)}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ :\ callback(std::move(callbackIn))\ \{\}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \mbox{\hyperlink{class_async_configuration_callback}{\string~AsyncConfigurationCallback}}()\textcolor{keyword}{\ override\ }\{\ cancelPendingUpdate();\ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ RequiresLock>\ \textcolor{keyword}{auto}\ withLock(RequiresLock\ \&\&fn)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedTryLockType\ scope(processingFlag);}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordflow}{return}\ fn(scope.isLocked());}
+\DoxyCodeLine{00038\ \ \ \}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{void}\ startConfigure()\ \{\ triggerAsyncUpdate();\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{void}\ handleAsyncUpdate()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedLockType\ scope(processingFlag);}
+\DoxyCodeLine{00045\ \ \ \ \ callback();}
+\DoxyCodeLine{00046\ \ \ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ std::function<void()>\ callback;}
+\DoxyCodeLine{00049\ \ \ SpinLock\ processingFlag;}
+\DoxyCodeLine{00050\ \};}
 
 \end{DoxyCode}

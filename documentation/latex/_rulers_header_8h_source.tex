@@ -10,29 +10,29 @@
 \DoxyCodeLine{00025\ }
 \DoxyCodeLine{00026\ \textcolor{keyword}{using\ namespace\ }juce;}
 \DoxyCodeLine{00027\ }
-\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_rulers_header}{RulersHeader}}\ :\ \textcolor{keyword}{public}\ Component}
-\DoxyCodeLine{00033\ \{}
-\DoxyCodeLine{00034\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00038\ \ \ \ \ \mbox{\hyperlink{class_rulers_header_a959d86fe205f4a99cdb139c9a02e2d53}{RulersHeader}}();}
-\DoxyCodeLine{00039\ }
-\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_rulers_header_a8defaa93d9eaa868fcb945b793a70dc2}{resized}}()\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00044\ }
-\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_rulers_header_af4dcad9c96f66955676b0244c77b0ca8}{paint}}\ (Graphics\&\ g)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00049\ }
-\DoxyCodeLine{00050\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00051\ \ \ \ \ Label\ chordsLabel,\ barsLabel,\ timeLabel;\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_rulers_header}{RulersHeader}}\ :\ \textcolor{keyword}{public}\ Component\ \{}
+\DoxyCodeLine{00033\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \ \ \mbox{\hyperlink{class_rulers_header_a959d86fe205f4a99cdb139c9a02e2d53}{RulersHeader}}();}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_rulers_header_a8defaa93d9eaa868fcb945b793a70dc2}{resized}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_rulers_header_af4dcad9c96f66955676b0244c77b0ca8}{paint}}(Graphics\ \&g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00050\ \ \ Label\ chordsLabel,\ barsLabel,}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ timeLabel;\ }
 \DoxyCodeLine{00052\ \};}
 \DoxyCodeLine{00053\ }
-\DoxyCodeLine{00054\ }
-\DoxyCodeLine{00055\ \textcolor{comment}{//\ \#pragma\ once}}
-\DoxyCodeLine{00056\ }
-\DoxyCodeLine{00057\ \textcolor{comment}{//\ class\ RulersHeader\ :\ public\ Component}}
-\DoxyCodeLine{00058\ \textcolor{comment}{//\ \{}}
-\DoxyCodeLine{00059\ \textcolor{comment}{//\ public:}}
-\DoxyCodeLine{00060\ \textcolor{comment}{//\ \ \ \ \ RulersHeader()}}
-\DoxyCodeLine{00061\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00062\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ chordsLabel.setText\ ("{}Chords"{},\ NotificationType::dontSendNotification);}}
-\DoxyCodeLine{00063\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (chordsLabel);}}
+\DoxyCodeLine{00054\ \textcolor{comment}{//\ \#pragma\ once}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{comment}{//\ class\ RulersHeader\ :\ public\ Component}}
+\DoxyCodeLine{00057\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00058\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00059\ \textcolor{comment}{//\ \ \ \ \ RulersHeader()}}
+\DoxyCodeLine{00060\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00061\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ chordsLabel.setText\ ("{}Chords"{},}}
+\DoxyCodeLine{00062\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ NotificationType::dontSendNotification);\ addAndMakeVisible}}
+\DoxyCodeLine{00063\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (chordsLabel);}}
 \DoxyCodeLine{00064\ }
 \DoxyCodeLine{00065\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ barsLabel.setText\ ("{}Bars"{},\ NotificationType::dontSendNotification);}}
 \DoxyCodeLine{00066\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (barsLabel);}}
@@ -54,12 +54,12 @@
 \DoxyCodeLine{00082\ \textcolor{comment}{//\ \ \ \ \ \{}}
 \DoxyCodeLine{00083\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ bounds\ =\ getLocalBounds();}}
 \DoxyCodeLine{00084\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ rulerHeight\ =\ bounds.getHeight()\ /\ 3;}}
-\DoxyCodeLine{00085\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (getLookAndFeel().findColour\ (ResizableWindow::backgroundColourId));}}
-\DoxyCodeLine{00086\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillRect\ (bounds);}}
-\DoxyCodeLine{00087\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (getLookAndFeel().findColour\ (ResizableWindow::backgroundColourId).contrasting());}}
-\DoxyCodeLine{00088\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawRect\ (bounds);}}
-\DoxyCodeLine{00089\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bounds.removeFromTop\ (rulerHeight);}}
-\DoxyCodeLine{00090\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawRect\ (bounds.removeFromTop\ (rulerHeight));}}
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (getLookAndFeel().findColour}}
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (ResizableWindow::backgroundColourId));\ g.fillRect\ (bounds);}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (getLookAndFeel().findColour}}
+\DoxyCodeLine{00088\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (ResizableWindow::backgroundColourId).contrasting());\ g.drawRect}}
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (bounds);\ bounds.removeFromTop\ (rulerHeight);\ g.drawRect}}
+\DoxyCodeLine{00090\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (bounds.removeFromTop\ (rulerHeight));}}
 \DoxyCodeLine{00091\ \textcolor{comment}{//\ \ \ \ \ \}}}
 \DoxyCodeLine{00092\ }
 \DoxyCodeLine{00093\ \textcolor{comment}{//\ private:}}

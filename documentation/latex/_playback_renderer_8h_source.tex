@@ -3,318 +3,49 @@
 \mbox{\hyperlink{_playback_renderer_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ }
-\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#pragma\ once}}
-\DoxyCodeLine{00026\ }
-\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
-\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
-\DoxyCodeLine{00029\ }
-\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
-\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
-\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
-\DoxyCodeLine{00033\ }
-\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ "{}../Util/ProcessingLockInterface.h"{}}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
+\DoxyCodeLine{00034\ }
 \DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ "{}../Timeline/SharedTimeSliceThread.h"{}}}
-\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_audio_modification_8h}{AudioModification.h}}"{}}}
-\DoxyCodeLine{00037\ }
-\DoxyCodeLine{00038\ \textcolor{keyword}{using\ namespace\ }juce;}
-\DoxyCodeLine{00039\ \textcolor{keyword}{using\ }std::unique\_ptr;\ }
-\DoxyCodeLine{00040\ }
-\DoxyCodeLine{00047\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}\ \ :\ \textcolor{keyword}{public}\ ARAPlaybackRenderer}
-\DoxyCodeLine{00048\ \{}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ "{}../Util/ProcessingLockInterface.h"{}}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_audio_modification_8h}{AudioModification.h}}"{}}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{using\ }std::unique\_ptr;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}\ :\ \textcolor{keyword}{public}\ ARAPlaybackRenderer\ \{}
 \DoxyCodeLine{00049\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00056\ \ \ \ \ \mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}\ (ARA::PlugIn::DocumentController*\ dc,\ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\&\ lockInterfaceIn);}
-\DoxyCodeLine{00057\ }
-\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_a275e328fe658af0b84baf74f918df587}{prepareToPlay}}\ (\textcolor{keywordtype}{double}\ sampleRateIn,}
-\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ maximumSamplesPerBlockIn,}
-\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ numChannelsIn,}
-\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AudioProcessor::ProcessingPrecision,}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AlwaysNonRealtime\ alwaysNonRealtime)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00056\ \ \ \mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}(ARA::PlugIn::DocumentController\ *dc,}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\ \&lockInterfaceIn);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00068\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_a275e328fe658af0b84baf74f918df587}{prepareToPlay}}(\textcolor{keywordtype}{double}\ sampleRateIn,\ \textcolor{keywordtype}{int}\ maximumSamplesPerBlockIn,}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ numChannelsIn,\ AudioProcessor::ProcessingPrecision,}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AlwaysNonRealtime\ alwaysNonRealtime)\ \textcolor{keyword}{override};}
 \DoxyCodeLine{00071\ }
-\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_aafe1fadc78981fb5bcad211d46eb2fc9}{releaseResources}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00075\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_aafe1fadc78981fb5bcad211d46eb2fc9}{releaseResources}}()\ \textcolor{keyword}{override};}
 \DoxyCodeLine{00076\ }
-\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_playback_renderer_a827c919d2c9bae841ad6a2b30241c953}{processBlock}}\ (AudioBuffer<float>\&\ buffer,}
-\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AudioProcessor::Realtime\ realtime,}
-\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ AudioPlayHead::PositionInfo\&\ positionInfo)\ \textcolor{keyword}{noexcept}\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{using\ }ARAPlaybackRenderer::processBlock;}
+\DoxyCodeLine{00086\ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_playback_renderer_a827c919d2c9bae841ad6a2b30241c953}{processBlock}}(}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ AudioBuffer<float>\ \&buffer,\ AudioProcessor::Realtime\ realtime,}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \textcolor{keyword}{const}\ AudioPlayHead::PositionInfo\ \&positionInfo)\ \textcolor{keyword}{noexcept}\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00089\ \ \ \textcolor{keyword}{using\ }ARAPlaybackRenderer::processBlock;}
 \DoxyCodeLine{00090\ }
 \DoxyCodeLine{00091\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00092\ \ \ \ \ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\&\ lockInterface;}
-\DoxyCodeLine{00093\ \ \ \ \ SharedResourcePointer<SharedTimeSliceThread>\ sharedTimesliceThread;}
-\DoxyCodeLine{00094\ \ \ \ \ std::map<ARAAudioSource*,\ unique\_ptr<juce::ResamplingAudioSource>>\ resamplingSources;}
-\DoxyCodeLine{00095\ \ \ \ \ std::map<ARAAudioSource*,\ unique\_ptr<AudioFormatReaderSource>>\ positionableSources;}
-\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{int}\ numChannels\ =\ 2;}
-\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{double}\ sampleRate\ =\ 48000.0;}
-\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordtype}{int}\ maximumSamplesPerBlock\ =\ 128;}
-\DoxyCodeLine{00099\ \ \ \ \ unique\_ptr<AudioBuffer<float>>\ tempBuffer;}
-\DoxyCodeLine{00100\ \};}
-\DoxyCodeLine{00101\ }
-\DoxyCodeLine{00102\ \textcolor{comment}{//\ \#pragma\ once}}
-\DoxyCodeLine{00103\ }
-\DoxyCodeLine{00104\ \textcolor{comment}{//\ \#include\ "{}../Util/ProcessingLockInterface.h"{}}}
-\DoxyCodeLine{00105\ \textcolor{comment}{//\ \#include\ "{}../Timeline/SharedTimeSliceThread.h"{}}}
-\DoxyCodeLine{00106\ }
-\DoxyCodeLine{00107\ \textcolor{comment}{//\ class\ PlaybackRenderer\ \ :\ public\ ARAPlaybackRenderer}}
-\DoxyCodeLine{00108\ \textcolor{comment}{//\ \{}}
-\DoxyCodeLine{00109\ \textcolor{comment}{//\ public:}}
-\DoxyCodeLine{00110\ \textcolor{comment}{//\ \ \ \ \ PlaybackRenderer\ (ARA::PlugIn::DocumentController*\ dc,\ ProcessingLockInterface\&\ lockInterfaceIn)}}
-\DoxyCodeLine{00111\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ :\ ARAPlaybackRenderer\ (dc),\ lockInterface\ (lockInterfaceIn)\ \{\}}}
-\DoxyCodeLine{00112\ }
-\DoxyCodeLine{00113\ \textcolor{comment}{//\ \ \ \ \ void\ prepareToPlay\ (double\ sampleRateIn,}}
-\DoxyCodeLine{00114\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int\ maximumSamplesPerBlockIn,}}
-\DoxyCodeLine{00115\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int\ numChannelsIn,}}
-\DoxyCodeLine{00116\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AudioProcessor::ProcessingPrecision,}}
-\DoxyCodeLine{00117\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AlwaysNonRealtime\ alwaysNonRealtime)\ override}}
-\DoxyCodeLine{00118\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00119\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ DBG("{}PlaybackRenderer::prepareToPlay"{});}}
-\DoxyCodeLine{00120\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ numChannels\ =\ numChannelsIn;}}
-\DoxyCodeLine{00121\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sampleRate\ =\ sampleRateIn;}}
-\DoxyCodeLine{00122\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ maximumSamplesPerBlock\ =\ maximumSamplesPerBlockIn;}}
-\DoxyCodeLine{00123\ }
-\DoxyCodeLine{00124\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ DBG("{}PlaybackRenderer::prepareToPlay\ -\/\ numChannels:\ "{}\ <<\ numChannels\ <<\ "{},\ sampleRate:\ "{}\ <<\ sampleRate\ <<\ "{},\ maximumSamplesPerBlock:\ "{}\ <<\ maximumSamplesPerBlock);}}
-\DoxyCodeLine{00125\ }
-\DoxyCodeLine{00126\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bool\ useBufferedAudioSourceReader\ =\ alwaysNonRealtime\ ==\ AlwaysNonRealtime::no;}}
-\DoxyCodeLine{00127\ }
-\DoxyCodeLine{00128\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ DBG("{}PlaybackRenderer::prepareToPlay\ using\ buffered\ audio\ source\ reader:\ "{}\ <<\ (int)useBufferedAudioSourceReader);}}
-\DoxyCodeLine{00129\ }
-\DoxyCodeLine{00130\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (const\ auto\ playbackRegion\ :\ getPlaybackRegions())}}
-\DoxyCodeLine{00131\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00132\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ audioSource\ =\ playbackRegion-\/>getAudioModification()-\/>getAudioSource();}}
-\DoxyCodeLine{00133\ }
-\DoxyCodeLine{00134\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ DBG("{}PlaybackRenderer::prepareToPlay\ audio\ source\ is\ "{}\ <<\ audioSource-\/>getName());}}
-\DoxyCodeLine{00135\ }
-\DoxyCodeLine{00136\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (resamplingSources.find\ (audioSource)\ ==\ resamplingSources.end())}}
-\DoxyCodeLine{00137\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00138\ }
-\DoxyCodeLine{00139\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::unique\_ptr<juce::AudioFormatReaderSource>\ readerSource\ \{nullptr\};}}
-\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00141\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (!\ useBufferedAudioSourceReader)}}
-\DoxyCodeLine{00142\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00143\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readerSource\ =\ std::make\_unique<juce::AudioFormatReaderSource>(}}
-\DoxyCodeLine{00144\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ new\ ARAAudioSourceReader\ (audioSource),}}
-\DoxyCodeLine{00145\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ true}}
-\DoxyCodeLine{00146\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00147\ }
-\DoxyCodeLine{00148\ }
-\DoxyCodeLine{00149\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00150\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else}}
-\DoxyCodeLine{00151\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00152\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ readAheadSize\ =\ jmax\ (4\ *\ maximumSamplesPerBlock,}}
-\DoxyCodeLine{00153\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ roundToInt\ (2.0\ *\ sampleRate));}}
-\DoxyCodeLine{00154\ }
-\DoxyCodeLine{00155\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readerSource\ =\ std::make\_unique<juce::AudioFormatReaderSource>(}}
-\DoxyCodeLine{00156\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ new\ BufferingAudioReader(new\ ARAAudioSourceReader\ (audioSource),}}
-\DoxyCodeLine{00157\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *sharedTimesliceThread,}}
-\DoxyCodeLine{00158\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readAheadSize),}}
-\DoxyCodeLine{00159\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ true}}
-\DoxyCodeLine{00160\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00161\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00162\ }
-\DoxyCodeLine{00163\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\ resamplingSource\ =\ std::make\_unique<ResamplingAudioSource>(}}
-\DoxyCodeLine{00164\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readerSource.get(),\ false,\ numChannels}}
-\DoxyCodeLine{00165\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00166\ }
-\DoxyCodeLine{00167\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ resamplingSource-\/>setResamplingRatio\ (sampleRate\ /\ audioSource-\/>getSampleRate());}}
-\DoxyCodeLine{00168\ }
-\DoxyCodeLine{00169\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readerSource-\/>prepareToPlay(maximumSamplesPerBlock,\ sampleRate);}}
-\DoxyCodeLine{00170\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ resamplingSource-\/>prepareToPlay\ (maximumSamplesPerBlock,\ sampleRate);}}
-\DoxyCodeLine{00171\ }
-\DoxyCodeLine{00172\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ positionableSources.emplace(audioSource,\ std::move(readerSource));}}
-\DoxyCodeLine{00173\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ resamplingSources.emplace(audioSource,\ std::move(resamplingSource));}}
-\DoxyCodeLine{00174\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00175\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00176\ }
-\DoxyCodeLine{00177\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00178\ }
-\DoxyCodeLine{00179\ }
-\DoxyCodeLine{00180\ \textcolor{comment}{//\ \ \ \ \ void\ releaseResources()\ override}}
-\DoxyCodeLine{00181\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00182\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ DBG("{}PlaybackRenderer::releaseResources\ releasing\ resources"{});}}
-\DoxyCodeLine{00183\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ resamplingSources.clear();}}
-\DoxyCodeLine{00184\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ positionableSources.clear();}}
-\DoxyCodeLine{00185\ }
-\DoxyCodeLine{00186\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ tempBuffer.reset();}}
-\DoxyCodeLine{00187\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00188\ }
-\DoxyCodeLine{00189\ \textcolor{comment}{//\ \ \ \ \ bool\ processBlock\ (AudioBuffer<float>\&\ buffer,}}
-\DoxyCodeLine{00190\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AudioProcessor::Realtime\ realtime,}}
-\DoxyCodeLine{00191\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ AudioPlayHead::PositionInfo\&\ positionInfo)\ noexcept\ override}}
-\DoxyCodeLine{00192\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00193\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ lock\ =\ lockInterface.getProcessingLock();}}
-\DoxyCodeLine{00194\ }
-\DoxyCodeLine{00195\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (!\ lock.isLocked())\ \{}}
-\DoxyCodeLine{00196\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}PlaybackRenderer::processBlock\ could\ not\ acquire\ processing\ lock"{});}}
-\DoxyCodeLine{00197\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ return\ true;}}
-\DoxyCodeLine{00198\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00199\ }
-\DoxyCodeLine{00200\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ numSamples\ =\ buffer.getNumSamples();}}
-\DoxyCodeLine{00201\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ jassert\ (numSamples\ <=\ maximumSamplesPerBlock);}}
-\DoxyCodeLine{00202\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ jassert\ (numChannels\ ==\ buffer.getNumChannels());}}
-\DoxyCodeLine{00203\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ jassert\ (realtime\ ==\ AudioProcessor::Realtime::no\ ||\ useBufferedAudioSourceReader);\ TODO:\ bring\ me\ back?\ }}
-\DoxyCodeLine{00204\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ timeInSamples\ =\ positionInfo.getTimeInSamples().orFallback\ (0);}}
-\DoxyCodeLine{00205\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ isPlaying\ =\ positionInfo.getIsPlaying();}}
-\DoxyCodeLine{00206\ }
-\DoxyCodeLine{00207\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bool\ success\ =\ true;}}
-\DoxyCodeLine{00208\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bool\ didRenderAnyRegion\ =\ false;}}
-\DoxyCodeLine{00209\ }
-\DoxyCodeLine{00210\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (isPlaying)}}
-\DoxyCodeLine{00211\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00212\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ blockRange\ =\ Range<int64>::withStartAndLength\ (timeInSamples,\ numSamples);}}
-\DoxyCodeLine{00213\ }
-\DoxyCodeLine{00214\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ for\ (const\ auto\&\ playbackRegion\ :\ getPlaybackRegions())}}
-\DoxyCodeLine{00215\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00216\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}PlaybackRenderer::processBlock\ evaluating\ playback\ region:\ "{}\ <<\ playbackRegion-\/>getRegionSequence()-\/>getName()\ <<\ "{}\ "{}\ <<\ playbackRegion-\/>getRegionSequence()-\/>getDocument()-\/>getName());}}
-\DoxyCodeLine{00217\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Evaluate\ region\ borders\ in\ song\ time,\ calculate\ sample\ range\ to\ render\ in\ song\ time.}}
-\DoxyCodeLine{00218\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Note\ that\ this\ example\ does\ not\ use\ head-\/\ or\ tailtime,\ so\ the\ includeHeadAndTail}}
-\DoxyCodeLine{00219\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ parameter\ is\ set\ to\ false\ here\ -\/\ this\ might\ need\ to\ be\ adjusted\ in\ actual\ plug-\/ins.}}
-\DoxyCodeLine{00220\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ playbackSampleRange\ =\ playbackRegion-\/>getSampleRange\ (sampleRate,\ ARAPlaybackRegion::IncludeHeadAndTail::no);}}
-\DoxyCodeLine{00221\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\ renderRange\ =\ blockRange.getIntersectionWith\ (playbackSampleRange);}}
-\DoxyCodeLine{00222\ }
-\DoxyCodeLine{00223\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (renderRange.isEmpty())}}
-\DoxyCodeLine{00224\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00225\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}PlaybackRenderer::processBlock\ render\ range\ is\ empty\ wrt\ to\ playback\ range"{});}}
-\DoxyCodeLine{00226\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;}}
-\DoxyCodeLine{00227\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ }}
-\DoxyCodeLine{00228\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Evaluate\ region\ borders\ in\ modification/source\ time\ and\ calculate\ offset\ between}}
-\DoxyCodeLine{00229\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ song\ and\ source\ samples,\ then\ clip\ song\ samples\ accordingly}}
-\DoxyCodeLine{00230\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ (if\ an\ actual\ plug-\/in\ supports\ time\ stretching,\ this\ must\ be\ taken\ into\ account\ here).}}
-\DoxyCodeLine{00231\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Range<int64>\ modificationSampleRange\ \{\ playbackRegion-\/>getStartInAudioModificationSamples(),}}
-\DoxyCodeLine{00232\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion-\/>getEndInAudioModificationSamples()\ \};}}
-\DoxyCodeLine{00233\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ modificationSampleOffset\ =\ modificationSampleRange.getStart()\ -\/\ playbackSampleRange.getStart();}}
-\DoxyCodeLine{00234\ }
-\DoxyCodeLine{00235\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ renderRange\ =\ renderRange.getIntersectionWith\ (modificationSampleRange.movedToStartAt\ (playbackSampleRange.getStart()));}}
-\DoxyCodeLine{00236\ }
-\DoxyCodeLine{00237\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (renderRange.isEmpty())}}
-\DoxyCodeLine{00238\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00239\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}PlaybackRenderer::processBlock\ render\ range\ is\ empty\ wrt\ to\ modification\ range"{});\ }}
-\DoxyCodeLine{00240\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;}}
-\DoxyCodeLine{00241\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00242\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ !\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
-\DoxyCodeLine{00243\ \ \ \ \ }
-\DoxyCodeLine{00244\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ find\ our\ resampled\ source}}
-\DoxyCodeLine{00245\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ resamplingSourceIt\ =\ resamplingSources.find(}}
-\DoxyCodeLine{00246\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion-\/>getAudioModification()-\/>getAudioSource()}}
-\DoxyCodeLine{00247\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00248\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\&\ resamplingSource\ =\ resamplingSourceIt-\/>second;}}
-\DoxyCodeLine{00249\ }
-\DoxyCodeLine{00250\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ positionableSourceIt\ =\ positionableSources.find(}}
-\DoxyCodeLine{00251\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion-\/>getAudioModification()-\/>getAudioSource()}}
-\DoxyCodeLine{00252\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00253\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\&\ positionableSource\ =\ positionableSourceIt-\/>second;}}
-\DoxyCodeLine{00254\ }
-\DoxyCodeLine{00255\ }
-\DoxyCodeLine{00256\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ TODO:\ the\ buffering\ audio\ reader\ should\ have\ a\ time\ out.\ dont'\ think\ it\ currently\ has\ one}}
-\DoxyCodeLine{00257\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ if\ we're\ in\ realtime\ mode,\ timeout\ should\ be\ 0.\ else,\ can\ be\ 100\ ms}}
-\DoxyCodeLine{00258\ }
-\DoxyCodeLine{00259\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ calculate\ buffer\ offsets}}
-\DoxyCodeLine{00260\ }
-\DoxyCodeLine{00261\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Calculate\ buffer\ offsets.}}
-\DoxyCodeLine{00262\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ int\ numSamplesToRead\ =\ (int)\ renderRange.getLength();}}
-\DoxyCodeLine{00263\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ int\ startInBuffer\ =\ (int)\ (renderRange.getStart()\ -\/\ blockRange.getStart());}}
-\DoxyCodeLine{00264\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\ startInSource\ =\ renderRange.getStart()\ +\ modificationSampleOffset;}}
-\DoxyCodeLine{00265\ }
-\DoxyCodeLine{00266\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ positionableSource-\/>setNextReadPosition\ (startInSource);}}
-\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00268\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Read\ samples:}}
-\DoxyCodeLine{00269\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ first\ region\ can\ write\ directly\ into\ output,\ later\ regions\ need\ to\ use\ local\ buffer.}}
-\DoxyCodeLine{00270\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\&\ readBuffer\ =\ (didRenderAnyRegion)\ ?\ *tempBuffer\ :\ buffer;}}
-\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00272\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ apply\ the\ modified\ buffer}}
-\DoxyCodeLine{00273\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\ *modBuffer\ =\ playbackRegion-\/>getAudioModification<AudioModification>()-\/>getModifiedAudioBuffer();}}
-\DoxyCodeLine{00274\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (modBuffer\ !=\ nullptr\ \&\&\ playbackRegion-\/>getAudioModification<AudioModification>()-\/>getIsModified())}}
-\DoxyCodeLine{00275\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00276\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ jassert\ (numSamplesToRead\ <=\ modBuffer-\/>getNumSamples());}}
-\DoxyCodeLine{00277\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ we\ could\ handle\ more\ cases\ with\ channel\ mismatches\ better\ }}
-\DoxyCodeLine{00278\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (modBuffer-\/>getNumChannels()\ ==\ numChannels)}}
-\DoxyCodeLine{00279\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00280\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ for\ (int\ c\ =\ 0;\ c\ <\ numChannels;\ ++c)}}
-\DoxyCodeLine{00281\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readBuffer.copyFrom\ (c,\ }}
-\DoxyCodeLine{00282\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0,\ }}
-\DoxyCodeLine{00283\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *modBuffer,}}
-\DoxyCodeLine{00284\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ c,}}
-\DoxyCodeLine{00285\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ static\_cast<int>(startInSource),}}
-\DoxyCodeLine{00286\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ numSamplesToRead);}}
-\DoxyCodeLine{00287\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00288\ }
-\DoxyCodeLine{00289\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else\ if\ (modBuffer-\/>getNumChannels()\ ==\ 1)}}
-\DoxyCodeLine{00290\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00291\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ for\ (int\ c\ =\ 0;\ c\ <\ numChannels;\ ++c)}}
-\DoxyCodeLine{00292\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ readBuffer.copyFrom\ (c,\ }}
-\DoxyCodeLine{00293\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0,\ }}
-\DoxyCodeLine{00294\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *modBuffer,}}
-\DoxyCodeLine{00295\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0,}}
-\DoxyCodeLine{00296\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ static\_cast<int>(startInSource),}}
-\DoxyCodeLine{00297\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ numSamplesToRead);}}
-\DoxyCodeLine{00298\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00299\ }
-\DoxyCodeLine{00300\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00301\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else\ }}
-\DoxyCodeLine{00302\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ //\ buffer\ isn't\ ready,\ read\ from\ original\ audio\ source}}
-\DoxyCodeLine{00303\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}reading\ "{}\ <<\ numSamplesToRead\ <<\ "{}\ samples\ from\ "{}\ <<\ startInSource\ <<\ "{}\ into\ "{}\ <<\ startInBuffer);}}
-\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00305\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ resamplingSource-\/>getNextAudioBlock(}}
-\DoxyCodeLine{00306\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ juce::AudioSourceChannelInfo(readBuffer)}}
-\DoxyCodeLine{00307\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ );}}
-\DoxyCodeLine{00308\ }
-\DoxyCodeLine{00309\ }
-\DoxyCodeLine{00310\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ if\ (!\ reader.get()-\/>read\ (\&readBuffer,\ startInBuffer,\ numSamplesToRead,\ startInSource,\ true,\ true))}}
-\DoxyCodeLine{00311\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ \{}}
-\DoxyCodeLine{00312\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ \ \ \ \ DBG("{}reader\ failed\ to\ read"{});}}
-\DoxyCodeLine{00313\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ \ \ \ \ success\ =\ false;}}
-\DoxyCodeLine{00314\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ \ \ \ \ continue;}}
-\DoxyCodeLine{00315\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ \ \ \ \ \}}}
-\DoxyCodeLine{00316\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00318\ }
-\DoxyCodeLine{00319\ }
-\DoxyCodeLine{00320\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Mix\ output\ of\ all\ regions}}
-\DoxyCodeLine{00321\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (didRenderAnyRegion)}}
-\DoxyCodeLine{00322\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00323\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Mix\ local\ buffer\ into\ the\ output\ buffer.}}
-\DoxyCodeLine{00324\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ for\ (int\ c\ =\ 0;\ c\ <\ numChannels;\ ++c)}}
-\DoxyCodeLine{00325\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.addFrom\ (c,\ startInBuffer,\ *tempBuffer,\ c,\ startInBuffer,\ numSamplesToRead);}}
-\DoxyCodeLine{00326\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00327\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else}}
-\DoxyCodeLine{00328\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00329\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //\ Clear\ any\ excess\ at\ start\ or\ end\ of\ the\ region.}}
-\DoxyCodeLine{00330\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (startInBuffer\ !=\ 0)}}
-\DoxyCodeLine{00331\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.clear\ (0,\ startInBuffer);}}
-\DoxyCodeLine{00332\ }
-\DoxyCodeLine{00333\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ int\ endInBuffer\ =\ startInBuffer\ +\ numSamplesToRead;}}
-\DoxyCodeLine{00334\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ int\ remainingSamples\ =\ numSamples\ -\/\ endInBuffer;}}
-\DoxyCodeLine{00335\ }
-\DoxyCodeLine{00336\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (remainingSamples\ !=\ 0)}}
-\DoxyCodeLine{00337\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.clear\ (endInBuffer,\ remainingSamples);}}
-\DoxyCodeLine{00338\ }
-\DoxyCodeLine{00339\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ didRenderAnyRegion\ =\ true;}}
-\DoxyCodeLine{00340\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00341\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00342\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00343\ }
-\DoxyCodeLine{00344\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ If\ no\ playback\ or\ no\ region\ did\ intersect,\ clear\ buffer\ now.}}
-\DoxyCodeLine{00345\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (!\ didRenderAnyRegion)}}
-\DoxyCodeLine{00346\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00347\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ DBG("{}no\ region\ did\ intersect\ or\ no\ playback"{});}}
-\DoxyCodeLine{00348\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ buffer.clear();}}
-\DoxyCodeLine{00349\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00350\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ success;}}
-\DoxyCodeLine{00351\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00352\ }
-\DoxyCodeLine{00353\ \textcolor{comment}{//\ \ \ \ \ using\ ARAPlaybackRenderer::processBlock;}}
-\DoxyCodeLine{00354\ }
-\DoxyCodeLine{00355\ \textcolor{comment}{//\ private:}}
-\DoxyCodeLine{00356\ \textcolor{comment}{//\ \ \ \ \ //==============================================================================}}
-\DoxyCodeLine{00357\ \textcolor{comment}{//\ \ \ \ \ ProcessingLockInterface\&\ lockInterface;}}
-\DoxyCodeLine{00358\ }
-\DoxyCodeLine{00359\ \textcolor{comment}{//\ \ \ \ \ SharedResourcePointer<SharedTimeSliceThread>\ sharedTimesliceThread;}}
-\DoxyCodeLine{00360\ \textcolor{comment}{//\ \ \ \ \ std::map<ARAAudioSource*,\ unique\_ptr<juce::ResamplingAudioSource>>\ resamplingSources;}}
-\DoxyCodeLine{00361\ \textcolor{comment}{//\ \ \ \ \ std::map<ARAAudioSource*,\ unique\_ptr<AudioFormatReaderSource>>\ positionableSources;}}
-\DoxyCodeLine{00362\ }
-\DoxyCodeLine{00363\ \textcolor{comment}{//\ \ \ \ \ int\ numChannels\ =\ 2;}}
-\DoxyCodeLine{00364\ \textcolor{comment}{//\ \ \ \ \ double\ sampleRate\ =\ 48000.0;}}
-\DoxyCodeLine{00365\ \textcolor{comment}{//\ \ \ \ \ int\ maximumSamplesPerBlock\ =\ 128;}}
-\DoxyCodeLine{00366\ }
-\DoxyCodeLine{00367\ \textcolor{comment}{//\ \ \ \ \ unique\_ptr<AudioBuffer<float>>\ tempBuffer;}}
-\DoxyCodeLine{00368\ }
-\DoxyCodeLine{00369\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{00092\ \ \ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\ \&lockInterface;}
+\DoxyCodeLine{00093\ \ \ SharedResourcePointer<SharedTimeSliceThread>\ sharedTimesliceThread;}
+\DoxyCodeLine{00094\ \ \ std::map<ARAAudioSource\ *,\ unique\_ptr<juce::ResamplingAudioSource>>}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ resamplingSources;}
+\DoxyCodeLine{00096\ \ \ std::map<ARAAudioSource\ *,\ unique\_ptr<AudioFormatReaderSource>>}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ positionableSources;}
+\DoxyCodeLine{00098\ \ \ \textcolor{keywordtype}{int}\ numChannels\ =\ 2;}
+\DoxyCodeLine{00099\ \ \ \textcolor{keywordtype}{double}\ sampleRate\ =\ 48000.0;}
+\DoxyCodeLine{00100\ \ \ \textcolor{keywordtype}{int}\ maximumSamplesPerBlock\ =\ 128;}
+\DoxyCodeLine{00101\ \ \ unique\_ptr<AudioBuffer<float>>\ tempBuffer;}
+\DoxyCodeLine{00102\ \};}
 
 \end{DoxyCode}

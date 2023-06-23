@@ -1,0 +1,68 @@
+\doxysection{Tensor\+Juce\+Processor\+Editor Class Reference}
+\hypertarget{class_tensor_juce_processor_editor}{}\label{class_tensor_juce_processor_editor}\index{TensorJuceProcessorEditor@{TensorJuceProcessorEditor}}
+
+
+Class responsible for managing the plugin\textquotesingle{}s graphical interface.
+
+
+
+
+{\ttfamily \#include $<$Processor\+Editor.\+h$>$}
+
+Inheritance diagram for Tensor\+Juce\+Processor\+Editor\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=1.000000cm]{class_tensor_juce_processor_editor}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item
+\mbox{\hyperlink{class_tensor_juce_processor_editor_ab806a9d0533180f7cbf3d628a15014b5}{Tensor\+Juce\+Processor\+Editor}} (\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}} \&p, \mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*}er)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{class_tensor_juce_processor_editor}{Tensor\+Juce\+Processor\+Editor}. \end{DoxyCompactList}\item
+\Hypertarget{class_tensor_juce_processor_editor_a21708751d116ad0eb3f520014e02a58b}\label{class_tensor_juce_processor_editor_a21708751d116ad0eb3f520014e02a58b}
+void {\bfseries button\+Clicked} (Button \texorpdfstring{$\ast$}{*}button) override
+\item
+\Hypertarget{class_tensor_juce_processor_editor_a0d6f6c20a8c70f1533c253fa589767f4}\label{class_tensor_juce_processor_editor_a0d6f6c20a8c70f1533c253fa589767f4}
+void {\bfseries combo\+Box\+Changed} (Combo\+Box \texorpdfstring{$\ast$}{*}box) override
+\item
+\Hypertarget{class_tensor_juce_processor_editor_a04d87b52c9a2fffff75c446329f02c67}\label{class_tensor_juce_processor_editor_a04d87b52c9a2fffff75c446329f02c67}
+void {\bfseries slider\+Value\+Changed} (Slider \texorpdfstring{$\ast$}{*}slider) override
+\item
+\Hypertarget{class_tensor_juce_processor_editor_ad364b643806550872405a491c482dfa0}\label{class_tensor_juce_processor_editor_ad364b643806550872405a491c482dfa0}
+void {\bfseries paint} (Graphics \&g) override
+\item
+\Hypertarget{class_tensor_juce_processor_editor_ab749ecdc2857f3edeebc20ec0863e71e}\label{class_tensor_juce_processor_editor_ab749ecdc2857f3edeebc20ec0863e71e}
+void {\bfseries resized} () override
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class responsible for managing the plugin\textquotesingle{}s graphical interface.
+
+This class extends the base class Audio\+Processor\+Editor and its ARA extension, and implements Button\+::\+Listener, Slider\+::\+Listener, and Combo\+Box\+::\+Listener interfaces.
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_tensor_juce_processor_editor_ab806a9d0533180f7cbf3d628a15014b5}\label{class_tensor_juce_processor_editor_ab806a9d0533180f7cbf3d628a15014b5}
+\index{TensorJuceProcessorEditor@{TensorJuceProcessorEditor}!TensorJuceProcessorEditor@{TensorJuceProcessorEditor}}
+\index{TensorJuceProcessorEditor@{TensorJuceProcessorEditor}!TensorJuceProcessorEditor@{TensorJuceProcessorEditor}}
+\doxysubsubsection{\texorpdfstring{TensorJuceProcessorEditor()}{TensorJuceProcessorEditor()}}
+{\footnotesize\ttfamily Tensor\+Juce\+Processor\+Editor\+::\+Tensor\+Juce\+Processor\+Editor (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}} \&}]{p,  }\item[{\mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*}}]{er }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+
+
+Constructor for \doxylink{class_tensor_juce_processor_editor}{Tensor\+Juce\+Processor\+Editor}.
+
+
+\begin{DoxyParams}{Parameters}
+{\em p} & Reference to \doxylink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl} object. \\
+\hline
+{\em er} & Pointer to \doxylink{class_editor_renderer}{Editor\+Renderer} object. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item
+Source/\+ARA/\mbox{\hyperlink{_processor_editor_8h}{Processor\+Editor.\+h}}\item
+Source/\+ARA/\mbox{\hyperlink{_processor_editor_8cpp}{Processor\+Editor.\+cpp}}\end{DoxyCompactItemize}

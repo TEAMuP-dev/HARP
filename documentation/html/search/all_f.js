@@ -8,5 +8,5 @@ var searchData=
   ['webmodel_5',['WebModel',['../class_web_model.html',1,'']]],
   ['webmodel_2eh_6',['WebModel.h',['../_web_model_8h.html',1,'']]],
   ['webwave2wave_7',['WebWave2Wave',['../class_web_wave2_wave.html',1,'']]],
-  ['willbeginediting_8',['willBeginEditing',['../class_a_r_a_demo_plugin_document_controller_specialisation.html#a3a476d5623ebe4ba5f5c00feab37696b',1,'ARADemoPluginDocumentControllerSpecialisation']]]
+  ['willbeginediting_8',['willBeginEditing',['../class_tensor_juce_document_controller_specialisation.html#ad092649b6c5cff682b86db3f155a0396',1,'TensorJuceDocumentControllerSpecialisation']]]
 ];

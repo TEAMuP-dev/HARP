@@ -5,31 +5,27 @@
 \DoxyCodeLine{00001\ }
 \DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
 \DoxyCodeLine{00021\ }
-\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}}
-\DoxyCodeLine{00023\ \{}
-\DoxyCodeLine{00024\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00025\ \ \ \ \ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}()\ =\ \textcolor{keywordflow}{default};}
-\DoxyCodeLine{00026\ }
-\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}\ (unique\_ptr<BufferingAudioReader>\ readerIn)}
-\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ :\ setTimeoutFn\ ([ptr\ =\ readerIn.get()]\ (\textcolor{keywordtype}{int}\ ms)\ \{\ ptr-\/>setReadTimeout\ (ms);\ \}),}
-\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ reader\ (std::move\ (readerIn))}
-\DoxyCodeLine{00030\ \ \ \ \ \{\}}
-\DoxyCodeLine{00031\ }
-\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}\ (unique\_ptr<AudioFormatReader>\ readerIn)}
-\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ :\ setTimeoutFn(),}
-\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ reader\ (std::move\ (readerIn))}
-\DoxyCodeLine{00035\ \ \ \ \ \{\}}
-\DoxyCodeLine{00036\ }
-\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{void}\ setReadTimeout\ (\textcolor{keywordtype}{int}\ ms)}
-\DoxyCodeLine{00038\ \ \ \ \ \{}
-\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ NullCheckedInvocation::invoke\ (setTimeoutFn,\ ms);}
-\DoxyCodeLine{00040\ \ \ \ \ \}}
-\DoxyCodeLine{00041\ }
-\DoxyCodeLine{00042\ \ \ \ \ AudioFormatReader*\ get()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ reader.get();\ \}}
-\DoxyCodeLine{00043\ }
-\DoxyCodeLine{00044\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00045\ \ \ \ \ std::function<void\ (\textcolor{keywordtype}{int})>\ setTimeoutFn;}
-\DoxyCodeLine{00046\ \ \ \ \ unique\_ptr<AudioFormatReader>\ reader;}
-\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}\ \{}
+\DoxyCodeLine{00023\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00024\ \ \ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}(unique\_ptr<BufferingAudioReader>\ readerIn)}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ :\ setTimeoutFn(}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ [ptr\ =\ readerIn.get()](\textcolor{keywordtype}{int}\ ms)\ \{\ ptr-\/>setReadTimeout(ms);\ \}),}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ reader(std::move(readerIn))\ \{\}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_possibly_buffered_reader}{PossiblyBufferedReader}}(unique\_ptr<AudioFormatReader>\ readerIn)}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ :\ setTimeoutFn(),\ reader(std::move(readerIn))\ \{\}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \textcolor{keywordtype}{void}\ setReadTimeout(\textcolor{keywordtype}{int}\ ms)\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ NullCheckedInvocation::invoke(setTimeoutFn,\ ms);}
+\DoxyCodeLine{00036\ \ \ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ AudioFormatReader\ *get()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ reader.get();\ \}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00041\ \ \ std::function<void(\textcolor{keywordtype}{int})>\ setTimeoutFn;}
+\DoxyCodeLine{00042\ \ \ unique\_ptr<AudioFormatReader>\ reader;}
+\DoxyCodeLine{00043\ \};}
 
 \end{DoxyCode}

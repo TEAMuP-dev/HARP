@@ -3,40 +3,49 @@
 \mbox{\hyperlink{_document_controller_specialisation_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ }
-\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#pragma\ once}}
-\DoxyCodeLine{00024\ }
-\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_editor_renderer_8h}{EditorRenderer.h}}"{}}}
-\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_playback_renderer_8h}{PlaybackRenderer.h}}"{}}}
-\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}../Util/PreviewState.h"{}}}
-\DoxyCodeLine{00028\ }
-\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation}{ARADemoPluginDocumentControllerSpecialisation}}\ \ :\ \textcolor{keyword}{public}\ ARADocumentControllerSpecialisation,}
-\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}}
-\DoxyCodeLine{00035\ \{}
-\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{using\ }ARADocumentControllerSpecialisation::ARADocumentControllerSpecialisation;}
-\DoxyCodeLine{00042\ }
-\DoxyCodeLine{00043\ \ \ \ \ \mbox{\hyperlink{struct_preview_state}{PreviewState}}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_a5cd3a3440f24d48bb9bd77aa4e217183}{previewState}};\ \ }
-\DoxyCodeLine{00044\ }
-\DoxyCodeLine{00045\ \textcolor{keyword}{protected}:}
-\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_a3a476d5623ebe4ba5f5c00feab37696b}{willBeginEditing}}\ (ARADocument*)\ \textcolor{keyword}{override};\ \ }
-\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_a4b4e14c815f6db55b1e1507c09947ed8}{didEndEditing}}\ (ARADocument*)\ \textcolor{keyword}{override};\ \ }
-\DoxyCodeLine{00048\ }
-\DoxyCodeLine{00053\ \ \ \ \ ARAAudioModification*\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_ab394909369804ab330b8f7994257b76c}{doCreateAudioModification}}\ (ARAAudioSource*\ audioSource,}
-\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARA::ARAAudioModificationHostRef\ hostRef,}
-\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ ARAAudioModification*\ optionalModificationToClone)\ \textcolor{keyword}{noexcept}\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00056\ }
-\DoxyCodeLine{00061\ \ \ \ \ ARAPlaybackRenderer*\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_acaf3731dc12776ccd2eed54929b6856f}{doCreatePlaybackRenderer}}()\ noexcept\ override;}
-\DoxyCodeLine{00062\ }
-\DoxyCodeLine{00067\ \ \ \ \ \mbox{\hyperlink{class_editor_renderer}{EditorRenderer}}*\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_aff0d0ce68703ad3979c158a7d1f36d7b}{doCreateEditorRenderer}}()\ noexcept\ override;}
-\DoxyCodeLine{00068\ }
-\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_af45e741f030e97724e5ff5ffcc03f386}{doRestoreObjectsFromStream}}\ (ARAInputStream\&\ input,}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARARestoreObjectsFilter*\ filter)\ noexcept\ override;\ \ }
-\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_a7d559ed47ad56d1f79c7ce899dea6a78}{doStoreObjectsToStream}}\ (ARAOutputStream\&\ output,\ const\ ARAStoreObjectsFilter*\ filter)\ noexcept\ override;\ \ }
-\DoxyCodeLine{00072\ }
-\DoxyCodeLine{00073\ private:}
-\DoxyCodeLine{00074\ \ \ \ \ ScopedTryReadLock\ getProcessingLock()\ override;\ \ }
-\DoxyCodeLine{00075\ }
-\DoxyCodeLine{00076\ \ \ \ \ ReadWriteLock\ processBlockLock;\ \ }
-\DoxyCodeLine{00077\ \};}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_editor_renderer_8h}{EditorRenderer.h}}"{}}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_playback_renderer_8h}{PlaybackRenderer.h}}"{}}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ "{}../Util/PreviewState.h"{}}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_tensor_juce_document_controller_specialisation}{TensorJuceDocumentControllerSpecialisation}}}
+\DoxyCodeLine{00038\ \ \ \ \ :\ \textcolor{keyword}{public}\ ARADocumentControllerSpecialisation,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \textcolor{keyword}{private}\ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\ \{}
+\DoxyCodeLine{00040\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00045\ \ \ \textcolor{keyword}{using\ }ARADocumentControllerSpecialisation::}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ ARADocumentControllerSpecialisation;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \mbox{\hyperlink{struct_preview_state}{PreviewState}}\ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_af7a8ce95d7c0370bad87d559400b2a21}{previewState}};\ }
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_ad092649b6c5cff682b86db3f155a0396}{willBeginEditing}}(}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ ARADocument\ *)\ \textcolor{keyword}{override};\ }
+\DoxyCodeLine{00053\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_a647d37e7367c05927851fcf3ff740582}{didEndEditing}}(}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ ARADocument\ *)\ \textcolor{keyword}{override};\ }
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00060\ \ \ ARAAudioModification\ *\mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_a7876a745c403fdf1de25a5c1e82f7c55}{doCreateAudioModification}}(}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ ARAAudioSource\ *audioSource,\ ARA::ARAAudioModificationHostRef\ hostRef,}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \textcolor{keyword}{const}\ ARAAudioModification\ *optionalModificationToClone)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \textcolor{keyword}{override};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00069\ \ \ ARAPlaybackRenderer\ *\mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_a2e61ee9dfea512dc6c7a019929accc29}{doCreatePlaybackRenderer}}()\ noexcept\ override;}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00075\ \ \ \mbox{\hyperlink{class_editor_renderer}{EditorRenderer}}\ *\mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_a257d24af496a8558c408de59e6e02f63}{doCreateEditorRenderer}}()\ noexcept\ override;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \textcolor{keywordtype}{bool}}
+\DoxyCodeLine{00078\ \ \ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_afc07312034b0cc5e931529a3e2958ca8}{doRestoreObjectsFromStream}}(ARAInputStream\ \&input,}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARARestoreObjectsFilter\ *filter)\ noexcept}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ override;\ }
+\DoxyCodeLine{00081\ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation_a01e0665edd1a48bb3ec4f102e8deb66d}{doStoreObjectsToStream}}(ARAOutputStream\ \&output,}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARAStoreObjectsFilter\ *filter)\ noexcept}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ override;\ }
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ private:}
+\DoxyCodeLine{00086\ \ \ ScopedTryReadLock\ getProcessingLock()\ override;\ }
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ ReadWriteLock\ processBlockLock;\ }
+\DoxyCodeLine{00089\ \};}
 
 \end{DoxyCode}

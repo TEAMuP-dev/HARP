@@ -3,39 +3,38 @@
 \mbox{\hyperlink{_audio_modification_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ }
-\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
-\DoxyCodeLine{00021\ }
-\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00022\ }
 \DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}../DeepLearning/WebModel.h"{}}}
-\DoxyCodeLine{00024\ }
-\DoxyCodeLine{00025\ \textcolor{keyword}{using\ }std::unique\_ptr;}
-\DoxyCodeLine{00026\ \textcolor{keyword}{using\ namespace\ }juce;}
-\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{using\ }std::unique\_ptr;}
+\DoxyCodeLine{00027\ \textcolor{keyword}{using\ namespace\ }juce;}
 \DoxyCodeLine{00028\ }
-\DoxyCodeLine{00037\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_audio_modification}{AudioModification}}\ :\ \textcolor{keyword}{public}\ juce::ARAAudioModification\ \{}
-\DoxyCodeLine{00038\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00039\ \ \ \ \ \mbox{\hyperlink{class_audio_modification}{AudioModification}}(juce::ARAAudioSource*\ audioSource,}
-\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ ARA::ARAAudioModificationHostRef\ hostRef,}
-\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ ARAAudioModification*\ optionalModificationToClone);}
-\DoxyCodeLine{00042\ }
-\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_audio_modification_aa99f5c127ae475ac110d8b4312c92e4e}{init}}(ARAAudioSource*\ audioSource);}
-\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{bool}\ isDimmed()\ \textcolor{keyword}{const};}
-\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{void}\ setDimmed(\textcolor{keywordtype}{bool}\ shouldDim);}
-\DoxyCodeLine{00046\ \ \ \ \ std::string\ getSourceName();}
-\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_audio_modification_aeca1b24446bb48eba9a4a39fb85100c4}{process}}(std::map<std::string,\ std::any>\&\ params);}
-\DoxyCodeLine{00048\ \ \ \ \ juce::AudioBuffer<float>*\ getModifiedAudioBuffer();}
-\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{bool}\ getIsModified();}
-\DoxyCodeLine{00050\ }
-\DoxyCodeLine{00051\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00052\ \ \ \ \ \mbox{\hyperlink{class_web_wave2_wave}{WebWave2Wave}}\ mModel;}
-\DoxyCodeLine{00053\ }
-\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{bool}\ dimmed\ =\ \textcolor{keyword}{false};}
-\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{bool}\ mIsModified\ =\ \textcolor{keyword}{false};}
-\DoxyCodeLine{00056\ }
-\DoxyCodeLine{00057\ \ \ \ \ std::string\ mAudioSourceName;}
-\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{int}\ mSampleRate;}
-\DoxyCodeLine{00059\ \ \ \ \ unique\_ptr<ARAAudioSourceReader>\ mAudioSourceReader\{\ \textcolor{keyword}{nullptr}\ \};}
-\DoxyCodeLine{00060\ \ \ \ \ unique\_ptr<juce::AudioBuffer<float>>\ mAudioBuffer\{\ \textcolor{keyword}{nullptr}\ \};}
-\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_audio_modification}{AudioModification}}\ :\ \textcolor{keyword}{public}\ juce::ARAAudioModification\ \{}
+\DoxyCodeLine{00040\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00041\ \ \ \mbox{\hyperlink{class_audio_modification}{AudioModification}}(juce::ARAAudioSource\ *audioSource,}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARA::ARAAudioModificationHostRef\ hostRef,}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ ARAAudioModification\ *optionalModificationToClone);}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_audio_modification_aa99f5c127ae475ac110d8b4312c92e4e}{init}}(ARAAudioSource\ *audioSource);}
+\DoxyCodeLine{00046\ \ \ \textcolor{keywordtype}{bool}\ isDimmed()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{void}\ setDimmed(\textcolor{keywordtype}{bool}\ shouldDim);}
+\DoxyCodeLine{00048\ \ \ std::string\ getSourceName();}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_audio_modification_aeca1b24446bb48eba9a4a39fb85100c4}{process}}(std::map<std::string,\ std::any>\ \&params);}
+\DoxyCodeLine{00050\ \ \ juce::AudioBuffer<float>\ *getModifiedAudioBuffer();}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{bool}\ getIsModified();}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00054\ \ \ \mbox{\hyperlink{class_web_wave2_wave}{WebWave2Wave}}\ mModel;}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{bool}\ dimmed\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{bool}\ mIsModified\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ std::string\ mAudioSourceName;}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{int}\ mSampleRate;}
+\DoxyCodeLine{00061\ \ \ unique\_ptr<ARAAudioSourceReader>\ mAudioSourceReader\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00062\ \ \ unique\_ptr<juce::AudioBuffer<float>>\ mAudioBuffer\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00063\ \};}
 
 \end{DoxyCode}

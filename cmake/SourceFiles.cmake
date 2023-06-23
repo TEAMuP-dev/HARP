@@ -9,10 +9,10 @@ set(SourceFiles
     Source/ARA/DocumentControllerSpecialisation.cpp
     Source/ARA/EditorRenderer.h
     Source/ARA/EditorRenderer.cpp
-    Source/ARA/PlaybackRenderer.h    
-    Source/ARA/PlaybackRenderer.cpp   
-    Source/ARA/ProcessorEditor.h 
-    Source/ARA/ProcessorEditor.cpp 
+    Source/ARA/PlaybackRenderer.h
+    Source/ARA/PlaybackRenderer.cpp
+    Source/ARA/ProcessorEditor.h
+    Source/ARA/ProcessorEditor.cpp
 
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
@@ -38,4 +38,6 @@ set(SourceFiles
     Source/UI/RulersView.cpp
     Source/UI/ToolBarStyle.h
     Source/UI/ToolBarStyle.cpp
+
+    Source/Util/PreviewState.h
 )

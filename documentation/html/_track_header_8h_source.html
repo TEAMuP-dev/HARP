@@ -81,81 +81,77 @@ $(function() {
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno"><a class="line" href="class_track_header.html">    3</a></span><span class="keyword">class </span><a class="code hl_class" href="class_track_header.html">TrackHeader</a> : <span class="keyword">public</span> Component,</div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span>                    <span class="keyword">private</span> ARARegionSequence::Listener,</div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span>                    <span class="keyword">private</span> ARAEditorView::Listener</div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span>{</div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>    <a class="code hl_class" href="class_track_header.html">TrackHeader</a> (ARAEditorView&amp; editorView, ARARegionSequence&amp; regionSequenceIn)</div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>        : araEditorView (editorView), regionSequence (regionSequenceIn)</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    {</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>        updateTrackName (regionSequence.getName());</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>        onNewSelection (araEditorView.getViewSelection());</div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span>                    <span class="keyword">private</span> ARAEditorView::Listener {</div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span>  <a class="code hl_class" href="class_track_header.html">TrackHeader</a>(ARAEditorView &amp;editorView, ARARegionSequence &amp;regionSequenceIn)</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>      : araEditorView(editorView), regionSequence(regionSequenceIn) {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>    updateTrackName(regionSequence.getName());</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    onNewSelection(araEditorView.getViewSelection());</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span> </div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    addAndMakeVisible(trackNameLabel);</div>
 <div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>        addAndMakeVisible (trackNameLabel);</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>        regionSequence.addListener (<span class="keyword">this</span>);</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>        araEditorView.addListener (<span class="keyword">this</span>);</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    }</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <a class="code hl_class" href="class_track_header.html">~TrackHeader</a>()<span class="keyword"> override</span></div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">    </span>{</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>        araEditorView.removeListener (<span class="keyword">this</span>);</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>        regionSequence.removeListener (<span class="keyword">this</span>);</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    }</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordtype">void</span> willUpdateRegionSequenceProperties (ARARegionSequence*, ARARegionSequence::PropertiesPtr newProperties)<span class="keyword"> override</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keyword">    </span>{</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>        <span class="keywordflow">if</span> (regionSequence.getName() != newProperties-&gt;name)</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>            updateTrackName (newProperties-&gt;name);</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>        <span class="keywordflow">if</span> (regionSequence.getColor() != newProperties-&gt;color)</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>            repaint();</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    }</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">void</span> resized()<span class="keyword"> override</span></div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span><span class="keyword">    </span>{</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>        trackNameLabel.setBounds (getLocalBounds().reduced (2));</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    }</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordtype">void</span> paint (Graphics&amp; g)<span class="keyword"> override</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="keyword">    </span>{</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>        <span class="keyword">const</span> <span class="keyword">auto</span> backgroundColour = getLookAndFeel().findColour (ResizableWindow::backgroundColourId);</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>        g.setColour (isSelected ? backgroundColour.brighter() : backgroundColour);</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        g.fillRoundedRectangle (getLocalBounds().reduced (2).toFloat(), 6.0f);</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>        g.setColour (backgroundColour.contrasting());</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>        g.drawRoundedRectangle (getLocalBounds().reduced (2).toFloat(), 6.0f, 1.0f);</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        <span class="keywordflow">if</span> (<span class="keyword">auto</span> colour = regionSequence.getColor())</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>        {</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>            g.setColour (convertARAColour (colour));</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>            g.fillRect (getLocalBounds().removeFromTop (16).reduced (6));</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>            g.fillRect (getLocalBounds().removeFromBottom (16).reduced (6));</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>        }</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    }</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keywordtype">void</span> onNewSelection (<span class="keyword">const</span> ARAViewSelection&amp; viewSelection)<span class="keyword"> override</span></div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><span class="keyword">    </span>{</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; selectedRegionSequences = viewSelection.getRegionSequences();</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> selected = std::find (selectedRegionSequences.begin(), selectedRegionSequences.end(), &amp;regionSequence) != selectedRegionSequences.end();</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <span class="keywordflow">if</span> (selected != isSelected)</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>        {</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>            isSelected = selected;</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>            repaint();</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        }</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    }</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordtype">void</span> updateTrackName (ARA::ARAUtf8String optionalName)</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    {</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>        trackNameLabel.setText (optionalName ? optionalName : <span class="stringliteral">&quot;No track name&quot;</span>,</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>                                NotificationType::dontSendNotification);</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    }</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span> </div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    ARAEditorView&amp; araEditorView;</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    ARARegionSequence&amp; regionSequence;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    Label trackNameLabel;</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keywordtype">bool</span> isSelected = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>};</div>
-<div class="ttc" id="aclass_track_header_html"><div class="ttname"><a href="class_track_header.html">TrackHeader</a></div><div class="ttdef"><b>Definition</b> TrackHeader.h:6</div></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    regionSequence.addListener(<span class="keyword">this</span>);</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    araEditorView.addListener(<span class="keyword">this</span>);</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>  }</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>  <a class="code hl_class" href="class_track_header.html">~TrackHeader</a>()<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    araEditorView.removeListener(<span class="keyword">this</span>);</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    regionSequence.removeListener(<span class="keyword">this</span>);</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>  }</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  <span class="keywordtype">void</span> willUpdateRegionSequenceProperties(</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>      ARARegionSequence *,</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>      ARARegionSequence::PropertiesPtr newProperties)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">if</span> (regionSequence.getName() != newProperties-&gt;name)</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>      updateTrackName(newProperties-&gt;name);</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keywordflow">if</span> (regionSequence.getColor() != newProperties-&gt;color)</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>      repaint();</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>  }</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>  <span class="keywordtype">void</span> resized()<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    trackNameLabel.setBounds(getLocalBounds().reduced(2));</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  }</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  <span class="keywordtype">void</span> paint(Graphics &amp;g)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keyword">const</span> <span class="keyword">auto</span> backgroundColour =</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        getLookAndFeel().findColour(ResizableWindow::backgroundColourId);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    g.setColour(isSelected ? backgroundColour.brighter() : backgroundColour);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    g.fillRoundedRectangle(getLocalBounds().reduced(2).toFloat(), 6.0f);</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    g.setColour(backgroundColour.contrasting());</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    g.drawRoundedRectangle(getLocalBounds().reduced(2).toFloat(), 6.0f, 1.0f);</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span> colour = regionSequence.getColor()) {</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>      g.setColour(convertARAColour(colour));</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>      g.fillRect(getLocalBounds().removeFromTop(16).reduced(6));</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>      g.fillRect(getLocalBounds().removeFromBottom(16).reduced(6));</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    }</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  }</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  <span class="keywordtype">void</span> onNewSelection(<span class="keyword">const</span> ARAViewSelection &amp;viewSelection)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;selectedRegionSequences = viewSelection.getRegionSequences();</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> selected =</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        std::find(selectedRegionSequences.begin(),</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>                  selectedRegionSequences.end(),</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>                  &amp;regionSequence) != selectedRegionSequences.end();</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordflow">if</span> (selected != isSelected) {</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>      isSelected = selected;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>      repaint();</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    }</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  }</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>  <span class="keywordtype">void</span> updateTrackName(ARA::ARAUtf8String optionalName) {</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    trackNameLabel.setText(optionalName ? optionalName : <span class="stringliteral">&quot;No track name&quot;</span>,</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>                           NotificationType::dontSendNotification);</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>  }</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>  ARAEditorView &amp;araEditorView;</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>  ARARegionSequence &amp;regionSequence;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>  Label trackNameLabel;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  <span class="keywordtype">bool</span> isSelected = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>};</div>
+<div class="ttc" id="aclass_track_header_html"><div class="ttname"><a href="class_track_header.html">TrackHeader</a></div><div class="ttdef"><b>Definition</b> TrackHeader.h:5</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

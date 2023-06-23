@@ -3,306 +3,89 @@
 \mbox{\hyperlink{_playback_region_8h}{Go to the documentation of this file.}}
 \begin{DoxyCode}{0}
 \DoxyCodeLine{00001\ }
-\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#pragma\ once}}
-\DoxyCodeLine{00020\ }
-\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ "{}../WaveformCache/WaveformCache.h"{}}}
-\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}../ARA/DocumentControllerSpecialisation.h"{}}}
-\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}../ARA/AudioModification.h"{}}}
-\DoxyCodeLine{00024\ }
-\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <JuceHeader.h>}}
-\DoxyCodeLine{00026\ }
-\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\ :\ \textcolor{keyword}{public}\ juce::Component,}
-\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ juce::ChangeListener,}
-\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ juce::SettableTooltipClient,}
-\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAAudioSource::Listener,}
-\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAPlaybackRegion::Listener,}
-\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAEditorView::Listener}
-\DoxyCodeLine{00037\ \{}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}../ARA/AudioModification.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}../ARA/DocumentControllerSpecialisation.h"{}}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}../WaveformCache/WaveformCache.h"{}}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <JuceHeader.h>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\ :\ \textcolor{keyword}{public}\ juce::Component,}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ juce::ChangeListener,}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ juce::SettableTooltipClient,}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAAudioSource::Listener,}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAPlaybackRegion::Listener,}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAEditorView::Listener\ \{}
 \DoxyCodeLine{00038\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00039\ \ \ \ \ \mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\ (ARAEditorView\&\ editorView,\ ARAPlaybackRegion\&\ region,\ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\&\ cache);}
-\DoxyCodeLine{00040\ \ \ \ \ \mbox{\hyperlink{class_playback_region_view}{\string~PlaybackRegionView}}()\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00041\ }
-\DoxyCodeLine{00042\ \ \ \ \ \textcolor{comment}{//\ Event\ handlers}}
-\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ mouseDown\ (\textcolor{keyword}{const}\ juce::MouseEvent\&\ m)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{void}\ mouseUp\ (\textcolor{keyword}{const}\ juce::MouseEvent\&)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{void}\ mouseDoubleClick\ (\textcolor{keyword}{const}\ juce::MouseEvent\&)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ changeListenerCallback\ (juce::ChangeBroadcaster*)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00047\ }
-\DoxyCodeLine{00048\ \ \ \ \ \textcolor{comment}{//\ ARA\ event\ handlers}}
-\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ didEnableAudioSourceSamplesAccess\ (ARAAudioSource*,\ \textcolor{keywordtype}{bool})\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ willUpdatePlaybackRegionProperties\ (ARAPlaybackRegion*,\ ARAPlaybackRegion::PropertiesPtr\ newProperties)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{void}\ didUpdatePlaybackRegionContent\ (ARAPlaybackRegion*,\ ARAContentUpdateScopes)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordtype}{void}\ onNewSelection\ (\textcolor{keyword}{const}\ ARAViewSelection\&\ viewSelection)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00053\ }
-\DoxyCodeLine{00054\ \ \ \ \ \textcolor{comment}{//\ Juce\ paint\ and\ resize}}
-\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{void}\ paint\ (juce::Graphics\&\ g)\ \textcolor{keyword}{override};}
-\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ resized()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00039\ \ \ \mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}(ARAEditorView\ \&editorView,\ ARAPlaybackRegion\ \&region,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ \&cache);}
+\DoxyCodeLine{00041\ \ \ \mbox{\hyperlink{class_playback_region_view}{\string~PlaybackRegionView}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \textcolor{comment}{//\ Event\ handlers}}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{void}\ mouseDown(\textcolor{keyword}{const}\ juce::MouseEvent\ \&m)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{void}\ mouseUp(\textcolor{keyword}{const}\ juce::MouseEvent\ \&)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00046\ \ \ \textcolor{keywordtype}{void}\ mouseDoubleClick(\textcolor{keyword}{const}\ juce::MouseEvent\ \&)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{void}\ changeListenerCallback(juce::ChangeBroadcaster\ *)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ ARA\ event\ handlers}}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{void}\ didEnableAudioSourceSamplesAccess(ARAAudioSource\ *,\ \textcolor{keywordtype}{bool})\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{void}\ willUpdatePlaybackRegionProperties(}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ ARAPlaybackRegion\ *,}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ ARAPlaybackRegion::PropertiesPtr\ newProperties)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00054\ \ \ \textcolor{keywordtype}{void}\ didUpdatePlaybackRegionContent(ARAPlaybackRegion\ *,}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARAContentUpdateScopes)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{void}\ onNewSelection(\textcolor{keyword}{const}\ ARAViewSelection\ \&viewSelection)\ \textcolor{keyword}{override};}
 \DoxyCodeLine{00057\ }
-\DoxyCodeLine{00058\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{class\ }PreviewRegionOverlay\ \ :\ \textcolor{keyword}{public}\ Component}
-\DoxyCodeLine{00060\ \ \ \ \ \{}
-\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ previewLength\ =\ 0.5;}
-\DoxyCodeLine{00062\ }
-\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ PreviewRegionOverlay\ (\mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\&\ ownerIn)\ :\ owner\ (ownerIn)}
-\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00067\ }
-\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ update()}
-\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ previewState\ =\ owner.getDocumentController()-\/>previewState;}
+\DoxyCodeLine{00058\ \ \ \textcolor{comment}{//\ Juce\ paint\ and\ resize}}
+\DoxyCodeLine{00059\ \ \ \textcolor{keywordtype}{void}\ paint(juce::Graphics\ \&g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{void}\ resized()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00063\ \ \ \textcolor{keyword}{class\ }PreviewRegionOverlay\ :\ \textcolor{keyword}{public}\ Component\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ previewLength\ =\ 0.5;}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00067\ \ \ \ \ PreviewRegionOverlay(\mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\ \&ownerIn)\ :\ owner(ownerIn)\ \{\}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{void}\ update()\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ \&previewState\ =\ owner.getDocumentController()-\/>previewState;}
 \DoxyCodeLine{00071\ }
-\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (previewState.previewedRegion.load()\ ==\ \&owner.playbackRegion)}
-\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ previewStartTime\ =\ previewState.previewTime.load()\ -\/\ owner.playbackRegion.getStartInPlaybackTime();}
-\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ pixelPerSecond\ =\ owner.getWidth()\ /\ owner.playbackRegion.getDurationInPlaybackTime();}
-\DoxyCodeLine{00076\ }
-\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ setBounds\ (roundToInt\ ((previewStartTime\ -\/\ previewLength\ /\ 2)\ *\ pixelPerSecond),}
-\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0,}
-\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ roundToInt\ (previewLength\ *\ pixelPerSecond),}
-\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ owner.getHeight());}
-\DoxyCodeLine{00081\ }
-\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ setVisible\ (\textcolor{keyword}{true});}
-\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
-\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ setVisible\ (\textcolor{keyword}{false});}
-\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00088\ }
-\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ repaint();}
-\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00091\ }
-\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ paint\ (Graphics\&\ g)\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00093\ \textcolor{keyword}{\ \ \ \ \ \ \ \ \ \ \ \ }\{}
-\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g.setColour\ (Colours::darkred.withAlpha\ (0.5f));}
-\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g.fillRect\ (getLocalBounds());}
-\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00097\ }
-\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\&\ owner;}
-\DoxyCodeLine{00100\ \ \ \ \ \};}
-\DoxyCodeLine{00101\ }
-\DoxyCodeLine{00102\ \ \ \ \ \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation}{ARADemoPluginDocumentControllerSpecialisation}}*\ getDocumentController()\ \textcolor{keyword}{const};}
-\DoxyCodeLine{00103\ \ \ \ \ ARAEditorView\&\ araEditorView;}
-\DoxyCodeLine{00104\ \ \ \ \ ARAPlaybackRegion\&\ playbackRegion;}
-\DoxyCodeLine{00105\ \ \ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\&\ waveformCache;}
-\DoxyCodeLine{00106\ \ \ \ \ PreviewRegionOverlay\ previewRegionOverlay;}
-\DoxyCodeLine{00107\ \ \ \ \ juce::AudioBuffer<float>*\ mDeepAudio;}
-\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{bool}\ isSelected\ =\ \textcolor{keyword}{false};}
-\DoxyCodeLine{00109\ \};}
-\DoxyCodeLine{00110\ }
-\DoxyCodeLine{00111\ }
-\DoxyCodeLine{00112\ \textcolor{comment}{//\ \#pragma\ once}}
-\DoxyCodeLine{00113\ }
-\DoxyCodeLine{00114\ \textcolor{comment}{//\ \#include\ "{}../WaveformCache/WaveformCache.h"{}}}
-\DoxyCodeLine{00115\ \textcolor{comment}{//\ \#include\ "{}../ARA/DocumentControllerSpecialisation.h"{}}}
-\DoxyCodeLine{00116\ \textcolor{comment}{//\ \#include\ "{}../ARA/AudioModification.h"{}}}
-\DoxyCodeLine{00117\ }
-\DoxyCodeLine{00118\ }
-\DoxyCodeLine{00119\ \textcolor{comment}{//\ class\ PlaybackRegionView\ :\ public\ Component,}}
-\DoxyCodeLine{00120\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ public\ ChangeListener,}}
-\DoxyCodeLine{00121\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ public\ SettableTooltipClient,}}
-\DoxyCodeLine{00122\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ ARAAudioSource::Listener,}}
-\DoxyCodeLine{00123\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ ARAPlaybackRegion::Listener,}}
-\DoxyCodeLine{00124\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ ARAEditorView::Listener}}
-\DoxyCodeLine{00125\ \textcolor{comment}{//\ \{}}
-\DoxyCodeLine{00126\ \textcolor{comment}{//\ public:}}
-\DoxyCodeLine{00127\ \textcolor{comment}{//\ \ \ \ \ PlaybackRegionView\ (ARAEditorView\&\ editorView,\ ARAPlaybackRegion\&\ region,\ WaveformCache\&\ cache)}}
-\DoxyCodeLine{00128\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ :\ araEditorView\ (editorView),\ playbackRegion\ (region),\ waveformCache\ (cache),\ previewRegionOverlay\ (*this)}}
-\DoxyCodeLine{00129\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00130\ }
-\DoxyCodeLine{00131\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ ARAAudioSource*\ audioSource;}}
-\DoxyCodeLine{00132\ }
-\DoxyCodeLine{00133\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ audioModification\ =\ playbackRegion.getAudioModification();}}
-\DoxyCodeLine{00134\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ audioModificationInstance\ =\ dynamic\_cast<AudioModification*>(audioModification);}}
-\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00137\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ audioSource\ =\ playbackRegion.getAudioModification()-\/>getAudioSource();}}
-\DoxyCodeLine{00138\ }
-\DoxyCodeLine{00139\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ waveformCache.getOrCreateThumbnail\ (audioSource,\ audioModificationInstance).addChangeListener\ (this);}}
-\DoxyCodeLine{00140\ }
-\DoxyCodeLine{00141\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ audioSource-\/>addListener\ (this);}}
-\DoxyCodeLine{00142\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegion.addListener\ (this);}}
-\DoxyCodeLine{00143\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ araEditorView.addListener\ (this);}}
-\DoxyCodeLine{00144\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (previewRegionOverlay);}}
-\DoxyCodeLine{00145\ }
-\DoxyCodeLine{00146\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setTooltip\ ("{}Double-\/click\ to\ toggle\ dim\ state\ of\ the\ region,\ click\ and\ hold\ to\ prelisten\ region\ near\ click."{});}}
-\DoxyCodeLine{00147\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00148\ }
-\DoxyCodeLine{00149\ \textcolor{comment}{//\ \ \ \ \ \string~PlaybackRegionView()\ override}}
-\DoxyCodeLine{00150\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00151\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto*\ audioSource\ =\ playbackRegion.getAudioModification()-\/>getAudioSource();}}
-\DoxyCodeLine{00152\ }
-\DoxyCodeLine{00153\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ audioSource-\/>removeListener\ (this);}}
-\DoxyCodeLine{00154\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegion.removeListener\ (this);}}
-\DoxyCodeLine{00155\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ araEditorView.removeListener\ (this);}}
-\DoxyCodeLine{00156\ }
-\DoxyCodeLine{00157\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ waveformCache.getOrCreateThumbnail\ (audioSource,\ dynamic\_cast<AudioModification*>(playbackRegion.getAudioModification())).removeChangeListener\ (this);}}
-\DoxyCodeLine{00158\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00159\ }
-\DoxyCodeLine{00160\ \textcolor{comment}{//\ \ \ \ \ void\ mouseDown\ (const\ MouseEvent\&\ m)\ override}}
-\DoxyCodeLine{00161\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00162\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ relativeTime\ =\ (double)\ m.getMouseDownX()\ /\ getLocalBounds().getWidth();}}
-\DoxyCodeLine{00163\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ previewTime\ =\ playbackRegion.getStartInPlaybackTime()}}
-\DoxyCodeLine{00164\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +\ relativeTime\ *\ playbackRegion.getDurationInPlaybackTime();}}
-\DoxyCodeLine{00165\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\&\ previewState\ =\ ARADocumentControllerSpecialisation::getSpecialisedDocumentController<ARADemoPluginDocumentControllerSpecialisation>\ (playbackRegion.getDocumentController())-\/>previewState;}}
-\DoxyCodeLine{00166\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewState.previewTime.store\ (previewTime);}}
-\DoxyCodeLine{00167\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewState.previewedRegion.store\ (\&playbackRegion);}}
-\DoxyCodeLine{00168\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewRegionOverlay.update();}}
-\DoxyCodeLine{00169\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00170\ }
-\DoxyCodeLine{00171\ \textcolor{comment}{//\ \ \ \ \ void\ mouseUp\ (const\ MouseEvent\&)\ override}}
-\DoxyCodeLine{00172\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00173\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\&\ previewState\ =\ ARADocumentControllerSpecialisation::getSpecialisedDocumentController<ARADemoPluginDocumentControllerSpecialisation>\ (playbackRegion.getDocumentController())-\/>previewState;}}
-\DoxyCodeLine{00174\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewState.previewTime.store\ (0.0);}}
-\DoxyCodeLine{00175\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewState.previewedRegion.store\ (nullptr);}}
-\DoxyCodeLine{00176\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ previewRegionOverlay.update();}}
-\DoxyCodeLine{00177\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00178\ }
-\DoxyCodeLine{00179\ \textcolor{comment}{//\ \ \ \ \ void\ mouseDoubleClick\ (const\ MouseEvent\&)\ override}}
-\DoxyCodeLine{00180\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00181\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Set\ the\ dim\ flag\ on\ our\ region's\ audio\ modification\ when\ double-\/clicked}}
-\DoxyCodeLine{00182\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ audioModification\ =\ playbackRegion.getAudioModification<AudioModification>();}}
-\DoxyCodeLine{00183\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ audioModification-\/>setDimmed\ (!\ audioModification-\/>isDimmed());}}
-\DoxyCodeLine{00184\ }
-\DoxyCodeLine{00185\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Send\ a\ content\ change\ notification\ for\ the\ modification\ and\ all\ associated\ playback\ regions}}
-\DoxyCodeLine{00186\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ audioModification-\/>notifyContentChanged\ (ARAContentUpdateScopes::samplesAreAffected(),\ true);}}
-\DoxyCodeLine{00187\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (auto\ region\ :\ audioModification-\/>getPlaybackRegions())}}
-\DoxyCodeLine{00188\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ region-\/>notifyContentChanged\ (ARAContentUpdateScopes::samplesAreAffected(),\ true);}}
-\DoxyCodeLine{00189\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00190\ }
-\DoxyCodeLine{00191\ \textcolor{comment}{//\ \ \ \ \ void\ changeListenerCallback\ (ChangeBroadcaster*)\ override}}
-\DoxyCodeLine{00192\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00193\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00194\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00195\ }
-\DoxyCodeLine{00196\ \textcolor{comment}{//\ \ \ \ \ void\ didEnableAudioSourceSamplesAccess\ (ARAAudioSource*,\ bool)\ override}}
-\DoxyCodeLine{00197\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00198\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00199\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00200\ }
-\DoxyCodeLine{00201\ \textcolor{comment}{//\ \ \ \ \ void\ willUpdatePlaybackRegionProperties\ (ARAPlaybackRegion*,}}
-\DoxyCodeLine{00202\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARAPlaybackRegion::PropertiesPtr\ newProperties)\ override}}
-\DoxyCodeLine{00203\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00204\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (playbackRegion.getName()\ !=\ newProperties-\/>name}}
-\DoxyCodeLine{00205\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ ||\ playbackRegion.getColor()\ !=\ newProperties-\/>color)}}
-\DoxyCodeLine{00206\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00207\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00208\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00209\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00210\ }
-\DoxyCodeLine{00211\ \textcolor{comment}{//\ \ \ \ \ void\ didUpdatePlaybackRegionContent\ (ARAPlaybackRegion*,\ ARAContentUpdateScopes)\ override}}
-\DoxyCodeLine{00212\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00213\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00214\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00215\ }
-\DoxyCodeLine{00216\ \textcolor{comment}{//\ \ \ \ \ void\ onNewSelection\ (const\ ARAViewSelection\&\ viewSelection)\ override}}
-\DoxyCodeLine{00217\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00218\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\&\ selectedPlaybackRegions\ =\ viewSelection.getPlaybackRegions();}}
-\DoxyCodeLine{00219\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ bool\ selected\ =\ std::find\ (selectedPlaybackRegions.begin(),\ selectedPlaybackRegions.end(),\ \&playbackRegion)\ !=\ selectedPlaybackRegions.end();}}
-\DoxyCodeLine{00220\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (selected\ !=\ isSelected)}}
-\DoxyCodeLine{00221\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00222\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ isSelected\ =\ selected;}}
-\DoxyCodeLine{00223\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00224\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00225\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00226\ }
-\DoxyCodeLine{00227\ \textcolor{comment}{//\ \ \ \ \ void\ paint\ (Graphics\&\ g)\ override}}
-\DoxyCodeLine{00228\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00229\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillAll\ (convertOptionalARAColour\ (playbackRegion.getEffectiveColor(),\ Colours::black));}}
-\DoxyCodeLine{00230\ }
-\DoxyCodeLine{00231\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto*\ audioModification\ =\ playbackRegion.getAudioModification<AudioModification>();}}
-\DoxyCodeLine{00232\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (audioModification-\/>isDimmed()\ ?\ Colours::whitesmoke.darker()\ :\ Colours::whitesmoke.brighter());}}
-\DoxyCodeLine{00233\ }
-\DoxyCodeLine{00234\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (audioModification-\/>getAudioSource()-\/>isSampleAccessEnabled())}}
-\DoxyCodeLine{00235\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00236\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\&\ thumbnail\ =\ waveformCache.getOrCreateThumbnail\ (playbackRegion.getAudioModification()-\/>getAudioSource(),\ dynamic\_cast<AudioModification*>(playbackRegion.getAudioModification()));}}
-\DoxyCodeLine{00237\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ thumbnail.drawChannels\ (g,}}
-\DoxyCodeLine{00238\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getLocalBounds(),}}
-\DoxyCodeLine{00239\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion.getStartInAudioModificationTime(),}}
-\DoxyCodeLine{00240\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion.getEndInAudioModificationTime(),}}
-\DoxyCodeLine{00241\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1.0f);}}
-\DoxyCodeLine{00242\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00243\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else}}
-\DoxyCodeLine{00244\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00245\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setFont\ (Font\ (12.0f));}}
-\DoxyCodeLine{00246\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.drawText\ ("{}Audio\ Access\ Disabled"{},\ getLocalBounds(),\ Justification::centred);}}
-\DoxyCodeLine{00247\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00248\ }
-\DoxyCodeLine{00249\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (Colours::white.withMultipliedAlpha\ (0.9f));}}
-\DoxyCodeLine{00250\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setFont\ (Font\ (12.0f));}}
-\DoxyCodeLine{00251\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawText\ (convertOptionalARAString\ (playbackRegion.getEffectiveName()),}}
-\DoxyCodeLine{00252\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getLocalBounds(),}}
-\DoxyCodeLine{00253\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Justification::topLeft);}}
-\DoxyCodeLine{00254\ }
-\DoxyCodeLine{00255\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (audioModification-\/>isDimmed())}}
-\DoxyCodeLine{00256\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.drawText\ ("{}using\ libtorch"{},\ getLocalBounds(),\ Justification::bottomLeft);}}
-\DoxyCodeLine{00257\ }
-\DoxyCodeLine{00258\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (isSelected\ ?\ Colours::white\ :\ Colours::black);}}
-\DoxyCodeLine{00259\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawRect\ (getLocalBounds());}}
-\DoxyCodeLine{00260\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00261\ }
-\DoxyCodeLine{00262\ \textcolor{comment}{//\ \ \ \ \ void\ resized()\ override}}
-\DoxyCodeLine{00263\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00264\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00265\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00266\ }
-\DoxyCodeLine{00267\ \textcolor{comment}{//\ private:}}
-\DoxyCodeLine{00268\ \ \ \ \ \textcolor{comment}{//\ class\ PreviewRegionOverlay\ \ :\ public\ Component}}
-\DoxyCodeLine{00269\ \ \ \ \ \textcolor{comment}{//\ \{}}
-\DoxyCodeLine{00270\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ static\ constexpr\ auto\ previewLength\ =\ 0.5;}}
-\DoxyCodeLine{00271\ }
-\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{//\ public:}}
-\DoxyCodeLine{00273\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ PreviewRegionOverlay\ (PlaybackRegionView\&\ ownerIn)\ :\ owner\ (ownerIn)}}
-\DoxyCodeLine{00274\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00275\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00276\ }
-\DoxyCodeLine{00277\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ void\ update()}}
-\DoxyCodeLine{00278\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00279\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\&\ previewState\ =\ owner.getDocumentController()-\/>previewState;}}
-\DoxyCodeLine{00280\ }
-\DoxyCodeLine{00281\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (previewState.previewedRegion.load()\ ==\ \&owner.playbackRegion)}}
-\DoxyCodeLine{00282\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00283\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ previewStartTime\ =\ previewState.previewTime.load()\ -\/\ owner.playbackRegion.getStartInPlaybackTime();}}
-\DoxyCodeLine{00284\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ pixelPerSecond\ =\ owner.getWidth()\ /\ owner.playbackRegion.getDurationInPlaybackTime();}}
-\DoxyCodeLine{00285\ }
-\DoxyCodeLine{00286\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ setBounds\ (roundToInt\ ((previewStartTime\ -\/\ previewLength\ /\ 2)\ *\ pixelPerSecond),}}
-\DoxyCodeLine{00287\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0,}}
-\DoxyCodeLine{00288\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ roundToInt\ (previewLength\ *\ pixelPerSecond),}}
-\DoxyCodeLine{00289\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ owner.getHeight());}}
-\DoxyCodeLine{00290\ }
-\DoxyCodeLine{00291\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ setVisible\ (true);}}
-\DoxyCodeLine{00292\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00293\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else}}
-\DoxyCodeLine{00294\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
-\DoxyCodeLine{00295\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ setVisible\ (false);}}
-\DoxyCodeLine{00296\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
-\DoxyCodeLine{00297\ }
-\DoxyCodeLine{00298\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ repaint();}}
-\DoxyCodeLine{00299\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00300\ }
-\DoxyCodeLine{00301\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ void\ paint\ (Graphics\&\ g)\ override}}
-\DoxyCodeLine{00302\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00303\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (Colours::darkred.withAlpha\ (0.5f));}}
-\DoxyCodeLine{00304\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillRect\ (getLocalBounds());}}
-\DoxyCodeLine{00305\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00306\ }
-\DoxyCodeLine{00307\ \ \ \ \ \textcolor{comment}{//\ private:}}
-\DoxyCodeLine{00308\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ PlaybackRegionView\&\ owner;}}
-\DoxyCodeLine{00309\ \ \ \ \ \textcolor{comment}{//\ \};}}
-\DoxyCodeLine{00310\ }
-\DoxyCodeLine{00311\ \textcolor{comment}{//\ \ \ \ \ ARADemoPluginDocumentControllerSpecialisation*\ getDocumentController()\ const}}
-\DoxyCodeLine{00312\ \textcolor{comment}{//\ \ \ \ \ \{}}
-\DoxyCodeLine{00313\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ ARADocumentControllerSpecialisation::getSpecialisedDocumentController<ARADemoPluginDocumentControllerSpecialisation>\ (playbackRegion.getDocumentController());}}
-\DoxyCodeLine{00314\ \textcolor{comment}{//\ \ \ \ \ \}}}
-\DoxyCodeLine{00315\ }
-\DoxyCodeLine{00316\ \textcolor{comment}{//\ \ \ \ \ ARAEditorView\&\ araEditorView;}}
-\DoxyCodeLine{00317\ \textcolor{comment}{//\ \ \ \ \ ARAPlaybackRegion\&\ playbackRegion;}}
-\DoxyCodeLine{00318\ \textcolor{comment}{//\ \ \ \ \ WaveformCache\&\ waveformCache;}}
-\DoxyCodeLine{00319\ \textcolor{comment}{//\ \ \ \ \ PreviewRegionOverlay\ previewRegionOverlay;}}
-\DoxyCodeLine{00320\ \textcolor{comment}{//\ \ \ \ \ juce::AudioBuffer<float>*\ mDeepAudio;}}
-\DoxyCodeLine{00321\ \textcolor{comment}{//\ \ \ \ \ bool\ isSelected\ =\ false;}}
-\DoxyCodeLine{00322\ \textcolor{comment}{//\ \};}}
-\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (previewState.previewedRegion.load()\ ==\ \&owner.playbackRegion)\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ previewStartTime\ =}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ previewState.previewTime.load()\ -\/}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ owner.playbackRegion.getStartInPlaybackTime();}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ pixelPerSecond\ =}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ owner.getWidth()\ /\ owner.playbackRegion.getDurationInPlaybackTime();}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ setBounds(}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ roundToInt((previewStartTime\ -\/\ previewLength\ /\ 2)\ *\ pixelPerSecond),}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ 0,\ roundToInt(previewLength\ *\ pixelPerSecond),\ owner.getHeight());}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ setVisible(\textcolor{keyword}{true});}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ setVisible(\textcolor{keyword}{false});}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \ \ repaint();}
+\DoxyCodeLine{00089\ \ \ \ \ \}}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keywordtype}{void}\ paint(Graphics\ \&g)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ g.setColour(Colours::darkred.withAlpha(0.5f));}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ g.fillRect(getLocalBounds());}
+\DoxyCodeLine{00094\ \ \ \ \ \}}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00097\ \ \ \ \ \mbox{\hyperlink{class_playback_region_view}{PlaybackRegionView}}\ \&owner;}
+\DoxyCodeLine{00098\ \ \ \};}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \mbox{\hyperlink{class_tensor_juce_document_controller_specialisation}{TensorJuceDocumentControllerSpecialisation}}\ *getDocumentController()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00101\ \ \ ARAEditorView\ \&araEditorView;}
+\DoxyCodeLine{00102\ \ \ ARAPlaybackRegion\ \&playbackRegion;}
+\DoxyCodeLine{00103\ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ \&waveformCache;}
+\DoxyCodeLine{00104\ \ \ PreviewRegionOverlay\ previewRegionOverlay;}
+\DoxyCodeLine{00105\ \ \ juce::AudioBuffer<float>\ *mDeepAudio;}
+\DoxyCodeLine{00106\ \ \ \textcolor{keywordtype}{bool}\ isSelected\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00107\ \};}
 
 \end{DoxyCode}

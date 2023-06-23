@@ -80,12 +80,11 @@ $(function() {
 <a href="_processing_lock_interface_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span> </div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#pragma once</span></div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno"><a class="line" href="struct_processing_lock_interface.html">   22</a></span><span class="keyword">struct </span><a class="code hl_struct" href="struct_processing_lock_interface.html">ProcessingLockInterface</a></div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>{</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keyword">virtual</span> <a class="code hl_struct" href="struct_processing_lock_interface.html">~ProcessingLockInterface</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <span class="keyword">virtual</span> juce::ScopedTryReadLock getProcessingLock() = 0;</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>};</div>
-<div class="ttc" id="astruct_processing_lock_interface_html"><div class="ttname"><a href="struct_processing_lock_interface.html">ProcessingLockInterface</a></div><div class="ttdef"><b>Definition</b> ProcessingLockInterface.h:23</div></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno"><a class="line" href="struct_processing_lock_interface.html">   22</a></span><span class="keyword">struct </span><a class="code hl_struct" href="struct_processing_lock_interface.html">ProcessingLockInterface</a> {</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  <span class="keyword">virtual</span> <a class="code hl_struct" href="struct_processing_lock_interface.html">~ProcessingLockInterface</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>  <span class="keyword">virtual</span> juce::ScopedTryReadLock getProcessingLock() = 0;</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>};</div>
+<div class="ttc" id="astruct_processing_lock_interface_html"><div class="ttname"><a href="struct_processing_lock_interface.html">ProcessingLockInterface</a></div><div class="ttdef"><b>Definition</b> ProcessingLockInterface.h:22</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

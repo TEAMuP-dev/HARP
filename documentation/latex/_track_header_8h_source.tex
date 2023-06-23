@@ -6,79 +6,75 @@
 \DoxyCodeLine{00002\ }
 \DoxyCodeLine{00003\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_track_header}{TrackHeader}}\ :\ \textcolor{keyword}{public}\ Component,}
 \DoxyCodeLine{00004\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARARegionSequence::Listener,}
-\DoxyCodeLine{00005\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAEditorView::Listener}
-\DoxyCodeLine{00006\ \{}
-\DoxyCodeLine{00007\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00008\ \ \ \ \ \mbox{\hyperlink{class_track_header}{TrackHeader}}\ (ARAEditorView\&\ editorView,\ ARARegionSequence\&\ regionSequenceIn)}
-\DoxyCodeLine{00009\ \ \ \ \ \ \ \ \ :\ araEditorView\ (editorView),\ regionSequence\ (regionSequenceIn)}
-\DoxyCodeLine{00010\ \ \ \ \ \{}
-\DoxyCodeLine{00011\ \ \ \ \ \ \ \ \ updateTrackName\ (regionSequence.getName());}
-\DoxyCodeLine{00012\ \ \ \ \ \ \ \ \ onNewSelection\ (araEditorView.getViewSelection());}
+\DoxyCodeLine{00005\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAEditorView::Listener\ \{}
+\DoxyCodeLine{00006\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00007\ \ \ \mbox{\hyperlink{class_track_header}{TrackHeader}}(ARAEditorView\ \&editorView,\ ARARegionSequence\ \&regionSequenceIn)}
+\DoxyCodeLine{00008\ \ \ \ \ \ \ :\ araEditorView(editorView),\ regionSequence(regionSequenceIn)\ \{}
+\DoxyCodeLine{00009\ \ \ \ \ updateTrackName(regionSequence.getName());}
+\DoxyCodeLine{00010\ \ \ \ \ onNewSelection(araEditorView.getViewSelection());}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \ \ \ \ addAndMakeVisible(trackNameLabel);}
 \DoxyCodeLine{00013\ }
-\DoxyCodeLine{00014\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (trackNameLabel);}
-\DoxyCodeLine{00015\ }
-\DoxyCodeLine{00016\ \ \ \ \ \ \ \ \ regionSequence.addListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ araEditorView.addListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00018\ \ \ \ \ \}}
-\DoxyCodeLine{00019\ }
-\DoxyCodeLine{00020\ \ \ \ \ \mbox{\hyperlink{class_track_header}{\string~TrackHeader}}()\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00021\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ araEditorView.removeListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ regionSequence.removeListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00024\ \ \ \ \ \}}
-\DoxyCodeLine{00025\ }
-\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{void}\ willUpdateRegionSequenceProperties\ (ARARegionSequence*,\ ARARegionSequence::PropertiesPtr\ newProperties)\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00027\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (regionSequence.getName()\ !=\ newProperties-\/>name)}
-\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ updateTrackName\ (newProperties-\/>name);}
-\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (regionSequence.getColor()\ !=\ newProperties-\/>color)}
-\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ repaint();}
-\DoxyCodeLine{00032\ \ \ \ \ \}}
-\DoxyCodeLine{00033\ }
-\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{void}\ resized()\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00035\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ trackNameLabel.setBounds\ (getLocalBounds().reduced\ (2));}
-\DoxyCodeLine{00037\ \ \ \ \ \}}
-\DoxyCodeLine{00038\ }
-\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{void}\ paint\ (Graphics\&\ g)\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00040\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ backgroundColour\ =\ getLookAndFeel().findColour\ (ResizableWindow::backgroundColourId);}
-\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ g.setColour\ (isSelected\ ?\ backgroundColour.brighter()\ :\ backgroundColour);}
-\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ g.fillRoundedRectangle\ (getLocalBounds().reduced\ (2).toFloat(),\ 6.0f);}
-\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ g.setColour\ (backgroundColour.contrasting());}
-\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ g.drawRoundedRectangle\ (getLocalBounds().reduced\ (2).toFloat(),\ 6.0f,\ 1.0f);}
-\DoxyCodeLine{00046\ }
-\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{auto}\ colour\ =\ regionSequence.getColor())}
-\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \ \ g.setColour\ (convertARAColour\ (colour));}
-\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ g.fillRect\ (getLocalBounds().removeFromTop\ (16).reduced\ (6));}
-\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ g.fillRect\ (getLocalBounds().removeFromBottom\ (16).reduced\ (6));}
-\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00053\ \ \ \ \ \}}
-\DoxyCodeLine{00054\ }
-\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{void}\ onNewSelection\ (\textcolor{keyword}{const}\ ARAViewSelection\&\ viewSelection)\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00056\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ selectedRegionSequences\ =\ viewSelection.getRegionSequences();}
-\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ selected\ =\ std::find\ (selectedRegionSequences.begin(),\ selectedRegionSequences.end(),\ \&regionSequence)\ !=\ selectedRegionSequences.end();}
-\DoxyCodeLine{00059\ }
-\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (selected\ !=\ isSelected)}
-\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ isSelected\ =\ selected;}
-\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ repaint();}
-\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00065\ \ \ \ \ \}}
-\DoxyCodeLine{00066\ }
-\DoxyCodeLine{00067\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{void}\ updateTrackName\ (ARA::ARAUtf8String\ optionalName)}
-\DoxyCodeLine{00069\ \ \ \ \ \{}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ trackNameLabel.setText\ (optionalName\ ?\ optionalName\ :\ \textcolor{stringliteral}{"{}No\ track\ name"{}},}
-\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NotificationType::dontSendNotification);}
-\DoxyCodeLine{00072\ \ \ \ \ \}}
-\DoxyCodeLine{00073\ }
-\DoxyCodeLine{00074\ \ \ \ \ ARAEditorView\&\ araEditorView;}
-\DoxyCodeLine{00075\ \ \ \ \ ARARegionSequence\&\ regionSequence;}
-\DoxyCodeLine{00076\ \ \ \ \ Label\ trackNameLabel;}
-\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{bool}\ isSelected\ =\ \textcolor{keyword}{false};}
-\DoxyCodeLine{00078\ \};}
+\DoxyCodeLine{00014\ \ \ \ \ regionSequence.addListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00015\ \ \ \ \ araEditorView.addListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00016\ \ \ \}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \ \ \mbox{\hyperlink{class_track_header}{\string~TrackHeader}}()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00019\ \ \ \ \ araEditorView.removeListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00020\ \ \ \ \ regionSequence.removeListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00021\ \ \ \}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \textcolor{keywordtype}{void}\ willUpdateRegionSequenceProperties(}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ ARARegionSequence\ *,}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ ARARegionSequence::PropertiesPtr\ newProperties)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordflow}{if}\ (regionSequence.getName()\ !=\ newProperties-\/>name)}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ updateTrackName(newProperties-\/>name);}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordflow}{if}\ (regionSequence.getColor()\ !=\ newProperties-\/>color)}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ repaint();}
+\DoxyCodeLine{00030\ \ \ \}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \textcolor{keywordtype}{void}\ resized()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00033\ \ \ \ \ trackNameLabel.setBounds(getLocalBounds().reduced(2));}
+\DoxyCodeLine{00034\ \ \ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{keywordtype}{void}\ paint(Graphics\ \&g)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ backgroundColour\ =}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ getLookAndFeel().findColour(ResizableWindow::backgroundColourId);}
+\DoxyCodeLine{00039\ \ \ \ \ g.setColour(isSelected\ ?\ backgroundColour.brighter()\ :\ backgroundColour);}
+\DoxyCodeLine{00040\ \ \ \ \ g.fillRoundedRectangle(getLocalBounds().reduced(2).toFloat(),\ 6.0f);}
+\DoxyCodeLine{00041\ \ \ \ \ g.setColour(backgroundColour.contrasting());}
+\DoxyCodeLine{00042\ \ \ \ \ g.drawRoundedRectangle(getLocalBounds().reduced(2).toFloat(),\ 6.0f,\ 1.0f);}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{auto}\ colour\ =\ regionSequence.getColor())\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ g.setColour(convertARAColour(colour));}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ g.fillRect(getLocalBounds().removeFromTop(16).reduced(6));}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ g.fillRect(getLocalBounds().removeFromBottom(16).reduced(6));}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \ \ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{void}\ onNewSelection(\textcolor{keyword}{const}\ ARAViewSelection\ \&viewSelection)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ \&selectedRegionSequences\ =\ viewSelection.getRegionSequences();}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ selected\ =}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ std::find(selectedRegionSequences.begin(),}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ selectedRegionSequences.end(),}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&regionSequence)\ !=\ selectedRegionSequences.end();}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordflow}{if}\ (selected\ !=\ isSelected)\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ isSelected\ =\ selected;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ repaint();}
+\DoxyCodeLine{00061\ \ \ \ \ \}}
+\DoxyCodeLine{00062\ \ \ \}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00065\ \ \ \textcolor{keywordtype}{void}\ updateTrackName(ARA::ARAUtf8String\ optionalName)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ trackNameLabel.setText(optionalName\ ?\ optionalName\ :\ \textcolor{stringliteral}{"{}No\ track\ name"{}},}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NotificationType::dontSendNotification);}
+\DoxyCodeLine{00068\ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ ARAEditorView\ \&araEditorView;}
+\DoxyCodeLine{00071\ \ \ ARARegionSequence\ \&regionSequence;}
+\DoxyCodeLine{00072\ \ \ Label\ trackNameLabel;}
+\DoxyCodeLine{00073\ \ \ \textcolor{keywordtype}{bool}\ isSelected\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00074\ \};}
 
 \end{DoxyCode}

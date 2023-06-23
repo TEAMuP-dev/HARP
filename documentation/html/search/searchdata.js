@@ -3,7 +3,7 @@ var indexSectionsWithContent =
   0: "abcdefilmoprstvwz~",
   1: "abcdelmoprstvwz",
   2: "acdelmprstwz",
-  3: "acdfilprw~",
+  3: "acdfilprtw~",
   4: "p"
 };
 
@@ -24,4 +24,3 @@ var indexSectionLabels =
   3: "Functions",
   4: "Variables"
 };
-

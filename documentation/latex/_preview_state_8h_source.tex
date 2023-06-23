@@ -5,10 +5,15 @@
 \DoxyCodeLine{00001\ }
 \DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
 \DoxyCodeLine{00021\ }
-\DoxyCodeLine{00022\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_preview_state}{PreviewState}}}
-\DoxyCodeLine{00023\ \{}
-\DoxyCodeLine{00024\ \ \ \ \ std::atomic<double>\ previewTime\ \{\ 0.0\ \};}
-\DoxyCodeLine{00025\ \ \ \ \ std::atomic<ARAPlaybackRegion*>\ previewedRegion\ \{\ \textcolor{keyword}{nullptr}\ \};}
-\DoxyCodeLine{00026\ \};}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_preview_state}{PreviewState}}\ \{}
+\DoxyCodeLine{00029\ \ \ std::atomic<double>\ previewTime\{0.0\};}
+\DoxyCodeLine{00030\ \ \ std::atomic<ARAPlaybackRegion\ *>\ previewedRegion\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00031\ \};}
 
 \end{DoxyCode}

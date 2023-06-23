@@ -7,84 +7,82 @@
 \DoxyCodeLine{00022\ }
 \DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_crossfade_8h}{Crossfade.h}}"{}}}
 \DoxyCodeLine{00024\ }
-\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_looper}{Looper}}}
-\DoxyCodeLine{00026\ \{}
-\DoxyCodeLine{00027\ \textcolor{keyword}{public}:}
-\DoxyCodeLine{00028\ \ \ \ \ \mbox{\hyperlink{class_looper}{Looper}}()\ :\ inputBuffer\ (\textcolor{keyword}{nullptr}),\ pos\ (loopRange.getStart())}
-\DoxyCodeLine{00029\ \ \ \ \ \{}
-\DoxyCodeLine{00030\ \ \ \ \ \}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_looper}{Looper}}\ \{}
+\DoxyCodeLine{00026\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00027\ \ \ \mbox{\hyperlink{class_looper}{Looper}}()\ :\ inputBuffer(\textcolor{keyword}{nullptr}),\ pos(loopRange.getStart())\ \{\}}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \mbox{\hyperlink{class_looper}{Looper}}(\textcolor{keyword}{const}\ AudioBuffer<float>\ *buffer,\ Range<int64>\ range)}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ :\ inputBuffer(buffer),\ loopRange(range),\ pos(range.getStart())\ \{\}}
 \DoxyCodeLine{00031\ }
-\DoxyCodeLine{00032\ \ \ \ \ \mbox{\hyperlink{class_looper}{Looper}}\ (\textcolor{keyword}{const}\ AudioBuffer<float>*\ buffer,\ Range<int64>\ range)}
-\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ :\ inputBuffer\ (buffer),\ loopRange\ (range),\ pos\ (range.getStart())}
-\DoxyCodeLine{00034\ \ \ \ \ \{}
-\DoxyCodeLine{00035\ \ \ \ \ \}}
-\DoxyCodeLine{00036\ }
-\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{void}\ writeInto\ (AudioBuffer<float>\&\ buffer)}
-\DoxyCodeLine{00038\ \ \ \ \ \{}
-\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (loopRange.getLength()\ ==\ 0)}
-\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ buffer.clear();}
-\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
-\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00044\ }
-\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ numChannelsToCopy\ =\ std::min\ (inputBuffer-\/>getNumChannels(),\ buffer.getNumChannels());}
-\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ actualCrossfadeLengthSamples\ =\ std::min\ (loopRange.getLength()\ /\ 2,\ (int64)\ desiredCrossfadeLengthSamples);}
-\DoxyCodeLine{00047\ }
-\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ samplesCopied\ =\ 0;\ samplesCopied\ <\ buffer.getNumSamples();)}
-\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ [needsCrossfade,\ samplePosOfNextCrossfadeTransition]\ =\ [\&]()\ -\/>\ std::pair<bool,\ int64>}
-\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ endOfFadeIn\ =\ loopRange.getStart()\ +\ actualCrossfadeLengthSamples;\ pos\ <\ endOfFadeIn)}
-\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\ \textcolor{keyword}{true},\ endOfFadeIn\ \};}
-\DoxyCodeLine{00054\ }
-\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\ \textcolor{keyword}{false},\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples\ \};}
-\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \}();}
-\DoxyCodeLine{00057\ }
-\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ samplesToNextCrossfadeTransition\ =\ samplePosOfNextCrossfadeTransition\ -\/\ pos;}
-\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ numSamplesToCopy\ =\ std::min\ (buffer.getNumSamples()\ -\/\ samplesCopied,}
-\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\textcolor{keywordtype}{int})\ samplesToNextCrossfadeTransition);}
-\DoxyCodeLine{00061\ }
-\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ getFadeInGainAtPos\ =\ [\textcolor{keyword}{this},\ actualCrossfadeLengthSamples]\ (\textcolor{keyword}{auto}\ p)}
-\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ jmap\ ((\textcolor{keywordtype}{float})\ p,\ (\textcolor{keywordtype}{float})\ loopRange.getStart(),\ (\textcolor{keywordtype}{float})\ loopRange.getStart()\ +\ (\textcolor{keywordtype}{float})\ actualCrossfadeLengthSamples\ -\/\ 1.0f,\ 0.0f,\ 1.0f);}
-\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
-\DoxyCodeLine{00066\ }
-\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ numChannelsToCopy;\ ++i)}
-\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (needsCrossfade)}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ overlapStart\ =\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples}
-\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +\ (pos\ -\/\ loopRange.getStart());}
+\DoxyCodeLine{00032\ \ \ \textcolor{keywordtype}{void}\ writeInto(AudioBuffer<float>\ \&buffer)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordflow}{if}\ (loopRange.getLength()\ ==\ 0)\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ buffer.clear();}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00036\ \ \ \ \ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ numChannelsToCopy\ =}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ std::min(inputBuffer-\/>getNumChannels(),\ buffer.getNumChannels());}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ actualCrossfadeLengthSamples\ =\ std::min(}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ loopRange.getLength()\ /\ 2,\ (int64)desiredCrossfadeLengthSamples);}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ samplesCopied\ =\ 0;\ samplesCopied\ <\ buffer.getNumSamples();)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ [needsCrossfade,\ samplePosOfNextCrossfadeTransition]\ =}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ [\&]()\ -\/>\ std::pair<bool,\ int64>\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ endOfFadeIn\ =}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopRange.getStart()\ +\ actualCrossfadeLengthSamples;}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ pos\ <\ endOfFadeIn)}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\textcolor{keyword}{true},\ endOfFadeIn\};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\textcolor{keyword}{false},\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples\};}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \}();}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ samplesToNextCrossfadeTransition\ =}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ samplePosOfNextCrossfadeTransition\ -\/\ pos;}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ numSamplesToCopy\ =}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ std::min(buffer.getNumSamples()\ -\/\ samplesCopied,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\textcolor{keywordtype}{int})samplesToNextCrossfadeTransition);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ getFadeInGainAtPos\ =\ [\textcolor{keyword}{this},}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ actualCrossfadeLengthSamples](\textcolor{keyword}{auto}\ p)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ jmap((\textcolor{keywordtype}{float})p,\ (\textcolor{keywordtype}{float})loopRange.getStart(),}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\textcolor{keywordtype}{float})loopRange.getStart()\ +}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\textcolor{keywordtype}{float})actualCrossfadeLengthSamples\ -\/\ 1.0f,}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0.0f,\ 1.0f);}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ numChannelsToCopy;\ ++i)\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (needsCrossfade)\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ overlapStart\ =\ loopRange.getEnd()\ -\/}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ actualCrossfadeLengthSamples\ +}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (pos\ -\/\ loopRange.getStart());}
 \DoxyCodeLine{00073\ }
-\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ crossfade\ (inputBuffer-\/>getReadPointer\ (i,\ (\textcolor{keywordtype}{int})\ pos),}
-\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ inputBuffer-\/>getReadPointer\ (i,\ (\textcolor{keywordtype}{int})\ overlapStart),}
-\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getFadeInGainAtPos\ (pos),}
-\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getFadeInGainAtPos\ (pos\ +\ numSamplesToCopy),}
-\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.getWritePointer\ (i,\ samplesCopied),}
-\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ numSamplesToCopy);}
-\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
-\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.copyFrom\ (i,\ samplesCopied,\ *inputBuffer,\ i,\ (\textcolor{keywordtype}{int})\ pos,\ numSamplesToCopy);}
-\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00086\ }
-\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ samplesCopied\ +=\ numSamplesToCopy;}
-\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ pos\ +=\ numSamplesToCopy;}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ crossfade(inputBuffer-\/>getReadPointer(i,\ (\textcolor{keywordtype}{int})pos),}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ inputBuffer-\/>getReadPointer(i,\ (\textcolor{keywordtype}{int})overlapStart),}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getFadeInGainAtPos(pos),}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getFadeInGainAtPos(pos\ +\ numSamplesToCopy),}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ buffer.getWritePointer(i,\ samplesCopied),\ numSamplesToCopy);}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ buffer.copyFrom(i,\ samplesCopied,\ *inputBuffer,\ i,\ (\textcolor{keywordtype}{int})pos,}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ numSamplesToCopy);}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ \ \ samplesCopied\ +=\ numSamplesToCopy;}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ pos\ +=\ numSamplesToCopy;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \ \ jassert(pos\ <=\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples);}
 \DoxyCodeLine{00089\ }
-\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ jassert\ (pos\ <=\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples);}
-\DoxyCodeLine{00091\ }
-\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples)}
-\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pos\ =\ loopRange.getStart();}
-\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00095\ \ \ \ \ \}}
-\DoxyCodeLine{00096\ }
-\DoxyCodeLine{00097\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ desiredCrossfadeLengthSamples\ =\ 50;}
-\DoxyCodeLine{00099\ }
-\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keyword}{const}\ AudioBuffer<float>*\ inputBuffer;}
-\DoxyCodeLine{00101\ \ \ \ \ Range<int64>\ loopRange;}
-\DoxyCodeLine{00102\ \ \ \ \ int64\ pos;}
-\DoxyCodeLine{00103\ \};}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ loopRange.getEnd()\ -\/\ actualCrossfadeLengthSamples)}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ pos\ =\ loopRange.getStart();}
+\DoxyCodeLine{00092\ \ \ \ \ \}}
+\DoxyCodeLine{00093\ \ \ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00096\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ desiredCrossfadeLengthSamples\ =\ 50;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \textcolor{keyword}{const}\ AudioBuffer<float>\ *inputBuffer;}
+\DoxyCodeLine{00099\ \ \ Range<int64>\ loopRange;}
+\DoxyCodeLine{00100\ \ \ int64\ pos;}
+\DoxyCodeLine{00101\ \};}
 
 \end{DoxyCode}

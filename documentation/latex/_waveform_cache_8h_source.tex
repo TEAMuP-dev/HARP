@@ -8,67 +8,61 @@
 \DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
 \DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
 \DoxyCodeLine{00024\ }
-\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_utils/juce\_audio\_utils.h"{}}}
-\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_utils/juce\_audio\_utils.h"{}}}
 \DoxyCodeLine{00027\ }
 \DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}../ARA/AudioModification.h"{}}}
 \DoxyCodeLine{00029\ }
 \DoxyCodeLine{00030\ \textcolor{keyword}{using\ namespace\ }juce;}
 \DoxyCodeLine{00031\ }
-\DoxyCodeLine{00032\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ :\ \textcolor{keyword}{private}\ ARAAudioSource::Listener}
-\DoxyCodeLine{00033\ \{}
-\DoxyCodeLine{00034\ \ \ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}()\ :\ thumbnailCache\ (20)}
-\DoxyCodeLine{00035\ \ \ \ \ \{}
-\DoxyCodeLine{00036\ \ \ \ \ \}}
-\DoxyCodeLine{00037\ }
-\DoxyCodeLine{00038\ \ \ \ \ \mbox{\hyperlink{struct_waveform_cache}{\string~WaveformCache}}()\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00039\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ thumbnails)}
-\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \{}
-\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ entry.first-\/>removeListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \}}
-\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ :\ \textcolor{keyword}{private}\ ARAAudioSource::Listener\ \{}
+\DoxyCodeLine{00033\ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}()\ :\ thumbnailCache(20)\ \{\}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \mbox{\hyperlink{struct_waveform_cache}{\string~WaveformCache}}()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ \&entry\ :\ thumbnails)\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ entry.first-\/>removeListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00038\ \ \ \ \ \}}
+\DoxyCodeLine{00039\ \ \ \}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{void}\ willDestroyAudioSource(ARAAudioSource\ *audioSource)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00043\ \ \ \ \ removeAudioSource(audioSource);}
+\DoxyCodeLine{00044\ \ \ \}}
 \DoxyCodeLine{00045\ }
-\DoxyCodeLine{00046\ \ \ \ \ \textcolor{comment}{//==============================================================================}}
-\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{void}\ willDestroyAudioSource\ (ARAAudioSource*\ audioSource)\textcolor{keyword}{\ override}}
-\DoxyCodeLine{00048\ \textcolor{keyword}{\ \ \ \ }\{}
-\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ removeAudioSource\ (audioSource);}
-\DoxyCodeLine{00050\ \ \ \ \ \}}
-\DoxyCodeLine{00051\ }
-\DoxyCodeLine{00052\ \ \ \ \ AudioThumbnail\&\ getOrCreateThumbnail(ARAAudioSource*\ audioSource,\ \mbox{\hyperlink{class_audio_modification}{AudioModification}}*\ audioModification)}
-\DoxyCodeLine{00053\ \ \ \ \ \{}
-\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ iter\ =\ thumbnails.find(audioSource);}
-\DoxyCodeLine{00055\ }
-\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (iter\ !=\ std::end(thumbnails))}
-\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *iter-\/>second;}
-\DoxyCodeLine{00058\ }
-\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ thumb\ =\ std::make\_unique<AudioThumbnail>(128,\ dummyManager,\ thumbnailCache);}
-\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ result\ =\ *thumb;}
+\DoxyCodeLine{00046\ \ \ AudioThumbnail\ \&getOrCreateThumbnail(ARAAudioSource\ *audioSource,}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_audio_modification}{AudioModification}}\ *audioModification)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ iter\ =\ thumbnails.find(audioSource);}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordflow}{if}\ (iter\ !=\ std::end(thumbnails))}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *iter-\/>second;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{auto}\ thumb\ =}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ std::make\_unique<AudioThumbnail>(128,\ dummyManager,\ thumbnailCache);}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{auto}\ \&result\ =\ *thumb;}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ ++hash;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordflow}{if}\ (audioModification-\/>getIsModified())}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ thumb-\/>setSource(audioModification-\/>getModifiedAudioBuffer(),}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ audioSource-\/>getSampleRate(),\ hash);}
 \DoxyCodeLine{00061\ }
-\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ ++hash;}
-\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (audioModification-\/>getIsModified())}
-\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ thumb-\/>setSource(audioModification-\/>getModifiedAudioBuffer(),\ audioSource-\/>getSampleRate(),\ hash);\ \ \ \ \ }
-\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ }
-\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
-\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ thumb-\/>setReader\ (\textcolor{keyword}{new}\ ARAAudioSourceReader\ (audioSource),\ hash);}
-\DoxyCodeLine{00068\ }
-\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ audioSource-\/>addListener(\textcolor{keyword}{this});}
-\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ thumbnails.emplace(audioSource,\ std::move(thumb));}
-\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
-\DoxyCodeLine{00072\ \ \ \ \ \}}
-\DoxyCodeLine{00073\ }
-\DoxyCodeLine{00074\ }
-\DoxyCodeLine{00075\ \textcolor{keyword}{private}:}
-\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{void}\ removeAudioSource\ (ARAAudioSource*\ audioSource)}
-\DoxyCodeLine{00077\ \ \ \ \ \{}
-\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ audioSource-\/>removeListener\ (\textcolor{keyword}{this});}
-\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ thumbnails.erase\ (audioSource);}
-\DoxyCodeLine{00080\ \ \ \ \ \}}
-\DoxyCodeLine{00081\ }
-\DoxyCodeLine{00082\ \ \ \ \ int64\ hash\ =\ 0;}
-\DoxyCodeLine{00083\ \ \ \ \ AudioFormatManager\ dummyManager;}
-\DoxyCodeLine{00084\ \ \ \ \ AudioThumbnailCache\ thumbnailCache;}
-\DoxyCodeLine{00085\ \ \ \ \ std::map<ARAAudioSource*,\ unique\_ptr<AudioThumbnail>>\ thumbnails;}
-\DoxyCodeLine{00086\ \};}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ thumb-\/>setReader(\textcolor{keyword}{new}\ ARAAudioSourceReader(audioSource),\ hash);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ audioSource-\/>addListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00066\ \ \ \ \ thumbnails.emplace(audioSource,\ std::move(thumb));}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00068\ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00071\ \ \ \textcolor{keywordtype}{void}\ removeAudioSource(ARAAudioSource\ *audioSource)\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ audioSource-\/>removeListener(\textcolor{keyword}{this});}
+\DoxyCodeLine{00073\ \ \ \ \ thumbnails.erase(audioSource);}
+\DoxyCodeLine{00074\ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ int64\ hash\ =\ 0;}
+\DoxyCodeLine{00077\ \ \ AudioFormatManager\ dummyManager;}
+\DoxyCodeLine{00078\ \ \ AudioThumbnailCache\ thumbnailCache;}
+\DoxyCodeLine{00079\ \ \ std::map<ARAAudioSource\ *,\ unique\_ptr<AudioThumbnail>>\ thumbnails;}
+\DoxyCodeLine{00080\ \};}
 
 \end{DoxyCode}
