@@ -1,0 +1,74 @@
+\doxysection{Torch\+Wave2\+Wave Class Reference}
+\hypertarget{class_torch_wave2_wave}{}\label{class_torch_wave2_wave}\index{TorchWave2Wave@{TorchWave2Wave}}
+
+
+Class that represents a \doxylink{class_torch_wave2_wave}{Torch\+Wave2\+Wave} inherited from \doxylink{class_torch_model}{Torch\+Model} and \doxylink{class_wave2_wave}{Wave2\+Wave}.  
+
+
+
+
+{\ttfamily \#include $<$Torch\+Model.\+h$>$}
+
+Inheritance diagram for Torch\+Wave2\+Wave\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_torch_wave2_wave}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_torch_wave2_wave_aa6e2fd1182f43a289bcffb7ce14f7a46}\label{class_torch_wave2_wave_aa6e2fd1182f43a289bcffb7ce14f7a46} 
+void {\bfseries process} (juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}buffer\+To\+Process, int sample\+Rate) const
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+bool \mbox{\hyperlink{class_torch_model_a4d8f9eb5cc07e36cc14f2b11b2bf627d}{load}} (const map$<$ string, any $>$ \&params) override
+\begin{DoxyCompactList}\small\item\em loads a torchscript model from file. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{class_torch_model_a024d4fd3970ec32ad68ea779db7e81c2}{ready}} () const override
+\begin{DoxyCompactList}\small\item\em checks if a model is loaded onto memory. \end{DoxyCompactList}\item 
+IValue {\bfseries forward} (const std\+::vector$<$ IValue $>$ \&inputs) const
+\begin{DoxyCompactList}\small\item\em forward pass \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{load}} (const map$<$ string, any $>$ \&params)=0
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{ready}} () const =0
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_wave2_wave}{Wave2\+Wave}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \mbox{\hyperlink{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d}{process}} (juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}buffer\+To\+Process, int sample\+Rate, const map$<$ string, any $>$ \&kwargs) const =0
+\begin{DoxyCompactList}\small\item\em Processes a buffer of audio data with the model. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Static Public Member Functions inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+static torch\+::\+Tensor {\bfseries to\+\_\+tensor} (const juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer)
+\item 
+static bool {\bfseries to\+\_\+buffer} (const torch\+::\+Tensor \&src\+\_\+tensor, juce\+::\+Audio\+Buffer$<$ float $>$ \&dest\+\_\+buffer)
+\end{DoxyCompactItemize}
+\doxysubsection*{Protected Member Functions inherited from \mbox{\hyperlink{class_wave2_wave}{Wave2\+Wave}}}
+\begin{DoxyCompactItemize}
+\item 
+bool {\bfseries save\+\_\+buffer\+\_\+to\+\_\+file} (const juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, const juce\+::\+File \&output\+File, int sample\+Rate) const
+\item 
+bool {\bfseries load\+\_\+buffer\+\_\+from\+\_\+file} (const juce\+::\+File \&input\+File, juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, int target\+Sample\+Rate) const
+\end{DoxyCompactItemize}
+\doxysubsection*{Protected Attributes inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+unique\+\_\+ptr$<$ Module $>$ {\bfseries m\+\_\+model}
+\item 
+bool {\bfseries m\+\_\+loaded}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class that represents a \doxylink{class_torch_wave2_wave}{Torch\+Wave2\+Wave} inherited from \doxylink{class_torch_model}{Torch\+Model} and \doxylink{class_wave2_wave}{Wave2\+Wave}. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_torch_model_8h}{Torch\+Model.\+h}}\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_torch_model_8cpp}{Torch\+Model.\+cpp}}\end{DoxyCompactItemize}

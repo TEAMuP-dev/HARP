@@ -1,0 +1,17 @@
+\doxysection{Audio\+Processor.\+h}
+\hypertarget{_audio_processor_8h_source}{}\label{_audio_processor_8h_source}\index{Source/ARA/AudioProcessor.h@{Source/ARA/AudioProcessor.h}}
+\mbox{\hyperlink{_audio_processor_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_audio_processor_impl_8h}{AudioProcessorImpl.h}}"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_processor_editor_8h}{ProcessorEditor.h}}"{}}}
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor}{ARADemoPluginAudioProcessor}}\ \ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemoPluginAudioProcessorImpl}}}
+\DoxyCodeLine{00025\ \{}
+\DoxyCodeLine{00026\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{bool}\ hasEditor()\textcolor{keyword}{\ const\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00028\ \ \ \ \ AudioProcessorEditor*\ createEditor()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{new}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_processor_editor}{ARADemoPluginProcessorEditor}}\ (*\textcolor{keyword}{this},\ \textcolor{keyword}{dynamic\_cast<}\mbox{\hyperlink{class_editor_renderer}{EditorRenderer}}*\textcolor{keyword}{>}(getEditorRenderer()));\ \}}
+\DoxyCodeLine{00029\ \};}
+
+\end{DoxyCode}

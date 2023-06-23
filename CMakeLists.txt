@@ -7,6 +7,9 @@ add_subdirectory(JUCE)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# defines SourceFiles
+include(cmake/SourceFiles.cmake) 
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...")
@@ -72,10 +75,7 @@ juce_generate_juce_header(AudioPluginExampleCMAKE64)
 
 target_sources(AudioPluginExampleCMAKE64
     PRIVATE
-        Source/Main.cpp
-        Source/TorchModel.h
-        Source/WebModel.h
-        Source/Model.h
+        ${SourceFiles}
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer

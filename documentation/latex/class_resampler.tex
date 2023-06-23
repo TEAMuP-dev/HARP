@@ -1,0 +1,62 @@
+\doxysection{Resampler Class Reference}
+\hypertarget{class_resampler}{}\label{class_resampler}\index{Resampler@{Resampler}}
+
+
+Class that represents a \doxylink{class_resampler}{Resampler} inherited from \doxylink{class_torch_model}{Torch\+Model}.  
+
+
+
+
+{\ttfamily \#include $<$Torch\+Model.\+h$>$}
+
+Inheritance diagram for Resampler\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_resampler}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_resampler_a1c658740848d883c5678c6854ae7003a}\label{class_resampler_a1c658740848d883c5678c6854ae7003a} 
+torch\+::\+Tensor {\bfseries resample} (const torch\+::\+Tensor \&waveform, int sample\+Rate\+In, int sample\+Rate\+Out) const
+\begin{DoxyCompactList}\small\item\em resample a waveform tensor. Waveform should be shape (channels, samples) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+bool \mbox{\hyperlink{class_torch_model_a4d8f9eb5cc07e36cc14f2b11b2bf627d}{load}} (const map$<$ string, any $>$ \&params) override
+\begin{DoxyCompactList}\small\item\em loads a torchscript model from file. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{class_torch_model_a024d4fd3970ec32ad68ea779db7e81c2}{ready}} () const override
+\begin{DoxyCompactList}\small\item\em checks if a model is loaded onto memory. \end{DoxyCompactList}\item 
+IValue {\bfseries forward} (const std\+::vector$<$ IValue $>$ \&inputs) const
+\begin{DoxyCompactList}\small\item\em forward pass \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{load}} (const map$<$ string, any $>$ \&params)=0
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{ready}} () const =0
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Static Public Member Functions inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+static torch\+::\+Tensor {\bfseries to\+\_\+tensor} (const juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer)
+\item 
+static bool {\bfseries to\+\_\+buffer} (const torch\+::\+Tensor \&src\+\_\+tensor, juce\+::\+Audio\+Buffer$<$ float $>$ \&dest\+\_\+buffer)
+\end{DoxyCompactItemize}
+\doxysubsection*{Protected Attributes inherited from \mbox{\hyperlink{class_torch_model}{Torch\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+unique\+\_\+ptr$<$ Module $>$ {\bfseries m\+\_\+model}
+\item 
+bool {\bfseries m\+\_\+loaded}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class that represents a \doxylink{class_resampler}{Resampler} inherited from \doxylink{class_torch_model}{Torch\+Model}. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_torch_model_8h}{Torch\+Model.\+h}}\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_torch_model_8cpp}{Torch\+Model.\+cpp}}\end{DoxyCompactItemize}

@@ -1,0 +1,35 @@
+\doxysection{Zoom\+Controls.\+h}
+\hypertarget{_zoom_controls_8h_source}{}\label{_zoom_controls_8h_source}\index{Source/UI/ZoomControls.h@{Source/UI/ZoomControls.h}}
+\mbox{\hyperlink{_zoom_controls_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_zoom_controls}{ZoomControls}}\ :\ \textcolor{keyword}{public}\ Component}
+\DoxyCodeLine{00023\ \{}
+\DoxyCodeLine{00024\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00025\ \ \ \ \ \mbox{\hyperlink{class_zoom_controls}{ZoomControls}}()}
+\DoxyCodeLine{00026\ \ \ \ \ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (zoomInButton);}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (zoomOutButton);}
+\DoxyCodeLine{00029\ \ \ \ \ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordtype}{void}\ setZoomInCallback\ \ (std::function<\textcolor{keywordtype}{void}()>\ cb)\ \ \ \{\ zoomInButton.onClick\ \ =\ std::move\ (cb);\ \}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{void}\ setZoomOutCallback\ (std::function<\textcolor{keywordtype}{void}()>\ cb)\ \ \ \{\ zoomOutButton.onClick\ =\ std::move\ (cb);\ \}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{void}\ resized()\textcolor{keyword}{\ override}}
+\DoxyCodeLine{00035\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ FlexBox\ fb;}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ fb.justifyContent\ =\ FlexBox::JustifyContent::flexEnd;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}*\ button\ :\ \{\ \&zoomInButton,\ \&zoomOutButton\ \})}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ fb.items.add\ (FlexItem\ (*button).withMinHeight\ (30.0f).withMinWidth\ (30.0f).withMargin\ (\{\ 5,\ 5,\ 5,\ 0\ \}));}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ fb.performLayout\ (getLocalBounds());}
+\DoxyCodeLine{00043\ \ \ \ \ \}}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00046\ \ \ \ \ TextButton\ zoomInButton\ \{\ \textcolor{stringliteral}{"{}+"{}}\ \},\ zoomOutButton\ \{\ \textcolor{stringliteral}{"{}-\/"{}}\ \};}
+\DoxyCodeLine{00047\ \};}
+
+\end{DoxyCode}

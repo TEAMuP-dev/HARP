@@ -1,0 +1,68 @@
+\doxysection{ARADemo\+Plugin\+Processor\+Editor Class Reference}
+\hypertarget{class_a_r_a_demo_plugin_processor_editor}{}\label{class_a_r_a_demo_plugin_processor_editor}\index{ARADemoPluginProcessorEditor@{ARADemoPluginProcessorEditor}}
+
+
+Class responsible for managing the plugin\textquotesingle{}s graphical interface.  
+
+
+
+
+{\ttfamily \#include $<$Processor\+Editor.\+h$>$}
+
+Inheritance diagram for ARADemo\+Plugin\+Processor\+Editor\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=1.000000cm]{class_a_r_a_demo_plugin_processor_editor}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{class_a_r_a_demo_plugin_processor_editor_accb12738596c118c02557996db842fc6}{ARADemo\+Plugin\+Processor\+Editor}} (\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}} \&p, \mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*}er)
+\begin{DoxyCompactList}\small\item\em Constructor for \doxylink{class_a_r_a_demo_plugin_processor_editor}{ARADemo\+Plugin\+Processor\+Editor}. \end{DoxyCompactList}\item 
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_abf48f854d1e6c2324798b0c38334ec25}\label{class_a_r_a_demo_plugin_processor_editor_abf48f854d1e6c2324798b0c38334ec25} 
+void {\bfseries button\+Clicked} (Button \texorpdfstring{$\ast$}{*}button) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_ad8f5abcbfe31cc979984244ea6b5f5e6}\label{class_a_r_a_demo_plugin_processor_editor_ad8f5abcbfe31cc979984244ea6b5f5e6} 
+void {\bfseries combo\+Box\+Changed} (Combo\+Box \texorpdfstring{$\ast$}{*}box) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_aa828c5fdfe3bf9d9b145b3f65ec3ccda}\label{class_a_r_a_demo_plugin_processor_editor_aa828c5fdfe3bf9d9b145b3f65ec3ccda} 
+void {\bfseries slider\+Value\+Changed} (Slider \texorpdfstring{$\ast$}{*}slider) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_a0dcaa4aab59428e8ba0cbc958ff13adf}\label{class_a_r_a_demo_plugin_processor_editor_a0dcaa4aab59428e8ba0cbc958ff13adf} 
+void {\bfseries paint} (Graphics \&g) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_afe725a203e9805a1cc65fd1500913eab}\label{class_a_r_a_demo_plugin_processor_editor_afe725a203e9805a1cc65fd1500913eab} 
+void {\bfseries resized} () override
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class responsible for managing the plugin\textquotesingle{}s graphical interface. 
+
+This class extends the base class Audio\+Processor\+Editor and its ARA extension, and implements Button\+::\+Listener, Slider\+::\+Listener, and Combo\+Box\+::\+Listener interfaces. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_a_r_a_demo_plugin_processor_editor_accb12738596c118c02557996db842fc6}\label{class_a_r_a_demo_plugin_processor_editor_accb12738596c118c02557996db842fc6} 
+\index{ARADemoPluginProcessorEditor@{ARADemoPluginProcessorEditor}!ARADemoPluginProcessorEditor@{ARADemoPluginProcessorEditor}}
+\index{ARADemoPluginProcessorEditor@{ARADemoPluginProcessorEditor}!ARADemoPluginProcessorEditor@{ARADemoPluginProcessorEditor}}
+\doxysubsubsection{\texorpdfstring{ARADemoPluginProcessorEditor()}{ARADemoPluginProcessorEditor()}}
+{\footnotesize\ttfamily ARADemo\+Plugin\+Processor\+Editor\+::\+ARADemo\+Plugin\+Processor\+Editor (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}} \&}]{p,  }\item[{\mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*}}]{er }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+
+
+Constructor for \doxylink{class_a_r_a_demo_plugin_processor_editor}{ARADemo\+Plugin\+Processor\+Editor}. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em p} & Reference to \doxylink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl} object. \\
+\hline
+{\em er} & Pointer to \doxylink{class_editor_renderer}{Editor\+Renderer} object. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+ARA/\mbox{\hyperlink{_processor_editor_8h}{Processor\+Editor.\+h}}\item 
+Source/\+ARA/\mbox{\hyperlink{_processor_editor_8cpp}{Processor\+Editor.\+cpp}}\end{DoxyCompactItemize}

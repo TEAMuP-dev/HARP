@@ -1,0 +1,58 @@
+\doxysection{Processor\+Editor.\+h}
+\hypertarget{_processor_editor_8h_source}{}\label{_processor_editor_8h_source}\index{Source/ARA/ProcessorEditor.h@{Source/ARA/ProcessorEditor.h}}
+\mbox{\hyperlink{_processor_editor_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_audio_processor_impl_8h}{AudioProcessorImpl.h}}"{}}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_editor_renderer_8h}{EditorRenderer.h}}"{}}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}../UI/ToolBarStyle.h"{}}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}../UI/DocumentView.h"{}}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_a_r_a_demo_plugin_processor_editor}{ARADemoPluginProcessorEditor}}\ \ :\ \textcolor{keyword}{public}\ AudioProcessorEditor,}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ AudioProcessorEditorARAExtension,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ Button::Listener,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ Slider::Listener,}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ ComboBox::Listener}
+\DoxyCodeLine{00042\ \{}
+\DoxyCodeLine{00043\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_a_r_a_demo_plugin_processor_editor}{ARADemoPluginProcessorEditor}}\ (\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemoPluginAudioProcessorImpl}}\&\ p,\ \mbox{\hyperlink{class_editor_renderer}{EditorRenderer}}*\ er);}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{comment}{//\ Button\ listener\ method}}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{void}\ buttonClicked(Button*\ button)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{comment}{//\ Combo\ box\ listener\ method}}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ comboBoxChanged\ (ComboBox*\ box)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{comment}{//\ Slider\ listener\ method}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{void}\ sliderValueChanged(Slider*\ slider)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{comment}{//\ Paint\ method}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ paint\ (Graphics\&\ g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{comment}{//\ Resize\ method}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{void}\ resized()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00068\ \ \ \ \ unique\_ptr<Component>\ documentView;}
+\DoxyCodeLine{00069\ \ \ \ \ juce::TextButton\ testButton;}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ juce::Slider\ temp1Dial;}
+\DoxyCodeLine{00072\ \ \ \ \ juce::Slider\ temp2Dial;}
+\DoxyCodeLine{00073\ \ \ \ \ juce::Slider\ stepsDial;}
+\DoxyCodeLine{00074\ \ \ \ \ juce::Slider\ phintDial;}
+\DoxyCodeLine{00075\ \ \ \ \ juce::Slider\ pwidthDial;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ juce::ComboBox\ modeBox;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \mbox{\hyperlink{class_toolbar_slider_style}{ToolbarSliderStyle}}\ toolbarSliderStyle;}
+\DoxyCodeLine{00080\ \ \ \ \ \mbox{\hyperlink{class_button_look_and_feel}{ButtonLookAndFeel}}\ buttonLookAndFeel;}
+\DoxyCodeLine{00081\ \ \ \ \ \mbox{\hyperlink{class_combo_box_look_and_feel}{ComboBoxLookAndFeel}}\ comboBoxLookAndFeel;}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \mbox{\hyperlink{class_editor_renderer}{EditorRenderer}}*\ mEditorRenderer;}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ JUCE\_DECLARE\_NON\_COPYABLE\_WITH\_LEAK\_DETECTOR\ (\mbox{\hyperlink{class_a_r_a_demo_plugin_processor_editor}{ARADemoPluginProcessorEditor}})}
+\DoxyCodeLine{00086\ \};}
+
+\end{DoxyCode}

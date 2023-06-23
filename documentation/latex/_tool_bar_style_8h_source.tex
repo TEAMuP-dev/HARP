@@ -1,0 +1,342 @@
+\doxysection{Tool\+Bar\+Style.\+h}
+\hypertarget{_tool_bar_style_8h_source}{}\label{_tool_bar_style_8h_source}\index{Source/UI/ToolBarStyle.h@{Source/UI/ToolBarStyle.h}}
+\mbox{\hyperlink{_tool_bar_style_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_processors/juce\_audio\_processors.h"{}}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_toolbar_slider_style}{ToolbarSliderStyle}}\ :\ \textcolor{keyword}{public}\ juce::LookAndFeel\_V4}
+\DoxyCodeLine{00031\ \{}
+\DoxyCodeLine{00032\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \ \ \mbox{\hyperlink{class_toolbar_slider_style}{ToolbarSliderStyle}}();}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ \textcolor{keywordtype}{int}\ buttonHeight)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{void}\ drawRotarySlider(juce::Graphics\&\ g,}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ x,\ \textcolor{keywordtype}{int}\ y,\ \textcolor{keywordtype}{int}\ width,\ \textcolor{keywordtype}{int}\ height,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\ sliderPos,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{float}\ rotaryStartAngle,}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{float}\ rotaryEndAngle,}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ juce::Slider\&\ slider)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{void}\ drawLabel(Graphics\&\ g,\ Label\&\ label)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ \};}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_button_look_and_feel}{ButtonLookAndFeel}}\ :\ \textcolor{keyword}{public}\ juce::LookAndFeel\_V4}
+\DoxyCodeLine{00051\ \{}
+\DoxyCodeLine{00052\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00053\ \ \ \ \ \mbox{\hyperlink{class_button_look_and_feel}{ButtonLookAndFeel}}();}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ \textcolor{keywordtype}{int}\ buttonHeight)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ drawButtonBackground\ (Graphics\&\ g,\ Button\&\ button,\ \textcolor{keyword}{const}\ Colour\&\ backgroundColour,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ shouldDrawButtonAsHighlighted,\ \textcolor{keywordtype}{bool}\ shouldDrawButtonAsDown)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{void}\ drawButtonText\ (Graphics\&\ g,\ TextButton\&\ button,\ \textcolor{keywordtype}{bool}\ shouldDrawButtonAsHighlighted,\ \textcolor{keywordtype}{bool}\ shouldDrawButtonAsDown)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00066\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_combo_box_look_and_feel}{ComboBoxLookAndFeel}}\ :\ \textcolor{keyword}{public}\ juce::LookAndFeel\_V4}
+\DoxyCodeLine{00067\ \{}
+\DoxyCodeLine{00068\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00069\ \ \ \ \ \mbox{\hyperlink{class_combo_box_look_and_feel}{ComboBoxLookAndFeel}}();}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ \textcolor{keywordtype}{int}\ buttonHeight)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordtype}{void}\ drawComboBox\ (Graphics\&\ g,\ \textcolor{keywordtype}{int}\ width,\ \textcolor{keywordtype}{int}\ height,\ \textcolor{keywordtype}{bool}\ \textcolor{comment}{/*isButtonDown*/},}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ \textcolor{comment}{/*buttonX*/},\ \textcolor{keywordtype}{int}\ \textcolor{comment}{/*buttonY*/},\ \textcolor{keywordtype}{int}\ \textcolor{comment}{/*buttonW*/},\ \textcolor{keywordtype}{int}\ \textcolor{comment}{/*buttonH*/},}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ComboBox\&\ box)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{void}\ drawPopupMenuItem\ (Graphics\&\ g,\ \textcolor{keyword}{const}\ Rectangle<int>\&\ area,}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ isSeparator,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ isActive,}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ isHighlighted,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ isTicked,}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ hasSubMenu,\ \textcolor{keyword}{const}\ String\&\ text,}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ String\&\ shortcutKeyText,}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Drawable*\ icon,\ \textcolor{keyword}{const}\ Colour*\ \textcolor{keyword}{const}\ textColourToUse)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00083\ \};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ \#pragma\ once}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \textcolor{comment}{//\ \#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ \#include\ "{}juce\_audio\_processors/juce\_audio\_processors.h"{}}}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ class\ ToolbarSliderStyle\ :\ public\ juce::LookAndFeel\_V4}}
+\DoxyCodeLine{00092\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00093\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00094\ \textcolor{comment}{//\ \ \ \ \ ToolbarSliderStyle()}}
+\DoxyCodeLine{00095\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00096\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(juce::Slider::backgroundColourId,\ juce::Colours::black);}}
+\DoxyCodeLine{00097\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(juce::Slider::thumbColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00098\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00099\ \textcolor{comment}{//\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ int\ buttonHeight)\ override}}
+\DoxyCodeLine{00100\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00101\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ Font(2.0f,\ Font::plain);\ }}
+\DoxyCodeLine{00102\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{comment}{//\ \ \ \ \ void\ drawRotarySlider(juce::Graphics\&\ g,}}
+\DoxyCodeLine{00105\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int\ x,\ int\ y,\ int\ width,\ int\ height,}}
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ float\ sliderPos,}}
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ float\ rotaryStartAngle,}}
+\DoxyCodeLine{00108\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ float\ rotaryEndAngle,}}
+\DoxyCodeLine{00109\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ juce::Slider\&\ slider)\ override}}
+\DoxyCodeLine{00110\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00111\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ radius\ =\ (float)\ juce::jmin(width\ /\ 2,\ height\ /\ 2)\ -\/\ 2.0f;}}
+\DoxyCodeLine{00112\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ centreX\ =\ (float)\ x\ +\ (float)\ width\ \ *\ 0.5f;}}
+\DoxyCodeLine{00113\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ centreY\ =\ (float)\ y\ +\ (float)\ height\ *\ 0.5f;}}
+\DoxyCodeLine{00114\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ rx\ =\ centreX\ -\/\ radius;}}
+\DoxyCodeLine{00115\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ ry\ =\ centreY\ -\/\ radius;}}
+\DoxyCodeLine{00116\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ rw\ =\ radius\ *\ 2.0f;}}
+\DoxyCodeLine{00117\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ angle\ =\ rotaryStartAngle\ +\ sliderPos\ *\ (rotaryEndAngle\ -\/\ rotaryStartAngle);}}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ fill}}
+\DoxyCodeLine{00120\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour(juce::Colours::black);}}
+\DoxyCodeLine{00121\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillEllipse(rx,\ ry,\ rw,\ rw);}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ outline}}
+\DoxyCodeLine{00124\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour(juce::Colours::black);}}
+\DoxyCodeLine{00125\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawEllipse(rx,\ ry,\ rw,\ rw,\ 1.0f);}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ juce::Path\ p;}}
+\DoxyCodeLine{00128\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ pointerLength\ =\ radius\ *\ 0.33f;}}
+\DoxyCodeLine{00129\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ pointerThickness\ =\ 2.0f;}}
+\DoxyCodeLine{00130\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ p.addRectangle(-\/pointerThickness\ *\ 0.5f,\ -\/radius,\ pointerThickness,\ pointerLength);}}
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX,\ centreY));}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ pointer}}
+\DoxyCodeLine{00134\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour(juce::Colours::white);}}
+\DoxyCodeLine{00135\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillPath(p);}}
+\DoxyCodeLine{00136\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \textcolor{comment}{//\ \ \ \ \ void\ drawLabel(Graphics\&\ g,\ Label\&\ label)\ override}}
+\DoxyCodeLine{00139\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00140\ \textcolor{comment}{//\ \ \ \ \ g.fillAll\ (label.findColour\ (Label::backgroundColourId));}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \textcolor{comment}{//\ \ \ \ \ if\ (!\ label.isBeingEdited())}}
+\DoxyCodeLine{00143\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00144\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ float\ alpha\ =\ label.isEnabled()\ ?\ 1.0f\ :\ 0.5f;}}
+\DoxyCodeLine{00145\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ Font\ font\ (getLabelFont\ (label));}}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (label.findColour\ (Label::textColourId).withMultipliedAlpha\ (alpha));}}
+\DoxyCodeLine{00148\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setFont\ (Font(16.0,\ Font::plain));}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ Rectangle<int>\ textArea\ (label.getBorderSize().subtractedFrom\ (label.getLocalBounds()));}}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawFittedText\ (label.getText(),\ textArea,\ label.getJustificationType(),}}
+\DoxyCodeLine{00153\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ jmax\ (1,\ (int)\ (textArea.getHeight()\ /\ font.getHeight())),}}
+\DoxyCodeLine{00154\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ label.getMinimumHorizontalScale());}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (label.findColour\ (Label::outlineColourId).withMultipliedAlpha\ (alpha));}}
+\DoxyCodeLine{00157\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00158\ \textcolor{comment}{//\ \ \ \ \ else\ if\ (label.isEnabled())}}
+\DoxyCodeLine{00159\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00160\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (label.findColour\ (Label::outlineColourId));}}
+\DoxyCodeLine{00161\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \textcolor{comment}{//\ class\ ButtonLookAndFeel\ :\ public\ juce::LookAndFeel\_V4}}
+\DoxyCodeLine{00169\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00170\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00171\ \textcolor{comment}{//\ \ \ \ \ ButtonLookAndFeel()}}
+\DoxyCodeLine{00172\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00173\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour\ (TextButton::buttonColourId,\ juce::Colours::black);}}
+\DoxyCodeLine{00174\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour\ (TextButton::buttonOnColourId,\ juce::Colours::black.brighter());}}
+\DoxyCodeLine{00175\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour\ (TextButton::textColourOffId,\ juce::Colours::white);}}
+\DoxyCodeLine{00176\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour\ (TextButton::textColourOnId,\ juce::Colours::white);}}
+\DoxyCodeLine{00177\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \textcolor{comment}{//\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ int\ buttonHeight)\ override}}
+\DoxyCodeLine{00180\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00181\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ Font(14.0f,\ Font::plain);\ }}
+\DoxyCodeLine{00182\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \textcolor{comment}{//\ \ \ \ \ void\ drawButtonBackground\ (Graphics\&\ g,\ Button\&\ button,\ const\ Colour\&\ backgroundColour,}}
+\DoxyCodeLine{00185\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bool\ shouldDrawButtonAsHighlighted,\ bool\ shouldDrawButtonAsDown)\ override}}
+\DoxyCodeLine{00186\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00187\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ buttonArea\ =\ button.getLocalBounds();}}
+\DoxyCodeLine{00188\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ edge\ =\ 4;}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ buttonArea.removeFromTop\ (edge);}}
+\DoxyCodeLine{00191\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ buttonArea.removeFromBottom\ (edge);}}
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ buttonArea.removeFromLeft\ (edge);}}
+\DoxyCodeLine{00193\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ buttonArea.removeFromRight\ (edge);}}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (shouldDrawButtonAsHighlighted\ ?\ findColour\ (TextButton::buttonOnColourId)}}
+\DoxyCodeLine{00196\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ findColour\ (TextButton::buttonColourId));}}
+\DoxyCodeLine{00197\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillRoundedRectangle\ (buttonArea.toFloat(),\ edge);}}
+\DoxyCodeLine{00198\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{comment}{//\ \ \ \ \ void\ drawButtonText\ (Graphics\&\ g,\ TextButton\&\ button,\ bool\ shouldDrawButtonAsHighlighted,\ bool\ shouldDrawButtonAsDown)\ override}}
+\DoxyCodeLine{00201\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00202\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (button.findColour\ (button.getToggleState()\ ?\ TextButton::textColourOnId}}
+\DoxyCodeLine{00203\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ TextButton::textColourOffId)}}
+\DoxyCodeLine{00204\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .withMultipliedAlpha\ (button.isEnabled()\ ?\ 1.0f\ :\ 0.5f));}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ set\ text\ colour\ to\ white}}
+\DoxyCodeLine{00207\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (Colours::white);}}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ yIndent\ =\ jmin\ (4,\ button.proportionOfHeight\ (0.1f));\ //\ Reduced\ indent\ proportion}}
+\DoxyCodeLine{00210\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ cornerSize\ =\ jmin\ (button.getHeight(),\ button.getWidth())\ /\ 2;}}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ fontHeight\ =\ roundToInt\ (cornerSize\ *\ 0.6f);}}
+\DoxyCodeLine{00213\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ leftIndent\ \ =\ jmin\ (fontHeight,\ 2\ +\ cornerSize\ /\ (button.isConnectedOnLeft()\ ?\ 4\ :\ 2));}}
+\DoxyCodeLine{00214\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ rightIndent\ =\ jmin\ (fontHeight,\ 2\ +\ cornerSize\ /\ (button.isConnectedOnRight()\ ?\ 4\ :\ 2));}}
+\DoxyCodeLine{00215\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ int\ textWidth\ =\ button.getWidth()\ -\/\ leftIndent\ -\/\ rightIndent;}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (textWidth\ >\ 0)}}
+\DoxyCodeLine{00218\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00219\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setFont\ (Font(16.0,\ Font::plain));}}
+\DoxyCodeLine{00220\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.drawFittedText(button.getButtonText(),}}
+\DoxyCodeLine{00221\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leftIndent,\ yIndent,\ //\ top-\/left\ position\ with\ new\ indent}}
+\DoxyCodeLine{00222\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ button.getWidth()\ -\/\ 2*leftIndent,\ button.getHeight()\ -\/\ 2*yIndent,\ //\ new\ width\ and\ height}}
+\DoxyCodeLine{00223\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Justification::centred,\ //\ centre\ the\ text\ both\ horizontally\ and\ vertically}}
+\DoxyCodeLine{00224\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2);\ //\ maximum\ number\ of\ lines\ the\ text\ can\ use}}
+\DoxyCodeLine{00225\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00226\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ \textcolor{comment}{//\ class\ ComboBoxLookAndFeel\ :\ public\ juce::LookAndFeel\_V4}}
+\DoxyCodeLine{00232\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00233\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00234\ \textcolor{comment}{//\ \ \ \ \ ComboBoxLookAndFeel()}}
+\DoxyCodeLine{00235\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00236\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(ComboBox::backgroundColourId,\ juce::Colours::black);}}
+\DoxyCodeLine{00237\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(ComboBox::textColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00238\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(ComboBox::arrowColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00239\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(ComboBox::outlineColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(PopupMenu::backgroundColourId,\ juce::Colours::black);}}
+\DoxyCodeLine{00242\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(PopupMenu::textColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00243\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setColour(PopupMenu::highlightedTextColourId,\ juce::Colours::white);}}
+\DoxyCodeLine{00244\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00245\ \textcolor{comment}{//\ \ \ \ \ Font\ getTextButtonFont(TextButton\&\ button,\ int\ buttonHeight)\ override}}
+\DoxyCodeLine{00246\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00247\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ Font(14.0f,\ Font::plain);\ }}
+\DoxyCodeLine{00248\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00249\ \textcolor{comment}{//\ void\ drawComboBox\ (Graphics\&\ g,\ int\ width,\ int\ height,\ bool\ /*isButtonDown*/,}}
+\DoxyCodeLine{00250\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int\ /*buttonX*/,\ int\ /*buttonY*/,\ int\ /*buttonW*/,\ int\ /*buttonH*/,}}
+\DoxyCodeLine{00251\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ComboBox\&\ box)\ override}}
+\DoxyCodeLine{00252\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00253\ \textcolor{comment}{//\ \ \ \ \ auto\ cornerSize\ =\ box.findParentComponentOfClass<ChoicePropertyComponent>()\ !=\ nullptr\ ?\ 0.0f\ :\ 3.0f;}}
+\DoxyCodeLine{00254\ \textcolor{comment}{//\ \ \ \ \ Rectangle<int>\ boxBounds\ (0,\ 0,\ width,\ height);}}
+\DoxyCodeLine{00255\ }
+\DoxyCodeLine{00256\ \textcolor{comment}{//\ \ \ \ \ g.setColour\ (box.findColour\ (ComboBox::backgroundColourId));}}
+\DoxyCodeLine{00257\ \textcolor{comment}{//\ \ \ \ \ g.fillRoundedRectangle\ (boxBounds.toFloat(),\ cornerSize);}}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00259\ \textcolor{comment}{//\ \ \ \ \ g.setColour\ (box.findColour\ (ComboBox::outlineColourId));}}
+\DoxyCodeLine{00260\ \textcolor{comment}{//\ \ \ \ \ g.drawRoundedRectangle\ (boxBounds.toFloat().reduced\ (0.5f,\ 0.5f),\ cornerSize,\ 1.0f);}}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \textcolor{comment}{//\ \ \ \ \ auto\ arrowX\ =\ static\_cast<float>\ (width\ -\/\ height\ *\ 0.5f);}}
+\DoxyCodeLine{00263\ \textcolor{comment}{//\ \ \ \ \ auto\ arrowH\ =\ static\_cast<float>\ (height\ *\ 0.35f\ *\ 0.5f);\ \ //\ Scale\ down\ the\ height\ by\ 50\%}}
+\DoxyCodeLine{00264\ }
+\DoxyCodeLine{00265\ \textcolor{comment}{//\ \ \ \ \ Path\ path;}}
+\DoxyCodeLine{00266\ \textcolor{comment}{//\ \ \ \ \ path.startNewSubPath\ (arrowX,\ height\ *\ 0.3f\ +\ arrowH\ *\ 0.5f);\ //\ Center\ the\ arrow}}
+\DoxyCodeLine{00267\ \textcolor{comment}{//\ \ \ \ \ path.lineTo\ (arrowX\ +\ arrowH\ *\ 0.6f,\ height\ *\ 0.7f\ -\/\ arrowH\ *\ 0.5f);\ //\ Adjust\ the\ arrow\ point}}
+\DoxyCodeLine{00268\ \textcolor{comment}{//\ \ \ \ \ path.lineTo\ (arrowX\ -\/\ arrowH\ *\ 0.6f,\ height\ *\ 0.7f\ -\/\ arrowH\ *\ 0.5f);\ //\ Adjust\ the\ arrow\ point}}
+\DoxyCodeLine{00269\ \textcolor{comment}{//\ \ \ \ \ path.closeSubPath();}}
+\DoxyCodeLine{00270\ \textcolor{comment}{//\ \ \ \ \ path.applyTransform(AffineTransform::rotation(-\/M\_PI,\ arrowX,\ height\ *\ 0.5f));\ //\ Rotate\ the\ arrow\ to\ point\ downwards}}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \textcolor{comment}{//\ \ \ \ \ g.setColour\ (box.findColour\ (ComboBox::arrowColourId).withAlpha\ ((box.isEnabled()\ ?\ 1.0f\ :\ 0.3f)));}}
+\DoxyCodeLine{00273\ \textcolor{comment}{//\ \ \ \ \ g.fillPath\ (path);\ //\ Fill\ the\ triangle\ instead\ of\ stroke}}
+\DoxyCodeLine{00274\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \textcolor{comment}{//\ void\ drawPopupMenuItem\ (Graphics\&\ g,\ const\ Rectangle<int>\&\ area,}}
+\DoxyCodeLine{00277\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ bool\ isSeparator,\ const\ bool\ isActive,}}
+\DoxyCodeLine{00278\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ bool\ isHighlighted,\ const\ bool\ isTicked,}}
+\DoxyCodeLine{00279\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ bool\ hasSubMenu,\ const\ String\&\ text,}}
+\DoxyCodeLine{00280\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ String\&\ shortcutKeyText,}}
+\DoxyCodeLine{00281\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ Drawable*\ icon,\ const\ Colour*\ const\ textColourToUse)\ override}}
+\DoxyCodeLine{00282\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00283\ \textcolor{comment}{//\ \ \ \ \ if\ (isSeparator)}}
+\DoxyCodeLine{00284\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00285\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ r\ \ =\ area.reduced\ (5,\ 0);}}
+\DoxyCodeLine{00286\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ r.removeFromTop\ (roundToInt\ ((r.getHeight()\ *\ 0.5f)\ -\/\ 0.5f));}}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00288\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setColour\ (findColour\ (PopupMenu::textColourId).withAlpha\ (0.3f));}}
+\DoxyCodeLine{00289\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.fillRect\ (r.removeFromTop\ (1));}}
+\DoxyCodeLine{00290\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00291\ \textcolor{comment}{//\ \ \ \ \ else}}
+\DoxyCodeLine{00292\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00293\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ textColour\ =\ (textColourToUse\ ==\ nullptr\ ?\ findColour\ (PopupMenu::textColourId)}}
+\DoxyCodeLine{00294\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ *textColourToUse);}}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ r\ \ =\ area.reduced\ (1);}}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (isHighlighted)}}
+\DoxyCodeLine{00299\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00300\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setColour\ (findColour\ (PopupMenu::highlightedBackgroundColourId));}}
+\DoxyCodeLine{00301\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.fillRect\ (r);}}
+\DoxyCodeLine{00302\ }
+\DoxyCodeLine{00303\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setColour\ (findColour\ (PopupMenu::highlightedTextColourId));}}
+\DoxyCodeLine{00304\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00305\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else}}
+\DoxyCodeLine{00306\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00307\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setColour\ (textColour.withMultipliedAlpha\ (isActive\ ?\ 1.0f\ :\ 0.5f));}}
+\DoxyCodeLine{00308\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00310\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ r.reduce\ (jmin\ (5,\ area.getWidth()\ /\ 20),\ 0);}}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ font\ =\ getPopupMenuFont();}}
+\DoxyCodeLine{00313\ }
+\DoxyCodeLine{00314\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ maxFontHeight\ =\ r.getHeight()\ /\ 1.3f;}}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00316\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (font.getHeight()\ >\ maxFontHeight)}}
+\DoxyCodeLine{00317\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ font.setHeight\ (maxFontHeight);}}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00319\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.setFont\ (Font(16.0,\ Font::plain));}}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ iconArea\ =\ r.removeFromLeft\ (roundToInt\ (maxFontHeight)).toFloat();}}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (icon\ !=\ nullptr)}}
+\DoxyCodeLine{00324\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00325\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ icon-\/>drawWithin\ (g,\ iconArea,\ RectanglePlacement::centred\ |\ RectanglePlacement::onlyReduceInSize,\ 1.0f);}}
+\DoxyCodeLine{00326\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00327\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else\ if\ (isTicked)}}
+\DoxyCodeLine{00328\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00329\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.drawText\ ("{}*"{},\ iconArea,\ Justification::centred);}}
+\DoxyCodeLine{00330\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (hasSubMenu)}}
+\DoxyCodeLine{00333\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00334\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ arrowH\ =\ 0.6f\ *\ getPopupMenuFont().getAscent();}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ x\ =\ static\_cast<float>\ (r.removeFromRight\ ((int)\ arrowH).getX());}}
+\DoxyCodeLine{00337\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ halfH\ =\ static\_cast<float>\ (r.getCentreY());}}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ Path\ path;}}
+\DoxyCodeLine{00340\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ path.startNewSubPath\ (x,\ halfH\ -\/\ arrowH\ *\ 0.5f);}}
+\DoxyCodeLine{00341\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ path.lineTo\ (x\ +\ arrowH\ *\ 0.6f,\ halfH);}}
+\DoxyCodeLine{00342\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ path.lineTo\ (x,\ halfH\ +\ arrowH\ *\ 0.5f);}}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.strokePath\ (path,\ PathStrokeType\ (2.0f));}}
+\DoxyCodeLine{00345\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00347\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ r.removeFromRight\ (3);}}
+\DoxyCodeLine{00348\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g.drawFittedText\ (text,\ r,\ Justification::centredLeft,\ 1);}}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00350\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (shortcutKeyText.isNotEmpty())}}
+\DoxyCodeLine{00351\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00352\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ f\ =\ font;}}
+\DoxyCodeLine{00353\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ f.setHeight\ (f.getHeight()\ *\ 0.75f);}}
+\DoxyCodeLine{00354\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ f.setHorizontalScale\ (0.95f);}}
+\DoxyCodeLine{00355\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.setFont\ (Font(16.0,\ Font::plain));}}
+\DoxyCodeLine{00356\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ g.drawText\ (shortcutKeyText,\ r,\ Justification::centredRight,\ true);}}
+\DoxyCodeLine{00357\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00358\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00359\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ }
+\DoxyCodeLine{00362\ }
+\DoxyCodeLine{00363\ \textcolor{comment}{//\ \};}}
+
+\end{DoxyCode}

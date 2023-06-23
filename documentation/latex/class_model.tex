@@ -1,0 +1,74 @@
+\doxysection{Model Class Reference}
+\hypertarget{class_model}{}\label{class_model}\index{Model@{Model}}
+
+
+Abstract class for different types of deep learning processors.  
+
+
+
+
+{\ttfamily \#include $<$Model.\+h$>$}
+
+Inheritance diagram for Model\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_model}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{load}} (const map$<$ string, any $>$ \&params)=0
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{ready}} () const =0
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Abstract class for different types of deep learning processors. 
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_model_a7032424ce73e00b889fde5bfba4a0692}\label{class_model_a7032424ce73e00b889fde5bfba4a0692} 
+\index{Model@{Model}!load@{load}}
+\index{load@{load}!Model@{Model}}
+\doxysubsubsection{\texorpdfstring{load()}{load()}}
+{\footnotesize\ttfamily virtual bool Model\+::load (\begin{DoxyParamCaption}\item[{const map$<$ string, any $>$ \&}]{params }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Load the model parameters. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em params} & A map of parameters for the model. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A boolean indicating whether the model was loaded successfully. 
+\end{DoxyReturn}
+
+
+Implemented in \mbox{\hyperlink{class_torch_model_a4d8f9eb5cc07e36cc14f2b11b2bf627d}{Torch\+Model}}, and \mbox{\hyperlink{class_web_model_a01c1ce5f7295778a1e699d0ad3edd9c3}{Web\+Model}}.
+
+\Hypertarget{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}\label{class_model_a2da73e5a1f8e1404cdc1eb318b81d406} 
+\index{Model@{Model}!ready@{ready}}
+\index{ready@{ready}!Model@{Model}}
+\doxysubsubsection{\texorpdfstring{ready()}{ready()}}
+{\footnotesize\ttfamily virtual bool Model\+::ready (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Checks if the model is ready. 
+
+\begin{DoxyReturn}{Returns}
+A boolean indicating whether the model is ready. 
+\end{DoxyReturn}
+
+
+Implemented in \mbox{\hyperlink{class_torch_model_a024d4fd3970ec32ad68ea779db7e81c2}{Torch\+Model}}, and \mbox{\hyperlink{class_web_model_a28b1dbb19138da06ce28173bf8da923c}{Web\+Model}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_model_8h}{Model.\+h}}\end{DoxyCompactItemize}

@@ -1,0 +1,49 @@
+\doxysection{Audio\+Processor\+Impl.\+h}
+\hypertarget{_audio_processor_impl_8h_source}{}\label{_audio_processor_impl_8h_source}\index{Source/ARA/AudioProcessorImpl.h@{Source/ARA/AudioProcessorImpl.h}}
+\mbox{\hyperlink{_audio_processor_impl_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_processors/juce\_audio\_processors.h"{}}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}../Timeline/PlayheadPositionLabel.h"{}}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemoPluginAudioProcessorImpl}}\ \ :\ \textcolor{keyword}{public}\ AudioProcessor,}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ AudioProcessorARAExtension}
+\DoxyCodeLine{00032\ \{}
+\DoxyCodeLine{00033\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00034\ \ \ \ \ \mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemoPluginAudioProcessorImpl}}()}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ :\ AudioProcessor\ (getBusesProperties())\{\}}
+\DoxyCodeLine{00036\ \ \ \ \ \mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{\string~ARADemoPluginAudioProcessorImpl}}()\ \textcolor{keyword}{override}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ prepareToPlay\ (\textcolor{keywordtype}{double}\ sampleRate,\ \textcolor{keywordtype}{int}\ samplesPerBlock)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{void}\ releaseResources()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{bool}\ isBusesLayoutSupported\ (\textcolor{keyword}{const}\ BusesLayout\&\ layouts)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{void}\ processBlock\ (AudioBuffer<float>\&\ buffer,\ MidiBuffer\&\ midiMessages)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keyword}{using\ }AudioProcessor::processBlock;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{const}\ String\ getName()\textcolor{keyword}{\ const\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}tensor-\/juce"{}};\ \}}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{bool}\ acceptsMidi()\textcolor{keyword}{\ const\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordtype}{bool}\ producesMidi()\textcolor{keyword}{\ const\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{double}\ getTailLengthSeconds()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{int}\ getNumPrograms()\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{int}\ getCurrentProgram()\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordtype}{void}\ setCurrentProgram\ (\textcolor{keywordtype}{int})\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\}}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{const}\ String\ getProgramName\ (\textcolor{keywordtype}{int})\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}None"{}};\ \}}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{void}\ changeProgramName\ (\textcolor{keywordtype}{int},\ \textcolor{keyword}{const}\ String\&)\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ getStateInformation\ (MemoryBlock\&)\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\}}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ setStateInformation\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*,\ \textcolor{keywordtype}{int})\textcolor{keyword}{\ override\ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\ playHeadState;}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{static}\ BusesProperties\ getBusesProperties();}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ JUCE\_DECLARE\_NON\_COPYABLE\_WITH\_LEAK\_DETECTOR\ (\mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemoPluginAudioProcessorImpl}})}
+\DoxyCodeLine{00065\ \};}
+
+\end{DoxyCode}

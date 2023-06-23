@@ -1,0 +1,80 @@
+\doxysection{ARADemo\+Plugin\+Audio\+Processor\+Impl Class Reference}
+\hypertarget{class_a_r_a_demo_plugin_audio_processor_impl}{}\label{class_a_r_a_demo_plugin_audio_processor_impl}\index{ARADemoPluginAudioProcessorImpl@{ARADemoPluginAudioProcessorImpl}}
+
+
+A class that implements the audio processing for the ARADemo\+Plugin.  
+
+
+
+
+{\ttfamily \#include $<$Audio\+Processor\+Impl.\+h$>$}
+
+Inheritance diagram for ARADemo\+Plugin\+Audio\+Processor\+Impl\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_a_r_a_demo_plugin_audio_processor_impl}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a5dd762bc08b039da1b7853bc7621db00}\label{class_a_r_a_demo_plugin_audio_processor_impl_a5dd762bc08b039da1b7853bc7621db00} 
+void {\bfseries prepare\+To\+Play} (double sample\+Rate, int samples\+Per\+Block) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a2c7e88309fc4fb6401ff57e61bcb7cb2}\label{class_a_r_a_demo_plugin_audio_processor_impl_a2c7e88309fc4fb6401ff57e61bcb7cb2} 
+void {\bfseries release\+Resources} () override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_aebb34ca2c72aa0fe7d15d726c15b2112}\label{class_a_r_a_demo_plugin_audio_processor_impl_aebb34ca2c72aa0fe7d15d726c15b2112} 
+bool {\bfseries is\+Buses\+Layout\+Supported} (const Buses\+Layout \&layouts) const override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a2a565fdeb6e12f8f64966d5d7ae8954b}\label{class_a_r_a_demo_plugin_audio_processor_impl_a2a565fdeb6e12f8f64966d5d7ae8954b} 
+void {\bfseries process\+Block} (Audio\+Buffer$<$ float $>$ \&buffer, Midi\+Buffer \&midi\+Messages) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a63d9c54ab0b1ec2ca7bbba4febfc8242}\label{class_a_r_a_demo_plugin_audio_processor_impl_a63d9c54ab0b1ec2ca7bbba4febfc8242} 
+const String {\bfseries get\+Name} () const override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a8b9b3b330b98a05480a8ad0da398ee86}\label{class_a_r_a_demo_plugin_audio_processor_impl_a8b9b3b330b98a05480a8ad0da398ee86} 
+bool {\bfseries accepts\+Midi} () const override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_aed2be7c2e0665cf8df0de6be789ddf11}\label{class_a_r_a_demo_plugin_audio_processor_impl_aed2be7c2e0665cf8df0de6be789ddf11} 
+bool {\bfseries produces\+Midi} () const override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a15838248c1192ff5914f1b9218629610}\label{class_a_r_a_demo_plugin_audio_processor_impl_a15838248c1192ff5914f1b9218629610} 
+double {\bfseries get\+Tail\+Length\+Seconds} () const override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a615771119309b09bf919b4e230a3aad2}\label{class_a_r_a_demo_plugin_audio_processor_impl_a615771119309b09bf919b4e230a3aad2} 
+int {\bfseries get\+Num\+Programs} () override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a514af964a5dedc3b23c0081e702fd8b5}\label{class_a_r_a_demo_plugin_audio_processor_impl_a514af964a5dedc3b23c0081e702fd8b5} 
+int {\bfseries get\+Current\+Program} () override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a9cbff443106028734f61a7621e50e266}\label{class_a_r_a_demo_plugin_audio_processor_impl_a9cbff443106028734f61a7621e50e266} 
+void {\bfseries set\+Current\+Program} (int) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a3ef4cb81524815b464dc4ce3447dc562}\label{class_a_r_a_demo_plugin_audio_processor_impl_a3ef4cb81524815b464dc4ce3447dc562} 
+const String {\bfseries get\+Program\+Name} (int) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_abf3453189755d11fcec9467258e14ee2}\label{class_a_r_a_demo_plugin_audio_processor_impl_abf3453189755d11fcec9467258e14ee2} 
+void {\bfseries change\+Program\+Name} (int, const String \&) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a115909702b102bbdea57ca3aa7668026}\label{class_a_r_a_demo_plugin_audio_processor_impl_a115909702b102bbdea57ca3aa7668026} 
+void {\bfseries get\+State\+Information} (Memory\+Block \&) override
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_a60b3e509e8d9dd6525bc44139cd3ff77}\label{class_a_r_a_demo_plugin_audio_processor_impl_a60b3e509e8d9dd6525bc44139cd3ff77} 
+void {\bfseries set\+State\+Information} (const void \texorpdfstring{$\ast$}{*}, int) override
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_a_r_a_demo_plugin_audio_processor_impl_ab7cc7d20a132855aa870bb65c27f10b6}\label{class_a_r_a_demo_plugin_audio_processor_impl_ab7cc7d20a132855aa870bb65c27f10b6} 
+\mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} {\bfseries play\+Head\+State}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A class that implements the audio processing for the ARADemo\+Plugin. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+ARA/\mbox{\hyperlink{_audio_processor_impl_8h}{Audio\+Processor\+Impl.\+h}}\item 
+Source/\+ARA/\mbox{\hyperlink{_audio_processor_impl_8cpp}{Audio\+Processor\+Impl.\+cpp}}\end{DoxyCompactItemize}

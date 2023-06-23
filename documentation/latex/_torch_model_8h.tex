@@ -1,0 +1,43 @@
+\doxysection{Source/\+Deep\+Learning/\+Torch\+Model.h File Reference}
+\hypertarget{_torch_model_8h}{}\label{_torch_model_8h}\index{Source/DeepLearning/TorchModel.h@{Source/DeepLearning/TorchModel.h}}
+
+
+This file is part of the JUCE examples.  
+
+
+{\ttfamily \#include $<$torch/script.\+h$>$}\newline
+{\ttfamily \#include $<$torch/torch.\+h$>$}\newline
+{\ttfamily \#include $<$string$>$}\newline
+{\ttfamily \#include $<$any$>$}\newline
+{\ttfamily \#include $<$map$>$}\newline
+{\ttfamily \#include $<$tuple$>$}\newline
+{\ttfamily \#include \"{}juce\+\_\+audio\+\_\+basics/juce\+\_\+audio\+\_\+basics.\+h\"{}}\newline
+{\ttfamily \#include \"{}Model.\+h\"{}}\newline
+{\ttfamily \#include \"{}Wave2\+Wave.\+h\"{}}\newline
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{class_torch_model}{Torch\+Model}}
+\begin{DoxyCompactList}\small\item\em Class that represents a base \doxylink{class_torch_model}{Torch\+Model} inherited from \doxylink{class_model}{Model}. \end{DoxyCompactList}\item 
+class \mbox{\hyperlink{class_torch_wave2_wave}{Torch\+Wave2\+Wave}}
+\begin{DoxyCompactList}\small\item\em Class that represents a \doxylink{class_torch_wave2_wave}{Torch\+Wave2\+Wave} inherited from \doxylink{class_torch_model}{Torch\+Model} and \doxylink{class_wave2_wave}{Wave2\+Wave}. \end{DoxyCompactList}\item 
+class \mbox{\hyperlink{class_resampler}{Resampler}}
+\begin{DoxyCompactList}\small\item\em Class that represents a \doxylink{class_resampler}{Resampler} inherited from \doxylink{class_torch_model}{Torch\+Model}. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{_torch_model_8h_a020c4f7b47fa17d6d6e26ce2ec132141}\label{_torch_model_8h_a020c4f7b47fa17d6d6e26ce2ec132141} 
+std\+::string {\bfseries size2string} (torch\+::\+Int\+Array\+Ref size)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This file is part of the JUCE examples. 
+
+Copyright (c) 2022 -\/ Raw Material Software Limited The code included in this file is provided under the terms of the ISC license \href{http://www.isc.org/downloads/software-support-policy/isc-license}{\texttt{ http\+://www.\+isc.\+org/downloads/software-\/support-\/policy/isc-\/license}}. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED \"{}\+AS IS\"{} WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.
+
+Models defined in this file are any audio processing models that utilize a libtorch backend for processing data. \begin{DoxyAuthor}{Author}
+hugo flores garcia, aldo aguilar 
+\end{DoxyAuthor}

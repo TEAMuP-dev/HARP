@@ -1,0 +1,58 @@
+\doxysection{Time\+To\+View\+Scaling.\+h}
+\hypertarget{_time_to_view_scaling_8h_source}{}\label{_time_to_view_scaling_8h_source}\index{Source/Util/TimeToViewScaling.h@{Source/Util/TimeToViewScaling.h}}
+\mbox{\hyperlink{_time_to_view_scaling_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}}
+\DoxyCodeLine{00028\ \{}
+\DoxyCodeLine{00029\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{Listener}}}
+\DoxyCodeLine{00031\ \ \ \ \ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{\string~Listener}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ zoomLevelChanged\ (\textcolor{keywordtype}{double}\ newPixelPerSecond)\ =\ 0;}
+\DoxyCodeLine{00036\ \ \ \ \ \};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ addListener\ (\mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{Listener}}*\ l)\ \ \ \ \{\ listeners.add\ (l);\ \}}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{void}\ removeListener\ (Listener*\ l)\ \{\ listeners.remove\ (l);\ \}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ zoom\ (\textcolor{keywordtype}{double}\ factor)}
+\DoxyCodeLine{00044\ \ \ \ \ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ zoomLevelPixelPerSecond\ =\ jlimit\ (minimumZoom,\ minimumZoom\ *\ 32,\ zoomLevelPixelPerSecond\ *\ factor);}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ setZoomLevel\ (zoomLevelPixelPerSecond);}
+\DoxyCodeLine{00047\ \ \ \ \ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ setZoomLevel\ (\textcolor{keywordtype}{double}\ pixelPerSecond)}
+\DoxyCodeLine{00050\ \ \ \ \ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ zoomLevelPixelPerSecond\ =\ pixelPerSecond;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ listeners.call\ ([\textcolor{keyword}{this}]\ (Listener\&\ l)\ \{\ l.zoomLevelChanged\ (zoomLevelPixelPerSecond);\ \});}
+\DoxyCodeLine{00053\ \ \ \ \ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{int}\ getXForTime\ (\textcolor{keywordtype}{double}\ time)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00056\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ roundToInt\ (time\ *\ zoomLevelPixelPerSecond);}
+\DoxyCodeLine{00058\ \ \ \ \ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{double}\ getTimeForX\ (\textcolor{keywordtype}{int}\ x)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00061\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ x\ /\ zoomLevelPixelPerSecond;}
+\DoxyCodeLine{00063\ \ \ \ \ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ minimumZoom\ =\ 10.0;}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{double}\ zoomLevelPixelPerSecond\ =\ minimumZoom\ *\ 4;}
+\DoxyCodeLine{00069\ \ \ \ \ ListenerList<Listener>\ listeners;}
+\DoxyCodeLine{00070\ \};}
+
+\end{DoxyCode}

@@ -1,0 +1,187 @@
+\doxysection{Playhead\+Position\+Label.\+h}
+\hypertarget{_playhead_position_label_8h_source}{}\label{_playhead_position_label_8h_source}\index{Source/Timeline/PlayheadPositionLabel.h@{Source/Timeline/PlayheadPositionLabel.h}}
+\mbox{\hyperlink{_playhead_position_label_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}}
+\DoxyCodeLine{00035\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ std::atomic<bool>\ isPlaying\ \{\ \textcolor{keyword}{false}\ \},}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ isLooping\ \{\ \textcolor{keyword}{false}\ \};}
+\DoxyCodeLine{00038\ \ \ \ \ std::atomic<double>\ timeInSeconds\ \{\ 0.0\ \},}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqStart\ \ \{\ 0.0\ \},}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqEnd\ \ \ \ \{\ 0.0\ \};}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{void}\ update\ (\textcolor{keyword}{const}\ Optional<AudioPlayHead::PositionInfo>\&\ info);}
+\DoxyCodeLine{00043\ \};}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playhead_position_label}{PlayheadPositionLabel}}\ :\ \textcolor{keyword}{public}\ Label,}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ Timer}
+\DoxyCodeLine{00051\ \{}
+\DoxyCodeLine{00052\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00053\ \ \ \ \ \mbox{\hyperlink{class_playhead_position_label}{PlayheadPositionLabel}}\ (\mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\&\ playHeadStateIn);}
+\DoxyCodeLine{00054\ \ \ \ \ \mbox{\hyperlink{class_playhead_position_label}{\string~PlayheadPositionLabel}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ selectMusicalContext\ (ARAMusicalContext*\ newSelectedMusicalContext);}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{void}\ timerCallback()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{static}\ String\ timeToTimecodeString\ (\textcolor{keywordtype}{double}\ seconds);}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\&\ playHeadState;}
+\DoxyCodeLine{00063\ \ \ \ \ ARAMusicalContext*\ selectedMusicalContext\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00064\ \};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{comment}{//\ \#pragma\ once}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{comment}{//\ \#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00070\ \textcolor{comment}{//\ \#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{comment}{//\ \#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00073\ \textcolor{comment}{//\ \#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
+\DoxyCodeLine{00074\ \textcolor{comment}{//\ \#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \textcolor{comment}{//\ using\ namespace\ juce;}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \textcolor{comment}{//\ struct\ PlayHeadState}}
+\DoxyCodeLine{00079\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ \ \ \ \ void\ update\ (const\ Optional<AudioPlayHead::PositionInfo>\&\ info)}}
+\DoxyCodeLine{00081\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (info.hasValue())}}
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00084\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ isPlaying.store\ (info-\/>getIsPlaying(),\ std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ timeInSeconds.store\ (info-\/>getTimeInSeconds().orFallback\ (0),\ std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ isLooping.store\ (info-\/>getIsLooping(),\ std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ loopPoints\ =\ info-\/>getLoopPoints();}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (loopPoints.hasValue())}}
+\DoxyCodeLine{00090\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqStart\ =\ loopPoints-\/>ppqStart;}}
+\DoxyCodeLine{00092\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqEnd\ =\ loopPoints-\/>ppqEnd;}}
+\DoxyCodeLine{00093\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00094\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00095\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else}}
+\DoxyCodeLine{00096\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00097\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ isPlaying.store\ (false,\ std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00098\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ isLooping.store\ (false,\ std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00099\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00100\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{comment}{//\ \ \ \ \ std::atomic<bool>\ isPlaying\ \{\ false\ \},}}
+\DoxyCodeLine{00103\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ isLooping\ \{\ false\ \};}}
+\DoxyCodeLine{00104\ \textcolor{comment}{//\ \ \ \ \ std::atomic<double>\ timeInSeconds\ \{\ 0.0\ \},}}
+\DoxyCodeLine{00105\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqStart\ \ \{\ 0.0\ \},}}
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loopPpqEnd\ \ \ \ \{\ 0.0\ \};}}
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \textcolor{comment}{//\ class\ PlayheadPositionLabel\ :\ public\ Label,}}
+\DoxyCodeLine{00111\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ Timer}}
+\DoxyCodeLine{00112\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00113\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00114\ \textcolor{comment}{//\ \ \ \ \ PlayheadPositionLabel\ (PlayHeadState\&\ playHeadStateIn)}}
+\DoxyCodeLine{00115\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ :\ playHeadState\ (playHeadStateIn)}}
+\DoxyCodeLine{00116\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00117\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ startTimerHz\ (30);}}
+\DoxyCodeLine{00118\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \textcolor{comment}{//\ \ \ \ \ \string~PlayheadPositionLabel()\ override}}
+\DoxyCodeLine{00121\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00122\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ stopTimer();}}
+\DoxyCodeLine{00123\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \textcolor{comment}{//\ \ \ \ \ void\ selectMusicalContext\ (ARAMusicalContext*\ newSelectedMusicalContext)}}
+\DoxyCodeLine{00126\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00127\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ selectedMusicalContext\ =\ newSelectedMusicalContext;}}
+\DoxyCodeLine{00128\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \textcolor{comment}{//\ private:}}
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ \ \ \ \ void\ timerCallback()\ override}}
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ timePosition\ =\ playHeadState.timeInSeconds.load\ (std::memory\_order\_relaxed);}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ text\ =\ timeToTimecodeString\ (timePosition);}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (playHeadState.isPlaying.load\ (std::memory\_order\_relaxed))}}
+\DoxyCodeLine{00138\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ "{}\ (playing)"{};}}
+\DoxyCodeLine{00139\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ else}}
+\DoxyCodeLine{00140\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ "{}\ (stopped)"{};}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (selectedMusicalContext\ !=\ nullptr)}}
+\DoxyCodeLine{00143\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00144\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::PlugIn::HostContentReader<ARA::kARAContentTypeTempoEntries>\ tempoReader\ (selectedMusicalContext);}}
+\DoxyCodeLine{00145\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::PlugIn::HostContentReader<ARA::kARAContentTypeBarSignatures>\ barSignaturesReader\ (selectedMusicalContext);}}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (tempoReader\ \&\&\ barSignaturesReader)}}
+\DoxyCodeLine{00148\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00149\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::TempoConverter<decltype\ (tempoReader)>\ tempoConverter\ (tempoReader);}}
+\DoxyCodeLine{00150\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::BarSignaturesConverter<decltype\ (barSignaturesReader)>\ barSignaturesConverter\ (barSignaturesReader);}}
+\DoxyCodeLine{00151\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ quarterPosition\ =\ tempoConverter.getQuarterForTime\ (timePosition);}}
+\DoxyCodeLine{00152\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ barIndex\ =\ barSignaturesConverter.getBarIndexForQuarter\ (quarterPosition);}}
+\DoxyCodeLine{00153\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ beatDistance\ =\ barSignaturesConverter.getBeatDistanceFromBarStartForQuarter\ (quarterPosition);}}
+\DoxyCodeLine{00154\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ quartersPerBeat\ =\ 4.0\ /\ (double)\ barSignaturesConverter.getBarSignatureForQuarter\ (quarterPosition).denominator;}}
+\DoxyCodeLine{00155\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ beatIndex\ =\ (int)\ beatDistance;}}
+\DoxyCodeLine{00156\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ tickIndex\ =\ juce::roundToInt\ ((beatDistance\ -\/\ beatIndex)\ *\ quartersPerBeat\ *\ 960.0);}}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ newLine;}}
+\DoxyCodeLine{00159\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ String::formatted\ ("{}bar\ \%d\ |\ beat\ \%d\ |\ tick\ \%03d"{},\ (barIndex\ >=\ 0)\ ?\ barIndex\ +\ 1\ :\ barIndex,\ beatIndex\ +\ 1,\ tickIndex\ +\ 1);}}
+\DoxyCodeLine{00160\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ "{}\ \ -\/\ \ "{};}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::PlugIn::HostContentReader<ARA::kARAContentTypeSheetChords>\ chordsReader\ (selectedMusicalContext);}}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (chordsReader\ \&\&\ chordsReader.getEventCount()\ >\ 0)}}
+\DoxyCodeLine{00165\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00166\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ begin\ =\ chordsReader.begin();}}
+\DoxyCodeLine{00167\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ end\ =\ chordsReader.end();}}
+\DoxyCodeLine{00168\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ auto\ it\ =\ begin;}}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ while\ (it\ !=\ end\ \&\&\ it-\/>position\ <=\ quarterPosition)}}
+\DoxyCodeLine{00171\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++it;}}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (it\ !=\ begin)}}
+\DoxyCodeLine{00174\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/it;}}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ ARA::ChordInterpreter\ interpreter\ (true);}}
+\DoxyCodeLine{00177\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ "{}chord\ "{};}}
+\DoxyCodeLine{00178\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ String\ (interpreter.getNameForChord\ (*it));}}
+\DoxyCodeLine{00179\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00180\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else}}
+\DoxyCodeLine{00181\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00182\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ text\ +=\ "{}(no\ chords\ provided)"{};}}
+\DoxyCodeLine{00183\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00184\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00185\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ setText\ (text,\ NotificationType::dontSendNotification);}}
+\DoxyCodeLine{00188\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \textcolor{comment}{//\ \ \ \ \ //\ Copied\ from\ AudioPluginDemo.h:\ quick-\/and-\/dirty\ function\ to\ format\ a\ timecode\ string}}
+\DoxyCodeLine{00191\ \textcolor{comment}{//\ \ \ \ \ static\ String\ timeToTimecodeString\ (double\ seconds)}}
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00193\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ millisecs\ =\ roundToInt\ (seconds\ *\ 1000.0);}}
+\DoxyCodeLine{00194\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ auto\ absMillisecs\ =\ std::abs\ (millisecs);}}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ String::formatted\ ("{}\%02d:\%02d:\%02d.\%03d"{},}}
+\DoxyCodeLine{00197\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ millisecs\ /\ 3600000,}}
+\DoxyCodeLine{00198\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (absMillisecs\ /\ 60000)\ \%\ 60,}}
+\DoxyCodeLine{00199\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (absMillisecs\ /\ 1000)\ \ \%\ 60,}}
+\DoxyCodeLine{00200\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ absMillisecs\ \%\ 1000);}}
+\DoxyCodeLine{00201\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ \textcolor{comment}{//\ \ \ \ \ PlayHeadState\&\ playHeadState;}}
+\DoxyCodeLine{00204\ \textcolor{comment}{//\ \ \ \ \ ARAMusicalContext*\ selectedMusicalContext\ =\ nullptr;}}
+\DoxyCodeLine{00205\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{00206\ }
+
+\end{DoxyCode}

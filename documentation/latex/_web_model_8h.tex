@@ -1,0 +1,36 @@
+\doxysection{Source/\+Deep\+Learning/\+Web\+Model.h File Reference}
+\hypertarget{_web_model_8h}{}\label{_web_model_8h}\index{Source/DeepLearning/WebModel.h@{Source/DeepLearning/WebModel.h}}
+
+
+This file is part of the JUCE examples.  
+
+
+{\ttfamily \#include $<$fstream$>$}\newline
+{\ttfamily \#include \"{}Model.\+h\"{}}\newline
+{\ttfamily \#include \"{}Wave2\+Wave.\+h\"{}}\newline
+{\ttfamily \#include $<$pybind11/embed.\+h$>$}\newline
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{class_web_model}{Web\+Model}}
+\item 
+class \mbox{\hyperlink{class_web_wave2_wave}{Web\+Wave2\+Wave}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{_web_model_8h_a95e7e836eced38a26499afed7d4e35be}\label{_web_model_8h_a95e7e836eced38a26499afed7d4e35be} 
+\#define {\bfseries PYBIND11\+\_\+\+ASSERT\+\_\+\+GIL\+\_\+\+HELD\+\_\+\+INCREF\+\_\+\+DECREF}~1
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This file is part of the JUCE examples. 
+
+Copyright (c) 2022 -\/ Raw Material Software Limited The code included in this file is provided under the terms of the ISC license \href{http://www.isc.org/downloads/software-support-policy/isc-license}{\texttt{ http\+://www.\+isc.\+org/downloads/software-\/support-\/policy/isc-\/license}}. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED \"{}\+AS IS\"{} WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.
+
+Base class for any models that utilize a web api to process information. Currently we provide an implmentation of a wave 2 wave web based model. We use the gradio python client to communicate with a gradio server. \begin{DoxyAuthor}{Author}
+hugo flores garcia, aldo aguilar 
+\end{DoxyAuthor}

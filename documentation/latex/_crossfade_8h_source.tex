@@ -1,0 +1,20 @@
+\doxysection{Crossfade.\+h}
+\hypertarget{_crossfade_8h_source}{}\label{_crossfade_8h_source}\index{Source/Util/Crossfade.h@{Source/Util/Crossfade.h}}
+\mbox{\hyperlink{_crossfade_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ crossfade\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{float}*\ sourceA,}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{float}*\ sourceB,}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\ aProportionAtStart,}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}\ aProportionAtFinish,}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{float}*\ destinationBuffer,}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ numSamples)}
+\DoxyCodeLine{00028\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ AudioBuffer<float>\ destination\ \{\ \&destinationBuffer,\ 1,\ numSamples\ \};}
+\DoxyCodeLine{00030\ \ \ \ \ destination.copyFromWithRamp\ (0,\ 0,\ sourceA,\ numSamples,\ aProportionAtStart,\ aProportionAtFinish);}
+\DoxyCodeLine{00031\ \ \ \ \ destination.addFromWithRamp\ (0,\ 0,\ sourceB,\ numSamples,\ 1.0f\ -\/\ aProportionAtStart,\ 1.0f\ -\/\ aProportionAtFinish);}
+\DoxyCodeLine{00032\ \}}
+
+\end{DoxyCode}
