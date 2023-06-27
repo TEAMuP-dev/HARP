@@ -1,0 +1,21 @@
+\doxysection{Shared\+Time\+Slice\+Thread.\+h}
+\hypertarget{_shared_time_slice_thread_8h_source}{}\label{_shared_time_slice_thread_8h_source}\index{Source/Timeline/SharedTimeSliceThread.h@{Source/Timeline/SharedTimeSliceThread.h}}
+\mbox{\hyperlink{_shared_time_slice_thread_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_shared_time_slice_thread}{SharedTimeSliceThread}}\ :\ \textcolor{keyword}{public}\ juce::TimeSliceThread\ \{}
+\DoxyCodeLine{00028\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00029\ \ \ \mbox{\hyperlink{class_shared_time_slice_thread}{SharedTimeSliceThread}}()}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ :\ TimeSliceThread(juce::String(JucePlugin\_Name)\ +}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}\ ARA\ Sample\ Reading\ Thread"{}})\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ startThread(Priority::high);\ \textcolor{comment}{//\ Above\ default\ priority\ so\ playback\ is}}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ fluent,\ but\ below\ realtime}}
+\DoxyCodeLine{00034\ \ \ \}}
+\DoxyCodeLine{00035\ \};}
+
+\end{DoxyCode}

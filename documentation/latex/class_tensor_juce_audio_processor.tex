@@ -1,0 +1,61 @@
+\doxysection{Tensor\+Juce\+Audio\+Processor Class Reference}
+\hypertarget{class_tensor_juce_audio_processor}{}\label{class_tensor_juce_audio_processor}\index{TensorJuceAudioProcessor@{TensorJuceAudioProcessor}}
+Inheritance diagram for Tensor\+Juce\+Audio\+Processor\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_tensor_juce_audio_processor}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{class_tensor_juce_audio_processor_a61513383de8fde49ff4e702a954a3917}\label{class_tensor_juce_audio_processor_a61513383de8fde49ff4e702a954a3917}
+bool {\bfseries has\+Editor} () const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_adc8666d0604c2b710960ccce0e91e9d3}\label{class_tensor_juce_audio_processor_adc8666d0604c2b710960ccce0e91e9d3}
+Audio\+Processor\+Editor \texorpdfstring{$\ast$}{*} {\bfseries create\+Editor} () override
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}}}
+\begin{DoxyCompactItemize}
+\item
+void {\bfseries prepare\+To\+Play} (double sample\+Rate, int samples\+Per\+Block) override
+\item
+void {\bfseries release\+Resources} () override
+\item
+bool {\bfseries is\+Buses\+Layout\+Supported} (const Buses\+Layout \&layouts) const override
+\item
+void {\bfseries process\+Block} (Audio\+Buffer$<$ float $>$ \&buffer, Midi\+Buffer \&midi\+Messages) override
+\item
+const String {\bfseries get\+Name} () const override
+\item
+bool {\bfseries accepts\+Midi} () const override
+\item
+bool {\bfseries produces\+Midi} () const override
+\item
+double {\bfseries get\+Tail\+Length\+Seconds} () const override
+\item
+int {\bfseries get\+Num\+Programs} () override
+\item
+int {\bfseries get\+Current\+Program} () override
+\item
+void {\bfseries set\+Current\+Program} (int) override
+\item
+const String {\bfseries get\+Program\+Name} (int) override
+\item
+void {\bfseries change\+Program\+Name} (int, const String \&) override
+\item
+void {\bfseries get\+State\+Information} (Memory\+Block \&) override
+\item
+void {\bfseries set\+State\+Information} (const void \texorpdfstring{$\ast$}{*}, int) override
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Public Attributes inherited from \mbox{\hyperlink{class_a_r_a_demo_plugin_audio_processor_impl}{ARADemo\+Plugin\+Audio\+Processor\+Impl}}}
+\begin{DoxyCompactItemize}
+\item
+\mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} {\bfseries play\+Head\+State}
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item
+Source/\+ARA/\mbox{\hyperlink{_audio_processor_8h}{Audio\+Processor.\+h}}\end{DoxyCompactItemize}

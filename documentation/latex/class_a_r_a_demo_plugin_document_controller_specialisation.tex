@@ -1,0 +1,95 @@
+\doxysection{ARADemo\+Plugin\+Document\+Controller\+Specialisation Class Reference}
+\hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation}{}\label{class_a_r_a_demo_plugin_document_controller_specialisation}\index{ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}}
+
+
+Specialises ARA\textquotesingle{}s document controller, with added functionality for audio modifications, playback rendering, and editor rendering.
+
+
+
+
+{\ttfamily \#include $<$Document\+Controller\+Specialisation.\+h$>$}
+
+Inheritance diagram for ARADemo\+Plugin\+Document\+Controller\+Specialisation\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=1.848185cm]{class_a_r_a_demo_plugin_document_controller_specialisation}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_a5cd3a3440f24d48bb9bd77aa4e217183}\label{class_a_r_a_demo_plugin_document_controller_specialisation_a5cd3a3440f24d48bb9bd77aa4e217183}
+\mbox{\hyperlink{struct_preview_state}{Preview\+State}} {\bfseries preview\+State}
+\begin{DoxyCompactList}\small\item\em Preview state. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_a3a476d5623ebe4ba5f5c00feab37696b}\label{class_a_r_a_demo_plugin_document_controller_specialisation_a3a476d5623ebe4ba5f5c00feab37696b}
+void {\bfseries will\+Begin\+Editing} (ARADocument \texorpdfstring{$\ast$}{*}) override
+\begin{DoxyCompactList}\small\item\em Called when beginning to edit a document. \end{DoxyCompactList}\item
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_a4b4e14c815f6db55b1e1507c09947ed8}\label{class_a_r_a_demo_plugin_document_controller_specialisation_a4b4e14c815f6db55b1e1507c09947ed8}
+void {\bfseries did\+End\+Editing} (ARADocument \texorpdfstring{$\ast$}{*}) override
+\begin{DoxyCompactList}\small\item\em Called when editing a document ends. \end{DoxyCompactList}\item
+ARAAudio\+Modification \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_ab394909369804ab330b8f7994257b76c}{do\+Create\+Audio\+Modification}} (ARAAudio\+Source \texorpdfstring{$\ast$}{*}audio\+Source, ARA\+::\+ARAAudio\+Modification\+Host\+Ref host\+Ref, const ARAAudio\+Modification \texorpdfstring{$\ast$}{*}optional\+Modification\+To\+Clone) noexcept override
+\begin{DoxyCompactList}\small\item\em Creates an audio modification. \end{DoxyCompactList}\item
+ARAPlayback\+Renderer \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_acaf3731dc12776ccd2eed54929b6856f}{do\+Create\+Playback\+Renderer}} () noexcept override
+\begin{DoxyCompactList}\small\item\em Creates a playback renderer. \end{DoxyCompactList}\item
+\mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{class_a_r_a_demo_plugin_document_controller_specialisation_aff0d0ce68703ad3979c158a7d1f36d7b}{do\+Create\+Editor\+Renderer}} () noexcept override
+\begin{DoxyCompactList}\small\item\em Creates an editor renderer. \end{DoxyCompactList}\item
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_af45e741f030e97724e5ff5ffcc03f386}\label{class_a_r_a_demo_plugin_document_controller_specialisation_af45e741f030e97724e5ff5ffcc03f386}
+bool {\bfseries do\+Restore\+Objects\+From\+Stream} (ARAInput\+Stream \&input, const ARARestore\+Objects\+Filter \texorpdfstring{$\ast$}{*}filter) noexcept override
+\begin{DoxyCompactList}\small\item\em Restores objects from a stream. \end{DoxyCompactList}\item
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_a7d559ed47ad56d1f79c7ce899dea6a78}\label{class_a_r_a_demo_plugin_document_controller_specialisation_a7d559ed47ad56d1f79c7ce899dea6a78}
+bool {\bfseries do\+Store\+Objects\+To\+Stream} (ARAOutput\+Stream \&output, const ARAStore\+Objects\+Filter \texorpdfstring{$\ast$}{*}filter) noexcept override
+\begin{DoxyCompactList}\small\item\em Stores objects to a stream. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Specialises ARA\textquotesingle{}s document controller, with added functionality for audio modifications, playback rendering, and editor rendering.
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_ab394909369804ab330b8f7994257b76c}\label{class_a_r_a_demo_plugin_document_controller_specialisation_ab394909369804ab330b8f7994257b76c}
+\index{ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}!doCreateAudioModification@{doCreateAudioModification}}
+\index{doCreateAudioModification@{doCreateAudioModification}!ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}}
+\doxysubsubsection{\texorpdfstring{doCreateAudioModification()}{doCreateAudioModification()}}
+{\footnotesize\ttfamily ARAAudio\+Modification \texorpdfstring{$\ast$}{*} ARADemo\+Plugin\+Document\+Controller\+Specialisation\+::do\+Create\+Audio\+Modification (\begin{DoxyParamCaption}\item[{ARAAudio\+Source \texorpdfstring{$\ast$}{*}}]{audio\+Source,  }\item[{ARA\+::\+ARAAudio\+Modification\+Host\+Ref}]{host\+Ref,  }\item[{const ARAAudio\+Modification \texorpdfstring{$\ast$}{*}}]{optional\+Modification\+To\+Clone }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [protected]}, {\ttfamily [noexcept]}}
+
+
+
+Creates an audio modification.
+
+\begin{DoxyReturn}{Returns}
+A new \doxylink{class_audio_modification}{Audio\+Modification} instance.
+\end{DoxyReturn}
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_aff0d0ce68703ad3979c158a7d1f36d7b}\label{class_a_r_a_demo_plugin_document_controller_specialisation_aff0d0ce68703ad3979c158a7d1f36d7b}
+\index{ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}!doCreateEditorRenderer@{doCreateEditorRenderer}}
+\index{doCreateEditorRenderer@{doCreateEditorRenderer}!ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}}
+\doxysubsubsection{\texorpdfstring{doCreateEditorRenderer()}{doCreateEditorRenderer()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}} \texorpdfstring{$\ast$}{*} ARADemo\+Plugin\+Document\+Controller\+Specialisation\+::do\+Create\+Editor\+Renderer (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [protected]}, {\ttfamily [noexcept]}}
+
+
+
+Creates an editor renderer.
+
+\begin{DoxyReturn}{Returns}
+A new \doxylink{class_editor_renderer}{Editor\+Renderer} instance.
+\end{DoxyReturn}
+\Hypertarget{class_a_r_a_demo_plugin_document_controller_specialisation_acaf3731dc12776ccd2eed54929b6856f}\label{class_a_r_a_demo_plugin_document_controller_specialisation_acaf3731dc12776ccd2eed54929b6856f}
+\index{ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}!doCreatePlaybackRenderer@{doCreatePlaybackRenderer}}
+\index{doCreatePlaybackRenderer@{doCreatePlaybackRenderer}!ARADemoPluginDocumentControllerSpecialisation@{ARADemoPluginDocumentControllerSpecialisation}}
+\doxysubsubsection{\texorpdfstring{doCreatePlaybackRenderer()}{doCreatePlaybackRenderer()}}
+{\footnotesize\ttfamily ARAPlayback\+Renderer \texorpdfstring{$\ast$}{*} ARADemo\+Plugin\+Document\+Controller\+Specialisation\+::do\+Create\+Playback\+Renderer (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [protected]}, {\ttfamily [noexcept]}}
+
+
+
+Creates a playback renderer.
+
+\begin{DoxyReturn}{Returns}
+A new \doxylink{class_playback_renderer}{Playback\+Renderer} instance.
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item
+Source/\+ARA/\mbox{\hyperlink{_document_controller_specialisation_8h}{Document\+Controller\+Specialisation.\+h}}\item
+Source/\+ARA/\mbox{\hyperlink{_document_controller_specialisation_8cpp}{Document\+Controller\+Specialisation.\+cpp}}\end{DoxyCompactItemize}

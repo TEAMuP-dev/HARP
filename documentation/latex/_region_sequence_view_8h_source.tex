@@ -1,0 +1,187 @@
+\doxysection{Region\+Sequence\+View.\+h}
+\hypertarget{_region_sequence_view_8h_source}{}\label{_region_sequence_view_8h_source}\index{Source/UI/RegionSequenceView.h@{Source/UI/RegionSequenceView.h}}
+\mbox{\hyperlink{_region_sequence_view_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}../Timeline/PlaybackRegion.h"{}}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}../Util/TimeToViewScaling.h"{}}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_region_sequence_view}{RegionSequenceView}}\ :\ \textcolor{keyword}{public}\ Component,}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ ChangeBroadcaster,}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ \mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{TimeToViewScaling::Listener}},}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARARegionSequence::Listener,}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAPlaybackRegion::Listener\ \{}
+\DoxyCodeLine{00032\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \mbox{\hyperlink{class_region_sequence_view}{RegionSequenceView}}(ARAEditorView\ \&editorView,\ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}\ \&scaling,}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARARegionSequence\ \&rs,\ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ \&cache);}
+\DoxyCodeLine{00035\ \ \ \mbox{\hyperlink{class_region_sequence_view}{\string~RegionSequenceView}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \textcolor{keywordtype}{void}\ willUpdateRegionSequenceProperties(}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ ARARegionSequence\ *,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ ARARegionSequence::PropertiesPtr\ newProperties)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{void}\ willRemovePlaybackRegionFromRegionSequence(}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ ARARegionSequence\ *,\ ARAPlaybackRegion\ *playbackRegion)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{void}\ didAddPlaybackRegionToRegionSequence(}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ ARARegionSequence\ *,\ ARAPlaybackRegion\ *playbackRegion)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{void}\ willDestroyPlaybackRegion(ARAPlaybackRegion\ *playbackRegion)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{void}\ didUpdatePlaybackRegionProperties(ARAPlaybackRegion\ *)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00046\ \ \ \textcolor{keywordtype}{void}\ zoomLevelChanged(\textcolor{keywordtype}{double})\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{void}\ resized()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \textcolor{keyword}{auto}\ getPlaybackDuration()\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ playbackDuration;\ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordtype}{void}\ createAndAddPlaybackRegionView(ARAPlaybackRegion\ *playbackRegion);}
+\DoxyCodeLine{00053\ \ \ \textcolor{keywordtype}{void}\ updatePlaybackDuration();}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ ARAEditorView\ \&araEditorView;}
+\DoxyCodeLine{00056\ \ \ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}\ \&timeToViewScaling;}
+\DoxyCodeLine{00057\ \ \ ARARegionSequence\ \&regionSequence;}
+\DoxyCodeLine{00058\ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ \&waveformCache;}
+\DoxyCodeLine{00059\ \ \ std::unordered\_map<ARAPlaybackRegion\ *,\ unique\_ptr<PlaybackRegionView>>}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ playbackRegionViews;}
+\DoxyCodeLine{00061\ \ \ \textcolor{keywordtype}{double}\ playbackDuration\ =\ 0.0;}
+\DoxyCodeLine{00062\ \};}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{comment}{//\ \#pragma\ once}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ \#include\ "{}../Timeline/PlaybackRegion.h"{}}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{comment}{//\ class\ RegionSequenceView\ :\ public\ Component,}}
+\DoxyCodeLine{00069\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ public\ ChangeBroadcaster,}}
+\DoxyCodeLine{00070\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ TimeToViewScaling::Listener,}}
+\DoxyCodeLine{00071\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ ARARegionSequence::Listener,}}
+\DoxyCodeLine{00072\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ private\ ARAPlaybackRegion::Listener}}
+\DoxyCodeLine{00073\ \textcolor{comment}{//\ \{}}
+\DoxyCodeLine{00074\ \textcolor{comment}{//\ public:}}
+\DoxyCodeLine{00075\ \textcolor{comment}{//\ \ \ \ \ RegionSequenceView\ (ARAEditorView\&\ editorView,\ TimeToViewScaling\&}}
+\DoxyCodeLine{00076\ \textcolor{comment}{//\ \ \ \ \ scaling,\ ARARegionSequence\&\ rs,\ WaveformCache\&\ cache)}}
+\DoxyCodeLine{00077\ \textcolor{comment}{//\ :\ araEditorView\ (editorView),\ timeToViewScaling\ (scaling),\ regionSequence}}
+\DoxyCodeLine{00078\ \textcolor{comment}{//\ (rs),\ waveformCache\ (cache)}}
+\DoxyCodeLine{00079\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ regionSequence.addListener\ (this);}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (auto*\ playbackRegion\ :\ regionSequence.getPlaybackRegions())}}
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ createAndAddPlaybackRegionView\ (playbackRegion);}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ updatePlaybackDuration();}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ timeToViewScaling.addListener\ (this);}}
+\DoxyCodeLine{00088\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \textcolor{comment}{//\ \ \ \ \ \string~RegionSequenceView()\ override}}
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00092\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ timeToViewScaling.removeListener\ (this);}}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ regionSequence.removeListener\ (this);}}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (const\ auto\&\ it\ :\ playbackRegionViews)}}
+\DoxyCodeLine{00097\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ it.first-\/>removeListener\ (this);}}
+\DoxyCodeLine{00098\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \textcolor{comment}{//\ \ \ \ \ //==============================================================================}}
+\DoxyCodeLine{00101\ \textcolor{comment}{//\ \ \ \ \ //\ ARA\ Document\ change\ callback\ overrides}}
+\DoxyCodeLine{00102\ \textcolor{comment}{//\ \ \ \ \ void\ willUpdateRegionSequenceProperties\ (ARARegionSequence*,}}
+\DoxyCodeLine{00103\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARARegionSequence::PropertiesPtr}}
+\DoxyCodeLine{00104\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ newProperties)\ override}}
+\DoxyCodeLine{00105\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (regionSequence.getColor()\ !=\ newProperties-\/>color)}}
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00108\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ for\ (auto\&\ pbr\ :\ playbackRegionViews)}}
+\DoxyCodeLine{00109\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pbr.second-\/>repaint();}}
+\DoxyCodeLine{00110\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00111\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \textcolor{comment}{//\ \ \ \ \ void\ willRemovePlaybackRegionFromRegionSequence\ (ARARegionSequence*,}}
+\DoxyCodeLine{00114\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARAPlaybackRegion*}}
+\DoxyCodeLine{00115\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegion)\ override}}
+\DoxyCodeLine{00116\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00117\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegion-\/>removeListener\ (this);}}
+\DoxyCodeLine{00118\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ removeChildComponent\ (playbackRegionViews[playbackRegion].get());}}
+\DoxyCodeLine{00119\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegionViews.erase\ (playbackRegion);}}
+\DoxyCodeLine{00120\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ updatePlaybackDuration();}}
+\DoxyCodeLine{00121\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{comment}{//\ \ \ \ \ void\ didAddPlaybackRegionToRegionSequence\ (ARARegionSequence*,}}
+\DoxyCodeLine{00124\ \textcolor{comment}{//\ \ \ \ \ ARAPlaybackRegion*\ playbackRegion)\ override}}
+\DoxyCodeLine{00125\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00126\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ createAndAddPlaybackRegionView\ (playbackRegion);}}
+\DoxyCodeLine{00127\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ updatePlaybackDuration();}}
+\DoxyCodeLine{00128\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \textcolor{comment}{//\ \ \ \ \ void\ willDestroyPlaybackRegion\ (ARAPlaybackRegion*\ playbackRegion)}}
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ \ \ \ \ override}}
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegion-\/>removeListener\ (this);}}
+\DoxyCodeLine{00134\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ removeChildComponent\ (playbackRegionViews[playbackRegion].get());}}
+\DoxyCodeLine{00135\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegionViews.erase\ (playbackRegion);}}
+\DoxyCodeLine{00136\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ updatePlaybackDuration();}}
+\DoxyCodeLine{00137\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \textcolor{comment}{//\ \ \ \ \ void\ didUpdatePlaybackRegionProperties\ (ARAPlaybackRegion*)\ override}}
+\DoxyCodeLine{00140\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00141\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ updatePlaybackDuration();}}
+\DoxyCodeLine{00142\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \textcolor{comment}{//\ \ \ \ \ void\ zoomLevelChanged\ (double)\ override}}
+\DoxyCodeLine{00145\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00146\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ resized();}}
+\DoxyCodeLine{00147\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \textcolor{comment}{//\ \ \ \ \ void\ resized()\ override}}
+\DoxyCodeLine{00150\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00151\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (auto\&\ pbr\ :\ playbackRegionViews)}}
+\DoxyCodeLine{00152\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \{}}
+\DoxyCodeLine{00153\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ playbackRegion\ =\ pbr.first;}}
+\DoxyCodeLine{00154\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ pbr.second-\/>setBounds\ (}}
+\DoxyCodeLine{00155\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ getLocalBounds()}}
+\DoxyCodeLine{00156\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .withTrimmedLeft\ (timeToViewScaling.getXForTime}}
+\DoxyCodeLine{00157\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (playbackRegion-\/>getStartInPlaybackTime()))\ .withWidth}}
+\DoxyCodeLine{00158\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (timeToViewScaling.getXForTime}}
+\DoxyCodeLine{00159\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (playbackRegion-\/>getDurationInPlaybackTime())));}}
+\DoxyCodeLine{00160\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{00161\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \textcolor{comment}{//\ \ \ \ \ auto\ getPlaybackDuration()\ const\ noexcept}}
+\DoxyCodeLine{00164\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00165\ \textcolor{comment}{//\ return\ playbackDuration;}}
+\DoxyCodeLine{00166\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \textcolor{comment}{//\ private:}}
+\DoxyCodeLine{00169\ \textcolor{comment}{//\ \ \ \ \ void\ createAndAddPlaybackRegionView\ (ARAPlaybackRegion*\ playbackRegion)}}
+\DoxyCodeLine{00170\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00171\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegionViews[playbackRegion]\ =}}
+\DoxyCodeLine{00172\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ std::make\_unique<PlaybackRegionView>\ (araEditorView,}}
+\DoxyCodeLine{00173\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *playbackRegion,}}
+\DoxyCodeLine{00174\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ waveformCache);}}
+\DoxyCodeLine{00175\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackRegion-\/>addListener\ (this);}}
+\DoxyCodeLine{00176\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ addAndMakeVisible\ (*playbackRegionViews[playbackRegion]);}}
+\DoxyCodeLine{00177\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \textcolor{comment}{//\ \ \ \ \ void\ updatePlaybackDuration()}}
+\DoxyCodeLine{00180\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{00181\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ const\ auto\ iter\ =\ std::max\_element\ (}}
+\DoxyCodeLine{00182\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegionViews.begin(),}}
+\DoxyCodeLine{00183\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ playbackRegionViews.end(),}}
+\DoxyCodeLine{00184\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ []\ (const\ auto\&\ a,\ const\ auto\&\ b)\ \{\ return}}
+\DoxyCodeLine{00185\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ a.first-\/>getEndInPlaybackTime()\ <}}
+\DoxyCodeLine{00186\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ b.first-\/>getEndInPlaybackTime();\ \});}}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00188\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ playbackDuration\ =\ iter\ !=\ playbackRegionViews.end()\ ?}}
+\DoxyCodeLine{00189\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ iter-\/>first-\/>getEndInPlaybackTime()}}
+\DoxyCodeLine{00190\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ 0.0;}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sendChangeMessage();}}
+\DoxyCodeLine{00193\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \textcolor{comment}{//\ \ \ \ \ ARAEditorView\&\ araEditorView;}}
+\DoxyCodeLine{00196\ \textcolor{comment}{//\ \ \ \ \ TimeToViewScaling\&\ timeToViewScaling;}}
+\DoxyCodeLine{00197\ \textcolor{comment}{//\ \ \ \ \ ARARegionSequence\&\ regionSequence;}}
+\DoxyCodeLine{00198\ \textcolor{comment}{//\ \ \ \ \ WaveformCache\&\ waveformCache;}}
+\DoxyCodeLine{00199\ \textcolor{comment}{//\ \ \ \ \ std::unordered\_map<ARAPlaybackRegion*,\ unique\_ptr<PlaybackRegionView>>}}
+\DoxyCodeLine{00200\ \textcolor{comment}{//\ \ \ \ \ playbackRegionViews;\ double\ playbackDuration\ =\ 0.0;}}
+\DoxyCodeLine{00201\ \textcolor{comment}{//\ \};}}
+
+\end{DoxyCode}

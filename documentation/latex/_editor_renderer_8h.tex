@@ -1,0 +1,41 @@
+\doxysection{Source/\+ARA/\+Editor\+Renderer.h File Reference}
+\hypertarget{_editor_renderer_8h}{}\label{_editor_renderer_8h}\index{Source/ARA/EditorRenderer.h@{Source/ARA/EditorRenderer.h}}
+
+
+This file is part of the JUCE examples.
+
+
+{\ttfamily \#include $<$any$>$}\newline
+{\ttfamily \#include $<$map$>$}\newline
+{\ttfamily \#include $<$ARA\+\_\+\+Library/\+Plug\+In/\+ARAPlug.\+h$>$}\newline
+{\ttfamily \#include $<$ARA\+\_\+\+Library/\+Utilities/\+ARAPitch\+Interpretation.\+h$>$}\newline
+{\ttfamily \#include $<$ARA\+\_\+\+Library/\+Utilities/\+ARATimeline\+Conversion.\+h$>$}\newline
+{\ttfamily \#include \"{}../\+Timeline/\+Shared\+Time\+Slice\+Thread.\+h\"{}}\newline
+{\ttfamily \#include \"{}../\+Util/\+Async\+Configuration\+Callback.\+h\"{}}\newline
+{\ttfamily \#include \"{}../\+Util/\+Looper.\+h\"{}}\newline
+{\ttfamily \#include \"{}../\+Util/\+Preview\+State.\+h\"{}}\newline
+{\ttfamily \#include \"{}../\+Util/\+Processing\+Lock\+Interface.\+h\"{}}\newline
+{\ttfamily \#include \"{}Audio\+Modification.\+h\"{}}\newline
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item
+class \mbox{\hyperlink{class_editor_renderer}{Editor\+Renderer}}
+\begin{DoxyCompactList}\small\item\em TODO\+: Write brief class description. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{_editor_renderer_8h_af65872928b52c728f7efce9f48a9acb2}\label{_editor_renderer_8h_af65872928b52c728f7efce9f48a9acb2}
+std\+::optional$<$ Range$<$ int64 $>$ $>$ {\bfseries read\+Playback\+Range\+Into\+Buffer} (Range$<$ double $>$ playback\+Range, const ARAPlayback\+Region \texorpdfstring{$\ast$}{*}playback\+Region, Audio\+Buffer$<$ float $>$ \&buffer, const std\+::function$<$ Audio\+Format\+Reader \texorpdfstring{$\ast$}{*}(ARAAudio\+Source \texorpdfstring{$\ast$}{*})$>$ \&get\+Reader)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This file is part of the JUCE examples.
+
+Copyright (c) 2022 -\/ Raw Material Software Limited The code included in this file is provided under the terms of the ISC license \href{http://www.isc.org/downloads/software-support-policy/isc-license}{\texttt{ http\+://www.\+isc.\+org/downloads/software-\/support-\/policy/isc-\/license}}. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED \"{}\+AS IS\"{} WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.
+
+Implementation of the ARA Editor Renderer. The ARA Editor Renderer is used to handle audio feedback from the plugin. This allows us to playback samples from the host without the host in playback mode. Editor Renderer will handle any audio rendering that is done soley in the plugin. \begin{DoxyAuthor}{Author}
+JUCE, aldo aguilar, hugo flores garcia
+\end{DoxyAuthor}

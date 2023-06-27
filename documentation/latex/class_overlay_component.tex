@@ -1,0 +1,52 @@
+\doxysection{Overlay\+Component Class Reference}
+\hypertarget{class_overlay_component}{}\label{class_overlay_component}\index{OverlayComponent@{OverlayComponent}}
+Inheritance diagram for Overlay\+Component\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_overlay_component}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{class_overlay_component_1_1_playhead_marker_component}{Playhead\+Marker\+Component}}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_overlay_component_a7da937ba34509494fc60cfd0ad756629}\label{class_overlay_component_a7da937ba34509494fc60cfd0ad756629} 
+{\bfseries Overlay\+Component} (\mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} \&play\+Head\+State\+In, \mbox{\hyperlink{class_time_to_view_scaling}{Time\+To\+View\+Scaling}} \&time\+To\+View\+Scaling\+In)
+\item 
+\Hypertarget{class_overlay_component_ab11b9d3b7b9040a0d55d8ba3b6644b9f}\label{class_overlay_component_ab11b9d3b7b9040a0d55d8ba3b6644b9f} 
+void {\bfseries resized} () override
+\item 
+\Hypertarget{class_overlay_component_a4ae4b70714d1201fc4b102ed5d12edaa}\label{class_overlay_component_a4ae4b70714d1201fc4b102ed5d12edaa} 
+void {\bfseries set\+Horizontal\+Offset} (int offset)
+\item 
+\Hypertarget{class_overlay_component_ab18a720a8f7e57f9ce49dcccbe217049}\label{class_overlay_component_ab18a720a8f7e57f9ce49dcccbe217049} 
+void {\bfseries set\+Selected\+Time\+Range} (std\+::optional$<$ ARA\+::\+ARAContent\+Time\+Range $>$ time\+Range)
+\item 
+void \mbox{\hyperlink{class_overlay_component_a6b9e2d4f0758339b558768d8e40d0c65}{zoom\+Level\+Changed}} (double) override
+\item 
+\Hypertarget{class_overlay_component_aaa7c62f5b780a6678679ecb083d28471}\label{class_overlay_component_aaa7c62f5b780a6678679ecb083d28471} 
+void {\bfseries paint} (Graphics \&g) override
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_overlay_component_a6b9e2d4f0758339b558768d8e40d0c65}\label{class_overlay_component_a6b9e2d4f0758339b558768d8e40d0c65} 
+\index{OverlayComponent@{OverlayComponent}!zoomLevelChanged@{zoomLevelChanged}}
+\index{zoomLevelChanged@{zoomLevelChanged}!OverlayComponent@{OverlayComponent}}
+\doxysubsubsection{\texorpdfstring{zoomLevelChanged()}{zoomLevelChanged()}}
+{\footnotesize\ttfamily void Overlay\+Component\+::zoom\+Level\+Changed (\begin{DoxyParamCaption}\item[{double}]{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Implements \mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{Time\+To\+View\+Scaling\+::\+Listener}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+UI/\mbox{\hyperlink{_layout_8h}{Layout.\+h}}\item 
+Source/\+UI/\mbox{\hyperlink{_layout_8cpp}{Layout.\+cpp}}\end{DoxyCompactItemize}

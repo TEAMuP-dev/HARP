@@ -1,0 +1,37 @@
+\doxysection{Async\+Configuration\+Callback.\+h}
+\hypertarget{_async_configuration_callback_8h_source}{}\label{_async_configuration_callback_8h_source}\index{Source/Util/AsyncConfigurationCallback.h@{Source/Util/AsyncConfigurationCallback.h}}
+\mbox{\hyperlink{_async_configuration_callback_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}\ :\ \textcolor{keyword}{private}\ AsyncUpdater\ \{}
+\DoxyCodeLine{00029\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_async_configuration_callback}{AsyncConfigurationCallback}}(std::function<\textcolor{keywordtype}{void}()>\ callbackIn)}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ :\ callback(std::move(callbackIn))\ \{\}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \mbox{\hyperlink{class_async_configuration_callback}{\string~AsyncConfigurationCallback}}()\textcolor{keyword}{\ override\ }\{\ cancelPendingUpdate();\ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ RequiresLock>\ \textcolor{keyword}{auto}\ withLock(RequiresLock\ \&\&fn)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedTryLockType\ scope(processingFlag);}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordflow}{return}\ fn(scope.isLocked());}
+\DoxyCodeLine{00038\ \ \ \}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{void}\ startConfigure()\ \{\ triggerAsyncUpdate();\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{void}\ handleAsyncUpdate()\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{const}\ SpinLock::ScopedLockType\ scope(processingFlag);}
+\DoxyCodeLine{00045\ \ \ \ \ callback();}
+\DoxyCodeLine{00046\ \ \ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ std::function<void()>\ callback;}
+\DoxyCodeLine{00049\ \ \ SpinLock\ processingFlag;}
+\DoxyCodeLine{00050\ \};}
+
+\end{DoxyCode}

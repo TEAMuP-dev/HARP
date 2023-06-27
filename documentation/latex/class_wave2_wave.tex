@@ -1,0 +1,66 @@
+\doxysection{Wave2\+Wave Class Reference}
+\hypertarget{class_wave2_wave}{}\label{class_wave2_wave}\index{Wave2Wave@{Wave2Wave}}
+
+
+Class that represents \doxylink{class_wave2_wave}{Wave2\+Wave} \doxylink{class_model}{Model}.  
+
+
+
+
+{\ttfamily \#include $<$Wave2\+Wave.\+h$>$}
+
+Inheritance diagram for Wave2\+Wave\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_wave2_wave}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \mbox{\hyperlink{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d}{process}} (juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}buffer\+To\+Process, int sample\+Rate, const map$<$ string, any $>$ \&kwargs) const =0
+\begin{DoxyCompactList}\small\item\em Processes a buffer of audio data with the model. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_wave2_wave_a40fe2e288d48f25eec36b4b18e3712ec}\label{class_wave2_wave_a40fe2e288d48f25eec36b4b18e3712ec} 
+bool {\bfseries save\+\_\+buffer\+\_\+to\+\_\+file} (const juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, const juce\+::\+File \&output\+File, int sample\+Rate) const
+\item 
+\Hypertarget{class_wave2_wave_a9af3adcc8ecae0fdb1d3150892f5eaf6}\label{class_wave2_wave_a9af3adcc8ecae0fdb1d3150892f5eaf6} 
+bool {\bfseries load\+\_\+buffer\+\_\+from\+\_\+file} (const juce\+::\+File \&input\+File, juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, int target\+Sample\+Rate) const
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class that represents \doxylink{class_wave2_wave}{Wave2\+Wave} \doxylink{class_model}{Model}. 
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d}\label{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d} 
+\index{Wave2Wave@{Wave2Wave}!process@{process}}
+\index{process@{process}!Wave2Wave@{Wave2Wave}}
+\doxysubsubsection{\texorpdfstring{process()}{process()}}
+{\footnotesize\ttfamily virtual void Wave2\+Wave\+::process (\begin{DoxyParamCaption}\item[{juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}}]{buffer\+To\+Process,  }\item[{int}]{sample\+Rate,  }\item[{const map$<$ string, any $>$ \&}]{kwargs }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Processes a buffer of audio data with the model. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em buffer\+To\+Process} & Buffer to be processed by the model. \\
+\hline
+{\em sample\+Rate} & The sample rate of the audio data. \\
+\hline
+{\em kwargs} & A map of parameters for the model. \\
+\hline
+\end{DoxyParams}
+
+
+Implemented in \mbox{\hyperlink{class_web_wave2_wave_aaa93e347af3e92b0c9cdd6dc98c60b42}{Web\+Wave2\+Wave}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_wave2_wave_8h}{Wave2\+Wave.\+h}}\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_wave2_wave_8cpp}{Wave2\+Wave.\+cpp}}\end{DoxyCompactItemize}

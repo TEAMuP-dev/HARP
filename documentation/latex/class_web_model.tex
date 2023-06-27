@@ -1,0 +1,68 @@
+\doxysection{Web\+Model Class Reference}
+\hypertarget{class_web_model}{}\label{class_web_model}\index{WebModel@{WebModel}}
+Inheritance diagram for Web\+Model\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_web_model}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_web_model_a01c1ce5f7295778a1e699d0ad3edd9c3}{load}} (const map$<$ string, any $>$ \&params) override
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_web_model_a28b1dbb19138da06ce28173bf8da923c}{ready}} () const override
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{load}} (const map$<$ string, any $>$ \&params)=0
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{ready}} () const =0
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_web_model_a01c1ce5f7295778a1e699d0ad3edd9c3}\label{class_web_model_a01c1ce5f7295778a1e699d0ad3edd9c3} 
+\index{WebModel@{WebModel}!load@{load}}
+\index{load@{load}!WebModel@{WebModel}}
+\doxysubsubsection{\texorpdfstring{load()}{load()}}
+{\footnotesize\ttfamily virtual bool Web\+Model\+::load (\begin{DoxyParamCaption}\item[{const map$<$ string, any $>$ \&}]{params }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Load the model parameters. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em params} & A map of parameters for the model. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A boolean indicating whether the model was loaded successfully. 
+\end{DoxyReturn}
+
+
+Implements \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{Model}}.
+
+\Hypertarget{class_web_model_a28b1dbb19138da06ce28173bf8da923c}\label{class_web_model_a28b1dbb19138da06ce28173bf8da923c} 
+\index{WebModel@{WebModel}!ready@{ready}}
+\index{ready@{ready}!WebModel@{WebModel}}
+\doxysubsubsection{\texorpdfstring{ready()}{ready()}}
+{\footnotesize\ttfamily virtual bool Web\+Model\+::ready (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Checks if the model is ready. 
+
+\begin{DoxyReturn}{Returns}
+A boolean indicating whether the model is ready. 
+\end{DoxyReturn}
+
+
+Implements \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{Model}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_web_model_8h}{Web\+Model.\+h}}\end{DoxyCompactItemize}

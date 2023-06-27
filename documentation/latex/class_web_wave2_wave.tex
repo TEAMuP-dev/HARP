@@ -1,0 +1,69 @@
+\doxysection{Web\+Wave2\+Wave Class Reference}
+\hypertarget{class_web_wave2_wave}{}\label{class_web_wave2_wave}\index{WebWave2Wave@{WebWave2Wave}}
+Inheritance diagram for Web\+Wave2\+Wave\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_web_wave2_wave}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \mbox{\hyperlink{class_web_wave2_wave_aaa93e347af3e92b0c9cdd6dc98c60b42}{process}} (juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}buffer\+To\+Process, int sample\+Rate, const map$<$ string, any $>$ \&kwargs) const override
+\begin{DoxyCompactList}\small\item\em Processes a buffer of audio data with the model. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_web_model}{Web\+Model}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_web_model_a01c1ce5f7295778a1e699d0ad3edd9c3}{load}} (const map$<$ string, any $>$ \&params) override
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_web_model_a28b1dbb19138da06ce28173bf8da923c}{ready}} () const override
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+virtual bool \mbox{\hyperlink{class_model_a7032424ce73e00b889fde5bfba4a0692}{load}} (const map$<$ string, any $>$ \&params)=0
+\begin{DoxyCompactList}\small\item\em Load the model parameters. \end{DoxyCompactList}\item 
+virtual bool \mbox{\hyperlink{class_model_a2da73e5a1f8e1404cdc1eb318b81d406}{ready}} () const =0
+\begin{DoxyCompactList}\small\item\em Checks if the model is ready. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \mbox{\hyperlink{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d}{process}} (juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}buffer\+To\+Process, int sample\+Rate, const map$<$ string, any $>$ \&kwargs) const =0
+\begin{DoxyCompactList}\small\item\em Processes a buffer of audio data with the model. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Protected Member Functions inherited from \mbox{\hyperlink{class_wave2_wave}{Wave2\+Wave}}}
+\begin{DoxyCompactItemize}
+\item 
+bool {\bfseries save\+\_\+buffer\+\_\+to\+\_\+file} (const juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, const juce\+::\+File \&output\+File, int sample\+Rate) const
+\item 
+bool {\bfseries load\+\_\+buffer\+\_\+from\+\_\+file} (const juce\+::\+File \&input\+File, juce\+::\+Audio\+Buffer$<$ float $>$ \&buffer, int target\+Sample\+Rate) const
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_web_wave2_wave_aaa93e347af3e92b0c9cdd6dc98c60b42}\label{class_web_wave2_wave_aaa93e347af3e92b0c9cdd6dc98c60b42} 
+\index{WebWave2Wave@{WebWave2Wave}!process@{process}}
+\index{process@{process}!WebWave2Wave@{WebWave2Wave}}
+\doxysubsubsection{\texorpdfstring{process()}{process()}}
+{\footnotesize\ttfamily virtual void Web\+Wave2\+Wave\+::process (\begin{DoxyParamCaption}\item[{juce\+::\+Audio\+Buffer$<$ float $>$ \texorpdfstring{$\ast$}{*}}]{buffer\+To\+Process,  }\item[{int}]{sample\+Rate,  }\item[{const map$<$ string, any $>$ \&}]{kwargs }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Processes a buffer of audio data with the model. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em buffer\+To\+Process} & Buffer to be processed by the model. \\
+\hline
+{\em sample\+Rate} & The sample rate of the audio data. \\
+\hline
+{\em kwargs} & A map of parameters for the model. \\
+\hline
+\end{DoxyParams}
+
+
+Implements \mbox{\hyperlink{class_wave2_wave_aa4fad6d5b2e4e56b6052d9d52c4fec1d}{Wave2\+Wave}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+Deep\+Learning/\mbox{\hyperlink{_web_model_8h}{Web\+Model.\+h}}\end{DoxyCompactItemize}

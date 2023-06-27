@@ -1,0 +1,108 @@
+\doxysection{Document\+View.\+h}
+\hypertarget{_document_view_8h_source}{}\label{_document_view_8h_source}\index{Source/UI/DocumentView.h@{Source/UI/DocumentView.h}}
+\mbox{\hyperlink{_document_view_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ "{}../WaveformCache/WaveformCache.h"{}}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_layout_8h}{Layout.h}}"{}}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_region_sequence_view_8h}{RegionSequenceView.h}}"{}}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_rulers_header_8h}{RulersHeader.h}}"{}}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_rulers_view_8h}{RulersView.h}}"{}}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ "{}TrackHeader.h"{}}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_zoom_controls_8h}{ZoomControls.h}}"{}}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_document_view}{DocumentView}}\ :\ \textcolor{keyword}{public}\ Component,}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ ChangeListener,}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ ARAMusicalContext::Listener,}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARADocument::Listener,}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAEditorView::Listener\ \{}
+\DoxyCodeLine{00046\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00052\ \ \ \mbox{\hyperlink{class_document_view}{DocumentView}}(ARAEditorView\ \&editorView,\ \mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\ \&playHeadState);}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00057\ \ \ \mbox{\hyperlink{class_document_view_af64fe7f4310c228d205dddb1f6eef883}{\string~DocumentView}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ ARADocument::Listener\ overrides}}
+\DoxyCodeLine{00061\ \ \ \textcolor{keywordtype}{void}}
+\DoxyCodeLine{00062\ \ \ didAddMusicalContextToDocument(ARADocument\ *,}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARAMusicalContext\ *musicalContext)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00064\ \ \ \textcolor{keywordtype}{void}\ willDestroyMusicalContext(ARAMusicalContext\ *musicalContext)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00065\ \ \ \textcolor{keywordtype}{void}\ didReorderRegionSequencesInDocument(ARADocument\ *)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordtype}{void}\ didAddRegionSequenceToDocument(ARADocument\ *,}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARARegionSequence\ *)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00068\ \ \ \textcolor{keywordtype}{void}\ willRemoveRegionSequenceFromDocument(}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ ARADocument\ *,\ ARARegionSequence\ *regionSequence)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00070\ \ \ \textcolor{keywordtype}{void}\ didEndEditing(ARADocument\ *)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00077\ \textcolor{comment}{}\ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_document_view_aecf9a173f070e23cebcf471e5ad67730}{changeListenerCallback}}(ChangeBroadcaster\ *source)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00080\ \ \ \textcolor{comment}{//\ ARAEditorView::Listener\ overrides}}
+\DoxyCodeLine{00081\ \ \ \textcolor{keywordtype}{void}\ onNewSelection(\textcolor{keyword}{const}\ ARAViewSelection\ \&viewSelection)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00082\ \ \ \textcolor{keywordtype}{void}\ onHideRegionSequences(}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<ARARegionSequence\ *>\ \&regionSequences)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00090\ \textcolor{comment}{}\ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_document_view_a7539a2065e9c57a468ae4fae55e68edb}{paint}}(Graphics\ \&g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00095\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_document_view_a534cdbb71bfccc314bfc352826030c97}{resized}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \ \ \textcolor{comment}{//==============================================================================}}
+\DoxyCodeLine{00098\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ headerWidth\ =\ 120;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00101\ \ \ \textcolor{keyword}{struct\ }RegionSequenceViewKey\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keyword}{explicit}\ RegionSequenceViewKey(ARARegionSequence\ *regionSequence)}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ :\ orderIndex(regionSequence-\/>getOrderIndex()),}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ sequence(regionSequence)\ \{\}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ RegionSequenceViewKey\ \&other)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tie(orderIndex,\ sequence)\ <}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ \ std::tie(other.orderIndex,\ other.sequence);}
+\DoxyCodeLine{00109\ \ \ \ \ \}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \ \ \ \ ARA::ARAInt32\ orderIndex;}
+\DoxyCodeLine{00112\ \ \ \ \ ARARegionSequence\ *sequence;}
+\DoxyCodeLine{00113\ \ \ \};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \ \ \textcolor{keywordtype}{void}\ selectMusicalContext(ARAMusicalContext\ *newSelectedMusicalContext);}
+\DoxyCodeLine{00116\ \ \ \textcolor{keywordtype}{void}\ zoom(\textcolor{keywordtype}{double}\ factor);}
+\DoxyCodeLine{00117\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00118\ \ \ \textcolor{keywordtype}{void}\ layOutVertically(Rectangle<int>\ bounds,\ T\ \&components,}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ verticalOffset\ =\ 0);}
+\DoxyCodeLine{00120\ \ \ \textcolor{keywordtype}{void}\ update();}
+\DoxyCodeLine{00121\ \ \ \textcolor{keywordtype}{void}\ addTrackViews(ARARegionSequence\ *regionSequence);}
+\DoxyCodeLine{00122\ \ \ \textcolor{keywordtype}{void}\ removeRegionSequenceView(ARARegionSequence\ *regionSequence);}
+\DoxyCodeLine{00123\ \ \ \textcolor{keywordtype}{void}\ invalidateRegionSequenceViews();}
+\DoxyCodeLine{00124\ \ \ \textcolor{keywordtype}{void}\ rebuildRegionSequenceViews();}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ ARAEditorView\ \&araEditorView;}
+\DoxyCodeLine{00127\ \ \ ARADocument\ \&araDocument;}
+\DoxyCodeLine{00128\ \ \ \textcolor{keywordtype}{bool}\ regionSequenceViewsAreValid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00129\ \ \ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}\ timeToViewScaling;}
+\DoxyCodeLine{00130\ \ \ \textcolor{keywordtype}{double}\ timelineLength\ =\ 0.0;}
+\DoxyCodeLine{00131\ \ \ ARAMusicalContext\ *selectedMusicalContext\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00132\ \ \ std::vector<ARARegionSequence\ *>\ hiddenRegionSequences;}
+\DoxyCodeLine{00133\ \ \ \mbox{\hyperlink{struct_waveform_cache}{WaveformCache}}\ waveformCache;}
+\DoxyCodeLine{00134\ \ \ std::map<RegionSequenceViewKey,\ unique\_ptr<TrackHeader>>\ trackHeaders;}
+\DoxyCodeLine{00135\ \ \ std::map<RegionSequenceViewKey,\ unique\_ptr<RegionSequenceView>>}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ regionSequenceViews;}
+\DoxyCodeLine{00137\ \ \ \mbox{\hyperlink{class_rulers_header}{RulersHeader}}\ rulersHeader;}
+\DoxyCodeLine{00138\ \ \ \mbox{\hyperlink{class_rulers_view}{RulersView}}\ rulersView;}
+\DoxyCodeLine{00139\ \ \ \mbox{\hyperlink{class_vertical_layout_viewport}{VerticalLayoutViewport}}\ viewport;}
+\DoxyCodeLine{00140\ \ \ \mbox{\hyperlink{class_overlay_component}{OverlayComponent}}\ overlay;}
+\DoxyCodeLine{00141\ \ \ \mbox{\hyperlink{class_zoom_controls}{ZoomControls}}\ zoomControls;}
+\DoxyCodeLine{00142\ \ \ \mbox{\hyperlink{class_playhead_position_label}{PlayheadPositionLabel}}\ playheadPositionLabel;}
+\DoxyCodeLine{00143\ \ \ TooltipWindow\ tooltip;}
+\DoxyCodeLine{00144\ \ \ \textcolor{keywordtype}{int}\ viewportHeightOffset\ =\ 0;}
+\DoxyCodeLine{00145\ \};}
+
+\end{DoxyCode}

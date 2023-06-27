@@ -1,0 +1,124 @@
+\doxysection{Document\+View Class Reference}
+\hypertarget{class_document_view}{}\label{class_document_view}\index{DocumentView@{DocumentView}}
+
+
+This class handles the \doxylink{class_document_view}{Document\+View} related functions.  
+
+
+
+
+{\ttfamily \#include $<$Document\+View.\+h$>$}
+
+Inheritance diagram for Document\+View\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=1.224044cm]{class_document_view}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{class_document_view_abef4ec4e5ff1ec0e6408a48126200951}{Document\+View}} (ARAEditor\+View \&editor\+View, \mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} \&play\+Head\+State)
+\begin{DoxyCompactList}\small\item\em Constructor. \end{DoxyCompactList}\item 
+\Hypertarget{class_document_view_af64fe7f4310c228d205dddb1f6eef883}\label{class_document_view_af64fe7f4310c228d205dddb1f6eef883} 
+{\bfseries \texorpdfstring{$\sim$}{\string~}\+Document\+View} () override
+\begin{DoxyCompactList}\small\item\em Destructor. \end{DoxyCompactList}\item 
+\Hypertarget{class_document_view_aeee870612c05703a0098dd045d7e465c}\label{class_document_view_aeee870612c05703a0098dd045d7e465c} 
+void {\bfseries did\+Add\+Musical\+Context\+To\+Document} (ARADocument \texorpdfstring{$\ast$}{*}, ARAMusical\+Context \texorpdfstring{$\ast$}{*}musical\+Context) override
+\item 
+\Hypertarget{class_document_view_a5f549b9f25481f9b1ac88efbbc92523b}\label{class_document_view_a5f549b9f25481f9b1ac88efbbc92523b} 
+void {\bfseries will\+Destroy\+Musical\+Context} (ARAMusical\+Context \texorpdfstring{$\ast$}{*}musical\+Context) override
+\item 
+\Hypertarget{class_document_view_a9fac181174ff707fbd2bd0287adeeb27}\label{class_document_view_a9fac181174ff707fbd2bd0287adeeb27} 
+void {\bfseries did\+Reorder\+Region\+Sequences\+In\+Document} (ARADocument \texorpdfstring{$\ast$}{*}) override
+\item 
+\Hypertarget{class_document_view_aeb0b205bc01737dba854e6417d9bac88}\label{class_document_view_aeb0b205bc01737dba854e6417d9bac88} 
+void {\bfseries did\+Add\+Region\+Sequence\+To\+Document} (ARADocument \texorpdfstring{$\ast$}{*}, ARARegion\+Sequence \texorpdfstring{$\ast$}{*}) override
+\item 
+\Hypertarget{class_document_view_a0c569cc01d4a175066c4b40f2edeeeb0}\label{class_document_view_a0c569cc01d4a175066c4b40f2edeeeb0} 
+void {\bfseries will\+Remove\+Region\+Sequence\+From\+Document} (ARADocument \texorpdfstring{$\ast$}{*}, ARARegion\+Sequence \texorpdfstring{$\ast$}{*}region\+Sequence) override
+\item 
+\Hypertarget{class_document_view_a8d5f7f0aa4e62223d8e8b90dbf31e8c5}\label{class_document_view_a8d5f7f0aa4e62223d8e8b90dbf31e8c5} 
+void {\bfseries did\+End\+Editing} (ARADocument \texorpdfstring{$\ast$}{*}) override
+\item 
+void \mbox{\hyperlink{class_document_view_aecf9a173f070e23cebcf471e5ad67730}{change\+Listener\+Callback}} (Change\+Broadcaster \texorpdfstring{$\ast$}{*}source) override
+\begin{DoxyCompactList}\small\item\em Implements change\+Listener\+Callback from Change\+Listener class. \end{DoxyCompactList}\item 
+\Hypertarget{class_document_view_a436318eebaf8328b89a7a30d7e8aa0f7}\label{class_document_view_a436318eebaf8328b89a7a30d7e8aa0f7} 
+void {\bfseries on\+New\+Selection} (const ARAView\+Selection \&view\+Selection) override
+\item 
+\Hypertarget{class_document_view_a30ab6cbd91ee06807ba5948bbdf9b795}\label{class_document_view_a30ab6cbd91ee06807ba5948bbdf9b795} 
+void {\bfseries on\+Hide\+Region\+Sequences} (const std\+::vector$<$ ARARegion\+Sequence \texorpdfstring{$\ast$}{*} $>$ \&region\+Sequences) override
+\item 
+void \mbox{\hyperlink{class_document_view_a7539a2065e9c57a468ae4fae55e68edb}{paint}} (Graphics \&g) override
+\begin{DoxyCompactList}\small\item\em Overrides the paint method from Component class. \end{DoxyCompactList}\item 
+\Hypertarget{class_document_view_a534cdbb71bfccc314bfc352826030c97}\label{class_document_view_a534cdbb71bfccc314bfc352826030c97} 
+void {\bfseries resized} () override
+\begin{DoxyCompactList}\small\item\em Overrides the resized method from Component class. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_document_view_a87a67e06d1fbeb48769265157bf6b752}\label{class_document_view_a87a67e06d1fbeb48769265157bf6b752} 
+static constexpr int {\bfseries header\+Width} = 120
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This class handles the \doxylink{class_document_view}{Document\+View} related functions. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_document_view_abef4ec4e5ff1ec0e6408a48126200951}\label{class_document_view_abef4ec4e5ff1ec0e6408a48126200951} 
+\index{DocumentView@{DocumentView}!DocumentView@{DocumentView}}
+\index{DocumentView@{DocumentView}!DocumentView@{DocumentView}}
+\doxysubsubsection{\texorpdfstring{DocumentView()}{DocumentView()}}
+{\footnotesize\ttfamily Document\+View\+::\+Document\+View (\begin{DoxyParamCaption}\item[{ARAEditor\+View \&}]{editor\+View,  }\item[{\mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} \&}]{play\+Head\+State }\end{DoxyParamCaption})}
+
+
+
+Constructor. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em editor\+View} & \\
+\hline
+{\em play\+Head\+State} & \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_document_view_aecf9a173f070e23cebcf471e5ad67730}\label{class_document_view_aecf9a173f070e23cebcf471e5ad67730} 
+\index{DocumentView@{DocumentView}!changeListenerCallback@{changeListenerCallback}}
+\index{changeListenerCallback@{changeListenerCallback}!DocumentView@{DocumentView}}
+\doxysubsubsection{\texorpdfstring{changeListenerCallback()}{changeListenerCallback()}}
+{\footnotesize\ttfamily void Document\+View\+::change\+Listener\+Callback (\begin{DoxyParamCaption}\item[{Change\+Broadcaster \texorpdfstring{$\ast$}{*}}]{source }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}}
+
+
+
+Implements change\+Listener\+Callback from Change\+Listener class. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em source} & \\
+\hline
+\end{DoxyParams}
+\Hypertarget{class_document_view_a7539a2065e9c57a468ae4fae55e68edb}\label{class_document_view_a7539a2065e9c57a468ae4fae55e68edb} 
+\index{DocumentView@{DocumentView}!paint@{paint}}
+\index{paint@{paint}!DocumentView@{DocumentView}}
+\doxysubsubsection{\texorpdfstring{paint()}{paint()}}
+{\footnotesize\ttfamily void Document\+View\+::paint (\begin{DoxyParamCaption}\item[{Graphics \&}]{g }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}}
+
+
+
+Overrides the paint method from Component class. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em g} & \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+Source/\+UI/\mbox{\hyperlink{_document_view_8h}{Document\+View.\+h}}\item 
+Source/\+UI/\mbox{\hyperlink{_document_view_8cpp}{Document\+View.\+cpp}}\end{DoxyCompactItemize}

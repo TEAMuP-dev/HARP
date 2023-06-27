@@ -1,0 +1,47 @@
+\doxysection{Rulers\+View.\+h}
+\hypertarget{_rulers_view_8h_source}{}\label{_rulers_view_8h_source}\index{Source/UI/RulersView.h@{Source/UI/RulersView.h}}
+\mbox{\hyperlink{_rulers_view_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}../Timeline/PlayheadPositionLabel.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}../Util/TimeToViewScaling.h"{}}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_rulers_view}{RulersView}}\ :\ \textcolor{keyword}{public}\ Component,}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{public}\ SettableTooltipClient,}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ Timer,}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ \mbox{\hyperlink{class_time_to_view_scaling_1_1_listener}{TimeToViewScaling::Listener}},}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{private}\ ARAMusicalContext::Listener\ \{}
+\DoxyCodeLine{00030\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00031\ \ \ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_rulers_view_1_1_cycle_marker_component}{CycleMarkerComponent}}\ :\ \textcolor{keyword}{public}\ Component\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{void}\ paint(Graphics\ \&g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00033\ \ \ \};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \mbox{\hyperlink{class_rulers_view}{RulersView}}(\mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\ \&playHeadStateIn,}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}\ \&timeToViewScalingIn,\ ARADocument\ \&document);}
+\DoxyCodeLine{00037\ \ \ \mbox{\hyperlink{class_rulers_view}{\string~RulersView}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \textcolor{keywordtype}{void}\ paint(Graphics\ \&g)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{void}\ mouseDrag(\textcolor{keyword}{const}\ MouseEvent\ \&m)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00041\ \ \ \textcolor{keywordtype}{void}\ mouseUp(\textcolor{keyword}{const}\ MouseEvent\ \&m)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{void}\ mouseDoubleClick(\textcolor{keyword}{const}\ MouseEvent\ \&)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{void}\ selectMusicalContext(ARAMusicalContext\ *newSelectedMusicalContext);}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{void}\ zoomLevelChanged(\textcolor{keywordtype}{double})\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{void}\ doUpdateMusicalContextContent(ARAMusicalContext\ *,}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ARAContentUpdateScopes)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{void}\ updateCyclePosition();}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{void}\ timerCallback()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00053\ \ \ \mbox{\hyperlink{struct_play_head_state}{PlayHeadState}}\ \&playHeadState;}
+\DoxyCodeLine{00054\ \ \ \mbox{\hyperlink{class_time_to_view_scaling}{TimeToViewScaling}}\ \&timeToViewScaling;}
+\DoxyCodeLine{00055\ \ \ ARADocument\ \&araDocument;}
+\DoxyCodeLine{00056\ \ \ ARAMusicalContext\ *selectedMusicalContext\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00057\ \ \ \mbox{\hyperlink{class_rulers_view_1_1_cycle_marker_component}{CycleMarkerComponent}}\ cycleMarker;}
+\DoxyCodeLine{00058\ \ \ \textcolor{keywordtype}{bool}\ isDraggingCycle\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00059\ \};}
+
+\end{DoxyCode}

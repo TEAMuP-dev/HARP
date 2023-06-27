@@ -1,0 +1,51 @@
+\doxysection{Playback\+Renderer.\+h}
+\hypertarget{_playback_renderer_8h_source}{}\label{_playback_renderer_8h_source}\index{Source/ARA/PlaybackRenderer.h@{Source/ARA/PlaybackRenderer.h}}
+\mbox{\hyperlink{_playback_renderer_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_basics/juce\_audio\_basics.h"{}}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ "{}juce\_audio\_formats/juce\_audio\_formats.h"{}}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <ARA\_Library/PlugIn/ARAPlug.h>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARAPitchInterpretation.h>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <ARA\_Library/Utilities/ARATimelineConversion.h>}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ "{}../Timeline/SharedTimeSliceThread.h"{}}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ "{}../Util/ProcessingLockInterface.h"{}}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_audio_modification_8h}{AudioModification.h}}"{}}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{using\ namespace\ }juce;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{using\ }std::unique\_ptr;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}\ :\ \textcolor{keyword}{public}\ ARAPlaybackRenderer\ \{}
+\DoxyCodeLine{00049\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00056\ \ \ \mbox{\hyperlink{class_playback_renderer}{PlaybackRenderer}}(ARA::PlugIn::DocumentController\ *dc,}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\ \&lockInterfaceIn);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00068\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_a275e328fe658af0b84baf74f918df587}{prepareToPlay}}(\textcolor{keywordtype}{double}\ sampleRateIn,\ \textcolor{keywordtype}{int}\ maximumSamplesPerBlockIn,}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ numChannelsIn,\ AudioProcessor::ProcessingPrecision,}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AlwaysNonRealtime\ alwaysNonRealtime)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_playback_renderer_aafe1fadc78981fb5bcad211d46eb2fc9}{releaseResources}}()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00086\ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_playback_renderer_a827c919d2c9bae841ad6a2b30241c953}{processBlock}}(}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ AudioBuffer<float>\ \&buffer,\ AudioProcessor::Realtime\ realtime,}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \textcolor{keyword}{const}\ AudioPlayHead::PositionInfo\ \&positionInfo)\ \textcolor{keyword}{noexcept}\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00089\ \ \ \textcolor{keyword}{using\ }ARAPlaybackRenderer::processBlock;}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00092\ \ \ \mbox{\hyperlink{struct_processing_lock_interface}{ProcessingLockInterface}}\ \&lockInterface;}
+\DoxyCodeLine{00093\ \ \ SharedResourcePointer<SharedTimeSliceThread>\ sharedTimesliceThread;}
+\DoxyCodeLine{00094\ \ \ std::map<ARAAudioSource\ *,\ unique\_ptr<juce::ResamplingAudioSource>>}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ resamplingSources;}
+\DoxyCodeLine{00096\ \ \ std::map<ARAAudioSource\ *,\ unique\_ptr<AudioFormatReaderSource>>}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ positionableSources;}
+\DoxyCodeLine{00098\ \ \ \textcolor{keywordtype}{int}\ numChannels\ =\ 2;}
+\DoxyCodeLine{00099\ \ \ \textcolor{keywordtype}{double}\ sampleRate\ =\ 48000.0;}
+\DoxyCodeLine{00100\ \ \ \textcolor{keywordtype}{int}\ maximumSamplesPerBlock\ =\ 128;}
+\DoxyCodeLine{00101\ \ \ unique\_ptr<AudioBuffer<float>>\ tempBuffer;}
+\DoxyCodeLine{00102\ \};}
+
+\end{DoxyCode}

@@ -7,10 +7,13 @@ add_subdirectory(JUCE)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# defines SourceFiles
+include(cmake/SourceFiles.cmake)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...")
-    # libtorch settings 
+    # libtorch settings
     find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
     # ara settings
@@ -19,7 +22,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # mac and linux library location
     message("Building for UNIX...")
-    # libtorch settings 
+    # libtorch settings
     find_package(Torch REQUIRED PATHS "/usr/local/lib/libtorch" NO_DEFAULT_PATH)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
     # ara settings
@@ -72,10 +75,7 @@ juce_generate_juce_header(AudioPluginExampleCMAKE64)
 
 target_sources(AudioPluginExampleCMAKE64
     PRIVATE
-        Source/Main.cpp
-        Source/TorchModel.h
-        Source/WebModel.h
-        Source/Model.h
+        ${SourceFiles}
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
