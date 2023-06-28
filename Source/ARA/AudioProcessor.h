@@ -21,7 +21,7 @@
 
 #include "AudioProcessorImpl.h"
 #include "ProcessorEditor.h"
-class TensorJuceAudioProcessor : public ARADemoPluginAudioProcessorImpl {
+class TensorJuceAudioProcessor : public TensorJuceAudioProcessorImpl {
 public:
   bool hasEditor() const override { return true; }
   AudioProcessorEditor *createEditor() override {

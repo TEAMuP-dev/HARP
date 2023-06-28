@@ -173,10 +173,10 @@
 
 boxfont setfont
 1 boundaspect scale
-(TensorJuceAudioProcessor) cw
 (TensorJuceAudioProcessorImpl) cw
 (AudioProcessor) cw
 (AudioProcessorARAExtension) cw
+(TensorJuceAudioProcessor) cw
 /boxwidth boxwidth marginwidth 2 mul add def
 /xspacing boxwidth distx add def
 /yspacing boxheight disty add def
@@ -188,17 +188,13 @@ boundx scalefactor div boundy scalefactor div scale
 
 % ----- classes -----
 
- (TensorJuceAudioProcessor) 0.500000 0.000000 box
  (TensorJuceAudioProcessorImpl) 0.500000 1.000000 box
  (AudioProcessor) 0.000000 2.000000 box
  (AudioProcessorARAExtension) 1.000000 2.000000 box
+ (TensorJuceAudioProcessor) 0.500000 0.000000 box
 
 % ----- relations -----
 
-solid
-0 0.500000 0.000000 out
-solid
-1 0.500000 1.000000 in
 solid
 0 0.500000 1.000000 out
 solid
@@ -207,3 +203,7 @@ solid
 1 0.000000 2.000000 in
 solid
 1 1.000000 2.000000 in
+solid
+1 0.500000 0.250000 out
+solid
+0 0.500000 0.750000 in

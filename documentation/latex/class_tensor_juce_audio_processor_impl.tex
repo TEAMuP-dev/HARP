@@ -1,0 +1,80 @@
+\doxysection{Tensor\+Juce\+Audio\+Processor\+Impl Class Reference}
+\hypertarget{class_tensor_juce_audio_processor_impl}{}\label{class_tensor_juce_audio_processor_impl}\index{TensorJuceAudioProcessorImpl@{TensorJuceAudioProcessorImpl}}
+
+
+A class that implements the audio processing for the plugin.
+
+
+
+
+{\ttfamily \#include $<$Audio\+Processor\+Impl.\+h$>$}
+
+Inheritance diagram for Tensor\+Juce\+Audio\+Processor\+Impl\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{class_tensor_juce_audio_processor_impl}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_aef3b1627087b7a4f3cc82b9f93f33353}\label{class_tensor_juce_audio_processor_impl_aef3b1627087b7a4f3cc82b9f93f33353}
+void {\bfseries prepare\+To\+Play} (double sample\+Rate, int samples\+Per\+Block) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a493438e54fa2be9e9487ea6cd5974273}\label{class_tensor_juce_audio_processor_impl_a493438e54fa2be9e9487ea6cd5974273}
+void {\bfseries release\+Resources} () override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a7005fff4d84a0b6af5c72a6ac57f40e4}\label{class_tensor_juce_audio_processor_impl_a7005fff4d84a0b6af5c72a6ac57f40e4}
+bool {\bfseries is\+Buses\+Layout\+Supported} (const Buses\+Layout \&layouts) const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_ada5b443907d00261c08f9e5b798ed73d}\label{class_tensor_juce_audio_processor_impl_ada5b443907d00261c08f9e5b798ed73d}
+void {\bfseries process\+Block} (Audio\+Buffer$<$ float $>$ \&buffer, Midi\+Buffer \&midi\+Messages) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a8e90a0e9cb620367be0e3cfe0067e7f7}\label{class_tensor_juce_audio_processor_impl_a8e90a0e9cb620367be0e3cfe0067e7f7}
+const String {\bfseries get\+Name} () const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_ad84a178b8ee4c91c04b0d9c4e42ecdb7}\label{class_tensor_juce_audio_processor_impl_ad84a178b8ee4c91c04b0d9c4e42ecdb7}
+bool {\bfseries accepts\+Midi} () const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_ac330d614ec71c01331e46e8617052780}\label{class_tensor_juce_audio_processor_impl_ac330d614ec71c01331e46e8617052780}
+bool {\bfseries produces\+Midi} () const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a927b48fdd82dcfce047c7b1be5b07206}\label{class_tensor_juce_audio_processor_impl_a927b48fdd82dcfce047c7b1be5b07206}
+double {\bfseries get\+Tail\+Length\+Seconds} () const override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_aa1f99cfd3125ae9c01293ef250364843}\label{class_tensor_juce_audio_processor_impl_aa1f99cfd3125ae9c01293ef250364843}
+int {\bfseries get\+Num\+Programs} () override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_aafe8492bda7f8706db27dac52530c4bb}\label{class_tensor_juce_audio_processor_impl_aafe8492bda7f8706db27dac52530c4bb}
+int {\bfseries get\+Current\+Program} () override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a2126aaf3520a504bf9c12ad52f2e233a}\label{class_tensor_juce_audio_processor_impl_a2126aaf3520a504bf9c12ad52f2e233a}
+void {\bfseries set\+Current\+Program} (int) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a8c60a8b0a21d27b88b7dc5a78310f813}\label{class_tensor_juce_audio_processor_impl_a8c60a8b0a21d27b88b7dc5a78310f813}
+const String {\bfseries get\+Program\+Name} (int) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a0aa7d610ccca4ffce60a3dbb5db1e8a2}\label{class_tensor_juce_audio_processor_impl_a0aa7d610ccca4ffce60a3dbb5db1e8a2}
+void {\bfseries change\+Program\+Name} (int, const String \&) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_aeeeaa64e77a6061dd7d6c1aa62b82824}\label{class_tensor_juce_audio_processor_impl_aeeeaa64e77a6061dd7d6c1aa62b82824}
+void {\bfseries get\+State\+Information} (Memory\+Block \&) override
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a790f96ee1bd444358abd2a4d59cfb268}\label{class_tensor_juce_audio_processor_impl_a790f96ee1bd444358abd2a4d59cfb268}
+void {\bfseries set\+State\+Information} (const void \texorpdfstring{$\ast$}{*}, int) override
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item
+\Hypertarget{class_tensor_juce_audio_processor_impl_a87900ab0171bc8219603d14e5abb1645}\label{class_tensor_juce_audio_processor_impl_a87900ab0171bc8219603d14e5abb1645}
+\mbox{\hyperlink{struct_play_head_state}{Play\+Head\+State}} {\bfseries play\+Head\+State}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A class that implements the audio processing for the plugin.
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item
+Source/\+ARA/\mbox{\hyperlink{_audio_processor_impl_8h}{Audio\+Processor\+Impl.\+h}}\item
+Source/\+ARA/\mbox{\hyperlink{_audio_processor_impl_8cpp}{Audio\+Processor\+Impl.\+cpp}}\end{DoxyCompactItemize}

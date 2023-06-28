@@ -24,14 +24,14 @@
 #include "../Timeline/PlayheadPositionLabel.h"
 
 /**
- * @class ARADemoPluginAudioProcessorImpl
+ * @class TensorJuceAudioProcessorImpl
  * @brief A class that implements the audio processing for the plugin.
  */
-class ARADemoPluginAudioProcessorImpl : public AudioProcessor,
-                                        public AudioProcessorARAExtension {
+class TensorJuceAudioProcessorImpl : public AudioProcessor,
+                                     public AudioProcessorARAExtension {
 public:
-  ARADemoPluginAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {}
-  ~ARADemoPluginAudioProcessorImpl() override = default;
+  TensorJuceAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {}
+  ~TensorJuceAudioProcessorImpl() override = default;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
   void releaseResources() override;
@@ -60,5 +60,5 @@ public:
 private:
   static BusesProperties getBusesProperties();
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ARADemoPluginAudioProcessorImpl)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceAudioProcessorImpl)
 };

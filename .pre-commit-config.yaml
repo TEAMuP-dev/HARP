@@ -10,5 +10,5 @@ repos:
     hooks:
     -   id: clang-format
         files: '^Source/.*\.(cpp|h)$'
-        exclude: '^Source/(Main\.cpp|DocumentControllerSpecialisation\.h)$'
+        exclude: '^Source/(Main\.cpp|DocumentControllerSpecialisation\.h)$|^documentation/.*$'
         types_or: [c++, c, cuda]

@@ -24,7 +24,7 @@
 #include "ProcessorEditor.h"
 
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
-    ARADemoPluginAudioProcessorImpl &p, EditorRenderer *er)
+    TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
     : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {
 
   if (auto *editorView = getARAEditorView())

@@ -45,10 +45,10 @@ public:
   /**
    * @brief Constructor for TensorJuceProcessorEditor.
    *
-   * @param p Reference to ARADemoPluginAudioProcessorImpl object.
+   * @param p Reference to TensorJuceAudioProcessorImpl object.
    * @param er Pointer to EditorRenderer object.
    */
-  explicit TensorJuceProcessorEditor(ARADemoPluginAudioProcessorImpl &p,
+  explicit TensorJuceProcessorEditor(TensorJuceAudioProcessorImpl &p,
                                      EditorRenderer *er);
 
   // Button listener method

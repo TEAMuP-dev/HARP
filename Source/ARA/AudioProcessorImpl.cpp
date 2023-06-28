@@ -20,19 +20,19 @@
 
 #include "AudioProcessorImpl.h"
 
-void ARADemoPluginAudioProcessorImpl::prepareToPlay(double sampleRate,
-                                                    int samplesPerBlock) {
+void TensorJuceAudioProcessorImpl::prepareToPlay(double sampleRate,
+                                                 int samplesPerBlock) {
   playHeadState.update(nullopt);
   prepareToPlayForARA(sampleRate, samplesPerBlock,
                       getMainBusNumOutputChannels(), getProcessingPrecision());
 }
 
-void ARADemoPluginAudioProcessorImpl::releaseResources() {
+void TensorJuceAudioProcessorImpl::releaseResources() {
   playHeadState.update(nullopt);
   releaseResourcesForARA();
 }
 
-bool ARADemoPluginAudioProcessorImpl::isBusesLayoutSupported(
+bool TensorJuceAudioProcessorImpl::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
   if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono() &&
       layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
@@ -41,8 +41,8 @@ bool ARADemoPluginAudioProcessorImpl::isBusesLayoutSupported(
   return true;
 }
 
-void ARADemoPluginAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
-                                                   MidiBuffer &midiMessages) {
+void TensorJuceAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
+                                                MidiBuffer &midiMessages) {
   ignoreUnused(midiMessages);
 
   ScopedNoDenormals noDenormals;
@@ -54,7 +54,7 @@ void ARADemoPluginAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
     processBlockBypassed(buffer, midiMessages);
 }
 
-double ARADemoPluginAudioProcessorImpl::getTailLengthSeconds() const {
+double TensorJuceAudioProcessorImpl::getTailLengthSeconds() const {
   double tail;
   if (getTailLengthSecondsForARA(tail))
     return tail;
@@ -63,7 +63,7 @@ double ARADemoPluginAudioProcessorImpl::getTailLengthSeconds() const {
 }
 
 juce::AudioProcessor::BusesProperties
-ARADemoPluginAudioProcessorImpl::getBusesProperties() {
+TensorJuceAudioProcessorImpl::getBusesProperties() {
   return BusesProperties()
       .withInput("Input", AudioChannelSet::stereo(), true)
       .withOutput("Output", AudioChannelSet::stereo(), true);
