@@ -27,5 +27,5 @@
 
 struct PreviewState {
   std::atomic<double> previewTime{0.0};
-  std::atomic<ARAPlaybackRegion *> previewedRegion{nullptr};
+  std::atomic<juce::ARAPlaybackRegion *> previewedRegion{nullptr};
 };

@@ -4,7 +4,7 @@ project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # defines SourceFiles
@@ -23,7 +23,7 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux
     # mac and linux library location
     message("Building for UNIX...")
     # libtorch settings
-    find_package(Torch REQUIRED PATHS "/usr/local/lib/libtorch" NO_DEFAULT_PATH)
+    find_package(Torch REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
     # ara settings
     juce_set_ara_sdk_path("/usr/local/lib/ARA_SDK")

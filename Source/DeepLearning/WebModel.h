@@ -35,10 +35,10 @@ class WebModel : public Model {
 public:
   virtual bool load(const map<string, any> &params) override {
     // get the name of the huggingface repo we're going to use
-    if (!params.contains("url")) {
+    if (!modelparams::contains(params, "url")) {
       return false;
     }
-    if (!params.contains("api_name")) {
+    if (!modelparams::contains(params, "api_name")) {
       return false;
     }
     m_url = any_cast<string>(params.at("url"));

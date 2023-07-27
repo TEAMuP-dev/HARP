@@ -28,10 +28,10 @@
 
 #include "EditorRenderer.h"
 
-std::optional<Range<int64>> readPlaybackRangeIntoBuffer(
-    Range<double> playbackRange, const ARAPlaybackRegion *playbackRegion,
-    AudioBuffer<float> &buffer,
-    const std::function<AudioFormatReader *(ARAAudioSource *)> &getReader) {
+std::optional<juce::Range<juce::int64>> readPlaybackRangeIntoBuffer(
+    juce::Range<double> playbackRange, const juce::ARAPlaybackRegion *playbackRegion,
+    juce::AudioBuffer<float> &buffer,
+    const std::function<juce::AudioFormatReader *(juce::ARAAudioSource *)> &getReader) {
   const auto rangeInAudioModificationTime =
       playbackRange - playbackRegion->getStartInPlaybackTime() +
       playbackRegion->getStartInAudioModificationTime();
@@ -41,14 +41,14 @@ std::optional<Range<int64>> readPlaybackRangeIntoBuffer(
   const auto audioSource = audioModification->getAudioSource();
   const auto audioModificationSampleRate = audioSource->getSampleRate();
 
-  const Range<int64_t> sampleRangeInAudioModification{
+  const juce::Range<int64_t> sampleRangeInAudioModification{
       ARA::roundSamplePosition(rangeInAudioModificationTime.getStart() *
                                audioModificationSampleRate),
       ARA::roundSamplePosition(rangeInAudioModificationTime.getEnd() *
                                audioModificationSampleRate) -
           1};
 
-  const auto inputOffset = jlimit((int64_t)0, audioSource->getSampleCount(),
+  const auto inputOffset = juce::jlimit((int64_t)0, audioSource->getSampleCount(),
                                   sampleRangeInAudioModification.getStart());
 
   // With the output offset it can always be said of the output buffer, that the
@@ -78,7 +78,7 @@ std::optional<Range<int64>> readPlaybackRangeIntoBuffer(
   }();
 
   if (readLength == 0)
-    return Range<int64>();
+    return juce::Range<juce::int64>();
 
   auto *reader = getReader(audioSource);
 
@@ -88,7 +88,7 @@ std::optional<Range<int64>> readPlaybackRangeIntoBuffer(
     if (audioModification->isDimmed())
       buffer.applyGain((int)outputOffset, (int)readLength, 0.25f);
 
-    return Range<int64>::withStartAndLength(outputOffset, readLength);
+    return juce::Range<juce::int64>::withStartAndLength(outputOffset, readLength);
   }
 
   return {};
@@ -109,14 +109,14 @@ EditorRenderer::~EditorRenderer() {
     rs->removeListener(this);
 }
 
-void EditorRenderer::didAddPlaybackRegionToRegionSequence(ARARegionSequence *,
-                                                          ARAPlaybackRegion *) {
+void EditorRenderer::didAddPlaybackRegionToRegionSequence(juce::ARARegionSequence *,
+                                                          juce::ARAPlaybackRegion *) {
   asyncConfigCallback.startConfigure();
 }
 
 void EditorRenderer::didAddRegionSequence(
     ARA::PlugIn::RegionSequence *rs) noexcept {
-  auto *sequence = static_cast<ARARegionSequence *>(rs);
+  auto *sequence = static_cast<juce::ARARegionSequence *>(rs);
   sequence->addListener(this);
   regionSequences.insert(sequence);
   asyncConfigCallback.startConfigure();
@@ -130,7 +130,7 @@ void EditorRenderer::didAddPlaybackRegion(
 void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
   DBG("EditorRenderer::executeProcess executing process");
 
-  auto myCallback = [&params](ARAPlaybackRegion *playbackRegion) -> bool {
+  auto myCallback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
     auto audioModification =
         playbackRegion->getAudioModification<AudioModification>();
     std::cout << "EditorRenderer::processing playbackRegion "
@@ -157,10 +157,10 @@ void EditorRenderer::forEachPlaybackRegion(Callback &&cb) {
 void EditorRenderer::prepareToPlay(double sampleRateIn,
                                    int maximumExpectedSamplesPerBlock,
                                    int numChannels,
-                                   AudioProcessor::ProcessingPrecision,
+                                   juce::AudioProcessor::ProcessingPrecision,
                                    AlwaysNonRealtime alwaysNonRealtime) {
   sampleRate = sampleRateIn;
-  previewBuffer = std::make_unique<AudioBuffer<float>>(numChannels,
+  previewBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels,
                                                        (int)(4 * sampleRateIn));
 
   ignoreUnused(maximumExpectedSamplesPerBlock, alwaysNonRealtime);
@@ -171,8 +171,8 @@ void EditorRenderer::releaseResources() { audioSourceReaders.clear(); }
 void EditorRenderer::reset() { previewBuffer->clear(); }
 
 bool EditorRenderer::processBlock(
-    AudioBuffer<float> &buffer, AudioProcessor::Realtime realtime,
-    const AudioPlayHead::PositionInfo &positionInfo) noexcept {
+    juce::AudioBuffer<float> &buffer, juce::AudioProcessor::Realtime realtime,
+    const juce::AudioPlayHead::PositionInfo &positionInfo) noexcept {
 
   ignoreUnused(realtime);
 
@@ -225,7 +225,7 @@ bool EditorRenderer::processBlock(
         if (lastPreviewTime != previewTime ||
             lastPlaybackRegion != previewedRegion ||
             lastPreviewDimmed != previewDimmed) {
-          Range<double> previewRangeInPlaybackTime{previewTime - 0.5,
+          juce::Range<double> previewRangeInPlaybackTime{previewTime - 0.5,
                                                    previewTime + 0.5};
 
           previewBuffer->clear();
@@ -267,8 +267,8 @@ void EditorRenderer::configure() {
         playbackRegion->getAudioModification()->getAudioSource();
 
     if (audioSourceReaders.find(audioSource) == audioSourceReaders.end()) {
-      audioSourceReaders[audioSource] = std::make_unique<BufferingAudioReader>(
-          new ARAAudioSourceReader(
+      audioSourceReaders[audioSource] = std::make_unique<juce::BufferingAudioReader>(
+          new juce::ARAAudioSourceReader(
               playbackRegion->getAudioModification()->getAudioSource()),
           *timeSliceThread,
           std::max(4 * maximumExpectedSamplesPerBlock, (int)sampleRate));

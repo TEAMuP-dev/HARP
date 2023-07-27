@@ -23,9 +23,8 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 
-using namespace juce;
 
-class AsyncConfigurationCallback : private AsyncUpdater {
+class AsyncConfigurationCallback : private juce::AsyncUpdater {
 public:
   explicit AsyncConfigurationCallback(std::function<void()> callbackIn)
       : callback(std::move(callbackIn)) {}
@@ -33,7 +32,7 @@ public:
   ~AsyncConfigurationCallback() override { cancelPendingUpdate(); }
 
   template <typename RequiresLock> auto withLock(RequiresLock &&fn) {
-    const SpinLock::ScopedTryLockType scope(processingFlag);
+    const juce::SpinLock::ScopedTryLockType scope(processingFlag);
     return fn(scope.isLocked());
   }
 
@@ -41,10 +40,10 @@ public:
 
 private:
   void handleAsyncUpdate() override {
-    const SpinLock::ScopedLockType scope(processingFlag);
+    const juce::SpinLock::ScopedLockType scope(processingFlag);
     callback();
   }
 
   std::function<void()> callback;
-  SpinLock processingFlag;
+  juce::SpinLock processingFlag;
 };

@@ -40,18 +40,7 @@ using std::unique_ptr;
 using torch::jit::IValue;
 using torch::jit::script::Module;
 
-std::string size2string(torch::IntArrayRef size) {
-  std::stringstream ss;
-  ss << "(";
-  for (int i = 0; i < size.size(); i++) {
-    ss << size[i];
-    if (i < size.size() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << ")";
-  return ss.str();
-}
+
 
 /**
  * @class TorchModel
@@ -85,7 +74,7 @@ protected:
  * @brief Class that represents a TorchWave2Wave inherited from TorchModel and
  * Wave2Wave.
  */
-class TorchWave2Wave : public TorchModel, public Wave2Wave {
+class TorchWave2Wave : public TorchModel {
 public:
   TorchWave2Wave();
 

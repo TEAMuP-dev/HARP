@@ -26,10 +26,10 @@ class Looper {
 public:
   Looper() : inputBuffer(nullptr), pos(loopRange.getStart()) {}
 
-  Looper(const AudioBuffer<float> *buffer, Range<int64> range)
+  Looper(const juce::AudioBuffer<float> *buffer, juce::Range<juce::int64> range)
       : inputBuffer(buffer), loopRange(range), pos(range.getStart()) {}
 
-  void writeInto(AudioBuffer<float> &buffer) {
+  void writeInto(juce::AudioBuffer<float> &buffer) {
     if (loopRange.getLength() == 0) {
       buffer.clear();
       return;
@@ -38,11 +38,11 @@ public:
     const auto numChannelsToCopy =
         std::min(inputBuffer->getNumChannels(), buffer.getNumChannels());
     const auto actualCrossfadeLengthSamples = std::min(
-        loopRange.getLength() / 2, (int64)desiredCrossfadeLengthSamples);
+        loopRange.getLength() / 2, (juce::int64)desiredCrossfadeLengthSamples);
 
     for (auto samplesCopied = 0; samplesCopied < buffer.getNumSamples();) {
       const auto [needsCrossfade, samplePosOfNextCrossfadeTransition] =
-          [&]() -> std::pair<bool, int64> {
+          [&]() -> std::pair<bool, juce::int64> {
         if (const auto endOfFadeIn =
                 loopRange.getStart() + actualCrossfadeLengthSamples;
             pos < endOfFadeIn)
@@ -59,7 +59,7 @@ public:
 
       const auto getFadeInGainAtPos = [this,
                                        actualCrossfadeLengthSamples](auto p) {
-        return jmap((float)p, (float)loopRange.getStart(),
+        return juce::jmap((float)p, (float)loopRange.getStart(),
                     (float)loopRange.getStart() +
                         (float)actualCrossfadeLengthSamples - 1.0f,
                     0.0f, 1.0f);
@@ -95,7 +95,7 @@ public:
 private:
   static constexpr int desiredCrossfadeLengthSamples = 50;
 
-  const AudioBuffer<float> *inputBuffer;
-  Range<int64> loopRange;
-  int64 pos;
+  const juce::AudioBuffer<float> *inputBuffer;
+  juce::Range<juce::int64> loopRange;
+  juce::int64 pos;
 };

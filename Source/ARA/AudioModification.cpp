@@ -29,7 +29,7 @@
  * clone
  */
 AudioModification::AudioModification(
-    ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
+    juce::ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
     const ARAAudioModification *optionalModificationToClone)
     : ARAAudioModification(audioSource, hostRef, optionalModificationToClone) {
 
@@ -44,7 +44,7 @@ AudioModification::AudioModification(
  *
  * @param audioSource Pointer to the ARAAudioSource to perform processing on
  */
-void AudioModification::init(ARAAudioSource *audioSource) {
+void AudioModification::init(juce::ARAAudioSource *audioSource) {
   DBG("loading model");
 
   // map<string, any> params {{"path",
@@ -58,7 +58,7 @@ void AudioModification::init(ARAAudioSource *audioSource) {
   }
 
   DBG("AudioModification:: create reader for " << audioSource->getName());
-  mAudioSourceReader = std::make_unique<ARAAudioSourceReader>(audioSource);
+  mAudioSourceReader = std::make_unique<juce::ARAAudioSourceReader>(audioSource);
   mSampleRate = audioSource->getSampleRate();
   mAudioSourceName = audioSource->getName();
 }
@@ -95,7 +95,7 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
     // reading into audio buffer
     mAudioSourceReader->read(mAudioBuffer.get(), 0,
                              static_cast<int>(numSamples), 0, true, true);
-    mModel.process(mAudioBuffer.get(), sampleRate, params);
+    mModel.process(mAudioBuffer.get(), sampleRate);
 
     // connect the modified buffer to the source
 

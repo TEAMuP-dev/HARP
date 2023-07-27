@@ -20,11 +20,10 @@
 
 #pragma once
 
-#include "../DeepLearning/WebModel.h"
+#include "../DeepLearning/TorchModel.h"
 #include <ARA_Library/PlugIn/ARAPlug.h>
 
 using std::unique_ptr;
-using namespace juce;
 
 /**
  * @class AudioModification
@@ -40,9 +39,9 @@ class AudioModification : public juce::ARAAudioModification {
 public:
   AudioModification(juce::ARAAudioSource *audioSource,
                     ARA::ARAAudioModificationHostRef hostRef,
-                    const ARAAudioModification *optionalModificationToClone);
+                    const juce::ARAAudioModification *optionalModificationToClone);
 
-  void init(ARAAudioSource *audioSource);
+  void init(juce::ARAAudioSource *audioSource);
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
   std::string getSourceName();
@@ -51,13 +50,13 @@ public:
   bool getIsModified();
 
 private:
-  WebWave2Wave mModel;
+  TorchWave2Wave mModel;
 
   bool dimmed = false;
   bool mIsModified = false;
 
   std::string mAudioSourceName;
   int mSampleRate;
-  unique_ptr<ARAAudioSourceReader> mAudioSourceReader{nullptr};
+  unique_ptr<juce::ARAAudioSourceReader> mAudioSourceReader{nullptr};
   unique_ptr<juce::AudioBuffer<float>> mAudioBuffer{nullptr};
 };

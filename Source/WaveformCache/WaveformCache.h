@@ -27,9 +27,8 @@
 
 #include "../ARA/AudioModification.h"
 
-using namespace juce;
 
-struct WaveformCache : private ARAAudioSource::Listener {
+struct WaveformCache : private juce::ARAAudioSource::Listener {
   WaveformCache() : thumbnailCache(20) {}
 
   ~WaveformCache() override {
@@ -39,11 +38,11 @@ struct WaveformCache : private ARAAudioSource::Listener {
   }
 
   //==============================================================================
-  void willDestroyAudioSource(ARAAudioSource *audioSource) override {
+  void willDestroyAudioSource(juce::ARAAudioSource *audioSource) override {
     removeAudioSource(audioSource);
   }
 
-  AudioThumbnail &getOrCreateThumbnail(ARAAudioSource *audioSource,
+  juce::AudioThumbnail &getOrCreateThumbnail(juce::ARAAudioSource *audioSource,
                                        AudioModification *audioModification) {
     const auto iter = thumbnails.find(audioSource);
 
@@ -51,7 +50,7 @@ struct WaveformCache : private ARAAudioSource::Listener {
       return *iter->second;
 
     auto thumb =
-        std::make_unique<AudioThumbnail>(128, dummyManager, thumbnailCache);
+        std::make_unique<juce::AudioThumbnail>(128, dummyManager, thumbnailCache);
     auto &result = *thumb;
 
     ++hash;
@@ -60,7 +59,7 @@ struct WaveformCache : private ARAAudioSource::Listener {
                        audioSource->getSampleRate(), hash);
 
     else
-      thumb->setReader(new ARAAudioSourceReader(audioSource), hash);
+      thumb->setReader(new juce::ARAAudioSourceReader(audioSource), hash);
 
     audioSource->addListener(this);
     thumbnails.emplace(audioSource, std::move(thumb));
@@ -68,13 +67,13 @@ struct WaveformCache : private ARAAudioSource::Listener {
   }
 
 private:
-  void removeAudioSource(ARAAudioSource *audioSource) {
+  void removeAudioSource(juce::ARAAudioSource *audioSource) {
     audioSource->removeListener(this);
     thumbnails.erase(audioSource);
   }
 
-  int64 hash = 0;
-  AudioFormatManager dummyManager;
-  AudioThumbnailCache thumbnailCache;
-  std::map<ARAAudioSource *, unique_ptr<AudioThumbnail>> thumbnails;
+  juce::int64 hash = 0;
+  juce::AudioFormatManager dummyManager;
+  juce::AudioThumbnailCache thumbnailCache;
+  std::map<juce::ARAAudioSource *, unique_ptr<juce::AudioThumbnail>> thumbnails;
 };

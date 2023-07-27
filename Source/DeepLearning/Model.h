@@ -30,6 +30,12 @@ using std::any;
 using std::map;
 using std::string;
 
+namespace modelparams {
+  inline bool contains(const map<string, any> &params, const string &key) {
+    return params.find(key) != params.end();
+  }
+}
+
 /**
  * @class Model
  * @brief Abstract class for different types of deep learning processors.

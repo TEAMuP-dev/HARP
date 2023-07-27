@@ -23,7 +23,6 @@
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 
-using namespace juce;
 
 class TimeToViewScaling {
 public:
@@ -41,7 +40,7 @@ public:
 
   void zoom(double factor) {
     zoomLevelPixelPerSecond =
-        jlimit(minimumZoom, minimumZoom * 32, zoomLevelPixelPerSecond * factor);
+        juce::jlimit(minimumZoom, minimumZoom * 32, zoomLevelPixelPerSecond * factor);
     setZoomLevel(zoomLevelPixelPerSecond);
   }
 
@@ -61,5 +60,5 @@ private:
   static constexpr auto minimumZoom = 10.0;
 
   double zoomLevelPixelPerSecond = minimumZoom * 4;
-  ListenerList<Listener> listeners;
+  juce::ListenerList<Listener> listeners;
 };

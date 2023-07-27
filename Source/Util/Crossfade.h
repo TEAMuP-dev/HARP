@@ -22,7 +22,7 @@
 static void crossfade(const float *sourceA, const float *sourceB,
                       float aProportionAtStart, float aProportionAtFinish,
                       float *destinationBuffer, int numSamples) {
-  AudioBuffer<float> destination{&destinationBuffer, 1, numSamples};
+  juce::AudioBuffer<float> destination{&destinationBuffer, 1, numSamples};
   destination.copyFromWithRamp(0, 0, sourceA, numSamples, aProportionAtStart,
                                aProportionAtFinish);
   destination.addFromWithRamp(0, 0, sourceB, numSamples,

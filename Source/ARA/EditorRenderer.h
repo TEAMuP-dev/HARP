@@ -40,25 +40,25 @@
 using std::unique_ptr;
 
 // TODO: Documentation for readPlaybackRangeIntoBuffer.
-std::optional<Range<int64>> readPlaybackRangeIntoBuffer(
-    Range<double> playbackRange, const ARAPlaybackRegion *playbackRegion,
-    AudioBuffer<float> &buffer,
-    const std::function<AudioFormatReader *(ARAAudioSource *)> &getReader);
+std::optional<juce::Range<juce::int64>> readPlaybackRangeIntoBuffer(
+    juce::Range<double> playbackRange, const juce::ARAPlaybackRegion *playbackRegion,
+    juce::AudioBuffer<float> &buffer,
+    const std::function<juce::AudioFormatReader *(juce::ARAAudioSource *)> &getReader);
 
 /**
  * @class EditorRenderer
  * @brief TODO: Write brief class description.
  */
-class EditorRenderer : public ARAEditorRenderer,
-                       private ARARegionSequence::Listener {
+class EditorRenderer : public juce::ARAEditorRenderer,
+                       private juce::ARARegionSequence::Listener {
 public:
   EditorRenderer(ARA::PlugIn::DocumentController *documentController,
                  const PreviewState *previewStateIn,
                  ProcessingLockInterface &lockInterfaceIn);
   ~EditorRenderer() override;
 
-  void didAddPlaybackRegionToRegionSequence(ARARegionSequence *,
-                                            ARAPlaybackRegion *) override;
+  void didAddPlaybackRegionToRegionSequence(juce::ARARegionSequence *,
+                                            juce::ARAPlaybackRegion *) override;
   void didAddRegionSequence(ARA::PlugIn::RegionSequence *rs) noexcept override;
   void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
   void executeProcess(std::map<std::string, std::any> &params);
@@ -66,15 +66,15 @@ public:
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 
   void prepareToPlay(double sampleRateIn, int maximumExpectedSamplesPerBlock,
-                     int numChannels, AudioProcessor::ProcessingPrecision,
+                     int numChannels, juce::AudioProcessor::ProcessingPrecision,
                      AlwaysNonRealtime alwaysNonRealtime) override;
 
   void releaseResources() override;
   void reset() override;
 
   bool processBlock(
-      AudioBuffer<float> &buffer, AudioProcessor::Realtime realtime,
-      const AudioPlayHead::PositionInfo &positionInfo) noexcept override;
+      juce::AudioBuffer<float> &buffer, juce::AudioProcessor::Realtime realtime,
+      const juce::AudioPlayHead::PositionInfo &positionInfo) noexcept override;
 
   using ARAEditorRenderer::processBlock;
 
@@ -85,16 +85,16 @@ private:
   const PreviewState *previewState = nullptr;
   AsyncConfigurationCallback asyncConfigCallback;
   double lastPreviewTime = 0.0;
-  ARAPlaybackRegion *lastPlaybackRegion = nullptr;
+  juce::ARAPlaybackRegion *lastPlaybackRegion = nullptr;
   bool lastPreviewDimmed = false;
   bool wasPreviewing = false;
-  unique_ptr<AudioBuffer<float>> previewBuffer;
+  unique_ptr<juce::AudioBuffer<float>> previewBuffer;
   Looper previewLooper;
 
   double sampleRate = 48000.0;
-  SharedResourcePointer<SharedTimeSliceThread> timeSliceThread;
-  std::map<ARAAudioSource *, unique_ptr<BufferingAudioReader>>
+  juce::SharedResourcePointer<SharedTimeSliceThread> timeSliceThread;
+  std::map<juce::ARAAudioSource *, unique_ptr<juce::BufferingAudioReader>>
       audioSourceReaders;
 
-  std::set<ARARegionSequence *> regionSequences;
+  std::set<juce::ARARegionSequence *> regionSequences;
 };

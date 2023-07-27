@@ -20,12 +20,28 @@
 
 #include "TorchModel.h"
 
+namespace {
+  std::string size2string(torch::IntArrayRef size) {
+    std::stringstream ss;
+    ss << "(";
+    for (int i = 0; i < size.size(); i++) {
+      ss << size[i];
+      if (i < size.size() - 1) {
+        ss << ", ";
+      }
+    }
+    ss << ")";
+    return ss.str();
+  }
+}
+
+
 // Implementation of TorchModel methods
 
 TorchModel::TorchModel() : m_model{nullptr}, m_loaded{false} {}
 
 bool TorchModel::load(const map<string, any> &params) {
-  if (!params.contains("modelPath")) {
+  if (modelparams::contains(params, "modelPath")) {
     return false;
   }
   auto modelPath = any_cast<string>(params.at("modelPath"));
