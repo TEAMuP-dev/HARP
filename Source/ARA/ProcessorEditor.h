@@ -23,10 +23,12 @@
 
 #pragma once
 
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "../UI/DocumentView.h"
 #include "../UI/ToolBarStyle.h"
 #include "AudioProcessorImpl.h"
 #include "EditorRenderer.h"
+#include "AudioModification.h"  
 
 /**
  * @class TensorJuceProcessorEditor
@@ -67,16 +69,27 @@ public:
   void resized() override;
 
 private:
+
+  void InitGenericDial(
+    juce::Slider &dial,
+    const juce::String& valueSuffix, 
+    const juce::Range<double> range, 
+    double step_size,
+    float value
+  );
+
+private:
   unique_ptr<Component> documentView;
-  juce::TextButton testButton;
+  juce::TextButton loadModelButton;
+  juce::TextButton processButton;
 
-  juce::Slider temp1Dial;
-  juce::Slider temp2Dial;
-  juce::Slider stepsDial;
-  juce::Slider phintDial;
-  juce::Slider pwidthDial;
+  juce::Slider dialA;
+  juce::Slider dialB;
+  juce::Slider dialC;
+  juce::Slider dialD;
 
-  juce::ComboBox modeBox;
+
+  std::unique_ptr<juce::FileChooser> modelPathChooser {nullptr};
 
   ToolbarSliderStyle toolbarSliderStyle;
   ButtonLookAndFeel buttonLookAndFeel;

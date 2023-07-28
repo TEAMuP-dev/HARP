@@ -39,18 +39,20 @@ class AudioModification : public juce::ARAAudioModification {
 public:
   AudioModification(juce::ARAAudioSource *audioSource,
                     ARA::ARAAudioModificationHostRef hostRef,
-                    const juce::ARAAudioModification *optionalModificationToClone);
-
-  void init(juce::ARAAudioSource *audioSource);
+                    const juce::ARAAudioModification *optionalModificationToClone, 
+                    std::shared_ptr<TorchWave2Wave> model);
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
   std::string getSourceName();
+
   void process(std::map<std::string, std::any> &params);
+  void load(std::map<std::string, std::any> &params);
+
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
 
 private:
-  TorchWave2Wave mModel;
+  std::shared_ptr<TorchWave2Wave> mModel;
 
   bool dimmed = false;
   bool mIsModified = false;

@@ -130,16 +130,31 @@ void EditorRenderer::didAddPlaybackRegion(
 void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
   DBG("EditorRenderer::executeProcess executing process");
 
-  auto myCallback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
-    auto audioModification =
+  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+    auto modification =
         playbackRegion->getAudioModification<AudioModification>();
     std::cout << "EditorRenderer::processing playbackRegion "
-              << audioModification->getSourceName() << std::endl;
-    audioModification->process(params);
+              << modification->getSourceName() << std::endl;
+    modification->process(params);
     return true;
   };
 
-  forEachPlaybackRegion(myCallback);
+  forEachPlaybackRegion(callback);
+}
+
+void EditorRenderer::executeLoad(std::map<std::string, std::any> &params) {
+  DBG("EditorRenderer::executeLoad executing load");
+
+  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+    auto modification = 
+        playbackRegion->getAudioModification<AudioModification>();
+    std::cout << "EditorRenderer::loading playbackRegion "
+              << modification->getSourceName() << std::endl;
+    modification->load(params);
+    return true;
+  };
+
+  forEachPlaybackRegion(callback);
 }
 
 template <typename Callback>

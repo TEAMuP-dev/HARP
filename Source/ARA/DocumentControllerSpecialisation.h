@@ -26,6 +26,7 @@
 
 #include "EditorRenderer.h"
 #include "PlaybackRenderer.h"
+#include "../DeepLearning/TorchModel.h"
 
 #include "../Util/PreviewState.h"
 
@@ -84,6 +85,7 @@ protected:
 
 private:
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
+  std::shared_ptr<TorchWave2Wave> mModel; ///< Model for audio processing.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 };

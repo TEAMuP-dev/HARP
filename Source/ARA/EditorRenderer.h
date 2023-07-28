@@ -62,6 +62,7 @@ public:
   void didAddRegionSequence(ARA::PlugIn::RegionSequence *rs) noexcept override;
   void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
   void executeProcess(std::map<std::string, std::any> &params);
+  void executeLoad(std::map<std::string, std::any> &params);
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 

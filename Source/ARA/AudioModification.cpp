@@ -30,38 +30,20 @@
  */
 AudioModification::AudioModification(
     juce::ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
-    const ARAAudioModification *optionalModificationToClone)
-    : ARAAudioModification(audioSource, hostRef, optionalModificationToClone) {
+    const ARAAudioModification *optionalModificationToClone, 
+    std::shared_ptr<TorchWave2Wave> model
+    )
+    : ARAAudioModification(audioSource, hostRef, optionalModificationToClone), 
+      mModel(model) {
 
   DBG("AudioModification::created");
   DBG("AudioModification::the audio source is " << audioSource->getName());
-
-  init(audioSource);
-}
-
-/**
- * @brief Initialization deep learning model for audio modification
- *
- * @param audioSource Pointer to the ARAAudioSource to perform processing on
- */
-void AudioModification::init(juce::ARAAudioSource *audioSource) {
-  DBG("loading model");
-
-  // map<string, any> params {{"path",
-  // "/Users/hugo/projects/plugin_sandbox/reduceamp.pt"}};
-  map<string, any> params{{"url", string("http://127.0.0.1:7860")},
-                          {"api_name", string("/api/predict/")}};
-  if (!mModel.load(params)) { // change model here
-    DBG("failed to load model");
-  } else {
-    DBG("model loaded");
-  }
-
   DBG("AudioModification:: create reader for " << audioSource->getName());
   mAudioSourceReader = std::make_unique<juce::ARAAudioSourceReader>(audioSource);
   mSampleRate = audioSource->getSampleRate();
   mAudioSourceName = audioSource->getName();
 }
+
 
 bool AudioModification::isDimmed() const { return dimmed; }
 
@@ -75,7 +57,7 @@ std::string AudioModification::getSourceName() { return mAudioSourceName; }
  * @param params Map of parameters for learner
  */
 void AudioModification::process(std::map<std::string, std::any> &params) {
-  if (!mModel.ready()) {
+  if (!mModel->ready()) {
     return;
   }
 
@@ -95,12 +77,18 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
     // reading into audio buffer
     mAudioSourceReader->read(mAudioBuffer.get(), 0,
                              static_cast<int>(numSamples), 0, true, true);
-    mModel.process(mAudioBuffer.get(), sampleRate);
+    mModel->process(mAudioBuffer.get(), sampleRate, params);
 
     // connect the modified buffer to the source
 
     mIsModified = true;
   }
+}
+
+void AudioModification::load(std::map<std::string, std::any> &params) {
+  // get the modelPath, pass it to the model
+  DBG("AudioModification::load");
+  mModel->load(params);
 }
 
 juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {

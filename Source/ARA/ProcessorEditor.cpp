@@ -23,6 +23,20 @@
 
 #include "ProcessorEditor.h"
 
+void TensorJuceProcessorEditor::InitGenericDial(
+  juce::Slider &dial, const juce::String& valueSuffix, 
+  const juce::Range<double> range, double step_size,
+  float value
+) {
+  dial.setLookAndFeel(&toolbarSliderStyle);
+  dial.setSliderStyle(Slider::Rotary);
+  dial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
+  dial.setTextValueSuffix(valueSuffix);
+  dial.setRange(range, step_size);
+  dial.setValue(value);
+  dial.addListener(this);
+}
+
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
     : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {
@@ -30,108 +44,98 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   if (auto *editorView = getARAEditorView())
     documentView = std::make_unique<DocumentView>(*editorView, p.playHeadState);
   mEditorRenderer = er;
-  addAndMakeVisible(documentView.get());
+  if (documentView != nullptr) {
+    addAndMakeVisible(documentView.get());
+  }
 
   // initialize your button
-  testButton.setLookAndFeel(&buttonLookAndFeel);
-  testButton.setButtonText("generate");
-  testButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
-  testButton.setColour(TextButton::textColourOffId, Colours::black);
-  testButton.setColour(TextButton::buttonOnColourId, Colours::grey);
-  testButton.setColour(TextButton::textColourOnId, Colours::black);
-  testButton.addListener(this);
-  addAndMakeVisible(testButton);
+  processButton.setLookAndFeel(&buttonLookAndFeel);
+  processButton.setButtonText("process");
+  processButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
+  processButton.setColour(TextButton::textColourOffId, Colours::black);
+  processButton.setColour(TextButton::buttonOnColourId, Colours::grey);
+  processButton.setColour(TextButton::textColourOnId, Colours::black);
+  processButton.addListener(this);
+  addAndMakeVisible(processButton);
 
-  // initalize knobs
-  temp1Dial.setLookAndFeel(&toolbarSliderStyle);
-  temp1Dial.setSliderStyle(Slider::Rotary);
-  temp1Dial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  temp1Dial.setTextValueSuffix("t0: ");
-  temp1Dial.setRange(0.0, 2.0, 0.01);
-  temp1Dial.setValue(0.9);
-  temp1Dial.addListener(this);
-  addAndMakeVisible(temp1Dial);
 
-  temp2Dial.setLookAndFeel(&toolbarSliderStyle);
-  temp2Dial.setSliderStyle(Slider::Rotary);
-  temp2Dial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  temp2Dial.setTextValueSuffix("t1: ");
-  temp2Dial.setRange(0.0, 2.0, 0.01);
-  temp2Dial.setValue(1.2);
-  temp2Dial.addListener(this);
-  addAndMakeVisible(temp2Dial);
+  // load model button
+  loadModelButton.setLookAndFeel(&buttonLookAndFeel);
+  loadModelButton.setButtonText("Load model");
+  loadModelButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
+  loadModelButton.setColour(TextButton::textColourOffId, Colours::black);
+  loadModelButton.setColour(TextButton::buttonOnColourId, Colours::grey);
+  loadModelButton.setColour(TextButton::textColourOnId, Colours::black);
+  loadModelButton.addListener(this);
+  addAndMakeVisible(loadModelButton);
 
-  stepsDial.setLookAndFeel(&toolbarSliderStyle);
-  stepsDial.setSliderStyle(Slider::Rotary);
-  stepsDial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  stepsDial.setTextValueSuffix("steps: ");
-  stepsDial.setRange(12, 64, 1);
-  stepsDial.setValue(36);
-  stepsDial.addListener(this);
-  addAndMakeVisible(stepsDial);
 
-  phintDial.setLookAndFeel(&toolbarSliderStyle);
-  phintDial.setSliderStyle(Slider::Rotary);
-  phintDial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  phintDial.setTextValueSuffix("phint: ");
-  phintDial.setRange(1, 256, 1);
-  phintDial.setValue(13);
-  phintDial.addListener(this);
-  addAndMakeVisible(phintDial);
+  // initialize knobs
+  InitGenericDial(dialA, "A", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  addAndMakeVisible(dialA);
 
-  pwidthDial.setLookAndFeel(&toolbarSliderStyle);
-  pwidthDial.setSliderStyle(Slider::Rotary);
-  pwidthDial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  pwidthDial.setTextValueSuffix("pwidth: ");
-  pwidthDial.setRange(0, 16, 1);
-  pwidthDial.setValue(0);
-  pwidthDial.addListener(this);
-  addAndMakeVisible(pwidthDial);
+  InitGenericDial(dialB, "B", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  addAndMakeVisible(dialB);
 
-  modeBox.setLookAndFeel(&comboBoxLookAndFeel);
-  modeBox.addItem("daydream", 1);
-  modeBox.addItem("deep sleep", 2);
-  modeBox.setSelectedId(1);
-  modeBox.addListener(this);
-  addAndMakeVisible(modeBox);
+  InitGenericDial(dialC, "C", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  addAndMakeVisible(dialC);
+
+  InitGenericDial(dialD, "D", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  addAndMakeVisible(dialD);
 
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
   setSize(800, 300);
+
 }
 
 void TensorJuceProcessorEditor::buttonClicked(Button *button) {
-  if (button == &testButton) {
+  if (button == &processButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
 
     std::map<std::string, std::any> params = {
-        {"modeMode", modeBox.getText()},
-        {"temp1", temp1Dial.getValue()},
-        {"temp2", temp2Dial.getValue()},
-        {"phint", phintDial.getValue()},
-        {"pwidth", pwidthDial.getValue()}};
+        {"A", dialA.getValue()},
+        {"B", dialB.getValue()},
+        {"C", dialC.getValue()},
+        {"D", dialD.getValue()}};
     mEditorRenderer->executeProcess(params);
+  }
+
+  if (button == &loadModelButton) {
+    DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
+
+    modelPathChooser = std::make_unique<FileChooser> (
+      "Please select the model file to load...",
+      File::getSpecialLocation(File::userHomeDirectory),
+      "*.pt"
+    );
+
+    auto folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+
+    modelPathChooser->launchAsync (folderChooserFlags, [this] (const FileChooser& chooser)
+    {
+      File modelPath (chooser.getResult());
+
+      DBG("got model path: " + modelPath.getFullPathName());
+      // if  the file doesn't exist, return
+      if (!modelPath.existsAsFile()) {
+        return;
+      }
+
+      // convert modelPath to a string
+      std::map<std::string, std::any> params = {
+        {"modelPath", modelPath.getFullPathName().toStdString()}
+      };
+      mEditorRenderer->executeLoad(params);
+    });
   }
 }
 
 void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *box) {
-  if (box == &modeBox) {
-    DBG("TensorJuceProcessorEditor::comboBoxChanged mode changed: "
-        << box->getSelectedId());
-  }
 }
 
 void TensorJuceProcessorEditor::sliderValueChanged(Slider *slider) {
-  if (slider == &temp1Dial) {
-    DBG("TensorJuceProcessorEditor::sliderValueChanged temp1 dial value:  "
-        << slider->getValue());
-  }
-
-  else if (slider == &temp2Dial) {
-    DBG("TensorJuceProcessorEditor::sliderValueChanged temp2 dial value:  "
-        << slider->getValue());
-  }
 }
 
 void TensorJuceProcessorEditor::paint(Graphics &g) {
@@ -146,37 +150,36 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
   }
 }
 
+
 void TensorJuceProcessorEditor::resized() {
-  int toolbarHeight = 70;
-  int knobSize = 60;
-  int buttonWidth = 100;
-  int buttonHeight = 40;
-  int comboWidth = 120;
-  int comboHeight = 40;
+  auto area = getLocalBounds();
 
-  auto buttonArea = getLocalBounds().removeFromTop(toolbarHeight);
-  int xCenter = (buttonArea.getWidth()) / 2;
-  int yCenter = (toolbarHeight) / 2;
+  auto topArea = area.removeFromTop(area.getHeight() * 0.2);  // use the topArea for the mainBox layout
 
-  // testButton.setBounds(xCenter-buttonWidth/2 - (buttonWidth/2 + knobSize),
-  // yCenter-buttonHeight/2, buttonWidth, buttonHeight);
-  modeBox.setBounds(xCenter - comboWidth - knobSize, yCenter - comboHeight / 2,
-                    comboWidth, comboHeight);
-  temp1Dial.setBounds(xCenter - knobSize / 2, yCenter - knobSize / 2, knobSize,
-                      knobSize);
-  temp2Dial.setBounds(xCenter - knobSize / 2 + knobSize, yCenter - knobSize / 2,
-                      knobSize, knobSize);
-  stepsDial.setBounds(xCenter - knobSize / 2 + (2 * knobSize),
-                      yCenter - knobSize / 2, knobSize, knobSize);
-  phintDial.setBounds(xCenter - knobSize / 2 + (3 * knobSize),
-                      yCenter - knobSize / 2, knobSize, knobSize);
-  pwidthDial.setBounds(xCenter - knobSize / 2 + (4 * knobSize),
-                       yCenter - knobSize / 2, knobSize, knobSize);
-  testButton.setBounds(xCenter - buttonWidth / 2 +
-                           (buttonWidth / 2 + 5 * knobSize),
-                       yCenter - buttonHeight / 2, buttonWidth, buttonHeight);
+  juce::FlexBox knobBox;
+  knobBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+  knobBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween; 
 
-  if (documentView != nullptr)
-    documentView->setBounds(0, toolbarHeight, getWidth(),
-                            getHeight() - toolbarHeight);
+  knobBox.items.add(juce::FlexItem(dialA).withFlex(1));
+  knobBox.items.add(juce::FlexItem(dialB).withFlex(1));
+  knobBox.items.add(juce::FlexItem(dialC).withFlex(1));
+  knobBox.items.add(juce::FlexItem(dialD).withFlex(1));
+
+  juce::FlexBox buttonBox;
+  buttonBox.flexDirection = juce::FlexBox::Direction::column;
+  buttonBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+
+  buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
+  buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
+
+  juce::FlexBox mainBox;
+  mainBox.flexDirection = juce::FlexBox::Direction::row;
+  mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
+  mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
+
+  mainBox.performLayout(topArea);  // use topArea instead of area
+
+  if (documentView != nullptr) {
+      documentView->setBounds(area);  // this should set the bounds correctly
+  }
 }

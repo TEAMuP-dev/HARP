@@ -67,6 +67,7 @@ public:
 protected:
   unique_ptr<Module> m_model;
   bool m_loaded;
+  mutable std::mutex m_mutex;
 };
 
 /**
@@ -78,7 +79,7 @@ class TorchWave2Wave : public TorchModel {
 public:
   TorchWave2Wave();
 
-  void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate) const;
+  void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate,  std::map<string, any> &params) const;
 };
 
 /**

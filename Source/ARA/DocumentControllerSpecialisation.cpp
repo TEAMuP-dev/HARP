@@ -37,9 +37,15 @@ ARAAudioModification *
 TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
     ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
     const ARAAudioModification *optionalModificationToClone) noexcept {
+    
+  if (mModel == nullptr) {
+    mModel.reset(new TorchWave2Wave());
+  }
   return new AudioModification(
       audioSource, hostRef,
-      static_cast<const AudioModification *>(optionalModificationToClone));
+      static_cast<const AudioModification *>(optionalModificationToClone), 
+      mModel
+    );
 }
 
 ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
