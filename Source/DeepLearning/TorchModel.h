@@ -82,15 +82,3 @@ public:
   void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate,  std::map<string, any> &params) const;
 };
 
-/**
- * @class Resampler
- * @brief Class that represents a Resampler inherited from TorchModel.
- */
-class Resampler : public TorchModel {
-public:
-  Resampler();
-
-  //! resample a waveform tensor. Waveform should be shape (channels, samples)
-  torch::Tensor resample(const torch::Tensor &waveform, int sampleRateIn,
-                         int sampleRateOut) const;
-};

@@ -57,10 +57,16 @@ bool TorchModel::load(const map<string, any> &params) {
     m_loaded = true;
     DBG("Model loaded");
 
+    // print model attributes
+    DBG("Model attributes:");
+    for (const auto &attr : m_model->named_attributes()) {
+      DBG("Name: " + attr.name);
+      // DBG("Type: " + attr.value().);
+    }
+
   } catch (const c10::Error &e) {
     std::cerr << "Error loading the model\n";
     std::cerr << e.what() << "\n";
-    DBG(e.what());
     return false;
   }
   return true;
@@ -98,7 +104,7 @@ bool TorchModel::to_buffer(const torch::Tensor &src_tensor,
   return true;
 }
 
-// Implementation of TorchWave2Wave methods
+// Implementation of TorchWave2Wave methodss
 
 TorchWave2Wave::TorchWave2Wave() {}
 
@@ -106,68 +112,51 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
                              int sampleRate, std::map<string, any> &params) const {
 
   std::lock_guard<std::mutex> lock(m_mutex);
+
   // build our IValue (mixdown to mono for now)
-  // TODO: support multichannel
+  // TODO: support multichannel, right now we're downmixing to mono
   IValue input = {
     TorchModel::to_tensor(*bufferToProcess).mean(0, true)
   };
 
-  IValue parameters = {
-      torch::tensor({
-        any_cast<double>(params.at("A")), 
-        any_cast<double>(params.at("B")),
-        any_cast<double>(params.at("C")),
-        any_cast<double>(params.at("D"))
-    })
-  };
+  // create a dict for our parameters
+  c10::Dict<string, torch::Tensor> parameters; 
+  // hardcode the gain parameter for now, but eventually we'd like to do this dynamically
+  parameters.insert("gain", torch::tensor({any_cast<double>(params.at("A"))}));
 
-  DBG("built input tensor with shape "
+  // print input tensor shape
+  DBG("built input audio tensor with shape "
       << size2string(input.toTensor().sizes()));
-    
-  DBG("built params with shape "
-      << size2string(parameters.toTensor().sizes()));
+
+  // access the model card (metadata)
+  auto card = m_model->attr("model_card").toObject();
 
   // forward pass
   try {
-    auto output = forward({input, parameters}).toTensor();
+    // resampling routine
+    DBG(
+      "resampling audio from " << sampleRate << " Hz" << 
+      " to " << card->getAttr("sample_rate").toInt(); << " Hz"
+    );
+    auto resampled = m_model->get_method("resample")({input, sampleRate}).toTensor();
+
+    // perform the forward pass
+    DBG("forward pass...");
+     auto output = forward({resampled, parameters}).toTensor();
     DBG("got output tensor with shape " << size2string(output.sizes()));
 
     // we're expecting audio out
-
+    DBG("converting output tensor to audio buffer");
     TorchModel::to_buffer(output, *bufferToProcess);
     DBG("got output buffer with shape " << bufferToProcess->getNumChannels()
                                         << " x "
                                         << bufferToProcess->getNumSamples());
     return;
 
-  } catch (const c10::Error &e) {
-    std::cerr << "Error processing the waveform\n";
-    std::cerr << e.what() << "\n";
-    DBG(e.what());
+  } catch (const char *msg) {
+    std::cerr<<"Error processing audio: " << msg << "\n";
+    DBG("Error processing audio: " << msg);
     return;
   }
-
 }
 
-// Implementation of Resampler methods
-
-Resampler::Resampler() {}
-
-torch::Tensor Resampler::resample(const torch::Tensor &waveform,
-                                  int sampleRateIn, int sampleRateOut) const {
-  std::lock_guard<std::mutex> lock(m_mutex);
-  // early exit if the sample rates are the same
-  if (sampleRateIn == sampleRateOut)
-    return waveform;
-
-  // set up inputs
-  std::vector<torch::jit::IValue> inputs = {waveform,
-                                            static_cast<float>(sampleRateIn),
-                                            static_cast<float>(sampleRateOut)};
-  try {
-    return m_model->forward(inputs).toTensor();
-  } catch (const c10::Error &e) {
-    std::cerr << "Error resampling the waveform\n";
-    return waveform;
-  };
-}
