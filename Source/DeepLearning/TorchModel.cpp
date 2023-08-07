@@ -142,7 +142,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
 
     // perform the forward pass
     DBG("forward pass...");
-     auto output = forward({resampled, parameters}).toTensor();
+    auto output = forward({resampled, parameters}).toTensor();
     DBG("got output tensor with shape " << size2string(output.sizes()));
 
     // we're expecting audio out
