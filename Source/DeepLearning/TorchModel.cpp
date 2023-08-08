@@ -61,7 +61,7 @@ bool TorchModel::load(const map<string, any> &params) {
     DBG("Model attributes:");
     for (const auto &attr : m_model->named_attributes()) {
       DBG("Name: " + attr.name);
-      // DBG("Type: " + attr.value().);
+      DBG("Type: " + attr.value().);
     }
 
   } catch (const c10::Error &e) {
@@ -134,10 +134,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   // forward pass
   try {
     // resampling routine
-    DBG(
-      "resampling audio from " << sampleRate << " Hz" << 
-      " to " << card->getAttr("sample_rate").toInt(); << " Hz"
-    );
+    DBG("resampling audio from " << sampleRate << " Hz" << " to " << card->getAttr("sample_rate").toInt() << " Hz");
     auto resampled = m_model->get_method("resample")({input, sampleRate}).toTensor();
 
     // perform the forward pass

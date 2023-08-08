@@ -4,7 +4,7 @@ project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # defines SourceFiles
@@ -33,11 +33,11 @@ else()
 
 endif()
 
-add_subdirectory(pybind11)
+# add_subdirectory(pybind11)
 
 
 
-add_subdirectory(tracktion_engine/modules)
+# add_subdirectory(tracktion_engine/modules)
 
 juce_add_plugin(AudioPluginExampleCMAKE64
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -106,7 +106,7 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        tracktion::tracktion_engine
+        # tracktion::tracktion_engine
 
         # tractkion::tracktion_core
         # tracktion::3rd_party
@@ -118,7 +118,7 @@ target_link_libraries(AudioPluginExampleCMAKE64
         juce::juce_recommended_warning_flags
         ${TORCH_LIBRARIES}
 
-        pybind11::embed
+        # pybind11::embed
         )
 # set_property(TARGET AudioPluginExampleCMAKE64 PROPERTY CXX_STANDARD 17)
 
