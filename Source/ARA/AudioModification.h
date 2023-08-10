@@ -51,6 +51,8 @@ public:
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
 
+  std::shared_ptr<TorchWave2Wave> getModel() {return mModel;};
+
 private:
   std::shared_ptr<TorchWave2Wave> mModel;
 

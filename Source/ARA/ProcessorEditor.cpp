@@ -83,6 +83,9 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   InitGenericDial(dialD, "D", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
   addAndMakeVisible(dialD);
 
+  // model card component
+  addAndMakeVisible(modelCardComponent);
+
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
@@ -127,9 +130,14 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
       std::map<std::string, std::any> params = {
         {"modelPath", modelPath.getFullPathName().toStdString()}
       };
+      mEditorRenderer->getModel()->addListener(this);
       mEditorRenderer->executeLoad(params);
     });
   }
+}
+
+void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
+  modelCardComponent.setModelCard(card);
 }
 
 void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *box) {
@@ -174,6 +182,7 @@ void TensorJuceProcessorEditor::resized() {
 
   juce::FlexBox mainBox;
   mainBox.flexDirection = juce::FlexBox::Direction::row;
+  mainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.3));  // Adjust flex size according to your need
   mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
   mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
 

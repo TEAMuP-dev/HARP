@@ -41,6 +41,19 @@ using torch::jit::IValue;
 using torch::jit::script::Module;
 
 
+struct ModelCard {
+  int sampleRate;
+  std::string name;
+  std::string description;
+  std::string author;
+  std::vector<std::string> tags;
+};
+
+class ModelCardListener
+{
+public:
+    virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
+};
 
 /**
  * @class TorchModel
@@ -56,6 +69,9 @@ public:
   //! checks if a model is loaded onto memory.
   bool ready() const override;
 
+  //! provides access to the model card (metadata)
+  ModelCard &card();
+
   //! forward pass
   IValue forward(const std::vector<IValue> &inputs) const;
 
@@ -64,8 +80,30 @@ public:
   static bool to_buffer(const torch::Tensor &src_tensor,
                         juce::AudioBuffer<float> &dest_buffer);
 
+public:
+  // modelcard listener
+  void addListener(ModelCardListener* listener) 
+  {
+      listeners.add(listener);
+  }
+
+  void removeListener(ModelCardListener* listener) 
+  {
+      listeners.remove(listener);
+  }
+
+protected: 
+  void broadcastModelCardLoaded() 
+  {
+    listeners.call([this](ModelCardListener& l) { l.modelCardLoaded(m_card); });
+  }
+
+private:
+  juce::ListenerList<ModelCardListener> listeners;
+
 protected:
   unique_ptr<Module> m_model;
+  ModelCard m_card;
   bool m_loaded;
   mutable std::mutex m_mutex;
 };

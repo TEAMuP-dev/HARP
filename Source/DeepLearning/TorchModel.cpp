@@ -61,14 +61,28 @@ bool TorchModel::load(const map<string, any> &params) {
     DBG("Model attributes:");
     for (const auto &attr : m_model->named_attributes()) {
       DBG("Name: " + attr.name);
-      // DBG("Type: " + attr.value().);
     }
 
-  } catch (const c10::Error &e) {
+    // populate the model card
+    auto pycard = m_model->attr("model_card").toObject();
+
+    m_card.name = pycard->getAttr("name").toStringRef();
+    m_card.description = pycard->getAttr("description").toStringRef();
+    m_card.author = pycard->getAttr("author").toStringRef();
+    m_card.sampleRate = pycard->getAttr("sample_rate").toInt();
+    for (const auto &tag : pycard->getAttr("tags").toListRef()) {
+      m_card.tags.push_back(tag.toStringRef());
+    }
+    
+    // we're done loading the model card, broadcast it
+    broadcastModelCardLoaded();
+
+  } catch (const char *e) {
     std::cerr << "Error loading the model\n";
-    std::cerr << e.what() << "\n";
+    std::cerr << e << "\n";
     return false;
   }
+
   return true;
 }
 
@@ -128,15 +142,12 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   DBG("built input audio tensor with shape "
       << size2string(input.toTensor().sizes()));
 
-  // access the model card (metadata)
-  auto card = m_model->attr("model_card").toObject();
-
   // forward pass
   try {
     // resampling routine
     DBG(
       "resampling audio from " << sampleRate << " Hz" << 
-      " to " << card->getAttr("sample_rate").toInt(); << " Hz"
+      " to " << m_card.sampleRate << " Hz"
     );
     auto resampled = m_model->get_method("resample")({input, sampleRate}).toTensor();
 

@@ -288,6 +288,8 @@ void EditorRenderer::configure() {
           *timeSliceThread,
           std::max(4 * maximumExpectedSamplesPerBlock, (int)sampleRate));
     }
+    
+    model = playbackRegion->template getAudioModification<AudioModification>()->getModel();
 
     return true;
   });

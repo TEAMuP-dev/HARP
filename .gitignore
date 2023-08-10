@@ -37,3 +37,5 @@ build*/
 libtorch/
 
 .DS_Store
+
+testproject
