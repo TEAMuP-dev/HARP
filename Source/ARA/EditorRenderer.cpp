@@ -142,14 +142,18 @@ void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
   forEachPlaybackRegion(callback);
 }
 
-void EditorRenderer::executeLoad(std::map<std::string, std::any> &params) {
+void EditorRenderer::executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> widgetCallback ) { //std::function<void(std::unique_ptr<Module>&)> widgetCallback
   DBG("EditorRenderer::executeLoad executing load");
 
-  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+  auto callback = [&params, widgetCallback](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+    // get the current active ProcessorEditor and cast it to TensorJuceProcessorEditor
+    // auto processorEditor = getActiveEditor(); // dynamic_cast<TensorJuceProcessorEditor *>(
     auto modification = 
         playbackRegion->getAudioModification<AudioModification>();
     std::cout << "EditorRenderer::loading playbackRegion "
               << modification->getSourceName() << std::endl;
+    // modification.provideTheEditor(processorEditor);
+    modification->sendTheCallbackToTorchModel(widgetCallback);
     modification->load(params);
     return true;
   };

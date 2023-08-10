@@ -36,7 +36,8 @@
 #include "../Util/PreviewState.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
-
+// #include "ProcessorEditor.h"
+// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 using std::unique_ptr;
 
 // TODO: Documentation for readPlaybackRangeIntoBuffer.
@@ -62,7 +63,7 @@ public:
   void didAddRegionSequence(ARA::PlugIn::RegionSequence *rs) noexcept override;
   void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
   void executeProcess(std::map<std::string, std::any> &params);
-  void executeLoad(std::map<std::string, std::any> &params);
+  void executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> callback); //
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 

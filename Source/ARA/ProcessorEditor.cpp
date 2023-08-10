@@ -22,6 +22,8 @@
  */
 
 #include "ProcessorEditor.h"
+// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
+
 
 void TensorJuceProcessorEditor::InitGenericDial(
   juce::Slider &dial, const juce::String& valueSuffix, 
@@ -39,7 +41,7 @@ void TensorJuceProcessorEditor::InitGenericDial(
 
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
-    : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {
+    : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p), resizedFlag(false) {
 
   if (auto *editorView = getARAEditorView())
     documentView = std::make_unique<DocumentView>(*editorView, p.playHeadState);
@@ -70,19 +72,20 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   addAndMakeVisible(loadModelButton);
 
 
-  // initialize knobs
-  InitGenericDial(dialA, "A", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
-  addAndMakeVisible(dialA);
+  // // initialize knobs
+  // InitGenericDial(dialA, "A", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialA);
 
-  InitGenericDial(dialB, "B", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
-  addAndMakeVisible(dialB);
+  // InitGenericDial(dialB, "B", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialB);
 
-  InitGenericDial(dialC, "C", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
-  addAndMakeVisible(dialC);
+  // InitGenericDial(dialC, "C", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialC);
 
-  InitGenericDial(dialD, "D", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
-  addAndMakeVisible(dialD);
+  // InitGenericDial(dialD, "D", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialD);
 
+  // createDynamicUI();
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
@@ -90,17 +93,39 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
 
 }
 
-void TensorJuceProcessorEditor::buttonClicked(Button *button) {
-  if (button == &processButton) {
-    DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
+void TensorJuceProcessorEditor::createDynamicUI(){
+  int numDials = 5;
+  // for (int i = 0; i < numDials; i++) {
+  //   juce::Slider dial = new juce::Slider();
+  //   // InitGenericDial(*dial, "dial_" + std::to_string(i), juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  //   addAndMakeVisible(dial);
+  //   dials.push_back(dial);
+  // }
+  for (int i = 0; i < numDials; ++i)
+    {
+        // Create a new unique_ptr pointing to a new Slider object
+        std::unique_ptr<juce::Slider> slider = std::make_unique<juce::Slider>();
 
-    std::map<std::string, std::any> params = {
-        {"A", dialA.getValue()},
-        {"B", dialB.getValue()},
-        {"C", dialC.getValue()},
-        {"D", dialD.getValue()}};
-    mEditorRenderer->executeProcess(params);
-  }
+        // Customize the slider properties if needed
+        slider->setSliderStyle(juce::Slider::LinearHorizontal);
+        slider->setRange(0.0, 1.0);
+        slider->addListener(this);
+        addAndMakeVisible(*slider);
+        // Add the slider to the vector
+        dials.push_back(std::move(slider));
+    }
+}
+void TensorJuceProcessorEditor::buttonClicked(Button *button) {
+  // if (button == &processButton) {
+  //   DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
+
+  //   std::map<std::string, std::any> params = {
+  //       {"A", dialA.getValue()},
+  //       {"B", dialB.getValue()},
+  //       {"C", dialC.getValue()},
+  //       {"D", dialD.getValue()}};
+  //   mEditorRenderer->executeProcess(params);
+  // }
 
   if (button == &loadModelButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
@@ -127,8 +152,10 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
       std::map<std::string, std::any> params = {
         {"modelPath", modelPath.getFullPathName().toStdString()}
       };
-      mEditorRenderer->executeLoad(params);
+      // first argument is params, second is an empty lambda that takes std::string and returns void
+      mEditorRenderer->executeLoad(params, [](std::string s){}); // &TensorJuceProcessorEditor::creatingTheWidgets
     });
+    creatingTheWidgets("peritwmata");
   }
 }
 
@@ -154,32 +181,75 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 void TensorJuceProcessorEditor::resized() {
   auto area = getLocalBounds();
 
-  auto topArea = area.removeFromTop(area.getHeight() * 0.2);  // use the topArea for the mainBox layout
+  
+    auto topArea = area.removeFromTop(area.getHeight() * 0.2);  // use the topArea for the mainBox layout
 
-  juce::FlexBox knobBox;
-  knobBox.flexWrap = juce::FlexBox::Wrap::noWrap;
-  knobBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween; 
+    juce::FlexBox knobBox;
+    knobBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+    knobBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween; 
 
-  knobBox.items.add(juce::FlexItem(dialA).withFlex(1));
-  knobBox.items.add(juce::FlexItem(dialB).withFlex(1));
-  knobBox.items.add(juce::FlexItem(dialC).withFlex(1));
-  knobBox.items.add(juce::FlexItem(dialD).withFlex(1));
+    // knobBox.items.add(juce::FlexItem(dialA).withFlex(1));
+    // knobBox.items.add(juce::FlexItem(dialB).withFlex(1));
+    // knobBox.items.add(juce::FlexItem(dialC).withFlex(1));
+    // knobBox.items.add(juce::FlexItem(dialD).withFlex(1));
+    for (int i = 0; i < dials.size(); i++) {
+      knobBox.items.add(juce::FlexItem(*dials[i]).withFlex(1));
+    }
 
-  juce::FlexBox buttonBox;
-  buttonBox.flexDirection = juce::FlexBox::Direction::column;
-  buttonBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+    juce::FlexBox buttonBox;
+    buttonBox.flexDirection = juce::FlexBox::Direction::column;
+    buttonBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
 
-  buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
-  buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
+    buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
+    buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
 
-  juce::FlexBox mainBox;
-  mainBox.flexDirection = juce::FlexBox::Direction::row;
-  mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
-  mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
+    juce::FlexBox mainBox;
+    mainBox.flexDirection = juce::FlexBox::Direction::row;
+    if (resizedFlag) {
+      mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
+    }
+    mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
 
-  mainBox.performLayout(topArea);  // use topArea instead of area
-
+    mainBox.performLayout(topArea);  // use topArea instead of area
+  
   if (documentView != nullptr) {
       documentView->setBounds(area);  // this should set the bounds correctly
   }
+}
+
+// void TensorJuceProcessorEditor::perimenontasTaWidget(unique_ptr<Module> &model) {
+//   DBG("TensorJuceProcessorEditor::perimenontasTaWidget");
+// }
+
+void TensorJuceProcessorEditor::creatingTheWidgets(std::string skata) {
+  DBG("TensorJuceProcessorEditor::creatingTheWidgets" + skata);
+
+  // initialize knobs
+  // InitGenericDial(dialA, "A", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialA);
+
+  // InitGenericDial(dialB, "B", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialB);
+
+  // InitGenericDial(dialC, "C", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialC);
+
+  // InitGenericDial(dialD, "D", juce::Range<double>(0.0, 1.0), 0.01, 0.0);
+  // addAndMakeVisible(dialD);
+  createDynamicUI();
+  resizedFlag = true;
+  this->resized();
+}
+
+// changeListener callback
+void TensorJuceProcessorEditor::changeListenerCallback(ChangeBroadcaster *source) {
+  // if (source == &mEditorRenderer->getProcessor()) {
+  //   // update the UI
+  //   // updateUI();
+  // }
+  // for (const auto &attr : source->m_model->named_attributes()) {
+  //     DBG("Name: " + attr.name);
+  //     // DBG("Type: " + attr.value);
+  //   }
+  DBG("ChangeListener");
 }

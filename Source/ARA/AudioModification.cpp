@@ -96,3 +96,11 @@ juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {
 }
 
 bool AudioModification::getIsModified() { return mIsModified; }
+
+// void AudioModification::provideTheEditor(EditorRenderer *editorRenderer
+//   mModel->addChangeListener(listener);
+// }
+
+void AudioModification::sendTheCallbackToTorchModel(std::function<void(std::string)> callback) { //std::function<void(std::unique_ptr<Module>&)>
+    mModel->setTheCallbackFromAudioModification(callback);
+  }

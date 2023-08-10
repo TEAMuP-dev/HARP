@@ -32,6 +32,9 @@
 
 #include "Model.h"
 #include "Wave2Wave.h"
+// #include "../ARA/ProcessorEditor.h"
+
+// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 
 using std::any;
 using std::map;
@@ -46,7 +49,9 @@ using torch::jit::script::Module;
  * @class TorchModel
  * @brief Class that represents a base TorchModel inherited from Model.
  */
-class TorchModel : public Model {
+class TorchModel : public Model,
+                   public ChangeBroadcaster
+ {
 public:
   TorchModel();
 
@@ -63,11 +68,18 @@ public:
 
   static bool to_buffer(const torch::Tensor &src_tensor,
                         juce::AudioBuffer<float> &dest_buffer);
+  
+  void setTheCallbackFromAudioModification(std::function<void(std::string)> callback) ; //std::function<void(std::unique_ptr<Module>&)>
+
+  // listeners
+  // void addListener(Listener *listener) override;
 
 protected:
   unique_ptr<Module> m_model;
   bool m_loaded;
   mutable std::mutex m_mutex;
+  std::function<void(std::string)> editorsWidgetCreationCallback;
+
 };
 
 /**

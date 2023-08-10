@@ -29,7 +29,9 @@
 #include "AudioProcessorImpl.h"
 #include "EditorRenderer.h"
 #include "AudioModification.h"  
-
+// #include "../DeepLearning/TorchModel.h"
+#include <torch/script.h>
+#include <torch/torch.h>
 /**
  * @class TensorJuceProcessorEditor
  * @brief Class responsible for managing the plugin's graphical interface.
@@ -42,7 +44,8 @@ class TensorJuceProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
                                   public Button::Listener,
                                   public Slider::Listener,
-                                  public ComboBox::Listener {
+                                  public ComboBox::Listener,
+                                  public ChangeListener {
 public:
   /**
    * @brief Constructor for TensorJuceProcessorEditor.
@@ -68,6 +71,17 @@ public:
   // Resize method
   void resized() override;
 
+  // Listener callback method
+  // void perimenontasTaWidget(unique_ptr<Module> &model); 
+
+  // static function that returns void
+  void creatingTheWidgets(std::string skata); // unique_ptr<torch::jit::script::Module> &model
+  
+  void createDynamicUI();
+
+  // Change listener method
+  void changeListenerCallback(ChangeBroadcaster *source) override;
+
 private:
 
   void InitGenericDial(
@@ -83,10 +97,18 @@ private:
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
 
-  juce::Slider dialA;
-  juce::Slider dialB;
-  juce::Slider dialC;
-  juce::Slider dialD;
+  // juce::Slider dialA;
+  // juce::Slider dialB;
+  // juce::Slider dialC;
+  // juce::Slider dialD;
+
+  // resized flag
+  bool resizedFlag;
+
+  // An vector of unique pointers to sliders
+  std::vector<std::unique_ptr<juce::Slider>> dials;
+  
+
 
 
   std::unique_ptr<juce::FileChooser> modelPathChooser {nullptr};

@@ -22,6 +22,8 @@
 
 #include "../DeepLearning/TorchModel.h"
 #include <ARA_Library/PlugIn/ARAPlug.h>
+// #include "ProcessorEditor.h"
+// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 
 using std::unique_ptr;
 
@@ -50,6 +52,9 @@ public:
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
+  // void provideTheEditor(EditorRenderer *listener);
+  // void provideTheCreationCallback()
+  void sendTheCallbackToTorchModel(std::function<void(std::string)> callback); // std::function<void(std::unique_ptr<Module>&)>
 
 private:
   std::shared_ptr<TorchWave2Wave> mModel;

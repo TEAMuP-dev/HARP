@@ -61,8 +61,11 @@ bool TorchModel::load(const map<string, any> &params) {
     DBG("Model attributes:");
     for (const auto &attr : m_model->named_attributes()) {
       DBG("Name: " + attr.name);
-      DBG("Type: " + attr.value().);
+      // DBG("Type: " + attr.value);
     }
+    // sendChangeMessage();
+    std::string skata =  "skata";
+    editorsWidgetCreationCallback(skata);
 
   } catch (const c10::Error &e) {
     std::cerr << "Error loading the model\n";
@@ -103,6 +106,12 @@ bool TorchModel::to_buffer(const torch::Tensor &src_tensor,
   }
   return true;
 }
+
+void TorchModel::setTheCallbackFromAudioModification(std::function<void(std::string)> callback) {
+    editorsWidgetCreationCallback = callback;
+  }
+
+
 
 // Implementation of TorchWave2Wave methodss
 
