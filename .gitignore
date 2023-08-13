@@ -35,5 +35,6 @@
 build*/
 .vscode/
 libtorch/
+.vs
 
 .DS_Store

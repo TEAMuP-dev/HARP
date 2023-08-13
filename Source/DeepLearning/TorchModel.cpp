@@ -15,7 +15,7 @@
  *
  * @brief Models defined in this file are any audio processing models that
  * utilize a libtorch backend for processing data.
- * @author hugo flores garcia, aldo aguilar
+ * @author hugo flores garcia, aldo aguilar, xribene
  */
 
 #include "TorchModel.h"
@@ -40,6 +40,11 @@ namespace {
 
 TorchModel::TorchModel() : m_model{nullptr}, m_loaded{false} {}
 
+TorchModel::~TorchModel() {
+  // release listeners
+  removeAllChangeListeners();
+}
+
 bool TorchModel::load(const map<string, any> &params) {
   DBG("Loading model");
   std::cout<<"Loading model"<<std::endl;
@@ -57,15 +62,17 @@ bool TorchModel::load(const map<string, any> &params) {
     m_loaded = true;
     DBG("Model loaded");
 
-    // print model attributes
-    DBG("Model attributes:");
-    for (const auto &attr : m_model->named_attributes()) {
-      DBG("Name: " + attr.name);
-      // DBG("Type: " + attr.value);
-    }
-    // sendChangeMessage();
-    std::string skata =  "skata";
-    editorsWidgetCreationCallback(skata);
+    // TODO : A TorchModel instance is a shared resource between all the 
+    // AMs and PRs, however, the model is loaded again and again for every PR. 
+    // In the current implementation, loading the model triggers the creation
+    // of the control widgets in the plugin. This means that if we have n PRs 
+    // loaded, the widgets will be created n times. This bug is only present
+    // when using sendSynchrounousChangeMessage(). If we use sendChangeMessage()
+    // JUCE someshow groups/optimizes all the n messages, and the widgets are
+    // only created once.
+    // sendSynchronousChangeMessage();
+    sendChangeMessage();
+    DBG("Change message sent");
 
   } catch (const c10::Error &e) {
     std::cerr << "Error loading the model\n";
@@ -107,11 +114,9 @@ bool TorchModel::to_buffer(const torch::Tensor &src_tensor,
   return true;
 }
 
-void TorchModel::setTheCallbackFromAudioModification(std::function<void(std::string)> callback) {
-    editorsWidgetCreationCallback = callback;
-  }
-
-
+void TorchModel::addListener(juce::ChangeListener *listener) {
+  addChangeListener(listener);
+}
 
 // Implementation of TorchWave2Wave methodss
 
@@ -131,7 +136,33 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   // create a dict for our parameters
   c10::Dict<string, torch::Tensor> parameters; 
   // hardcode the gain parameter for now, but eventually we'd like to do this dynamically
-  parameters.insert("gain", torch::tensor({any_cast<double>(params.at("A"))}));
+  // parameters.insert("gain", torch::tensor({any_cast<double>(params.at("A"))}));
+
+  for (const auto& pair : params) {
+      std::string key = pair.first;
+      std::string valueAsString;
+      double valueAsDouble = 0.0;
+
+      if (pair.second.type() == typeid(int)) {
+          valueAsString = std::to_string(std::any_cast<int>(pair.second));
+          valueAsDouble = static_cast<double>(std::any_cast<int>(pair.second));
+      } else if (pair.second.type() == typeid(float)) {
+          valueAsString = std::to_string(std::any_cast<float>(pair.second));
+          valueAsDouble = static_cast<double>(std::any_cast<float>(pair.second));
+      } else if (pair.second.type() == typeid(double)) {
+          valueAsString = std::to_string(std::any_cast<double>(pair.second));
+          valueAsDouble = std::any_cast<double>(pair.second);
+      } else if (pair.second.type() == typeid(bool)) {
+          valueAsString = std::to_string(std::any_cast<bool>(pair.second));
+          valueAsDouble = static_cast<double>(std::any_cast<bool>(pair.second));
+      } else if (pair.second.type() == typeid(std::string)) {
+          valueAsString = std::any_cast<std::string>(pair.second);
+          // TODO: handle string parameters
+      }
+
+      DBG("{" << key << ": " << valueAsString << "}");
+      parameters.insert(key, torch::tensor({valueAsDouble}));
+  }
 
   // print input tensor shape
   DBG("built input audio tensor with shape "

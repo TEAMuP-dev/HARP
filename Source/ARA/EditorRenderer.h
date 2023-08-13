@@ -18,7 +18,7 @@
  * This allows us to playback samples from the host without the host in playback
  * mode. Editor Renderer will handle any audio rendering that is done soley in
  * the plugin.
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #pragma once
@@ -63,7 +63,8 @@ public:
   void didAddRegionSequence(ARA::PlugIn::RegionSequence *rs) noexcept override;
   void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
   void executeProcess(std::map<std::string, std::any> &params);
-  void executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> callback); //
+  // void executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> callback); //
+  void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener); //
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 

@@ -15,15 +15,13 @@
  *
  * @brief Audio modification header started from the ARAPluginDemo.h file
  * provided by juce. This class now also manages offline processing.
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #pragma once
 
 #include "../DeepLearning/TorchModel.h"
 #include <ARA_Library/PlugIn/ARAPlug.h>
-// #include "ProcessorEditor.h"
-// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 
 using std::unique_ptr;
 
@@ -52,9 +50,7 @@ public:
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
-  // void provideTheEditor(EditorRenderer *listener);
-  // void provideTheCreationCallback()
-  void sendTheCallbackToTorchModel(std::function<void(std::string)> callback); // std::function<void(std::unique_ptr<Module>&)>
+  void sendTheListenerToTorchModel(juce::ChangeListener* listener);
 
 private:
   std::shared_ptr<TorchWave2Wave> mModel;

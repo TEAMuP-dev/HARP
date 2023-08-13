@@ -18,7 +18,7 @@
  * This allows us to playback samples from the host without the host in playback
  * mode. Editor Renderer will handle any audio rendering that is done soley in
  * the plugin.
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 /**
@@ -142,18 +142,18 @@ void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
   forEachPlaybackRegion(callback);
 }
 
-void EditorRenderer::executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> widgetCallback ) { //std::function<void(std::unique_ptr<Module>&)> widgetCallback
+void EditorRenderer::executeLoad(std::map<std::string, std::any> &params, 
+                                juce::ChangeListener* listener ) {
   DBG("EditorRenderer::executeLoad executing load");
 
-  auto callback = [&params, widgetCallback](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+  auto callback = [&params, listener](juce::ARAPlaybackRegion *playbackRegion) -> bool {
     // get the current active ProcessorEditor and cast it to TensorJuceProcessorEditor
     // auto processorEditor = getActiveEditor(); // dynamic_cast<TensorJuceProcessorEditor *>(
     auto modification = 
         playbackRegion->getAudioModification<AudioModification>();
     std::cout << "EditorRenderer::loading playbackRegion "
               << modification->getSourceName() << std::endl;
-    // modification.provideTheEditor(processorEditor);
-    modification->sendTheCallbackToTorchModel(widgetCallback);
+    modification->sendTheListenerToTorchModel(listener);
     modification->load(params);
     return true;
   };

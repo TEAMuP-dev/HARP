@@ -50,10 +50,13 @@ using torch::jit::script::Module;
  * @brief Class that represents a base TorchModel inherited from Model.
  */
 class TorchModel : public Model,
-                   public ChangeBroadcaster
+                   public juce::ChangeBroadcaster
  {
 public:
   TorchModel();
+
+  // destructor
+  ~TorchModel() override;
 
   //! loads a torchscript model from file.
   bool load(const map<string, any> &params) override;
@@ -72,9 +75,9 @@ public:
   void setTheCallbackFromAudioModification(std::function<void(std::string)> callback) ; //std::function<void(std::unique_ptr<Module>&)>
 
   // listeners
-  // void addListener(Listener *listener) override;
+  void addListener(juce::ChangeListener *listener);
 
-protected:
+// protected:
   unique_ptr<Module> m_model;
   bool m_loaded;
   mutable std::mutex m_mutex;

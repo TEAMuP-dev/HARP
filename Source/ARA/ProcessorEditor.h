@@ -26,6 +26,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "../UI/DocumentView.h"
 #include "../UI/ToolBarStyle.h"
+#include "../UI/CustomComponents.h"
 #include "AudioProcessorImpl.h"
 #include "EditorRenderer.h"
 #include "AudioModification.h"  
@@ -45,6 +46,7 @@ class TensorJuceProcessorEditor : public AudioProcessorEditor,
                                   public Button::Listener,
                                   public Slider::Listener,
                                   public ComboBox::Listener,
+                                  public TextEditor::Listener,
                                   public ChangeListener {
 public:
   /**
@@ -71,14 +73,6 @@ public:
   // Resize method
   void resized() override;
 
-  // Listener callback method
-  // void perimenontasTaWidget(unique_ptr<Module> &model); 
-
-  // static function that returns void
-  void creatingTheWidgets(std::string skata); // unique_ptr<torch::jit::script::Module> &model
-  
-  void createDynamicUI();
-
   // Change listener method
   void changeListenerCallback(ChangeBroadcaster *source) override;
 
@@ -97,19 +91,11 @@ private:
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
 
-  // juce::Slider dialA;
-  // juce::Slider dialB;
-  // juce::Slider dialC;
-  // juce::Slider dialD;
-
-  // resized flag
-  bool resizedFlag;
-
   // An vector of unique pointers to sliders
-  std::vector<std::unique_ptr<juce::Slider>> dials;
-  
-
-
+  std::vector<std::unique_ptr<juce::Slider>> continuousCtrls;
+  std::vector<std::unique_ptr<juce::ToggleButton>> binaryCtrls;
+  std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
+  std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
 
   std::unique_ptr<juce::FileChooser> modelPathChooser {nullptr};
 

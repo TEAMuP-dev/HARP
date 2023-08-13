@@ -15,7 +15,7 @@
  *
  * Audio modification class started from the ARAPluginDemo.h file provided by
  * juce. This class now also manages offline processing.
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #include "AudioModification.h"
@@ -97,10 +97,6 @@ juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {
 
 bool AudioModification::getIsModified() { return mIsModified; }
 
-// void AudioModification::provideTheEditor(EditorRenderer *editorRenderer
-//   mModel->addChangeListener(listener);
-// }
-
-void AudioModification::sendTheCallbackToTorchModel(std::function<void(std::string)> callback) { //std::function<void(std::unique_ptr<Module>&)>
-    mModel->setTheCallbackFromAudioModification(callback);
-  }
+void AudioModification::sendTheListenerToTorchModel(juce::ChangeListener* listener){
+  mModel->addListener(listener);
+}
