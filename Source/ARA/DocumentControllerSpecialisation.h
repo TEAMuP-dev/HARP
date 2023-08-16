@@ -48,6 +48,7 @@ public:
 
   PreviewState previewState; ///< Preview state.
 
+  std::shared_ptr<TorchWave2Wave> getModel() { return mModel; }
 protected:
   void willBeginEditing(
       ARADocument *) override; ///< Called when beginning to edit a document.
@@ -85,7 +86,7 @@ protected:
 
 private:
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
-  std::shared_ptr<TorchWave2Wave> mModel; ///< Model for audio processing.
+  std::shared_ptr<TorchWave2Wave> mModel {new TorchWave2Wave()}; ///< Model for audio processing.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 };

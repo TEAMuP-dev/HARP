@@ -50,7 +50,9 @@ public:
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
-  void sendTheListenerToTorchModel(juce::ChangeListener* listener);
+  void addListenerToModel(juce::ChangeListener* listener);
+
+  std::shared_ptr<TorchWave2Wave> getModel() {return mModel;};
 
 private:
   std::shared_ptr<TorchWave2Wave> mModel;

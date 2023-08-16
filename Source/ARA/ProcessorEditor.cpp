@@ -72,6 +72,9 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  // model card component
+  addAndMakeVisible(modelCardComponent); // TODO check when to do that
+
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
@@ -133,10 +136,15 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
         {"modelPath", modelPath.getFullPathName().toStdString()}
       };
 
+      mEditorRenderer->getModel()->addMcListener(this);
       mEditorRenderer->executeLoad(params, this); 
     });
     
   }
+}
+
+void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
+  modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
 }
 
 void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *box) {
@@ -209,9 +217,14 @@ void TensorJuceProcessorEditor::resized() {
           buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
           buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
       
-      mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(1));
-      mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(1));
+      mainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.3));
+      mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(0.3));
+      mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(0.3));
       mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));
+  // mainBox.flexDirection = juce::FlexBox::Direction::row;
+  // mainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.3));  // Adjust flex size according to your need
+  // mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
+  // mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
 
   mainBox.performLayout(topArea);  // use topArea instead of area
   

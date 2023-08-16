@@ -97,6 +97,6 @@ juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {
 
 bool AudioModification::getIsModified() { return mIsModified; }
 
-void AudioModification::sendTheListenerToTorchModel(juce::ChangeListener* listener){
+void AudioModification::addListenerToModel(juce::ChangeListener* listener){
   mModel->addListener(listener);
 }

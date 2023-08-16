@@ -32,9 +32,6 @@
 
 #include "Model.h"
 #include "Wave2Wave.h"
-// #include "../ARA/ProcessorEditor.h"
-
-// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 
 using std::any;
 using std::map;
@@ -44,6 +41,19 @@ using torch::jit::IValue;
 using torch::jit::script::Module;
 
 
+struct ModelCard {
+  int sampleRate;
+  std::string name;
+  std::string description;
+  std::string author;
+  std::vector<std::string> tags;
+};
+
+class ModelCardListener
+{
+public:
+    virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
+};
 
 /**
  * @class TorchModel
@@ -64,6 +74,9 @@ public:
   //! checks if a model is loaded onto memory.
   bool ready() const override;
 
+  // //! provides access to the model card (metadata)
+  ModelCard &card();
+
   //! forward pass
   IValue forward(const std::vector<IValue> &inputs) const;
 
@@ -72,13 +85,36 @@ public:
   static bool to_buffer(const torch::Tensor &src_tensor,
                         juce::AudioBuffer<float> &dest_buffer);
   
-  void setTheCallbackFromAudioModification(std::function<void(std::string)> callback) ; //std::function<void(std::unique_ptr<Module>&)>
-
   // listeners
   void addListener(juce::ChangeListener *listener);
 
 // protected:
+public:
+  // modelcard listener
+  void addMcListener(ModelCardListener* listener) 
+  {
+      mcListeners.add(listener);
+  }
+
+  void removeMcListener(ModelCardListener* listener) 
+  {
+      mcListeners.remove(listener);
+  }
+
+protected: 
+  void broadcastModelCardLoaded() 
+  {
+    mcListeners.call([this](ModelCardListener& l) { l.modelCardLoaded(m_card); });
+  }
+
+private:
+  juce::ListenerList<ModelCardListener> mcListeners;
+
+public: 
   unique_ptr<Module> m_model;
+protected:
+  // unique_ptr<Module> m_model;
+  ModelCard m_card;
   bool m_loaded;
   mutable std::mutex m_mutex;
   std::function<void(std::string)> editorsWidgetCreationCallback;

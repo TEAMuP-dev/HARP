@@ -153,7 +153,7 @@ void EditorRenderer::executeLoad(std::map<std::string, std::any> &params,
         playbackRegion->getAudioModification<AudioModification>();
     std::cout << "EditorRenderer::loading playbackRegion "
               << modification->getSourceName() << std::endl;
-    modification->sendTheListenerToTorchModel(listener);
+    modification->addListenerToModel(listener);
     modification->load(params);
     return true;
   };
@@ -292,6 +292,8 @@ void EditorRenderer::configure() {
           *timeSliceThread,
           std::max(4 * maximumExpectedSamplesPerBlock, (int)sampleRate));
     }
+    
+    model = playbackRegion->template getAudioModification<AudioModification>()->getModel();
 
     return true;
   });

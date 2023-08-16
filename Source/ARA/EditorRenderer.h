@@ -62,9 +62,10 @@ public:
                                             juce::ARAPlaybackRegion *) override;
   void didAddRegionSequence(ARA::PlugIn::RegionSequence *rs) noexcept override;
   void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
+
+
   void executeProcess(std::map<std::string, std::any> &params);
-  // void executeLoad(std::map<std::string, std::any> &params, std::function<void(std::string)> callback); //
-  void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener); //
+  void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener);
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 
@@ -81,8 +82,14 @@ public:
 
   using ARAEditorRenderer::processBlock;
 
+  std::shared_ptr<TorchWave2Wave> getModel() { 
+    return model;
+  }
+
 private:
   void configure();
+
+  std::shared_ptr<TorchWave2Wave> model {nullptr};
 
   ProcessingLockInterface &lockInterface;
   const PreviewState *previewState = nullptr;

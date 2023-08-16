@@ -38,3 +38,5 @@ libtorch/
 .vs
 
 .DS_Store
+
+testproject
