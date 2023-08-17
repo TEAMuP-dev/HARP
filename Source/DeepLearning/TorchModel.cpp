@@ -156,8 +156,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
 
   // create a dict for our parameters
   c10::Dict<string, torch::Tensor> parameters; 
-  // hardcode the gain parameter for now, but eventually we'd like to do this dynamically
-  // parameters.insert("gain", torch::tensor({any_cast<double>(params.at("A"))}));
+  c10::Dict<string, IValue> parameters2;
 
   for (const auto& pair : params) {
       std::string key = pair.first;
@@ -167,18 +166,23 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
       if (pair.second.type() == typeid(int)) {
           valueAsString = std::to_string(std::any_cast<int>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<int>(pair.second));
+          parameters2.insert(key, torch::tensor({valueAsDouble}));
       } else if (pair.second.type() == typeid(float)) {
           valueAsString = std::to_string(std::any_cast<float>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<float>(pair.second));
+          parameters2.insert(key, torch::tensor({valueAsDouble}));
       } else if (pair.second.type() == typeid(double)) {
           valueAsString = std::to_string(std::any_cast<double>(pair.second));
           valueAsDouble = std::any_cast<double>(pair.second);
+          parameters2.insert(key, torch::tensor({valueAsDouble}));
       } else if (pair.second.type() == typeid(bool)) {
           valueAsString = std::to_string(std::any_cast<bool>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<bool>(pair.second));
+          parameters2.insert(key, torch::tensor({valueAsDouble}));
       } else if (pair.second.type() == typeid(std::string)) {
           valueAsString = std::any_cast<std::string>(pair.second);
           // TODO: handle string parameters
+          parameters2.insert(key, valueAsString);
       }
 
       DBG("{" << key << ": " << valueAsString << "}");

@@ -217,16 +217,16 @@ void TensorJuceProcessorEditor::resized() {
           buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
           buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
       
-      mainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.3));
       mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(0.3));
       mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(0.3));
       mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));
-  // mainBox.flexDirection = juce::FlexBox::Direction::row;
-  // mainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.3));  // Adjust flex size according to your need
-  // mainBox.items.add(juce::FlexItem(knobBox).withFlex(0.7));  // Adjust flex size according to your need
-  // mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));  // Adjust flex size according to your need
 
-  mainBox.performLayout(topArea);  // use topArea instead of area
+  juce::FlexBox superMainBox;
+      superMainBox.flexDirection = juce::FlexBox::Direction::column;
+      superMainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.5));
+      superMainBox.items.add(juce::FlexItem(mainBox).withFlex(0.5));
+      
+  superMainBox.performLayout(topArea);  // use topArea instead of area
   
   if (documentView != nullptr) {
       documentView->setBounds(area);  // this should set the bounds correctly
@@ -240,7 +240,9 @@ void TensorJuceProcessorEditor::changeListenerCallback(ChangeBroadcaster *source
   // cast the source to TorchModel
   auto tm = dynamic_cast<TorchModel *>(source);
   for (const auto &attr : tm->m_model->named_attributes()) {
+
     if (attr.name == "model_card") {
+      // TODO : this if branch is useless after merging with hf/ctrl
       // auto model_card = attr.value.toObjectRef();
       // auto model_card2 = attr.value.toObject();
       // auto pycard = tm->m_model->attr("model_card").toObject();
