@@ -56,6 +56,13 @@ bool TorchModel::load(const map<string, any> &params) {
   auto modelPath = any_cast<string>(params.at("modelPath"));
   DBG("Loading model from " + modelPath);
 
+  // if this modelPath is the same as the one we already have loaded, (and we're already loaded)
+  // then do nothing
+  if (m_loaded && modelPath == m_modelPath) {
+    DBG("Model already loaded");
+    return true;
+  }
+
   try {
     m_model = std::make_unique<Module>(torch::jit::load(modelPath));
     m_model->eval();

@@ -109,6 +109,7 @@ protected:
 
 private:
   juce::ListenerList<ModelCardListener> mcListeners;
+  std::string m_modelPath;
 
 public: 
   unique_ptr<Module> m_model;
