@@ -156,7 +156,9 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
 
   // create a dict for our parameters
   c10::Dict<string, torch::Tensor> parameters; 
-  c10::Dict<string, IValue> parameters2;
+  auto keyType = c10::getTypePtr<std::string>(); // Example key type
+  auto valueType = c10::getTypePtr<c10::IValue>(); // Example value type
+  auto parameters2 = c10::impl::GenericDict(keyType, valueType);
 
   for (const auto& pair : params) {
       std::string key = pair.first;
@@ -166,7 +168,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
       if (pair.second.type() == typeid(int)) {
           valueAsString = std::to_string(std::any_cast<int>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<int>(pair.second));
-          parameters2.insert(key, torch::tensor({valueAsDouble}));
+          parameters2.insert(key, IValue(torch::tensor({valueAsDouble})));
       } else if (pair.second.type() == typeid(float)) {
           valueAsString = std::to_string(std::any_cast<float>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<float>(pair.second));
@@ -178,11 +180,11 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
       } else if (pair.second.type() == typeid(bool)) {
           valueAsString = std::to_string(std::any_cast<bool>(pair.second));
           valueAsDouble = static_cast<double>(std::any_cast<bool>(pair.second));
-          parameters2.insert(key, torch::tensor({valueAsDouble}));
+          parameters2.insert(key, IValue(torch::tensor({valueAsDouble})));
       } else if (pair.second.type() == typeid(std::string)) {
           valueAsString = std::any_cast<std::string>(pair.second);
           // TODO: handle string parameters
-          parameters2.insert(key, valueAsString);
+          parameters2.insert(key, IValue(valueAsString));
       }
 
       DBG("{" << key << ": " << valueAsString << "}");
@@ -192,7 +194,14 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   // print input tensor shape
   DBG("built input audio tensor with shape "
       << size2string(input.toTensor().sizes()));
+  torch::Tensor aa = parameters.at("gain");
+  DBG("gain: " << aa.item<double>());
+  IValue bb = parameters2.at("gain");
+  torch::Tensor my_tensor = bb.toTensor();
+  DBG("gain3: " << my_tensor.item<double>());
 
+  IValue ss = parameters2.at("mode");
+  std::string mode = ss.toStringRef();
   // forward pass
   try {
     // resampling routine
@@ -205,7 +214,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
 
     // perform the forward pass
     DBG("forward pass...");
-    auto output = forward({resampled, parameters}).toTensor();
+    auto output = forward({resampled, parameters2}).toTensor();
     DBG("got output tensor with shape " << size2string(output.sizes()));
 
     // we're expecting audio out
