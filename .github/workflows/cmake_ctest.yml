@@ -35,7 +35,7 @@ concurrency:
 
 env:
   PROJECT_NAME: tensorjuce
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
   BUILD_DIR: Builds
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   DISPLAY: :0 # linux pluginval needs this
@@ -168,7 +168,7 @@ jobs:
       run: |
         # Each plugin must be code signed
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
-        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
 
     - name: Add Custom Icons (macOS)
       if: ${{ matrix.name == 'macOS' }}
@@ -182,11 +182,11 @@ jobs:
 
         # Stuff the resource into the strange Icon? file's resource fork
         Rez -a /tmp/icons -o ${{ env.VST3_PATH }}/Icon$'\r'
-        Rez -a /tmp/icons -o ${{ env.AU_PATH }}/Icon$'\r'
+        # Rez -a /tmp/icons -o ${{ env.AU_PATH }}/Icon$'\r'
 
         # Set custom icon attribute
         SetFile -a C ${{ env.VST3_PATH }}
-        SetFile -a C ${{ env.AU_PATH }}
+        # SetFile -a C ${{ env.AU_PATH }}
 
     - name: Create DMG, Notarize and Staple (macOS)
       if: ${{ matrix.name == 'macOS' }}
@@ -199,7 +199,7 @@ jobs:
         ln -s /Library/Audio/Plug-Ins/Components "packaging/dmg/Your Mac's Component folder"
         ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
         mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/dmg
-        mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
+        # mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
         
         # Run appdmg to create the .dmg
         cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
