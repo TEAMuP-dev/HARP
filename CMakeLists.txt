@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "tensorjuce-ARA")
-project(${PROJECT_NAME} VERSION 0.0.1)
-add_subdirectory(JUCE)
-
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +10,13 @@ set (TENSORJUCE_FORMATS "VST3")
 
 # defines SourceFiles
 include(cmake/SourceFiles.cmake)
+
+# Reads in our VERSION file and sticks in it CURRENT_VERSION variable
+# Be sure the file has no newlines!
+file(STRINGS VERSION CURRENT_VERSION)
+
+project(${PROJECT_NAME} VERSION CURRENT_VERSION)
+add_subdirectory(JUCE)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
