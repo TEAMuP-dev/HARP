@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-set(PROJECT_NAME "tensor-juce-ARA")
+set(PROJECT_NAME "tensorjuce-ARA")
 project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
@@ -59,7 +59,7 @@ juce_add_plugin(${PROJECT_NAME}
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
                                                 # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
                                                 # compatibility - GarageBand 10.3 does not support ARA anyways.
-    PRODUCT_NAME tensor-juce                # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME tensorjuce                # The name of the final executable, which can differ from the target name
     FORMATS ${TENSORJUCE_FORMATS}
     # VST3_CATEGORIES "Tools"
     # AU_SANDBOX_SAFE TRUE

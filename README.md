@@ -1,6 +1,8 @@
 # plugin_sandbox
 A repository for a custom ARA plugin with juce, tracktion, and libtorch working together in harmony.
 
+parts of this codebase are based on the [pamplejuce](https://github.com/sudara/pamplejuce) JUCE + CMake template. 
+
 ## Cloning
 ```git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git```
 
