@@ -15,7 +15,7 @@ include(cmake/SourceFiles.cmake)
 # Be sure the file has no newlines!
 file(STRINGS VERSION CURRENT_VERSION)
 
-project(${PROJECT_NAME} VERSION CURRENT_VERSION)
+project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
