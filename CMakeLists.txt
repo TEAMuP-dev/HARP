@@ -4,8 +4,12 @@ project(${PROJECT_NAME} VERSION 0.0.1)
 add_subdirectory(JUCE)
 
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
+
+set (TENSORJUCE_FORMATS "VST3")
 
 # defines SourceFiles
 include(cmake/SourceFiles.cmake)
@@ -39,7 +43,7 @@ endif()
 
 # add_subdirectory(tracktion_engine/modules)
 
-juce_add_plugin(AudioPluginExampleCMAKE64
+juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
     # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
     # ICON_SMALL ...
@@ -55,8 +59,8 @@ juce_add_plugin(AudioPluginExampleCMAKE64
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
                                                 # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
                                                 # compatibility - GarageBand 10.3 does not support ARA anyways.
-    FORMATS AU VST3 Standalone                             # The formats to build. Other valid formats are: AAX Unity VST AU AUv3
     PRODUCT_NAME tensor-juce                # The name of the final executable, which can differ from the target name
+    FORMATS ${TENSORJUCE_FORMATS}
     # VST3_CATEGORIES "Tools"
     # AU_SANDBOX_SAFE TRUE
     # APP_SANDBOX_ENABLED TRUE
@@ -71,9 +75,10 @@ juce_add_plugin(AudioPluginExampleCMAKE64
     # ARA_TRANSFORMATION_FLAGS                  # If supporting time-stretching or other ARA playback transformations, define them as OR'd values here - otherwise 0.
 )
 
-juce_generate_juce_header(AudioPluginExampleCMAKE64)
 
-target_sources(AudioPluginExampleCMAKE64
+juce_generate_juce_header(${PROJECT_NAME})
+
+target_sources(${PROJECT_NAME}
     PRIVATE
         ${SourceFiles}
 )
@@ -85,13 +90,15 @@ target_sources(AudioPluginExampleCMAKE64
 # definitions will be visible both to your code, and also the JUCE module code, so for new
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
-target_compile_definitions(AudioPluginExampleCMAKE64
+target_compile_definitions(${PROJECT_NAME}
     PUBLIC
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
         JUCE_USE_CURL=1    # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
-target_link_libraries(AudioPluginExampleCMAKE64
+
+
+target_link_libraries(${PROJECT_NAME}
     PRIVATE
         # AudioPluginData
         juce::juce_audio_basics
@@ -119,17 +126,57 @@ target_link_libraries(AudioPluginExampleCMAKE64
         ${TORCH_LIBRARIES}
 
         # pybind11::embed
-        )
-# set_property(TARGET AudioPluginExampleCMAKE64 PROPERTY CXX_STANDARD 17)
+)
+
+# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,
 # the DLLs need to be copied to avoid memory errors.
 if (MSVC)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-  add_custom_command(TARGET AudioPluginExampleCMAKE64
+  add_custom_command(TARGET ${PROJECT_NAME}
                      POST_BUILD
                      COMMAND ${CMAKE_COMMAND} -E copy_if_different
                      ${TORCH_DLLS}
-                     $<TARGET_FILE_DIR:AudioPluginExampleCMAKE64>)
+                     $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 endif (MSVC)
+
+if (UNIX AND NOT APPLE) # Linux
+    # For Linux, libtorch usually provides .so files. Modify this as needed.
+    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.so")
+elseif(APPLE)
+    # For macOS, libtorch provides .dylib files. Modify this as needed.
+    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.dylib")
+endif()
+
+if (UNIX)
+    foreach(format ${TENSORJUCE_FORMATS})
+        # make a resource directory
+        add_custom_command(TARGET ${PROJECT_NAME}_${format}
+                        POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E make_directory
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+        add_custom_command(TARGET ${PROJECT_NAME}_${format}
+                        POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        ${TORCH_SHARED_LIBRARIES}
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+    endforeach()
+endif()
+
+
+
+# this fixes the RPATH to be relative to the executable
+# in MacOS. Now, all we need to do is copy the libtorch
+# dynamic libraries to the executable directories
+if (APPLE)
+    foreach(format ${TENSORJUCE_FORMATS})
+        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Resources" )
+
+    endforeach()
+
+    set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
+endif(APPLE)
+
+
