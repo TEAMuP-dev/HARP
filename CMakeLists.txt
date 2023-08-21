@@ -39,7 +39,7 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux
     find_package(Torch REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
     # ara settings
-    juce_set_ara_sdk_path("/usr/local/lib/ARA_SDK")
+    juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 
 else()
     message(FATAL_ERROR "Unsupported platform.")
