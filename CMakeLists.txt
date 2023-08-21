@@ -38,6 +38,11 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux
     # libtorch settings
     find_package(Torch REQUIRED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    # add ARA SDK to PATH
+    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK")
+    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Examples")
+    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Library")
+    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_API")
     # ara settings
     juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 

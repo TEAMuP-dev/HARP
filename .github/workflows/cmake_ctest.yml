@@ -117,7 +117,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
       with:
-        submodules: true # Get JUCE populated
+        submodules: recursive # Get JUCE populated
 
     - name: Setup Environment Variables
       shell: bash
