@@ -56,7 +56,7 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 On Mac M1 computers here are the commands you can usse for configuration and building. This project will only run on M1 Macs currently due to building issues for ARA on x86. This is building from inside of a build folder in the project.
 - Configure
 ```
-Torch_DIR="<PATH_TO_LIBTORCH>" cmake ..  -DCMAKE_BUILD_TYPE=Debug 
+cmake ..  -DCMAKE_BUILD_TYPE=Debug 
 ```
 
 -Build

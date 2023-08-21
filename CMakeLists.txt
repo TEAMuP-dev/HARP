@@ -18,6 +18,11 @@ file(STRINGS VERSION CURRENT_VERSION)
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)
 
+if (APPLE) 
+    include(cmake/libtorch-mac.cmake)
+    message(${Torch_DIR})
+endif(APPLE)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...") 
