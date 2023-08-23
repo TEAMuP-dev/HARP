@@ -42,3 +42,5 @@ libtorch/
 testproject
 scratch
 _downloads
+
+packaging/

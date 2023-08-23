@@ -170,12 +170,12 @@ if (UNIX)
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E make_directory
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         ${TORCH_SHARED_LIBRARIES}
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
     endforeach()
 endif()
 
@@ -186,7 +186,7 @@ endif()
 # dynamic libraries to the executable directories
 if (APPLE)
     foreach(format ${TENSORJUCE_FORMATS})
-        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Resources" )
+        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
 
     endforeach()
 
