@@ -40,6 +40,12 @@ void TensorJuceProcessorEditor::InitGenericDial(
   dial.addListener(this);
 }
 
+// destructor
+// TensorJuceProcessorEditor::~TensorJuceProcessorEditor() {
+//   // release listeners
+//   // removeAllChangeListeners();
+//   int aa = 42;
+// }
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
     : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {

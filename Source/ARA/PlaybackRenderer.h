@@ -55,6 +55,8 @@ public:
    */
   PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
                    ProcessingLockInterface &lockInterfaceIn);
+  // destructor
+  ~PlaybackRenderer() override;
 
   /**
    * @brief Prepares for playback by initializing necessary parameters.

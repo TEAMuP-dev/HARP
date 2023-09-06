@@ -124,6 +124,8 @@ public:
   explicit TensorJuceProcessorEditor(TensorJuceAudioProcessorImpl &p,
                                      EditorRenderer *er);
 
+  // destructor
+  // ~TensorJuceProcessorEditor() override;
   // Button listener method
   void buttonClicked(Button *button) override;
 
