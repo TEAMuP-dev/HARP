@@ -34,6 +34,7 @@
 #include <torch/script.h>
 #include <torch/torch.h>
 #include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
+#include "DocumentControllerSpecialisation.h"
 
 
 /**
@@ -66,6 +67,17 @@ public:
         tagsLabel.setText(tagsText, juce::dontSendNotification);
         
         // Repaint the component to update the display
+        repaint();
+    }
+
+    void clear() {
+        // Clear the text for the labels
+        nameLabel.setText("", juce::dontSendNotification);
+        descriptionLabel.setText("", juce::dontSendNotification);
+        authorLabel.setText("", juce::dontSendNotification);
+        sampleRateLabel.setText("", juce::dontSendNotification);
+        tagsLabel.setText("", juce::dontSendNotification);
+        
         repaint();
     }
 
@@ -112,7 +124,7 @@ class TensorJuceProcessorEditor : public AudioProcessorEditor,
                                   public ComboBox::Listener,
                                   public TextEditor::Listener,
                                   public ChangeListener,
-                                  public ModelCardListener // TODO from hf. Check if I need that
+                                  public ModelCardListener
                                    {
 public:
   /**
@@ -147,6 +159,8 @@ public:
   // Change listener method
   void changeListenerCallback(ChangeBroadcaster *source) override;
 
+  void resetUI();
+
 private:
 
   void InitGenericDial(
@@ -178,6 +192,6 @@ private:
   ComboBoxLookAndFeel comboBoxLookAndFeel;
 
   EditorRenderer *mEditorRenderer;
-
+  TensorJuceDocumentControllerSpecialisation *mDocumentController;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceProcessorEditor)
 };

@@ -46,11 +46,11 @@ public:
   std::string getSourceName();
 
   void process(std::map<std::string, std::any> &params);
-  void load(std::map<std::string, std::any> &params);
+  // void load(std::map<std::string, std::any> &params);
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
-  void addListenerToModel(juce::ChangeListener* listener);
+  // void addListenerToModel(juce::ChangeListener* listener);
 
   std::shared_ptr<TorchWave2Wave> getModel() {return mModel;};
 

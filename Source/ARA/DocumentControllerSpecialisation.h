@@ -48,7 +48,10 @@ public:
 
   PreviewState previewState; ///< Preview state.
 
-  std::shared_ptr<TorchWave2Wave> getModel() { return mModel; }
+  std::shared_ptr<TorchWave2Wave> getNeuralModel() { return mModel; }
+  void printModelPath(std::string path);
+  void loadNeuralModel(std::map<std::string, std::any> &params);
+  
 protected:
   void willBeginEditing(
       ARADocument *) override; ///< Called when beginning to edit a document.

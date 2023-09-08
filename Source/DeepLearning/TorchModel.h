@@ -94,7 +94,7 @@ public:
 // protected:
 public:
   // modelcard listener
-  void addMcListener(ModelCardListener* listener) 
+  void addModelCardListener(ModelCardListener* listener) 
   {
       mcListeners.add(listener);
   }

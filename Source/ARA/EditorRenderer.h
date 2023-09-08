@@ -65,7 +65,7 @@ public:
 
 
   void executeProcess(std::map<std::string, std::any> &params);
-  void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener);
+  // void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener);
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 

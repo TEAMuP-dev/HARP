@@ -72,7 +72,7 @@ bool TorchModel::load(const map<string, any> &params) {
     // only created once.
     // sendSynchronousChangeMessage();
     sendChangeMessage();
-    DBG("Change message sent");
+    // DBG("Change message sent");
     // // print model attributes
     // DBG("Model attributes:");
     // for (const auto &attr : m_model->named_attributes()) {
@@ -92,6 +92,7 @@ bool TorchModel::load(const map<string, any> &params) {
     
     // we're done loading the model card, broadcast it
     broadcastModelCardLoaded();
+    DBG("broadcasted model card loaded event");
 
   } catch (const char *e) {
     DBG("Error loading the model");

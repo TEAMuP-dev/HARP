@@ -24,6 +24,21 @@
 
 #include "DocumentControllerSpecialisation.h"
 
+void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path) {
+  std::cout << "Model path: " << path << std::endl;
+  DBG("Model path: " << path);
+}
+
+void TensorJuceDocumentControllerSpecialisation::loadNeuralModel(std::map<std::string, std::any> &params) {
+    // get the modelPath, pass it to the model
+    DBG("TensorJuceDocumentControllerSpecialisation::loadNeuralModel");
+    mModel->load(params);
+    DBG("TensorJuceDocumentControllerSpecialisation::loadNeuralModel done");
+    // print the pointer memory value of mModel using DBG
+    int aa = 53;
+    
+  }
+
 void TensorJuceDocumentControllerSpecialisation::willBeginEditing(
     ARADocument *) {
   processBlockLock.enterWrite();

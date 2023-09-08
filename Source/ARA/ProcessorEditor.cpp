@@ -50,8 +50,13 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
     : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {
 
-  if (auto *editorView = getARAEditorView())
+  if (auto *editorView = getARAEditorView()) {
+  // mDocumentController = editorView.getDocumentController()//->getDocument<ARADocument>())
+    mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
+                                                    TensorJuceDocumentControllerSpecialisation>(
+                                                    editorView->getDocumentController());
     documentView = std::make_unique<DocumentView>(*editorView, p.playHeadState);
+  }
   mEditorRenderer = er;
   if (documentView != nullptr) {
     addAndMakeVisible(documentView.get());
@@ -113,7 +118,7 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
           optionCtrls[i]->getName().toStdString(),
           optionCtrls[i]->getText().toStdString()));
     }    
-    mEditorRenderer->executeProcess(params);
+    // mEditorRenderer->executeProcess(params);
   }
 
   if (button == &loadModelButton) {
@@ -142,8 +147,13 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
         {"modelPath", modelPath.getFullPathName().toStdString()}
       };
 
-      mEditorRenderer->getModel()->addMcListener(this);
-      mEditorRenderer->executeLoad(params, this); 
+      // mEditorRenderer->getModel()->addMcListener(this);
+      // mEditorRenderer->executeLoad(params, this); 
+      // mDocumentController->printModelPath(modelPath.getFullPathName().toStdString());
+      mDocumentController->getNeuralModel()->addModelCardListener(this);
+      mDocumentController->getNeuralModel()->addListener(this);
+      resetUI();
+      mDocumentController->loadNeuralModel(params);
     });
     
   }
@@ -239,10 +249,32 @@ void TensorJuceProcessorEditor::resized() {
   }
 }
 
-// changeListener callback
+void TensorJuceProcessorEditor::resetUI(){
+  // remove all the widgets and empty the vectors
+  for (auto &ctrl : continuousCtrls) {
+    removeChildComponent(ctrl.get());
+  }
+  continuousCtrls.clear();
+  for (auto &ctrl : binaryCtrls) {
+    removeChildComponent(ctrl.get());
+  }
+  binaryCtrls.clear();
+  for (auto &ctrl : textCtrls) {
+    removeChildComponent(ctrl.get());
+  }
+  textCtrls.clear();
+  for (auto &ctrl : optionCtrls) {
+    removeChildComponent(ctrl.get());
+  }
+  optionCtrls.clear();
+  // Also clear the model card component
+  modelCardComponent.clear();
+  resized();
+}
+// This callback gets called once a neuralModel is loaded
+// It is used to create the UI elements for the controls
 void TensorJuceProcessorEditor::changeListenerCallback(ChangeBroadcaster *source) {
   
-  // creatingTheWidgets("peritwmata");
   // cast the source to TorchModel
   auto tm = dynamic_cast<TorchModel *>(source);
   for (const auto &attr : tm->m_model->named_attributes()) {
