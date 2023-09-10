@@ -47,22 +47,25 @@ void TensorJuceProcessorEditor::InitGenericDial(
 //   int aa = 42;
 // }
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
-    TensorJuceAudioProcessorImpl &p, EditorRenderer *er)
-    : AudioProcessorEditor(&p), AudioProcessorEditorARAExtension(&p) {
-
-  if (auto *editorView = getARAEditorView()) {
-  // mDocumentController = editorView.getDocumentController()//->getDocument<ARADocument>())
+    TensorJuceAudioProcessorImpl &ap, EditorRenderer *er, 
+    PlaybackRenderer *pr, EditorView *ev)
+    : AudioProcessorEditor(&ap), AudioProcessorEditorARAExtension(&ap) {
+  
+  mEditorRenderer = er;
+  mPlaybackRenderer = pr;
+  mEditorView = ev;
+  if (mEditorView != nullptr) {
     mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
                                                     TensorJuceDocumentControllerSpecialisation>(
-                                                    editorView->getDocumentController());
-    documentView = std::make_unique<DocumentView>(*editorView, p.playHeadState);
+                                                    mEditorView->getDocumentController());
+    documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
-  mEditorRenderer = er;
+
   if (documentView != nullptr) {
     addAndMakeVisible(documentView.get());
   }
 
-  // initialize your button
+  // initialize load and process buttons
   processButton.setLookAndFeel(&buttonLookAndFeel);
   processButton.setButtonText("process");
   processButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
@@ -71,9 +74,6 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   processButton.setColour(TextButton::textColourOnId, Colours::black);
   processButton.addListener(this);
   addAndMakeVisible(processButton);
-
-
-  // load model button
   loadModelButton.setLookAndFeel(&buttonLookAndFeel);
   loadModelButton.setButtonText("Load model");
   loadModelButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
@@ -86,6 +86,10 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   // model card component
   addAndMakeVisible(modelCardComponent); // TODO check when to do that
 
+  // Get the modelCard from the EditorView
+  modelCardComponent.setModelCard(mEditorView->getModelCard());
+  // populate the UI
+  populateGui();
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
@@ -147,26 +151,28 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
         {"modelPath", modelPath.getFullPathName().toStdString()}
       };
 
-      // mEditorRenderer->getModel()->addMcListener(this);
-      // mEditorRenderer->executeLoad(params, this); 
-      // mDocumentController->printModelPath(modelPath.getFullPathName().toStdString());
-      mDocumentController->getNeuralModel()->addModelCardListener(this);
-      mDocumentController->getNeuralModel()->addListener(this);
       resetUI();
-      mDocumentController->loadNeuralModel(params);
+      mDocumentController->loadModel(params);
+      // Model loading happens synchronously, so we can be sure that
+      // the Editor View has the model card and UI attributes loaded
+      modelCardComponent.setModelCard(mEditorView->getModelCard());
+      populateGui();
+      resized();
     });
     
   }
 }
 
-void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
-  modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
-}
+// void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
+//   modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
+// }
 
 void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *box) {
+  ignoreUnused(box);
 }
 
 void TensorJuceProcessorEditor::sliderValueChanged(Slider *slider) {
+  ignoreUnused(slider);
 }
 
 void TensorJuceProcessorEditor::paint(Graphics &g) {
@@ -271,131 +277,86 @@ void TensorJuceProcessorEditor::resetUI(){
   modelCardComponent.clear();
   resized();
 }
-// This callback gets called once a neuralModel is loaded
+// This callback gets called once a model is loaded
 // It is used to create the UI elements for the controls
-void TensorJuceProcessorEditor::changeListenerCallback(ChangeBroadcaster *source) {
+void TensorJuceProcessorEditor::populateGui() {
   
-  // cast the source to TorchModel
-  auto tm = dynamic_cast<TorchModel *>(source);
-  for (const auto &attr : tm->m_model->named_attributes()) {
-
-    if (attr.name == "model_card") {
-      // TODO : this if branch is useless after merging with hf/ctrl
-      // auto model_card = attr.value.toObjectRef();
-      // auto model_card2 = attr.value.toObject();
-      // auto pycard = tm->m_model->attr("model_card").toObject();
-      auto pycard2 = attr.value.toObject();
-
-      std::string name = pycard2->getAttr("name").toStringRef();
-      std::string description = pycard2->getAttr("description").toStringRef();
-      std::string author = pycard2->getAttr("author").toStringRef();
-      int sampleRate = pycard2->getAttr("sample_rate").toInt();
-      for (const auto &tag : pycard2->getAttr("tags").toListRef()) {
-        // m_card.tags.push_back(tag.toStringRef());
-        DBG(tag.toStringRef());
+  for (const auto &ctrlAttributes  : mEditorView->getModelGuiAttributes()) {
+    std::string nameId = std::any_cast<std::string>(ctrlAttributes.at("nameId"));
+    std::string name = std::any_cast<std::string>(ctrlAttributes.at("name"));
+    std::string widgetType = std::any_cast<std::string>(ctrlAttributes.at("widget_type"));
+    // int widgetTypeVal = std::any_cast<int>(ctrlAttributes.at("widget_type_val"));
+    std::string ctrlType = std::any_cast<std::string>(ctrlAttributes.at("ctrl_type"));
+    if (ctrlType == "ContinuousCtrl") {
+      // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
+      double min = std::any_cast<double>(ctrlAttributes.at("min"));
+      double max = std::any_cast<double>(ctrlAttributes.at("max"));
+      double step = std::any_cast<double>(ctrlAttributes.at("step"));
+      std::unique_ptr<juce::Slider> continuousCtrl = std::make_unique<juce::Slider>();
+      if (widgetType == "SLIDER") {
+          continuousCtrl->setSliderStyle(juce::Slider::LinearHorizontal);
       }
-      
+      else if (widgetType == "ROTARY") {
+          continuousCtrl->setSliderStyle(juce::Slider::Rotary);
+      }
+      else {
+          DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
+          jassertfalse;
+      }
+      continuousCtrl->setName(nameId);
+      continuousCtrl->setRange(min, max, step);
+      continuousCtrl->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
+      continuousCtrl->addListener(this);
+      continuousCtrl->setTextValueSuffix(" " + name);
+      continuousCtrl->setLookAndFeel(&toolbarSliderStyle);
+      addAndMakeVisible(*continuousCtrl);
+      // Add the slider to the vector
+      continuousCtrls.push_back(std::move(continuousCtrl));
     }
-    if (attr.name == "ctrls"){
-      // make sure that the attribute is a dictionary, if not print a message
-      if (!attr.value.isGenericDict()) {
-        DBG("ctrls is not a dictionary");
-        jassertfalse;
+    
+    else if (ctrlType == "BinaryCtrl") {
+      bool defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
+      if (widgetType == "CHECKBOX") {
+          std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
+          binaryCtrl->setName(nameId);
+          binaryCtrl->setButtonText(name);
+          binaryCtrl->setToggleState(defaultValue, juce::dontSendNotification);
+          binaryCtrl->addListener(this);
+          addAndMakeVisible(*binaryCtrl);
+          binaryCtrls.push_back(std::move(binaryCtrl));
       }
-      auto ctrls = attr.value.toGenericDict();
-      for (auto it = ctrls.begin(); it != ctrls.end(); it++){
-
-          auto nameId = it->key().toStringRef();
-          auto ctrl = it->value().toObjectRef();
-          auto name = ctrl.getAttr("name").toStringRef();
-          std::string ctrlType = ctrl.getAttr("ctrl_type").toStringRef();
-          
-          auto widget = ctrl.getAttr("widget").toEnumHolder().get();
-          //jassert(widget->isEnum());
-          auto widgetType = widget->name();
-          auto widgetTypeVal = widget->value().toInt();
-          if (ctrlType == "ContinuousCtrl") {
-              auto defaultValue = ctrl.getAttr("default").toDouble();
-              auto min = ctrl.getAttr("min").toDouble();
-              auto max = ctrl.getAttr("max").toDouble();
-              auto step = ctrl.getAttr("step").toDouble();
-
-
-              std::unique_ptr<juce::Slider> continuousCtrl = std::make_unique<juce::Slider>();
-
-              // Customize the slider properties if needed
-              if (widgetType == "SLIDER") {
-                  continuousCtrl->setSliderStyle(juce::Slider::LinearHorizontal);
-              }
-              else if (widgetType == "ROTARY") {
-                  continuousCtrl->setSliderStyle(juce::Slider::Rotary);
-              }
-              else {
-                  DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-                  jassertfalse;
-              }
-              continuousCtrl->setName(nameId);
-              continuousCtrl->setRange(min, max, step);
-              continuousCtrl->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-              continuousCtrl->addListener(this);
-              continuousCtrl->setTextValueSuffix(" " + name);
-              continuousCtrl->setLookAndFeel(&toolbarSliderStyle);
-              addAndMakeVisible(*continuousCtrl);
-
-              // Add the slider to the vector
-              continuousCtrls.push_back(std::move(continuousCtrl));
-
-          }
-          else if (ctrlType == "BinaryCtrl") {
-            auto defaultValue = ctrl.getAttr("default").toBool();
-            if (widgetType == "CHECKBOX") {
-                std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
-                binaryCtrl->setName(nameId);
-                binaryCtrl->setButtonText(name);
-                binaryCtrl->setToggleState(defaultValue, juce::dontSendNotification);
-                binaryCtrl->addListener(this);
-                addAndMakeVisible(*binaryCtrl);
-                binaryCtrls.push_back(std::move(binaryCtrl));
-            }
-            else {
-                DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-                jassertfalse;
-            }
-            
-            
-          }
-          else if (ctrlType == "TextInputCtrl") {
-              auto defaultValue = ctrl.getAttr("default").toStringRef();
-              std::unique_ptr<TitledTextBox> textCtrl = std::make_unique<TitledTextBox>();
-              textCtrl->setName(nameId);
-              textCtrl->setTitle(name);
-              textCtrl->setText(defaultValue);
-              textCtrl->addListener(this);
-              addAndMakeVisible(*textCtrl);
-              textCtrls.push_back(std::move(textCtrl));
-          }
-          else if (ctrlType == "FloatInputCtrl") {
-              auto defaultValue = ctrl.getAttr("default").toDouble();
-          }
-          else if (ctrlType == "OptionCtrl") {
-              auto options = ctrl.getAttr("options").toListRef();
-              // auto defaultValue = ctrl.getAttr("default").toString();
-              std::unique_ptr<juce::ComboBox> optionCtrl = std::make_unique<juce::ComboBox>();
-              for (auto &option : options) {
-                optionCtrl->addItem(option.toStringRef(), optionCtrl->getNumItems() + 1);
-              }
-              optionCtrl->setSelectedId(1);
-              optionCtrl->setName(nameId);
-              optionCtrl->addListener(this);
-              optionCtrl->setTextWhenNoChoicesAvailable("No choices");
-              addAndMakeVisible(*optionCtrl);
-              optionCtrls.push_back(std::move(optionCtrl));
-          }
-      
-
+      else {
+          DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
+          jassertfalse;
       }
     }
+    else if (ctrlType == "TextInputCtrl") {
+        std::string defaultValue = std::any_cast<std::string>(ctrlAttributes.at("default"));
+        std::unique_ptr<TitledTextBox> textCtrl = std::make_unique<TitledTextBox>();
+        textCtrl->setName(nameId);
+        textCtrl->setTitle(name);
+        textCtrl->setText(defaultValue);
+        textCtrl->addListener(this);
+        addAndMakeVisible(*textCtrl);
+        textCtrls.push_back(std::move(textCtrl));
     }
-  resized();
-  DBG("ChangeListener");
+    else if (ctrlType == "FloatInputCtrl") {
+        // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
+        // TODO
+    }
+    else if (ctrlType == "OptionCtrl") {
+        auto options = std::any_cast<std::vector<std::string>>(ctrlAttributes.at("options"));
+        std::unique_ptr<juce::ComboBox> optionCtrl = std::make_unique<juce::ComboBox>();
+        for (auto &option : options) {
+          optionCtrl->addItem(option, optionCtrl->getNumItems() + 1);
+        }
+        optionCtrl->setSelectedId(1);
+        optionCtrl->setName(nameId);
+        optionCtrl->addListener(this);
+        optionCtrl->setTextWhenNoChoicesAvailable("No choices");
+        addAndMakeVisible(*optionCtrl);
+        optionCtrls.push_back(std::move(optionCtrl));
+    }
+  }
+  DBG("populateGui finished");
 }

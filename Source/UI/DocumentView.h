@@ -23,6 +23,7 @@
 
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
+#include "../ARA/EditorView.h"
 
 #include "juce_audio_basics/juce_audio_basics.h"
 
@@ -38,6 +39,7 @@
  * @class DocumentView
  * @brief This class handles the DocumentView related functions
  */
+
 class DocumentView : public Component,
                      public ChangeListener,
                      public ARAMusicalContext::Listener,
@@ -49,7 +51,9 @@ public:
    * @param editorView
    * @param playHeadState
    */
-  DocumentView(ARAEditorView &editorView, PlayHeadState &playHeadState);
+  //TODO : editorView should be of type EditorView
+  // DocumentView(ARAEditorView &editorView, PlayHeadState &playHeadState);
+  DocumentView(EditorView &editorView, PlayHeadState &playHeadState);
 
   /**
    * @brief Destructor
@@ -123,7 +127,8 @@ private:
   void invalidateRegionSequenceViews();
   void rebuildRegionSequenceViews();
 
-  ARAEditorView &araEditorView;
+  // ARAEditorView &araEditorView;
+  EditorView &araEditorView;
   ARADocument &araDocument;
   bool regionSequenceViewsAreValid = false;
   TimeToViewScaling timeToViewScaling;

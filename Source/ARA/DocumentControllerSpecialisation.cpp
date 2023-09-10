@@ -24,19 +24,30 @@
 
 #include "DocumentControllerSpecialisation.h"
 
+// The constructor. It is taking entry and instance as parameters and feeds them directly to the base class constructor.
+TensorJuceDocumentControllerSpecialisation::
+            TensorJuceDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+                                         const ARA::ARADocumentControllerHostInstance* instance)
+            : ARADocumentControllerSpecialisation(entry, instance) {
+  
+
+}
+
 void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path) {
   std::cout << "Model path: " << path << std::endl;
   DBG("Model path: " << path);
 }
 
-void TensorJuceDocumentControllerSpecialisation::loadNeuralModel(std::map<std::string, std::any> &params) {
+void TensorJuceDocumentControllerSpecialisation::loadModel(std::map<std::string, std::any> &params) {
     // get the modelPath, pass it to the model
-    DBG("TensorJuceDocumentControllerSpecialisation::loadNeuralModel");
+    DBG("TensorJuceDocumentControllerSpecialisation::loadModel");
+    // mModel->addModelCardListener(editorView);
+    // mModel->addListener(editorView);
     mModel->load(params);
-    DBG("TensorJuceDocumentControllerSpecialisation::loadNeuralModel done");
+    DBG("TensorJuceDocumentControllerSpecialisation::loadModel done");
     // print the pointer memory value of mModel using DBG
-    int aa = 53;
-    
+    // int aa = 53;
+
   }
 
 void TensorJuceDocumentControllerSpecialisation::willBeginEditing(
@@ -66,11 +77,22 @@ ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
   return new PlaybackRenderer(getDocumentController(), *this);
 }
 
+// TODO : why not use ARAEditorRenderer like above ? (ARAPlaybackRenderer)
 EditorRenderer *
 TensorJuceDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
   return new EditorRenderer(getDocumentController(), &previewState, *this);
 }
 
+// Use ARAEditorView instead of EditorView because DocumentView expects just that. 
+// TODO : change the type in DocumentView
+EditorView *
+TensorJuceDocumentControllerSpecialisation::doCreateEditorView() noexcept {
+  EditorView* newEditorView = new EditorView(getDocumentController());
+  editorView = newEditorView;//dynamic_cast<EditorView*>(newEditorView);
+  // mModel->addModelCardListener(editorView);
+  mModel->addListener(editorView);
+  return newEditorView;
+}
 bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
     ARAInputStream &input, const ARARestoreObjectsFilter *filter) noexcept {
   // Start reading data from the archive, starting with the number of audio

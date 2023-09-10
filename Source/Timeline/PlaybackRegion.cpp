@@ -1,6 +1,6 @@
 #include "PlaybackRegion.h"
 
-PlaybackRegionView::PlaybackRegionView(ARAEditorView &editorView,
+PlaybackRegionView::PlaybackRegionView(EditorView &editorView,
                                        ARAPlaybackRegion &region,
                                        WaveformCache &cache)
     : araEditorView(editorView), playbackRegion(region), waveformCache(cache),

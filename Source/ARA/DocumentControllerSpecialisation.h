@@ -26,6 +26,7 @@
 
 #include "EditorRenderer.h"
 #include "PlaybackRenderer.h"
+#include "EditorView.h"
 #include "../DeepLearning/TorchModel.h"
 
 #include "../Util/PreviewState.h"
@@ -43,14 +44,18 @@ public:
    * @brief Constructor.
    * Uses ARA's document controller specialisation's constructor.
    */
-  using ARADocumentControllerSpecialisation::
-      ARADocumentControllerSpecialisation;
+  // using ARADocumentControllerSpecialisation::
+  //     ARADocumentControllerSpecialisation;
+  TensorJuceDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+                                         const ARA::ARADocumentControllerHostInstance* instance) ;
+  // ARADocumentControllerSpecialisation (const ARA::PlugIn::PlugInEntry* entry,
+  //                                        const ARA::ARADocumentControllerHostInstance* instance);
 
   PreviewState previewState; ///< Preview state.
 
-  std::shared_ptr<TorchWave2Wave> getNeuralModel() { return mModel; }
+  std::shared_ptr<TorchWave2Wave> getModel() { return mModel; }
   void printModelPath(std::string path);
-  void loadNeuralModel(std::map<std::string, std::any> &params);
+  void loadModel(std::map<std::string, std::any> &params);
   
 protected:
   void willBeginEditing(
@@ -79,6 +84,12 @@ protected:
    */
   EditorRenderer *doCreateEditorRenderer() noexcept override;
 
+  /**
+   * @brief Creates an editor view.
+   * @return A new EditorView instance.
+   */
+  EditorView *doCreateEditorView() noexcept override;
+
   bool
   doRestoreObjectsFromStream(ARAInputStream &input,
                              const ARARestoreObjectsFilter *filter) noexcept
@@ -92,4 +103,10 @@ private:
   std::shared_ptr<TorchWave2Wave> mModel {new TorchWave2Wave()}; ///< Model for audio processing.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
+
+  // We need the DocController to have access to the EditorView
+  // so that we can update the view when the model is loaded
+  // (another option is to use a listener pattern)
+  EditorView *editorView {nullptr}; ///< Editor view.
+
 };

@@ -13,6 +13,8 @@ set(SourceFiles
     Source/ARA/PlaybackRenderer.cpp
     Source/ARA/ProcessorEditor.h
     Source/ARA/ProcessorEditor.cpp
+    Source/ARA/EditorView.h
+    Source/ARA/EditorView.cpp
 
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
@@ -26,6 +28,7 @@ set(SourceFiles
     Source/Timeline/PlayheadPositionLabel.h
     Source/Timeline/PlayheadPositionLabel.cpp
 
+    Source/UI/CustomComponents.h
     Source/UI/DocumentView.h
     Source/UI/DocumentView.cpp
     Source/UI/Layout.h

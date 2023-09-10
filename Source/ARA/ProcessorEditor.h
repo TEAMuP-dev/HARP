@@ -27,20 +27,18 @@
 #include "../UI/DocumentView.h"
 #include "../UI/ToolBarStyle.h"
 #include "../UI/CustomComponents.h"
+// #include "../UI/ModelCard.h"
 #include "AudioProcessorImpl.h"
 #include "EditorRenderer.h"
+#include "PlaybackRenderer.h"
+#include "EditorView.h"
 #include "AudioModification.h"  
 // #include "../DeepLearning/TorchModel.h"
 #include <torch/script.h>
 #include <torch/torch.h>
-#include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
+// #include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
 #include "DocumentControllerSpecialisation.h"
 
-
-/**
- * @class ModelCardComponent
- * @brief graphical interface for model metadata
- */
 class ModelCardComponent : public juce::Component {
 public:
     ModelCardComponent() {
@@ -57,7 +55,11 @@ public:
         nameLabel.setText("Name: " + juce::String(card.name), juce::dontSendNotification);
         descriptionLabel.setText("Description: " + juce::String(card.description), juce::dontSendNotification);
         authorLabel.setText("Author: " + juce::String(card.author), juce::dontSendNotification);
-        sampleRateLabel.setText("Sample Rate: " + juce::String(card.sampleRate), juce::dontSendNotification);
+        if (card.sampleRate == 0) {
+          sampleRateLabel.setText("Sample Rate: ", juce::dontSendNotification);
+        } else {
+          sampleRateLabel.setText("Sample Rate: " + juce::String(card.sampleRate), juce::dontSendNotification);
+        }
         
         juce::String tagsText = "Tags: ";
         for (const auto& tag : card.tags) {
@@ -108,7 +110,6 @@ private:
     juce::Label tagsLabel;
 };
 
-
 /**
  * @class TensorJuceProcessorEditor
  * @brief Class responsible for managing the plugin's graphical interface.
@@ -122,9 +123,7 @@ class TensorJuceProcessorEditor : public AudioProcessorEditor,
                                   public Button::Listener,
                                   public Slider::Listener,
                                   public ComboBox::Listener,
-                                  public TextEditor::Listener,
-                                  public ChangeListener,
-                                  public ModelCardListener
+                                  public TextEditor::Listener
                                    {
 public:
   /**
@@ -134,7 +133,9 @@ public:
    * @param er Pointer to EditorRenderer object.
    */
   explicit TensorJuceProcessorEditor(TensorJuceAudioProcessorImpl &p,
-                                     EditorRenderer *er);
+                                     EditorRenderer *er,
+                                     PlaybackRenderer *pr,
+                                     EditorView *ev);
 
   // destructor
   // ~TensorJuceProcessorEditor() override;
@@ -147,17 +148,13 @@ public:
   // Slider listener method
   void sliderValueChanged(Slider *slider) override;
 
-  // Model card listener method
-  void modelCardLoaded(const ModelCard& card) override;
-
   // Paint method
   void paint(Graphics &g) override;
 
   // Resize method
   void resized() override;
 
-  // Change listener method
-  void changeListenerCallback(ChangeBroadcaster *source) override;
+  void populateGui();
 
   void resetUI();
 
@@ -192,6 +189,8 @@ private:
   ComboBoxLookAndFeel comboBoxLookAndFeel;
 
   EditorRenderer *mEditorRenderer;
+  PlaybackRenderer *mPlaybackRenderer;
+  EditorView *mEditorView;
   TensorJuceDocumentControllerSpecialisation *mDocumentController;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceProcessorEditor)
 };

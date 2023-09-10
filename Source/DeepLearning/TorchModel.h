@@ -32,7 +32,7 @@
 #include <tuple>
 
 #include "juce_audio_basics/juce_audio_basics.h"
-
+// #include "../UI/ModelCard.h"
 #include "Model.h"
 #include "Wave2Wave.h"
 
@@ -50,13 +50,16 @@ struct ModelCard {
   std::string description;
   std::string author;
   std::vector<std::string> tags;
+  ModelCard()
+    : sampleRate(0) // Initialize sampleRate to 0
+    {}
 };
 
-class ModelCardListener
-{
-public:
-    virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
-};
+// class ModelCardListener
+// {
+// public:
+//     virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
+// };
 
 /**
  * @class TorchModel
@@ -78,7 +81,7 @@ public:
   bool ready() const override;
 
   // //! provides access to the model card (metadata)
-  ModelCard &card();
+  // ModelCard &card();
 
   //! forward pass
   IValue forward(const std::vector<IValue> &inputs) const;
@@ -94,30 +97,30 @@ public:
 // protected:
 public:
   // modelcard listener
-  void addModelCardListener(ModelCardListener* listener) 
-  {
-      mcListeners.add(listener);
-  }
+//   void addModelCardListener(ModelCardListener* listener) 
+//   {
+//       mcListeners.add(listener);
+//   }
 
-  void removeMcListener(ModelCardListener* listener) 
-  {
-      mcListeners.remove(listener);
-  }
+//   void removeMcListener(ModelCardListener* listener) 
+//   {
+//       mcListeners.remove(listener);
+//   }
 
-protected: 
-  void broadcastModelCardLoaded() 
-  {
-    mcListeners.call([this](ModelCardListener& l) { l.modelCardLoaded(m_card); });
-  }
+// protected: 
+//   void broadcastModelCard() 
+//   {
+//     mcListeners.call([this](ModelCardListener& l) { l.setModelCard(m_card); });
+//   }
 
-private:
-  juce::ListenerList<ModelCardListener> mcListeners;
+// private:
+//   juce::ListenerList<ModelCardListener> mcListeners;
 
 public: 
   unique_ptr<Module> m_model;
 protected:
   // unique_ptr<Module> m_model;
-  ModelCard m_card;
+  // ModelCard m_card;
   bool m_loaded;
   mutable std::mutex m_mutex;
   std::function<void(std::string)> editorsWidgetCreationCallback;

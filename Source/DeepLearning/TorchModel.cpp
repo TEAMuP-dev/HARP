@@ -70,8 +70,8 @@ bool TorchModel::load(const map<string, any> &params) {
     // when using sendSynchrounousChangeMessage(). If we use sendChangeMessage()
     // JUCE someshow groups/optimizes all the n messages, and the widgets are
     // only created once.
-    // sendSynchronousChangeMessage();
-    sendChangeMessage();
+    sendSynchronousChangeMessage();
+    // sendChangeMessage();
     // DBG("Change message sent");
     // // print model attributes
     // DBG("Model attributes:");
@@ -80,19 +80,19 @@ bool TorchModel::load(const map<string, any> &params) {
     // }
 
     // populate the model card
-    auto pycard = m_model->attr("model_card").toObject();
+    // auto pycard = m_model->attr("model_card").toObject();
 
-    m_card.name = pycard->getAttr("name").toStringRef();
-    m_card.description = pycard->getAttr("description").toStringRef();
-    m_card.author = pycard->getAttr("author").toStringRef();
-    m_card.sampleRate = pycard->getAttr("sample_rate").toInt();
-    for (const auto &tag : pycard->getAttr("tags").toListRef()) {
-      m_card.tags.push_back(tag.toStringRef());
-    }
+    // m_card.name = pycard->getAttr("name").toStringRef();
+    // m_card.description = pycard->getAttr("description").toStringRef();
+    // m_card.author = pycard->getAttr("author").toStringRef();
+    // m_card.sampleRate = pycard->getAttr("sample_rate").toInt();
+    // for (const auto &tag : pycard->getAttr("tags").toListRef()) {
+    //   m_card.tags.push_back(tag.toStringRef());
+    // }
     
     // we're done loading the model card, broadcast it
-    broadcastModelCardLoaded();
-    DBG("broadcasted model card loaded event");
+    // broadcastModelCard();
+    // DBG("broadcasted model card loaded event");
 
   } catch (const char *e) {
     DBG("Error loading the model");
@@ -207,10 +207,10 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   try {
     // resampling routine
     // DBG("resampling audio from " << sampleRate << " Hz" << " to " << card->getAttr("sample_rate").toInt() << " Hz");
-    DBG(
-      "resampling audio from " << sampleRate << " Hz" << 
-      " to " << m_card.sampleRate << " Hz"
-    );
+    // DBG(
+    //   "resampling audio from " << sampleRate << " Hz" << 
+    //   " to " << m_card.sampleRate << " Hz"
+    // );
     auto resampled = m_model->get_method("resample")({input, sampleRate}).toTensor();
 
     // perform the forward pass

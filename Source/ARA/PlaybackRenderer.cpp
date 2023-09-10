@@ -110,7 +110,7 @@ bool PlaybackRenderer::processBlock(
     AudioBuffer<float> &buffer, AudioProcessor::Realtime realtime,
     const AudioPlayHead::PositionInfo &positionInfo) noexcept {
   const auto lock = lockInterface.getProcessingLock();
-
+  ignoreUnused(realtime);
   if (!lock.isLocked()) {
     DBG("PlaybackRenderer::processBlock could not acquire processing lock");
     return true;

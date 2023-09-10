@@ -1,10 +1,11 @@
 #pragma once
 
+#include "../ARA/EditorView.h"
 class TrackHeader : public Component,
                     private ARARegionSequence::Listener,
                     private ARAEditorView::Listener {
 public:
-  TrackHeader(ARAEditorView &editorView, ARARegionSequence &regionSequenceIn)
+  TrackHeader(EditorView &editorView, ARARegionSequence &regionSequenceIn)
       : araEditorView(editorView), regionSequence(regionSequenceIn) {
     updateTrackName(regionSequence.getName());
     onNewSelection(araEditorView.getViewSelection());
@@ -67,7 +68,7 @@ private:
                            NotificationType::dontSendNotification);
   }
 
-  ARAEditorView &araEditorView;
+  EditorView &araEditorView;
   ARARegionSequence &regionSequence;
   Label trackNameLabel;
   bool isSelected = false;

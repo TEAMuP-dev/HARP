@@ -20,7 +20,7 @@
  */
 #include "RegionSequenceView.h"
 
-RegionSequenceView::RegionSequenceView(ARAEditorView &editorView,
+RegionSequenceView::RegionSequenceView(EditorView &editorView,
                                        TimeToViewScaling &scaling,
                                        ARARegionSequence &rs,
                                        WaveformCache &cache)

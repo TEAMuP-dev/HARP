@@ -21,7 +21,9 @@
 
 #include "DocumentView.h"
 
-DocumentView::DocumentView(ARAEditorView &editorView,
+// DocumentView::DocumentView(ARAEditorView &editorView,
+//                            PlayHeadState &playHeadState)
+DocumentView::DocumentView(EditorView &editorView,
                            PlayHeadState &playHeadState)
     : araEditorView(editorView),
       araDocument(

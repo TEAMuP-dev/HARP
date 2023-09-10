@@ -20,6 +20,7 @@
 #pragma once
 
 #include "../ARA/AudioModification.h"
+#include "../ARA/EditorView.h"
 #include "../ARA/DocumentControllerSpecialisation.h"
 #include "../WaveformCache/WaveformCache.h"
 
@@ -36,7 +37,7 @@ class PlaybackRegionView : public juce::Component,
                            private ARAPlaybackRegion::Listener,
                            private ARAEditorView::Listener {
 public:
-  PlaybackRegionView(ARAEditorView &editorView, ARAPlaybackRegion &region,
+  PlaybackRegionView(EditorView &editorView, ARAPlaybackRegion &region,
                      WaveformCache &cache);
   ~PlaybackRegionView() override;
 
@@ -98,7 +99,7 @@ private:
   };
 
   TensorJuceDocumentControllerSpecialisation *getDocumentController() const;
-  ARAEditorView &araEditorView;
+  EditorView &araEditorView;
   ARAPlaybackRegion &playbackRegion;
   WaveformCache &waveformCache;
   PreviewRegionOverlay previewRegionOverlay;

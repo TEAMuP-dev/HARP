@@ -26,6 +26,10 @@ public:
   bool hasEditor() const override { return true; }
   AudioProcessorEditor *createEditor() override {
     return new TensorJuceProcessorEditor(
-        *this, dynamic_cast<EditorRenderer *>(getEditorRenderer()));
+        *this, 
+        dynamic_cast<EditorRenderer *>(getEditorRenderer()),
+        dynamic_cast<PlaybackRenderer *>(getPlaybackRenderer()),
+        dynamic_cast<EditorView *>(getEditorView())
+      );
   }
 };

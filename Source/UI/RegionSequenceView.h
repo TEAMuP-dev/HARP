@@ -23,6 +23,7 @@
 
 #include "../Timeline/PlaybackRegion.h"
 #include "../Util/TimeToViewScaling.h"
+#include "../ARA/EditorView.h"
 
 class RegionSequenceView : public Component,
                            public ChangeBroadcaster,
@@ -30,7 +31,7 @@ class RegionSequenceView : public Component,
                            private ARARegionSequence::Listener,
                            private ARAPlaybackRegion::Listener {
 public:
-  RegionSequenceView(ARAEditorView &editorView, TimeToViewScaling &scaling,
+  RegionSequenceView(EditorView &editorView, TimeToViewScaling &scaling,
                      ARARegionSequence &rs, WaveformCache &cache);
   ~RegionSequenceView() override;
 
@@ -52,7 +53,7 @@ private:
   void createAndAddPlaybackRegionView(ARAPlaybackRegion *playbackRegion);
   void updatePlaybackDuration();
 
-  ARAEditorView &araEditorView;
+  EditorView &araEditorView;
   TimeToViewScaling &timeToViewScaling;
   ARARegionSequence &regionSequence;
   WaveformCache &waveformCache;
