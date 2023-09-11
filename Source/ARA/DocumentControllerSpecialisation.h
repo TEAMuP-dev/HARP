@@ -19,7 +19,7 @@
  * maintains the ARA model graph. More information can be found on the offical
  * JUCE documentation:
  * https://docs.juce.com/master/classARADocumentControllerSpecialisation.html#details
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #pragma once
@@ -55,7 +55,9 @@ public:
 
   std::shared_ptr<TorchWave2Wave> getModel() { return mModel; }
   void printModelPath(std::string path);
-  void loadModel(std::map<std::string, std::any> &params);
+  void executeLoad(const std::string &modelPath);
+  void executeProcess(std::map<std::string, std::any> &params);
+  
   
 protected:
   void willBeginEditing(
@@ -108,5 +110,6 @@ private:
   // so that we can update the view when the model is loaded
   // (another option is to use a listener pattern)
   EditorView *editorView {nullptr}; ///< Editor view.
-
+  PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
+  EditorRenderer *editorRenderer {nullptr}; ///< Editor renderer.
 };

@@ -65,7 +65,6 @@ public:
 
 
   void executeProcess(std::map<std::string, std::any> &params);
-  // void executeLoad(std::map<std::string, std::any> &params, juce::ChangeListener* listener);
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 
@@ -82,14 +81,14 @@ public:
 
   using ARAEditorRenderer::processBlock;
 
-  std::shared_ptr<TorchWave2Wave> getModel() { 
-    return model;
-  }
+  // std::shared_ptr<TorchWave2Wave> getModel() { 
+  //   return model;
+  // }
 
 private:
   void configure();
 
-  std::shared_ptr<TorchWave2Wave> model {nullptr};
+  // std::shared_ptr<TorchWave2Wave> model {nullptr};
 
   ProcessingLockInterface &lockInterface;
   const PreviewState *previewState = nullptr;

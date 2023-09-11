@@ -45,15 +45,15 @@ TorchModel::~TorchModel() {
   removeAllChangeListeners();
 }
 
-bool TorchModel::load(const map<string, any> &params) {
+bool TorchModel::load(const string &modelPath) {
   DBG("Loading model");
   std::cout<<"Loading model"<<std::endl;
   std::lock_guard<std::mutex> lock(m_mutex);
-  if (!modelparams::contains(params, "modelPath")) {
-    DBG("modelPath not found in params");
-    return false;
-  }
-  auto modelPath = any_cast<string>(params.at("modelPath"));
+  // if (!modelparams::contains(params, "modelPath")) {
+  //   DBG("modelPath not found in params");
+  //   return false;
+  // }
+  // auto modelPath = any_cast<string>(params.at("modelPath"));
   DBG("Loading model from " + modelPath);
 
   try {
@@ -62,26 +62,11 @@ bool TorchModel::load(const map<string, any> &params) {
     m_loaded = true;
     DBG("Model loaded");
 
-    // TODO : A TorchModel instance is a shared resource between all the 
-    // AMs and PRs, however, the model is loaded again and again for every PR. 
-    // In the current implementation, loading the model triggers the creation
-    // of the control widgets in the plugin. This means that if we have n PRs 
-    // loaded, the widgets will be created n times. This bug is only present
-    // when using sendSynchrounousChangeMessage(). If we use sendChangeMessage()
-    // JUCE someshow groups/optimizes all the n messages, and the widgets are
-    // only created once.
+    // It's important to use the synchronous version of sendChangeMessage()
     sendSynchronousChangeMessage();
-    // sendChangeMessage();
-    // DBG("Change message sent");
-    // // print model attributes
-    // DBG("Model attributes:");
-    // for (const auto &attr : m_model->named_attributes()) {
-    //   DBG("Name: " + attr.name);
-    // }
 
     // populate the model card
     // auto pycard = m_model->attr("model_card").toObject();
-
     // m_card.name = pycard->getAttr("name").toStringRef();
     // m_card.description = pycard->getAttr("description").toStringRef();
     // m_card.author = pycard->getAttr("author").toStringRef();
@@ -90,10 +75,6 @@ bool TorchModel::load(const map<string, any> &params) {
     //   m_card.tags.push_back(tag.toStringRef());
     // }
     
-    // we're done loading the model card, broadcast it
-    // broadcastModelCard();
-    // DBG("broadcasted model card loaded event");
-
   } catch (const char *e) {
     DBG("Error loading the model");
     std::cerr << "Error loading the model\n";
@@ -195,14 +176,14 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
   // print input tensor shape
   DBG("built input audio tensor with shape "
       << size2string(input.toTensor().sizes()));
-  torch::Tensor aa = parameters.at("gain");
-  DBG("gain: " << aa.item<double>());
-  IValue bb = parameters2.at("gain");
-  torch::Tensor my_tensor = bb.toTensor();
-  DBG("gain3: " << my_tensor.item<double>());
+  // torch::Tensor aa = parameters.at("gain");
+  // DBG("gain: " << aa.item<double>());
+  // IValue bb = parameters2.at("gain");
+  // torch::Tensor my_tensor = bb.toTensor();
+  // DBG("gain3: " << my_tensor.item<double>());
 
-  IValue ss = parameters2.at("mode");
-  std::string mode = ss.toStringRef();
+  // IValue ss = parameters2.at("mode");
+  // std::string mode = ss.toStringRef();
   // forward pass
   try {
     // resampling routine
@@ -215,7 +196,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
 
     // perform the forward pass
     DBG("forward pass...");
-    auto output = forward({resampled, parameters2}).toTensor();
+    auto output = forward({resampled, parameters}).toTensor();
     DBG("got output tensor with shape " << size2string(output.sizes()));
 
     // we're expecting audio out

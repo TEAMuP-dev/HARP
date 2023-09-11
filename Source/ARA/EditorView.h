@@ -21,18 +21,12 @@
 using namespace juce;
 using GenericDict = std::map<std::string, std::any>;
 using ListOfDicts = std::vector<GenericDict>;
-
-// #include "../UI/CustomComponents.h"
-
-
-
 /**
  * @class EditorRenderer
  * @brief TODO: Write brief class description.
  */
 class EditorView : public juce::ARAEditorView,
                     public ChangeListener
-                    // public ModelCardListener 
                     {
 public:
     // EditorView(ARA::PlugIn::DocumentController *documentController);
@@ -42,8 +36,6 @@ public:
 
     // setModelGuiAttributes
     void changeListenerCallback(ChangeBroadcaster *source) override;
-    // Model card listener method
-    // void setModelCard(const ModelCard& card) override;
 
     // Model Card getter
     ModelCard getModelCard() const;

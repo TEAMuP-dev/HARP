@@ -1,3 +1,10 @@
+/**
+ * @file
+ *
+ * @brief Implementation of the ARA Editor View.
+ * @author xribene
+ */
+
 #include "EditorView.h"
 
 // EditorView::EditorView(ARA::PlugIn::DocumentController *documentController)
@@ -102,12 +109,6 @@ void EditorView::changeListenerCallback(ChangeBroadcaster *source) {
     }
     modelLoaded = true;
 }
-
-// // Model card listener method
-// void EditorView::setModelCard(const ModelCard& card){
-//     modelCard = card;
-//     DBG("Eimai Mesa se EditorView::modelCardLoaded");
-// }
 
 // Model Card getter
 ModelCard EditorView::getModelCard() const {

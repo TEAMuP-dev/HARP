@@ -15,7 +15,7 @@
  *
  * @brief Models defined in this file are any audio processing models that
  * utilize a libtorch backend for processing data.
- * @author hugo flores garcia, aldo aguilar
+ * @author hugo flores garcia, aldo aguilar, xribene
  */
 
 #pragma once
@@ -75,7 +75,7 @@ public:
   ~TorchModel() override;
 
   //! loads a torchscript model from file.
-  bool load(const map<string, any> &params) override;
+  bool load(const string &modelPath) override;
 
   //! checks if a model is loaded onto memory.
   bool ready() const override;

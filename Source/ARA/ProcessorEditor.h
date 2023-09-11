@@ -18,7 +18,7 @@
  * control all user input. The Processor Editor manages the UI components for
  * user input, and manages a callback to send UI information to the deeplearning
  * model.
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #pragma once

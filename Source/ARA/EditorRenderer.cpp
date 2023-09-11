@@ -142,25 +142,6 @@ void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
   forEachPlaybackRegion(callback);
 }
 
-// void EditorRenderer::executeLoad(std::map<std::string, std::any> &params, 
-//                                 juce::ChangeListener* listener ) {
-//   DBG("EditorRenderer::executeLoad executing load");
-
-//   auto callback = [&params, listener](juce::ARAPlaybackRegion *playbackRegion) -> bool {
-//     // get the current active ProcessorEditor and cast it to TensorJuceProcessorEditor
-//     // auto processorEditor = getActiveEditor(); // dynamic_cast<TensorJuceProcessorEditor *>(
-//     auto modification = 
-//         playbackRegion->getAudioModification<AudioModification>();
-//     std::cout << "EditorRenderer::loading playbackRegion "
-//               << modification->getSourceName() << std::endl;
-//     // modification->addListenerToModel(listener);
-//     // modification->load(params);
-//     return true;
-//   };
-
-//   forEachPlaybackRegion(callback);
-// }
-
 template <typename Callback>
 void EditorRenderer::forEachPlaybackRegion(Callback &&cb) {
   for (const auto &playbackRegion : getPlaybackRegions())
@@ -293,7 +274,7 @@ void EditorRenderer::configure() {
           std::max(4 * maximumExpectedSamplesPerBlock, (int)sampleRate));
     }
     
-    model = playbackRegion->template getAudioModification<AudioModification>()->getModel();
+    // model = playbackRegion->template getAudioModification<AudioModification>()->getModel();
 
     return true;
   });

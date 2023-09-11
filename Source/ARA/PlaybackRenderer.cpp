@@ -266,3 +266,32 @@ bool PlaybackRenderer::processBlock(
   }
   return success;
 }
+
+void PlaybackRenderer::executeProcess(std::map<std::string, std::any> &params) {
+  DBG("PlaybackRenderer::executeProcess executing process");
+
+  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+    auto modification =
+        playbackRegion->getAudioModification<AudioModification>();
+    std::cout << "PlaybackRenderer::processing playbackRegion "
+              << modification->getSourceName() << std::endl;
+    modification->process(params);
+    return true;
+  };
+
+  forEachPlaybackRegion(callback);
+}
+
+template <typename Callback>
+void PlaybackRenderer::forEachPlaybackRegion(Callback &&cb) {
+  for (const auto &playbackRegion : getPlaybackRegions())
+    if (!cb(playbackRegion))
+      return;
+
+  // NOTE : PlaybackRenderer doesn't get access to the regionSequences
+  // for (const auto &regionSequence : getRegionSequences())
+  //   for (const auto &playbackRegion : regionSequence->getPlaybackRegions())
+  //     if (!cb(playbackRegion))
+  //       return;
+  // Question : does callback get called 2x for each region?
+}

@@ -123,6 +123,7 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
           optionCtrls[i]->getText().toStdString()));
     }    
     // mEditorRenderer->executeProcess(params);
+    mDocumentController->executeProcess(params);
   }
 
   if (button == &loadModelButton) {
@@ -147,12 +148,12 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
       }
 
       // convert modelPath to a string
-      std::map<std::string, std::any> params = {
-        {"modelPath", modelPath.getFullPathName().toStdString()}
-      };
+      // std::map<std::string, std::any> params = {
+      //   {"modelPath", modelPath.getFullPathName().toStdString()}
+      // };
 
       resetUI();
-      mDocumentController->loadModel(params);
+      mDocumentController->executeLoad(modelPath.getFullPathName().toStdString());
       // Model loading happens synchronously, so we can be sure that
       // the Editor View has the model card and UI attributes loaded
       modelCardComponent.setModelCard(mEditorView->getModelCard());
@@ -315,7 +316,7 @@ void TensorJuceProcessorEditor::populateGui() {
     }
     
     else if (ctrlType == "BinaryCtrl") {
-      bool defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
+      bool defaultValue = std::any_cast<bool>(ctrlAttributes.at("default"));
       if (widgetType == "CHECKBOX") {
           std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
           binaryCtrl->setName(nameId);

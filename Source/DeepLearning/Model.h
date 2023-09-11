@@ -47,7 +47,7 @@ public:
    * @param params A map of parameters for the model.
    * @return A boolean indicating whether the model was loaded successfully.
    */
-  virtual bool load(const map<string, any> &params) = 0;
+  virtual bool load(const string &modelPath) = 0;
 
   /**
    * @brief Checks if the model is ready.

@@ -85,18 +85,8 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
   }
 }
 
-// void AudioModification::load(std::map<std::string, std::any> &params) {
-//   // get the modelPath, pass it to the model
-//   DBG("AudioModification::load");
-//   mModel->load(params);
-// }
-
 juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {
   return mAudioBuffer.get();
 }
 
 bool AudioModification::getIsModified() { return mIsModified; }
-
-// void AudioModification::addListenerToModel(juce::ChangeListener* listener){
-//   mModel->addListener(listener);
-// }

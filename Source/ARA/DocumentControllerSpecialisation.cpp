@@ -19,7 +19,7 @@
  * maintains the ARA model graph. More information can be found on the offical
  * JUCE documentation:
  * https://docs.juce.com/master/classARADocumentControllerSpecialisation.html#details
- * @author JUCE, aldo aguilar, hugo flores garcia
+ * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
 #include "DocumentControllerSpecialisation.h"
@@ -38,17 +38,19 @@ void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path
   DBG("Model path: " << path);
 }
 
-void TensorJuceDocumentControllerSpecialisation::loadModel(std::map<std::string, std::any> &params) {
+void TensorJuceDocumentControllerSpecialisation::executeLoad(const std::string &modelPath) {
     // get the modelPath, pass it to the model
-    DBG("TensorJuceDocumentControllerSpecialisation::loadModel");
-    // mModel->addModelCardListener(editorView);
-    // mModel->addListener(editorView);
-    mModel->load(params);
-    DBG("TensorJuceDocumentControllerSpecialisation::loadModel done");
-    // print the pointer memory value of mModel using DBG
-    // int aa = 53;
-
+    DBG("TensorJuceDocumentControllerSpecialisation::executeLoad");
+    mModel->load(modelPath);
+    DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
   }
+
+void TensorJuceDocumentControllerSpecialisation::executeProcess(std::map<std::string, std::any> &params) {
+    // Playback renderer is the one having access to all the playback regions
+    playbackRenderer->executeProcess(params);
+    // Editor renderer has also, and additionally to the region sequences
+    // editorRenderer->executeProcess(params);
+}
 
 void TensorJuceDocumentControllerSpecialisation::willBeginEditing(
     ARADocument *) {
@@ -74,13 +76,18 @@ TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
 
 ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
-  return new PlaybackRenderer(getDocumentController(), *this);
+  PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this);
+  playbackRenderer = newPlaybackRenderer;//dynamic_cast<EditorView*>(newEditorView);
+  return newPlaybackRenderer;
 }
 
 // TODO : why not use ARAEditorRenderer like above ? (ARAPlaybackRenderer)
 EditorRenderer *
 TensorJuceDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
-  return new EditorRenderer(getDocumentController(), &previewState, *this);
+  // return new EditorRenderer(getDocumentController(), &previewState, *this);
+  EditorRenderer* newEditorRenderer = new EditorRenderer(getDocumentController(), &previewState, *this);
+  editorRenderer = newEditorRenderer;
+  return newEditorRenderer;
 }
 
 // Use ARAEditorView instead of EditorView because DocumentView expects just that. 
@@ -89,7 +96,6 @@ EditorView *
 TensorJuceDocumentControllerSpecialisation::doCreateEditorView() noexcept {
   EditorView* newEditorView = new EditorView(getDocumentController());
   editorView = newEditorView;//dynamic_cast<EditorView*>(newEditorView);
-  // mModel->addModelCardListener(editorView);
   mModel->addListener(editorView);
   return newEditorView;
 }

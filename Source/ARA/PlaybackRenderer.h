@@ -90,6 +90,15 @@ public:
       const AudioPlayHead::PositionInfo &positionInfo) noexcept override;
   using ARAPlaybackRenderer::processBlock;
 
+  /**
+   * @brief Processes the each of the playback regions using the Neural Model
+   * @param params The parameters from the UI to use for processing. 
+   * @return void
+   */
+  void executeProcess(std::map<std::string, std::any> &params);
+
+  template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
+
 private:
   ProcessingLockInterface &lockInterface;
   SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
