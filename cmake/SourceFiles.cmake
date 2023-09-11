@@ -19,8 +19,8 @@ set(SourceFiles
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
     Source/DeepLearning/Wave2Wave.cpp
-    Source/DeepLearning/TorchModel.h
-    Source/DeepLearning/TorchModel.cpp
+    # Source/DeepLearning/TorchModel.h
+    # Source/DeepLearning/TorchModel.cpp
     Source/DeepLearning/WebModel.h
 
     Source/Timeline/PlaybackRegion.h

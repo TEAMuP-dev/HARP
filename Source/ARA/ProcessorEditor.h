@@ -33,10 +33,7 @@
 #include "PlaybackRenderer.h"
 #include "EditorView.h"
 #include "AudioModification.h"  
-// #include "../DeepLearning/TorchModel.h"
-#include <torch/script.h>
-#include <torch/torch.h>
-// #include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
+
 #include "DocumentControllerSpecialisation.h"
 
 class ModelCardComponent : public juce::Component {
@@ -178,6 +175,7 @@ private:
   ComboBoxLookAndFeel comboBoxLookAndFeel;
 
   unique_ptr<Component> documentView;
+  juce::TextEditor modelPathTextBox;
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
 
@@ -187,10 +185,8 @@ private:
   std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
   std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
 
-  // std::shared_ptr<TorchWave2Wave> model;
+  // std::shared_ptr<WebWave2Wave> model;
   ModelCardComponent modelCardComponent;
-
-  std::unique_ptr<juce::FileChooser> modelPathChooser {nullptr};
 
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;

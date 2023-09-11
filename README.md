@@ -14,30 +14,24 @@ parts of this codebase are based on the [pamplejuce](https://github.com/sudara/p
     - (don't forget its submodules)
 - Update your ARA_SDK path in [CMakeLists.txt](CMakeLists.txt)
 
-<!-- ### Tracktion
-- tracktion_engine is a submodule. The JUCE package that exists as a submodule in tracktion_engine is not needed (I think) -->
 
-### Libtorch
-- Libtorch is in C:\libtorch. Change your path in CMakeLists.txt accordingly
-- It's important to maintain the order of the `include` statements in `Main.cpp` (torch before juce)
+## An Important Note
+For now, this build works on MacOS M1 only, since it builds with a version of relocatable python that is only available on MacOS. This is a temporary limitation (hopefully), as we figure out how to embed a Python interpreter in our windows builds. 
 
-### Downloading libtorch for MacOS
-We're currently having trouble making ARA work for x86 Mac builds, so make sure you build
-For ARM MacOS builds, you can download an ARM build here: https://github.com/mlverse/libtorch-mac-m1/releases/tag/LibTorch-for-R.
-This should be a drop-in replacement for a regular libtorch build.
+To see what we're doing right now, check out relocatable-python: https://github.com/gregneagle/relocatable-python
+though I had to make some changes to make it work with our build system: https://github.com/hugofloresgarcia/relocatable-python
 
-To ensure you're building on arm, make sure that you build the application from an ARM shell, `arch -arm64 zsh`.
-<!-- 
-### Setting up PyBind
-
-1. make a clean python environment using conda
-2. activate that python environment before building
-3. pip install `gradio-client` in that environment
+## Building
 
 call cmake:
 ```
-cmake -DPYTHON_EXECUTABLE=$(python3 -c "import sys; print(sys.executable)") ..
-``` -->
+cmake  .. -DCMAKE_BUILD_TYPE=Debug
+```
+
+## Notes
+these people have a cross platform embedded python using their SCons build system:
+https://github.com/touilleMan/godot-python/tree/master
+
 
 ### CMake
 #### Windows

@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "tensorjuce")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
+# set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
 
-set (TENSORJUCE_FORMATS "VST3")
+set (TENSORJUCE_FORMATS "VST3" "Standalone")
 
 # defines SourceFiles
 include(cmake/SourceFiles.cmake)
@@ -18,31 +18,17 @@ file(STRINGS VERSION CURRENT_VERSION)
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)
 
-if (APPLE) 
-    include(cmake/libtorch-mac.cmake)
-    message(${Torch_DIR})
-endif(APPLE)
-
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...") 
-    # libtorch settings
-    find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    
     # ara settings
     juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
 
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # mac and linux library location
     message("Building for UNIX...")
-    # libtorch settings
-    find_package(Torch REQUIRED)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-    # add ARA SDK to PATH
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Examples")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Library")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_API")
+
     # ara settings
     juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 
@@ -51,11 +37,19 @@ else()
 
 endif()
 
-# add_subdirectory(pybind11)
+# this sets the following variables:
+# PY_FRAMEWORK_DIR, Python_ROOT_DIR, PYTHON_EXECUTABLE
+# to include Python and pybind11
+include(py/relocatable-python.cmake)
+setup_relocatable_python()
+message("Python framework dir: ${PY_FRAMEWORK_DIR}")
+message("Python root dir: ${Python_ROOT_DIR}")
+message("Python executable: ${PYTHON_EXECUTABLE}")
 
+# get all the files in the python framework
+find_package(Python COMPONENTS Interpreter Development)
+add_subdirectory(pybind11)
 
-
-# add_subdirectory(tracktion_engine/modules)
 
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -127,43 +121,18 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        # tracktion::tracktion_engine
-
-        # tractkion::tracktion_core
-        # tracktion::3rd_party
-        # tracktion::tracktion_graph
 
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
-        ${TORCH_LIBRARIES}
 
-        # pybind11::embed
+        pybind11::embed
+        Python::Python
 )
 
-# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
-# The following code block is suggested to be used on Windows.
-# According to https://github.com/pytorch/pytorch/issues/25457,
-# the DLLs need to be copied to avoid memory errors.
-if (MSVC)
-  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-  add_custom_command(TARGET ${PROJECT_NAME}
-                     POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                     ${TORCH_DLLS}
-                     $<TARGET_FILE_DIR:${PROJECT_NAME}>)
-endif (MSVC)
-
-if (UNIX AND NOT APPLE) # Linux
-    # For Linux, libtorch usually provides .so files. Modify this as needed.
-    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.so")
-elseif(APPLE)
-    # For macOS, libtorch provides .dylib files. Modify this as needed.
-    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.dylib")
-endif()
-
+# copy the Python.framework to the  bundle
 if (UNIX)
     foreach(format ${TENSORJUCE_FORMATS})
         # make a resource directory
@@ -171,23 +140,24 @@ if (UNIX)
                         POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E make_directory
                         "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+        # Use the native cp command with -R to properly handle symlinks
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${TORCH_SHARED_LIBRARIES}
+                        COMMAND cp -R
+                        ${PY_FRAMEWORK_DIR}
                         "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+
     endforeach()
 endif()
 
 
-
 # this fixes the RPATH to be relative to the executable
-# in MacOS. Now, all we need to do is copy the libtorch
+# in MacOS. Now, all we need to do is copy the 
 # dynamic libraries to the executable directories
 if (APPLE)
     foreach(format ${TENSORJUCE_FORMATS})
         set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
-
+        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks/Python.framework" )
     endforeach()
 
     set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")

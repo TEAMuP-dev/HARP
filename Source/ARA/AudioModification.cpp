@@ -31,7 +31,7 @@
 AudioModification::AudioModification(
     juce::ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
     const ARAAudioModification *optionalModificationToClone, 
-    std::shared_ptr<TorchWave2Wave> model
+    std::shared_ptr<WebWave2Wave> model
     )
     : ARAAudioModification(audioSource, hostRef, optionalModificationToClone), 
       mModel(model) {

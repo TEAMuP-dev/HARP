@@ -27,7 +27,7 @@
 #include "EditorRenderer.h"
 #include "PlaybackRenderer.h"
 #include "EditorView.h"
-#include "../DeepLearning/TorchModel.h"
+#include "../DeepLearning/WebModel.h"
 
 #include "../Util/PreviewState.h"
 
@@ -54,9 +54,9 @@ public:
 
   PreviewState previewState; ///< Preview state.
 
-  std::shared_ptr<TorchWave2Wave> getModel() { return mModel; }
+  std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
   void printModelPath(std::string path);
-  void executeLoad(const std::string &modelPath);
+  void executeLoad(const map<string, any> &params);
   void executeProcess(std::map<std::string, std::any> &params);
   void run() override;
   
@@ -104,7 +104,7 @@ protected:
 
 private:
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
-  std::shared_ptr<TorchWave2Wave> mModel {new TorchWave2Wave()}; ///< Model for audio processing.
+  std::shared_ptr<WebWave2Wave> mModel {new WebWave2Wave()}; ///< Model for audio processing.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 

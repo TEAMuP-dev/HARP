@@ -44,3 +44,5 @@ scratch
 _downloads
 
 packaging/
+Python.framework
+py/relocatable-python

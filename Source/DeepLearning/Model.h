@@ -1,18 +1,5 @@
 /**
  * @file
- * @brief This file is part of the JUCE examples.
- *
- * Copyright (c) 2022 - Raw Material Software Limited
- * The code included in this file is provided under the terms of the ISC license
- * http://www.isc.org/downloads/software-support-policy/isc-license. Permission
- * To use, copy, modify, and/or distribute this software for any purpose with or
- * without fee is hereby granted provided that the above copyright notice and
- * this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
- * WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
- * PURPOSE, ARE DISCLAIMED.
- *
  * @brief This is the interface for any kind of deep learning model. this will
  * be the base class for wave 2 wave, wave 2 label, text 2 wave, midi 2 wave,
  * wave 2 midi, etc.
@@ -26,6 +13,9 @@
 #include <string>
 #include <unordered_map>
 
+#include "juce_events/juce_events.h"
+#include "juce_audio_basics/juce_audio_basics.h"
+
 using std::any;
 using std::map;
 using std::string;
@@ -36,22 +26,69 @@ namespace modelparams {
   }
 }
 
+struct ModelCard {
+  int sampleRate;
+  std::string name;
+  std::string description;
+  std::string author;
+  std::vector<std::string> tags;
+};
+
+class ModelCardListener
+{
+public:
+    virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
+};
+
+
 /**
  * @class Model
  * @brief Abstract class for different types of deep learning processors.
  */
-class Model {
+class Model : public juce::ChangeBroadcaster {
 public:
   /**
    * @brief Load the model parameters.
    * @param params A map of parameters for the model.
    * @return A boolean indicating whether the model was loaded successfully.
    */
-  virtual bool load(const string &modelPath) = 0;
+  virtual bool load(const map<string, any> &params) = 0;
 
   /**
    * @brief Checks if the model is ready.
    * @return A boolean indicating whether the model is ready.
    */
   virtual bool ready() const = 0;
+
+public:
+  // modelcard listener
+  void addMcListener(ModelCardListener* listener) 
+  {
+      mcListeners.add(listener);
+  }
+
+  void removeMcListener(ModelCardListener* listener) 
+  {
+      mcListeners.remove(listener);
+  }
+
+  // //! provides access to the model card (metadata)
+  ModelCard &card();
+
+  void addListener(juce::ChangeListener *listener){
+    addChangeListener(listener);
+  }
+
+protected: 
+  ModelCard m_card;
+
+  void broadcastModelCardLoaded() 
+  {
+    mcListeners.call([this](ModelCardListener& l) { l.modelCardLoaded(m_card); });
+  }
+
+private:
+  juce::ListenerList<ModelCardListener> mcListeners;
+  std::function<void(std::string)> editorsWidgetCreationCallback;
+
 };

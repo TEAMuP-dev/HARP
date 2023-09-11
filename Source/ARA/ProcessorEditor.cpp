@@ -22,7 +22,7 @@
  */
 
 #include "ProcessorEditor.h"
-#include "../DeepLearning/TorchModel.h"
+#include "../DeepLearning/WebModel.h"
 // using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 
 
@@ -82,6 +82,16 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  // model path textbox
+  modelPathTextBox.setMultiLine(false);
+  modelPathTextBox.setReturnKeyStartsNewLine(false);
+  modelPathTextBox.setReadOnly(false);
+  modelPathTextBox.setScrollbarsShown(true);
+  modelPathTextBox.setCaretVisible(true);
+  modelPathTextBox.setPopupMenuEnabled(true);
+  modelPathTextBox.setText("Path to model");  // Default text
+  addAndMakeVisible(modelPathTextBox);
+
   // model card component
   addAndMakeVisible(modelCardComponent); // TODO check when to do that
 
@@ -128,38 +138,19 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
   else if (button == &loadModelButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
 
-    modelPathChooser = std::make_unique<FileChooser> (
-      "Please select the model file to load...",
-      File::getSpecialLocation(File::userHomeDirectory),
-      "*.pt"
-    );
+    std::map<std::string, std::any> params = {
+      {"url", modelPathTextBox.getText().toStdString()},
+      {"api_name", std::string("/view_api")}
+    };
 
-    auto folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+    resetUI();
+    mDocumentController->executeLoad(params);
+    // Model loading happens synchronously, so we can be sure that
+    // the Editor View has the model card and UI attributes loaded
+    modelCardComponent.setModelCard(mEditorView->getModelCard());
+    populateGui();
+    resized();
 
-    modelPathChooser->launchAsync (folderChooserFlags, [this] (const FileChooser& chooser)
-    {
-      File modelPath (chooser.getResult());
-
-      DBG("got model path: " + modelPath.getFullPathName());
-      // if  the file doesn't exist, return
-      if (!modelPath.existsAsFile()) {
-        return;
-      }
-
-      // convert modelPath to a string
-      // std::map<std::string, std::any> params = {
-      //   {"modelPath", modelPath.getFullPathName().toStdString()}
-      // };
-
-      resetUI();
-      mDocumentController->executeLoad(modelPath.getFullPathName().toStdString());
-      // Model loading happens synchronously, so we can be sure that
-      // the Editor View has the model card and UI attributes loaded
-      modelCardComponent.setModelCard(mEditorView->getModelCard());
-      populateGui();
-      resized();
-    });
-    
   }
   else {
     auto name = button->getName().toStdString();
@@ -249,9 +240,10 @@ void TensorJuceProcessorEditor::resized() {
           // ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
 
       juce::FlexBox buttonBox;
-          buttonBox.flexDirection = juce::FlexBox::Direction::column;
-          buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
-          buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
+        buttonBox.flexDirection = juce::FlexBox::Direction::column;
+        buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
+        buttonBox.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(30).withMargin(juce::FlexItem::Margin(5))); // Adjust as needed
+        buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
       
       mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(0.3));
       mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(0.3));

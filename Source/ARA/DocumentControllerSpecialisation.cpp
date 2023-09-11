@@ -45,10 +45,10 @@ void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path
   DBG("Model path: " << path);
 }
 
-void TensorJuceDocumentControllerSpecialisation::executeLoad(const std::string &modelPath) {
+void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad");
-    mModel->load(modelPath);
+    mModel->load(params);
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
   }
 

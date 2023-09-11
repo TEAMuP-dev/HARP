@@ -27,9 +27,22 @@
 
 #include "Model.h"
 #include "Wave2Wave.h"
+#include <Python.h>
 #include <pybind11/embed.h>
 namespace py = pybind11;
 using namespace pybind11::literals;
+
+namespace {
+  std::wstring widen( const std::string& str )
+  {
+      using namespace std;
+      wostringstream wstm ;
+      const ctype<wchar_t>& ctfacet = use_facet<ctype<wchar_t>>(wstm.getloc()) ;
+      for( size_t i=0 ; i<str.size() ; ++i ) 
+                wstm << ctfacet.widen( str[i] ) ;
+      return wstm.str() ;
+  }
+}
 
 class WebModel : public Model {
 public:
@@ -50,7 +63,7 @@ public:
 
   virtual bool ready() const override { return m_loaded; }
 
-private:
+protected:
   string m_url{};
   string m_api_name{};
   bool m_loaded = false;
@@ -59,14 +72,31 @@ private:
 class WebWave2Wave : public WebModel, public Wave2Wave {
 private:
   py::object Client;
+  py::object m_client;
 
 public:
   WebWave2Wave() { // TODO: should be a singleton
-    // initialize the python interpreter
+
     py::initialize_interpreter();
-    // your pybind11 code
+    if (!Py_IsInitialized()) {
+      DBG("Failed to initialize Python runtime.");
+      return;
+    }
+
+    py::list sys_path = py::module_::import("sys").attr("path");
+
+    for (auto path : sys_path) {
+        DBG("Python sys.path (after setting): " << path.cast<std::string>());
+    }
+
+    // try to import the client. 
     DBG("Importing client");
-    Client = py::module_::import("gradio_client").attr("Client");
+    try {
+      Client = py::module_::import("gradio_client").attr("Client");
+    } catch (const py::error_already_set &e) {
+      DBG("Exception: " << e.what());
+      return;
+    }
   }
 
   ~WebWave2Wave() {
@@ -74,9 +104,53 @@ public:
     py::finalize_interpreter();
   }
 
+  virtual bool load(const map<string, any> &params) override {
+    // get the name of the huggingface repo we're going to use
+    if (!modelparams::contains(params, "url")) {
+      DBG("url not found in params");
+      return false;
+    }
+    if (!modelparams::contains(params, "api_name")) {
+      DBG("api_name not found in params");
+      return false;
+    }
+
+    try {
+      m_url = any_cast<string>(params.at("url"));
+      m_api_name = any_cast<string>(params.at("api_name"));
+    }
+    catch (const std::runtime_error &e) {
+      DBG("Exception: " << e.what());
+      return false;
+    }
+
+    // view the api
+    try {
+      DBG("creating client");
+      py::print(py::str(m_url));
+      m_client = Client(py::str(m_url));
+      DBG("created client");
+
+      pybind11::dict client_api = m_client.attr("view_api")("return_format"_a = "dict");
+
+      m_loaded = true;
+      return true;
+
+    } catch (const py::error_already_set &e) {
+      DBG("Exception: " << e.what());
+      return false;
+    }
+  }
+
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
                        int sampleRate,
                        const map<string, any> &kwargs) const override {
+    // make sure we're loaded
+    if (!m_loaded) {
+      DBG("Model not loaded");
+      return;
+    }
+                    
     // save the buffer to file
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -117,14 +191,9 @@ public:
     }
 
     try {
-      DBG("creating client");
-      py::object client = Client(py::str("http://localhost:7860/"));
-      DBG("created client");
-
       DBG("predicting");
       string output_audio_path =
-          client
-              .attr("predict")(*(pykwargs.attr("values")()),
+          m_client.attr("predict")(*(pykwargs.attr("values")()),
                                "api_name"_a = "/vamp")
               .cast<string>();
       py::print(output_audio_path);

@@ -5,3 +5,6 @@
 [submodule "ARA_SDK"]
 	path = ARA_SDK
 	url = https://github.com/Celemony/ARA_SDK
+[submodule "pybind11"]
+	path = pybind11
+	url = https://github.com/pybind/pybind11

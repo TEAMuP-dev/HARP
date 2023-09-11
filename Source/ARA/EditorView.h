@@ -6,14 +6,12 @@
  */
 
 #pragma once
-#include <torch/script.h>
-#include <torch/torch.h>
 #include "juce_gui_basics/juce_gui_basics.h"
 
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
-#include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
+#include "../DeepLearning/WebModel.h" // needed for ModelCardListener
 #include "../UI/CustomComponents.h"
 
 
