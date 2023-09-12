@@ -110,6 +110,10 @@ private:
   // so that we can update the view when the model is loaded
   // (another option is to use a listener pattern)
   EditorView *editorView {nullptr}; ///< Editor view.
-  PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
+  // PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
   EditorRenderer *editorRenderer {nullptr}; ///< Editor renderer.
+  // In contrast to EditorView and EditorRenderer which are unique for the plugin
+  // there are multiple playbackRenderers (one for each playbackRegion)
+  std::vector<PlaybackRenderer*> playbackRenderers;
+
 };

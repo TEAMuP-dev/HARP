@@ -105,6 +105,12 @@ void PlaybackRenderer::releaseResources() {
 
   tempBuffer.reset();
 }
+// void PlaybackRenderer::didAddPlaybackRegion (PlaybackRegion* playbackRegion) {
+//   DBG("PlaybackRenderer::didAddPlaybackRegion");
+//   auto audioSource = playbackRegion->getAudioModification()->getAudioSource();
+
+//   DBG("PlaybackRenderer::didAddPlaybackRegion audio source is " << audioSource->getName());
+// }
 
 bool PlaybackRenderer::processBlock(
     AudioBuffer<float> &buffer, AudioProcessor::Realtime realtime,
@@ -284,10 +290,15 @@ void PlaybackRenderer::executeProcess(std::map<std::string, std::any> &params) {
 
 template <typename Callback>
 void PlaybackRenderer::forEachPlaybackRegion(Callback &&cb) {
-  for (const auto &playbackRegion : getPlaybackRegions())
+  for (const auto &playbackRegion : getPlaybackRegions()) {
+     auto modification =
+        playbackRegion->getAudioModification<AudioModification>();
+    // // DBG modification->getSourceName()
+    DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
+        << modification->getSourceName()); 
     if (!cb(playbackRegion))
       return;
-
+  }
   // NOTE : PlaybackRenderer doesn't get access to the regionSequences
   // for (const auto &regionSequence : getRegionSequences())
   //   for (const auto &playbackRegion : regionSequence->getPlaybackRegions())

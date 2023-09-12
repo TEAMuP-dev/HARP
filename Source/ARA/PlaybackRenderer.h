@@ -75,7 +75,8 @@ public:
    * @brief Releases all resources used by the PlaybackRenderer.
    */
   void releaseResources() override;
-
+  // void didAddPlaybackRegion (ARA::PlugIn::PlaybackRegion* playbackRegion) noexcept override {}
+  // void didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion *) noexcept override;
   /**
    * @brief Processes an audio block for playback.
    *

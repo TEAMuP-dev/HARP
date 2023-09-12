@@ -46,9 +46,13 @@ void TensorJuceDocumentControllerSpecialisation::executeLoad(const std::string &
   }
 
 void TensorJuceDocumentControllerSpecialisation::executeProcess(std::map<std::string, std::any> &params) {
-    // Playback renderer is the one having access to all the playback regions
-    playbackRenderer->executeProcess(params);
-    // Editor renderer has also, and additionally to the region sequences
+    // Each playbackRenderer has access to its own playbackRegions
+    for (auto& playbackRenderer : playbackRenderers) {
+      playbackRenderer->executeProcess(params);
+    }
+    
+    // Alternatively we could use Editor renderer 
+    // which has access to all playbackRegions and regionSequences.
     // editorRenderer->executeProcess(params);
 }
 
@@ -77,7 +81,7 @@ TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
 ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
   PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this);
-  playbackRenderer = newPlaybackRenderer;//dynamic_cast<EditorView*>(newEditorView);
+  playbackRenderers.push_back(newPlaybackRenderer);
   return newPlaybackRenderer;
 }
 
