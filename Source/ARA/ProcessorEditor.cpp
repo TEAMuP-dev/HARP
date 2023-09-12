@@ -125,7 +125,7 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
     mDocumentController->executeProcess(params);
   }
 
-  if (button == &loadModelButton) {
+  else if (button == &loadModelButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
 
     modelPathChooser = std::make_unique<FileChooser> (
@@ -161,18 +161,32 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
     });
     
   }
+  else {
+    auto name = button->getName().toStdString();
+    mEditorView->setCurrentCtrlValue(name, button->getToggleState());
+  }
 }
 
 // void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
 //   modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
 // }
 
-void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *box) {
-  ignoreUnused(box);
+void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *comboBox) {
+  auto name = comboBox->getName().toStdString();
+  mEditorView->setCurrentCtrlValue(name, comboBox->getSelectedId());
+}
+void TensorJuceProcessorEditor::textEditorReturnKeyPressed (TextEditor& textEditor) {
+  auto name = textEditor.getName().toStdString();
+  mEditorView->setCurrentCtrlValue(name, textEditor.getText().toStdString());
 }
 
-void TensorJuceProcessorEditor::sliderValueChanged(Slider *slider) {
+void TensorJuceProcessorEditor::sliderValueChanged(Slider* slider) {
   ignoreUnused(slider);
+}
+
+void TensorJuceProcessorEditor::sliderDragEnded(Slider* slider) {
+  auto name = slider->getName().toStdString();
+  mEditorView->setCurrentCtrlValue(name, slider->getValue());
 }
 
 void TensorJuceProcessorEditor::paint(Graphics &g) {
@@ -292,6 +306,7 @@ void TensorJuceProcessorEditor::populateGui() {
       double min = std::any_cast<double>(ctrlAttributes.at("min"));
       double max = std::any_cast<double>(ctrlAttributes.at("max"));
       double step = std::any_cast<double>(ctrlAttributes.at("step"));
+      double defautlValue = std::any_cast<double>(ctrlAttributes.at("current"));
       std::unique_ptr<juce::Slider> continuousCtrl = std::make_unique<juce::Slider>();
       if (widgetType == "SLIDER") {
           continuousCtrl->setSliderStyle(juce::Slider::LinearHorizontal);
@@ -309,13 +324,14 @@ void TensorJuceProcessorEditor::populateGui() {
       continuousCtrl->addListener(this);
       continuousCtrl->setTextValueSuffix(" " + name);
       continuousCtrl->setLookAndFeel(&toolbarSliderStyle);
+      continuousCtrl->setValue(defautlValue, juce::dontSendNotification);
       addAndMakeVisible(*continuousCtrl);
       // Add the slider to the vector
       continuousCtrls.push_back(std::move(continuousCtrl));
     }
     
     else if (ctrlType == "BinaryCtrl") {
-      bool defaultValue = std::any_cast<bool>(ctrlAttributes.at("default"));
+      bool defaultValue = std::any_cast<bool>(ctrlAttributes.at("current"));
       if (widgetType == "CHECKBOX") {
           std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
           binaryCtrl->setName(nameId);
@@ -331,7 +347,7 @@ void TensorJuceProcessorEditor::populateGui() {
       }
     }
     else if (ctrlType == "TextInputCtrl") {
-        std::string defaultValue = std::any_cast<std::string>(ctrlAttributes.at("default"));
+        std::string defaultValue = std::any_cast<std::string>(ctrlAttributes.at("current"));
         std::unique_ptr<TitledTextBox> textCtrl = std::make_unique<TitledTextBox>();
         textCtrl->setName(nameId);
         textCtrl->setTitle(name);
@@ -345,14 +361,16 @@ void TensorJuceProcessorEditor::populateGui() {
         // TODO
     }
     else if (ctrlType == "OptionCtrl") {
-        auto options = std::any_cast<std::vector<std::string>>(ctrlAttributes.at("options"));
+        int defaultValue = std::any_cast<int>(ctrlAttributes.at("current"));
+        auto options = std::any_cast<std::vector<std::tuple<std::string, int>>>(ctrlAttributes.at("options"));
         std::unique_ptr<juce::ComboBox> optionCtrl = std::make_unique<juce::ComboBox>();
         for (auto &option : options) {
-          optionCtrl->addItem(option, optionCtrl->getNumItems() + 1);
+          optionCtrl->addItem(std::get<0>(option), std::get<1>(option));
         }
-        optionCtrl->setSelectedId(1);
+        // optionCtrl->setSelectedId(1);
         optionCtrl->setName(nameId);
         optionCtrl->addListener(this);
+        optionCtrl->setSelectedId(defaultValue, juce::dontSendNotification);
         optionCtrl->setTextWhenNoChoicesAvailable("No choices");
         addAndMakeVisible(*optionCtrl);
         optionCtrls.push_back(std::move(optionCtrl));

@@ -43,6 +43,9 @@ public:
     // Neural Model Attributes getter
     ListOfDicts getModelGuiAttributes() const;
 
+    void setCurrentCtrlValue(std::string nameId, std::any value);
+
+
 private:
     // std::shared_ptr<ModelCard> modelCard;
     ModelCard modelCard;

@@ -145,8 +145,11 @@ public:
   // Combo box listener method
   void comboBoxChanged(ComboBox *box) override;
 
+  void textEditorReturnKeyPressed (TextEditor&) override;
+
   // Slider listener method
   void sliderValueChanged(Slider *slider) override;
+  void sliderDragEnded(Slider* slider) override;
 
   // Paint method
   void paint(Graphics &g) override;

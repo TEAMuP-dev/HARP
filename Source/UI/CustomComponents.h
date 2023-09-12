@@ -34,6 +34,16 @@ public:
         addAndMakeVisible(titleLabel);
     }
 
+    void setName(const juce::String &nameId)
+    {
+        textBox.setName(nameId);
+    }
+
+    juce::String getName()
+    {
+        return textBox.getName();
+    }
+    
     void setTitle(const juce::String &title)
     {
         titleLabel.setText(title, juce::dontSendNotification);
