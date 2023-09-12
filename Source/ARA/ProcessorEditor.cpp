@@ -42,10 +42,9 @@ void TensorJuceProcessorEditor::InitGenericDial(
 
 // destructor
 // TensorJuceProcessorEditor::~TensorJuceProcessorEditor() {
-//   // release listeners
-//   // removeAllChangeListeners();
-//   int aa = 42;
+//   processButton.setLookAndFeel (nullptr);
 // }
+
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &ap, EditorRenderer *er, 
     PlaybackRenderer *pr, EditorView *ev)

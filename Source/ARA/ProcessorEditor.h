@@ -169,11 +169,16 @@ private:
   );
 
 private:
+
+  ToolbarSliderStyle toolbarSliderStyle;
+  ButtonLookAndFeel buttonLookAndFeel;
+  ComboBoxLookAndFeel comboBoxLookAndFeel;
+
   unique_ptr<Component> documentView;
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
 
-  // An vector of unique pointers to sliders
+  // Vectors of unique pointers to widgets
   std::vector<std::unique_ptr<juce::Slider>> continuousCtrls;
   std::vector<std::unique_ptr<juce::ToggleButton>> binaryCtrls;
   std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
@@ -183,10 +188,6 @@ private:
   ModelCardComponent modelCardComponent;
 
   std::unique_ptr<juce::FileChooser> modelPathChooser {nullptr};
-
-  ToolbarSliderStyle toolbarSliderStyle;
-  ButtonLookAndFeel buttonLookAndFeel;
-  ComboBoxLookAndFeel comboBoxLookAndFeel;
 
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;
