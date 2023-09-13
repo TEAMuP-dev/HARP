@@ -30,11 +30,11 @@ TensorJuceDocumentControllerSpecialisation::
                                          const ARA::ARADocumentControllerHostInstance* instance)
             : ARADocumentControllerSpecialisation(entry, instance),
             // juce::Thread("executeProcessingThread")
-            juce::ThreadWithProgressWindow ("title",
+            juce::ThreadWithProgressWindow ("Processing",
                               true,
                               true,
                               10000,
-                              "ti einai auto"
+                              "cancel (don't click me)"
                               )
              {
               setStatusMessage ("Processing...");

@@ -55,12 +55,6 @@ struct ModelCard {
     {}
 };
 
-// class ModelCardListener
-// {
-// public:
-//     virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
-// };
-
 /**
  * @class TorchModel
  * @brief Class that represents a base TorchModel inherited from Model.
@@ -80,9 +74,6 @@ public:
   //! checks if a model is loaded onto memory.
   bool ready() const override;
 
-  // //! provides access to the model card (metadata)
-  // ModelCard &card();
-
   //! forward pass
   IValue forward(const std::vector<IValue> &inputs) const;
 
@@ -94,27 +85,7 @@ public:
   // listeners
   void addListener(juce::ChangeListener *listener);
 
-// protected:
 public:
-  // modelcard listener
-//   void addModelCardListener(ModelCardListener* listener) 
-//   {
-//       mcListeners.add(listener);
-//   }
-
-//   void removeMcListener(ModelCardListener* listener) 
-//   {
-//       mcListeners.remove(listener);
-//   }
-
-// protected: 
-//   void broadcastModelCard() 
-//   {
-//     mcListeners.call([this](ModelCardListener& l) { l.setModelCard(m_card); });
-//   }
-
-// private:
-//   juce::ListenerList<ModelCardListener> mcListeners;
 
 public: 
   unique_ptr<Module> m_model;
