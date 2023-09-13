@@ -28,9 +28,16 @@
 TensorJuceDocumentControllerSpecialisation::
             TensorJuceDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
-            : ARADocumentControllerSpecialisation(entry, instance) {
-  
-
+            : ARADocumentControllerSpecialisation(entry, instance),
+            // juce::Thread("executeProcessingThread")
+            juce::ThreadWithProgressWindow ("title",
+                              true,
+                              true,
+                              10000,
+                              "ti einai auto"
+                              )
+             {
+              setStatusMessage ("Processing...");
 }
 
 void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path) {
@@ -45,15 +52,42 @@ void TensorJuceDocumentControllerSpecialisation::executeLoad(const std::string &
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
   }
 
+void TensorJuceDocumentControllerSpecialisation::run() {
+  // This function is called when the thread is started
+  // Show the processing modal window
+  // processingWindow = std::make_unique<juce::AlertWindow>(
+  //     "Processing",
+  //     "Processing...",
+  //     juce::AlertWindow::NoIcon);
+
+  // processingWindow_->enterModalState();
+
+  // Each playbackRenderer has access to its own playbackRegions
+  setProgress(0.0);
+  int counter = 0;
+  for (auto& playbackRenderer : playbackRenderers) {
+    playbackRenderer->executeProcess(processingParams);
+    counter++;
+    setProgress((double) counter / (double) playbackRenderers.size());
+    double pr = (double) counter / (double) playbackRenderers.size();
+    DBG("Progress: " << pr);
+  }
+  
+  // Alternatively we could use Editor renderer 
+  // which has access to all playbackRegions and regionSequences.
+  // editorRenderer->executeProcess(params);
+
+  // Dismiss the modal window when processing is complete
+  // processingWindow->exitModalState();
+}
 void TensorJuceDocumentControllerSpecialisation::executeProcess(std::map<std::string, std::any> &params) {
-    // Each playbackRenderer has access to its own playbackRegions
-    for (auto& playbackRenderer : playbackRenderers) {
-      playbackRenderer->executeProcess(params);
-    }
-    
-    // Alternatively we could use Editor renderer 
-    // which has access to all playbackRegions and regionSequences.
-    // editorRenderer->executeProcess(params);
+  // wait untill thread has stopped running
+  if (!isThreadRunning()) {
+    // start the thread
+    processingParams = params;
+    // startThread();
+    launchThread();
+  }
 }
 
 void TensorJuceDocumentControllerSpecialisation::willBeginEditing(

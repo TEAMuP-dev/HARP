@@ -38,6 +38,7 @@
  */
 class TensorJuceDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
+      public juce::ThreadWithProgressWindow,
       private ProcessingLockInterface {
 public:
   /**
@@ -57,6 +58,7 @@ public:
   void printModelPath(std::string path);
   void executeLoad(const std::string &modelPath);
   void executeProcess(std::map<std::string, std::any> &params);
+  void run() override;
   
   
 protected:
@@ -115,5 +117,8 @@ private:
   // In contrast to EditorView and EditorRenderer which are unique for the plugin
   // there are multiple playbackRenderers (one for each playbackRegion)
   std::vector<PlaybackRenderer*> playbackRenderers;
+  std::unique_ptr<juce::AlertWindow> processingWindow;
+  bool isProcessing {false};
+  std::map<std::string, std::any> processingParams;
 
 };
