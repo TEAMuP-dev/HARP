@@ -40,3 +40,7 @@ libtorch/
 .DS_Store
 
 testproject
+scratch
+_downloads
+
+packaging/
