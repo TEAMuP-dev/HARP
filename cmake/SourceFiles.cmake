@@ -16,6 +16,9 @@ set(SourceFiles
     Source/ARA/EditorView.h
     Source/ARA/EditorView.cpp
 
+    Source/ARA/CtrlComponent.h
+    Source/ARA/ModelCardComponent.h
+
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
     Source/DeepLearning/Wave2Wave.cpp
