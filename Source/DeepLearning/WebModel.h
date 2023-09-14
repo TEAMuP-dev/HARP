@@ -44,36 +44,7 @@ namespace {
   }
 }
 
-class WebModel : public Model {
-public:
-  virtual bool load(const map<string, any> &params) override {
-    // get the name of the huggingface repo we're going to use
-    if (!modelparams::contains(params, "url")) {
-      return false;
-    }
-    if (!modelparams::contains(params, "api_name")) {
-      return false;
-    }
-    m_url = any_cast<string>(params.at("url"));
-    m_api_name = any_cast<string>(params.at("api_name"));
-
-    m_loaded = true;
-    return true;
-  }
-
-  virtual bool ready() const override { return m_loaded; }
-
-protected:
-  string m_url{};
-  string m_api_name{};
-  bool m_loaded = false;
-};
-
-class WebWave2Wave : public WebModel, public Wave2Wave {
-private:
-  py::object Client;
-  py::object m_client;
-
+class WebWave2Wave : public Model, public Wave2Wave {
 public:
   WebWave2Wave() { // TODO: should be a singleton
 
@@ -113,7 +84,7 @@ public:
     if (!modelparams::contains(params, "api_name")) {
       DBG("api_name not found in params");
       return false;
-    }
+    } 
 
     try {
       m_url = any_cast<string>(params.at("url"));
@@ -124,22 +95,6 @@ public:
       return false;
     }
 
-    // view the api
-    try {
-      DBG("creating client");
-      py::print(py::str(m_url));
-      m_client = Client(py::str(m_url));
-      DBG("created client");
-
-      pybind11::dict client_api = m_client.attr("view_api")("return_format"_a = "dict");
-
-      m_loaded = true;
-      return true;
-
-    } catch (const py::error_already_set &e) {
-      DBG("Exception: " << e.what());
-      return false;
-    }
   }
 
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
@@ -214,4 +169,11 @@ public:
     }
     return;
   }
+
+private:
+  py::object Client;
+  py::object m_client;
+  string m_url;
+  string m_api_name;
+  bool m_loaded;
 };
