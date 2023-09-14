@@ -58,7 +58,6 @@ public:
                         juce::AudioBuffer<float> &dest_buffer);
 
 private:
-  
   std::string m_modelPath;
 
 public: 

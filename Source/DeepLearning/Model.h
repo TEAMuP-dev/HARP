@@ -34,12 +34,6 @@ struct ModelCard {
   std::vector<std::string> tags;
 };
 
-class ModelCardListener
-{
-public:
-    virtual void modelCardLoaded(const ModelCard& card) = 0; // Called when a model card has been loaded
-};
-
 
 /**
  * @class Model
@@ -61,17 +55,6 @@ public:
   virtual bool ready() const = 0;
 
 public:
-  // modelcard listener
-  void addMcListener(ModelCardListener* listener) 
-  {
-      mcListeners.add(listener);
-  }
-
-  void removeMcListener(ModelCardListener* listener) 
-  {
-      mcListeners.remove(listener);
-  }
-
   // //! provides access to the model card (metadata)
   ModelCard &card();
 
@@ -82,13 +65,7 @@ public:
 protected: 
   ModelCard m_card;
 
-  void broadcastModelCardLoaded() 
-  {
-    mcListeners.call([this](ModelCardListener& l) { l.modelCardLoaded(m_card); });
-  }
-
 private:
-  juce::ListenerList<ModelCardListener> mcListeners;
   std::function<void(std::string)> editorsWidgetCreationCallback;
 
 };

@@ -55,7 +55,6 @@ public:
   PreviewState previewState; ///< Preview state.
 
   std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
-  void printModelPath(std::string path);
   void executeLoad(const map<string, any> &params);
   void executeProcess(std::map<std::string, std::any> &params);
   void run() override;

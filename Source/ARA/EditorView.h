@@ -24,8 +24,8 @@ using ListOfDicts = std::vector<GenericDict>;
  * @brief TODO: Write brief class description.
  */
 class EditorView : public juce::ARAEditorView,
-                    public ChangeListener
-                    {
+                   public ChangeListener
+{
 public:
     // EditorView(ARA::PlugIn::DocumentController *documentController);
     // ~EditorView() override;

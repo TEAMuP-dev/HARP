@@ -40,10 +40,6 @@ TensorJuceDocumentControllerSpecialisation::
               setStatusMessage ("Processing...");
 }
 
-void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path) {
-  std::cout << "Model path: " << path << std::endl;
-  DBG("Model path: " << path);
-}
 
 void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model

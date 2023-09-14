@@ -75,7 +75,9 @@ public:
     py::finalize_interpreter();
   }
 
-  virtual bool load(const map<string, any> &params) override {
+  bool ready() const override { return m_loaded; }
+
+  bool load(const map<string, any> &params) override {
     // get the name of the huggingface repo we're going to use
     if (!modelparams::contains(params, "url")) {
       DBG("url not found in params");
@@ -89,12 +91,13 @@ public:
     try {
       m_url = any_cast<string>(params.at("url"));
       m_api_name = any_cast<string>(params.at("api_name"));
+      m_loaded = true;
+      return true; 
     }
     catch (const std::runtime_error &e) {
       DBG("Exception: " << e.what());
       return false;
     }
-
   }
 
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
