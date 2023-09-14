@@ -36,7 +36,8 @@
 
 #include "DocumentControllerSpecialisation.h"
 
-class ModelCardComponent : public juce::Component {
+class ModelCardComponent : public juce::Component
+{
 public:
     ModelCardComponent() {
         // Initialize the labels
@@ -105,6 +106,96 @@ private:
     juce::Label authorLabel;
     juce::Label sampleRateLabel;
     juce::Label tagsLabel;
+
+};
+
+
+class CtrlComponent: public juce::Component, 
+                     public Button::Listener, 
+                     public Slider::Listener,
+                     public ComboBox::Listener,
+                     public TextEditor::Listener
+{
+private:
+public:
+
+  CtrlComponent() {}
+
+  std::map<std::string, std::any> getParams() {
+    // create an empty map
+    std::map<std::string, std::any> params;
+    for (int i = 0; i < continuousCtrls.size(); i++) {
+      params.insert(std::pair<std::string, std::any>(
+          continuousCtrls[i]->getName().toStdString(),
+          continuousCtrls[i]->getValue()));
+    }
+    for (int i = 0; i < binaryCtrls.size(); i++) {
+      params.insert(std::pair<std::string, std::any>(
+          binaryCtrls[i]->getName().toStdString(),
+          binaryCtrls[i]->getToggleState()));
+    }
+    for (int i = 0; i < textCtrls.size(); i++) {
+      params.insert(std::pair<std::string, std::any>(
+          textCtrls[i]->getName().toStdString(),
+          textCtrls[i]->getText().toStdString()));
+    }
+    for (int i = 0; i < optionCtrls.size(); i++) {
+      params.insert(std::pair<std::string, std::any>(
+          optionCtrls[i]->getName().toStdString(),
+          optionCtrls[i]->getText().toStdString()));
+    }
+    return params; 
+  }
+
+  void populateGui(ListOfDicts& guiAttributes);
+
+  void resetUI();
+
+  void resized() override;
+
+  void buttonClicked(Button *button) {
+    auto name = button->getName().toStdString();
+    mEditorView->setCurrentCtrlValue(name, button->getToggleState());
+  }
+
+  void comboBoxChanged(ComboBox *comboBox) {
+    auto name = comboBox->getName().toStdString();
+    mEditorView->setCurrentCtrlValue(name, comboBox->getSelectedId());
+  }
+  void textEditorReturnKeyPressed (TextEditor& textEditor) {
+    auto name = textEditor.getName().toStdString();
+    mEditorView->setCurrentCtrlValue(name, textEditor.getText().toStdString());
+  }
+
+  void sliderValueChanged(Slider* slider) {
+    ignoreUnused(slider);
+  }
+
+  void sliderDragEnded(Slider* slider) {
+    auto name = slider->getName().toStdString();
+    mEditorView->setCurrentCtrlValue(name, slider->getValue());
+  }
+
+
+private:
+  void InitGenericDial(
+    juce::Slider &dial,
+    const juce::String& valueSuffix, 
+    const juce::Range<double> range, 
+    double step_size,
+    float value
+  );
+
+private:
+  ToolbarSliderStyle toolbarSliderStyle;
+  EditorView *mEditorView;
+
+  // Vectors of unique pointers to widgets
+  std::vector<std::unique_ptr<juce::Slider>> continuousCtrls;
+  std::vector<std::unique_ptr<juce::ToggleButton>> binaryCtrls;
+  std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
+  std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
+
 };
 
 /**
@@ -117,11 +208,8 @@ private:
  */
 class TensorJuceProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
-                                  public Button::Listener,
-                                  public Slider::Listener,
-                                  public ComboBox::Listener,
-                                  public TextEditor::Listener
-                                   {
+                                  public Button::Listener
+                                  {
 public:
   /**
    * @brief Constructor for TensorJuceProcessorEditor.
@@ -139,38 +227,21 @@ public:
   // Button listener method
   void buttonClicked(Button *button) override;
 
-  // Combo box listener method
-  void comboBoxChanged(ComboBox *box) override;
-
-  void textEditorReturnKeyPressed (TextEditor&) override;
-
-  // Slider listener method
-  void sliderValueChanged(Slider *slider) override;
-  void sliderDragEnded(Slider* slider) override;
-
   // Paint method
   void paint(Graphics &g) override;
 
   // Resize method
   void resized() override;
 
-  void populateGui();
-
-  void resetUI();
+private:
+  void resetUI(){
+    ctrlComponent.resetUI();
+    // Also clear the model card component
+    modelCardComponent.clear();
+  }
 
 private:
 
-  void InitGenericDial(
-    juce::Slider &dial,
-    const juce::String& valueSuffix, 
-    const juce::Range<double> range, 
-    double step_size,
-    float value
-  );
-
-private:
-
-  ToolbarSliderStyle toolbarSliderStyle;
   ButtonLookAndFeel buttonLookAndFeel;
   ComboBoxLookAndFeel comboBoxLookAndFeel;
 
@@ -179,18 +250,13 @@ private:
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
 
-  // Vectors of unique pointers to widgets
-  std::vector<std::unique_ptr<juce::Slider>> continuousCtrls;
-  std::vector<std::unique_ptr<juce::ToggleButton>> binaryCtrls;
-  std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
-  std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
-
-  // std::shared_ptr<WebWave2Wave> model;
+  CtrlComponent ctrlComponent;
   ModelCardComponent modelCardComponent;
 
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;
   EditorView *mEditorView;
   TensorJuceDocumentControllerSpecialisation *mDocumentController;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceProcessorEditor)
 };
