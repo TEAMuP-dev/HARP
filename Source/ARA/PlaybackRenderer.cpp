@@ -35,9 +35,9 @@ PlaybackRenderer::PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
     : ARAPlaybackRenderer(dc), lockInterface(lockInterfaceIn) {}
 
 // destructor 
-PlaybackRenderer::~PlaybackRenderer() {
-  int aa = 42;
-}
+// PlaybackRenderer::~PlaybackRenderer() {
+//   int aa = 42;
+// }
 
 void PlaybackRenderer::prepareToPlay(double sampleRateIn,
                                      int maximumSamplesPerBlockIn,
