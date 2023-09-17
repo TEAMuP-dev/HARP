@@ -56,7 +56,7 @@ public:
   EditorRenderer(ARA::PlugIn::DocumentController *documentController,
                  const PreviewState *previewStateIn,
                  ProcessingLockInterface &lockInterfaceIn);
-  ~EditorRenderer() override;
+  // ~EditorRenderer() override;
 
   void didAddPlaybackRegionToRegionSequence(juce::ARARegionSequence *,
                                             juce::ARAPlaybackRegion *) override;

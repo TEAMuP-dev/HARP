@@ -104,10 +104,10 @@ EditorRenderer::EditorRenderer(
   jassert(previewState != nullptr);
 }
 
-EditorRenderer::~EditorRenderer() {
-  for (const auto &rs : regionSequences)
-    rs->removeListener(this);
-}
+// EditorRenderer::~EditorRenderer() {
+//   for (const auto &rs : regionSequences)
+//     rs->removeListener(this);
+// }
 
 void EditorRenderer::didAddPlaybackRegionToRegionSequence(juce::ARARegionSequence *,
                                                           juce::ARAPlaybackRegion *) {
