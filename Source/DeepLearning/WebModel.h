@@ -33,12 +33,12 @@ namespace {
 }
 
 struct Ctrl {
-  std::string name;
+  std::string label;
 };
 
 struct SliderCtrl : public Ctrl {
-  float min;
-  float max;
+  float minimum;
+  float maximum;
   float step;
   float value;
 };
@@ -46,6 +46,8 @@ struct SliderCtrl : public Ctrl {
 struct TextCtrl : public Ctrl {
   std::string value;
 };
+
+struct AudioInCtrl : public Ctrl {};
 
 struct NumberBoxCtrl : public Ctrl {
   float min;
@@ -110,8 +112,8 @@ public:
 
       // check if the api has a wav2wav endpoint
       // otherwise we can't use this model
-      if (!named_endpoints.contains("/wav2wav")) {
-        DBG("wav2wav endpoint not found");
+      if (!(named_endpoints.contains("/wav2wav") && named_endpoints.contains("/wav2wav-ctrls")))  {
+        DBG("wav2wav or wav2wav-ctrls endpoint not found");
         return false;
       }
 
@@ -119,57 +121,11 @@ public:
       py::dict w2w_endpoint = named_endpoints["/wav2wav"];
       DBG("w2w_endpoint: " << py::str(w2w_endpoint.attr("keys")()));
 
-      // get the parameters of the wav2wav endpoint
-      py::list w2w_parameters = w2w_endpoint["parameters"];
 
-      // iterate over the parameters
-      bool found_input_audio = false;
-      for (py::handle handle : w2w_parameters) {
-        py::dict param = handle.cast<py::dict>();
-        DBG("param: " << py::str(param));
-
-        // TODO: parse all of these into Ctrl objects
-        if (param["component"].cast<string>() == "slider") {
-          DBG("found slider");
-
-          // construct a slider
-          SliderCtrl ctrl;
-          ctrl.name = param["name"].cast<string>();
-          ctrl.min; // how? 
-          ctrl.max; // how?
-          ctrl.step = 0.01; // how?
-  
-        }
-
-        
-
-        // check if we have an input audio parameter
-        if (param["name"].cast<string>() == "input audio") {
-          DBG("found input audio");
-        };
-      }
-
-      if (!found_input_audio) {
-        DBG("error: input audio widget not found in the parameters for this endpoint!!!");
-        return false;
-      }
-      
-      // iterate over the returns, find one named "output audio"
-      py::list w2w_returns = w2w_endpoint["returns"];
-      bool found_output_audio = false;
-      for (py::handle handle : w2w_returns) {
-        py::dict ret = handle.cast<py::dict>();
-        if (ret["name"].cast<string>() == "output audio") {
-          DBG("found output audio");
-          found_output_audio = true;
-          break;
-        }
-      }
-
-      if (!found_output_audio) {
-        DBG("error: output audio widget not found in the return widgets for this endpoint!!!");
-        return false;
-      }
+      // hit the wav2wav-ctrls endpoint
+      auto ctrls = m_client.attr("predict")( 
+          "api_name"_a = "/wav2wav-ctrls"
+      );
 
       return true; 
     }
