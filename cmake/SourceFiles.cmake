@@ -14,7 +14,7 @@ set(SourceFiles
     Source/ARA/ProcessorEditor.h
     Source/ARA/ProcessorEditor.cpp
     Source/ARA/EditorView.h
-    Source/ARA/EditorView.cpp
+    # Source/ARA/EditorView.cpp
 
     Source/ARA/CtrlComponent.h
     Source/ARA/ModelCardComponent.h

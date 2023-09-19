@@ -46,20 +46,11 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   // initialize load and process buttons
   processButton.setLookAndFeel(&buttonLookAndFeel);
   processButton.setButtonText("process");
-  processButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
-  processButton.setColour(TextButton::textColourOffId, Colours::black);
-  processButton.setColour(TextButton::buttonOnColourId, Colours::grey);
-  processButton.setColour(TextButton::textColourOnId, Colours::black);
   processButton.addListener(this);
   addAndMakeVisible(processButton);
 
-  
   loadModelButton.setLookAndFeel(&buttonLookAndFeel);
   loadModelButton.setButtonText("Load model");
-  loadModelButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
-  loadModelButton.setColour(TextButton::textColourOffId, Colours::black);
-  loadModelButton.setColour(TextButton::buttonOnColourId, Colours::grey);
-  loadModelButton.setColour(TextButton::textColourOnId, Colours::black);
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
@@ -67,10 +58,9 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   modelPathTextBox.setMultiLine(false);
   modelPathTextBox.setReturnKeyStartsNewLine(false);
   modelPathTextBox.setReadOnly(false);
-  modelPathTextBox.setScrollbarsShown(true);
+  modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
-  modelPathTextBox.setPopupMenuEnabled(true);
-  modelPathTextBox.setText("Path to model");  // Default text
+  modelPathTextBox.setText("path to a gradio endpoint");  // Default text
   addAndMakeVisible(modelPathTextBox);
   
   // model controls
@@ -79,16 +69,14 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   ctrlComponent.populateGui(guiAttributes);
 
   // model card component
-  addAndMakeVisible(modelCardComponent); // TODO check when to do that
-
   // Get the modelCard from the EditorView
+  addAndMakeVisible(modelCardComponent); // TODO check when to do that
   modelCardComponent.setModelCard(mEditorView->getModelCard());
-  
+
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
   setSize(800, 300);
-
 }
 
 void TensorJuceProcessorEditor::buttonClicked(Button *button) {
@@ -107,9 +95,7 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
     // collect input parameters for the model.
     std::map<std::string, std::any> params = {
       {"url", modelPathTextBox.getText().toStdString()},
-      {"api_name", std::string("/view_api")}
     };
-
 
     resetUI();
     mDocumentController->executeLoad(params);
@@ -147,30 +133,33 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 
 void TensorJuceProcessorEditor::resized() {
   auto area = getLocalBounds();
-  auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // use the topArea for the mainBox layout
-  juce::FlexBox mainBox;
-  {
-      mainBox.flexDirection = juce::FlexBox::Direction::row;
+  auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // We'll keep the topArea for the grid layout
 
-      juce::FlexBox buttonBox;
-        buttonBox.flexDirection = juce::FlexBox::Direction::column;
-        buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
-        buttonBox.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(30).withMargin(juce::FlexItem::Margin(5))); // Adjust as needed
-        buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
-      
-      mainBox.items.add(juce::FlexItem(ctrlComponent).withFlex(0.3));
-      mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));
+  juce::Grid grid;
 
-  }
+  using Track = juce::Grid::TrackInfo;
+  using Fr = juce::Grid::Fr;
 
-  juce::FlexBox superMainBox;
-      superMainBox.flexDirection = juce::FlexBox::Direction::column;
-      superMainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.5));
-      superMainBox.items.add(juce::FlexItem(mainBox).withFlex(0.5));
-      
-  superMainBox.performLayout(topArea);  // use topArea instead of area
-  
+  grid.templateRows = { Track(Fr(1)), Track(Fr(1)), Track(Fr(1)) };  // Three rows for the three buttons/box
+  grid.templateColumns = { Track(Fr(1)), Track(Fr(2)), Track(Fr(1)) };  // Three columns for left, middle, right sections
+
+  grid.items = { 
+    juce::GridItem(loadModelButton), 
+    juce::GridItem(ctrlComponent),  // Assuming you want this in the middle
+    juce::GridItem(),  // Empty spot
+
+    juce::GridItem(modelPathTextBox),
+    juce::GridItem(),  // Empty spot
+    juce::GridItem(),  // Empty spot
+
+    juce::GridItem(processButton), 
+    juce::GridItem(),  // Empty spot
+    juce::GridItem(modelCardComponent)  // Placing modelCardComponent in the bottom right
+  };
+
+  grid.performLayout(topArea);
+
   if (documentView != nullptr) {
-      documentView->setBounds(area);  // this should set the bounds correctly
+    documentView->setBounds(area);  // this should set the bounds correctly
   }
 }

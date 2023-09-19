@@ -35,6 +35,7 @@ struct ModelCard {
 };
 
 
+
 /**
  * @class Model
  * @brief Abstract class for different types of deep learning processors.

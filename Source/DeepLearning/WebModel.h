@@ -1,18 +1,6 @@
 /**
  * @file
  * @brief This file is part of the JUCE examples.
- *
- * Copyright (c) 2022 - Raw Material Software Limited
- * The code included in this file is provided under the terms of the ISC license
- * http://www.isc.org/downloads/software-support-policy/isc-license. Permission
- * To use, copy, modify, and/or distribute this software for any purpose with or
- * without fee is hereby granted provided that the above copyright notice and
- * this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
- * WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
- * PURPOSE, ARE DISCLAIMED.
- *
  * @brief Base class for any models that utilize a web api to process
  * information. Currently we provide an implmentation of a wave 2 wave web based
  * model. We use the gradio python client to communicate with a gradio server.
@@ -43,6 +31,28 @@ namespace {
       return wstm.str() ;
   }
 }
+
+struct Ctrl {
+  std::string name;
+};
+
+struct SliderCtrl : public Ctrl {
+  float min;
+  float max;
+  float step;
+  float value;
+};
+
+struct TextCtrl : public Ctrl {
+  std::string value;
+};
+
+struct NumberBoxCtrl : public Ctrl {
+  float min;
+  float max;
+  float value;
+};
+
 
 class WebWave2Wave : public Model, public Wave2Wave {
 public:
@@ -83,18 +93,91 @@ public:
       DBG("url not found in params");
       return false;
     }
-    if (!modelparams::contains(params, "api_name")) {
-      DBG("api_name not found in params");
-      return false;
-    } 
 
     try {
+      DBG("loading model from " << any_cast<string>(params.at("url")));
       m_url = any_cast<string>(params.at("url"));
-      m_api_name = any_cast<string>(params.at("api_name"));
       m_loaded = true;
+
+      DBG("establishing a client");
+      m_client = Client(m_url, "verbose"_a = false);
+
+      DBG("looking for a wav2wav api...");
+      py::dict api = m_client.attr("view_api")("return_format"_a = "dict");
+
+      py::dict named_endpoints = api["named_endpoints"];
+      DBG("named_endpoints: " << py::str(named_endpoints.attr("keys")()));
+
+      // check if the api has a wav2wav endpoint
+      // otherwise we can't use this model
+      if (!named_endpoints.contains("/wav2wav")) {
+        DBG("wav2wav endpoint not found");
+        return false;
+      }
+
+      // get the wav2wav endpoint
+      py::dict w2w_endpoint = named_endpoints["/wav2wav"];
+      DBG("w2w_endpoint: " << py::str(w2w_endpoint.attr("keys")()));
+
+      // get the parameters of the wav2wav endpoint
+      py::list w2w_parameters = w2w_endpoint["parameters"];
+
+      // iterate over the parameters
+      bool found_input_audio = false;
+      for (py::handle handle : w2w_parameters) {
+        py::dict param = handle.cast<py::dict>();
+        DBG("param: " << py::str(param));
+
+        // TODO: parse all of these into Ctrl objects
+        if (param["component"].cast<string>() == "slider") {
+          DBG("found slider");
+
+          // construct a slider
+          SliderCtrl ctrl;
+          ctrl.name = param["name"].cast<string>();
+          ctrl.min; // how? 
+          ctrl.max; // how?
+          ctrl.step = 0.01; // how?
+  
+        }
+
+        
+
+        // check if we have an input audio parameter
+        if (param["name"].cast<string>() == "input audio") {
+          DBG("found input audio");
+        };
+      }
+
+      if (!found_input_audio) {
+        DBG("error: input audio widget not found in the parameters for this endpoint!!!");
+        return false;
+      }
+      
+      // iterate over the returns, find one named "output audio"
+      py::list w2w_returns = w2w_endpoint["returns"];
+      bool found_output_audio = false;
+      for (py::handle handle : w2w_returns) {
+        py::dict ret = handle.cast<py::dict>();
+        if (ret["name"].cast<string>() == "output audio") {
+          DBG("found output audio");
+          found_output_audio = true;
+          break;
+        }
+      }
+
+      if (!found_output_audio) {
+        DBG("error: output audio widget not found in the return widgets for this endpoint!!!");
+        return false;
+      }
+
       return true; 
     }
     catch (const std::runtime_error &e) {
+      DBG("Exception: " << e.what());
+      return false;
+    }
+    catch (const py::error_already_set &e) {
       DBG("Exception: " << e.what());
       return false;
     }
@@ -177,6 +260,5 @@ private:
   py::object Client;
   py::object m_client;
   string m_url;
-  string m_api_name;
   bool m_loaded;
 };
