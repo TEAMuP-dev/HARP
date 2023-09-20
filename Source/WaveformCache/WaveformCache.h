@@ -46,9 +46,16 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
                                        AudioModification *audioModification) {
     const auto iter = thumbnails.find(audioSource);
 
-    if (iter != std::end(thumbnails))
-      return *iter->second;
-
+    if (iter != std::end(thumbnails)){
+      juce::AudioThumbnail &result = *iter->second;
+      ++hash;
+      if (audioModification->getIsModified()) {
+        result.setSource(audioModification->getModifiedAudioBuffer(),
+                       audioSource->getSampleRate(), hash);
+      }
+      return result; 
+      // return *iter->second;
+    }
     auto thumb =
         std::make_unique<juce::AudioThumbnail>(128, dummyManager, thumbnailCache);
     auto &result = *thumb;
