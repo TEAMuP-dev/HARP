@@ -1,0 +1,3 @@
+argbind
+gradio_client
+pyinstaller

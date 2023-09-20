@@ -37,18 +37,12 @@ else()
 
 endif()
 
-# this sets the following variables:
-# PY_FRAMEWORK_DIR, Python_ROOT_DIR, PYTHON_EXECUTABLE
-# to include Python and pybind11
-include(py/relocatable-python.cmake)
-setup_relocatable_python()
-message("Python framework dir: ${PY_FRAMEWORK_DIR}")
-message("Python root dir: ${Python_ROOT_DIR}")
-message("Python executable: ${PYTHON_EXECUTABLE}")
-
-# get all the files in the python framework
-find_package(Python COMPONENTS Interpreter Development)
-add_subdirectory(pybind11)
+# TODO:
+# make sure we have a variable for the python executable we'll be using for pyinstaller
+# cd into the py/client directory and run `pip install -r requirements.txt`
+# then run `pyinstaller get_ctrls.py --collect-all gradio_client`
+# and `pyinstaller get_ctrls.py --collect-all gradio_client`
+# the dist directory will be copied to the bundle later
 
 
 juce_add_plugin(${PROJECT_NAME}
@@ -127,25 +121,25 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 
-        pybind11::embed
-        Python::Python
+        # pybind11::embed
+        # Python::Python
 )
 
 
-# copy the Python.framework to the  bundle
+# copy the pyinstaller tools to the  bundle
 if (UNIX)
     foreach(format ${TENSORJUCE_FORMATS})
         # make a resource directory
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E make_directory
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
         # Use the native cp command with -R to properly handle symlinks
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
                         COMMAND cp -R
-                        ${PY_FRAMEWORK_DIR}
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+                        ${CMAKE_SOURCE_DIR}/py/client/dist/
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
 
     endforeach()
 endif()
@@ -157,7 +151,6 @@ endif()
 if (APPLE)
     foreach(format ${TENSORJUCE_FORMATS})
         set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
-        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks/Python.framework" )
     endforeach()
 
     set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")

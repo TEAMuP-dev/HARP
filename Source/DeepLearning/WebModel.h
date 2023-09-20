@@ -11,26 +11,13 @@
 
 #include <fstream>
 
-#define PYBIND11_ASSERT_GIL_HELD_INCREF_DECREF 1
 
 #include "Model.h"
 #include "Wave2Wave.h"
-#include <Python.h>
-#include <pybind11/embed.h>
-namespace py = pybind11;
-using namespace pybind11::literals;
 
-namespace {
-  std::wstring widen( const std::string& str )
-  {
-      using namespace std;
-      wostringstream wstm ;
-      const ctype<wchar_t>& ctfacet = use_facet<ctype<wchar_t>>(wstm.getloc()) ;
-      for( size_t i=0 ; i<str.size() ; ++i ) 
-                wstm << ctfacet.widen( str[i] ) ;
-      return wstm.str() ;
-  }
-}
+#include "juce_core/juce_core.h"
+// #include "juce_data_structres/juce_data_structures.h"
+
 
 struct Ctrl {
   std::string label;
@@ -55,36 +42,38 @@ struct NumberBoxCtrl : public Ctrl {
   float value;
 };
 
+namespace {
+  juce::var loadJsonFromFile(const juce::File& file) {
+      juce::var result;
+
+      if (!file.existsAsFile()) {
+          DBG("File does not exist: " + file.getFullPathName());
+          return result;
+      }
+
+      juce::String fileContent = file.loadFileAsString();
+      
+      juce::Result parseResult = juce::JSON::parse(fileContent, result);
+
+      if (parseResult.failed()) {
+          DBG("Failed to parse JSON: " + parseResult.getErrorMessage());
+          return juce::var();  // Return an empty var
+      }
+
+      return result;
+  }
+
+}
+
+
 
 class WebWave2Wave : public Model, public Wave2Wave {
 public:
   WebWave2Wave() { // TODO: should be a singleton
 
-    py::initialize_interpreter();
-    if (!Py_IsInitialized()) {
-      DBG("Failed to initialize Python runtime.");
-      return;
-    }
-
-    py::list sys_path = py::module_::import("sys").attr("path");
-
-    for (auto path : sys_path) {
-        DBG("Python sys.path (after setting): " << path.cast<std::string>());
-    }
-
-    // try to import the client. 
-    DBG("Importing client");
-    try {
-      Client = py::module_::import("gradio_client").attr("Client");
-    } catch (const py::error_already_set &e) {
-      DBG("Exception: " << e.what());
-      return;
-    }
   }
 
   ~WebWave2Wave() {
-    // finalize the python interpreter
-    py::finalize_interpreter();
   }
 
   bool ready() const override { return m_loaded; }
@@ -96,46 +85,100 @@ public:
       return false;
     }
 
-    try {
-      DBG("loading model from " << any_cast<string>(params.at("url")));
-      m_url = any_cast<string>(params.at("url"));
-      m_loaded = true;
+    std::string url = std::any_cast<std::string>(params.at("url"));
+    m_url = url; // Store the URL for future use
 
-      DBG("establishing a client");
-      m_client = Client(m_url, "verbose"_a = false);
+    juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getChildFile("control_spec.json");
 
-      DBG("looking for a wav2wav api...");
-      py::dict api = m_client.attr("view_api")("return_format"_a = "dict");
 
-      py::dict named_endpoints = api["named_endpoints"];
-      DBG("named_endpoints: " << py::str(named_endpoints.attr("keys")()));
+    juce::File scriptPath = juce::File::getSpecialLocation(
+        juce::File::currentApplicationFile
+    ).getChildFile("Contents/Resources/get_ctrls/get_ctrls");
 
-      // check if the api has a wav2wav endpoint
-      // otherwise we can't use this model
-      if (!(named_endpoints.contains("/wav2wav") && named_endpoints.contains("/wav2wav-ctrls")))  {
-        DBG("wav2wav or wav2wav-ctrls endpoint not found");
+    std::string command = scriptPath.getFullPathName().toStdString() + " --url " + m_url + " --output_path " + outputPath.getFullPathName().toStdString();
+    int result = std::system(command.c_str());
+
+    if (result != 0) {
+        DBG("Failed to run get_ctrls script.");
+        return false;
+    }
+
+  // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
+  juce::var controls = loadJsonFromFile(outputPath);
+  if (controls.isVoid()) {
+      DBG("Failed to load controls from JSON.");
+      return false;
+  }
+
+  // else, it should be a list of dicts
+  juce::Array<juce::var> *ctrlList = controls.getArray();
+  if (ctrlList == nullptr) {
+      DBG("Failed to load controls from JSON. ctrlList is null.");
+      return false;
+  }
+
+  // clear the m_ctrls vector
+  m_ctrls.clear();
+
+  // iterate through the list of controls
+  // and add them to the m_ctrls vector
+  for (int i = 0; i < ctrlList->size(); i++) {
+    juce::var ctrl = ctrlList->getReference(i);
+    if (!ctrl.isObject()) {
+        DBG("Failed to load controls from JSON. ctrl is not an object.");
+        return false;
+    }
+    
+    try{
+        // get the ctrl type
+        juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
+
+        // create the ctrl
+        if (ctrl_type == "slider") {
+          SliderCtrl slider;
+          slider.label = ctrl["label"].toString().toStdString();
+          slider.minimum = ctrl["minimum"].toString().getFloatValue();
+          slider.maximum = ctrl["maximum"].toString().getFloatValue();
+          slider.step = ctrl["step"].toString().getFloatValue();
+          slider.value = ctrl["value"].toString().getFloatValue();
+
+          m_ctrls.push_back(slider);
+          DBG("Slider: " + slider.label + " added");
+        }
+        else if (ctrl_type == "text") {
+          TextCtrl text;
+          text.label = ctrl["label"].toString().toStdString();
+          text.value = ctrl["value"].toString().toStdString();
+
+          m_ctrls.push_back(text);
+          DBG("Text: " + text.label + " added");
+        }
+        else if (ctrl_type == "audio_in") {
+          AudioInCtrl audio_in;
+          audio_in.label = ctrl["label"].toString().toStdString();
+
+          m_ctrls.push_back(audio_in);
+          DBG("Audio In: " + audio_in.label + " added");
+        }
+        else if (ctrl_type == "number_box") {
+          NumberBoxCtrl number_box;
+          number_box.label = ctrl["label"].toString().toStdString();
+          number_box.min = ctrl["min"].toString().getFloatValue();
+          number_box.max = ctrl["max"].toString().getFloatValue();
+          number_box.value = ctrl["value"].toString().getFloatValue();
+          
+          m_ctrls.push_back(number_box);
+          DBG("Number Box: " + number_box.label + " added");
+        }
+        else {
+          DBG("failed to parse control with unknown type: " + ctrl_type);
+        }
+      }
+      catch (const char* e) {
+        DBG("Failed to load controls from JSON. " << e);
         return false;
       }
-
-      // get the wav2wav endpoint
-      py::dict w2w_endpoint = named_endpoints["/wav2wav"];
-      DBG("w2w_endpoint: " << py::str(w2w_endpoint.attr("keys")()));
-
-
-      // hit the wav2wav-ctrls endpoint
-      auto ctrls = m_client.attr("predict")( 
-          "api_name"_a = "/wav2wav-ctrls"
-      );
-
-      return true; 
-    }
-    catch (const std::runtime_error &e) {
-      DBG("Exception: " << e.what());
-      return false;
-    }
-    catch (const py::error_already_set &e) {
-      DBG("Exception: " << e.what());
-      return false;
     }
   }
 
@@ -148,73 +191,79 @@ public:
       return;
     }
                     
-    // save the buffer to file
-    juce::File tempFile =
-        juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("input.wav");
-    if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
-      DBG("Failed to save buffer to file.");
-      return;
-    }
+    // // save the buffer to file
+    // juce::File tempFile =
+    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //         .getChildFile("input.wav");
+    // if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
+    //   DBG("Failed to save buffer to file.");
+    //   return;
+    // }
 
-    // a tarrget output file
-    juce::File tempOutputFile =
-        juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("output.wav");
+    // // a tarrget output file
+    // juce::File tempOutputFile =
+    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //         .getChildFile("output.wav");
 
-    // Create a Python list to hold the command line arguments
-    // Create a Python dictionary to hold the keyworded arguments
-    pybind11::dict pykwargs;
-    try {
-      pykwargs["use_coarse2fine"] = true;
-      pykwargs["audio_path"] = tempFile.getFullPathName().toStdString();
-      pykwargs["input_pitch_shift_semitones"] = 0;
-      pykwargs["random_mask_intensity"] = 1.0;
-      pykwargs["periodic_hint_freq"] =
-          (int)any_cast<double>(kwargs.at("phint"));
-      pykwargs["periodic_hint_width"] = 1;
-      pykwargs["onset_mask_width"] = (int)any_cast<double>(kwargs.at("pwidth"));
-      pykwargs["ncc"] = 0;
-      pykwargs["stretch_factor"] = 1.0;
-      pykwargs["prefix_hint"] = 0.0;
-      pykwargs["suffix_hint"] = 0.0;
-      pykwargs["init_temp"] = any_cast<double>(kwargs.at("temp1"));
-      pykwargs["final_temp"] = any_cast<double>(kwargs.at("temp2"));
-      pykwargs["num_steps"] = 36;
-      pykwargs["mask_dropout"] = 0.0;
-    } catch (const std::runtime_error &e) {
-      DBG("Exception: " << e.what());
-      return;
-    }
+    // // Construct the JSON controls path, let's assume you have a function or method to do this.
+    // juce::File ctrlsPath = constructCtrlsJson(tempFile.getFullPathName().toStdString()); 
 
-    try {
-      DBG("predicting");
-      string output_audio_path =
-          m_client.attr("predict")(*(pykwargs.attr("values")()),
-                               "api_name"_a = "/vamp")
-              .cast<string>();
-      py::print(output_audio_path);
-      DBG("Predicted");
+    // std::string processCommand = "Resources/process --url " + m_url 
+    //                               + " --input_path " + tempFile.getFullPathName().toStdString()
+    //                               + " --ctrls_path " + ctrlsPath.getFullPathName().toStdString();
+    
+    // int processResult = std::system(processCommand.c_str());
+    // if (processResult != 0) {
+    //     DBG("Failed to run process script.");
+    //     return;
+    // }
 
-      // read the output file to a buffer
-      // TODO: the sample rate should not be the incoming sample rate, but
-      // rather the output sample rate of the daw?
-      load_buffer_from_file(juce::File(output_audio_path), *bufferToProcess,
-                            sampleRate);
 
-      // delete the temp input file
-      tempFile.deleteFile();
-      tempOutputFile.deleteFile();
-    } catch (const py::error_already_set &e) {
-      DBG("Exception: " << e.what());
-      // Additional error handling or logging if needed
-    }
+    // // TODO 
+    // // call the script in Resources/process
+    // // we will need to pass it three arguments:
+    // // --url <url>: the url of the gradio server
+    // // --input_path <path>: the path to the input file
+    // // --ctrls_path <path>: path to a json file with the control values including
+    // // the path to the input audio file. 
+
+
+
+    // // read the output file to a buffer
+    // // TODO: the sample rate should not be the incoming sample rate, but
+    // // rather the output sample rate of the daw?
+    // load_buffer_from_file(juce::File(output_audio_path), *bufferToProcess,
+    //                       sampleRate);
+
+    // // delete the temp input file
+    // tempFile.deleteFile();
+    // tempOutputFile.deleteFile();
+
     return;
   }
 
+  juce::var loadJsonFromFile(const juce::File& file) {
+    juce::var result;
+
+    if (!file.existsAsFile()) {
+        DBG("File does not exist: " + file.getFullPathName());
+        return result;
+    }
+
+    juce::String fileContent = file.loadFileAsString();
+    
+    juce::Result parseResult = juce::JSON::parse(fileContent, result);
+
+    if (parseResult.failed()) {
+        DBG("Failed to parse JSON: " + parseResult.getErrorMessage());
+        return juce::var();  // Return an empty var
+    }
+
+    return result;
+  }
+
 private:
-  py::object Client;
-  py::object m_client;
+  std::vector <Ctrl> m_ctrls;
   string m_url;
   bool m_loaded;
 };
