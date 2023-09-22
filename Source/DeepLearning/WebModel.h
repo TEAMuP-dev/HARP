@@ -187,6 +187,10 @@ public:
     return m_ctrls;
   }
 
+  bool saveCtrls(juce::File savePath){
+    // TODO: implement me!
+  }
+
 
   virtual void process(
     juce::AudioBuffer<float> *bufferToProcess, int sampleRate
@@ -197,22 +201,27 @@ public:
       return;
     }
                     
-    // // save the buffer to file
-    // juce::File tempFile =
-    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
-    //         .getChildFile("input.wav");
-    // if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
-    //   DBG("Failed to save buffer to file.");
-    //   return;
-    // }
+    // save the buffer to file
+    juce::File tempFile =
+        juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getChildFile("input.wav");
+    if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
+      DBG("Failed to save buffer to file.");
+      return;
+    }
 
-    // // a tarrget output file
-    // juce::File tempOutputFile =
-    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
-    //         .getChildFile("output.wav");
+    // a tarrget output file
+    juce::File tempOutputFile =
+        juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getChildFile("output.wav");
 
-    // // Construct the JSON controls path, let's assume you have a function or method to do this.
-    // juce::File ctrlsPath = constructCtrlsJson(tempFile.getFullPathName().toStdString()); 
+    // a ctrls file
+    juce::File tempCtrlsFile =
+        juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getChildFile("ctrls.json");
+
+      
+
 
     // std::string processCommand = "Resources/process --url " + m_url 
     //                               + " --input_path " + tempFile.getFullPathName().toStdString()
