@@ -24,7 +24,7 @@ def main(url, output_path, mode, ctrls_path=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some arguments.')
     parser.add_argument('--url', required=True, help='The URL to connect to.')
-    parser.add_argument('--output-path', required=True, help='The output path to save the file.')
+    parser.add_argument('--output_path', required=True, help='The output path to save the file.')
     parser.add_argument('--mode', required=True, choices=['get_ctrls', 'predict'], help='The mode of operation.')
     parser.add_argument('--ctrls_path', help='The path to the controls file.')
     
