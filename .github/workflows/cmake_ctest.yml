@@ -169,7 +169,7 @@ jobs:
         # Each plugin must be code signed
         # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
         # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestam
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --preserve-metadata=entitlements,flags,runtime  ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/gradiojuce_client
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}/Contents/MacOS/tensorjuce
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}
         
