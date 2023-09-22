@@ -35,7 +35,6 @@ struct ModelCard {
 };
 
 
-
 /**
  * @class Model
  * @brief Abstract class for different types of deep learning processors.
@@ -57,7 +56,7 @@ public:
 
 public:
   // //! provides access to the model card (metadata)
-  ModelCard &card();
+  ModelCard &card() {return m_card ;}
 
   void addListener(juce::ChangeListener *listener){
     addChangeListener(listener);

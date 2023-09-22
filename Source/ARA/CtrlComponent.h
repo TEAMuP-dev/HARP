@@ -17,148 +17,134 @@ public:
 
   CtrlComponent() {}
 
-  std::map<std::string, std::any> getParams() {
-    // create an empty map
-    std::map<std::string, std::any> params;
-    for (int i = 0; i < continuousCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          continuousCtrls[i]->getName().toStdString(),
-          continuousCtrls[i]->getValue()));
-    }
-    for (int i = 0; i < binaryCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          binaryCtrls[i]->getName().toStdString(),
-          binaryCtrls[i]->getToggleState()));
-    }
-    for (int i = 0; i < textCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          textCtrls[i]->getName().toStdString(),
-          textCtrls[i]->getText().toStdString()));
-    }
-    for (int i = 0; i < optionCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          optionCtrls[i]->getName().toStdString(),
-          optionCtrls[i]->getText().toStdString()));
-    }
-    return params; 
+  void setModel(std::shared_ptr<WebWave2Wave> model) {
+    mModel = model;
   }
 
-  void populateGui(ListOfDicts& guiAttributes) {
+  void populateGui() {
+    headerLabel.setText("The controls go here", juce::dontSendNotification);
+    headerLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(headerLabel);
 
-    for (const auto &ctrlAttributes  : guiAttributes) {
-        std::string nameId = std::any_cast<std::string>(ctrlAttributes.at("nameId"));
-        std::string name = std::any_cast<std::string>(ctrlAttributes.at("name"));
-        std::string widgetType = std::any_cast<std::string>(ctrlAttributes.at("widget_type"));
-        // int widgetTypeVal = std::any_cast<int>(ctrlAttributes.at("widget_type_val"));
-        std::string ctrlType = std::any_cast<std::string>(ctrlAttributes.at("ctrl_type"));
-
-        if (ctrlType == "ContinuousCtrl") {
-        // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
-        double min = std::any_cast<double>(ctrlAttributes.at("min"));
-        double max = std::any_cast<double>(ctrlAttributes.at("max"));
-        double step = std::any_cast<double>(ctrlAttributes.at("step"));
-        double defautlValue = std::any_cast<double>(ctrlAttributes.at("current"));
-        std::unique_ptr<juce::Slider> continuousCtrl = std::make_unique<juce::Slider>();
-
-        if (widgetType == "SLIDER") {
-            continuousCtrl->setSliderStyle(juce::Slider::LinearHorizontal);
-        }
-        else if (widgetType == "ROTARY") {
-            continuousCtrl->setSliderStyle(juce::Slider::Rotary);
-        }
-        else {
-            DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-            jassertfalse;
-        }
-
-        continuousCtrl->setName(nameId);
-        continuousCtrl->setRange(min, max, step);
-        continuousCtrl->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-        continuousCtrl->addListener(this);
-        continuousCtrl->setTextValueSuffix(" " + name);
-        continuousCtrl->setLookAndFeel(&toolbarSliderStyle);
-        continuousCtrl->setValue(defautlValue, juce::dontSendNotification);
-        addAndMakeVisible(*continuousCtrl);
-
-        // Add the slider to the vector
-        continuousCtrls.push_back(std::move(continuousCtrl));
-        }
-        
-        else if (ctrlType == "BinaryCtrl") {
-        bool defaultValue = std::any_cast<bool>(ctrlAttributes.at("current"));
-        if (widgetType == "CHECKBOX") {
-            std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
-            binaryCtrl->setName(nameId);
-            binaryCtrl->setButtonText(name);
-            binaryCtrl->setToggleState(defaultValue, juce::dontSendNotification);
-            binaryCtrl->addListener(this);
-            addAndMakeVisible(*binaryCtrl);
-            binaryCtrls.push_back(std::move(binaryCtrl));
-        }
-        else {
-            DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-            jassertfalse;
-        }
-        }
-        else if (ctrlType == "TextInputCtrl") {
-            std::string defaultValue = std::any_cast<std::string>(ctrlAttributes.at("current"));
-            std::unique_ptr<TitledTextBox> textCtrl = std::make_unique<TitledTextBox>();
-            textCtrl->setName(nameId);
-            textCtrl->setTitle(name);
-            textCtrl->setText(defaultValue);
-            textCtrl->addListener(this);
-            addAndMakeVisible(*textCtrl);
-            textCtrls.push_back(std::move(textCtrl));
-        }
-        else if (ctrlType == "FloatInputCtrl") {
-            // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
-            // TODO
-        }
-        else if (ctrlType == "OptionCtrl") {
-            int defaultValue = std::any_cast<int>(ctrlAttributes.at("current"));
-            auto options = std::any_cast<std::vector<std::tuple<std::string, int>>>(ctrlAttributes.at("options"));
-            std::unique_ptr<juce::ComboBox> optionCtrl = std::make_unique<juce::ComboBox>();
-            for (auto &option : options) {
-            optionCtrl->addItem(std::get<0>(option), std::get<1>(option));
-            }
-            // optionCtrl->setSelectedId(1);
-            optionCtrl->setName(nameId);
-            optionCtrl->addListener(this);
-            optionCtrl->setSelectedId(defaultValue, juce::dontSendNotification);
-            optionCtrl->setTextWhenNoChoicesAvailable("No choices");
-            addAndMakeVisible(*optionCtrl);
-            optionCtrls.push_back(std::move(optionCtrl));
-        }
+    if (mModel == nullptr) {
+      DBG("populate gui called, but model is null");
+      return;
     }
-    DBG("populateGui finished");
-    
-  }
 
+    auto &ctrlList = mModel->controls();
+  
+    for (const auto &pair : ctrlList) {
+          auto ctrlPtr = pair.second;
+          // SliderCtrl
+          if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrlPtr.get())) {
+              auto slider = std::make_unique<juce::Slider>();
+              // Assuming all sliders are horizontal for simplicity
+              slider->setSliderStyle(juce::Slider::LinearHorizontal);
+              slider->setName(sliderCtrl->id.toString());
+              slider->setRange(sliderCtrl->minimum, sliderCtrl->maximum, sliderCtrl->step);
+              slider->setValue(sliderCtrl->value);
+              slider->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
+              slider->addListener(this);
+              slider->setTextValueSuffix(" " + sliderCtrl->label);
+              slider->setLookAndFeel(&toolbarSliderStyle);
+              addAndMakeVisible(*slider);
+              sliders.push_back(std::move(slider));
+              DBG("Slider: " + sliderCtrl->label + " added");
+
+          // ToggleCtrl
+          } else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrlPtr.get())) {
+              auto toggle = std::make_unique<juce::ToggleButton>();
+              toggle->setName(toggleCtrl->id.toString());
+              toggle->setButtonText(toggleCtrl->label);
+              toggle->setToggleState(toggleCtrl->value, juce::dontSendNotification);
+              toggle->addListener(this);
+              addAndMakeVisible(*toggle);
+              toggles.push_back(std::move(toggle));
+              DBG("Toggle: " + toggleCtrl->label + " added");
+
+          // TextBoxCtrl
+          } else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrlPtr.get())) {
+              auto textCtrl = std::make_unique<TitledTextBox>();
+              textCtrl->setName(textBoxCtrl->id.toString());
+              textCtrl->setTitle(textBoxCtrl->label);
+              textCtrl->setText(textBoxCtrl->value);
+              textCtrl->addListener(this);
+              addAndMakeVisible(*textCtrl);
+              textCtrls.push_back(std::move(textCtrl));
+              DBG("Text Box: " + textBoxCtrl->label + " added");
+
+          // ComboBoxCtrl
+          } else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrlPtr.get())) {
+              auto comboBox = std::make_unique<juce::ComboBox>();
+              comboBox->setName(comboBoxCtrl->id.toString());
+              for (const auto &option : comboBoxCtrl->options) {
+                  comboBox->addItem(option, comboBox->getNumItems() + 1);
+              }
+
+              int selectedId = 1; // Default to first item if the desired value isn't found
+              for (int i = 0; i < comboBox->getNumItems(); ++i) {
+                  if (comboBox->getItemText(i).toStdString() == comboBoxCtrl->value) {
+                      selectedId = i + 1;  // item IDs start at 1
+                      break;
+                  }
+              }
+              comboBox->addListener(this);
+              comboBox->setTextWhenNoChoicesAvailable("No choices");
+              addAndMakeVisible(*comboBox);
+              optionCtrls.push_back(std::move(comboBox));
+              DBG("Combo Box: " + comboBoxCtrl->label + " added");
+          }
+
+          // NumberBoxCtrl (Assuming this should be treated as a slider, but without a visual slider)
+          else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrlPtr.get())) {
+              std::unique_ptr<juce::Slider> numberBox = std::make_unique<juce::Slider>();
+              numberBox->setName(numberBoxCtrl->id.toString());
+              numberBox->setRange(numberBoxCtrl->min, numberBoxCtrl->max);
+              numberBox->setValue(numberBoxCtrl->value, juce::dontSendNotification);
+              numberBox->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
+              numberBox->addListener(this);
+              numberBox->setTextValueSuffix(" " + numberBoxCtrl->label);
+              numberBox->setSliderStyle(juce::Slider::IncDecButtons);
+              numberBox->setLookAndFeel(&toolbarSliderStyle);
+              addAndMakeVisible(*numberBox);
+              sliders.push_back(std::move(numberBox));
+              DBG("Number Box: " + numberBoxCtrl->label + " added");
+          }
+      }
+      repaint();
+      resized();
+  }
 
   void resetUI(){
+    DBG("CtrlComponent::resetUI called");
+    mModel.reset();
     // remove all the widgets and empty the vectors
-    for (auto &ctrl : continuousCtrls) {
+    for (auto &ctrl : sliders) {
       removeChildComponent(ctrl.get());
     }
-    continuousCtrls.clear();
-    for (auto &ctrl : binaryCtrls) {
-      removeChildComponent(ctrl.get());
+    sliders.clear();
+
+    for (auto &ctrl : toggles) {
+        removeChildComponent(ctrl.get());
     }
-    binaryCtrls.clear();
-    for (auto &ctrl : textCtrls) {
-      removeChildComponent(ctrl.get());
-    }
-    textCtrls.clear();
+    toggles.clear();
+
     for (auto &ctrl : optionCtrls) {
-      removeChildComponent(ctrl.get());
+        removeChildComponent(ctrl.get());
     }
     optionCtrls.clear();
 
-    resized();
+    for (auto &ctrl : textCtrls) {
+        removeChildComponent(ctrl.get());
+    }
+    textCtrls.clear();
   }
+
 
   void resized() override {
     auto area = getLocalBounds();
+
+    headerLabel.setBounds(area.removeFromTop(30));  // Adjust height to your preference
 
     // TODO:: what do these flex numbers do? I feel like I (hugo) could be using them better. 
     juce::FlexBox mainBox;
@@ -167,68 +153,114 @@ public:
       juce::FlexBox ctrlBox1;
       {
           ctrlBox1.flexDirection = juce::FlexBox::Direction::column;
-          juce::FlexBox continuousBox;
-              // continuousBox.flexWrap = juce::FlexBox::Wrap::noWrap;
-              // continuousBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
-              // continuousBox.alignContent = juce::FlexBox::AlignContent::center;
-              continuousBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < continuousCtrls.size(); i++) {
-                continuousBox.items.add(juce::FlexItem(*continuousCtrls[i]).withFlex(1));
+          juce::FlexBox sliderBox;
+              // sliderBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+              // sliderBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+              // sliderBox.alignContent = juce::FlexBox::AlignContent::center;
+              sliderBox.flexDirection = juce::FlexBox::Direction::row;
+              for (size_t i = 0; i < sliders.size(); i++) {
+                DBG("adding slider with name " + sliders[i]->getName() + "to sliderBox");
+                sliderBox.items.add(juce::FlexItem(*sliders[i]).withFlex(1));
               }
-          ctrlBox1.items.add(juce::FlexItem(continuousBox).withFlex(1));
-          juce::FlexBox binaryBox;
-              binaryBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < binaryCtrls.size(); i++) {
-                binaryBox.items.add(juce::FlexItem(*binaryCtrls[i]).withFlex(1));
+          ctrlBox1.items.add(juce::FlexItem(sliderBox).withFlex(1));
+          juce::FlexBox toggleBox;
+              toggleBox.flexDirection = juce::FlexBox::Direction::row;
+              for (size_t i = 0; i < toggles.size(); i++) {
+                DBG("adding toggle with name " + toggles[i]->getName() + "to toggleBox");
+                toggleBox.items.add(juce::FlexItem(*toggles[i]).withFlex(1));
               }
-          ctrlBox1.items.add(juce::FlexItem(binaryBox).withFlex(1));
+          ctrlBox1.items.add(juce::FlexItem(toggleBox).withFlex(1));
       }
-      mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(0.3));
+      mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(1));
 
       juce::FlexBox ctrlBox2;
       {
           ctrlBox2.flexDirection = juce::FlexBox::Direction::column;
-          juce::FlexBox optionBox;
-              optionBox.flexDirection = juce::FlexBox::Direction::row;
-              // optionBox.flexWrap = juce::FlexBox::Wrap::noWrap;
-      //         optionBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
-      //         optionBox.alignContent = juce::FlexBox::AlignContent::center;  
-              for (int i = 0; i < optionCtrls.size(); i++) {
-                optionBox.items.add(juce::FlexItem(*optionCtrls[i]).withFlex(1));
+          juce::FlexBox comboBox;
+              comboBox.flexDirection = juce::FlexBox::Direction::row;
+              comboBox.flexWrap = juce::FlexBox::Wrap::noWrap;
+              comboBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+              comboBox.alignContent = juce::FlexBox::AlignContent::center;  
+              for (size_t i = 0; i < optionCtrls.size(); i++) {
+                DBG("adding option with name " + optionCtrls[i]->getName() + "to optionBox");
+                comboBox.items.add(juce::FlexItem(*optionCtrls[i]).withFlex(1));
               }
-              if (optionBox.items.size() > 0){
-                  ctrlBox2.items.add(juce::FlexItem(optionBox).withFlex(1));
+              if (comboBox.items.size() > 0){
+                  ctrlBox2.items.add(juce::FlexItem(comboBox).withFlex(1));
               }
           
           juce::FlexBox textCtrlBox;
               textCtrlBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < textCtrls.size(); i++) {
+              for (size_t i = 0; i < textCtrls.size(); i++) {
+                DBG("adding textCtrl with name " + textCtrls[i]->getName() + "to textCtrlBox");
                 textCtrlBox.items.add(juce::FlexItem(*textCtrls[i]).withFlex(1));
               }
               if (textCtrlBox.items.size() > 0){
-                  ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
+                DBG("adding textCtrlBox to ctrlBox2");
+                ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
               }
           // ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
       }
-      mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(0.3));
-      
+      mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(1));
     }
 
+    DBG("performing layout");
+    mainBox.performLayout(area);
 
   }
 
+
+
   void buttonClicked(Button *button) {
-    auto name = button->getName().toStdString();
-    mEditorView->setCurrentCtrlValue(name, button->getToggleState());
+    auto id = juce::Uuid(button->getName().toStdString());
+
+    CtrlList &ctrls = mModel->controls();
+    auto pair = mModel->findCtrlByUuid(id); 
+    if (pair == ctrls.end()) {
+      DBG("buttonClicked: ctrl not found");
+      return;
+    }
+    auto ctrl = pair->second;
+    if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get())) {
+      toggleCtrl->value = button->getToggleState();
+    } else {
+      DBG("buttonClicked: ctrl is not a toggle");
+    }
+
   }
 
   void comboBoxChanged(ComboBox *comboBox) {
-    auto name = comboBox->getName().toStdString();
-    mEditorView->setCurrentCtrlValue(name, comboBox->getSelectedId());
+    auto id = juce::Uuid(comboBox->getName().toStdString());
+
+    CtrlList &ctrls = mModel->controls();
+    auto pair = mModel->findCtrlByUuid(id);
+    if (pair == ctrls.end()) {
+      DBG("comboBoxChanged: ctrl not found");
+      return;
+    }
+    auto ctrl = pair->second;
+    if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get())) {
+      comboBoxCtrl->value = comboBox->getText().toStdString();
+    } else {
+      DBG("comboBoxChanged: ctrl is not a combobox");
+    }
   }
+
   void textEditorReturnKeyPressed (TextEditor& textEditor) {
-    auto name = textEditor.getName().toStdString();
-    mEditorView->setCurrentCtrlValue(name, textEditor.getText().toStdString());
+    auto id = juce::Uuid(textEditor.getName().toStdString());
+
+    CtrlList &ctrls = mModel->controls();
+    auto pair = mModel->findCtrlByUuid(id);
+    if (pair == ctrls.end()) {
+      DBG("textEditorReturnKeyPressed: ctrl not found");
+      return;
+    }
+    auto ctrl = pair->second;
+    if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
+      textBoxCtrl->value = textEditor.getText().toStdString();
+    } else {
+      DBG("textEditorReturnKeyPressed: ctrl is not a text box");
+    }
   }
 
   void sliderValueChanged(Slider* slider) {
@@ -236,35 +268,33 @@ public:
   }
 
   void sliderDragEnded(Slider* slider) {
-    auto name = slider->getName().toStdString();
-    mEditorView->setCurrentCtrlValue(name, slider->getValue());
-  }
+    auto id = juce::Uuid(slider->getName().toStdString());
 
-
-private:
-  void InitGenericDial(
-    juce::Slider &dial,
-    const juce::String& valueSuffix, 
-    const juce::Range<double> range, 
-    double step_size,
-    float value
-  ){
-    dial.setLookAndFeel(&toolbarSliderStyle);
-    dial.setSliderStyle(Slider::Rotary);
-    dial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-    dial.setTextValueSuffix(valueSuffix);
-    dial.setRange(range, step_size);
-    dial.setValue(value);
-    dial.addListener(this);
+    CtrlList &ctrls = mModel->controls();
+    auto pair = mModel->findCtrlByUuid(id);
+    if (pair == ctrls.end()) {
+      DBG("sliderDragEnded: ctrl not found");
+      return;
+    }
+    auto ctrl = pair->second;
+    if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get())) {
+      sliderCtrl->value = slider->getValue();
+    } else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get())) {
+      numberBoxCtrl->value = slider->getValue();
+    } else {
+      DBG("sliderDragEnded: ctrl is not a slider");
+    }
   }
 
 private:
   ToolbarSliderStyle toolbarSliderStyle;
-  EditorView *mEditorView;
+  std::shared_ptr<WebWave2Wave> mModel {nullptr};
+
+  juce::Label headerLabel;
 
   // Vectors of unique pointers to widgets
-  std::vector<std::unique_ptr<juce::Slider>> continuousCtrls;
-  std::vector<std::unique_ptr<juce::ToggleButton>> binaryCtrls;
+  std::vector<std::unique_ptr<juce::Slider>> sliders;
+  std::vector<std::unique_ptr<juce::ToggleButton>> toggles;
   std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
   std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
 

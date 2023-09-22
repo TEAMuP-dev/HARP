@@ -20,65 +20,56 @@
 
 
 struct Ctrl {
-  std::string label;
+  juce::Uuid id {""};
+  std::string label {""};
+  virtual ~Ctrl() = default; // virtual destructor
 };
 
 struct SliderCtrl : public Ctrl {
-  float minimum;
-  float maximum;
-  float step;
-  float value;
+  double minimum;
+  double maximum;
+  double step;
+  double value;
 };
 
-struct TextCtrl : public Ctrl {
+struct TextBoxCtrl : public Ctrl {
   std::string value;
 };
 
 struct AudioInCtrl : public Ctrl {};
 
+
 struct NumberBoxCtrl : public Ctrl {
-  float min;
-  float max;
-  float value;
+  double min;
+  double max;
+  double value;
 };
 
-namespace {
-  juce::var loadJsonFromFile(const juce::File& file) {
-      juce::var result;
+struct ToggleCtrl : public Ctrl {
+  bool value;
+};
 
-      if (!file.existsAsFile()) {
-          DBG("File does not exist: " + file.getFullPathName());
-          return result;
-      }
-
-      juce::String fileContent = file.loadFileAsString();
-      
-      juce::Result parseResult = juce::JSON::parse(fileContent, result);
-
-      if (parseResult.failed()) {
-          DBG("Failed to parse JSON: " + parseResult.getErrorMessage());
-          return juce::var();  // Return an empty var
-      }
-
-      return result;
-  }
-
-}
+struct ComboBoxCtrl : public Ctrl {
+  std::vector<std::string> options;
+  std::string value;
+};
 
 
+
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 class WebWave2Wave : public Model, public Wave2Wave {
 public:
   WebWave2Wave() { // TODO: should be a singleton
-
   }
 
-  ~WebWave2Wave() {
-  }
 
   bool ready() const override { return m_loaded; }
 
   bool load(const map<string, any> &params) override {
+    m_ctrls.clear();
+    m_loaded = false;
+
     // get the name of the huggingface repo we're going to use
     if (!modelparams::contains(params, "url")) {
       DBG("url not found in params");
@@ -136,40 +127,41 @@ public:
 
         // create the ctrl
         if (ctrl_type == "slider") {
-          SliderCtrl slider;
-          slider.label = ctrl["label"].toString().toStdString();
-          slider.minimum = ctrl["minimum"].toString().getFloatValue();
-          slider.maximum = ctrl["maximum"].toString().getFloatValue();
-          slider.step = ctrl["step"].toString().getFloatValue();
-          slider.value = ctrl["value"].toString().getFloatValue();
+          auto slider = std::make_shared<SliderCtrl>();
+          slider->id = juce::Uuid();
+          slider->label = ctrl["label"].toString().toStdString();
+          slider->minimum = ctrl["minimum"].toString().getFloatValue();
+          slider->maximum = ctrl["maximum"].toString().getFloatValue();
+          slider->step = ctrl["step"].toString().getFloatValue();
+          slider->value = ctrl["value"].toString().getFloatValue();
 
-          m_ctrls.push_back(slider);
-          DBG("Slider: " + slider.label + " added");
+          m_ctrls.push_back({slider->id, slider});
+          DBG("Slider: " + slider->label + " added");
         }
         else if (ctrl_type == "text") {
-          TextCtrl text;
-          text.label = ctrl["label"].toString().toStdString();
-          text.value = ctrl["value"].toString().toStdString();
+          auto text = std::make_shared<TextBoxCtrl>();
+          text->label = ctrl["label"].toString().toStdString();
+          text->value = ctrl["value"].toString().toStdString();
 
-          m_ctrls.push_back(text);
-          DBG("Text: " + text.label + " added");
+          m_ctrls.push_back({text->id, text});
+          DBG("Text: " + text->label + " added");
         }
         else if (ctrl_type == "audio_in") {
-          AudioInCtrl audio_in;
-          audio_in.label = ctrl["label"].toString().toStdString();
+          auto audio_in = std::make_shared<AudioInCtrl>();
+          audio_in->label = ctrl["label"].toString().toStdString();
 
-          m_ctrls.push_back(audio_in);
-          DBG("Audio In: " + audio_in.label + " added");
+          m_ctrls.push_back({audio_in->id, audio_in});
+          DBG("Audio In: " + audio_in->label + " added");
         }
         else if (ctrl_type == "number_box") {
-          NumberBoxCtrl number_box;
-          number_box.label = ctrl["label"].toString().toStdString();
-          number_box.min = ctrl["min"].toString().getFloatValue();
-          number_box.max = ctrl["max"].toString().getFloatValue();
-          number_box.value = ctrl["value"].toString().getFloatValue();
+          auto number_box = std::make_shared<NumberBoxCtrl>();
+          number_box->label = ctrl["label"].toString().toStdString();
+          number_box->min = ctrl["min"].toString().getFloatValue();
+          number_box->max = ctrl["max"].toString().getFloatValue();
+          number_box->value = ctrl["value"].toString().getFloatValue();
           
-          m_ctrls.push_back(number_box);
-          DBG("Number Box: " + number_box.label + " added");
+          m_ctrls.push_back({number_box->id, number_box});
+          DBG("Number Box: " + number_box->label + " added");
         }
         else {
           DBG("failed to parse control with unknown type: " + ctrl_type);
@@ -180,11 +172,20 @@ public:
         return false;
       }
     }
+
+    sendChangeMessage();
+    m_loaded = true;
+    return true;
   }
 
-  virtual void process(juce::AudioBuffer<float> *bufferToProcess,
-                       int sampleRate,
-                       const map<string, any> &kwargs) const override {
+  CtrlList& controls() {
+    return m_ctrls;
+  }
+
+
+  virtual void process(
+    juce::AudioBuffer<float> *bufferToProcess, int sampleRate
+  ) const override {
     // make sure we're loaded
     if (!m_loaded) {
       DBG("Model not loaded");
@@ -242,6 +243,15 @@ public:
     return;
   }
 
+  CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid) {
+    return std::find_if(m_ctrls.begin(), m_ctrls.end(),
+        [&uuid](const CtrlList::value_type& pair) {
+            return pair.first == uuid;
+        }
+    );
+  }
+
+private:
   juce::var loadJsonFromFile(const juce::File& file) {
     juce::var result;
 
@@ -262,8 +272,8 @@ public:
     return result;
   }
 
-private:
-  std::vector <Ctrl> m_ctrls;
+  CtrlList m_ctrls;
+
   string m_url;
   bool m_loaded;
 };

@@ -88,7 +88,7 @@ protected:
     double resamplingRatio = static_cast<double>(targetSampleRate) /
                             static_cast<double>(reader->sampleRate);
     resamplingSource->setResamplingRatio(resamplingRatio);
-    resamplingSource->prepareToPlay(reader->lengthInSamples, reader->sampleRate);
+    resamplingSource->prepareToPlay(static_cast<int>(reader->lengthInSamples), reader->sampleRate);
     DBG("Resampling ratio: " + std::to_string(resamplingRatio));
 
     // resize the buffer to account for resampling
@@ -98,7 +98,7 @@ protected:
 
     DBG("resizing buffer to " + std::to_string(reader->numChannels) +
         " channels and " + std::to_string(resampledBufferLength) + " samples");
-    buffer.setSize(reader->numChannels, resampledBufferLength);
+    buffer.setSize((int)reader->numChannels, resampledBufferLength);
 
     resamplingSource->getNextAudioBlock(juce::AudioSourceChannelInfo(buffer));
 
@@ -110,9 +110,7 @@ public:
    * @brief Processes a buffer of audio data with the model.
    * @param bufferToProcess Buffer to be processed by the model.
    * @param sampleRate The sample rate of the audio data.
-   * @param kwargs A map of parameters for the model.
    */
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
-                       int sampleRate,
-                       const map<string, any> &kwargs) const = 0;
+                       int sampleRate) const = 0;
 };

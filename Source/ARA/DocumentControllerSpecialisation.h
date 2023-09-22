@@ -56,7 +56,7 @@ public:
 
   std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
   void executeLoad(const map<string, any> &params);
-  void executeProcess(std::map<std::string, std::any> &params);
+  void executeProcess(std::shared_ptr<WebWave2Wave> model);
   void run() override;
   
   
@@ -103,7 +103,6 @@ protected:
 
 private:
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
-  std::shared_ptr<WebWave2Wave> mModel {new WebWave2Wave()}; ///< Model for audio processing.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 
@@ -113,11 +112,14 @@ private:
   EditorView *editorView {nullptr}; ///< Editor view.
   // PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
   EditorRenderer *editorRenderer {nullptr}; ///< Editor renderer.
+
+  // store a copy of the model
+  std::shared_ptr<WebWave2Wave> mModel {new WebWave2Wave()}; ///< Model for audio processing.
+
   // In contrast to EditorView and EditorRenderer which are unique for the plugin
   // there are multiple playbackRenderers (one for each playbackRegion)
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
   bool isProcessing {false};
-  std::map<std::string, std::any> processingParams;
 
 };

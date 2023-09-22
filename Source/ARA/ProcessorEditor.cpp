@@ -62,16 +62,23 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   modelPathTextBox.setCaretVisible(true);
   modelPathTextBox.setText("path to a gradio endpoint");  // Default text
   addAndMakeVisible(modelPathTextBox);
+
+  // TODO: what happens if the model is nullptr rn? 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL TensorJuceProcessorEditor::TensorJuceProcessorEditor: model is null");
+    return;
+  }
   
   // model controls
+  ctrlComponent.setModel(mEditorView->getModel());
   addAndMakeVisible(ctrlComponent);
-  auto guiAttributes = mEditorView->getModelGuiAttributes();
-  ctrlComponent.populateGui(guiAttributes);
+  ctrlComponent.populateGui();
 
   // model card component
   // Get the modelCard from the EditorView
   addAndMakeVisible(modelCardComponent); // TODO check when to do that
-  modelCardComponent.setModelCard(mEditorView->getModelCard());
+  modelCardComponent.setModelCard(mEditorView->getModel()->card());
 
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
@@ -83,10 +90,8 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
   if (button == &processButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
     
-    auto params = ctrlComponent.getParams();
-
-    // mEditorRenderer->executeProcess(params);
-    mDocumentController->executeProcess(params);
+    auto model = mEditorView->getModel();
+    mDocumentController->executeProcess(model);
   }
 
   else if (button == &loadModelButton) {
@@ -102,10 +107,9 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
 
     // Model loading happens synchronously, so we can be sure that
     // the Editor View has the model card and UI attributes loaded
-    modelCardComponent.setModelCard(mEditorView->getModelCard());
-
-    auto guiAttributes = mEditorView->getModelGuiAttributes();
-    ctrlComponent.populateGui(guiAttributes);
+    modelCardComponent.setModelCard(mEditorView->getModel()->card());
+    ctrlComponent.setModel(mEditorView->getModel());
+    ctrlComponent.populateGui();
     resized();
 
   }

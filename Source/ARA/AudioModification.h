@@ -45,18 +45,12 @@ public:
   void setDimmed(bool shouldDim);
   std::string getSourceName();
 
-  void process(std::map<std::string, std::any> &params);
-  // void load(std::map<std::string, std::any> &params);
+  void process(std::shared_ptr<WebWave2Wave> model);
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
-  // void addListenerToModel(juce::ChangeListener* listener);
-
-  std::shared_ptr<WebWave2Wave> getModel() {return mModel;};
 
 private:
-  std::shared_ptr<WebWave2Wave> mModel;
-
   bool dimmed = false;
   bool mIsModified = false;
 

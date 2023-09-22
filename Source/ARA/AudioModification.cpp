@@ -33,8 +33,7 @@ AudioModification::AudioModification(
     const ARAAudioModification *optionalModificationToClone, 
     std::shared_ptr<WebWave2Wave> model
     )
-    : ARAAudioModification(audioSource, hostRef, optionalModificationToClone), 
-      mModel(model) {
+    : ARAAudioModification(audioSource, hostRef, optionalModificationToClone){
 
   DBG("AudioModification::created");
   DBG("AudioModification::the audio source is " << audioSource->getName());
@@ -56,8 +55,14 @@ std::string AudioModification::getSourceName() { return mAudioSourceName; }
  *
  * @param params Map of parameters for learner
  */
-void AudioModification::process(std::map<std::string, std::any> &params) {
-  if (!mModel->ready()) {
+void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
+  if (model == nullptr) {
+    DBG("AudioModification::process: model is null");
+    return;
+  }
+
+  if (!model->ready()) {
+    DBG("AudioModification::process: model is not ready");
     return;
   }
 
@@ -77,7 +82,7 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
     // reading into audio buffer
     mAudioSourceReader->read(mAudioBuffer.get(), 0,
                              static_cast<int>(numSamples), 0, true, true);
-    mModel->process(mAudioBuffer.get(), sampleRate, params);
+    model->process(mAudioBuffer.get(), sampleRate);
 
     // connect the modified buffer to the source
 
