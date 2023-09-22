@@ -81,7 +81,7 @@ void TensorJuceDocumentControllerSpecialisation::executeProcess(std::shared_ptr<
   // wait untill thread has stopped running
   if (!isThreadRunning()) {
     // start the thread
-    if (model != nullptr){
+    if (model == nullptr){
       DBG("unhandled exception: model is null. we should probably open an error window here.");
       return;
     }
