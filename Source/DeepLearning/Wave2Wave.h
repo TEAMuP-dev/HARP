@@ -71,9 +71,15 @@ protected:
                              int targetSampleRate) const {
     juce::WavAudioFormat wavFormat;
 
+    auto *stream = new juce::FileInputStream(inputFile);
+    if (!stream->openedOk()) {
+      DBG("Failed to open input stream.");
+      return false;
+    }
+    
     // NOTE: the input stream will be destroyed by the AudioFormatReader.
     auto *reader =
-        wavFormat.createReaderFor(new juce::FileInputStream(inputFile), true);
+        wavFormat.createReaderFor(stream, true);
     if (reader == nullptr) {
       DBG("Failed to create audio format reader.");
       return false;

@@ -36,7 +36,9 @@ struct TextBoxCtrl : public Ctrl {
   std::string value;
 };
 
-struct AudioInCtrl : public Ctrl {};
+struct AudioInCtrl : public Ctrl {
+  std::string value;
+};
 
 
 struct NumberBoxCtrl : public Ctrl {
@@ -81,6 +83,7 @@ public:
 
     juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("control_spec.json");
+    outputPath.deleteFile();
 
 
     juce::File scriptPath = juce::File::getSpecialLocation(
@@ -107,8 +110,48 @@ public:
         return false;
     }
 
+    juce::DynamicObject *ctrlDict = controls.getDynamicObject();
+    if (ctrlDict == nullptr) {
+        DBG("Failed to load control dict from JSON.");
+        return false;
+    }    
+
+    // the "ctrls" key should be a list of dicts
+    // the "card" key should be the modelcard
+
+    // BEGIN  MODELCARD
+    if (!ctrlDict->hasProperty("card")) {
+        DBG("Failed to load model card from JSON. card key not found.");
+        return false;
+    }
+    juce::DynamicObject *jsonCard = ctrlDict->getProperty("card").getDynamicObject();
+    if (jsonCard == nullptr) {
+        DBG("Failed to load model card from JSON.");
+        return false;
+    }
+
+    // TODO: probably need to check if these properties exist and if they're the right types. 
+    m_card = ModelCard();
+    m_card.name = jsonCard->getProperty("name").toString().toStdString();
+    m_card.description = jsonCard->getProperty("description").toString().toStdString();
+    m_card.author = jsonCard->getProperty("author").toString().toStdString();
+    // tags is a list of str   
+    juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
+    if (tags == nullptr) {
+        DBG("Failed to load tags from JSON. tags is null.");
+        return false;
+    }
+    for (int i = 0; i < tags->size(); i++) {
+      m_card.tags.push_back(tags->getReference(i).toString().toStdString());
+    }
+    // END MODELCARD
+
+    if (!ctrlDict->hasProperty("ctrls")) {
+        DBG("Failed to load controls from JSON. ctrls key not found.");
+        return false;
+    }
     // else, it should be a list of dicts
-    juce::Array<juce::var> *ctrlList = controls.getArray();
+    juce::Array<juce::var> *ctrlList = ctrlDict->getProperty("ctrls").getArray();
     if (ctrlList == nullptr) {
         DBG("Failed to load controls from JSON. ctrlList is null.");
         return false;
@@ -178,6 +221,7 @@ public:
         }
       }
 
+    outputPath.deleteFile();
     sendChangeMessage();
     m_loaded = true;
     return true;
@@ -187,24 +231,24 @@ public:
     return m_ctrls;
   }
 
-  bool saveCtrls(juce::File savePath){
-    // TODO: implement me!
-  }
 
 
   virtual void process(
     juce::AudioBuffer<float> *bufferToProcess, int sampleRate
   ) const override {
     // make sure we're loaded
+    DBG("WebWave2Wave::process");
     if (!m_loaded) {
       DBG("Model not loaded");
       return;
     }
                     
     // save the buffer to file
+    DBG("Saving buffer to file");
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("input.wav");
+    tempFile.deleteFile();
     if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
       DBG("Failed to save buffer to file.");
       return;
@@ -214,24 +258,33 @@ public:
     juce::File tempOutputFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("output.wav");
+    tempOutputFile.deleteFile();
 
     // a ctrls file
     juce::File tempCtrlsFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("ctrls.json");
+    tempCtrlsFile.deleteFile();
 
       
     juce::File scriptPath = juce::File::getSpecialLocation(
       juce::File::currentApplicationFile
     ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
+    DBG("saving controls...");
+    if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString())) {
+      DBG("Failed to save controls to file.");
+      return;
+    }
+
     std::string command = (
       scriptPath.getFullPathName().toStdString() 
-      + " --mode process"
+      + " --mode predict"
       + " --url " + m_url 
       + " --output_path " + tempOutputFile.getFullPathName().toStdString()
       + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
     );
+    DBG("Running command: " + command);
     int result = std::system(command.c_str());
 
     if (result != 0) {
@@ -242,15 +295,18 @@ public:
     // read the output file to a buffer
     // TODO: the sample rate should not be the incoming sample rate, but
     // rather the output sample rate of the daw?
+    DBG("Reading output file to buffer");
     load_buffer_from_file(tempOutputFile, *bufferToProcess, sampleRate);
 
     // delete the temp input file
     tempFile.deleteFile();
     tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
+    DBG("WebWave2Wave::process done");
 
     return;
   }
+
 
   CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid) {
     return std::find_if(m_ctrls.begin(), m_ctrls.end(),
@@ -261,7 +317,7 @@ public:
   }
 
 private:
-  juce::var loadJsonFromFile(const juce::File& file) {
+  juce::var loadJsonFromFile(const juce::File& file) const {
     juce::var result;
 
     if (!file.existsAsFile()) {
@@ -280,6 +336,54 @@ private:
 
     return result;
   }
+
+  bool saveCtrls(juce::File savePath, std::string audioInputPath) const {
+    // Create a JSON array to hold each control's value
+    juce::Array<juce::var> jsonCtrlsArray;
+
+    // Iterate through each control in m_ctrls
+    for (const auto& ctrlPair : m_ctrls) {
+        auto ctrl = ctrlPair.second;
+
+        // Check the type of ctrl and extract its value
+        if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get())) {
+            // Slider control, use sliderCtrl->value
+            jsonCtrlsArray.add(juce::var(sliderCtrl->value));
+        } else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
+            // Text box control, use textBoxCtrl->value
+            jsonCtrlsArray.add(juce::var(textBoxCtrl->value));
+        } else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get())) {
+            // Number box control, use numberBoxCtrl->value
+            jsonCtrlsArray.add(juce::var(numberBoxCtrl->value));
+        } else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get())) {
+            // Toggle control, use toggleCtrl->value
+            jsonCtrlsArray.add(juce::var(toggleCtrl->value));
+        } else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get())) {
+            // Combo box control, use comboBoxCtrl->value
+            jsonCtrlsArray.add(juce::var(comboBoxCtrl->value));
+        } else if (auto audioInCtrl = dynamic_cast<AudioInCtrl*>(ctrl.get())) {
+            // Audio in control, use audioInCtrl->value
+            audioInCtrl->value = audioInputPath;
+            jsonCtrlsArray.add(juce::var(audioInCtrl->value));
+        } else {
+            // Unsupported control type or missing implementation
+            DBG("Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString());
+            return false;
+        }
+    }
+
+    // Convert the array to a JSON string
+    juce::String jsonText = juce::JSON::toString(jsonCtrlsArray, true);  // true for human-readable
+
+    // Write the JSON string to the specified file path
+    if (!savePath.replaceWithText(jsonText)) {
+        DBG("Failed to save controls to file: " + savePath.getFullPathName());
+        return false;
+    }
+
+    return true;
+  }
+
 
   CtrlList m_ctrls;
 

@@ -9,6 +9,7 @@ def main(url, output_path, mode, ctrls_path=None):
     client = Client(url)
     
     if mode == "get_ctrls":
+        print(f"Getting controls for {url}...")
         ctrls_path = client.predict(api_name="/wav2wav-ctrls")
         Path(ctrls_path).rename(output_path)
     elif mode == "predict":
@@ -16,7 +17,10 @@ def main(url, output_path, mode, ctrls_path=None):
         with open(ctrls_path) as f:
             ctrls = json.load(f)
             assert isinstance(ctrls, list), "Controls must be a list of parameter values."
+            print(f"loaded ctrls: {ctrls}")
+        print(f"Predicting audio for {url}...")
         audio_path = client.predict(*ctrls, api_name="/wav2wav")
+        print(f"Saving audio to {output_path}...")
         Path(audio_path).rename(output_path)
     else:
         raise ValueError("Invalid mode. Choose either 'get_ctrls' or 'predict'.")
