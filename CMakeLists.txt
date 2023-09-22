@@ -71,11 +71,11 @@ function(install_miniconda)
     message(STATUS "Downloading Miniconda installer...")
     file(DOWNLOAD
         "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
-        "${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}"
+        "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
     )
 
-    if (NOT EXISTS "${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}")
-        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}")
+    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
     endif()
 
     message(STATUS "Installing Miniconda...")
