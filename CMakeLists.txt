@@ -40,9 +40,86 @@ endif()
 # TODO:
 # make sure we have a variable for the python executable we'll be using for pyinstaller
 # cd into the py/client directory and run `pip install -r requirements.txt`
-# then run `pyinstaller get_ctrls.py --collect-all gradio_client`
-# and `pyinstaller get_ctrls.py --collect-all gradio_client`
+# then run `pyinstaller gradiojuce_client.py --collect-all gradio_client`
 # the dist directory will be copied to the bundle later
+
+# New: Function to download and install Miniconda
+function(install_miniconda)
+    set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")
+
+    if (EXISTS ${MINICONDA_DIR})
+        message(STATUS "Miniconda already installed at ${MINICONDA_DIR}")
+        return()
+    endif()
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(MINICONDA_INSTALLER "Miniconda3-latest-Windows-x86_64.exe")
+        set(MINICONDA_INSTALL_SCRIPT "start /wait ${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        set(MINICONDA_INSTALLER "Miniconda3-latest-MacOSX-arm64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        set(MINICONDA_INSTALLER "Miniconda3-latest-MacOSX-x86_64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    else()
+        set(MINICONDA_INSTALLER "Miniconda3-latest-Linux-x86_64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    endif()
+
+    message(STATUS "Downloading Miniconda installer...")
+    file(DOWNLOAD
+        "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
+        "${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}"
+    )
+
+    message(STATUS "Installing Miniconda...")
+    execute_process(
+        COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+    if(result)
+        message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
+    else()
+        message(STATUS "Miniconda installed successfully.")
+    endif()
+endfunction()
+
+
+# Call the function to install Miniconda
+install_miniconda()
+
+# Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
+set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
+set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")  # On Windows, change /bin/ to /Scripts/ and python to python.exe
+set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")  # On Windows, change /bin/ to /Scripts/ and pyinstaller to pyinstaller.exe
+
+
+# Define the command sequence as a list
+set(PYINSTALLER_COMMANDS 
+    "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
+    "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
+    "${PYINSTALLER_EXECUTABLE} gradiojuce_client.py --collect-all gradio_client"
+)
+
+# Execute each command individually, and check the result of each
+foreach(cmd IN LISTS PYINSTALLER_COMMANDS)
+    execute_process(
+        COMMAND bash -c "${cmd}"  # Using bash -c to ensure command is executed in a shell
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client  # Ensure the working directory is set correctly
+    )
+    if(result)
+        message(FATAL_ERROR "Command '${cmd}' failed with result: ${result}. Output: ${output}. Error: ${error}")
+    else()
+        message(STATUS "Command '${cmd}' succeeded. Output:\n${output}")
+    endif()
+endforeach()
+
+
 
 
 juce_add_plugin(${PROJECT_NAME}
@@ -99,7 +176,6 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 
-
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         # AudioPluginData
@@ -121,8 +197,6 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 
-        # pybind11::embed
-        # Python::Python
 )
 
 

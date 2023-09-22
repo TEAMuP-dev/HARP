@@ -85,9 +85,14 @@ public:
 
     juce::File scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
-    ).getChildFile("Contents/Resources/get_ctrls/get_ctrls");
+    ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
-    std::string command = scriptPath.getFullPathName().toStdString() + " --url " + m_url + " --output_path " + outputPath.getFullPathName().toStdString();
+    std::string command = (
+      scriptPath.getFullPathName().toStdString() 
+      + " --mode get_ctrls"
+      + " --url " + m_url 
+      + " --output_path " + outputPath.getFullPathName().toStdString()
+    );
     int result = std::system(command.c_str());
 
     if (result != 0) {
