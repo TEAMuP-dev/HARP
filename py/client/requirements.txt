@@ -1,3 +1,4 @@
 argbind
 gradio_client
 pyinstaller
+typing-extensions

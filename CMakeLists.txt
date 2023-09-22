@@ -52,17 +52,19 @@ function(install_miniconda)
         return()
     endif()
 
+    set(MINICONDA_VERSION "py39_23.5.2-0")
+
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        set(MINICONDA_INSTALLER "Miniconda3-latest-Windows-x86_64.exe")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
         set(MINICONDA_INSTALL_SCRIPT "start /wait ${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-        set(MINICONDA_INSTALLER "Miniconda3-latest-MacOSX-arm64.sh")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
         set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-        set(MINICONDA_INSTALLER "Miniconda3-latest-MacOSX-x86_64.sh")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")
         set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     else()
-        set(MINICONDA_INSTALLER "Miniconda3-latest-Linux-x86_64.sh")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh")
         set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     endif()
 
@@ -71,6 +73,10 @@ function(install_miniconda)
         "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
         "${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}"
     )
+
+    if (NOT EXISTS "${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}")
+        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_BINARY_DIR}/${MINICONDA_INSTALLER}")
+    endif()
 
     message(STATUS "Installing Miniconda...")
     execute_process(
@@ -100,7 +106,7 @@ set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")  # On Windows, ch
 set(PYINSTALLER_COMMANDS 
     "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
     "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
-    "${PYINSTALLER_EXECUTABLE} gradiojuce_client.py --collect-all gradio_client"
+    "${PYINSTALLER_EXECUTABLE} -y gradiojuce_client.py --collect-all gradio_client"
 )
 
 # Execute each command individually, and check the result of each

@@ -8,7 +8,7 @@ def main(url, output_path, mode, ctrls_path=None):
     assert output_path, "Please specify an output path."
     client = Client(url)
     
-    if mode == "get-ctrls":
+    if mode == "get_ctrls":
         ctrls_path = client.predict(api_name="/wav2wav-ctrls")
         Path(ctrls_path).rename(output_path)
     elif mode == "predict":
@@ -19,7 +19,7 @@ def main(url, output_path, mode, ctrls_path=None):
         audio_path = client.predict(*ctrls, api_name="/wav2wav")
         Path(audio_path).rename(output_path)
     else:
-        raise ValueError("Invalid mode. Choose either 'get-ctrls' or 'predict'.")
+        raise ValueError("Invalid mode. Choose either 'get_ctrls' or 'predict'.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some arguments.')
