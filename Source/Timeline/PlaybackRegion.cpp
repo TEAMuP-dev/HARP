@@ -33,6 +33,7 @@ PlaybackRegionView::~PlaybackRegionView() {
   audioSource->removeListener(this);
   playbackRegion.removeListener(this);
   araEditorView.removeListener(this);
+  araEditorView.removeChangeListener(this);
 
   waveformCache
       .getOrCreateThumbnail(audioSource,
