@@ -44,7 +44,7 @@ public:
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
   void setThumbCreated(bool created);
-  bool getThumbCreated();
+  bool isThumbCreated() const;
   std::string getSourceName();
 
   void process(std::map<std::string, std::any> &params);
@@ -61,7 +61,7 @@ private:
 
   bool dimmed = false;
   bool mIsModified = false;
-  bool thumbCreated = false;
+  bool mThumbCreated = false;
 
   std::string mAudioSourceName;
   int mSampleRate;

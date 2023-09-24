@@ -49,7 +49,7 @@ bool AudioModification::isDimmed() const { return dimmed; }
 
 void AudioModification::setDimmed(bool shouldDim) { dimmed = shouldDim; }
 
-bool AudioModification::thumbCreated() const { return mThumbCreated; }
+bool AudioModification::isThumbCreated() const { return mThumbCreated; }
 
 void AudioModification::setThumbCreated(bool created) {
   mThumbCreated = created;
