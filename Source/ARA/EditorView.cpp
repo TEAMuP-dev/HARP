@@ -119,6 +119,9 @@ void EditorView::changeListenerCallback(ChangeBroadcaster *source) {
     modelLoaded = true;
 }
 
+void EditorView::triggerRepaint() {
+    sendChangeMessage();
+}
 // Model Card getter
 ModelCard EditorView::getModelCard() const {
     return modelCard;

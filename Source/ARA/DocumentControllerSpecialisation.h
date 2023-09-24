@@ -39,6 +39,7 @@
 class TensorJuceDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
       public juce::ThreadWithProgressWindow,
+      public juce::ChangeBroadcaster,
       private ProcessingLockInterface {
 public:
   /**
@@ -59,6 +60,7 @@ public:
   void executeLoad(const std::string &modelPath);
   void executeProcess(std::map<std::string, std::any> &params);
   void run() override;
+  void threadComplete (bool userPressedCancel) override;
   
   
 protected:

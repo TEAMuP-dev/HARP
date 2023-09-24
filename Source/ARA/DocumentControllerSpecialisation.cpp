@@ -85,11 +85,19 @@ void TensorJuceDocumentControllerSpecialisation::executeProcess(std::map<std::st
   if (!isThreadRunning()) {
     // start the thread
     processingParams = params;
-    // startThread();
+    // launchThread starts the thread and returns.
     launchThread();
   }
 }
 
+void 	TensorJuceDocumentControllerSpecialisation::threadComplete (bool userPressedCancel) {
+  // if the user didn't press cancel, then the thread has finished normally
+  // and we can trigger the repainting of the playbackRegions to update the
+  // processed waveform thumbnails
+  if (!userPressedCancel) {
+    editorView->triggerRepaint();
+  }
+}
 void TensorJuceDocumentControllerSpecialisation::willBeginEditing(
     ARADocument *) {
   processBlockLock.enterWrite();
