@@ -49,6 +49,12 @@ bool AudioModification::isDimmed() const { return dimmed; }
 
 void AudioModification::setDimmed(bool shouldDim) { dimmed = shouldDim; }
 
+bool AudioModification::thumbCreated() const { return mThumbCreated; }
+
+void AudioModification::setThumbCreated(bool created) {
+  mThumbCreated = created;
+}
+
 std::string AudioModification::getSourceName() { return mAudioSourceName; }
 
 /**

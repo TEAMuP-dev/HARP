@@ -43,6 +43,8 @@ public:
                     std::shared_ptr<TorchWave2Wave> model);
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
+  void setThumbCreated(bool created);
+  bool getThumbCreated();
   std::string getSourceName();
 
   void process(std::map<std::string, std::any> &params);
@@ -59,6 +61,7 @@ private:
 
   bool dimmed = false;
   bool mIsModified = false;
+  bool thumbCreated = false;
 
   std::string mAudioSourceName;
   int mSampleRate;
