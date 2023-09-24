@@ -180,7 +180,7 @@ void TorchWave2Wave::process(juce::AudioBuffer<float> *bufferToProcess,
       parameters.insert(key, torch::tensor({valueAsDouble}));
   }
 
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   DBG("dummy sleep finished");
   // print input tensor shape
   DBG("built input audio tensor with shape "
