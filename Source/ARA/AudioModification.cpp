@@ -88,6 +88,7 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
     // connect the modified buffer to the source
 
     mIsModified = true;
+    mThumbCreated = false;
   }
 }
 
