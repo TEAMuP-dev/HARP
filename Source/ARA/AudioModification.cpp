@@ -61,12 +61,12 @@ std::string AudioModification::getSourceName() { return mAudioSourceName; }
  */
 void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
   if (model == nullptr) {
-    DBG("AudioModification::process: model is null");
+    throw std::runtime_error("AudioModification::process: model is null");
     return;
   }
 
   if (!model->ready()) {
-    DBG("AudioModification::process: model is not ready");
+    throw std::runtime_error("AudioModification::process: model is not ready");
     return;
   }
 

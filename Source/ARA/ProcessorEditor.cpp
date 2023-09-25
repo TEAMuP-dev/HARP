@@ -147,8 +147,8 @@ void TensorJuceProcessorEditor::resized() {
     fbTop.alignItems = juce::FlexBox::AlignItems::center;
     
     // Adding items to the top FlexBox
-    fbTop.items.add(juce::FlexItem(loadModelButton).withFlex(0).withWidth(100).withHeight(20));  // Fixed width
-    fbTop.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(20));  // Takes up remaining space
+    fbTop.items.add(juce::FlexItem(loadModelButton).withFlex(0).withWidth(100).withHeight(30));  // Fixed width
+    fbTop.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(30));  // Takes up remaining space
     
     // Horizontal FlexBox for the main area
     juce::FlexBox fbMain;
@@ -166,17 +166,22 @@ void TensorJuceProcessorEditor::resized() {
     fbOverall.justifyContent = juce::FlexBox::JustifyContent::flexStart;
     fbOverall.alignItems = juce::FlexBox::AlignItems::stretch;
     
+    // Horizontal FlexBox for the bottom area
+    juce::FlexBox fbBottom;
+    fbBottom.flexDirection = juce::FlexBox::Direction::row;
+    fbBottom.justifyContent = juce::FlexBox::JustifyContent::flexEnd;  // Aligns items to the right
+    fbBottom.alignItems = juce::FlexBox::AlignItems::center;
+    
+    // Adding the processButton to the bottom FlexBox
+    fbBottom.items.add(juce::FlexItem(processButton).withFlex(0).withWidth(100).withHeight(30));  // Fixed width and height
+
     // Adding items to the overall FlexBox
     fbOverall.items.add(juce::FlexItem(fbTop).withFlex(0).withHeight(20));  // Fixed height
     fbOverall.items.add(juce::FlexItem(fbMain).withFlex(1));  // Takes up remaining vertical space
+    fbOverall.items.add(juce::FlexItem(fbBottom).withFlex(0).withHeight(30));  // Fixed height
     
     // Performing the layout
     fbOverall.performLayout(topArea);
-    
-    // Positioning the process button at the bottom right
-    auto buttonWidth = 100;
-    auto buttonHeight = 30;
-    processButton.setBounds(topArea.getWidth() - buttonWidth - 10, topArea.getHeight() - buttonHeight - 10, buttonWidth, buttonHeight);
     
     if (documentView != nullptr) {
         documentView->setBounds(area);  // This should set the bounds correctly

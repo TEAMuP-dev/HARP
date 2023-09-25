@@ -273,11 +273,20 @@ void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   DBG("PlaybackRenderer::executeProcess executing process");
 
   auto callback = [model](juce::ARAPlaybackRegion *playbackRegion) -> bool {
-    auto modification = playbackRegion->getAudioModification<AudioModification>();
-    std::cout << "PlaybackRenderer::processing playbackRegion "
-              << modification->getSourceName() << std::endl;
-    modification->process(model);
-    return true;
+      try {
+          auto modification = playbackRegion->getAudioModification<AudioModification>();
+          std::cout << "PlaybackRenderer::processing playbackRegion "
+                    << modification->getSourceName() << std::endl;
+          modification->process(model);
+      } catch (const std::runtime_error& e) {
+          juce::AlertWindow::showMessageBoxAsync(
+              juce::AlertWindow::WarningIcon,
+              "Processing Error",
+              juce::String("An error occurred while processing: ") + e.what()
+          );
+          return false;  // Return false to indicate a failure (if necessary)
+      }
+      return true;
   };
 
   forEachPlaybackRegion(callback);

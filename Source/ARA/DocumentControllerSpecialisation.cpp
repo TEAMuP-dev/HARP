@@ -22,7 +22,9 @@
  * @author JUCE, aldo aguilar, hugo flores garcia, xribene
  */
 
+#include <juce_gui_basics/juce_gui_basics.h>  // Include this if it's not already included
 #include "DocumentControllerSpecialisation.h"
+
 
 // The constructor. It is taking entry and instance as parameters and feeds them directly to the base class constructor.
 TensorJuceDocumentControllerSpecialisation::
@@ -44,7 +46,15 @@ TensorJuceDocumentControllerSpecialisation::
 void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad");
-    mModel->load(params);
+    try {
+        mModel->load(params);
+    } catch (const std::runtime_error& e) {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Loading Error",
+            juce::String("An error occurred while loading the WebModel: ") + e.what()
+        );
+    }
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
   }
 

@@ -39,14 +39,14 @@ struct ModelCard {
  * @class Model
  * @brief Abstract class for different types of deep learning processors.
  */
-class Model : public juce::ChangeBroadcaster {
+class Model {
 public:
   /**
    * @brief Load the model parameters.
    * @param params A map of parameters for the model.
-   * @return A boolean indicating whether the model was loaded successfully.
+   * @return void. will throw a std::runtime_error if loading fails. 
    */
-  virtual bool load(const map<string, any> &params) = 0;
+  virtual void load(const map<string, any> &params) = 0;
 
   /**
    * @brief Checks if the model is ready.
@@ -58,14 +58,8 @@ public:
   // //! provides access to the model card (metadata)
   ModelCard &card() {return m_card ;}
 
-  void addListener(juce::ChangeListener *listener){
-    addChangeListener(listener);
-  }
 
 protected: 
   ModelCard m_card;
-
-private:
-  std::function<void(std::string)> editorsWidgetCreationCallback;
 
 };

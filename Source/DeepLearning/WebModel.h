@@ -68,14 +68,13 @@ public:
 
   bool ready() const override { return m_loaded; }
 
-  bool load(const map<string, any> &params) override {
+  void load(const map<string, any> &params) override {
     m_ctrls.clear();
     m_loaded = false;
 
     // get the name of the huggingface repo we're going to use
     if (!modelparams::contains(params, "url")) {
-      DBG("url not found in params");
-      return false;
+        throw std::runtime_error("url not found in params");
     }
 
     std::string url = std::any_cast<std::string>(params.at("url"));
@@ -99,21 +98,19 @@ public:
     int result = std::system(command.c_str());
 
     if (result != 0) {
-        DBG("Failed to run get_ctrls script.");
-        return false;
+        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls.");
     }
+
 
     // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
     juce::var controls = loadJsonFromFile(outputPath);
     if (controls.isVoid()) {
-        DBG("Failed to load controls from JSON.");
-        return false;
+        throw std::runtime_error("Failed to load controls from JSON.");
     }
 
     juce::DynamicObject *ctrlDict = controls.getDynamicObject();
     if (ctrlDict == nullptr) {
-        DBG("Failed to load control dict from JSON.");
-        return false;
+        throw std::runtime_error("Failed to load control dict from JSON.");
     }    
 
     // the "ctrls" key should be a list of dicts
@@ -121,13 +118,11 @@ public:
 
     // BEGIN  MODELCARD
     if (!ctrlDict->hasProperty("card")) {
-        DBG("Failed to load model card from JSON. card key not found.");
-        return false;
+        throw std::runtime_error("Failed to load model card from JSON. card key not found.");
     }
     juce::DynamicObject *jsonCard = ctrlDict->getProperty("card").getDynamicObject();
     if (jsonCard == nullptr) {
-        DBG("Failed to load model card from JSON.");
-        return false;
+        throw std::runtime_error("Failed to load model card from JSON.");
     }
 
     // TODO: probably need to check if these properties exist and if they're the right types. 
@@ -135,11 +130,11 @@ public:
     m_card.name = jsonCard->getProperty("name").toString().toStdString();
     m_card.description = jsonCard->getProperty("description").toString().toStdString();
     m_card.author = jsonCard->getProperty("author").toString().toStdString();
+
     // tags is a list of str   
     juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
     if (tags == nullptr) {
-        DBG("Failed to load tags from JSON. tags is null.");
-        return false;
+        throw std::runtime_error("Failed to load tags from JSON. tags is null.");
     }
     for (int i = 0; i < tags->size(); i++) {
       m_card.tags.push_back(tags->getReference(i).toString().toStdString());
@@ -147,14 +142,12 @@ public:
     // END MODELCARD
 
     if (!ctrlDict->hasProperty("ctrls")) {
-        DBG("Failed to load controls from JSON. ctrls key not found.");
-        return false;
+        throw std::runtime_error("Failed to load controls from JSON. ctrls key not found.");
     }
     // else, it should be a list of dicts
     juce::Array<juce::var> *ctrlList = ctrlDict->getProperty("ctrls").getArray();
     if (ctrlList == nullptr) {
-        DBG("Failed to load controls from JSON. ctrlList is null.");
-        return false;
+        throw std::runtime_error("Failed to load controls from JSON. ctrlList is null.");
     }
 
     // clear the m_ctrls vector
@@ -165,8 +158,7 @@ public:
     for (int i = 0; i < ctrlList->size(); i++) {
       juce::var ctrl = ctrlList->getReference(i);
       if (!ctrl.isObject()) {
-          DBG("Failed to load controls from JSON. ctrl is not an object.");
-          return false;
+          throw std::runtime_error("Failed to load controls from JSON. ctrl is not an object.");
       }
       
       try{
@@ -216,21 +208,17 @@ public:
           }
         }
         catch (const char* e) {
-          DBG("Failed to load controls from JSON. " << e);
-          return false;
+          throw std::runtime_error("Failed to load controls from JSON. " + *e);
         }
       }
 
     outputPath.deleteFile();
-    sendChangeMessage();
     m_loaded = true;
-    return true;
   }
 
   CtrlList& controls() {
     return m_ctrls;
   }
-
 
 
   virtual void process(
@@ -239,8 +227,7 @@ public:
     // make sure we're loaded
     DBG("WebWave2Wave::process");
     if (!m_loaded) {
-      DBG("Model not loaded");
-      return;
+      throw std::runtime_error("Model not loaded");
     }
                     
     // save the buffer to file
@@ -250,8 +237,7 @@ public:
             .getChildFile("input.wav");
     tempFile.deleteFile();
     if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
-      DBG("Failed to save buffer to file.");
-      return;
+      throw std::runtime_error("Failed to save buffer to file.");
     }
 
     // a tarrget output file
@@ -273,8 +259,7 @@ public:
 
     DBG("saving controls...");
     if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString())) {
-      DBG("Failed to save controls to file.");
-      return;
+      throw std::runtime_error("Failed to save controls to file.");
     }
 
     std::string command = (
@@ -285,11 +270,12 @@ public:
       + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
     );
     DBG("Running command: " + command);
+    // TODO: log commmand output to a file
     int result = std::system(command.c_str());
 
     if (result != 0) {
-        DBG("Failed to run process script.");
-        // return false;
+        // TODO: maybe we want to read the command output and display it? 
+        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode predict. Check the logs for more details.");
     }
 
     // read the output file to a buffer
