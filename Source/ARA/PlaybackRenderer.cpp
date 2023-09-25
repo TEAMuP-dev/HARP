@@ -34,10 +34,6 @@ PlaybackRenderer::PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
                                    ProcessingLockInterface &lockInterfaceIn)
     : ARAPlaybackRenderer(dc), lockInterface(lockInterfaceIn) {}
 
-// destructor 
-// PlaybackRenderer::~PlaybackRenderer() {
-//   int aa = 42;
-// }
 
 void PlaybackRenderer::prepareToPlay(double sampleRateIn,
                                      int maximumSamplesPerBlockIn,
@@ -273,16 +269,24 @@ bool PlaybackRenderer::processBlock(
   return success;
 }
 
-void PlaybackRenderer::executeProcess(std::map<std::string, std::any> &params) {
+void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   DBG("PlaybackRenderer::executeProcess executing process");
 
-  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
-    auto modification =
-        playbackRegion->getAudioModification<AudioModification>();
-    std::cout << "PlaybackRenderer::processing playbackRegion "
-              << modification->getSourceName() << std::endl;
-    modification->process(params);
-    return true;
+  auto callback = [model](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+      try {
+          auto modification = playbackRegion->getAudioModification<AudioModification>();
+          std::cout << "PlaybackRenderer::processing playbackRegion "
+                    << modification->getSourceName() << std::endl;
+          modification->process(model);
+      } catch (const std::runtime_error& e) {
+          juce::AlertWindow::showMessageBoxAsync(
+              juce::AlertWindow::WarningIcon,
+              "Processing Error",
+              juce::String("An error occurred while processing: ") + e.what()
+          );
+          return false;  // Return false to indicate a failure (if necessary)
+      }
+      return true;
   };
 
   forEachPlaybackRegion(callback);

@@ -127,20 +127,6 @@ void EditorRenderer::didAddPlaybackRegion(
   asyncConfigCallback.startConfigure();
 }
 
-void EditorRenderer::executeProcess(std::map<std::string, std::any> &params) {
-  DBG("EditorRenderer::executeProcess executing process");
-
-  auto callback = [&params](juce::ARAPlaybackRegion *playbackRegion) -> bool {
-    auto modification =
-        playbackRegion->getAudioModification<AudioModification>();
-    std::cout << "EditorRenderer::processing playbackRegion "
-              << modification->getSourceName() << std::endl;
-    modification->process(params);
-    return true;
-  };
-
-  forEachPlaybackRegion(callback);
-}
 
 template <typename Callback>
 void EditorRenderer::forEachPlaybackRegion(Callback &&cb) {

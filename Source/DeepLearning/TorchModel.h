@@ -1,18 +1,6 @@
 /**
  * @file
- * @brief This file is part of the JUCE examples.
- *
- * Copyright (c) 2022 - Raw Material Software Limited
- * The code included in this file is provided under the terms of the ISC license
- * http://www.isc.org/downloads/software-support-policy/isc-license. Permission
- * To use, copy, modify, and/or distribute this software for any purpose with or
- * without fee is hereby granted provided that the above copyright notice and
- * this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
- * WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
- * PURPOSE, ARE DISCLAIMED.
- *
+
  * @brief Models defined in this file are any audio processing models that
  * utilize a libtorch backend for processing data.
  * @author hugo flores garcia, aldo aguilar, xribene
@@ -43,24 +31,11 @@ using std::unique_ptr;
 using torch::jit::IValue;
 using torch::jit::script::Module;
 
-
-struct ModelCard {
-  int sampleRate;
-  std::string name;
-  std::string description;
-  std::string author;
-  std::vector<std::string> tags;
-  ModelCard()
-    : sampleRate(0) // Initialize sampleRate to 0
-    {}
-};
-
 /**
  * @class TorchModel
  * @brief Class that represents a base TorchModel inherited from Model.
  */
-class TorchModel : public Model,
-                   public juce::ChangeBroadcaster
+class TorchModel : public Model
  {
 public:
   TorchModel();
@@ -81,31 +56,28 @@ public:
 
   static bool to_buffer(const torch::Tensor &src_tensor,
                         juce::AudioBuffer<float> &dest_buffer);
-  
-  // listeners
-  void addListener(juce::ChangeListener *listener);
 
-public:
+private:
+  std::string m_modelPath;
 
 public: 
   unique_ptr<Module> m_model;
+
+
 protected:
-  // unique_ptr<Module> m_model;
-  // ModelCard m_card;
   bool m_loaded;
   mutable std::mutex m_mutex;
-  std::function<void(std::string)> editorsWidgetCreationCallback;
 
 };
 
 /**
- * @class TorchWave2Wave
- * @brief Class that represents a TorchWave2Wave inherited from TorchModel and
+ * @class WebWave2Wave
+ * @brief Class that represents a WebWave2Wave inherited from TorchModel and
  * Wave2Wave.
  */
-class TorchWave2Wave : public TorchModel {
+class WebWave2Wave : public TorchModel {
 public:
-  TorchWave2Wave();
+  WebWave2Wave();
 
   void process(juce::AudioBuffer<float> *bufferToProcess, int sampleRate,  std::map<string, any> &params) const;
 };

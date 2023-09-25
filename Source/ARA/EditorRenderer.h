@@ -81,14 +81,8 @@ public:
 
   using ARAEditorRenderer::processBlock;
 
-  // std::shared_ptr<TorchWave2Wave> getModel() { 
-  //   return model;
-  // }
-
 private:
   void configure();
-
-  // std::shared_ptr<TorchWave2Wave> model {nullptr};
 
   ProcessingLockInterface &lockInterface;
   const PreviewState *previewState = nullptr;

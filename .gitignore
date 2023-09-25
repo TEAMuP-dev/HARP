@@ -44,3 +44,12 @@ scratch
 _downloads
 
 packaging/
+Python.framework
+py/relocatable-python
+
+py/client/dist/
+py/client/*.spec
+
+
+Miniconda3
+Miniconda*.sh
