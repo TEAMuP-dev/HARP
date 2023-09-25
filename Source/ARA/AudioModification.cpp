@@ -49,6 +49,12 @@ bool AudioModification::isDimmed() const { return dimmed; }
 
 void AudioModification::setDimmed(bool shouldDim) { dimmed = shouldDim; }
 
+bool AudioModification::isThumbCreated() const { return mThumbCreated; }
+
+void AudioModification::setThumbCreated(bool created) {
+  mThumbCreated = created;
+}
+
 std::string AudioModification::getSourceName() { return mAudioSourceName; }
 
 /**
@@ -82,6 +88,7 @@ void AudioModification::process(std::map<std::string, std::any> &params) {
     // connect the modified buffer to the source
 
     mIsModified = true;
+    mThumbCreated = false;
   }
 }
 

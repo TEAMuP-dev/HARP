@@ -20,6 +20,7 @@ PlaybackRegionView::PlaybackRegionView(EditorView &editorView,
   audioSource->addListener(this);
   playbackRegion.addListener(this);
   araEditorView.addListener(this);
+  araEditorView.addChangeListener(this);
   addAndMakeVisible(previewRegionOverlay);
 
   setTooltip("Double-click to toggle dim state of the region, click and hold "
@@ -32,6 +33,7 @@ PlaybackRegionView::~PlaybackRegionView() {
   audioSource->removeListener(this);
   playbackRegion.removeListener(this);
   araEditorView.removeListener(this);
+  araEditorView.removeChangeListener(this);
 
   waveformCache
       .getOrCreateThumbnail(audioSource,

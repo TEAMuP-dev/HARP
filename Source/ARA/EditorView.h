@@ -26,7 +26,8 @@ using ListOfDicts = std::vector<GenericDict>;
  * @brief TODO: Write brief class description.
  */
 class EditorView : public juce::ARAEditorView,
-                    public ChangeListener
+                    public ChangeListener,
+                    public ChangeBroadcaster
                     {
 public:
     // EditorView(ARA::PlugIn::DocumentController *documentController);
@@ -36,6 +37,8 @@ public:
 
     // setModelGuiAttributes
     void changeListenerCallback(ChangeBroadcaster *source) override;
+
+    void triggerRepaint(); 
 
     // Model Card getter
     ModelCard getModelCard() const;

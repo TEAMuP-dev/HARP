@@ -46,9 +46,37 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
                                        AudioModification *audioModification) {
     const auto iter = thumbnails.find(audioSource);
 
+    // if a thumbnail was found for this source,
     if (iter != std::end(thumbnails))
-      return *iter->second;
+      if (audioModification->getIsModified()){
+        // if the audio has been modified even once,
+        // this flag will remain true forever.
+        // That's why we'll check if a thumbnail has been
+        // created for the latest processing step.
+        if (audioModification->isThumbCreated()){
+          // it means the current thumbnail is the updated one,
+          // and we just need to return it.
+          return *iter->second;
+        }
+        else{
+          // It means there has been a processing step since 
+          // the last time the thumbnail was created, so we need
+          // to update it.
+          ++hash;
+          iter->second->setSource(audioModification->getModifiedAudioBuffer(),
+                       audioSource->getSampleRate(), hash);
+          audioModification->setThumbCreated(true);
+          return *iter->second;
+        }
+      }
+      else{
+        // if the source has never been modified then
+        // we just return the thumbnail previously created.
+        return *iter->second;
+      }
+      
 
+    // if not found, create the thumbnail
     auto thumb =
         std::make_unique<juce::AudioThumbnail>(128, dummyManager, thumbnailCache);
     auto &result = *thumb;
@@ -63,6 +91,7 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
 
     audioSource->addListener(this);
     thumbnails.emplace(audioSource, std::move(thumb));
+    audioModification->setThumbCreated(true);
     return result;
   }
 
