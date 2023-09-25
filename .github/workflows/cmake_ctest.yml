@@ -195,26 +195,8 @@ jobs:
     - name: Create DMG, Notarize and Staple (macOS)
       if: ${{ matrix.name == 'macOS' }}
       run: |
-        npm install -g appdmg
-        mkdir -p packaging/dmg
-        
-        # Create directories for the dmg symlinks
-        sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/Components && sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/VST3
-        ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
-        mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/dmg
-
-        chmod +x ./py/client/sign.sh
-        ./py/client/sign.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/Resources/gradiojuce_client/"
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --options runtime --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/Resources/gradiojuce_client/gradiojuce_client
-
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/MacOS/tensorjuce
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3
-        
-        # Run appdmg to create the .dmg
-        cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --deep --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.PRODUCT_NAME }}.dmg 
-        xcrun notarytool submit ${{ env.PRODUCT_NAME }}.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
-        xcrun stapler staple ${{ env.PRODUCT_NAME }}.dmg 
+        chmod +x ./packaging/package.sh
+        ./package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
 
     - name: Zip
       if: ${{ matrix.name == 'Linux' }}
