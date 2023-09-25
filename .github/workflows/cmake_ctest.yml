@@ -162,16 +162,16 @@ jobs:
     #     7z x pluginval_${{ matrix.name }}.zip
     #     ${{ matrix.pluginval-binary }} --strictness-level 10 --verbose --validate "${{ env.VST3_PATH }}"
 
-    - name: Codesign (macOS)
-      working-directory: ${{ env.BUILD_DIR }}
-      if: ${{ matrix.name == 'macOS' }}
-      run: |
-        # Each plugin must be code signed
-        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
-        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestam
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}/Contents/MacOS/tensorjuce
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}
+    # - name: Codesign (macOS)
+    #   working-directory: ${{ env.BUILD_DIR }}
+    #   if: ${{ matrix.name == 'macOS' }}
+    #   run: |
+    #     # Each plugin must be code signed
+    #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
+    #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}/Contents/MacOS/tensorjuce
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}
         
 
     # - name: Add Custom Icons (macOS)
@@ -200,10 +200,10 @@ jobs:
         
         # Create directories for the dmg symlinks
         sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/Components && sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/VST3
-        # ln -s /Library/Audio/Plug-Ins/Components "packaging/dmg/Your Mac's Component folder"
         ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
         mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/dmg
-        # mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
+
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements "${{ env.BUILD_DIR }}/py/client/entitlements.plist" "packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/Resources/gradiojuce_client/"
 
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/MacOS/tensorjuce
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3
