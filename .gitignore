@@ -43,7 +43,9 @@ testproject
 scratch
 _downloads
 
-packaging/
+packaging/dmg
+packaging/*.dmg
+
 Python.framework
 py/relocatable-python
 

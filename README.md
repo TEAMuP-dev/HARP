@@ -1,20 +1,38 @@
-# plugin_sandbox
-A repository for a custom ARA plugin with juce, tracktion, and libtorch working together in harmony.
+# HARP
+An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from the DAW through Gradio endpoints.
 
-parts of this codebase (mostly CI) are based on the [pamplejuce](https://github.com/sudara/pamplejuce) JUCE + CMake template. 
 
-## Building
-
-### First, An Important Note
-For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html). 
-**TODO**: add cmake options to build on windows. 
+# Building
 
 clone the plugin_sandbox repo
 ```
 git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git
 ```
 
+
+
+## Mac OS
+
+Mac OS builds are known to work on apple silicon only. We've had trouble getting REAPER and ARA to work together on x86 (on apple silicon machines, to be fair). TODO: test on x86 macs.
+
+Configure
+```
+mkdir build
+cd build
+cmake ..  -DCMAKE_BUILD_TYPE=Debug 
+```
+
+Build
+```
+make -jNUM_PROCESSORS
+```
+
 ## Windows
+
+### An Important Note
+For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html). 
+**TODO**: add cmake options to build on windows. 
+
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10.
 Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
 
@@ -28,24 +46,39 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 "C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/plugin_sandbox/build --config Debug --target ALL_BUILD -j 14 --
 ```
 
+# Codesigning and Distribution
+
 ## Mac OS
 
-On Mac M1 computers here are the commands you can usse for configuration and building. This project will only run on M1 Macs currently due to building issues for ARA on x86. 
+Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
+You'll need to set up a developer account with Apple and create a certificate for signing the plugin.
+For more information on codesigning and notarization for mac, refer to the [pamplejuce](https://github.com/sudara/pamplejuce) template. 
 
-- Configure
+The script requires the following  variables to be passed:
 ```
-mkdir build
-cd build
-cmake ..  -DCMAKE_BUILD_TYPE=Debug 
+# Retrieve values from either environment variables or command-line arguments
+DEV_ID_APPLICATION # Developer ID Application certificate
+ARTIFACTS_PATH # should be packaging/dmg/tensorjuce.vst3
+PROJECT_NAME # "tensorjuce"
+PRODUCT_NAME # "tensorjuce"
+NOTARIZATION_USERNAME # Apple ID
+NOTARIZATION_PASSWORD # App-specific password for notarization
+TEAM_ID # Team ID for notarization
 ```
 
--Build
-```
-make -jNUM_PROCESSORS
+Usage:
+```bash
+bash packaging/package.sh <Developer ID Application> <Artifacts Path> <Project Name> <Product Name> <Notarization Username> <Notarization Password> <Team ID>
 ```
 
 
-## Debugging
+After running `package.sh`, you should have a signed and notarized dmg file in the `packaging/` directory.
+
+## Windows
+
+TODO
+
+# Debugging
 ### Mac
 1. download visual studio code for mac https://code.visualstudio.com/
 2. install Microsoft's C/C++ extension
