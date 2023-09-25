@@ -6,14 +6,13 @@ parts of this codebase (mostly CI) are based on the [pamplejuce](https://github.
 ## Building
 
 ### First, An Important Note
-For now, this build works on MacOS M1 only, since it builds with a version of relocatable python that is only available on MacOS. This is a temporary limitation (hopefully), as we figure out how to embed a Python interpreter in our windows builds. 
-
-To see what we're doing right now, check out relocatable-python: https://github.com/gregneagle/relocatable-python
-though I had to make some changes to make it work with our build system: https://github.com/hugofloresgarcia/relocatable-python
-
+For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html). 
+**TODO**: add cmake options to build on windows. 
 
 clone the plugin_sandbox repo
-```git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git```
+```
+git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git
+```
 
 ## Windows
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10.
@@ -28,6 +27,7 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 ```php
 "C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/plugin_sandbox/build --config Debug --target ALL_BUILD -j 14 --
 ```
+
 ## Mac OS
 
 On Mac M1 computers here are the commands you can usse for configuration and building. This project will only run on M1 Macs currently due to building issues for ARA on x86. 
@@ -43,13 +43,6 @@ cmake ..  -DCMAKE_BUILD_TYPE=Debug
 ```
 make -jNUM_PROCESSORS
 ```
-
-
-## Notes
-these people have a cross platform embedded python using their SCons build system:
-https://github.com/touilleMan/godot-python/tree/master
-
-there's a relocatable python repo that has an option to build on windows, but I (hugo) couldn't get it to work on mac: https://github.com/Infinidat/relocatable-python3.
 
 
 ## Debugging
