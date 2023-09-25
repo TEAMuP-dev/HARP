@@ -203,7 +203,8 @@ jobs:
         ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
         mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/dmg
 
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements "./py/client/entitlements.plist" "packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/Resources/gradiojuce_client/"
+        chmod +x ./py/client/sign.sh
+        ./py/client/sign.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "./py/client/entitlements.plist" "packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/Resources/gradiojuce_client/"
 
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/MacOS/tensorjuce
         codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3
