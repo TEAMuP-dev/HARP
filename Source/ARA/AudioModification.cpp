@@ -30,8 +30,7 @@
  */
 AudioModification::AudioModification(
     juce::ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
-    const ARAAudioModification *optionalModificationToClone, 
-    )
+    const ARAAudioModification *optionalModificationToClone)
     : ARAAudioModification(audioSource, hostRef, optionalModificationToClone){
 
   DBG("AudioModification::created");

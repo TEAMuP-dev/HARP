@@ -136,34 +136,50 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 
 
 void TensorJuceProcessorEditor::resized() {
-  auto area = getLocalBounds();
-  auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // We'll keep the topArea for the grid layout
+    auto area = getLocalBounds();
+    auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // We'll keep the topArea for the vertical layout
 
-  juce::Grid grid;
-
-  using Track = juce::Grid::TrackInfo;
-  using Fr = juce::Grid::Fr;
-
-  grid.templateRows = { Track(Fr(1)), Track(Fr(1)), Track(Fr(1)) };  // Three rows for the three buttons/box
-  grid.templateColumns = { Track(Fr(1)), Track(Fr(2)), Track(Fr(1)) };  // Three columns for left, middle, right sections
-
-  grid.items = { 
-    juce::GridItem(loadModelButton), 
-    juce::GridItem(ctrlComponent),  // Assuming you want this in the middle
-    juce::GridItem(),  // Empty spot
-
-    juce::GridItem(modelPathTextBox),
-    juce::GridItem(),  // Empty spot
-    juce::GridItem(),  // Empty spot
-
-    juce::GridItem(processButton), 
-    juce::GridItem(),  // Empty spot
-    juce::GridItem(modelCardComponent)  // Placing modelCardComponent in the bottom right
-  };
-
-  grid.performLayout(topArea);
-
-  if (documentView != nullptr) {
-    documentView->setBounds(area);  // this should set the bounds correctly
-  }
+    
+    // Horizontal FlexBox for the top area
+    juce::FlexBox fbTop;
+    fbTop.flexDirection = juce::FlexBox::Direction::row;
+    fbTop.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    fbTop.alignItems = juce::FlexBox::AlignItems::center;
+    
+    // Adding items to the top FlexBox
+    fbTop.items.add(juce::FlexItem(loadModelButton).withFlex(0).withWidth(100).withHeight(20));  // Fixed width
+    fbTop.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(20));  // Takes up remaining space
+    
+    // Horizontal FlexBox for the main area
+    juce::FlexBox fbMain;
+    fbMain.flexDirection = juce::FlexBox::Direction::row;
+    fbMain.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    fbMain.alignItems = juce::FlexBox::AlignItems::stretch;
+    
+    // Adding items to the main FlexBox
+    fbMain.items.add(juce::FlexItem(modelCardComponent).withFlex(0.4f));  // 40% width
+    fbMain.items.add(juce::FlexItem(ctrlComponent).withFlex(0.6f));  // 60% width
+    
+    // Vertical FlexBox for overall layout
+    juce::FlexBox fbOverall;
+    fbOverall.flexDirection = juce::FlexBox::Direction::column;
+    fbOverall.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    fbOverall.alignItems = juce::FlexBox::AlignItems::stretch;
+    
+    // Adding items to the overall FlexBox
+    fbOverall.items.add(juce::FlexItem(fbTop).withFlex(0).withHeight(20));  // Fixed height
+    fbOverall.items.add(juce::FlexItem(fbMain).withFlex(1));  // Takes up remaining vertical space
+    
+    // Performing the layout
+    fbOverall.performLayout(topArea);
+    
+    // Positioning the process button at the bottom right
+    auto buttonWidth = 100;
+    auto buttonHeight = 30;
+    processButton.setBounds(topArea.getWidth() - buttonWidth - 10, topArea.getHeight() - buttonHeight - 10, buttonWidth, buttonHeight);
+    
+    if (documentView != nullptr) {
+        documentView->setBounds(area);  // This should set the bounds correctly
+    }
 }
+

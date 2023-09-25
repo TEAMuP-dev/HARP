@@ -116,7 +116,7 @@ TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
 
   return new AudioModification(
       audioSource, hostRef,
-      static_cast<const AudioModification *>(optionalModificationToClone), 
+      static_cast<const AudioModification *>(optionalModificationToClone)
     );
 }
 

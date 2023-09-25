@@ -39,7 +39,7 @@ class AudioModification : public juce::ARAAudioModification {
 public:
   AudioModification(juce::ARAAudioSource *audioSource,
                     ARA::ARAAudioModificationHostRef hostRef,
-                    const juce::ARAAudioModification *optionalModificationToClone, );
+                    const juce::ARAAudioModification *optionalModificationToClone);
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
   void setThumbCreated(bool created);
