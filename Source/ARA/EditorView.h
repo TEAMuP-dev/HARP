@@ -6,52 +6,37 @@
  */
 
 #pragma once
-#include <torch/script.h>
-#include <torch/torch.h>
 #include "juce_gui_basics/juce_gui_basics.h"
 
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include <ARA_Library/Utilities/ARATimelineConversion.h>
-#include "../DeepLearning/TorchModel.h" // needed for ModelCardListener
+#include "../DeepLearning/WebModel.h" // needed for ModelCardListener
 #include "../UI/CustomComponents.h"
 
 
-// #include "../UI/ModelCard.h"
 using namespace juce;
-using GenericDict = std::map<std::string, std::any>;
-using ListOfDicts = std::vector<GenericDict>;
+
 /**
  * @class EditorRenderer
  * @brief TODO: Write brief class description.
  */
-class EditorView : public juce::ARAEditorView,
-                    public ChangeListener,
-                    public ChangeBroadcaster
-                    {
+class EditorView : public juce::ARAEditorView, public ChangeBroadcaster
+{
 public:
-    // EditorView(ARA::PlugIn::DocumentController *documentController);
-    // ~EditorView() override;
     // constructor. Using the base class constructor
     using ARAEditorView::ARAEditorView;
 
-    // setModelGuiAttributes
-    void changeListenerCallback(ChangeBroadcaster *source) override;
 
-    void triggerRepaint(); 
+    void triggerRepaint() {sendChangeMessage();};
+    /**
+     * @brief returns the active model
+     * @return std::shared_ptr<WebWave2Wave> 
+     */
+    std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
 
-    // Model Card getter
-    ModelCard getModelCard() const;
-
-    // Neural Model Attributes getter
-    ListOfDicts getModelGuiAttributes() const;
-
-    void setCurrentCtrlValue(std::string nameId, std::any value);
-
+    void setModel(std::shared_ptr<WebWave2Wave> model) { mModel = model; }
 
 private:
-    // std::shared_ptr<ModelCard> modelCard;
-    ModelCard modelCard;
-    bool modelLoaded = false;
-    ListOfDicts modelGuiAttributes;
+    std::shared_ptr<WebWave2Wave> mModel {nullptr}; ///< Model for audio processing.
 };

@@ -1,0 +1,76 @@
+#include "juce_gui_basics/juce_gui_basics.h"
+#include "../DeepLearning/Model.h"
+
+class ModelCardComponent : public juce::Component
+{
+public:
+    ModelCardComponent() {
+        // Initialize the labels
+        addAndMakeVisible(nameLabel);
+        addAndMakeVisible(descriptionLabel);
+        addAndMakeVisible(authorLabel);
+        addAndMakeVisible(sampleRateLabel);
+        addAndMakeVisible(tagsLabel);
+    }
+
+    void setModelCard(const ModelCard& card) {
+        // Set the text for the labels
+        nameLabel.setText("Name: " + juce::String(card.name), juce::dontSendNotification);
+        descriptionLabel.setText("Description: " + juce::String(card.description), juce::dontSendNotification);
+        authorLabel.setText("Author: " + juce::String(card.author), juce::dontSendNotification);
+        if (card.sampleRate == 0) {
+          sampleRateLabel.setText("Sample Rate: ", juce::dontSendNotification);
+        } else {
+          sampleRateLabel.setText("Sample Rate: " + juce::String(card.sampleRate), juce::dontSendNotification);
+        }
+        
+        juce::String tagsText = "Tags: ";
+        for (const auto& tag : card.tags) {
+            tagsText += juce::String(tag) + ", ";
+        }
+        tagsText = tagsText.dropLastCharacters(2);  // Remove trailing comma and space
+        tagsLabel.setText(tagsText, juce::dontSendNotification);
+        
+        // Repaint the component to update the display
+        repaint();
+    }
+
+    void clear() {
+        // Clear the text for the labels
+        nameLabel.setText("", juce::dontSendNotification);
+        descriptionLabel.setText("", juce::dontSendNotification);
+        authorLabel.setText("", juce::dontSendNotification);
+        sampleRateLabel.setText("", juce::dontSendNotification);
+        tagsLabel.setText("", juce::dontSendNotification);
+        
+        repaint();
+    }
+
+    void resized() override {
+        // Create a FlexBox instance
+        juce::FlexBox flexBox;
+        flexBox.flexDirection = juce::FlexBox::Direction::column;
+        flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+        flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+
+        // Add each label to the FlexBox with uniform flex
+        const float flexValue = 1.0f;
+        flexBox.items.add(juce::FlexItem(nameLabel).withFlex(flexValue));
+        flexBox.items.add(juce::FlexItem(descriptionLabel).withFlex(flexValue));
+        flexBox.items.add(juce::FlexItem(authorLabel).withFlex(flexValue));
+        flexBox.items.add(juce::FlexItem(sampleRateLabel).withFlex(flexValue));
+        flexBox.items.add(juce::FlexItem(tagsLabel).withFlex(flexValue));
+
+        // Perform layout in the component's local bounds
+        flexBox.performLayout(getLocalBounds());
+    }
+
+private:
+    juce::Label nameLabel;
+    juce::Label descriptionLabel;
+    juce::Label authorLabel;
+    juce::Label sampleRateLabel;
+    juce::Label tagsLabel;
+
+};
+

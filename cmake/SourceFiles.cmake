@@ -14,13 +14,16 @@ set(SourceFiles
     Source/ARA/ProcessorEditor.h
     Source/ARA/ProcessorEditor.cpp
     Source/ARA/EditorView.h
-    Source/ARA/EditorView.cpp
+    # Source/ARA/EditorView.cpp
+
+    Source/ARA/CtrlComponent.h
+    Source/ARA/ModelCardComponent.h
 
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
-    Source/DeepLearning/Wave2Wave.cpp
-    Source/DeepLearning/TorchModel.h
-    Source/DeepLearning/TorchModel.cpp
+    # Source/DeepLearning/Wave2Wave.cpp
+    # Source/DeepLearning/TorchModel.h
+    # Source/DeepLearning/TorchModel.cpp
     Source/DeepLearning/WebModel.h
 
     Source/Timeline/PlaybackRegion.h

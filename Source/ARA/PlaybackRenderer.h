@@ -55,8 +55,6 @@ public:
    */
   PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
                    ProcessingLockInterface &lockInterfaceIn);
-  // destructor
-  // ~PlaybackRenderer();
 
   /**
    * @brief Prepares for playback by initializing necessary parameters.
@@ -96,7 +94,7 @@ public:
    * @param params The parameters from the UI to use for processing. 
    * @return void
    */
-  void executeProcess(std::map<std::string, std::any> &params);
+  void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
   template <typename Callback> void forEachPlaybackRegion(Callback &&cb);
 

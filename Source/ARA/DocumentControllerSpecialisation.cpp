@@ -40,15 +40,11 @@ TensorJuceDocumentControllerSpecialisation::
               setStatusMessage ("Processing...");
 }
 
-void TensorJuceDocumentControllerSpecialisation::printModelPath(std::string path) {
-  std::cout << "Model path: " << path << std::endl;
-  DBG("Model path: " << path);
-}
 
-void TensorJuceDocumentControllerSpecialisation::executeLoad(const std::string &modelPath) {
+void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad");
-    mModel->load(modelPath);
+    mModel->load(params);
     DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
   }
 
@@ -66,7 +62,7 @@ void TensorJuceDocumentControllerSpecialisation::run() {
   setProgress(0.0);
   int counter = 0;
   for (auto& playbackRenderer : playbackRenderers) {
-    playbackRenderer->executeProcess(processingParams);
+    playbackRenderer->executeProcess(mModel);
     counter++;
     setProgress((double) counter / (double) playbackRenderers.size());
     double pr = (double) counter / (double) playbackRenderers.size();
@@ -80,12 +76,17 @@ void TensorJuceDocumentControllerSpecialisation::run() {
   // Dismiss the modal window when processing is complete
   // processingWindow->exitModalState();
 }
-void TensorJuceDocumentControllerSpecialisation::executeProcess(std::map<std::string, std::any> &params) {
+
+void TensorJuceDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   // wait untill thread has stopped running
   if (!isThreadRunning()) {
     // start the thread
-    processingParams = params;
-    // launchThread starts the thread and returns.
+    if (model == nullptr){
+      DBG("unhandled exception: model is null. we should probably open an error window here.");
+      return;
+    }
+
+    mModel = model;
     launchThread();
   }
 }
@@ -116,7 +117,6 @@ TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
   return new AudioModification(
       audioSource, hostRef,
       static_cast<const AudioModification *>(optionalModificationToClone), 
-      mModel
     );
 }
 
@@ -142,9 +142,10 @@ EditorView *
 TensorJuceDocumentControllerSpecialisation::doCreateEditorView() noexcept {
   EditorView* newEditorView = new EditorView(getDocumentController());
   editorView = newEditorView;//dynamic_cast<EditorView*>(newEditorView);
-  mModel->addListener(editorView);
+  editorView->setModel(mModel);
   return newEditorView;
 }
+
 bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
     ARAInputStream &input, const ARARestoreObjectsFilter *filter) noexcept {
   // Start reading data from the archive, starting with the number of audio
@@ -192,6 +193,7 @@ bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
 
   return !input.failed();
 }
+
 
 bool TensorJuceDocumentControllerSpecialisation::doStoreObjectsToStream(
     ARAOutputStream &output, const ARAStoreObjectsFilter *filter) noexcept {

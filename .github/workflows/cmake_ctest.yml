@@ -167,8 +167,12 @@ jobs:
       if: ${{ matrix.name == 'macOS' }}
       run: |
         # Each plugin must be code signed
-        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
-        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
+        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
+        # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestam
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}/Contents/MacOS/tensorjuce
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}
+        
 
     # - name: Add Custom Icons (macOS)
     #   if: ${{ matrix.name == 'macOS' }}
@@ -201,7 +205,8 @@ jobs:
         mv "${{ env.ARTIFACTS_PATH }}/VST3/${{ env.PROJECT_NAME }}.vst3" packaging/dmg
         # mv "${{ env.ARTIFACTS_PATH }}/AU/${{ env.PROJECT_NAME }}.component" packaging/dmg
 
-        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --deep --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3/Contents/MacOS/tensorjuce
+        codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force packaging/dmg/${{ env.PROJECT_NAME }}.vst3
         
         # Run appdmg to create the .dmg
         cd packaging && appdmg dmg.json ${{ env.PRODUCT_NAME}}.dmg

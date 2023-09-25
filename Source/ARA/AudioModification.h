@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "../DeepLearning/TorchModel.h"
+#include "../DeepLearning/WebModel.h"
 #include <ARA_Library/PlugIn/ARAPlug.h>
 
 using std::unique_ptr;
@@ -39,26 +39,19 @@ class AudioModification : public juce::ARAAudioModification {
 public:
   AudioModification(juce::ARAAudioSource *audioSource,
                     ARA::ARAAudioModificationHostRef hostRef,
-                    const juce::ARAAudioModification *optionalModificationToClone, 
-                    std::shared_ptr<TorchWave2Wave> model);
+                    const juce::ARAAudioModification *optionalModificationToClone, );
   bool isDimmed() const;
   void setDimmed(bool shouldDim);
   void setThumbCreated(bool created);
   bool isThumbCreated() const;
   std::string getSourceName();
 
-  void process(std::map<std::string, std::any> &params);
-  // void load(std::map<std::string, std::any> &params);
+  void process(std::shared_ptr<WebWave2Wave> model);
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified();
-  // void addListenerToModel(juce::ChangeListener* listener);
-
-  std::shared_ptr<TorchWave2Wave> getModel() {return mModel;};
 
 private:
-  std::shared_ptr<TorchWave2Wave> mModel;
-
   bool dimmed = false;
   bool mIsModified = false;
   bool mThumbCreated = false;

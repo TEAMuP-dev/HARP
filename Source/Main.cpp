@@ -18,7 +18,6 @@
  * @author JUCE, hugo flores garcia, aldo aguilar
  */
 
-#include <torch/script.h>
 #include <JuceHeader.h>
 
 #include "ARA/AudioProcessor.h"

@@ -22,28 +22,7 @@
  */
 
 #include "ProcessorEditor.h"
-#include "../DeepLearning/TorchModel.h"
-// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
-
-
-void TensorJuceProcessorEditor::InitGenericDial(
-  juce::Slider &dial, const juce::String& valueSuffix, 
-  const juce::Range<double> range, double step_size,
-  float value
-) {
-  dial.setLookAndFeel(&toolbarSliderStyle);
-  dial.setSliderStyle(Slider::Rotary);
-  dial.setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-  dial.setTextValueSuffix(valueSuffix);
-  dial.setRange(range, step_size);
-  dial.setValue(value);
-  dial.addListener(this);
-}
-
-// destructor
-// TensorJuceProcessorEditor::~TensorJuceProcessorEditor() {
-//   processButton.setLookAndFeel (nullptr);
-// }
+#include "../DeepLearning/WebModel.h"
 
 TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     TensorJuceAudioProcessorImpl &ap, EditorRenderer *er, 
@@ -67,127 +46,81 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   // initialize load and process buttons
   processButton.setLookAndFeel(&buttonLookAndFeel);
   processButton.setButtonText("process");
-  processButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
-  processButton.setColour(TextButton::textColourOffId, Colours::black);
-  processButton.setColour(TextButton::buttonOnColourId, Colours::grey);
-  processButton.setColour(TextButton::textColourOnId, Colours::black);
   processButton.addListener(this);
   addAndMakeVisible(processButton);
+
   loadModelButton.setLookAndFeel(&buttonLookAndFeel);
   loadModelButton.setButtonText("Load model");
-  loadModelButton.setColour(TextButton::buttonColourId, Colours::lightgrey);
-  loadModelButton.setColour(TextButton::textColourOffId, Colours::black);
-  loadModelButton.setColour(TextButton::buttonOnColourId, Colours::grey);
-  loadModelButton.setColour(TextButton::textColourOnId, Colours::black);
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
-  // model card component
-  addAndMakeVisible(modelCardComponent); // TODO check when to do that
+  // model path textbox
+  modelPathTextBox.setMultiLine(false);
+  modelPathTextBox.setReturnKeyStartsNewLine(false);
+  modelPathTextBox.setReadOnly(false);
+  modelPathTextBox.setScrollbarsShown(false);
+  modelPathTextBox.setCaretVisible(true);
+  modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  addAndMakeVisible(modelPathTextBox);
 
+  // TODO: what happens if the model is nullptr rn? 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL TensorJuceProcessorEditor::TensorJuceProcessorEditor: model is null");
+    return;
+  }
+  
+  // model controls
+  ctrlComponent.setModel(mEditorView->getModel());
+  addAndMakeVisible(ctrlComponent);
+  ctrlComponent.populateGui();
+
+  // model card component
   // Get the modelCard from the EditorView
-  modelCardComponent.setModelCard(mEditorView->getModelCard());
-  // populate the UI
-  populateGui();
+  addAndMakeVisible(modelCardComponent); // TODO check when to do that
+  modelCardComponent.setModelCard(mEditorView->getModel()->card());
+
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
   setSize(800, 300);
-
 }
 
 void TensorJuceProcessorEditor::buttonClicked(Button *button) {
   if (button == &processButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
-    // create an empty map
-    std::map<std::string, std::any> params;
-    for (int i = 0; i < continuousCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          continuousCtrls[i]->getName().toStdString(),
-          continuousCtrls[i]->getValue()));
-    }
-    for (int i = 0; i < binaryCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          binaryCtrls[i]->getName().toStdString(),
-          binaryCtrls[i]->getToggleState()));
-    }
-    for (int i = 0; i < textCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          textCtrls[i]->getName().toStdString(),
-          textCtrls[i]->getText().toStdString()));
-    }
-    for (int i = 0; i < optionCtrls.size(); i++) {
-      params.insert(std::pair<std::string, std::any>(
-          optionCtrls[i]->getName().toStdString(),
-          optionCtrls[i]->getText().toStdString()));
-    }    
-    // mEditorRenderer->executeProcess(params);
-    mDocumentController->executeProcess(params);
+    
+    auto model = mEditorView->getModel();
+    mDocumentController->executeProcess(model);
   }
 
   else if (button == &loadModelButton) {
     DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
 
-    modelPathChooser = std::make_unique<FileChooser> (
-      "Please select the model file to load...",
-      File::getSpecialLocation(File::userHomeDirectory),
-      "*.pt"
-    );
+    // collect input parameters for the model.
+    std::map<std::string, std::any> params = {
+      {"url", modelPathTextBox.getText().toStdString()},
+    };
 
-    auto folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+    resetUI();
+    mDocumentController->executeLoad(params);
 
-    modelPathChooser->launchAsync (folderChooserFlags, [this] (const FileChooser& chooser)
-    {
-      File modelPath (chooser.getResult());
+    // Model loading happens synchronously, so we can be sure that
+    // the Editor View has the model card and UI attributes loaded
+    modelCardComponent.setModelCard(mEditorView->getModel()->card());
+    ctrlComponent.setModel(mEditorView->getModel());
+    ctrlComponent.populateGui();
+    resized();
 
-      DBG("got model path: " + modelPath.getFullPathName());
-      // if  the file doesn't exist, return
-      if (!modelPath.existsAsFile()) {
-        return;
-      }
-
-      // convert modelPath to a string
-      // std::map<std::string, std::any> params = {
-      //   {"modelPath", modelPath.getFullPathName().toStdString()}
-      // };
-
-      resetUI();
-      mDocumentController->executeLoad(modelPath.getFullPathName().toStdString());
-      // Model loading happens synchronously, so we can be sure that
-      // the Editor View has the model card and UI attributes loaded
-      modelCardComponent.setModelCard(mEditorView->getModelCard());
-      populateGui();
-      resized();
-    });
-    
   }
   else {
-    auto name = button->getName().toStdString();
-    mEditorView->setCurrentCtrlValue(name, button->getToggleState());
+    DBG("a button was pressed, but we didn't do anything. ");
   }
 }
 
 // void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
 //   modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
 // }
-
-void TensorJuceProcessorEditor::comboBoxChanged(ComboBox *comboBox) {
-  auto name = comboBox->getName().toStdString();
-  mEditorView->setCurrentCtrlValue(name, comboBox->getSelectedId());
-}
-void TensorJuceProcessorEditor::textEditorReturnKeyPressed (TextEditor& textEditor) {
-  auto name = textEditor.getName().toStdString();
-  mEditorView->setCurrentCtrlValue(name, textEditor.getText().toStdString());
-}
-
-void TensorJuceProcessorEditor::sliderValueChanged(Slider* slider) {
-  ignoreUnused(slider);
-}
-
-void TensorJuceProcessorEditor::sliderDragEnded(Slider* slider) {
-  auto name = slider->getName().toStdString();
-  mEditorView->setCurrentCtrlValue(name, slider->getValue());
-}
 
 void TensorJuceProcessorEditor::paint(Graphics &g) {
   g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
@@ -204,177 +137,33 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 
 void TensorJuceProcessorEditor::resized() {
   auto area = getLocalBounds();
-  auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // use the topArea for the mainBox layout
-  juce::FlexBox mainBox;
-      mainBox.flexDirection = juce::FlexBox::Direction::row;
-      juce::FlexBox ctrlBox1;
-          ctrlBox1.flexDirection = juce::FlexBox::Direction::column;
-          juce::FlexBox continuousBox;
-              // continuousBox.flexWrap = juce::FlexBox::Wrap::noWrap;
-              // continuousBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
-              // continuousBox.alignContent = juce::FlexBox::AlignContent::center;
-              continuousBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < continuousCtrls.size(); i++) {
-                continuousBox.items.add(juce::FlexItem(*continuousCtrls[i]).withFlex(1));
-              }
-          ctrlBox1.items.add(juce::FlexItem(continuousBox).withFlex(1));
-          juce::FlexBox binaryBox;
-              binaryBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < binaryCtrls.size(); i++) {
-                binaryBox.items.add(juce::FlexItem(*binaryCtrls[i]).withFlex(1));
-              }
-          ctrlBox1.items.add(juce::FlexItem(binaryBox).withFlex(1));
-      juce::FlexBox ctrlBox2;
-          ctrlBox2.flexDirection = juce::FlexBox::Direction::column;
-          juce::FlexBox optionBox;
-              optionBox.flexDirection = juce::FlexBox::Direction::row;
-              // optionBox.flexWrap = juce::FlexBox::Wrap::noWrap;
-      //         optionBox.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
-      //         optionBox.alignContent = juce::FlexBox::AlignContent::center;  
-              for (int i = 0; i < optionCtrls.size(); i++) {
-                optionBox.items.add(juce::FlexItem(*optionCtrls[i]).withFlex(1));
-              }
-              if (optionBox.items.size() > 0){
-                  ctrlBox2.items.add(juce::FlexItem(optionBox).withFlex(1));
-              }
-          
-          juce::FlexBox textCtrlBox;
-              textCtrlBox.flexDirection = juce::FlexBox::Direction::row;
-              for (int i = 0; i < textCtrls.size(); i++) {
-                textCtrlBox.items.add(juce::FlexItem(*textCtrls[i]).withFlex(1));
-              }
-              if (textCtrlBox.items.size() > 0){
-                  ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
-              }
-          // ctrlBox2.items.add(juce::FlexItem(textCtrlBox).withFlex(1));
+  auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // We'll keep the topArea for the grid layout
 
-      juce::FlexBox buttonBox;
-          buttonBox.flexDirection = juce::FlexBox::Direction::column;
-          buttonBox.items.add(juce::FlexItem(loadModelButton).withFlex(1));
-          buttonBox.items.add(juce::FlexItem(processButton).withFlex(1));
-      
-      mainBox.items.add(juce::FlexItem(ctrlBox1).withFlex(0.3));
-      mainBox.items.add(juce::FlexItem(ctrlBox2).withFlex(0.3));
-      mainBox.items.add(juce::FlexItem(buttonBox).withFlex(0.3));
+  juce::Grid grid;
 
-  juce::FlexBox superMainBox;
-      superMainBox.flexDirection = juce::FlexBox::Direction::column;
-      superMainBox.items.add(juce::FlexItem(modelCardComponent).withFlex(0.5));
-      superMainBox.items.add(juce::FlexItem(mainBox).withFlex(0.5));
-      
-  superMainBox.performLayout(topArea);  // use topArea instead of area
-  
+  using Track = juce::Grid::TrackInfo;
+  using Fr = juce::Grid::Fr;
+
+  grid.templateRows = { Track(Fr(1)), Track(Fr(1)), Track(Fr(1)) };  // Three rows for the three buttons/box
+  grid.templateColumns = { Track(Fr(1)), Track(Fr(2)), Track(Fr(1)) };  // Three columns for left, middle, right sections
+
+  grid.items = { 
+    juce::GridItem(loadModelButton), 
+    juce::GridItem(ctrlComponent),  // Assuming you want this in the middle
+    juce::GridItem(),  // Empty spot
+
+    juce::GridItem(modelPathTextBox),
+    juce::GridItem(),  // Empty spot
+    juce::GridItem(),  // Empty spot
+
+    juce::GridItem(processButton), 
+    juce::GridItem(),  // Empty spot
+    juce::GridItem(modelCardComponent)  // Placing modelCardComponent in the bottom right
+  };
+
+  grid.performLayout(topArea);
+
   if (documentView != nullptr) {
-      documentView->setBounds(area);  // this should set the bounds correctly
+    documentView->setBounds(area);  // this should set the bounds correctly
   }
-}
-
-void TensorJuceProcessorEditor::resetUI(){
-  // remove all the widgets and empty the vectors
-  for (auto &ctrl : continuousCtrls) {
-    removeChildComponent(ctrl.get());
-  }
-  continuousCtrls.clear();
-  for (auto &ctrl : binaryCtrls) {
-    removeChildComponent(ctrl.get());
-  }
-  binaryCtrls.clear();
-  for (auto &ctrl : textCtrls) {
-    removeChildComponent(ctrl.get());
-  }
-  textCtrls.clear();
-  for (auto &ctrl : optionCtrls) {
-    removeChildComponent(ctrl.get());
-  }
-  optionCtrls.clear();
-  // Also clear the model card component
-  modelCardComponent.clear();
-  resized();
-}
-// This callback gets called once a model is loaded
-// It is used to create the UI elements for the controls
-void TensorJuceProcessorEditor::populateGui() {
-  
-  for (const auto &ctrlAttributes  : mEditorView->getModelGuiAttributes()) {
-    std::string nameId = std::any_cast<std::string>(ctrlAttributes.at("nameId"));
-    std::string name = std::any_cast<std::string>(ctrlAttributes.at("name"));
-    std::string widgetType = std::any_cast<std::string>(ctrlAttributes.at("widget_type"));
-    // int widgetTypeVal = std::any_cast<int>(ctrlAttributes.at("widget_type_val"));
-    std::string ctrlType = std::any_cast<std::string>(ctrlAttributes.at("ctrl_type"));
-    if (ctrlType == "ContinuousCtrl") {
-      // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
-      double min = std::any_cast<double>(ctrlAttributes.at("min"));
-      double max = std::any_cast<double>(ctrlAttributes.at("max"));
-      double step = std::any_cast<double>(ctrlAttributes.at("step"));
-      double defautlValue = std::any_cast<double>(ctrlAttributes.at("current"));
-      std::unique_ptr<juce::Slider> continuousCtrl = std::make_unique<juce::Slider>();
-      if (widgetType == "SLIDER") {
-          continuousCtrl->setSliderStyle(juce::Slider::LinearHorizontal);
-      }
-      else if (widgetType == "ROTARY") {
-          continuousCtrl->setSliderStyle(juce::Slider::Rotary);
-      }
-      else {
-          DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-          jassertfalse;
-      }
-      continuousCtrl->setName(nameId);
-      continuousCtrl->setRange(min, max, step);
-      continuousCtrl->setTextBoxStyle(juce::Slider::TextBoxAbove, false, 90, 20);
-      continuousCtrl->addListener(this);
-      continuousCtrl->setTextValueSuffix(" " + name);
-      continuousCtrl->setLookAndFeel(&toolbarSliderStyle);
-      continuousCtrl->setValue(defautlValue, juce::dontSendNotification);
-      addAndMakeVisible(*continuousCtrl);
-      // Add the slider to the vector
-      continuousCtrls.push_back(std::move(continuousCtrl));
-    }
-    
-    else if (ctrlType == "BinaryCtrl") {
-      bool defaultValue = std::any_cast<bool>(ctrlAttributes.at("current"));
-      if (widgetType == "CHECKBOX") {
-          std::unique_ptr<juce::ToggleButton> binaryCtrl = std::make_unique<juce::ToggleButton>();
-          binaryCtrl->setName(nameId);
-          binaryCtrl->setButtonText(name);
-          binaryCtrl->setToggleState(defaultValue, juce::dontSendNotification);
-          binaryCtrl->addListener(this);
-          addAndMakeVisible(*binaryCtrl);
-          binaryCtrls.push_back(std::move(binaryCtrl));
-      }
-      else {
-          DBG("Unknown widget type" + widgetType + " for ContinuousCtrl");
-          jassertfalse;
-      }
-    }
-    else if (ctrlType == "TextInputCtrl") {
-        std::string defaultValue = std::any_cast<std::string>(ctrlAttributes.at("current"));
-        std::unique_ptr<TitledTextBox> textCtrl = std::make_unique<TitledTextBox>();
-        textCtrl->setName(nameId);
-        textCtrl->setTitle(name);
-        textCtrl->setText(defaultValue);
-        textCtrl->addListener(this);
-        addAndMakeVisible(*textCtrl);
-        textCtrls.push_back(std::move(textCtrl));
-    }
-    else if (ctrlType == "FloatInputCtrl") {
-        // double defaultValue = std::any_cast<double>(ctrlAttributes.at("default"));
-        // TODO
-    }
-    else if (ctrlType == "OptionCtrl") {
-        int defaultValue = std::any_cast<int>(ctrlAttributes.at("current"));
-        auto options = std::any_cast<std::vector<std::tuple<std::string, int>>>(ctrlAttributes.at("options"));
-        std::unique_ptr<juce::ComboBox> optionCtrl = std::make_unique<juce::ComboBox>();
-        for (auto &option : options) {
-          optionCtrl->addItem(std::get<0>(option), std::get<1>(option));
-        }
-        // optionCtrl->setSelectedId(1);
-        optionCtrl->setName(nameId);
-        optionCtrl->addListener(this);
-        optionCtrl->setSelectedId(defaultValue, juce::dontSendNotification);
-        optionCtrl->setTextWhenNoChoicesAvailable("No choices");
-        addAndMakeVisible(*optionCtrl);
-        optionCtrls.push_back(std::move(optionCtrl));
-    }
-  }
-  DBG("populateGui finished");
 }

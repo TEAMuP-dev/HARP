@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "tensorjuce")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
+# set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
 
-set (TENSORJUCE_FORMATS "VST3")
+set (TENSORJUCE_FORMATS "VST3" "Standalone")
 
 # defines SourceFiles
 include(cmake/SourceFiles.cmake)
@@ -18,31 +18,17 @@ file(STRINGS VERSION CURRENT_VERSION)
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)
 
-if (APPLE) 
-    include(cmake/libtorch-mac.cmake)
-    message(${Torch_DIR})
-endif(APPLE)
-
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
     message("Building for Windows...") 
-    # libtorch settings
-    find_package(Torch REQUIRED PATHS "C:\\libtorch" NO_DEFAULT_PATH)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+    
     # ara settings
     juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
 
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # mac and linux library location
     message("Building for UNIX...")
-    # libtorch settings
-    find_package(Torch REQUIRED)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-    # add ARA SDK to PATH
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Examples")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_Library")
-    # list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/ARA_SDK/ARA_API")
+
     # ara settings
     juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 
@@ -51,11 +37,96 @@ else()
 
 endif()
 
-# add_subdirectory(pybind11)
+# TODO:
+# make sure we have a variable for the python executable we'll be using for pyinstaller
+# cd into the py/client directory and run `pip install -r requirements.txt`
+# then run `pyinstaller gradiojuce_client.py --collect-all gradio_client`
+# the dist directory will be copied to the bundle later
+
+# New: Function to download and install Miniconda
+function(install_miniconda)
+    set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")
+
+    if (EXISTS ${MINICONDA_DIR})
+        message(STATUS "Miniconda already installed at ${MINICONDA_DIR}")
+        return()
+    endif()
+
+    set(MINICONDA_VERSION "py39_23.5.2-0")
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
+        set(MINICONDA_INSTALL_SCRIPT "start /wait ${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    else()
+        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh")
+        set(MINICONDA_INSTALL_SCRIPT "bash ${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+    endif()
+
+    message(STATUS "Downloading Miniconda installer...")
+    file(DOWNLOAD
+        "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
+        "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
+    )
+
+    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+    endif()
+
+    message(STATUS "Installing Miniconda...")
+    execute_process(
+        COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+    )
+    if(result)
+        message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
+    else()
+        message(STATUS "Miniconda installed successfully.")
+    endif()
+endfunction()
+
+
+# Call the function to install Miniconda
+install_miniconda()
+
+# Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
+set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
+set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")  # On Windows, change /bin/ to /Scripts/ and python to python.exe
+set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")  # On Windows, change /bin/ to /Scripts/ and pyinstaller to pyinstaller.exe
+
+
+# Define the command sequence as a list
+set(PYINSTALLER_COMMANDS 
+    "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
+    "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
+    "${PYINSTALLER_EXECUTABLE} -y gradiojuce_client.py --collect-all gradio_client"
+)
+
+# Execute each command individually, and check the result of each
+foreach(cmd IN LISTS PYINSTALLER_COMMANDS)
+    execute_process(
+        COMMAND bash -c "${cmd}"  # Using bash -c to ensure command is executed in a shell
+        RESULT_VARIABLE result
+        OUTPUT_VARIABLE output
+        ERROR_VARIABLE error
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client  # Ensure the working directory is set correctly
+    )
+    if(result)
+        message(FATAL_ERROR "Command '${cmd}' failed with result: ${result}. Output: ${output}. Error: ${error}")
+    else()
+        message(STATUS "Command '${cmd}' succeeded. Output:\n${output}")
+    endif()
+endforeach()
 
 
 
-# add_subdirectory(tracktion_engine/modules)
 
 juce_add_plugin(${PROJECT_NAME}
     # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -111,7 +182,6 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 
-
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         # AudioPluginData
@@ -127,67 +197,40 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        # tracktion::tracktion_engine
-
-        # tractkion::tracktion_core
-        # tracktion::3rd_party
-        # tracktion::tracktion_graph
 
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
-        ${TORCH_LIBRARIES}
 
-        # pybind11::embed
 )
 
-# set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
-# The following code block is suggested to be used on Windows.
-# According to https://github.com/pytorch/pytorch/issues/25457,
-# the DLLs need to be copied to avoid memory errors.
-if (MSVC)
-  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
-  add_custom_command(TARGET ${PROJECT_NAME}
-                     POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                     ${TORCH_DLLS}
-                     $<TARGET_FILE_DIR:${PROJECT_NAME}>)
-endif (MSVC)
-
-if (UNIX AND NOT APPLE) # Linux
-    # For Linux, libtorch usually provides .so files. Modify this as needed.
-    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.so")
-elseif(APPLE)
-    # For macOS, libtorch provides .dylib files. Modify this as needed.
-    file(GLOB TORCH_SHARED_LIBRARIES "${TORCH_INSTALL_PREFIX}/lib/*.dylib")
-endif()
-
+# copy the pyinstaller tools to the  bundle
 if (UNIX)
     foreach(format ${TENSORJUCE_FORMATS})
         # make a resource directory
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E make_directory
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+        # Use the native cp command with -R to properly handle symlinks
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${TORCH_SHARED_LIBRARIES}
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Frameworks/")
+                        COMMAND cp -R
+                        ${CMAKE_SOURCE_DIR}/py/client/dist/
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+
     endforeach()
 endif()
 
 
-
 # this fixes the RPATH to be relative to the executable
-# in MacOS. Now, all we need to do is copy the libtorch
+# in MacOS. Now, all we need to do is copy the 
 # dynamic libraries to the executable directories
 if (APPLE)
     foreach(format ${TENSORJUCE_FORMATS})
         set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
-
     endforeach()
 
     set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
