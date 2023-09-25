@@ -196,7 +196,7 @@ jobs:
       if: ${{ matrix.name == 'macOS' }}
       run: |
         chmod +x ./packaging/package.sh
-        ./package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
+        ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
 
     - name: Zip
       if: ${{ matrix.name == 'Linux' }}
