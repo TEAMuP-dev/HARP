@@ -60,3 +60,83 @@ Create a funciton which defines the processing logic for your audio model. This 
 
 **NOTE** This function should be a Gradio-compatible processing function, and should thus take the values of some input widgets as arguments. To work with HARP, the function should accept exactly ONE audio input argument + any number of other sliders, texboxes, etc. Additionally, the function should output exactly one audio file. 
 
+For our pitch shifter, we'll use the [audiotools](https://github.com/descript/descript-audiotools) library. 
+Our function  will take two arguments: 
+- `input_audio`: the audio filepath to be processed
+- `pitch_shift`: the amount of pitch shift to apply to the audio
+
+```python
+# Define the process function
+def process_fn(input_audio, pitch_shift_amount):
+    from audiotools import AudioSignal
+    
+    sig = AudioSignal(input_audio)
+    sig.pitch_shift(pitch_shift_amount)
+
+    output_dir = Path("_outputs")
+    output_dir.mkdir(exist_ok=True)
+    sig.write(output_dir / "output.wav")
+    return sig.path_to_file # return the path to the output file
+```
+
+## Create a Model Card
+
+A model card helps users identify your model and keep track of what it does. 
+```python
+from pyharp import ModelCard
+# Create a ModelCard
+card = ModelCard(
+    name="Pitch Shifter",
+    description="A pitch shifting example for HARP.",
+    author="Hugo Flores Garcia",
+    tags=["example", "pitch shift"]
+)
+```
+
+## Create a Gradio Interface
+
+Now, we'll create a Gradio interface for our processing function, connecting the input and output widgets to the function, and making our processing code accessible via a Gradio // HARP endpoint. 
+
+To achieve this, we'll create a list of Gradio input widgets, as well as an audio output widget, then use the `build_endpoint` function from PyHARP to create a Gradio interface for our processing function. 
+
+```python
+# Build the endpoint
+with gr.Blocks() as demo:
+
+    # Define your Gradio interface
+    inputs = [
+        gr.Audio(
+            label="Audio Input", 
+            type="filepath"
+        ), # make sure to have an audio input with type="filepath"!
+        gr.Slider(
+            minimum=-24, 
+            maximum=24, 
+            step=1, 
+            value=7, 
+            label="Pitch Shift (semitones)"
+        ),
+    ]
+    
+    # make an output audio widget
+    output = gr.Audio(label="Audio Output", type="filepath")
+
+    # Build the endpoint
+    ctrls_data, ctrls_button, process_button = build_endpoint(inputs, output, process_fn, card)
+
+demo.launch(share=True)
+```
+
+## Run the app
+
+Now, we can run our app and test it out. 
+
+```bash
+python examples/pitch_shifter/pitch_shifter.py
+```
+
+This will create a local Gradio endpoint on `http://localhost:<PORT>`, as well as a forwarded gradio endpoint, with a format like `https://<RANDOM_ID>.gradio.live/`. You can copy that link and enter it in your HARP plugin to use your app in your DAW. 
+
+
+Note that automatically generated Gradio endpoints are only available for 72 hours. If you'd like to keep your endpoint alive and share it with other users, you can easily create a [HuggingFace Space](https://huggingface.co/docs/hub/spaces-overview) to host your HARP app indefinitely, or alternatively, host your gradio app using other hosting services.  
+
