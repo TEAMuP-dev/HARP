@@ -4,11 +4,8 @@ from pyharp import ModelCard, build_endpoint
 
 # Define the process function
 def process_fn(input_audio, pitch_shift_amount):
-    try: 
-        from audiotools import AudioSignal
-    except ImportError:
-        raise ImportError("Please install audiotools to use this example. Run `pip install descript-audiotools`.")
-
+    from audiotools import AudioSignal
+    
     sig = AudioSignal(input_audio)
     sig.pitch_shift(pitch_shift_amount)
 
