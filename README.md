@@ -2,7 +2,7 @@
 An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from the DAW through Gradio endpoints.
 
 ## TODOs
-- [ ] make an instructional readme for pyharp
+- [x] make an instructional readme for pyharp
 - [ ] vampnet example that can handle audio longer than 10s
 - [ ] textbox example
 - [ ] make the UI just a little nicer. 
@@ -11,13 +11,23 @@ An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**roc
 - [ ] add cmake logic for building w/ pyinstaller on windows
 
 
+# Download HARP
+
+TODO
+
+# Making a HARP App.
+
+You don't need to build HARP from source to use HARP apps in your DAW. 
+You can download pre-built HARP apps from the [HARP releases page] (TODO). 
+
+You can write your audio processing code in python using the [pyHARP](https://github.com/audacitorch/pyharp) library.
+
 # Building
 
 clone the plugin_sandbox repo
 ```
 git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git
 ```
-
 
 
 ## Mac OS
