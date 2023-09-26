@@ -42,10 +42,6 @@ AudioModification::AudioModification(
 }
 
 
-bool AudioModification::isDimmed() const { return dimmed; }
-
-void AudioModification::setDimmed(bool shouldDim) { dimmed = shouldDim; }
-
 bool AudioModification::isThumbCreated() const { return mThumbCreated; }
 
 void AudioModification::setThumbCreated(bool created) {

@@ -40,11 +40,6 @@
 // using MyType = void (TensorJuceProcessorEditor::*)(std::string);
 using std::unique_ptr;
 
-// TODO: Documentation for readPlaybackRangeIntoBuffer.
-std::optional<juce::Range<juce::int64>> readPlaybackRangeIntoBuffer(
-    juce::Range<double> playbackRange, const juce::ARAPlaybackRegion *playbackRegion,
-    juce::AudioBuffer<float> &buffer,
-    const std::function<juce::AudioFormatReader *(juce::ARAAudioSource *)> &getReader);
 
 /**
  * @class EditorRenderer

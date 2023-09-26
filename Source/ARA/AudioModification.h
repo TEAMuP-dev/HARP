@@ -40,8 +40,7 @@ public:
   AudioModification(juce::ARAAudioSource *audioSource,
                     ARA::ARAAudioModificationHostRef hostRef,
                     const juce::ARAAudioModification *optionalModificationToClone);
-  bool isDimmed() const;
-  void setDimmed(bool shouldDim);
+
   void setThumbCreated(bool created);
   bool isThumbCreated() const;
   std::string getSourceName();
@@ -52,7 +51,6 @@ public:
   bool getIsModified();
 
 private:
-  bool dimmed = false;
   bool mIsModified = false;
   bool mThumbCreated = false;
 

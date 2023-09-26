@@ -42,8 +42,9 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   if (documentView != nullptr) {
     addAndMakeVisible(documentView.get());
   }
+  juce::LookAndFeel::setDefaultLookAndFeel (&mHARPLookAndFeel);
 
-  setLookAndFeel(&mHARPLookAndFeel);
+  // setLookAndFeel(&mHARPLookAndFeel);
 
   // initialize load and process buttons
   processButton.setButtonText("process");
@@ -151,7 +152,7 @@ void TensorJuceProcessorEditor::resized() {
     auto area = getLocalBounds();
     auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
-    auto mainAreaHeight = int(area.getHeight() * 0.80);  // 85% of total height
+    auto mainAreaHeight = int(area.getHeight() * 0.75);  // 85% of total height
     auto docViewHeight = area.getHeight() - mainAreaHeight;  // 15% of total height
     
     auto mainArea = area.removeFromTop(mainAreaHeight);

@@ -73,7 +73,7 @@ void PlaybackRegionView::mouseDoubleClick(const juce::MouseEvent &) {
   // Set the dim flag on our region's audio modification when double-clicked
   auto audioModification =
       playbackRegion.getAudioModification<AudioModification>();
-  audioModification->setDimmed(!audioModification->isDimmed());
+  // audioModification->setDimmed(!audioModification->isDimmed());
 
   // Send a content change notification for the modification and all associated
   // playback regions
@@ -119,12 +119,10 @@ void PlaybackRegionView::onNewSelection(const ARAViewSelection &viewSelection) {
 
 void PlaybackRegionView::paint(juce::Graphics &g) {
   g.fillAll(convertOptionalARAColour(playbackRegion.getEffectiveColor(),
-                                     Colours::black));
+                                     juce::Colour(juce::ResizableWindow::backgroundColourId)));
 
-  const auto *audioModification =
-      playbackRegion.getAudioModification<AudioModification>();
-  g.setColour(audioModification->isDimmed() ? Colours::whitesmoke.darker()
-                                            : Colours::whitesmoke.brighter());
+  const auto *audioModification = playbackRegion.getAudioModification<AudioModification>();
+  g.setColour(Colours::whitesmoke.brighter());
 
   if (audioModification->getAudioSource()->isSampleAccessEnabled()) {
     auto &thumbnail = waveformCache.getOrCreateThumbnail(
@@ -145,10 +143,8 @@ void PlaybackRegionView::paint(juce::Graphics &g) {
   g.drawText(convertOptionalARAString(playbackRegion.getEffectiveName()),
              getLocalBounds(), Justification::topLeft);
 
-  if (audioModification->isDimmed())
-    g.drawText("using libtorch", getLocalBounds(), Justification::bottomLeft);
-
-  g.setColour(isSelected ? Colours::white : Colours::black);
+  g.setColour(
+    juce::Colour(juce::ResizableWindow::backgroundColourId));
   g.drawRect(getLocalBounds());
 }
 

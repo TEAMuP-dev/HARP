@@ -83,11 +83,11 @@ protected:
    */
   ARAPlaybackRenderer *doCreatePlaybackRenderer() noexcept override;
 
-  /**
-   * @brief Creates an editor renderer.
-   * @return A new EditorRenderer instance.
-   */
-  EditorRenderer *doCreateEditorRenderer() noexcept override;
+  // /**
+  //  * @brief Creates an editor renderer.
+  //  * @return A new EditorRenderer instance.
+  //  */
+  // EditorRenderer *doCreateEditorRenderer() noexcept override;
 
   /**
    * @brief Creates an editor view.

@@ -28,71 +28,7 @@
 
 #include "EditorRenderer.h"
 
-std::optional<juce::Range<juce::int64>> readPlaybackRangeIntoBuffer(
-    juce::Range<double> playbackRange, const juce::ARAPlaybackRegion *playbackRegion,
-    juce::AudioBuffer<float> &buffer,
-    const std::function<juce::AudioFormatReader *(juce::ARAAudioSource *)> &getReader) {
-  const auto rangeInAudioModificationTime =
-      playbackRange - playbackRegion->getStartInPlaybackTime() +
-      playbackRegion->getStartInAudioModificationTime();
 
-  const auto audioModification =
-      playbackRegion->getAudioModification<AudioModification>();
-  const auto audioSource = audioModification->getAudioSource();
-  const auto audioModificationSampleRate = audioSource->getSampleRate();
-
-  const juce::Range<int64_t> sampleRangeInAudioModification{
-      ARA::roundSamplePosition(rangeInAudioModificationTime.getStart() *
-                               audioModificationSampleRate),
-      ARA::roundSamplePosition(rangeInAudioModificationTime.getEnd() *
-                               audioModificationSampleRate) -
-          1};
-
-  const auto inputOffset = juce::jlimit((int64_t)0, audioSource->getSampleCount(),
-                                  sampleRangeInAudioModification.getStart());
-
-  // With the output offset it can always be said of the output buffer, that the
-  // zeroth element corresponds to beginning of the playbackRange.
-  const auto outputOffset =
-      std::max(-sampleRangeInAudioModification.getStart(), (int64_t)0);
-
-  /* TODO: Handle different AudioSource and playback sample rates.
-
-     The conversion should be done inside a specialized AudioFormatReader so
-     that we could use playbackSampleRate everywhere in this function and we
-     could still read `readLength` number of samples from the source.
-
-     The current implementation will be incorrect when sampling rates differ.
-  */
-  const auto readLength = [&] {
-    const auto sourceReadLength =
-        std::min(sampleRangeInAudioModification.getEnd(),
-                 audioSource->getSampleCount()) -
-        inputOffset;
-
-    const auto outputReadLength = std::min(outputOffset + sourceReadLength,
-                                           (int64_t)buffer.getNumSamples()) -
-                                  outputOffset;
-
-    return std::min(sourceReadLength, outputReadLength);
-  }();
-
-  if (readLength == 0)
-    return juce::Range<juce::int64>();
-
-  auto *reader = getReader(audioSource);
-
-  if (reader != nullptr &&
-      reader->read(&buffer, (int)outputOffset, (int)readLength, inputOffset,
-                   true, true)) {
-    if (audioModification->isDimmed())
-      buffer.applyGain((int)outputOffset, (int)readLength, 0.25f);
-
-    return juce::Range<juce::int64>::withStartAndLength(outputOffset, readLength);
-  }
-
-  return {};
-}
 
 EditorRenderer::EditorRenderer(
     ARA::PlugIn::DocumentController *documentController,
@@ -159,91 +95,10 @@ void EditorRenderer::reset() { previewBuffer->clear(); }
 bool EditorRenderer::processBlock(
     juce::AudioBuffer<float> &buffer, juce::AudioProcessor::Realtime realtime,
     const juce::AudioPlayHead::PositionInfo &positionInfo) noexcept {
-
+    
+  ignoreUnused(buffer, realtime, positionInfo);
   ignoreUnused(realtime);
 
-  const auto lock = lockInterface.getProcessingLock();
-
-  if (!lock.isLocked())
-    return true;
-
-  return asyncConfigCallback.withLock([&](bool locked) {
-    if (!locked)
-      return true;
-
-    const auto fadeOutIfNecessary = [this, &buffer] {
-      if (std::exchange(wasPreviewing, false)) {
-        previewLooper.writeInto(buffer);
-        const auto fadeOutStart = std::max(0, buffer.getNumSamples() - 50);
-        buffer.applyGainRamp(fadeOutStart,
-                             buffer.getNumSamples() - fadeOutStart, 1.0f, 0.0f);
-      }
-    };
-
-    if (positionInfo.getIsPlaying()) {
-      fadeOutIfNecessary();
-      return true;
-    }
-
-    if (const auto previewedRegion = previewState->previewedRegion.load()) {
-      const auto regionIsAssignedToEditor = [&]() {
-        bool regionIsAssigned = false;
-
-        forEachPlaybackRegion(
-            [&previewedRegion, &regionIsAssigned](const auto &region) {
-              if (region == previewedRegion) {
-                regionIsAssigned = true;
-                return false;
-              }
-
-              return true;
-            });
-
-        return regionIsAssigned;
-      }();
-
-      if (regionIsAssignedToEditor) {
-        const auto previewTime = previewState->previewTime.load();
-        const auto previewDimmed =
-            previewedRegion->getAudioModification<AudioModification>()
-                ->isDimmed();
-
-        if (lastPreviewTime != previewTime ||
-            lastPlaybackRegion != previewedRegion ||
-            lastPreviewDimmed != previewDimmed) {
-          juce::Range<double> previewRangeInPlaybackTime{previewTime - 0.5,
-                                                   previewTime + 0.5};
-
-          previewBuffer->clear();
-          const auto rangeInOutput = readPlaybackRangeIntoBuffer(
-              previewRangeInPlaybackTime, previewedRegion,
-              *previewBuffer, [this](auto *source) -> auto * {
-                const auto iter = audioSourceReaders.find(source);
-                return iter != audioSourceReaders.end() ? iter->second.get()
-                                                        : nullptr;
-              });
-
-          if (rangeInOutput) {
-            lastPreviewTime = previewTime;
-            lastPlaybackRegion = previewedRegion;
-            lastPreviewDimmed = previewDimmed;
-            previewLooper = Looper(previewBuffer.get(), *rangeInOutput);
-          }
-        } else {
-          previewLooper.writeInto(buffer);
-
-          if (!std::exchange(wasPreviewing, true)) {
-            const auto fadeInLength = std::min(50, buffer.getNumSamples());
-            buffer.applyGainRamp(0, fadeInLength, 0.0f, 1.0f);
-          }
-        }
-      }
-    } else {
-      fadeOutIfNecessary();
-    }
-
-    return true;
-  });
 }
 
 void EditorRenderer::configure() {

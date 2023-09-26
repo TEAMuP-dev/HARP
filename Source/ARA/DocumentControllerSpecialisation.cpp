@@ -79,9 +79,6 @@ void TensorJuceDocumentControllerSpecialisation::run() {
     DBG("Progress: " << pr);
   }
   
-  // Alternatively we could use Editor renderer 
-  // which has access to all playbackRegions and regionSequences.
-  // editorRenderer->executeProcess(params);
 
   // Dismiss the modal window when processing is complete
   // processingWindow->exitModalState();
@@ -138,13 +135,13 @@ ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
 }
 
 // TODO : why not use ARAEditorRenderer like above ? (ARAPlaybackRenderer)
-EditorRenderer *
-TensorJuceDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
-  // return new EditorRenderer(getDocumentController(), &previewState, *this);
-  EditorRenderer* newEditorRenderer = new EditorRenderer(getDocumentController(), &previewState, *this);
-  editorRenderer = newEditorRenderer;
-  return newEditorRenderer;
-}
+// EditorRenderer *
+// TensorJuceDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
+//   // return new EditorRenderer(getDocumentController(), &previewState, *this);
+//   EditorRenderer* newEditorRenderer = new EditorRenderer(getDocumentController(), &previewState, *this);
+//   editorRenderer = newEditorRenderer;
+//   return newEditorRenderer;
+// }
 
 // Use ARAEditorView instead of EditorView because DocumentView expects just that. 
 // TODO : change the type in DocumentView
@@ -171,7 +168,6 @@ bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
 
     // Read audio modification persistent ID and analysis result from archive
     const String persistentID = input.readString();
-    const bool dimmed = input.readBool();
 
     // Find audio modification to restore the state to (drop state if not to be
     // loaded)
@@ -182,12 +178,9 @@ bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
     if (audioModification == nullptr)
       continue;
 
-    const bool dimChanged = (dimmed != audioModification->isDimmed());
-    audioModification->setDimmed(dimmed);
-
     // If the dim state changed, send a sample content change notification
     // without notifying the host
-    if (dimChanged) {
+    if (audioModification->getIsModified()) {
       audioModification->notifyContentChanged(
           ARAContentUpdateScopes::samplesAreAffected(), false);
 
@@ -228,13 +221,6 @@ bool TensorJuceDocumentControllerSpecialisation::doStoreObjectsToStream(
   // For each audio modification to persist, persist its ID followed by whether
   // it's dimmed
   for (size_t i = 0; i < numAudioModifications; ++i) {
-    // Write persistent ID and dim state
-    if (!output.writeString(audioModificationsToPersist[i]->getPersistentID()))
-      return false;
-
-    if (!output.writeBool(audioModificationsToPersist[i]->isDimmed()))
-      return false;
-
     const auto progressVal = (float)i / (float)numAudioModifications;
     reportProgress(progressVal);
   }
