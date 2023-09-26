@@ -32,6 +32,7 @@
 #include "PlaybackRenderer.h"
 #include "EditorView.h"
 #include "AudioModification.h"  
+#include "../UI/LookAndFeel.h"
 
 #include "DocumentControllerSpecialisation.h"
 
@@ -82,8 +83,8 @@ private:
 
 private:
 
-  ButtonLookAndFeel buttonLookAndFeel;
-  ComboBoxLookAndFeel comboBoxLookAndFeel;
+  HARPLookAndFeel mHARPLookAndFeel;
+
 
   unique_ptr<Component> documentView;
   juce::TextEditor modelPathTextBox;

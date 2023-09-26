@@ -30,7 +30,8 @@
 class TensorJuceAudioProcessorImpl : public AudioProcessor,
                                      public AudioProcessorARAExtension {
 public:
-  TensorJuceAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {}
+  TensorJuceAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {
+  }
   ~TensorJuceAudioProcessorImpl() override = default;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;

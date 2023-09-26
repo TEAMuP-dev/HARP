@@ -43,13 +43,13 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
     addAndMakeVisible(documentView.get());
   }
 
+  setLookAndFeel(&mHARPLookAndFeel);
+
   // initialize load and process buttons
-  processButton.setLookAndFeel(&buttonLookAndFeel);
   processButton.setButtonText("process");
   processButton.addListener(this);
   addAndMakeVisible(processButton);
 
-  loadModelButton.setLookAndFeel(&buttonLookAndFeel);
   loadModelButton.setButtonText("Load model");
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);

@@ -42,8 +42,6 @@ set(SourceFiles
     Source/UI/RulersHeader.cpp
     Source/UI/RulersView.h
     Source/UI/RulersView.cpp
-    Source/UI/ToolBarStyle.h
-    Source/UI/ToolBarStyle.cpp
 
     Source/Util/PreviewState.h
 )

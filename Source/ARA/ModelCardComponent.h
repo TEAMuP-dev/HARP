@@ -1,6 +1,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "../DeepLearning/Model.h"
 
+
 class ModelCardComponent : public juce::Component
 {
 public:

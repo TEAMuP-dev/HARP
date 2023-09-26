@@ -1,6 +1,5 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "../UI/DocumentView.h"
-#include "../UI/ToolBarStyle.h"
 #include "../UI/CustomComponents.h"
 
 #include "EditorView.h"
