@@ -75,15 +75,27 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   addAndMakeVisible(ctrlComponent);
   ctrlComponent.populateGui();
 
+  addAndMakeVisible(nameLabel);
+  addAndMakeVisible(authorLabel);
+  addAndMakeVisible(descriptionLabel);
+  addAndMakeVisible(tagsLabel);
+
   // model card component
   // Get the modelCard from the EditorView
-  addAndMakeVisible(modelCardComponent); // TODO check when to do that
-  modelCardComponent.setModelCard(mEditorView->getModel()->card());
+  auto &card = mEditorView->getModel()->card();
+  setModelCard(card);
 
   // ARA requires that plugin editors are resizable to support tight integration
   // into the host UI
   setResizable(true, false);
-  setSize(800, 300);
+  setSize(800, 500);
+}
+
+void TensorJuceProcessorEditor::setModelCard(const ModelCard& card) {
+  // Set the text for the labels
+  nameLabel.setText(juce::String(card.name), juce::dontSendNotification);
+  descriptionLabel.setText(juce::String(card.description), juce::dontSendNotification);
+  authorLabel.setText("by " + juce::String(card.author), juce::dontSendNotification);
 }
 
 void TensorJuceProcessorEditor::buttonClicked(Button *button) {
@@ -107,7 +119,7 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
 
     // Model loading happens synchronously, so we can be sure that
     // the Editor View has the model card and UI attributes loaded
-    modelCardComponent.setModelCard(mEditorView->getModel()->card());
+    setModelCard(mEditorView->getModel()->card());
     ctrlComponent.setModel(mEditorView->getModel());
     ctrlComponent.populateGui();
     resized();
@@ -137,54 +149,43 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 
 void TensorJuceProcessorEditor::resized() {
     auto area = getLocalBounds();
-    auto topArea = area.removeFromTop(area.getHeight() * 0.4);  // We'll keep the topArea for the vertical layout
+    auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
+    auto mainAreaHeight = int(area.getHeight() * 0.80);  // 85% of total height
+    auto docViewHeight = area.getHeight() - mainAreaHeight;  // 15% of total height
     
-    // Horizontal FlexBox for the top area
-    juce::FlexBox fbTop;
-    fbTop.flexDirection = juce::FlexBox::Direction::row;
-    fbTop.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    fbTop.alignItems = juce::FlexBox::AlignItems::center;
-    
-    // Adding items to the top FlexBox
-    fbTop.items.add(juce::FlexItem(loadModelButton).withFlex(0).withWidth(100).withHeight(30));  // Fixed width
-    fbTop.items.add(juce::FlexItem(modelPathTextBox).withFlex(1).withHeight(30));  // Takes up remaining space
-    
-    // Horizontal FlexBox for the main area
-    juce::FlexBox fbMain;
-    fbMain.flexDirection = juce::FlexBox::Direction::row;
-    fbMain.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    fbMain.alignItems = juce::FlexBox::AlignItems::stretch;
-    
-    // Adding items to the main FlexBox
-    fbMain.items.add(juce::FlexItem(modelCardComponent).withFlex(0.4f));  // 40% width
-    fbMain.items.add(juce::FlexItem(ctrlComponent).withFlex(0.6f));  // 60% width
-    
-    // Vertical FlexBox for overall layout
-    juce::FlexBox fbOverall;
-    fbOverall.flexDirection = juce::FlexBox::Direction::column;
-    fbOverall.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    fbOverall.alignItems = juce::FlexBox::AlignItems::stretch;
-    
-    // Horizontal FlexBox for the bottom area
-    juce::FlexBox fbBottom;
-    fbBottom.flexDirection = juce::FlexBox::Direction::row;
-    fbBottom.justifyContent = juce::FlexBox::JustifyContent::flexEnd;  // Aligns items to the right
-    fbBottom.alignItems = juce::FlexBox::AlignItems::center;
-    
-    // Adding the processButton to the bottom FlexBox
-    fbBottom.items.add(juce::FlexItem(processButton).withFlex(0).withWidth(100).withHeight(30));  // Fixed width and height
+    auto mainArea = area.removeFromTop(mainAreaHeight);
+    auto documentViewArea = area;  // what remains is the 15% area for documentView
 
-    // Adding items to the overall FlexBox
-    fbOverall.items.add(juce::FlexItem(fbTop).withFlex(0).withHeight(20));  // Fixed height
-    fbOverall.items.add(juce::FlexItem(fbMain).withFlex(1));  // Takes up remaining vertical space
-    fbOverall.items.add(juce::FlexItem(fbBottom).withFlex(0).withHeight(30));  // Fixed height
+    // Row 1: Model Path TextBox and Load Model Button
+    auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
+    modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
+    loadModelButton.setBounds(row1.reduced(margin));
+
+    // Row 2: Name and Author Labels
+    auto row2 = mainArea.removeFromTop(40);  // adjust height as needed
+    nameLabel.setBounds(row2.removeFromLeft(row2.getWidth() / 2).reduced(margin));
+    nameLabel.setFont(Font(16.0f, Font::bold));
+    authorLabel.setBounds(row2.reduced(margin));
+    authorLabel.setFont(Font(10.0f));
+
+    // Row 3: Description Label
+    auto row3 = mainArea.removeFromTop(60);  // adjust height as needed
+    descriptionLabel.setBounds(row3.reduced(margin));
+
+    // Row 5: Process Button (taken out in advance to preserve its height)
+    auto row5Height = 40;  // adjust height as needed
+    auto row5 = mainArea.removeFromBottom(row5Height);
     
-    // Performing the layout
-    fbOverall.performLayout(topArea);
-    
+    // Row 4: CtrlComponent (flexible height)
+    auto row4 = mainArea;  // the remaining area is for row 4
+    ctrlComponent.setBounds(row4.reduced(margin));
+
+    // Assign bounds to processButton
+    processButton.setBounds(row5.withSizeKeepingCentre(100, 30));  // centering the button in the row
+
+    // DocumentView layout
     if (documentView != nullptr) {
-        documentView->setBounds(area);  // This should set the bounds correctly
+        documentView->setBounds(documentViewArea);  // This should set the bounds correctly
     }
 }
-

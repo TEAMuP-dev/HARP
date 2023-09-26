@@ -34,9 +34,9 @@ DocumentView::DocumentView(EditorView &editorView,
   if (araDocument.getMusicalContexts().size() > 0)
     selectMusicalContext(araDocument.getMusicalContexts().front());
 
-  addAndMakeVisible(rulersHeader);
+  // addAndMakeVisible(rulersHeader);
 
-  viewport.content.addAndMakeVisible(rulersView);
+  // viewport.content.addAndMakeVisible(rulersView);
 
   viewport.onVisibleAreaChanged = [this](const auto &r) {
     viewportHeightOffset = r.getY();
@@ -145,9 +145,9 @@ void DocumentView::resized() {
   fb.items.add(FlexItem(zoomControls).withMinWidth(80.0f));
   fb.performLayout(bounds.removeFromBottom(40));
 
-  auto headerBounds = bounds.removeFromLeft(headerWidth);
-  rulersHeader.setBounds(headerBounds.removeFromTop(trackHeight));
-  layOutVertically(headerBounds, trackHeaders, viewportHeightOffset);
+  // auto headerBounds = bounds.removeFromLeft(headerWidth);
+  // rulersHeader.setBounds(headerBounds.removeFromTop(trackHeight));
+  // layOutVertically(headerBounds, trackHeaders, viewportHeightOffset);
 
   viewport.setBounds(bounds);
   overlay.setBounds(bounds.reduced(1));

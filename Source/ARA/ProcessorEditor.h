@@ -77,9 +77,13 @@ public:
 private:
   void resetUI(){
     ctrlComponent.resetUI();
-    // Also clear the model card component
-    modelCardComponent.clear();
+    // Also clear the model card components
+    ModelCard empty;
+    setModelCard(empty);
+
   }
+
+  void setModelCard(const ModelCard& card);
 
 private:
 
@@ -92,7 +96,8 @@ private:
   juce::TextButton processButton;
 
   CtrlComponent ctrlComponent;
-  ModelCardComponent modelCardComponent;
+  // model card
+  juce::Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
 
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;

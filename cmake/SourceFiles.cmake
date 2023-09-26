@@ -14,10 +14,8 @@ set(SourceFiles
     Source/ARA/ProcessorEditor.h
     Source/ARA/ProcessorEditor.cpp
     Source/ARA/EditorView.h
-    # Source/ARA/EditorView.cpp
 
     Source/ARA/CtrlComponent.h
-    Source/ARA/ModelCardComponent.h
 
     Source/DeepLearning/Model.h
     Source/DeepLearning/Wave2Wave.h
