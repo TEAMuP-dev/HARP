@@ -37,7 +37,7 @@
 #include "DocumentControllerSpecialisation.h"
 
 #include "CtrlComponent.h"
-#include "ModelCardComponent.h"
+// #include "ModelCardComponent.h"
 
 /**
  * @class TensorJuceProcessorEditor

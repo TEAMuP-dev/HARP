@@ -69,6 +69,7 @@ public:
             slider.setName(sliderCtrl->id.toString());
             slider.setRange(sliderCtrl->minimum, sliderCtrl->maximum, sliderCtrl->step);
             slider.setValue(sliderCtrl->value);
+            slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
             slider.addListener(this);
             addAndMakeVisible(*sliderWithLabel);
             sliders.push_back(std::move(sliderWithLabel));
