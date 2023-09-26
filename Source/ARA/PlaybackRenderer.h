@@ -39,6 +39,21 @@
 using namespace juce;
 using std::unique_ptr;
 
+// class SampleRange : public Range<int64>
+// {
+// public:
+//     using Range<int64>::Range; // Inherit constructors from the base class
+
+//     // Constructor to create a ScalableRange from a Range
+//     ScalableRange(const Range<int64>& range) noexcept : Range<int64>(range) {}
+//     // Scale the range by a <double> factor
+//     ScalableRange operator*(const double factor) const noexcept
+//     {
+//         return ScalableRange(roundToInt(this->getStart() * factor), 
+//                             roundToInt(this->getEnd() * factor));
+//     }
+// };
+
 /**
  * @class PlaybackRenderer
  * @brief Class responsible for rendering playback.
@@ -108,7 +123,7 @@ private:
   std::map<ARAAudioSource *, unique_ptr<AudioFormatReaderSource>>
       positionableSources;
   int numChannels = 2;
-  double sampleRate = 48000.0;
+  double DAWSampleRate;
   int maximumSamplesPerBlock = 128;
   unique_ptr<AudioBuffer<float>> tempBuffer;
 };
