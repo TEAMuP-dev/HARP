@@ -1,15 +1,6 @@
 # HARP
 An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from the DAW through Gradio endpoints.
 
-## TODOs
-- [x] make an instructional readme for pyharp
-- [ ] vampnet example that can handle audio longer than 10s
-- [ ] textbox example
-- [ ] make the UI just a little nicer. 
-- [ ] make a hero figure for the paper
-- [ ] write technical appendix for the paper
-- [ ] add cmake logic for building w/ pyinstaller on windows
-
 
 # Download HARP
 
