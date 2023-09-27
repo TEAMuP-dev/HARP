@@ -48,7 +48,7 @@ public:
   void process(std::shared_ptr<WebWave2Wave> model);
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
-  bool getIsModified();
+  bool getIsModified() const;
 
 private:
   bool mIsModified = false;

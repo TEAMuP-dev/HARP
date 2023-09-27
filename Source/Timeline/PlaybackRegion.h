@@ -23,6 +23,7 @@
 #include "../ARA/EditorView.h"
 #include "../ARA/DocumentControllerSpecialisation.h"
 #include "../WaveformCache/WaveformCache.h"
+#include "../UI/LookAndFeel.h"
 
 #include <JuceHeader.h>
 
@@ -105,4 +106,5 @@ private:
   PreviewRegionOverlay previewRegionOverlay;
   juce::AudioBuffer<float> *mDeepAudio;
   bool isSelected = false;
+  HARPLookAndFeel mHARPLookAndFeel;
 };

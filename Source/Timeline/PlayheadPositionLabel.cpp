@@ -110,7 +110,7 @@ void PlayheadPositionLabel::timerCallback() {
         text += "chord ";
         text += String(interpreter.getNameForChord(*it));
       } else {
-        text += "(no chords provided)";
+        // text += "(no chords provided)";
       }
     }
   }

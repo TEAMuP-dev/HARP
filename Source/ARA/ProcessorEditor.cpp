@@ -152,10 +152,9 @@ void TensorJuceProcessorEditor::resized() {
     auto area = getLocalBounds();
     auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
-    auto mainAreaHeight = int(area.getHeight() * 0.75);  // 85% of total height
-    auto docViewHeight = area.getHeight() - mainAreaHeight;  // 15% of total height
+    auto docViewHeight = 125;  
     
-    auto mainArea = area.removeFromTop(mainAreaHeight);
+    auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
     auto documentViewArea = area;  // what remains is the 15% area for documentView
 
     // Row 1: Model Path TextBox and Load Model Button
@@ -166,16 +165,20 @@ void TensorJuceProcessorEditor::resized() {
     // Row 2: Name and Author Labels
     auto row2 = mainArea.removeFromTop(40);  // adjust height as needed
     nameLabel.setBounds(row2.removeFromLeft(row2.getWidth() / 2).reduced(margin));
-    nameLabel.setFont(Font(16.0f, Font::bold));
-    authorLabel.setBounds(row2.reduced(margin));
+    nameLabel.setFont(Font(20.0f, Font::bold));
+    nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
+
+    auto row25 = mainArea.removeFromTop(30);
+    authorLabel.setBounds(row25.reduced(margin));
     authorLabel.setFont(Font(10.0f));
 
+
     // Row 3: Description Label
-    auto row3 = mainArea.removeFromTop(60);  // adjust height as needed
+    auto row3 = mainArea.removeFromTop(80);  // adjust height as needed
     descriptionLabel.setBounds(row3.reduced(margin));
 
     // Row 5: Process Button (taken out in advance to preserve its height)
-    auto row5Height = 40;  // adjust height as needed
+    auto row5Height = 25;  // adjust height as needed
     auto row5 = mainArea.removeFromBottom(row5Height);
     
     // Row 4: CtrlComponent (flexible height)
@@ -183,7 +186,7 @@ void TensorJuceProcessorEditor::resized() {
     ctrlComponent.setBounds(row4.reduced(margin));
 
     // Assign bounds to processButton
-    processButton.setBounds(row5.withSizeKeepingCentre(100, 30));  // centering the button in the row
+    processButton.setBounds(row5.withSizeKeepingCentre(100, 20));  // centering the button in the row
 
     // DocumentView layout
     if (documentView != nullptr) {

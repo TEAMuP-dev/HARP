@@ -122,7 +122,13 @@ void PlaybackRegionView::paint(juce::Graphics &g) {
                                      juce::Colour(juce::ResizableWindow::backgroundColourId)));
 
   const auto *audioModification = playbackRegion.getAudioModification<AudioModification>();
-  g.setColour(Colours::whitesmoke.brighter());
+  juce::Colour waveColour;
+  if (audioModification->getIsModified()){
+    waveColour = mHARPLookAndFeel.highlightColor;
+  } else {
+    waveColour = Colours::white.withMultipliedAlpha(0.9f);
+  }
+  g.setColour(waveColour);
 
   if (audioModification->getAudioSource()->isSampleAccessEnabled()) {
     auto &thumbnail = waveformCache.getOrCreateThumbnail(
@@ -138,10 +144,13 @@ void PlaybackRegionView::paint(juce::Graphics &g) {
                Justification::centred);
   }
 
-  g.setColour(Colours::white.withMultipliedAlpha(0.9f));
+
+  g.setColour(mHARPLookAndFeel.platinum);
   g.setFont(Font(12.0f));
   g.drawText(convertOptionalARAString(playbackRegion.getEffectiveName()),
              getLocalBounds(), Justification::topLeft);
+
+
 
   g.setColour(
     juce::Colour(juce::ResizableWindow::backgroundColourId));

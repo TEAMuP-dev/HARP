@@ -95,4 +95,4 @@ juce::AudioBuffer<float> *AudioModification::getModifiedAudioBuffer() {
   return mAudioBuffer.get();
 }
 
-bool AudioModification::getIsModified() { return mIsModified; }
+bool AudioModification::getIsModified() const { return mIsModified; }
