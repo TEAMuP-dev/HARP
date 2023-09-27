@@ -124,7 +124,7 @@ void PlaybackRegionView::paint(juce::Graphics &g) {
   const auto *audioModification = playbackRegion.getAudioModification<AudioModification>();
   juce::Colour waveColour;
   if (audioModification->getIsModified()){
-    waveColour = mHARPLookAndFeel.highlightColor;
+    waveColour = mHARPLookAndFeel.textHeaderColor;
   } else {
     waveColour = Colours::white.withMultipliedAlpha(0.9f);
   }

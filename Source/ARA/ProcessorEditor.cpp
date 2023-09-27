@@ -152,7 +152,7 @@ void TensorJuceProcessorEditor::resized() {
     auto area = getLocalBounds();
     auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
-    auto docViewHeight = 125;  
+    auto docViewHeight = 100;  
     
     auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
     auto documentViewArea = area;  // what remains is the 15% area for documentView
