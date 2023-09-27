@@ -21,11 +21,11 @@
 
 #include "AudioProcessorImpl.h"
 #include "ProcessorEditor.h"
-class TensorJuceAudioProcessor : public TensorJuceAudioProcessorImpl {
+class HARPAudioProcessor : public HARPAudioProcessorImpl {
 public:
   bool hasEditor() const override { return true; }
   AudioProcessorEditor *createEditor() override {
-    return new TensorJuceProcessorEditor(
+    return new HARPProcessorEditor(
         *this, 
         dynamic_cast<EditorRenderer *>(getEditorRenderer()),
         dynamic_cast<PlaybackRenderer *>(getPlaybackRenderer()),

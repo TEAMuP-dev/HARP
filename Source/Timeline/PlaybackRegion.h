@@ -99,7 +99,7 @@ private:
     PlaybackRegionView &owner;
   };
 
-  TensorJuceDocumentControllerSpecialisation *getDocumentController() const;
+  HARPDocumentControllerSpecialisation *getDocumentController() const;
   EditorView &araEditorView;
   ARAPlaybackRegion &playbackRegion;
   WaveformCache &waveformCache;

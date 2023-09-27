@@ -27,8 +27,8 @@
 
 
 // The constructor. It is taking entry and instance as parameters and feeds them directly to the base class constructor.
-TensorJuceDocumentControllerSpecialisation::
-            TensorJuceDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+HARPDocumentControllerSpecialisation::
+            HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
             : ARADocumentControllerSpecialisation(entry, instance),
             // juce::Thread("executeProcessingThread")
@@ -43,9 +43,9 @@ TensorJuceDocumentControllerSpecialisation::
 }
 
 
-void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
+void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model
-    DBG("TensorJuceDocumentControllerSpecialisation::executeLoad");
+    DBG("HARPDocumentControllerSpecialisation::executeLoad");
     try {
         mModel->load(params);
     } catch (const std::runtime_error& e) {
@@ -55,10 +55,10 @@ void TensorJuceDocumentControllerSpecialisation::executeLoad(const map<string, a
             juce::String("An error occurred while loading the WebModel: ") + e.what()
         );
     }
-    DBG("TensorJuceDocumentControllerSpecialisation::executeLoad done");
+    DBG("HARPDocumentControllerSpecialisation::executeLoad done");
   }
 
-void TensorJuceDocumentControllerSpecialisation::run() {
+void HARPDocumentControllerSpecialisation::run() {
   // This function is called when the thread is started
   // Show the processing modal window
   // processingWindow = std::make_unique<juce::AlertWindow>(
@@ -84,7 +84,7 @@ void TensorJuceDocumentControllerSpecialisation::run() {
   // processingWindow->exitModalState();
 }
 
-void TensorJuceDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
+void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   // wait untill thread has stopped running
   if (!isThreadRunning()) {
     // start the thread
@@ -98,7 +98,7 @@ void TensorJuceDocumentControllerSpecialisation::executeProcess(std::shared_ptr<
   }
 }
 
-void 	TensorJuceDocumentControllerSpecialisation::threadComplete (bool userPressedCancel) {
+void 	HARPDocumentControllerSpecialisation::threadComplete (bool userPressedCancel) {
   // if the user didn't press cancel, then the thread has finished normally
   // and we can trigger the repainting of the playbackRegions to update the
   // processed waveform thumbnails
@@ -106,17 +106,17 @@ void 	TensorJuceDocumentControllerSpecialisation::threadComplete (bool userPress
     editorView->triggerRepaint();
   }
 }
-void TensorJuceDocumentControllerSpecialisation::willBeginEditing(
+void HARPDocumentControllerSpecialisation::willBeginEditing(
     ARADocument *) {
   processBlockLock.enterWrite();
 }
 
-void TensorJuceDocumentControllerSpecialisation::didEndEditing(ARADocument *) {
+void HARPDocumentControllerSpecialisation::didEndEditing(ARADocument *) {
   processBlockLock.exitWrite();
 }
 
 ARAAudioModification *
-TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
+HARPDocumentControllerSpecialisation::doCreateAudioModification(
     ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
     const ARAAudioModification *optionalModificationToClone) noexcept {
     
@@ -127,7 +127,7 @@ TensorJuceDocumentControllerSpecialisation::doCreateAudioModification(
     );
 }
 
-ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
+ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
   PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this);
   playbackRenderers.push_back(newPlaybackRenderer);
@@ -136,7 +136,7 @@ ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
 
 // TODO : why not use ARAEditorRenderer like above ? (ARAPlaybackRenderer)
 // EditorRenderer *
-// TensorJuceDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
+// HARPDocumentControllerSpecialisation::doCreateEditorRenderer() noexcept {
 //   // return new EditorRenderer(getDocumentController(), &previewState, *this);
 //   EditorRenderer* newEditorRenderer = new EditorRenderer(getDocumentController(), &previewState, *this);
 //   editorRenderer = newEditorRenderer;
@@ -146,14 +146,14 @@ ARAPlaybackRenderer *TensorJuceDocumentControllerSpecialisation::
 // Use ARAEditorView instead of EditorView because DocumentView expects just that. 
 // TODO : change the type in DocumentView
 EditorView *
-TensorJuceDocumentControllerSpecialisation::doCreateEditorView() noexcept {
+HARPDocumentControllerSpecialisation::doCreateEditorView() noexcept {
   EditorView* newEditorView = new EditorView(getDocumentController());
   editorView = newEditorView;//dynamic_cast<EditorView*>(newEditorView);
   editorView->setModel(mModel);
   return newEditorView;
 }
 
-bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
+bool HARPDocumentControllerSpecialisation::doRestoreObjectsFromStream(
     ARAInputStream &input, const ARARestoreObjectsFilter *filter) noexcept {
   // Start reading data from the archive, starting with the number of audio
   // modifications in the archive
@@ -198,7 +198,7 @@ bool TensorJuceDocumentControllerSpecialisation::doRestoreObjectsFromStream(
 }
 
 
-bool TensorJuceDocumentControllerSpecialisation::doStoreObjectsToStream(
+bool HARPDocumentControllerSpecialisation::doStoreObjectsToStream(
     ARAOutputStream &output, const ARAStoreObjectsFilter *filter) noexcept {
   // This example implementation only deals with audio modification states
   const auto &audioModificationsToPersist{
@@ -229,6 +229,6 @@ bool TensorJuceDocumentControllerSpecialisation::doStoreObjectsToStream(
 }
 
 ScopedTryReadLock
-TensorJuceDocumentControllerSpecialisation::getProcessingLock() {
+HARPDocumentControllerSpecialisation::getProcessingLock() {
   return ScopedTryReadLock{processBlockLock};
 }

@@ -1,5 +1,5 @@
 {
-    "title": "tensorjuce",
+    "title": "HARP",
     "window": {
       "position": {
         "x": 100,
@@ -12,7 +12,7 @@
     },
     "format": "UDZO",
     "contents": [
-      { "x": 250, "y": 405, "type": "file", "path": "dmg/tensorjuce.vst3" },
+      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARP.vst3" },
       { "x": 480, "y": 405, "type": "file", "path": "dmg/Your Mac's VST3 Folder" }
     ]
 }

@@ -40,31 +40,31 @@
 // #include "ModelCardComponent.h"
 
 /**
- * @class TensorJuceProcessorEditor
+ * @class HARPProcessorEditor
  * @brief Class responsible for managing the plugin's graphical interface.
  *
  * This class extends the base class AudioProcessorEditor and its ARA extension,
  * and implements Button::Listener, Slider::Listener, and ComboBox::Listener
  * interfaces.
  */
-class TensorJuceProcessorEditor : public AudioProcessorEditor,
+class HARPProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
                                   public Button::Listener
                                   {
 public:
   /**
-   * @brief Constructor for TensorJuceProcessorEditor.
+   * @brief Constructor for HARPProcessorEditor.
    *
-   * @param p Reference to TensorJuceAudioProcessorImpl object.
+   * @param p Reference to HARPAudioProcessorImpl object.
    * @param er Pointer to EditorRenderer object.
    */
-  explicit TensorJuceProcessorEditor(TensorJuceAudioProcessorImpl &p,
+  explicit HARPProcessorEditor(HARPAudioProcessorImpl &p,
                                      EditorRenderer *er,
                                      PlaybackRenderer *pr,
                                      EditorView *ev);
 
   // destructor
-  // ~TensorJuceProcessorEditor() override;
+  // ~HARPProcessorEditor() override;
   // Button listener method
   void buttonClicked(Button *button) override;
 
@@ -102,7 +102,7 @@ private:
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;
   EditorView *mEditorView;
-  TensorJuceDocumentControllerSpecialisation *mDocumentController;
+  HARPDocumentControllerSpecialisation *mDocumentController;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceProcessorEditor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HARPProcessorEditor)
 };

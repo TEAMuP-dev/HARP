@@ -24,15 +24,15 @@
 #include "../Timeline/PlayheadPositionLabel.h"
 
 /**
- * @class TensorJuceAudioProcessorImpl
+ * @class HARPAudioProcessorImpl
  * @brief A class that implements the audio processing for the plugin.
  */
-class TensorJuceAudioProcessorImpl : public AudioProcessor,
+class HARPAudioProcessorImpl : public AudioProcessor,
                                      public AudioProcessorARAExtension {
 public:
-  TensorJuceAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {
+  HARPAudioProcessorImpl() : AudioProcessor(getBusesProperties()) {
   }
-  ~TensorJuceAudioProcessorImpl() override = default;
+  ~HARPAudioProcessorImpl() override = default;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
   void releaseResources() override;
@@ -61,5 +61,5 @@ public:
 private:
   static BusesProperties getBusesProperties();
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TensorJuceAudioProcessorImpl)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HARPAudioProcessorImpl)
 };

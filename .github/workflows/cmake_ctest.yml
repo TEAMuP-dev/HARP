@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 # follow this: https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/
-name: tensorjuce
+name: HARP
 
 on:
   workflow_dispatch: # lets you run a build from the UI
@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROJECT_NAME: tensorjuce
+  PROJECT_NAME: HARP
   BUILD_TYPE: Debug
   BUILD_DIR: Builds
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,9 +169,9 @@ jobs:
     #     # Each plugin must be code signed
     #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
     #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}/Contents/MacOS/tensorjuce
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.tensorjuce.tensorjuce --force ${{ env.VST3_PATH }}
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.HARP.HARP --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.HARP.HARP --force ${{ env.VST3_PATH }}/Contents/MacOS/HARP
+    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.HARP.HARP --force ${{ env.VST3_PATH }}
         
 
     # - name: Add Custom Icons (macOS)
@@ -179,10 +179,10 @@ jobs:
     #   working-directory: ${{ env.BUILD_DIR }}
     #   run: |
     #     # add the icns as its own icon resource (meta!)
-    #     sips -i ../packaging/tensorjuce.icns
+    #     sips -i ../packaging/HARP.icns
 
     #     # Grab the resource, put in tempfile
-    #     DeRez -only icns ../packaging/tensorjuce.icns > /tmp/icons
+    #     DeRez -only icns ../packaging/HARP.icns > /tmp/icons
 
     #     # Stuff the resource into the strange Icon? file's resource fork
     #     Rez -a /tmp/icons -o ${{ env.VST3_PATH }}/Icon$'\r'

@@ -25,12 +25,12 @@
 
 //==============================================================================
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
-  return new TensorJuceAudioProcessor();
+  return new HARPAudioProcessor();
 }
 
 #if JucePlugin_Enable_ARA
 const ARA::ARAFactory *JUCE_CALLTYPE createARAFactory() {
   return juce::ARADocumentControllerSpecialisation::createARAFactory<
-      TensorJuceDocumentControllerSpecialisation>();
+      HARPDocumentControllerSpecialisation>();
 }
 #endif

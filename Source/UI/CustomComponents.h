@@ -2,7 +2,7 @@
 
 /**
  * @file
- * @brief Custom UI components for the TensorJucePlugin
+ * @brief Custom UI components for the HARPPlugin
  * @author xribene
  */
 

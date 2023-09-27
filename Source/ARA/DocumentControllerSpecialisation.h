@@ -32,11 +32,11 @@
 #include "../Util/PreviewState.h"
 
 /**
- * @class TensorJuceDocumentControllerSpecialisation
+ * @class HARPDocumentControllerSpecialisation
  * @brief Specialises ARA's document controller, with added functionality for
  * audio modifications, playback rendering, and editor rendering.
  */
-class TensorJuceDocumentControllerSpecialisation
+class HARPDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
       public juce::ThreadWithProgressWindow,
       public juce::ChangeBroadcaster,
@@ -48,7 +48,7 @@ public:
    */
   // using ARADocumentControllerSpecialisation::
   //     ARADocumentControllerSpecialisation;
-  TensorJuceDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+  HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance) ;
   // ARADocumentControllerSpecialisation (const ARA::PlugIn::PlugInEntry* entry,
   //                                        const ARA::ARADocumentControllerHostInstance* instance);

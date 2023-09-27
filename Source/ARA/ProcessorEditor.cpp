@@ -24,8 +24,8 @@
 #include "ProcessorEditor.h"
 #include "../DeepLearning/WebModel.h"
 
-TensorJuceProcessorEditor::TensorJuceProcessorEditor(
-    TensorJuceAudioProcessorImpl &ap, EditorRenderer *er, 
+HARPProcessorEditor::HARPProcessorEditor(
+    HARPAudioProcessorImpl &ap, EditorRenderer *er, 
     PlaybackRenderer *pr, EditorView *ev)
     : AudioProcessorEditor(&ap), AudioProcessorEditorARAExtension(&ap) {
   
@@ -34,7 +34,7 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   mEditorView = ev;
   if (mEditorView != nullptr) {
     mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
-                                                    TensorJuceDocumentControllerSpecialisation>(
+                                                    HARPDocumentControllerSpecialisation>(
                                                     mEditorView->getDocumentController());
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
@@ -67,7 +67,7 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   // TODO: what happens if the model is nullptr rn? 
   auto model = mEditorView->getModel();
   if (model == nullptr) {
-    DBG("FATAL TensorJuceProcessorEditor::TensorJuceProcessorEditor: model is null");
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
     return;
   }
   
@@ -92,23 +92,23 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   setSize(800, 500);
 }
 
-void TensorJuceProcessorEditor::setModelCard(const ModelCard& card) {
+void HARPProcessorEditor::setModelCard(const ModelCard& card) {
   // Set the text for the labels
   nameLabel.setText(juce::String(card.name), juce::dontSendNotification);
   descriptionLabel.setText(juce::String(card.description), juce::dontSendNotification);
   authorLabel.setText("by " + juce::String(card.author), juce::dontSendNotification);
 }
 
-void TensorJuceProcessorEditor::buttonClicked(Button *button) {
+void HARPProcessorEditor::buttonClicked(Button *button) {
   if (button == &processButton) {
-    DBG("TensorJuceProcessorEditor::buttonClicked button listener activated");
+    DBG("HARPProcessorEditor::buttonClicked button listener activated");
     
     auto model = mEditorView->getModel();
     mDocumentController->executeProcess(model);
   }
 
   else if (button == &loadModelButton) {
-    DBG("TensorJuceProcessorEditor::buttonClicked load model button listener activated");
+    DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
 
     // collect input parameters for the model.
     std::map<std::string, std::any> params = {
@@ -131,11 +131,11 @@ void TensorJuceProcessorEditor::buttonClicked(Button *button) {
   }
 }
 
-// void TensorJuceProcessorEditor::modelCardLoaded(const ModelCard& card) {
+// void HARPProcessorEditor::modelCardLoaded(const ModelCard& card) {
 //   modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
 // }
 
-void TensorJuceProcessorEditor::paint(Graphics &g) {
+void HARPProcessorEditor::paint(Graphics &g) {
   g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
 
   if (!isARAEditorView()) {
@@ -148,7 +148,7 @@ void TensorJuceProcessorEditor::paint(Graphics &g) {
 }
 
 
-void TensorJuceProcessorEditor::resized() {
+void HARPProcessorEditor::resized() {
     auto area = getLocalBounds();
     auto margin = 10;  // Adjusted margin value for top and bottom spacing
 

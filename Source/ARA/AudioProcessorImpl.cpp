@@ -20,19 +20,19 @@
 
 #include "AudioProcessorImpl.h"
 
-void TensorJuceAudioProcessorImpl::prepareToPlay(double sampleRate,
+void HARPAudioProcessorImpl::prepareToPlay(double sampleRate,
                                                  int samplesPerBlock) {
   playHeadState.update(nullopt);
   prepareToPlayForARA(sampleRate, samplesPerBlock,
                       getMainBusNumOutputChannels(), getProcessingPrecision());
 }
 
-void TensorJuceAudioProcessorImpl::releaseResources() {
+void HARPAudioProcessorImpl::releaseResources() {
   playHeadState.update(nullopt);
   releaseResourcesForARA();
 }
 
-bool TensorJuceAudioProcessorImpl::isBusesLayoutSupported(
+bool HARPAudioProcessorImpl::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
   if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono() &&
       layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
@@ -41,7 +41,7 @@ bool TensorJuceAudioProcessorImpl::isBusesLayoutSupported(
   return true;
 }
 
-void TensorJuceAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
+void HARPAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
                                                 MidiBuffer &midiMessages) {
   ignoreUnused(midiMessages);
 
@@ -54,7 +54,7 @@ void TensorJuceAudioProcessorImpl::processBlock(AudioBuffer<float> &buffer,
     processBlockBypassed(buffer, midiMessages);
 }
 
-double TensorJuceAudioProcessorImpl::getTailLengthSeconds() const {
+double HARPAudioProcessorImpl::getTailLengthSeconds() const {
   double tail;
   if (getTailLengthSecondsForARA(tail))
     return tail;
@@ -63,7 +63,7 @@ double TensorJuceAudioProcessorImpl::getTailLengthSeconds() const {
 }
 
 juce::AudioProcessor::BusesProperties
-TensorJuceAudioProcessorImpl::getBusesProperties() {
+HARPAudioProcessorImpl::getBusesProperties() {
   return BusesProperties()
       .withInput("Input", AudioChannelSet::stereo(), true)
       .withOutput("Output", AudioChannelSet::stereo(), true);

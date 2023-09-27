@@ -37,7 +37,7 @@
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
 // #include "ProcessorEditor.h"
-// using MyType = void (TensorJuceProcessorEditor::*)(std::string);
+// using MyType = void (HARPProcessorEditor::*)(std::string);
 using std::unique_ptr;
 
 

@@ -9,8 +9,8 @@ fi
 # Find all .dylib and .so files under the specified directory
 find "$ARTIFACTS_DIR" -type f \( -name "*.dylib" -o -name "*.so" \) | while read artifact; do
     echo "Code signing $artifact"
-    codesign -s "$SIGN_ID" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements "./py/client/entitlements.plist" "$artifact"
+    codesign -s "$SIGN_ID" -vvv --timestamp --deep -i com.HARP.HARP --force --entitlements "./py/client/entitlements.plist" "$artifact"
 done
 
 echo "Code signing gradiojuce_client directory"
-codesign -s "$SIGN_ID" -vvv --timestamp --deep -i com.tensorjuce.tensorjuce --force --entitlements "./py/client/entitlements.plist" "$ARTIFACTS_DIR/gradiojuce_client"
+codesign -s "$SIGN_ID" -vvv --timestamp --deep -i com.HARP.HARP --force --entitlements "./py/client/entitlements.plist" "$ARTIFACTS_DIR/gradiojuce_client"

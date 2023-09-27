@@ -41,15 +41,15 @@ chmod +x ./py/client/sign.sh
 ./py/client/sign.sh "$DEV_ID_APPLICATION" "packaging/dmg/${PROJECT_NAME}.vst3/Contents/Resources/gradiojuce_client/"
 
 # Sign the application
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.tensorjuce.tensorjuce --options runtime --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/Resources/gradiojuce_client/gradiojuce_client"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.tensorjuce.tensorjuce --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/MacOS/tensorjuce"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.tensorjuce.tensorjuce --force "packaging/dmg/${PROJECT_NAME}.vst3"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/Resources/gradiojuce_client/gradiojuce_client"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/MacOS/HARP"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.vst3"
 
 # Create the .dmg
 cd packaging && appdmg dmg.json "${PRODUCT_NAME}.dmg"
 
 # Sign the .dmg
-codesign -s "$DEV_ID_APPLICATION" --deep --timestamp -i com.tensorjuce.tensorjuce --force "${PRODUCT_NAME}.dmg" 
+codesign -s "$DEV_ID_APPLICATION" --deep --timestamp -i com.HARP.HARP --force "${PRODUCT_NAME}.dmg" 
 
 # Notarize the .dmg
 xcrun notarytool submit "${PRODUCT_NAME}.dmg" --apple-id "$NOTARIZATION_USERNAME" --password "$NOTARIZATION_PASSWORD" --team-id "$TEAM_ID" --wait

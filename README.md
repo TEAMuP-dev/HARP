@@ -68,9 +68,9 @@ The script requires the following  variables to be passed:
 ```
 # Retrieve values from either environment variables or command-line arguments
 DEV_ID_APPLICATION # Developer ID Application certificate
-ARTIFACTS_PATH # should be packaging/dmg/tensorjuce.vst3
-PROJECT_NAME # "tensorjuce"
-PRODUCT_NAME # "tensorjuce"
+ARTIFACTS_PATH # should be packaging/dmg/HARP.vst3
+PROJECT_NAME # "HARP"
+PRODUCT_NAME # "HARP"
 NOTARIZATION_USERNAME # Apple ID
 NOTARIZATION_PASSWORD # App-specific password for notarization
 TEAM_ID # Team ID for notarization

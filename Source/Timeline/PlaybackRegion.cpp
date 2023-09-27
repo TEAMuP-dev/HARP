@@ -50,7 +50,7 @@ void PlaybackRegionView::mouseDown(const juce::MouseEvent &m) {
       relativeTime * playbackRegion.getDurationInPlaybackTime();
   auto &previewState =
       ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
-          TensorJuceDocumentControllerSpecialisation>(
+          HARPDocumentControllerSpecialisation>(
           playbackRegion.getDocumentController())
           ->previewState;
   previewState.previewTime.store(previewTime);
@@ -61,7 +61,7 @@ void PlaybackRegionView::mouseDown(const juce::MouseEvent &m) {
 void PlaybackRegionView::mouseUp(const juce::MouseEvent &) {
   auto &previewState =
       ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
-          TensorJuceDocumentControllerSpecialisation>(
+          HARPDocumentControllerSpecialisation>(
           playbackRegion.getDocumentController())
           ->previewState;
   previewState.previewTime.store(0.0);
@@ -159,9 +159,9 @@ void PlaybackRegionView::paint(juce::Graphics &g) {
 
 void PlaybackRegionView::resized() { repaint(); }
 
-TensorJuceDocumentControllerSpecialisation *
+HARPDocumentControllerSpecialisation *
 PlaybackRegionView::getDocumentController() const {
   return ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
-      TensorJuceDocumentControllerSpecialisation>(
+      HARPDocumentControllerSpecialisation>(
       playbackRegion.getDocumentController());
 }
