@@ -42,7 +42,7 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
                                      AlwaysNonRealtime alwaysNonRealtime) {
   // DBG("PlaybackRenderer::prepareToPlay");
   numChannels = numChannelsIn;
-  sampleRate = sampleRateIn;
+  DAWSampleRate = sampleRateIn;
   maximumSamplesPerBlock = maximumSamplesPerBlockIn;
 
   // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ",
@@ -71,7 +71,7 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
 
       } else {
         const auto readAheadSize =
-            jmax(4 * maximumSamplesPerBlock, roundToInt(2.0 * sampleRate));
+            jmax(4 * maximumSamplesPerBlock, roundToInt(2.0 * DAWSampleRate));
 
         readerSource = std::make_unique<juce::AudioFormatReaderSource>(
             new BufferingAudioReader(new ARAAudioSourceReader(audioSource),
@@ -82,11 +82,11 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
       auto resamplingSource = std::make_unique<ResamplingAudioSource>(
           readerSource.get(), false, numChannels);
 
-      resamplingSource->setResamplingRatio(sampleRate /
-                                           audioSource->getSampleRate());
+      resamplingSource->setResamplingRatio(audioSource->getSampleRate() / DAWSampleRate
+                                           );
 
-      readerSource->prepareToPlay(maximumSamplesPerBlock, sampleRate);
-      resamplingSource->prepareToPlay(maximumSamplesPerBlock, sampleRate);
+      readerSource->prepareToPlay(maximumSamplesPerBlock, DAWSampleRate);
+      resamplingSource->prepareToPlay(maximumSamplesPerBlock, DAWSampleRate);
 
       positionableSources.emplace(audioSource, std::move(readerSource));
       resamplingSources.emplace(audioSource, std::move(resamplingSource));
@@ -118,13 +118,21 @@ bool PlaybackRenderer::processBlock(
     return true;
   }
 
+  // all the sample-related variable names that end in assr are in the audio source sample rate
+  // all other sample-related variables are in DAW time (DAWSampleRate)
   const auto numSamples = buffer.getNumSamples();
   jassert(numSamples <= maximumSamplesPerBlock);
   jassert(numChannels == buffer.getNumChannels());
   // jassert (realtime == AudioProcessor::Realtime::no ||
   // useBufferedAudioSourceReader); TODO: bring me back?
+
+  // time in samples based on the DAW's sample rate
   const auto timeInSamples = positionInfo.getTimeInSamples().orFallback(0);
   const auto isPlaying = positionInfo.getIsPlaying();
+  // DBG numSamples and timeInSamples
+  DBG("PlaybackRenderer::processBlock numSamples: " << numSamples
+                                                    << ", timeInSamples: "
+                                                    << timeInSamples);
 
   bool success = true;
   bool didRenderAnyRegion = false;
@@ -132,45 +140,42 @@ bool PlaybackRenderer::processBlock(
   if (isPlaying) {
     const auto blockRange =
         Range<int64>::withStartAndLength(timeInSamples, numSamples);
-
+    // const auto blockRange = 
+    //     SampleRange::withStartAndLength(timeInSamples, numSamples);
+    DBG("PlaybackRenderer::processBlock blockRange: " << blockRange.getStart()
+                                                      << " "
+                                                      << blockRange.getEnd());
     for (const auto &playbackRegion : getPlaybackRegions()) {
-      DBG("PlaybackRenderer::processBlock evaluating playback region: "
-          << playbackRegion->getRegionSequence()->getName() << " "
-          << playbackRegion->getRegionSequence()->getDocument()->getName());
+      auto sourceSampleRate = playbackRegion->getAudioModification()->getAudioSource()->getSampleRate();
+      // DBG("PlaybackRenderer::processBlock evaluating playback region: "
+      //     << playbackRegion->getRegionSequence()->getName() << " "
+      //     << playbackRegion->getRegionSequence()->getDocument()->getName());
       // Evaluate region borders in song time, calculate sample range to render
       // in song time. Note that this example does not use head- or tailtime, so
       // the includeHeadAndTail parameter is set to false here - this might need
       // to be adjusted in actual plug-ins.
+
+      // playbackRegion sample range in DAW time
       const auto playbackSampleRange = playbackRegion->getSampleRange(
-          sampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
+          DAWSampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
+      const auto playbackSampleRange_assr = playbackRegion->getSampleRange(
+          sourceSampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
+
+      DBG("PlaybackRenderer::processBlock playbackSampleRange_assr: " << playbackSampleRange_assr.getStart() << " " << playbackSampleRange_assr.getEnd());
+      DBG("PlaybackRenderer::processBlock playbackSampleRange: " <<
+              playbackSampleRange.getStart() << " " << playbackSampleRange.getEnd());
+
+      // blockRange may start before the playbackSampleRange, so we make sure 
+      // the renderRange starts at the same time as the playbackSampleRange
       auto renderRange = blockRange.getIntersectionWith(playbackSampleRange);
+      DBG("PlaybackRenderer::processBlock renderRange: " <<
+              renderRange.getStart() << " " << renderRange.getEnd());
 
       if (renderRange.isEmpty()) {
         DBG("PlaybackRenderer::processBlock render range is empty wrt to "
             "playback range");
         continue;
       }
-      // Evaluate region borders in modification/source time and calculate
-      // offset between song and source samples, then clip song samples
-      // accordingly (if an actual plug-in supports time stretching, this must
-      // be taken into account here).
-      Range<int64> modificationSampleRange{
-          playbackRegion->getStartInAudioModificationSamples(),
-          playbackRegion->getEndInAudioModificationSamples()};
-      const auto modificationSampleOffset =
-          modificationSampleRange.getStart() - playbackSampleRange.getStart();
-
-      renderRange = renderRange.getIntersectionWith(
-          modificationSampleRange.movedToStartAt(
-              playbackSampleRange.getStart()));
-
-      if (renderRange.isEmpty()) {
-        DBG("PlaybackRenderer::processBlock render range is empty wrt to "
-            "modification range");
-        continue;
-      }
-      // !
-      // -----------------------------------------------------------------------------------------
 
       // find our resampled source
       const auto resamplingSourceIt = resamplingSources.find(
@@ -185,16 +190,66 @@ bool PlaybackRenderer::processBlock(
       // currently has one if we're in realtime mode, timeout should be 0. else,
       // can be 100 ms
 
+
+      // Evaluate region borders in modification/source time and calculate
+      // offset between song and source samples, then clip song samples
+      // accordingly (if an actual plug-in supports time stretching, this must
+      // be taken into account here).
+      Range<int64> modificationSampleRange_assr{ // samples on source original sample rate (i.e 48k)
+          playbackRegion->getStartInAudioModificationSamples(),
+          playbackRegion->getEndInAudioModificationSamples()};
+      Range<int64> modificationSampleRange{
+          playbackRegion->getStartInPlaybackSamples(DAWSampleRate),
+          playbackRegion->getEndInPlaybackSamples(DAWSampleRate)};
+      
+      const auto modificationSampleOffset_old =
+          modificationSampleRange_assr.getStart() - roundToInt(playbackSampleRange.getStart() * resamplingSource->getResamplingRatio()); // playbackSampleRange is in DAW time
+      const auto modificationSampleOffset_assr = 
+          modificationSampleRange_assr.getStart() - playbackSampleRange_assr.getStart();
+      jassert(modificationSampleOffset_assr == modificationSampleOffset_old);
+      DBG("PlaybackRenderer::processBlock modificationSampleRange_assr: " <<
+              modificationSampleRange_assr.getStart() << " " << modificationSampleRange_assr.getEnd());
+      DBG("PlaybackRenderer::processBlock modificationSampleRange: " <<
+              modificationSampleRange.getStart() << " " << modificationSampleRange.getEnd());
+      DBG("PlaybackRenderer::processBlock modificationSampleOffset_assr: " <<
+              modificationSampleOffset_assr);
+
+      renderRange = renderRange.getIntersectionWith( // renderRange.getStart() always same as playbackSampleRange.getStart() (unless the DAW doesn't work correctly (i.e. timeInSamples is larger than the playbackRegion's start time))
+          modificationSampleRange.movedToStartAt( // so the only reason to do this intersection is to limit/cut the end of the renderRange based on the end of the modificationSampleRange_assr
+              playbackSampleRange.getStart())); // TODO:  we should be using the sampleRateRation multiplier to get the modificationSampleRange_assr in DAW time
+      DBG("PlaybackRenderer::processBlock renderRange after intersecting with mod: " <<
+              renderRange.getStart() << " " << renderRange.getEnd());
+      if (renderRange.isEmpty()) {
+        DBG("PlaybackRenderer::processBlock render range is empty wrt to "
+            "modification range");
+        continue;
+      }
+      // !
+      // -----------------------------------------------------------------------------------------
+
+      
+
       // calculate buffer offsets
 
       // Calculate buffer offsets.
       const int numSamplesToRead = (int)renderRange.getLength();
       const int startInBuffer =
           (int)(renderRange.getStart() - blockRange.getStart());
-      auto startInSource = renderRange.getStart() + modificationSampleOffset;
+      auto startInSource = roundToInt(renderRange.getStart() * resamplingSource->getResamplingRatio()) + modificationSampleOffset_assr;
+      auto startInSourceDawTime = renderRange.getStart() + roundToInt(modificationSampleOffset_assr / resamplingSource->getResamplingRatio());
+      DBG("PlaybackRenderer::processBlock numSamplesToRead in DAW time: " << numSamplesToRead);
+      DBG("PlaybackRenderer::processBlock numSamplesToRead in source time: " << numSamplesToRead * resamplingSource->getResamplingRatio());
+      DBG("PlaybackRenderer::processBlock startInSource: " << startInSource);
+      DBG("PlaybackRenderer::processBlock startInBuffer: " << startInBuffer);
 
-      positionableSource->setNextReadPosition(startInSource);
 
+      // positionableSource->setNextReadPosition(roundToInt(startInSource * resamplingSource->getResamplingRatio()));
+      // positionableSource->setNextReadPosition(roundToInt(startInSource + numSamplesToRead * resamplingSource->getResamplingRatio()));
+      positionableSource->setNextReadPosition(startInSource );
+
+      // DBG("PlaybackRenderer::processBlock setting next read position to " << roundToInt(startInSource * resamplingSource->getResamplingRatio()) );
+      // DBG("PlaybackRenderer::processBlock setting next read position to " << roundToInt(startInSource + numSamplesToRead * resamplingSource->getResamplingRatio()) );
+      DBG("PlaybackRenderer::processBlock setting next read position to " << startInSource);
       // Read samples:
       // first region can write directly into output, later regions need to use
       // local buffer.
@@ -212,23 +267,25 @@ bool PlaybackRenderer::processBlock(
         if (modBuffer->getNumChannels() == numChannels) {
           for (int c = 0; c < numChannels; ++c)
             readBuffer.copyFrom(c, 0, *modBuffer, c,
-                                static_cast<int>(startInSource),
+                                static_cast<int>(startInSourceDawTime),
                                 numSamplesToRead);
         }
 
         else if (modBuffer->getNumChannels() == 1) {
           for (int c = 0; c < numChannels; ++c)
             readBuffer.copyFrom(c, 0, *modBuffer, 0,
-                                static_cast<int>(startInSource),
+                                static_cast<int>(startInSourceDawTime),
                                 numSamplesToRead);
         }
 
       } else { // buffer isn't ready, read from original audio source
-        DBG("reading " << numSamplesToRead << " samples from " << startInSource
-                       << " into " << startInBuffer);
-
+        DBG("reading " << numSamplesToRead << " DAW time samples from " << roundToInt(startInSource * resamplingSource->getResamplingRatio())
+                       << " into " << startInBuffer << " sample position in DAW buffer");
         resamplingSource->getNextAudioBlock(
             juce::AudioSourceChannelInfo(readBuffer));
+        
+        // resamplingSource->getNextAudioBlock(
+        //     juce::AudioSourceChannelInfo(&readBuffer, startInBuffer, numSamplesToRead));
 
         //     if (! reader.get()->read (&readBuffer, startInBuffer,
         //     numSamplesToRead, startInSource, true, true))
