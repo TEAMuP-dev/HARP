@@ -51,7 +51,7 @@ TensorJuceProcessorEditor::TensorJuceProcessorEditor(
   processButton.addListener(this);
   addAndMakeVisible(processButton);
 
-  loadModelButton.setButtonText("Load model");
+  loadModelButton.setButtonText("load");
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
