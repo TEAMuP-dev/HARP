@@ -29,12 +29,13 @@ npm install -g appdmg
 
 # Create necessary directories
 rm -rf packaging/dmg
+rm packaging/HARP.dmg
 mkdir -p packaging/dmg
 
 # Create directories for the dmg symlinks
 sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/Components && sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/VST3
 ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
-mv "${ARTIFACTS_PATH}/VST3/${PROJECT_NAME}.vst3" packaging/dmg
+cp -r "${ARTIFACTS_PATH}/VST3/${PROJECT_NAME}.vst3" packaging/dmg
 
 # Make sign.sh executable and run it
 chmod +x ./py/client/sign.sh
