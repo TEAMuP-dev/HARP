@@ -29,7 +29,7 @@ npm install -g appdmg
 
 # Create necessary directories
 rm -rf packaging/dmg
-rm packaging/HARP.dmg
+rm packaging/${PRODUCT_NAME}.dmg || true
 mkdir -p packaging/dmg
 
 # Create directories for the dmg symlinks
