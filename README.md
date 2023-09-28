@@ -4,7 +4,7 @@ An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**roc
 
 # Download HARP
 
-TODO
+You can download HARP from the HARP [releases](https://github.com/audacitorch/HARP/releases) page. 
 
 # Making a HARP App.
 
