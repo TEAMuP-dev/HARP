@@ -192,7 +192,7 @@ public:
       textBox.flexDirection = juce::FlexBox::Direction::row;
       for (auto& textCtrl : textCtrls) {
           DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
-          textBox.items.add(juce::FlexItem(*textCtrl).withFlex(1).withMinHeight(30).withMinWidth(80));
+          textBox.items.add(juce::FlexItem(*textCtrl).withFlex(0.5).withMinHeight(30).withMinWidth(80));
       }
 
       // Add each FlexBox to the main FlexBox
