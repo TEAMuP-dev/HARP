@@ -9,7 +9,8 @@ You can download HARP from the HARP [releases](https://github.com/audacitorch/HA
 # Making a HARP App.
 
 You don't need to build HARP from source to use HARP apps in your DAW. 
-You can download pre-built HARP apps from the [HARP releases page] (TODO). 
+You can download HARP from the HARP [releases](https://github.com/audacitorch/HARP/releases) page. 
+
 
 You can write your audio processing code in python using the [pyHARP](https://github.com/audacitorch/pyharp) library.
 
