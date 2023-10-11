@@ -18,7 +18,7 @@ You can write your audio processing code in python using the [pyHARP](https://gi
 
 clone the plugin_sandbox repo
 ```
-git clone --recurse-submodules git@github.com:audacitorch/plugin_sandbox.git
+git clone --recurse-submodules git@github.com:audacitorch/HARP.git
 ```
 
 
