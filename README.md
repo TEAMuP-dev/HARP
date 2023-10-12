@@ -6,6 +6,8 @@ An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**roc
 
 You can download HARP from the HARP [releases](https://github.com/audacitorch/HARP/releases) page. 
 
+HARP is known to work on arm-based Mac computers, using the REAPER digital audio workstation. 
+
 # Making a HARP App.
 
 You don't need to build HARP from source to use HARP apps in your DAW. 
