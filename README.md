@@ -9,10 +9,13 @@ HARP has been tested on arm-based Mac computers running ??WHAT OS??, using the [
 # Installing HARP
 ## MacOS
 * Download the HARP DMG file from from the HARP [releases](https://github.com/audacitorch/HARP/releases)
+
 * Double click on the DMG file. This will open the window below
- <img width="608" alt="harp_dmg" src="https://github.com/audacitorch/HARP/assets/26678616/124289ea-9b92-4da2-9588-19a237891efe">
- * Double click on "Your Mac's VST3 folder"
- * Drag HARP.vst3 to the folder that was opened in the previous step
+<img width="397" alt="harp_dmg" src="https://github.com/audacitorch/HARP/assets/26678616/61acf9f3-8e00-4b85-9433-77366b262e19">
+
+* Double click on "Your Mac's VST3 folder"
+ 
+* Drag HARP.vst3 to the folder that was opened in the previous step
 
 ## Windows & Linux
 The windows build is still under development. There are no current plans to support Linux
