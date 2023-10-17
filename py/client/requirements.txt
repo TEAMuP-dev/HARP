@@ -1,4 +1,4 @@
 argbind
 gradio_client
-pyinstaller
+pyinstaller @ git+https://github.com/hugofloresgarcia/pyinstaller.git@develop
 typing-extensions
