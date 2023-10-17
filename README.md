@@ -6,7 +6,6 @@ HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allo
 # OS and DAW compatibility 
 HARP has been tested on arm-based Mac computers running ??WHAT OS??, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
 
-
 # Installing HARP
 ## MacOS
 * Download the HARP DMG file from from the HARP [releases](https://github.com/audacitorch/HARP/releases)
@@ -15,7 +14,8 @@ HARP has been tested on arm-based Mac computers running ??WHAT OS??, using the [
  * Double click on "Your Mac's VST3 folder"
  * Drag HARP.vst3 to the folder that was opened in the previous step
 
-## Windows
+## Windows & Linux
+The windows build is still under development. There are no current plans to support Linux
 
 # Making a deep learning model compatible with HARP
 We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
