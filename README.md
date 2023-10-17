@@ -1,22 +1,27 @@
 # HARP
-An ARA plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from the DAW through Gradio endpoints.
+![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
+
+HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from a digital audio workstation (DAW) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets  DAW users access large state-of-the-art models with GPU compute from the cloud without breaking their within-DAW workflow.
+
+# OS and DAW compatibility 
+HARP has been tested on arm-based Mac computers running ??WHAT OS??, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
 
 
-# Download HARP
+# Installing HARP
+## MacOS
+* Download the HARP DMG file from from the HARP [releases](https://github.com/audacitorch/HARP/releases)
+* Double click on the DMG file. This will open the window below
+ <img width="608" alt="harp_dmg" src="https://github.com/audacitorch/HARP/assets/26678616/124289ea-9b92-4da2-9588-19a237891efe">
+ * Double click on "Your Mac's VST3 folder"
+ * Drag HARP.vst3 to the folder that was opened in the previous step
 
-You can download HARP from the HARP [releases](https://github.com/audacitorch/HARP/releases) page. 
+## Windows
 
-HARP is known to work on arm-based Mac computers, using the REAPER digital audio workstation. 
+# Making a deep learning model compatible with HARP
+We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
 
-# Making a HARP App.
-
-You don't need to build HARP from source to use HARP apps in your DAW. 
-You can download HARP from the HARP [releases](https://github.com/audacitorch/HARP/releases) page. 
-
-
-You can write your audio processing code in python using the [pyHARP](https://github.com/audacitorch/pyharp) library.
-
-# Building
+# Building the HARP plug-in from source code
+To build the HARP plugin from scratch, perform the following steps:
 
 clone the HARP repo
 ```
