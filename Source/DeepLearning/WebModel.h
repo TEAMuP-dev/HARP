@@ -60,9 +60,21 @@ struct ComboBoxCtrl : public Ctrl {
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
+namespace{
+
+  void LogAndDBG(const juce::String& message) {
+    DBG(message);
+
+    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
+    logFile.appendText(message + "\n");
+  }
+}
+
 class WebWave2Wave : public Model, public Wave2Wave {
 public:
   WebWave2Wave() { // TODO: should be a singleton
+    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
+    logFile.deleteFile();
   }
 
 
@@ -89,16 +101,28 @@ public:
         juce::File::currentApplicationFile
     ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
+    juce::File tempLogFile = 
+    juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("system_get_ctrls_log.txt");
+    tempLogFile.deleteFile();  // ensure the file doesn't already exist
+
     std::string command = (
       scriptPath.getFullPathName().toStdString() 
       + " --mode get_ctrls"
       + " --url " + m_url 
       + " --output_path " + outputPath.getFullPathName().toStdString()
+      + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      + " 2>&1"   // redirect stderr to the same file as stdout
     );
+
     int result = std::system(command.c_str());
 
+    juce::String logContent = tempLogFile.loadFileAsString();
+    LogAndDBG(logContent);
+    tempLogFile.deleteFile();  // delete the temporary log file
+
     if (result != 0) {
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls.");
+        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.");
     }
 
 
@@ -176,7 +200,7 @@ public:
             slider->value = ctrl["value"].toString().getFloatValue();
 
             m_ctrls.push_back({slider->id, slider});
-            DBG("Slider: " + slider->label + " added");
+            LogAndDBG("Slider: " + slider->label + " added");
           }
           else if (ctrl_type == "text") {
             auto text = std::make_shared<TextBoxCtrl>();
@@ -184,14 +208,14 @@ public:
             text->value = ctrl["value"].toString().toStdString();
 
             m_ctrls.push_back({text->id, text});
-            DBG("Text: " + text->label + " added");
+            LogAndDBG("Text: " + text->label + " added");
           }
           else if (ctrl_type == "audio_in") {
             auto audio_in = std::make_shared<AudioInCtrl>();
             audio_in->label = ctrl["label"].toString().toStdString();
 
             m_ctrls.push_back({audio_in->id, audio_in});
-            DBG("Audio In: " + audio_in->label + " added");
+            LogAndDBG("Audio In: " + audio_in->label + " added");
           }
           else if (ctrl_type == "number_box") {
             auto number_box = std::make_shared<NumberBoxCtrl>();
@@ -201,10 +225,10 @@ public:
             number_box->value = ctrl["value"].toString().getFloatValue();
             
             m_ctrls.push_back({number_box->id, number_box});
-            DBG("Number Box: " + number_box->label + " added");
+            LogAndDBG("Number Box: " + number_box->label + " added");
           }
           else {
-            DBG("failed to parse control with unknown type: " + ctrl_type);
+            LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
           }
         }
         catch (const char* e) {
@@ -225,13 +249,13 @@ public:
     juce::AudioBuffer<float> *bufferToProcess, int sampleRate
   ) const override {
     // make sure we're loaded
-    DBG("WebWave2Wave::process");
+    LogAndDBG("WebWave2Wave::process");
     if (!m_loaded) {
       throw std::runtime_error("Model not loaded");
     }
                     
     // save the buffer to file
-    DBG("Saving buffer to file");
+    LogAndDBG("Saving buffer to file");
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("input.wav");
@@ -257,38 +281,49 @@ public:
       juce::File::currentApplicationFile
     ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
-    DBG("saving controls...");
+    LogAndDBG("saving controls...");
     if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString())) {
       throw std::runtime_error("Failed to save controls to file.");
     }
 
+    juce::File tempLogFile = 
+        juce::File::getSpecialLocation(juce::File::tempDirectory)
+            .getChildFile("system_log.txt");
+    tempLogFile.deleteFile();  // ensure the file doesn't already exist
+
     std::string command = (
-      scriptPath.getFullPathName().toStdString() 
-      + " --mode predict"
-      + " --url " + m_url 
-      + " --output_path " + tempOutputFile.getFullPathName().toStdString()
-      + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
+        scriptPath.getFullPathName().toStdString() 
+        + " --mode predict"
+        + " --url " + m_url 
+        + " --output_path " + tempOutputFile.getFullPathName().toStdString()
+        + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
+        + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        + " 2>&1"   // redirect stderr to the same file as stdout
     );
-    DBG("Running command: " + command);
+    LogAndDBG("Running command: " + command);
     // TODO: log commmand output to a file
     int result = std::system(command.c_str());
 
+    juce::String logContent = tempLogFile.loadFileAsString();
+    LogAndDBG(logContent);
+    tempLogFile.deleteFile();  // delete the temporary log file
+
     if (result != 0) {
         // TODO: maybe we want to read the command output and display it? 
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode predict. Check the logs for more details.");
+        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.");
     }
 
     // read the output file to a buffer
     // TODO: the sample rate should not be the incoming sample rate, but
     // rather the output sample rate of the daw?
-    DBG("Reading output file to buffer");
+    LogAndDBG("Reading output file to buffer");
     load_buffer_from_file(tempOutputFile, *bufferToProcess, sampleRate);
 
     // delete the temp input file
     tempFile.deleteFile();
     tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
-    DBG("WebWave2Wave::process done");
+    LogAndDBG("WebWave2Wave::process done");
 
     return;
   }
@@ -307,7 +342,7 @@ private:
     juce::var result;
 
     if (!file.existsAsFile()) {
-        DBG("File does not exist: " + file.getFullPathName());
+        LogAndDBG("File does not exist: " + file.getFullPathName());
         return result;
     }
 
@@ -316,7 +351,7 @@ private:
     juce::Result parseResult = juce::JSON::parse(fileContent, result);
 
     if (parseResult.failed()) {
-        DBG("Failed to parse JSON: " + parseResult.getErrorMessage());
+        LogAndDBG("Failed to parse JSON: " + parseResult.getErrorMessage());
         return juce::var();  // Return an empty var
     }
 
@@ -353,7 +388,7 @@ private:
             jsonCtrlsArray.add(juce::var(audioInCtrl->value));
         } else {
             // Unsupported control type or missing implementation
-            DBG("Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString());
+            LogAndDBG("Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString());
             return false;
         }
     }
@@ -363,7 +398,7 @@ private:
 
     // Write the JSON string to the specified file path
     if (!savePath.replaceWithText(jsonText)) {
-        DBG("Failed to save controls to file: " + savePath.getFullPathName());
+        LogAndDBG("Failed to save controls to file: " + savePath.getFullPathName());
         return false;
     }
 

@@ -2,7 +2,7 @@
 
 # Usage:
 # Set environment variables or pass arguments
-# ./package.sh <Developer ID Application> <Artifacts Path> <Project Name> <Product Name> <Notarization Username> <Notarization Password> <Team ID>
+# ./package/package.sh <Developer ID Application> <Artifacts Path> <Project Name> <Product Name> <Notarization Username> <Notarization Password> <Team ID>
 
 # Function to get the value from either the environment variable or the command-line argument
 set -e 
@@ -15,6 +15,14 @@ PRODUCT_NAME=$4
 NOTARIZATION_USERNAME=$5
 NOTARIZATION_PASSWORD=$6
 TEAM_ID=$7
+
+# check if the version file exists
+if [ ! -f "VERSION" ]; then
+    echo "Error: VERSION not found. are you in the root directory of the project?" >&2
+    exit 1
+fi
+
+VERSION=$(cat ./VERSION)
 
 # Check if the necessary variables are set
 for var in DEV_ID_APPLICATION ARTIFACTS_PATH PROJECT_NAME PRODUCT_NAME NOTARIZATION_USERNAME NOTARIZATION_PASSWORD TEAM_ID; do
@@ -55,3 +63,5 @@ codesign -s "$DEV_ID_APPLICATION" --deep --timestamp -i com.HARP.HARP --force "$
 # Notarize the .dmg
 xcrun notarytool submit "${PRODUCT_NAME}.dmg" --apple-id "$NOTARIZATION_USERNAME" --password "$NOTARIZATION_PASSWORD" --team-id "$TEAM_ID" --wait
 xcrun stapler staple "${PRODUCT_NAME}.dmg"
+
+mv "${PRODUCT_NAME}.dmg" "${PRODUCT_NAME}-MacOS-${VERSION}.dmg"
