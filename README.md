@@ -4,7 +4,7 @@
 HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from a digital audio workstation (DAW) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets  DAW users access large state-of-the-art models with GPU compute from the cloud without breaking their within-DAW workflow.
 
 # OS and DAW compatibility 
-HARP has been tested on arm-based Mac computers running ??WHAT OS??, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
+HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
 
 # Installing HARP
 ## MacOS
