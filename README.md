@@ -49,6 +49,15 @@ Build
 make -jNUM_PROCESSORS
 ```
 
+### Building for ARM vs x86 MacOS
+
+To specify which OSX architecture you'd like to build for, set  `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+
+(for example, for an x86_64 build)
+```bash
+cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
+```
+
 ## Windows
 
 ### An Important Note
