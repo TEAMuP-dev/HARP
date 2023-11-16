@@ -97,9 +97,13 @@ public:
     outputPath.deleteFile();
 
 
+    // juce::File scriptPath = juce::File::getSpecialLocation(
+    //     juce::File::currentApplicationFile
+    // ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+
     juce::File scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
-    ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+    ).getParentDirectory().getChildFile("gradiojuce_client/gradiojuce_client.exe");
 
     juce::File tempLogFile = 
     juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -277,10 +281,15 @@ public:
     tempCtrlsFile.deleteFile();
 
       
-    juce::File scriptPath = juce::File::getSpecialLocation(
-      juce::File::currentApplicationFile
-    ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+    // juce::File scriptPath = juce::File::getSpecialLocation(
+    //   juce::File::currentApplicationFile
+    // ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
+    juce::File scriptPath = juce::File::getSpecialLocation(
+        juce::File::currentApplicationFile
+    ).getParentDirectory().getChildFile("gradiojuce_client/gradiojuce_client.exe");
+
+    LogAndDBG("scriptPath: " + scriptPath.getFullPathName());
     LogAndDBG("saving controls...");
     if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString())) {
       throw std::runtime_error("Failed to save controls to file.");

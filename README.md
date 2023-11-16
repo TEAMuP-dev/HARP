@@ -70,11 +70,19 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 - Configure
 
 ```php
-"C:\Program Files\CMake\bin\cmake.EXE" --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/plugin_sandbox/build -G "Visual Studio 17 2022" -T host=x64 -A win64
+"C:\Program Files\CMake\bin\cmake.EXE" --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/HARP/build -G "Visual Studio 17 2022" -A x64
+```
+
+```php
+cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -S . -B build -G "Visual Studio 17 2022" -A x64
+```
 ```
 - Build
 ```php
-"C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/plugin_sandbox/build --config Debug --target ALL_BUILD -j 14 --
+"C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/HARP/build --config Debug --target ALL_BUILD -j 14 --
+
+cmake --build build --config Debug --target ALL_BUILD -j 14
+
 ```
 
 # Codesigning and Distribution

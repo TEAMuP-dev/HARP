@@ -96,9 +96,9 @@ bool EditorRenderer::processBlock(
     juce::AudioBuffer<float> &buffer, juce::AudioProcessor::Realtime realtime,
     const juce::AudioPlayHead::PositionInfo &positionInfo) noexcept {
     
-  ignoreUnused(buffer, realtime, positionInfo);
-  ignoreUnused(realtime);
-
+    ignoreUnused(buffer, realtime, positionInfo);
+    ignoreUnused(realtime);
+    return true;
 }
 
 void EditorRenderer::configure() {
