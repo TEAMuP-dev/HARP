@@ -103,7 +103,7 @@ set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/Miniconda3/python.exe")  # On Windows, c
 set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/Scripts/pyinstaller.exe")  # On Windows, change /bin/ to /Scripts/ and pyinstaller to pyinstaller.exe
 
 
-# Define the command sequence as a list
+# Define the command sequence as a list 
 # set(PYINSTALLER_COMMANDS 
 #     "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
 #     "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"

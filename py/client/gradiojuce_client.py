@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 from gradio_client import Client
 from pathlib import Path

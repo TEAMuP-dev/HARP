@@ -111,6 +111,8 @@ public:
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
+    //   "set PYTHONIOENCODING=UTF-8 && " +
+      "start /B cmd /c set PYTHONIOENCODING=UTF-8 && " +
       scriptPath.getFullPathName().toStdString() 
       + " --mode get_ctrls"
       + " --url " + m_url 
@@ -128,7 +130,6 @@ public:
     if (result != 0) {
         throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.");
     }
-
 
     // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
     juce::var controls = loadJsonFromFile(outputPath);
@@ -301,6 +302,7 @@ public:
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
+        // "start /B cmd /c " +
         scriptPath.getFullPathName().toStdString() 
         + " --mode predict"
         + " --url " + m_url 

@@ -9,7 +9,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['C:/Users/xribene/Projects/audacitorch/HARP/py/client/gradiojuce_client.py'],
+    ['py\\client\\gradiojuce_client.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,

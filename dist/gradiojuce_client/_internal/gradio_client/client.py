@@ -123,7 +123,7 @@ class Client:
                 "Please contact the owner to fix this."
             )
         if self.verbose:
-            print(f"Loaded as API: {self.src} ✔")
+            print(f"Loaded as API: {self.src} [OK]")
 
         self.api_url = urllib.parse.urljoin(self.src, utils.API_URL)
         self.sse_url = urllib.parse.urljoin(self.src, utils.SSE_URL)

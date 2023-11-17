@@ -1,4 +1,4 @@
 argbind
-gradio_client
+gradio_client @ git+https://github.com/xribene/gradio.git@harp
 pyinstaller @ git+https://github.com/hugofloresgarcia/pyinstaller.git@develop
 typing-extensions
