@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+message("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa CMAKE VERSION: ${CMAKE_VERSION}")
 set(PROJECT_NAME "HARP")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -18,23 +19,15 @@ file(STRINGS VERSION CURRENT_VERSION)
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    # windows library location
-    message("Building for Windows...") 
-    
-    # ara settings
-    juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
-
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # mac and linux library location
-    message("Building for UNIX...")
+    message("Building for " ${CMAKE_SYSTEM_NAME} "...")
 
     # ara settings
     juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 
 else()
     message(FATAL_ERROR "Unsupported platform.")
-
 endif()
 
 # TODO:
@@ -56,7 +49,7 @@ function(install_miniconda)
 
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
-        set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} ")
+        # set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} ")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
         set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
@@ -73,30 +66,69 @@ function(install_miniconda)
     #     "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
     #     "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
     # )
+    # set(MINICONDA_INSTALLER_PATH "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
 
-    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
-        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+
+    set(MINICONDA_INSTALLER_PATH "C:\\Users\\xribene\\Projects\\audacitorch\\HARP\\Miniconda3-py39_23.5.2-0-Windows-x86_64.exe")
+
+    # Define a custom target to install Miniconda
+    execute_process(
+        COMMAND "${MINICONDA_INSTALLER_PATH}"
+        RESULT_VARIABLE MINICONDA_INSTALL_RESULT
+        OUTPUT_VARIABLE MINICONDA_INSTALL_OUTPUT
+        ERROR_VARIABLE error
+    )
+    if(MINICONDA_INSTALL_RESULT)
+        message(FATAL_ERROR "Miniconda installation failed with result: ${MINICONDA_INSTALL_RESULT}. Output: ${MINICONDA_INSTALL_OUTPUT}. Error: ${error}")
+    else()
+        message(STATUS "Miniconda installed successfully.")
     endif()
 
-    message(STATUS "Installing Miniconda...")
-    execute_process(
-        COMMAND "${MINICONDA_INSTALL_SCRIPT}"
-        # RESULT_VARIABLE result
-        # OUTPUT_VARIABLE output
-        # ERROR_VARIABLE error
-    )
-    # if(result)
-    #     message(STATUS "${MINICONDA_INSTALL_SCRIPT}")
-    #     message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
-    # else()
-    #     message(STATUS "Miniconda installed successfully.")
+    # file(TO_NATIVE_PATH ${MINICONDA_INSTALLER_PATH} MINICONDA_INSTALLER_NATIVE_PATH)
+    # file(TO_CMAKE_PATH ${MINICONDA_INSTALLER_NATIVE_PATH} MINICONDA_INSTALLER_CMAKE_PATH)
+    # execute_process(COMMAND "start /wait C:\Users\xribene\Projects\audacitorch\HARP\Miniconda3-py39_23.5.2-0-Windows-x86_64.exe" RESULT_VARIABLE result)
+    # message(STATUS "TEST RESULT IS ${result}")
+
+
+    # message(STATUS "NATIVE PATH IS ${MINICONDA_INSTALLER_NATIVE_PATH}")
+    # message(STATUS "CMAKE PATH IS ${MINICONDA_INSTALLER_CMAKE_PATH}")
+
+    # if (NOT EXISTS "${MINICONDA_INSTALLER_PATH}")
+    #     message(FATAL_ERROR "Miniconda installer not found at ${MINICONDA_INSTALLER_PATH}")
     # endif()
+
+    # string(REPLACE "/" "\\" MINICONDA_INSTALL_DIR_BACKSLASHES "${MINICONDA_INSTALL_DIR}")
+    # file(TO_NATIVE_PATH ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} MINICONDA_INSTALLER_NATIVE_PATH)
+    message(STATUS "Miniconda installer path: ${MINICONDA_INSTALLER_PATH}")
+
+    string(REPLACE "/" "\\" MINICONDA_INSTALLER_PATH_BACKSLASHES "${MINICONDA_INSTALLER_PATH}")
+    set(MINICONDA_INSTALLER_PATH_BACKSLASHES, "C:\\\\Users\\xribene\\Projects\\audacitorch\\HARP\\Miniconda3-py39_23.5.2-0-Windows-x86_64.exe ")
+    set(MINICONDA_INSTALL_COMMANDLINE "start /wait ${MINICONDA_INSTALLER_PATH_BACKSLASHES}")
+    # set(MINICONDA_INSTALLER_COMMANDLINE "start /wait C://Users//xribene//Projects//audacitorch//HARP//Miniconda3-py39_23.5.2-0-Windows-x86_64.exe ")
+    # /AddToPath=0 /S /D=${CMAKE_SOURCE_DIR}/Miniconda3
+
+    message(STATUS "Installing Miniconda...")
+    execute_process(COMMAND ${MINICONDA_INSTALL_COMMANDLINE} RESULT_VARIABLE result)
+
+    # execute_process(
+    #     COMMAND "${MINICONDA_INSTALL_SCRIPT}"
+    #     RESULT_VARIABLE result
+    #     OUTPUT_VARIABLE output
+    #     ERROR_VARIABLE error
+    # )
+    if(result)
+        message(STATUS "RRRRRRRRRRR ${MINICONDA_INSTALL_COMMANDLINE}")
+        message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
+    else()
+        message(STATUS "Miniconda installed successfully.")
+    endif()
 endfunction()
 
 
 # Call the function to install Miniconda
 # install_miniconda()
 
+message("SUCCEEEEEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
 # Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
 set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
 set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/Miniconda3/python.exe")  # On Windows, change /bin/ to /Scripts/ and python to python.exe
