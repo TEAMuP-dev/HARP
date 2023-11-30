@@ -98,7 +98,7 @@ protected:
 
     // resize the buffer to account for resampling
     int resampledBufferLength = static_cast<int>(
-        static_cast<double>(reader->lengthInSamples) * resamplingRatio);
+        static_cast<double>(reader->lengthInSamples) / resamplingRatio);
     DBG("Resampled buffer length: " + std::to_string(resampledBufferLength));
 
     DBG("resizing buffer to " + std::to_string(reader->numChannels) +
