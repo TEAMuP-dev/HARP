@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "DocumentControllerSpecialisation.h"
+
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 
@@ -35,6 +37,7 @@
 #include "../Timeline/SharedTimeSliceThread.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
+
 
 using namespace juce;
 using std::unique_ptr;
@@ -69,7 +72,13 @@ public:
    * @param lockInterfaceIn Lock interface to use during processing.
    */
   PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
-                   ProcessingLockInterface &lockInterfaceIn);
+                   ProcessingLockInterface &lockInterfaceIn,
+                   HARPDocumentControllerSpecialisation &harpDCS);
+
+  /**
+   * @brief Destructor for PlaybackRenderer class.
+   */
+    ~PlaybackRenderer();
 
   /**
    * @brief Prepares for playback by initializing necessary parameters.
@@ -115,6 +124,7 @@ public:
 
 private:
   ProcessingLockInterface &lockInterface;
+  HARPDocumentControllerSpecialisation &harpDCS;
   SharedResourcePointer<SharedTimeSliceThread> sharedTimesliceThread;
   std::map<ARAAudioSource *, unique_ptr<juce::ResamplingAudioSource>>
       resamplingSources;

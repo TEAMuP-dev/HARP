@@ -24,7 +24,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>  // Include this if it's not already included
 #include "DocumentControllerSpecialisation.h"
-
+#include "PlaybackRenderer.h"
 
 // The constructor. It is taking entry and instance as parameters and feeds them directly to the base class constructor.
 HARPDocumentControllerSpecialisation::
@@ -42,6 +42,14 @@ HARPDocumentControllerSpecialisation::
               setStatusMessage ("Processing...");
 }
 
+
+void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete){
+    // int aa = playbackRenderers.size();
+    // playbackRenderers.erase(std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete), playbackRenderers.end());
+    auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
+    playbackRenderers.erase(it, playbackRenderers.end());
+    DBG("playbackRenderers.size() after: " << playbackRenderers.size());
+}
 
 void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
     // get the modelPath, pass it to the model
@@ -129,7 +137,7 @@ HARPDocumentControllerSpecialisation::doCreateAudioModification(
 
 ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
-  PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this);
+  PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this, *this);
   playbackRenderers.push_back(newPlaybackRenderer);
   return newPlaybackRenderer;
 }
