@@ -131,7 +131,7 @@ private:
   std::map<ARAAudioSource *, unique_ptr<AudioFormatReaderSource>>
       positionableSources;
   int numChannels = 2;
-  double DAWSampleRate;
+  double dawSampleRate;
   int maximumSamplesPerBlock = 128;
   unique_ptr<AudioBuffer<float>> tempBuffer;
 };

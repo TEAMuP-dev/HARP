@@ -55,7 +55,7 @@ std::string AudioModification::getSourceName() { return mAudioSourceName; }
  *
  * @param params Map of parameters for learner
  */
-void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
+void AudioModification::process(std::shared_ptr<WebWave2Wave> model, double dawSampleRate) {
   if (model == nullptr) {
     throw std::runtime_error("AudioModification::process: model is null");
     return;
@@ -72,7 +72,7 @@ void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
     auto numChannels = mAudioSourceReader->numChannels;
     auto numSamples = mAudioSourceReader->lengthInSamples;
     auto sourceSampleRate = mSampleRate;
-    auto dawSampleRate = 44100;
+    // auto dawSampleRate = 44100;
 
     DBG("AudioModification:: audio source: "
         << mAudioSourceName << " channels: " << juce::String(numChannels)
