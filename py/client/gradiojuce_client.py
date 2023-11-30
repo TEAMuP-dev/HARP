@@ -24,6 +24,7 @@ def main(
         output_path: str, 
         mode: str, 
         ctrls_path : str = None, 
+        ctrls_timeout: float = 30,
         cancel_flag_path: str = None,
         status_flag_path: str = None
     ):
@@ -35,8 +36,18 @@ def main(
     if mode == "get_ctrls":
         print(f"Getting controls for {url}...")
         # ctrls will be a dict, instead of a path now
-        ctrls = client.predict(api_name="/wav2wav-ctrls")
+        # ctrls = client.predict(api_name="/wav2wav-ctrls")
+        job = client.submit(api_name="/wav2wav-ctrls")
 
+        # wait for the job to finish or timeout
+        start_time = time.time()
+        while not job.done():
+            time.sleep(0.05)
+            if time.time() - start_time > ctrls_timeout:
+                raise TimeoutError(f"Timeout reached while waiting for controls from {url}.")
+
+        # done
+        ctrls = job.result()
         print(f"got ctrls: {ctrls}")
         print(f"Saving ctrls to {output_path}...")
         with open(output_path, "w") as f:

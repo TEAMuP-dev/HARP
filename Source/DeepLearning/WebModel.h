@@ -123,7 +123,9 @@ public:
     tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.");
+        // read the text from the temp log file.
+        std::string message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        throw std::runtime_error(message);
     }
 
 
@@ -245,7 +247,6 @@ public:
     return m_ctrls;
   }
 
-
   virtual void process(
     juce::AudioBuffer<float> *bufferToProcess, int sampleRate
   ) const override {
@@ -311,12 +312,14 @@ public:
 
     juce::String logContent = tempLogFile.loadFileAsString();
     LogAndDBG(logContent);
-    tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
-        // TODO: maybe we want to read the command output and display it? 
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.");
+        // read the text from the temp log file.
+        std::string message = "An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        throw std::runtime_error(message);
     }
+
+    tempLogFile.deleteFile();  // delete the temporary log file
 
     // read the output file to a buffer
     // TODO: the sample rate should not be the incoming sample rate, but
@@ -421,7 +424,6 @@ private:
 
     return true;
   }
-
 
   juce::File m_cancel_flag_file {
     juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
