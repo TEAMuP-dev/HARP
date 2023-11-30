@@ -24,7 +24,7 @@ using std::string;
 class Wave2Wave {
 protected:
   bool save_buffer_to_file(const juce::AudioBuffer<float> &buffer,
-                           const juce::File &outputFile, int sampleRate) const {
+                           const juce::File &outputFile,int sampleRate) const {
     juce::WavAudioFormat wavFormat;
     juce::TemporaryFile tempFile(outputFile);
     juce::File tempOutputFile = tempFile.getFile();
@@ -91,8 +91,7 @@ protected:
     auto resamplingSource =
         std::make_unique<juce::ResamplingAudioSource>(readerSource, true, 2);
 
-    double resamplingRatio = static_cast<double>(targetSampleRate) /
-                            static_cast<double>(reader->sampleRate);
+    double resamplingRatio = static_cast<double>(reader->sampleRate) / static_cast<double>(targetSampleRate);
     resamplingSource->setResamplingRatio(resamplingRatio);
     resamplingSource->prepareToPlay(static_cast<int>(reader->lengthInSamples), reader->sampleRate);
     DBG("Resampling ratio: " + std::to_string(resamplingRatio));
@@ -118,5 +117,5 @@ public:
    * @param sampleRate The sample rate of the audio data.
    */
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
-                       int sampleRate) const = 0;
+                       int sourceSampleRate, int dawSampleRate) const = 0;
 };

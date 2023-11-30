@@ -252,7 +252,7 @@ public:
 
 
   virtual void process(
-    juce::AudioBuffer<float> *bufferToProcess, int sampleRate
+    juce::AudioBuffer<float> *bufferToProcess, int sourceSampleRate, int dawSampleRate
   ) const override {
     // make sure we're loaded
     LogAndDBG("WebWave2Wave::process");
@@ -266,7 +266,7 @@ public:
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("input.wav");
     tempFile.deleteFile();
-    if (!save_buffer_to_file(*bufferToProcess, tempFile, sampleRate)) {
+    if (!save_buffer_to_file(*bufferToProcess, tempFile, sourceSampleRate)) {
       throw std::runtime_error("Failed to save buffer to file.");
     }
 
@@ -329,7 +329,7 @@ public:
     // TODO: the sample rate should not be the incoming sample rate, but
     // rather the output sample rate of the daw?
     LogAndDBG("Reading output file to buffer");
-    load_buffer_from_file(tempOutputFile, *bufferToProcess, sampleRate);
+    load_buffer_from_file(tempOutputFile, *bufferToProcess, dawSampleRate);
 
     // delete the temp input file
     tempFile.deleteFile();

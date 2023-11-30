@@ -71,7 +71,8 @@ void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
   else {
     auto numChannels = mAudioSourceReader->numChannels;
     auto numSamples = mAudioSourceReader->lengthInSamples;
-    auto sampleRate = mSampleRate;
+    auto sourceSampleRate = mSampleRate;
+    auto dawSampleRate = 44100;
 
     DBG("AudioModification:: audio source: "
         << mAudioSourceName << " channels: " << juce::String(numChannels)
@@ -82,7 +83,7 @@ void AudioModification::process(std::shared_ptr<WebWave2Wave> model) {
     // reading into audio buffer
     mAudioSourceReader->read(mAudioBuffer.get(), 0,
                              static_cast<int>(numSamples), 0, true, true);
-    model->process(mAudioBuffer.get(), sampleRate);
+    model->process(mAudioBuffer.get(), sourceSampleRate, dawSampleRate);
 
     // connect the modified buffer to the source
 
