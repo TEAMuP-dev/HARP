@@ -49,9 +49,14 @@ def main(
         # done
         ctrls = job.result()
         print(f"got ctrls: {ctrls}")
-        print(f"Saving ctrls to {output_path}...")
-        with open(output_path, "w") as f:
-            json.dump(ctrls, f)
+        # if it's a string, it's a filepath
+        if isinstance(ctrls, str):
+            Path(ctrls).rename(output_path)
+        # if it's not, likely that it's the actual controls
+        else:
+            print(f"Saving ctrls to {output_path}...")
+            with open(output_path, "w") as f:
+                json.dump(ctrls, f)
 
     elif mode == "predict":
         assert ctrls_path is not None, "Please specify a ctrls path."
