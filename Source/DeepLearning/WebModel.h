@@ -361,6 +361,7 @@ private:
   juce::var loadJsonFromFile(const juce::File& file) const {
     juce::var result;
 
+    LogAndDBG("Loading JSON from file: " + file.getFullPathName());
     if (!file.existsAsFile()) {
         LogAndDBG("File does not exist: " + file.getFullPathName());
         return result;
