@@ -91,11 +91,11 @@ public:
 
     std::string url = std::any_cast<std::string>(params.at("url"));
     m_url = url; // Store the URL for future use
+    LogAndDBG("url: " + m_url);
 
     juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("control_spec.json");
     outputPath.deleteFile();
-
 
     juce::File scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
@@ -111,10 +111,11 @@ public:
       + " --mode get_ctrls"
       + " --url " + m_url 
       + " --output_path " + outputPath.getFullPathName().toStdString()
-      + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
       + " 2>&1"   // redirect stderr to the same file as stdout
     );
 
+    LogAndDBG("Running command: " + command);
     int result = std::system(command.c_str());
 
     juce::String logContent = tempLogFile.loadFileAsString();
@@ -248,6 +249,9 @@ public:
   virtual void process(
     juce::AudioBuffer<float> *bufferToProcess, int sampleRate
   ) const override {
+    // clear the cancel flag file
+    m_cancel_flag_file.deleteFile();
+
     // make sure we're loaded
     LogAndDBG("WebWave2Wave::process");
     if (!m_loaded) {
@@ -297,7 +301,8 @@ public:
         + " --url " + m_url 
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
-        + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
+        + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
         + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
@@ -325,9 +330,21 @@ public:
     tempCtrlsFile.deleteFile();
     LogAndDBG("WebWave2Wave::process done");
 
+    // clear the cancel flag file
+    m_cancel_flag_file.deleteFile();
     return;
   }
 
+  // sets a cancel flag file that the client can check to see if the process
+  // should be cancelled
+  void cancel() {
+    m_cancel_flag_file.deleteFile();
+    m_cancel_flag_file.create();
+  }
+
+  juce::File getCancelFlagFile() const {
+    return m_cancel_flag_file;
+  }
 
   CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid) {
     return std::find_if(m_ctrls.begin(), m_ctrls.end(),
@@ -406,6 +423,9 @@ private:
   }
 
 
+  juce::File m_cancel_flag_file {
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
+  };
   CtrlList m_ctrls;
 
   string m_url;

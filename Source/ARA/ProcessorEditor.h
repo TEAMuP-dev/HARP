@@ -49,7 +49,8 @@
  */
 class HARPProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
-                                  public Button::Listener
+                                  public Button::Listener, 
+                                  public ChangeListener
                                   {
 public:
   /**
@@ -74,6 +75,9 @@ public:
   // Resize method
   void resized() override;
 
+  // Change listener method
+  void changeListenerCallback(ChangeBroadcaster *source) override;
+
 private:
   void resetUI(){
     ctrlComponent.resetUI();
@@ -86,7 +90,6 @@ private:
   void setModelCard(const ModelCard& card);
 
 private:
-
   HARPLookAndFeel mHARPLookAndFeel;
 
 
@@ -94,6 +97,7 @@ private:
   juce::TextEditor modelPathTextBox;
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
+  juce::TextButton cancelButton;
 
   CtrlComponent ctrlComponent;
   // model card
