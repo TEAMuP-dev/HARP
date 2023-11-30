@@ -101,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--ctrls_path', help='The path to the controls file.')
     parser.add_argument('--cancel_flag_path', help='The path to the cancel flag file.')
     parser.add_argument('--status_flag_path', help='The path to the status flag file.')
+    parser.add_argument('--ctrls_timeout', type=float, default=30, help='The timeout for getting controls.')
     
     args = parser.parse_args()
     
