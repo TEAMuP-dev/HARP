@@ -132,12 +132,12 @@ public:
     // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
     juce::var controls = loadJsonFromFile(outputPath);
     if (controls.isVoid()) {
-        throw std::runtime_error("Failed to load controls from JSON.");
+        throw std::runtime_error("Failed to load controls from JSON. juce::var was void.");
     }
 
     juce::DynamicObject *ctrlDict = controls.getDynamicObject();
     if (ctrlDict == nullptr) {
-        throw std::runtime_error("Failed to load control dict from JSON.");
+        throw std::runtime_error("Failed to load control dict from JSON. ctrlDict is null.");
     }    
 
     // the "ctrls" key should be a list of dicts
