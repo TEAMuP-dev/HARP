@@ -76,6 +76,8 @@ def main(
                     print("Cancel flag detected. Cancelling...")
                     client.submit(api_name="/wav2wav-cancel")
                     canceled = True
+                    Path(status_flag_path).write_text("Status.CANCELED")
+                    break
             
             # check if we were given a status path
             # if it does, write the status to the file
@@ -92,6 +94,10 @@ def main(
 
             print(f"Saving audio to {output_path}...")
             Path(audio_path).rename(output_path)
+        else:
+            # still consume the result and block? 
+            # job.result()
+            pass
 
     else:
         raise ValueError("Invalid mode. Choose either 'get_ctrls' or 'predict'.")
