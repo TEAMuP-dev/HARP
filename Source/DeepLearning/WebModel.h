@@ -75,6 +75,7 @@ public:
   WebWave2Wave() { // TODO: should be a singleton
     juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
     logFile.deleteFile();
+    m_status_flag_file.replaceWithText("Status.INITIALIZED");
   }
 
   ~WebWave2Wave() {
