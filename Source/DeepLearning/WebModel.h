@@ -470,7 +470,6 @@ public:
   }
 
   void timerCallback() override {
-    DBG("ModelStatusTimer::timerCallback polling model status");
     // get the status of the model
     std::string status = m_model->getStatus();
 
