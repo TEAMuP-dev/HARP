@@ -77,6 +77,12 @@ public:
     logFile.deleteFile();
   }
 
+  ~WebWave2Wave() {
+    // clean up flag files
+    m_cancel_flag_file.deleteFile();
+    m_status_flag_file.deleteFile();
+  }
+
 
   bool ready() const override { return m_loaded; }
 
@@ -116,6 +122,7 @@ public:
     );
 
     LogAndDBG("Running command: " + command);
+    // TODO: urgently need to find a better alternative to system
     int result = std::system(command.c_str());
 
     juce::String logContent = tempLogFile.loadFileAsString();
@@ -241,6 +248,9 @@ public:
 
     outputPath.deleteFile();
     m_loaded = true;
+
+    // set the status to LOADED
+    m_status_flag_file.replaceWithText("Status.LOADED");
   }
 
   CtrlList& controls() {
@@ -303,6 +313,7 @@ public:
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
         + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
+        + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
         + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
         + " 2>&1"   // redirect stderr to the same file as stdout
     );
@@ -343,6 +354,17 @@ public:
   void cancel() {
     m_cancel_flag_file.deleteFile();
     m_cancel_flag_file.create();
+  }
+
+  std::string getStatus() {
+    // if the status file doesn't exist, return Status.INACTIVE
+    if (!m_status_flag_file.exists()) {
+      return "Status.INACTIVE";
+    }
+
+    // read the status file and return its text
+    juce::String status = m_status_flag_file.loadFileAsString();
+    return status.toStdString();
   }
 
   juce::File getCancelFlagFile() const {
@@ -429,8 +451,36 @@ private:
   juce::File m_cancel_flag_file {
     juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
   };
+  juce::File m_status_flag_file {
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
+  };
   CtrlList m_ctrls;
 
   string m_url;
   bool m_loaded;
+};
+
+
+// a timer that checks the status of the model and broadcasts a change if if there is one
+class ModelStatusTimer : public juce::Timer, 
+                         public juce::ChangeBroadcaster {
+public:
+  ModelStatusTimer(std::shared_ptr<WebWave2Wave> model) : m_model(model) {
+  }
+
+  void timerCallback() override {
+    DBG("ModelStatusTimer::timerCallback polling model status");
+    // get the status of the model
+    std::string status = m_model->getStatus();
+
+    // if the status has changed, broadcast a change
+    if (status != m_last_status) {
+      m_last_status = status;
+      sendChangeMessage();
+    }
+  }
+
+private:
+  std::shared_ptr<WebWave2Wave> m_model;
+  std::string m_last_status;
 };

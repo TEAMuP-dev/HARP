@@ -92,12 +92,14 @@ private:
 private:
   HARPLookAndFeel mHARPLookAndFeel;
 
+  std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
 
   unique_ptr<Component> documentView;
   juce::TextEditor modelPathTextBox;
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
   juce::TextButton cancelButton;
+  juce::Label statusLabel;
 
   CtrlComponent ctrlComponent;
   // model card

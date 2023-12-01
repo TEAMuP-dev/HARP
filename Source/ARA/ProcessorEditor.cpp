@@ -40,14 +40,26 @@ HARPProcessorEditor::HARPProcessorEditor(
     mDocumentController->processBroadcaster.addChangeListener(this);
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
+  else {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: mEditorView is null");
+    jassertfalse;
+    return;
+  }
 
   if (documentView != nullptr) {
     addAndMakeVisible(documentView.get());
   }
   juce::LookAndFeel::setDefaultLookAndFeel (&mHARPLookAndFeel);
 
-  // setLookAndFeel(&mHARPLookAndFeel);
+  // TODO: what happens if the model is nullptr rn? 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
+    jassertfalse;
+    return;
+  }
 
+  
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
@@ -63,6 +75,18 @@ HARPProcessorEditor::HARPProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  // status label
+  statusLabel.setText(model->getStatus(), juce::dontSendNotification);
+  addAndMakeVisible(statusLabel);
+  // TODO: we need to have a way to update the status label with a timer thread 
+
+
+  // add a status timer to update the status label periodically
+  mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
+  mModelStatusTimer->addChangeListener(this);
+  mModelStatusTimer->startTimer(100);  // 100 ms interval
+
+
   // model path textbox
   modelPathTextBox.setMultiLine(false);
   modelPathTextBox.setReturnKeyStartsNewLine(false);
@@ -72,13 +96,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setText("path to a gradio endpoint");  // Default text
   addAndMakeVisible(modelPathTextBox);
 
-  // TODO: what happens if the model is nullptr rn? 
-  auto model = mEditorView->getModel();
-  if (model == nullptr) {
-    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
-    return;
-  }
-  
   // model controls
   ctrlComponent.setModel(mEditorView->getModel());
   addAndMakeVisible(ctrlComponent);
@@ -183,6 +200,14 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     processButton.setEnabled(true);
     cancelButton.setEnabled(false);
   }
+  else if (source == mModelStatusTimer.get()) {
+    // update the status label
+    DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
+    statusLabel.setText(mEditorView->getModel()->getStatus(), juce::dontSendNotification);
+  }
+  else {
+    DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
+  }
 
 }
 
@@ -242,6 +267,9 @@ void HARPProcessorEditor::resized() {
 
     // place the cancel button to the right of the process button (justified right)
     cancelButton.setBounds(processButton.getBounds().translated(110, 0));
+
+    // place the status label to the left of the process button (justified left)
+    statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
 
     // DocumentView layout
     if (documentView != nullptr) {

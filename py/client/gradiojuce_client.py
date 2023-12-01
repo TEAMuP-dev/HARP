@@ -83,7 +83,7 @@ def main(
             print(f"Status: {status}")
 
             if status_flag_path is not None:
-                Path(status_flag_path).write_text(status)
+                Path(status_flag_path).write_text(str(status.code))
         
             time.sleep(0.05)
         
