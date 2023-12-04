@@ -57,9 +57,8 @@ HARPProcessorEditor::HARPProcessorEditor(
     DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
     jassertfalse;
     return;
-  }
+  }  
 
-  
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
@@ -75,12 +74,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
-  auto model = mEditorView->getModel();
-  if (model == nullptr) {
-    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
-    return;
-  }
-
   std::string currentStatus = model->getStatus();
   if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
     processButton.setEnabled(true);
@@ -93,8 +86,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   // status label
   statusLabel.setText(currentStatus, juce::dontSendNotification);
   addAndMakeVisible(statusLabel);
-  // TODO: we need to have a way to update the status label with a timer thread 
-
 
   // add a status timer to update the status label periodically
   mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);

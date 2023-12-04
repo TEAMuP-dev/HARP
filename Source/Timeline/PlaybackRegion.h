@@ -104,7 +104,6 @@ private:
   ARAPlaybackRegion &playbackRegion;
   WaveformCache &waveformCache;
   PreviewRegionOverlay previewRegionOverlay;
-  juce::AudioBuffer<float> *mDeepAudio;
   bool isSelected = false;
   HARPLookAndFeel mHARPLookAndFeel;
 };
