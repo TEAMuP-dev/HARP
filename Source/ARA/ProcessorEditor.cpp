@@ -75,8 +75,17 @@ HARPProcessorEditor::HARPProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  std::string currentStatus = model->getStatus();
+  if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
+    processButton.setEnabled(true);
+    processButton.setButtonText("process");
+  } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
+    cancelButton.setEnabled(true);
+    processButton.setButtonText("processing " + juce::String(model->card().name) + "...");
+  }
+
   // status label
-  statusLabel.setText(model->getStatus(), juce::dontSendNotification);
+  statusLabel.setText(currentStatus, juce::dontSendNotification);
   addAndMakeVisible(statusLabel);
   // TODO: we need to have a way to update the status label with a timer thread 
 
