@@ -25,7 +25,7 @@
 #pragma once
 
 #include "EditorRenderer.h"
-#include "PlaybackRenderer.h"
+// #include "PlaybackRenderer.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
 #include "juce_core/juce_core.h" 
@@ -33,6 +33,8 @@
 
 #include "../Util/PreviewState.h"
 
+// Forward declaration of the child class
+class PlaybackRenderer;
 
 /**
  * @class HARPDocumentControllerSpecialisation
@@ -61,7 +63,10 @@ public:
   // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
   juce::ChangeBroadcaster loadBroadcaster;
   juce::ChangeBroadcaster processBroadcaster;
-
+  
+  void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
+  
+  
 protected:
   void willBeginEditing(
       ARADocument *) override; ///< Called when beginning to edit a document.

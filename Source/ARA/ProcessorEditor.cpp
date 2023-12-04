@@ -75,6 +75,12 @@ HARPProcessorEditor::HARPProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
+    return;
+  }
+
   std::string currentStatus = model->getStatus();
   if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
     processButton.setEnabled(true);
@@ -95,14 +101,17 @@ HARPProcessorEditor::HARPProcessorEditor(
   mModelStatusTimer->addChangeListener(this);
   mModelStatusTimer->startTimer(100);  // 100 ms interval
 
-
   // model path textbox
   modelPathTextBox.setMultiLine(false);
   modelPathTextBox.setReturnKeyStartsNewLine(false);
   modelPathTextBox.setReadOnly(false);
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
-  modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  if (model->ready()) {
+    modelPathTextBox.setText(model->space_url());  // Default text
+  } else {
+    modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  }
   addAndMakeVisible(modelPathTextBox);
 
   // model controls

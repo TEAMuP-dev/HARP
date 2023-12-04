@@ -55,4 +55,7 @@ dist*/
 
 
 Miniconda*
+dist/
+Miniconda
+Miniconda3
 Miniconda*.sh
