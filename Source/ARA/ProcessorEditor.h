@@ -64,8 +64,23 @@ public:
                                      PlaybackRenderer *pr,
                                      EditorView *ev);
 
+
   // destructor
-  // ~HARPProcessorEditor() override;
+  ~HARPProcessorEditor() override {
+    DBG("HARPProcessorEditor destructor called");
+    if (mEditorView != nullptr) {
+      DBG("cancelling processing job.");
+      mEditorView->getModel()->cancel();
+    }
+
+    processButton.removeListener(this);
+    cancelButton.removeListener(this);
+    loadModelButton.removeListener(this);
+    mDocumentController->loadBroadcaster.removeChangeListener(this);
+    mDocumentController->processBroadcaster.removeChangeListener(this);
+
+    mModelStatusTimer.reset(nullptr);
+  }
   // Button listener method
   void buttonClicked(Button *button) override;
 

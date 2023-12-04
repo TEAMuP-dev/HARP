@@ -61,7 +61,8 @@ HARPProcessorEditor::HARPProcessorEditor(
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
-  processButton.setEnabled(false);
+  model->ready() ? processButton.setEnabled(true) 
+                : processButton.setEnabled(false);
   addAndMakeVisible(processButton);
 
   cancelButton.setButtonText("cancel");
