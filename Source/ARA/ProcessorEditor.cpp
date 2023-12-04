@@ -55,13 +55,23 @@ HARPProcessorEditor::HARPProcessorEditor(
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
+    return;
+  }
+
   // model path textbox
   modelPathTextBox.setMultiLine(false);
   modelPathTextBox.setReturnKeyStartsNewLine(false);
   modelPathTextBox.setReadOnly(false);
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
-  modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  if (model->ready()) {
+    modelPathTextBox.setText(model->space_url());  // Default text
+  } else {
+    modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  }
   addAndMakeVisible(modelPathTextBox);
 
   // TODO: what happens if the model is nullptr rn? 
