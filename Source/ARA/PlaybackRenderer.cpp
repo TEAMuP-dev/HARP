@@ -31,9 +31,15 @@
 #include "PlaybackRenderer.h"
 
 PlaybackRenderer::PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
-                                   ProcessingLockInterface &lockInterfaceIn)
-    : ARAPlaybackRenderer(dc), lockInterface(lockInterfaceIn) {}
+                                   ProcessingLockInterface &lockInterfaceIn, 
+                                   HARPDocumentControllerSpecialisation& harpDCS)
+    : ARAPlaybackRenderer(dc), lockInterface(lockInterfaceIn), harpDCS(harpDCS) {
+    }
 
+// destructor
+PlaybackRenderer::~PlaybackRenderer() {
+  harpDCS.cleanDeletedPlaybackRenderers(this);
+}
 
 void PlaybackRenderer::prepareToPlay(double sampleRateIn,
                                      int maximumSamplesPerBlockIn,

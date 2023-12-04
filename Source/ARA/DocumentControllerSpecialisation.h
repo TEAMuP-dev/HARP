@@ -25,11 +25,14 @@
 #pragma once
 
 #include "EditorRenderer.h"
-#include "PlaybackRenderer.h"
+// #include "PlaybackRenderer.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
 
 #include "../Util/PreviewState.h"
+
+// Forward declaration of the child class
+class PlaybackRenderer;
 
 /**
  * @class HARPDocumentControllerSpecialisation
@@ -60,6 +63,7 @@ public:
   void executeProcess(std::shared_ptr<WebWave2Wave> model);
   void run() override;
   void threadComplete (bool userPressedCancel) override;
+  void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
   
   
 protected:
