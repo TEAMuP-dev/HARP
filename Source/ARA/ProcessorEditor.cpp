@@ -42,7 +42,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   }
   else {
     DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: mEditorView is null");
-    jassertfalse;
     return;
   }
 
