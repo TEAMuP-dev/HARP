@@ -215,6 +215,7 @@ public:
           }
           else if (ctrl_type == "text") {
             auto text = std::make_shared<TextBoxCtrl>();
+            text->id = juce::Uuid();
             text->label = ctrl["label"].toString().toStdString();
             text->value = ctrl["value"].toString().toStdString();
 
