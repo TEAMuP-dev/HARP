@@ -45,7 +45,7 @@ public:
   bool isThumbCreated() const;
   std::string getSourceName();
 
-  void process(std::shared_ptr<WebWave2Wave> model);
+  void process(std::shared_ptr<WebWave2Wave> model, double dawSampleRate);
 
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified() const;

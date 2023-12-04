@@ -52,6 +52,6 @@ py/relocatable-python
 py/client/dist/
 py/client/*.spec
 
-
+Miniconda
 Miniconda3
 Miniconda*.sh
