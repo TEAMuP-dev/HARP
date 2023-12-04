@@ -69,20 +69,6 @@ void PlaybackRegionView::mouseUp(const juce::MouseEvent &) {
   previewRegionOverlay.update();
 }
 
-void PlaybackRegionView::mouseDoubleClick(const juce::MouseEvent &) {
-  // Set the dim flag on our region's audio modification when double-clicked
-  auto audioModification =
-      playbackRegion.getAudioModification<AudioModification>();
-  // audioModification->setDimmed(!audioModification->isDimmed());
-
-  // Send a content change notification for the modification and all associated
-  // playback regions
-  audioModification->notifyContentChanged(
-      ARAContentUpdateScopes::samplesAreAffected(), true);
-  for (auto region : audioModification->getPlaybackRegions())
-    region->notifyContentChanged(ARAContentUpdateScopes::samplesAreAffected(),
-                                 true);
-}
 
 void PlaybackRegionView::changeListenerCallback(juce::ChangeBroadcaster *) {
   repaint();
