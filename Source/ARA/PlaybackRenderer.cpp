@@ -48,7 +48,7 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
                                      AlwaysNonRealtime alwaysNonRealtime) {
   // DBG("PlaybackRenderer::prepareToPlay");
   numChannels = numChannelsIn;
-  DAWSampleRate = sampleRateIn;
+  dawSampleRate = sampleRateIn;
   maximumSamplesPerBlock = maximumSamplesPerBlockIn;
 
   // DBG("PlaybackRenderer::prepareToPlay - numChannels: " << numChannels << ",
@@ -77,7 +77,7 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
 
       } else {
         const auto readAheadSize =
-            jmax(4 * maximumSamplesPerBlock, roundToInt(2.0 * DAWSampleRate));
+            jmax(4 * maximumSamplesPerBlock, roundToInt(2.0 * dawSampleRate));
 
         readerSource = std::make_unique<juce::AudioFormatReaderSource>(
             new BufferingAudioReader(new ARAAudioSourceReader(audioSource),
@@ -88,11 +88,11 @@ void PlaybackRenderer::prepareToPlay(double sampleRateIn,
       auto resamplingSource = std::make_unique<ResamplingAudioSource>(
           readerSource.get(), false, numChannels);
 
-      resamplingSource->setResamplingRatio(audioSource->getSampleRate() / DAWSampleRate
+      resamplingSource->setResamplingRatio(audioSource->getSampleRate() / dawSampleRate
                                            );
 
-      readerSource->prepareToPlay(maximumSamplesPerBlock, DAWSampleRate);
-      resamplingSource->prepareToPlay(maximumSamplesPerBlock, DAWSampleRate);
+      readerSource->prepareToPlay(maximumSamplesPerBlock, dawSampleRate);
+      resamplingSource->prepareToPlay(maximumSamplesPerBlock, dawSampleRate);
 
       positionableSources.emplace(audioSource, std::move(readerSource));
       resamplingSources.emplace(audioSource, std::move(resamplingSource));
@@ -125,7 +125,7 @@ bool PlaybackRenderer::processBlock(
   }
 
   // all the sample-related variable names that end in assr are in the audio source sample rate
-  // all other sample-related variables are in DAW time (DAWSampleRate)
+  // all other sample-related variables are in DAW time (dawSampleRate)
   const auto numSamples = buffer.getNumSamples();
   jassert(numSamples <= maximumSamplesPerBlock);
   jassert(numChannels == buffer.getNumChannels());
@@ -163,7 +163,7 @@ bool PlaybackRenderer::processBlock(
 
       // playbackRegion sample range in DAW time
       const auto playbackSampleRange = playbackRegion->getSampleRange(
-          DAWSampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
+          dawSampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
       const auto playbackSampleRange_assr = playbackRegion->getSampleRange(
           sourceSampleRate, ARAPlaybackRegion::IncludeHeadAndTail::no);
 
@@ -205,8 +205,8 @@ bool PlaybackRenderer::processBlock(
           playbackRegion->getStartInAudioModificationSamples(),
           playbackRegion->getEndInAudioModificationSamples()};
       Range<int64> modificationSampleRange{
-          playbackRegion->getStartInPlaybackSamples(DAWSampleRate),
-          playbackRegion->getEndInPlaybackSamples(DAWSampleRate)};
+          playbackRegion->getStartInPlaybackSamples(dawSampleRate),
+          playbackRegion->getEndInPlaybackSamples(dawSampleRate)};
       
       const auto modificationSampleOffset_old =
           modificationSampleRange_assr.getStart() - roundToInt(playbackSampleRange.getStart() * resamplingSource->getResamplingRatio()); // playbackSampleRange is in DAW time
@@ -335,12 +335,12 @@ bool PlaybackRenderer::processBlock(
 void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   DBG("PlaybackRenderer::executeProcess executing process");
 
-  auto callback = [model](juce::ARAPlaybackRegion *playbackRegion) -> bool {
+  auto callback = [this, model](juce::ARAPlaybackRegion *playbackRegion) -> bool {
       try {
           auto modification = playbackRegion->getAudioModification<AudioModification>();
           std::cout << "PlaybackRenderer::processing playbackRegion "
                     << modification->getSourceName() << std::endl;
-          modification->process(model);
+          modification->process(model, dawSampleRate);
       } catch (const std::runtime_error& e) {
           juce::AlertWindow::showMessageBoxAsync(
               juce::AlertWindow::WarningIcon,
