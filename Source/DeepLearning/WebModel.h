@@ -79,6 +79,7 @@ public:
 
 
   bool ready() const override { return m_loaded; }
+  std::string space_url() const { return m_url; }
 
   void load(const map<string, any> &params) override {
     m_ctrls.clear();
@@ -411,5 +412,4 @@ private:
   CtrlList m_ctrls;
 
   string m_url;
-  bool m_loaded;
 };

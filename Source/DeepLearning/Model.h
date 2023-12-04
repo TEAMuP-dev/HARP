@@ -61,5 +61,6 @@ public:
 
 protected: 
   ModelCard m_card;
+  bool m_loaded{false};
 
 };
