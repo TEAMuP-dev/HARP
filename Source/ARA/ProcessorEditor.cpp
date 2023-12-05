@@ -61,7 +61,7 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setReadOnly(false);
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
-  modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+  modelPathTextBox.setText("path to a gradio endpoint (see https://github.com/audacitorch/HARP#available-models)");  // Default text
   addAndMakeVisible(modelPathTextBox);
 
   // TODO: what happens if the model is nullptr rn? 
