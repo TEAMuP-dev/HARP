@@ -236,7 +236,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.dmg
-        path: packaging/${{ env.PRODUCT_NAME }}.dmg
+        path: packaging/${{ env.PRODUCT_NAME }}-MacOS-$VERSION.dmg
 
 
   release:
