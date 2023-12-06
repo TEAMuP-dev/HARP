@@ -91,15 +91,15 @@ protected:
     auto resamplingSource =
         std::make_unique<juce::ResamplingAudioSource>(readerSource, true, 2);
 
-    double resamplingRatio = static_cast<double>(targetSampleRate) /
-                            static_cast<double>(reader->sampleRate);
+    double resamplingRatio = static_cast<double>(reader->sampleRate) / 
+                            static_cast<double>(targetSampleRate);
     resamplingSource->setResamplingRatio(resamplingRatio);
     resamplingSource->prepareToPlay(static_cast<int>(reader->lengthInSamples), reader->sampleRate);
     DBG("Resampling ratio: " + std::to_string(resamplingRatio));
 
     // resize the buffer to account for resampling
     int resampledBufferLength = static_cast<int>(
-        static_cast<double>(reader->lengthInSamples) * resamplingRatio);
+        static_cast<double>(reader->lengthInSamples) / resamplingRatio);
     DBG("Resampled buffer length: " + std::to_string(resampledBufferLength));
 
     DBG("resizing buffer to " + std::to_string(reader->numChannels) +
@@ -118,5 +118,5 @@ public:
    * @param sampleRate The sample rate of the audio data.
    */
   virtual void process(juce::AudioBuffer<float> *bufferToProcess,
-                       int sampleRate) const = 0;
+                       int sourceSampleRate, int dawSampleRate) const = 0;
 };

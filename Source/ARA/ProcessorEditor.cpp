@@ -36,7 +36,13 @@ HARPProcessorEditor::HARPProcessorEditor(
     mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
                                                     HARPDocumentControllerSpecialisation>(
                                                     mEditorView->getDocumentController());
+    mDocumentController->loadBroadcaster.addChangeListener(this);
+    mDocumentController->processBroadcaster.addChangeListener(this);
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
+  }
+  else {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: mEditorView is null");
+    return;
   }
 
   if (documentView != nullptr) {
@@ -44,16 +50,47 @@ HARPProcessorEditor::HARPProcessorEditor(
   }
   juce::LookAndFeel::setDefaultLookAndFeel (&mHARPLookAndFeel);
 
-  // setLookAndFeel(&mHARPLookAndFeel);
+  // TODO: what happens if the model is nullptr rn? 
+  auto model = mEditorView->getModel();
+  if (model == nullptr) {
+    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
+    jassertfalse;
+    return;
+  }  
 
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
+  model->ready() ? processButton.setEnabled(true) 
+                : processButton.setEnabled(false);
   addAndMakeVisible(processButton);
+
+  cancelButton.setButtonText("cancel");
+  cancelButton.addListener(this);
+  cancelButton.setEnabled(false);
+  addAndMakeVisible(cancelButton);
 
   loadModelButton.setButtonText("load");
   loadModelButton.addListener(this);
   addAndMakeVisible(loadModelButton);
+
+  std::string currentStatus = model->getStatus();
+  if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
+    processButton.setEnabled(true);
+    processButton.setButtonText("process");
+  } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
+    cancelButton.setEnabled(true);
+    processButton.setButtonText("processing " + juce::String(model->card().name) + "...");
+  }
+
+  // status label
+  statusLabel.setText(currentStatus, juce::dontSendNotification);
+  addAndMakeVisible(statusLabel);
+
+  // add a status timer to update the status label periodically
+  mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
+  mModelStatusTimer->addChangeListener(this);
+  mModelStatusTimer->startTimer(100);  // 100 ms interval
 
   // model path textbox
   modelPathTextBox.setMultiLine(false);
@@ -77,13 +114,13 @@ HARPProcessorEditor::HARPProcessorEditor(
   glossaryButton.addListener(this);
   addAndMakeVisible(glossaryButton);
 
-  // TODO: what happens if the model is nullptr rn? 
-  auto model = mEditorView->getModel();
-  if (model == nullptr) {
-    DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
-    return;
+  if (model->ready()) {
+    modelPathTextBox.setText(model->space_url());  // Default text
+  } else {
+    modelPathTextBox.setText("path to a gradio endpoint");  // Default text
   }
-  
+  addAndMakeVisible(modelPathTextBox);
+
   // model controls
   ctrlComponent.setModel(mEditorView->getModel());
   addAndMakeVisible(ctrlComponent);
@@ -109,7 +146,10 @@ void HARPProcessorEditor::setModelCard(const ModelCard& card) {
   // Set the text for the labels
   nameLabel.setText(juce::String(card.name), juce::dontSendNotification);
   descriptionLabel.setText(juce::String(card.description), juce::dontSendNotification);
-  authorLabel.setText("by " + juce::String(card.author), juce::dontSendNotification);
+  // set the author label text to "by {author}" only if {author} isn't empty
+  card.author.empty() ?
+    authorLabel.setText("", juce::dontSendNotification) :
+    authorLabel.setText("by " + juce::String(card.author), juce::dontSendNotification);
 }
 
 void HARPProcessorEditor::buttonClicked(Button *button) {
@@ -118,6 +158,12 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
     
     auto model = mEditorView->getModel();
     mDocumentController->executeProcess(model);
+    // set the button text to "processing {model.card().name}"
+    processButton.setButtonText("processing " + juce::String(model->card().name) + "...");
+    processButton.setEnabled(false);
+
+    // enable the cancel button
+    cancelButton.setEnabled(true);
   }
 
   else if (button == &loadModelButton) {
@@ -129,24 +175,67 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
     };
 
     resetUI();
+    // loading happens asynchronously. 
+    // the document controller trigger a change listener callback, which will update the UI
     mDocumentController->executeLoad(params);
 
+    // disable the load button until the model is loaded
+    loadModelButton.setEnabled(false);
+    loadModelButton.setButtonText("loading...");
+
+    // disable the process button until the model is loaded
+    processButton.setEnabled(false);
+    
+    // set the descriptionLabel to "loading {url}..."
+    // TODO: we need to get rid of the params map, and just pass the url around instead
+    // since it looks like we're sticking to webmodels. 
+    juce::String url = juce::String(std::any_cast<std::string>(params.at("url")));
+    descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting \n " + "huggingface.co/spaces/" + url + "\n Once the huggingface space is awake, try again." , juce::dontSendNotification);
+
+    // TODO: here, we should also reset the highlighting of the playback regions to the default color
+  }
+  else if (button == &cancelButton) {
+    DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+    mDocumentController->getModel()->cancel();
+  }
+  else {
+    DBG("a button was pressed, but we didn't do anything. ");
+  } 
+}
+
+void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source) {
+
+  if (source == &mDocumentController->loadBroadcaster) {
     // Model loading happens synchronously, so we can be sure that
     // the Editor View has the model card and UI attributes loaded
+    DBG("Setting up model card, CtrlComponent, resizing.");
     setModelCard(mEditorView->getModel()->card());
     ctrlComponent.setModel(mEditorView->getModel());
     ctrlComponent.populateGui();
     resized();
 
+    // now, we can enable the buttons
+    processButton.setEnabled(true);
+    loadModelButton.setEnabled(true);
+    loadModelButton.setButtonText("load");
+  }
+  else if (source == &mDocumentController->processBroadcaster) {
+    // now, we can enable the process button
+    processButton.setButtonText("process");
+    processButton.setEnabled(true);
+    cancelButton.setEnabled(false);
+  }
+  else if (source == mModelStatusTimer.get()) {
+    // update the status label
+    DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
+    statusLabel.setText(mEditorView->getModel()->getStatus(), juce::dontSendNotification);
   }
   else {
-    DBG("a button was pressed, but we didn't do anything. ");
+    DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
   }
+
 }
 
-// void HARPProcessorEditor::modelCardLoaded(const ModelCard& card) {
-//   modelCardComponent.setModelCard(card); // addAndMakeVisible(modelCardComponent); 
-// }
 
 void HARPProcessorEditor::paint(Graphics &g) {
   g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
@@ -207,6 +296,12 @@ void HARPProcessorEditor::resized() {
 
     // Assign bounds to processButton
     processButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
+
+    // place the cancel button to the right of the process button (justified right)
+    cancelButton.setBounds(processButton.getBounds().translated(110, 0));
+
+    // place the status label to the left of the process button (justified left)
+    statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
 
     // DocumentView layout
     if (documentView != nullptr) {

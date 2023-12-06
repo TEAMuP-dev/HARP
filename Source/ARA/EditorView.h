@@ -27,6 +27,10 @@ public:
     // constructor. Using the base class constructor
     using ARAEditorView::ARAEditorView;
 
+    // log the destruction of the editor view
+    ~EditorView() override {
+        DBG("EditorView destructor called");
+    }
 
     void triggerRepaint() {sendChangeMessage();};
     /**

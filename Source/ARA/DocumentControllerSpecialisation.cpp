@@ -24,88 +24,69 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>  // Include this if it's not already included
 #include "DocumentControllerSpecialisation.h"
-
+#include "PlaybackRenderer.h"
 
 // The constructor. It is taking entry and instance as parameters and feeds them directly to the base class constructor.
 HARPDocumentControllerSpecialisation::
             HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
-            : ARADocumentControllerSpecialisation(entry, instance),
-            // juce::Thread("executeProcessingThread")
-            juce::ThreadWithProgressWindow ("Processing",
-                              true,
-                              true,
-                              10000,
-                              "cancel (don't click me)"
-                              )
-             {
-              setStatusMessage ("Processing...");
+            : ARADocumentControllerSpecialisation(entry, instance) {
 }
 
+
+void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete){
+    auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
+    playbackRenderers.erase(it, playbackRenderers.end());
+    DBG("playbackRenderers.size() after: " << playbackRenderers.size());
+}
 
 void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
+    // TODO: should we cancel all other jobs? 
+    // how do we deal with a process job that is currently running? 
+
     // get the modelPath, pass it to the model
-    DBG("HARPDocumentControllerSpecialisation::executeLoad");
-    try {
-        mModel->load(params);
-    } catch (const std::runtime_error& e) {
-        juce::AlertWindow::showMessageBoxAsync(
-            juce::AlertWindow::WarningIcon,
-            "Loading Error",
-            juce::String("An error occurred while loading the WebModel: ") + e.what()
-        );
-    }
-    DBG("HARPDocumentControllerSpecialisation::executeLoad done");
+    threadPool.addJob([this, params] {
+      DBG("HARPDocumentControllerSpecialisation::executeLoad");
+      try {
+          mModel->load(params);
+      } catch (const std::runtime_error& e) {
+          juce::AlertWindow::showMessageBoxAsync(
+              juce::AlertWindow::WarningIcon,
+              "Loading Error",
+              juce::String("An error occurred while loading the WebModel: ") + e.what()
+          );
+      }
+      DBG("HARPDocumentControllerSpecialisation::executeLoad done");
+      loadBroadcaster.sendChangeMessage();
+    });
+
   }
-
-void HARPDocumentControllerSpecialisation::run() {
-  // This function is called when the thread is started
-  // Show the processing modal window
-  // processingWindow = std::make_unique<juce::AlertWindow>(
-  //     "Processing",
-  //     "Processing...",
-  //     juce::AlertWindow::NoIcon);
-
-  // processingWindow_->enterModalState();
-
-  // Each playbackRenderer has access to its own playbackRegions
-  setProgress(0.0);
-  int counter = 0;
-  for (auto& playbackRenderer : playbackRenderers) {
-    playbackRenderer->executeProcess(mModel);
-    counter++;
-    setProgress((double) counter / (double) playbackRenderers.size());
-    double pr = (double) counter / (double) playbackRenderers.size();
-    DBG("Progress: " << pr);
-  }
-  
-
-  // Dismiss the modal window when processing is complete
-  // processingWindow->exitModalState();
-}
 
 void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
-  // wait untill thread has stopped running
-  if (!isThreadRunning()) {
-    // start the thread
-    if (model == nullptr){
-      DBG("unhandled exception: model is null. we should probably open an error window here.");
-      return;
+  // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right? 
+  if (model == nullptr){
+    DBG("unhandled exception: model is null. we should probably open an error window here.");
+    return;
+  }
+
+  // print how many jobs are currently in the threadpool
+  DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+
+  mModel = model;
+
+  // start the thread
+  threadPool.addJob([this] {
+    int counter = 0;
+    for (auto& playbackRenderer : playbackRenderers) {
+      playbackRenderer->executeProcess(mModel);
+
+      counter++;
+      DBG("Processing region: " << counter);
     }
-
-    mModel = model;
-    launchThread();
-  }
+    processBroadcaster.sendChangeMessage();
+  });
 }
 
-void 	HARPDocumentControllerSpecialisation::threadComplete (bool userPressedCancel) {
-  // if the user didn't press cancel, then the thread has finished normally
-  // and we can trigger the repainting of the playbackRegions to update the
-  // processed waveform thumbnails
-  if (!userPressedCancel) {
-    editorView->triggerRepaint();
-  }
-}
 void HARPDocumentControllerSpecialisation::willBeginEditing(
     ARADocument *) {
   processBlockLock.enterWrite();
@@ -129,7 +110,7 @@ HARPDocumentControllerSpecialisation::doCreateAudioModification(
 
 ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
-  PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this);
+  PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this, *this);
   playbackRenderers.push_back(newPlaybackRenderer);
   return newPlaybackRenderer;
 }
