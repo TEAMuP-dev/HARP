@@ -112,6 +112,8 @@ private:
   unique_ptr<Component> documentView;
   juce::TextEditor modelPathTextBox;
   juce::TextButton loadModelButton;
+  juce::Label glossaryLabel;
+  juce::HyperlinkButton glossaryButton;
   juce::TextButton processButton;
   juce::TextButton cancelButton;
   juce::Label statusLabel;

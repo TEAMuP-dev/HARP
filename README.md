@@ -3,6 +3,17 @@
 
 HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from a digital audio workstation (DAW) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets  DAW users access large state-of-the-art models with GPU compute from the cloud without breaking their within-DAW workflow.
 
+# Available Models
+At present, the following models are available for use within HARP:
+- [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
+- [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+- [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
+- [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
+- [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+
+# Making a deep learning model compatible with HARP
+We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
+
 # OS and DAW compatibility 
 HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
 
@@ -19,9 +30,6 @@ HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the [
 
 ## Windows & Linux
 The windows build is still under development. There are no current plans to support Linux
-
-# Making a deep learning model compatible with HARP
-We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
 
 # Building the HARP plug-in from source code
 To build the HARP plugin from scratch, perform the following steps:
