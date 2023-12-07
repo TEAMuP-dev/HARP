@@ -64,4 +64,4 @@ codesign -s "$DEV_ID_APPLICATION" --deep --timestamp -i com.HARP.HARP --force "$
 xcrun notarytool submit "${PRODUCT_NAME}.dmg" --apple-id "$NOTARIZATION_USERNAME" --password "$NOTARIZATION_PASSWORD" --team-id "$TEAM_ID" --wait
 xcrun stapler staple "${PRODUCT_NAME}.dmg"
 
-mv "${PRODUCT_NAME}.dmg" "${PRODUCT_NAME}-MacOS-${VERSION}.dmg"
+# mv "${PRODUCT_NAME}.dmg" "${PRODUCT_NAME}.dmg"
