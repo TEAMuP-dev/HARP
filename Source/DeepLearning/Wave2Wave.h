@@ -91,7 +91,8 @@ protected:
     auto resamplingSource =
         std::make_unique<juce::ResamplingAudioSource>(readerSource, true, 2);
 
-    double resamplingRatio = static_cast<double>(reader->sampleRate) / static_cast<double>(targetSampleRate);
+    double resamplingRatio = static_cast<double>(reader->sampleRate) / 
+                            static_cast<double>(targetSampleRate);
     resamplingSource->setResamplingRatio(resamplingRatio);
     resamplingSource->prepareToPlay(static_cast<int>(reader->lengthInSamples), reader->sampleRate);
     DBG("Resampling ratio: " + std::to_string(resamplingRatio));

@@ -54,7 +54,7 @@ void RegionSequenceView::willUpdateRegionSequenceProperties(
 }
 
 void RegionSequenceView::willRemovePlaybackRegionFromRegionSequence(
-    ARARegionSequence *, ARAPlaybackRegion *playbackRegion) {
+    ARARegionSequence *, ARAPlaybackRegion*playbackRegion) {
   playbackRegion->removeListener(this);
   removeChildComponent(playbackRegionViews[playbackRegion].get());
   playbackRegionViews.erase(playbackRegion);
@@ -62,13 +62,13 @@ void RegionSequenceView::willRemovePlaybackRegionFromRegionSequence(
 }
 
 void RegionSequenceView::didAddPlaybackRegionToRegionSequence(
-    ARARegionSequence *, ARAPlaybackRegion *playbackRegion) {
+    ARARegionSequence *, ARAPlaybackRegion*playbackRegion) {
   createAndAddPlaybackRegionView(playbackRegion);
   updatePlaybackDuration();
 }
 
 void RegionSequenceView::willDestroyPlaybackRegion(
-    ARAPlaybackRegion *playbackRegion) {
+    ARAPlaybackRegion*playbackRegion) {
   playbackRegion->removeListener(this);
   removeChildComponent(playbackRegionViews[playbackRegion].get());
   playbackRegionViews.erase(playbackRegion);
@@ -76,7 +76,7 @@ void RegionSequenceView::willDestroyPlaybackRegion(
 }
 
 void RegionSequenceView::didUpdatePlaybackRegionProperties(
-    ARAPlaybackRegion *) {
+    ARAPlaybackRegion*) {
   updatePlaybackDuration();
 }
 
@@ -95,7 +95,7 @@ void RegionSequenceView::resized() {
 }
 
 void RegionSequenceView::createAndAddPlaybackRegionView(
-    ARAPlaybackRegion *playbackRegion) {
+    ARAPlaybackRegion*playbackRegion) {
   playbackRegionViews[playbackRegion] = std::make_unique<PlaybackRegionView>(
       araEditorView, *playbackRegion, waveformCache);
   playbackRegion->addListener(this);

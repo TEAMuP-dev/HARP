@@ -22,9 +22,9 @@
 #include "../ARA/AudioModification.h"
 #include "../ARA/EditorView.h"
 #include "../ARA/DocumentControllerSpecialisation.h"
+#include "../ARA/PlaybackRegion.h"
 #include "../WaveformCache/WaveformCache.h"
 #include "../UI/LookAndFeel.h"
-
 #include <JuceHeader.h>
 
 /**
@@ -45,7 +45,7 @@ public:
   // Event handlers
   void mouseDown(const juce::MouseEvent &m) override;
   void mouseUp(const juce::MouseEvent &) override;
-  void mouseDoubleClick(const juce::MouseEvent &) override;
+  // void mouseDoubleClick(const juce::MouseEvent &) override;
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
 
   // ARA event handlers
@@ -104,7 +104,6 @@ private:
   ARAPlaybackRegion &playbackRegion;
   WaveformCache &waveformCache;
   PreviewRegionOverlay previewRegionOverlay;
-  juce::AudioBuffer<float> *mDeepAudio;
   bool isSelected = false;
   HARPLookAndFeel mHARPLookAndFeel;
 };

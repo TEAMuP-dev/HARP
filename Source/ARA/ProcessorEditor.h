@@ -49,7 +49,8 @@
  */
 class HARPProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
-                                  public Button::Listener
+                                  public Button::Listener, 
+                                  public ChangeListener
                                   {
 public:
   /**
@@ -63,8 +64,23 @@ public:
                                      PlaybackRenderer *pr,
                                      EditorView *ev);
 
+
   // destructor
-  // ~HARPProcessorEditor() override;
+  ~HARPProcessorEditor() override {
+    DBG("HARPProcessorEditor destructor called");
+    if (mEditorView != nullptr) {
+      DBG("cancelling processing job.");
+      mEditorView->getModel()->cancel();
+    }
+
+    processButton.removeListener(this);
+    cancelButton.removeListener(this);
+    loadModelButton.removeListener(this);
+    mDocumentController->loadBroadcaster.removeChangeListener(this);
+    mDocumentController->processBroadcaster.removeChangeListener(this);
+
+    mModelStatusTimer.reset(nullptr);
+  }
   // Button listener method
   void buttonClicked(Button *button) override;
 
@@ -73,6 +89,9 @@ public:
 
   // Resize method
   void resized() override;
+
+  // Change listener method
+  void changeListenerCallback(ChangeBroadcaster *source) override;
 
 private:
   void resetUI(){
@@ -86,14 +105,16 @@ private:
   void setModelCard(const ModelCard& card);
 
 private:
-
   HARPLookAndFeel mHARPLookAndFeel;
 
+  std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
 
   unique_ptr<Component> documentView;
   juce::TextEditor modelPathTextBox;
   juce::TextButton loadModelButton;
   juce::TextButton processButton;
+  juce::TextButton cancelButton;
+  juce::Label statusLabel;
 
   CtrlComponent ctrlComponent;
   // model card

@@ -1,7 +1,7 @@
-#include "PlaybackRegion.h"
+#include "PlaybackRegionView.h"
 
 PlaybackRegionView::PlaybackRegionView(EditorView &editorView,
-                                       ARAPlaybackRegion &region,
+                                       ARAPlaybackRegion&region,
                                        WaveformCache &cache)
     : araEditorView(editorView), playbackRegion(region), waveformCache(cache),
       previewRegionOverlay(*this) {
@@ -69,20 +69,6 @@ void PlaybackRegionView::mouseUp(const juce::MouseEvent &) {
   previewRegionOverlay.update();
 }
 
-void PlaybackRegionView::mouseDoubleClick(const juce::MouseEvent &) {
-  // Set the dim flag on our region's audio modification when double-clicked
-  auto audioModification =
-      playbackRegion.getAudioModification<AudioModification>();
-  // audioModification->setDimmed(!audioModification->isDimmed());
-
-  // Send a content change notification for the modification and all associated
-  // playback regions
-  audioModification->notifyContentChanged(
-      ARAContentUpdateScopes::samplesAreAffected(), true);
-  for (auto region : audioModification->getPlaybackRegions())
-    region->notifyContentChanged(ARAContentUpdateScopes::samplesAreAffected(),
-                                 true);
-}
 
 void PlaybackRegionView::changeListenerCallback(juce::ChangeBroadcaster *) {
   repaint();
@@ -94,7 +80,7 @@ void PlaybackRegionView::didEnableAudioSourceSamplesAccess(ARAAudioSource *,
 }
 
 void PlaybackRegionView::willUpdatePlaybackRegionProperties(
-    ARAPlaybackRegion *, ARAPlaybackRegion::PropertiesPtr newProperties) {
+    ARAPlaybackRegion*, ARAPlaybackRegion::PropertiesPtr newProperties) {
   if (playbackRegion.getName() != newProperties->name ||
       playbackRegion.getColor() != newProperties->color) {
     repaint();
@@ -102,7 +88,7 @@ void PlaybackRegionView::willUpdatePlaybackRegionProperties(
 }
 
 void PlaybackRegionView::didUpdatePlaybackRegionContent(
-    ARAPlaybackRegion *, ARAContentUpdateScopes) {
+    ARAPlaybackRegion*, ARAContentUpdateScopes) {
   repaint();
 }
 
@@ -111,6 +97,9 @@ void PlaybackRegionView::onNewSelection(const ARAViewSelection &viewSelection) {
   const bool selected =
       std::find(selectedPlaybackRegions.begin(), selectedPlaybackRegions.end(),
                 &playbackRegion) != selectedPlaybackRegions.end();
+//   playbackRegion->setSelected(selected);
+    PlaybackRegion& playbackRegion2 = static_cast<PlaybackRegion& >(playbackRegion);
+    playbackRegion2.setSelected(selected);
   if (selected != isSelected) {
     isSelected = selected;
     repaint();

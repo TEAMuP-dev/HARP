@@ -250,20 +250,20 @@ public:
     }
   }
 
-  void textEditorReturnKeyPressed (TextEditor& textEditor) {
+  void textEditorTextChanged (TextEditor& textEditor) {
     auto id = juce::Uuid(textEditor.getName().toStdString());
 
     CtrlList &ctrls = mModel->controls();
     auto pair = mModel->findCtrlByUuid(id);
     if (pair == ctrls.end()) {
-      DBG("textEditorReturnKeyPressed: ctrl not found");
+      DBG("textEditorTextChanged: ctrl not found");
       return;
     }
     auto ctrl = pair->second;
     if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
       textBoxCtrl->value = textEditor.getText().toStdString();
     } else {
-      DBG("textEditorReturnKeyPressed: ctrl is not a text box");
+      DBG("textEditorTextChanged: ctrl is not a text box");
     }
   }
 

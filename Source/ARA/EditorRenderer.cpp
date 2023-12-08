@@ -82,15 +82,13 @@ void EditorRenderer::prepareToPlay(double sampleRateIn,
                                    juce::AudioProcessor::ProcessingPrecision,
                                    AlwaysNonRealtime alwaysNonRealtime) {
   sampleRate = sampleRateIn;
-  previewBuffer = std::make_unique<juce::AudioBuffer<float>>(numChannels,
-                                                       (int)(4 * sampleRateIn));
 
   ignoreUnused(maximumExpectedSamplesPerBlock, alwaysNonRealtime);
 }
 
 void EditorRenderer::releaseResources() { audioSourceReaders.clear(); }
 
-void EditorRenderer::reset() { previewBuffer->clear(); }
+void EditorRenderer::reset() { }
 
 bool EditorRenderer::processBlock(
     juce::AudioBuffer<float> &buffer, juce::AudioProcessor::Realtime realtime,

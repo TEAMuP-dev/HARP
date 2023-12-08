@@ -75,6 +75,13 @@ public:
   WebWave2Wave() { // TODO: should be a singleton
     juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
     logFile.deleteFile();
+    m_status_flag_file.replaceWithText("Status.INITIALIZED");
+  }
+
+  ~WebWave2Wave() {
+    // clean up flag files
+    m_cancel_flag_file.deleteFile();
+    m_status_flag_file.deleteFile();
   }
 
 
@@ -92,6 +99,7 @@ public:
 
     std::string url = std::any_cast<std::string>(params.at("url"));
     m_url = url; // Store the URL for future use
+    LogAndDBG("url: " + m_url);
 
     juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("control_spec.json");
@@ -118,10 +126,12 @@ public:
       + " --mode get_ctrls"
       + " --url " + m_url 
       + " --output_path " + outputPath.getFullPathName().toStdString()
-      + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
       + " 2>&1"   // redirect stderr to the same file as stdout
     );
 
+    LogAndDBG("Running command: " + command);
+    // TODO: urgently need to find a better alternative to system
     int result = std::system(command.c_str());
 
     juce::String logContent = tempLogFile.loadFileAsString();
@@ -129,18 +139,20 @@ public:
     tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.");
+        // read the text from the temp log file.
+        std::string message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        throw std::runtime_error(message);
     }
 
     // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
     juce::var controls = loadJsonFromFile(outputPath);
     if (controls.isVoid()) {
-        throw std::runtime_error("Failed to load controls from JSON.");
+        throw std::runtime_error("Failed to load controls from JSON. juce::var was void.");
     }
 
     juce::DynamicObject *ctrlDict = controls.getDynamicObject();
     if (ctrlDict == nullptr) {
-        throw std::runtime_error("Failed to load control dict from JSON.");
+        throw std::runtime_error("Failed to load control dict from JSON. ctrlDict is null.");
     }    
 
     // the "ctrls" key should be a list of dicts
@@ -210,6 +222,7 @@ public:
           }
           else if (ctrl_type == "text") {
             auto text = std::make_shared<TextBoxCtrl>();
+            text->id = juce::Uuid();
             text->label = ctrl["label"].toString().toStdString();
             text->value = ctrl["value"].toString().toStdString();
 
@@ -244,16 +257,21 @@ public:
 
     outputPath.deleteFile();
     m_loaded = true;
+
+    // set the status to LOADED
+    m_status_flag_file.replaceWithText("Status.LOADED");
   }
 
   CtrlList& controls() {
     return m_ctrls;
   }
 
-
   virtual void process(
     juce::AudioBuffer<float> *bufferToProcess, int sourceSampleRate, int dawSampleRate
   ) const override {
+    // clear the cancel flag file
+    m_cancel_flag_file.deleteFile();
+
     // make sure we're loaded
     LogAndDBG("WebWave2Wave::process");
     if (!m_loaded) {
@@ -309,7 +327,9 @@ public:
         + " --url " + m_url 
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
-        + " > " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
+        + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
+        + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
         + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
@@ -318,12 +338,14 @@ public:
 
     juce::String logContent = tempLogFile.loadFileAsString();
     LogAndDBG(logContent);
-    tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
-        // TODO: maybe we want to read the command output and display it? 
-        throw std::runtime_error("An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.");
+        // read the text from the temp log file.
+        std::string message = "An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        throw std::runtime_error(message);
     }
+
+    tempLogFile.deleteFile();  // delete the temporary log file
 
     // read the output file to a buffer
     // TODO: the sample rate should not be the incoming sample rate, but
@@ -337,9 +359,32 @@ public:
     tempCtrlsFile.deleteFile();
     LogAndDBG("WebWave2Wave::process done");
 
+    // clear the cancel flag file
+    m_cancel_flag_file.deleteFile();
     return;
   }
 
+  // sets a cancel flag file that the client can check to see if the process
+  // should be cancelled
+  void cancel() {
+    m_cancel_flag_file.deleteFile();
+    m_cancel_flag_file.create();
+  }
+
+  std::string getStatus() {
+    // if the status file doesn't exist, return Status.INACTIVE
+    if (!m_status_flag_file.exists()) {
+      return "Status.INACTIVE";
+    }
+
+    // read the status file and return its text
+    juce::String status = m_status_flag_file.loadFileAsString();
+    return status.toStdString();
+  }
+
+  juce::File getCancelFlagFile() const {
+    return m_cancel_flag_file;
+  }
 
   CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid) {
     return std::find_if(m_ctrls.begin(), m_ctrls.end(),
@@ -353,6 +398,7 @@ private:
   juce::var loadJsonFromFile(const juce::File& file) const {
     juce::var result;
 
+    LogAndDBG("Loading JSON from file: " + file.getFullPathName());
     if (!file.existsAsFile()) {
         LogAndDBG("File does not exist: " + file.getFullPathName());
         return result;
@@ -417,7 +463,36 @@ private:
     return true;
   }
 
+  juce::File m_cancel_flag_file {
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
+  };
+  juce::File m_status_flag_file {
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
+  };
   CtrlList m_ctrls;
   string m_url;
-//   bool m_loaded;
+};
+
+
+// a timer that checks the status of the model and broadcasts a change if if there is one
+class ModelStatusTimer : public juce::Timer, 
+                         public juce::ChangeBroadcaster {
+public:
+  ModelStatusTimer(std::shared_ptr<WebWave2Wave> model) : m_model(model) {
+  }
+
+  void timerCallback() override {
+    // get the status of the model
+    std::string status = m_model->getStatus();
+
+    // if the status has changed, broadcast a change
+    if (status != m_last_status) {
+      m_last_status = status;
+      sendChangeMessage();
+    }
+  }
+
+private:
+  std::shared_ptr<WebWave2Wave> m_model;
+  std::string m_last_status;
 };

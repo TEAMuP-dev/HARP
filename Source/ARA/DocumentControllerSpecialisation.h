@@ -26,8 +26,11 @@
 
 #include "EditorRenderer.h"
 // #include "PlaybackRenderer.h"
+#include "PlaybackRegion.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
+#include "juce_core/juce_core.h" 
+
 
 #include "../Util/PreviewState.h"
 
@@ -41,28 +44,27 @@ class PlaybackRenderer;
  */
 class HARPDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
-      public juce::ThreadWithProgressWindow,
-      public juce::ChangeBroadcaster,
       private ProcessingLockInterface {
 public:
   /**
    * @brief Constructor.
    * Uses ARA's document controller specialisation's constructor.
    */
-  // using ARADocumentControllerSpecialisation::
-  //     ARADocumentControllerSpecialisation;
   HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance) ;
-  // ARADocumentControllerSpecialisation (const ARA::PlugIn::PlugInEntry* entry,
-  //                                        const ARA::ARADocumentControllerHostInstance* instance);
 
   PreviewState previewState; ///< Preview state.
 
   std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
   void executeLoad(const map<string, any> &params);
   void executeProcess(std::shared_ptr<WebWave2Wave> model);
-  void run() override;
-  void threadComplete (bool userPressedCancel) override;
+
+public:
+  // TODO: these should probably be private, and we should have wrappers
+  // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
+  juce::ChangeBroadcaster loadBroadcaster;
+  juce::ChangeBroadcaster processBroadcaster;
+  
   void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
   
   
@@ -80,6 +82,14 @@ protected:
       ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
       const ARAAudioModification *optionalModificationToClone) noexcept
       override;
+
+  /**
+   * @brief Creates a playback region.
+   * @return A new PlaybackRegion instance.
+   */
+  ARAPlaybackRegion* doCreatePlaybackRegion (
+      ARAAudioModification* modification,
+      ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
 
   /**
    * @brief Creates a playback renderer.
@@ -126,6 +136,9 @@ private:
   // there are multiple playbackRenderers (one for each playbackRegion)
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
-  bool isProcessing {false};
+
+  juce::ThreadPool threadPool {1};
+
+
 
 };

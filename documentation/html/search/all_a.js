@@ -1,7 +1,7 @@
 var searchData=
 [
   ['paint_0',['paint',['../class_document_view.html#a7539a2065e9c57a468ae4fae55e68edb',1,'DocumentView::paint()'],['../class_rulers_header.html#af4dcad9c96f66955676b0244c77b0ca8',1,'RulersHeader::paint()']]],
-  ['playbackregion_2eh_1',['PlaybackRegion.h',['../_playback_region_8h.html',1,'']]],
+  ['playbackregion_2eh_1',['PlaybackRegionView.h',['../_playback_region_8h.html',1,'']]],
   ['playbackregionview_2',['PlaybackRegionView',['../class_playback_region_view.html',1,'']]],
   ['playbackrenderer_3',['PlaybackRenderer',['../class_playback_renderer.html',1,'PlaybackRenderer'],['../class_playback_renderer.html#aa6275e28bc21b1c0d08d49fc8dce8d2f',1,'PlaybackRenderer::PlaybackRenderer()']]],
   ['playbackrenderer_2ecpp_4',['PlaybackRenderer.cpp',['../_playback_renderer_8cpp.html',1,'']]],

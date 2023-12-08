@@ -26,7 +26,6 @@
 #pragma once
 
 #include "DocumentControllerSpecialisation.h"
-
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_audio_formats/juce_audio_formats.h"
 
@@ -37,6 +36,7 @@
 #include "../Timeline/SharedTimeSliceThread.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
+#include "PlaybackRegion.h"
 
 
 using namespace juce;

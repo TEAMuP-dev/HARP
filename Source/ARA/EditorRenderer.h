@@ -36,8 +36,7 @@
 #include "../Util/PreviewState.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
-// #include "ProcessorEditor.h"
-// using MyType = void (HARPProcessorEditor::*)(std::string);
+
 using std::unique_ptr;
 
 
@@ -82,12 +81,7 @@ private:
   ProcessingLockInterface &lockInterface;
   const PreviewState *previewState = nullptr;
   AsyncConfigurationCallback asyncConfigCallback;
-  double lastPreviewTime = 0.0;
   juce::ARAPlaybackRegion *lastPlaybackRegion = nullptr;
-  bool lastPreviewDimmed = false;
-  bool wasPreviewing = false;
-  unique_ptr<juce::AudioBuffer<float>> previewBuffer;
-  Looper previewLooper;
 
   double sampleRate = 48000.0;
   juce::SharedResourcePointer<SharedTimeSliceThread> timeSliceThread;

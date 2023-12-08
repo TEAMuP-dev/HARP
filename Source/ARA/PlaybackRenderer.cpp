@@ -38,11 +38,7 @@ PlaybackRenderer::PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
 
 // destructor
 PlaybackRenderer::~PlaybackRenderer() {
-  // DBG("PlaybackRenderer::~PlaybackRenderer");
   harpDCS.cleanDeletedPlaybackRenderers(this);
-//   int aa = harpDCS.playbackRenderers.size();
-//   DBG("PlaybackRenderer::~PlaybackRenderer " << aa);
-//   releaseResources();
 }
 
 void PlaybackRenderer::prepareToPlay(double sampleRateIn,
@@ -362,13 +358,15 @@ void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
 template <typename Callback>
 void PlaybackRenderer::forEachPlaybackRegion(Callback &&cb) {
   for (const auto &playbackRegion : getPlaybackRegions()) {
-     auto modification =
-        playbackRegion->getAudioModification<AudioModification>();
-    // // DBG modification->getSourceName()
-    DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
-        << modification->getSourceName()); 
-    if (!cb(playbackRegion))
-      return;
+    PlaybackRegion& region = static_cast<PlaybackRegion&>(*playbackRegion);
+    if (region.isSelected()){
+        auto modification =
+            playbackRegion->getAudioModification<AudioModification>();
+        DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
+            << modification->getSourceName()); 
+        if (!cb(playbackRegion))
+        return;
+    }
   }
   // NOTE : PlaybackRenderer doesn't get access to the regionSequences
   // for (const auto &regionSequence : getRegionSequences())

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['playbackregion_2eh_0',['PlaybackRegion.h',['../_playback_region_8h.html',1,'']]],
+  ['playbackregion_2eh_0',['PlaybackRegionView.h',['../_playback_region_8h.html',1,'']]],
   ['playbackrenderer_2ecpp_1',['PlaybackRenderer.cpp',['../_playback_renderer_8cpp.html',1,'']]],
   ['playbackrenderer_2eh_2',['PlaybackRenderer.h',['../_playback_renderer_8h.html',1,'']]],
   ['playheadpositionlabel_2ecpp_3',['PlayheadPositionLabel.cpp',['../_playhead_position_label_8cpp.html',1,'']]],
