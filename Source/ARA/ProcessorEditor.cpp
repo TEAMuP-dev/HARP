@@ -98,6 +98,22 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setReadOnly(false);
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
+  modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", juce::Colour::greyLevel(0.5f));  // Default text
+  modelPathTextBox.onReturnKey = [this] { loadModelButton.triggerClick(); };
+  addAndMakeVisible(modelPathTextBox);
+
+  // glossary label
+  glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", juce::NotificationType::dontSendNotification);
+  glossaryLabel.setJustificationType(juce::Justification::centredRight);
+  addAndMakeVisible(glossaryLabel);
+
+  // glossary link
+  glossaryButton.setButtonText("Model Glossary");
+  glossaryButton.setURL(juce::URL("https://github.com/audacitorch/HARP#available-models"));
+  //glossaryButton.setJustificationType(juce::Justification::centredLeft);
+  glossaryButton.addListener(this);
+  addAndMakeVisible(glossaryButton);
+
   if (model->ready()) {
     modelPathTextBox.setText(model->space_url());  // Default text
   } else {
@@ -248,31 +264,38 @@ void HARPProcessorEditor::resized() {
     modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
     loadModelButton.setBounds(row1.reduced(margin));
 
-    // Row 2: Name and Author Labels
-    auto row2 = mainArea.removeFromTop(40);  // adjust height as needed
-    nameLabel.setBounds(row2.removeFromLeft(row2.getWidth() / 2).reduced(margin));
+    // Row 2: Glossary Label and Hyperlink
+    auto row2 = mainArea.removeFromTop(30);  // adjust height as needed
+    glossaryLabel.setBounds(row2.removeFromLeft(row2.getWidth() * 0.8f).reduced(margin));
+    glossaryButton.setBounds(row2.reduced(margin));
+    glossaryLabel.setFont(Font(11.0f));
+    glossaryButton.setFont(Font(11.0f), false, juce::Justification::centredLeft);
+
+    // Row 3: Name and Author Labels
+    auto row3a = mainArea.removeFromTop(40);  // adjust height as needed
+    nameLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 2).reduced(margin));
     nameLabel.setFont(Font(20.0f, Font::bold));
     nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
 
-    auto row25 = mainArea.removeFromTop(30);
-    authorLabel.setBounds(row25.reduced(margin));
+    auto row3b = mainArea.removeFromTop(30);
+    authorLabel.setBounds(row3b.reduced(margin));
     authorLabel.setFont(Font(10.0f));
 
 
-    // Row 3: Description Label
-    auto row3 = mainArea.removeFromTop(80);  // adjust height as needed
-    descriptionLabel.setBounds(row3.reduced(margin));
+    // Row 4: Description Label
+    auto row4 = mainArea.removeFromTop(80);  // adjust height as needed
+    descriptionLabel.setBounds(row4.reduced(margin));
 
-    // Row 5: Process Button (taken out in advance to preserve its height)
-    auto row5Height = 25;  // adjust height as needed
-    auto row5 = mainArea.removeFromBottom(row5Height);
+    // Row 6: Process Button (taken out in advance to preserve its height)
+    auto row6Height = 25;  // adjust height as needed
+    auto row6 = mainArea.removeFromBottom(row6Height);
     
-    // Row 4: CtrlComponent (flexible height)
-    auto row4 = mainArea;  // the remaining area is for row 4
-    ctrlComponent.setBounds(row4.reduced(margin));
+    // Row 5: CtrlComponent (flexible height)
+    auto row5 = mainArea;  // the remaining area is for row 4
+    ctrlComponent.setBounds(row5.reduced(margin));
 
     // Assign bounds to processButton
-    processButton.setBounds(row5.withSizeKeepingCentre(100, 20));  // centering the button in the row
+    processButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
 
     // place the cancel button to the right of the process button (justified right)
     cancelButton.setBounds(processButton.getBounds().translated(110, 0));
