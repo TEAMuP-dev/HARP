@@ -272,17 +272,23 @@ public:
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
+    float bufferRMS = bufferToProcess->getRMSLevel(0, 0, bufferToProcess->getNumSamples());
+    DBG("buffer RMS in WebModel.h: " + std::to_string(bufferRMS));
+
     // make sure we're loaded
     LogAndDBG("WebWave2Wave::process");
     if (!m_loaded) {
       throw std::runtime_error("Model not loaded");
     }
-                    
+
+    // a random string to append to the input/output.wav files
+    std::string randomString = juce::Uuid().toString().toStdString();
+
     // save the buffer to file
     LogAndDBG("Saving buffer to file");
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("input.wav");
+            .getChildFile("input_" + randomString + ".wav");
     tempFile.deleteFile();
     if (!save_buffer_to_file(*bufferToProcess, tempFile, sourceSampleRate)) {
       throw std::runtime_error("Failed to save buffer to file.");
@@ -291,13 +297,13 @@ public:
     // a tarrget output file
     juce::File tempOutputFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("output.wav");
+            .getChildFile("output_" + randomString + ".wav");
     tempOutputFile.deleteFile();
 
     // a ctrls file
     juce::File tempCtrlsFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("ctrls.json");
+            .getChildFile("ctrls_" + randomString + ".json");
     tempCtrlsFile.deleteFile();
 
       
@@ -317,7 +323,7 @@ public:
 
     juce::File tempLogFile = 
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("system_log.txt");
+            .getChildFile("system_log_" + randomString + ".txt");
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
@@ -354,9 +360,9 @@ public:
     load_buffer_from_file(tempOutputFile, *bufferToProcess, dawSampleRate);
 
     // delete the temp input file
-    tempFile.deleteFile();
-    tempOutputFile.deleteFile();
-    tempCtrlsFile.deleteFile();
+    // tempFile.deleteFile();
+    // tempOutputFile.deleteFile();
+    // tempCtrlsFile.deleteFile();
     LogAndDBG("WebWave2Wave::process done");
 
     // clear the cancel flag file

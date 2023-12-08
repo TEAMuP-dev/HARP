@@ -338,7 +338,7 @@ void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
   auto callback = [this, model](juce::ARAPlaybackRegion *playbackRegion) -> bool {
       try {
           auto modification = playbackRegion->getAudioModification<AudioModification>();
-          std::cout << "PlaybackRenderer::processing playbackRegion "
+          std::cout << "PlaybackRenderer::processing inTheCallback: "
                     << modification->getSourceName() << std::endl;
           modification->process(model, dawSampleRate);
       } catch (const std::runtime_error& e) {
@@ -364,6 +364,8 @@ void PlaybackRenderer::forEachPlaybackRegion(Callback &&cb) {
             playbackRegion->getAudioModification<AudioModification>();
         DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
             << modification->getSourceName()); 
+        // float bufferRMS = modification->mAudioBuffer->getRMSLevel(0, 0, mAudioBuffer->getNumSamples());
+        // DBG("buffer RMS in PlaybackRenderer.cpp 368: " + std::to_string(bufferRMS));
         if (!cb(playbackRegion))
         return;
     }

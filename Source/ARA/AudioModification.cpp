@@ -37,6 +37,12 @@ AudioModification::AudioModification(
   DBG("AudioModification::the audio source is " << audioSource->getName());
   DBG("AudioModification:: create reader for " << audioSource->getName());
   mAudioSourceReader = std::make_unique<juce::ARAAudioSourceReader>(audioSource);
+
+//   readMaxLevels (int64 startSample, int64 numSamples,
+//                                 Range<float>* results, int numChannelsToRead);
+    juce::Range<float> results;
+    mAudioSourceReader->readMaxLevels(0, mAudioSourceReader->lengthInSamples, &results, 1);
+    DBG("AudioModification:: max level: " << results.getStart() << " " << results.getEnd());
   mSampleRate = audioSource->getSampleRate();
   mAudioSourceName = audioSource->getName();
 }
@@ -80,8 +86,17 @@ void AudioModification::process(std::shared_ptr<WebWave2Wave> model, double dawS
     mAudioBuffer.reset(new juce::AudioBuffer<float>(numChannels, numSamples));
 
     // reading into audio buffer
+
+    juce::Range<float> results;
+    mAudioSourceReader->readMaxLevels(0, mAudioSourceReader->lengthInSamples, &results, 1);
+    DBG("AudioModification:: max level: " << results.getStart() << " " << results.getEnd());
+    DBG("is valid audio source reader: ", mAudioSourceReader->isValid());
     mAudioSourceReader->read(mAudioBuffer.get(), 0,
                              static_cast<int>(numSamples), 0, true, true);
+    float bufferRMS = mAudioBuffer->getRMSLevel(0, 0, mAudioBuffer->getNumSamples());
+    DBG("buffer RMS in AudioMod.cpp: " + std::to_string(bufferRMS));
+    DBG("mAudioBuffer's memory address: " + std::to_string((long)mAudioBuffer.get()));
+
     model->process(mAudioBuffer.get(), sourceSampleRate, dawSampleRate);
 
     // connect the modified buffer to the source

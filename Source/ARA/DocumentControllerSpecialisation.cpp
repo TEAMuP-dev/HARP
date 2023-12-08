@@ -63,28 +63,91 @@ void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &p
   }
 
 void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
-  // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right? 
-  if (model == nullptr){
-    DBG("unhandled exception: model is null. we should probably open an error window here.");
-    return;
-  }
-
-  // print how many jobs are currently in the threadpool
-  DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
-
-  mModel = model;
-
-  // start the thread
-  threadPool.addJob([this] {
-    int counter = 0;
-    for (auto& playbackRenderer : playbackRenderers) {
-      playbackRenderer->executeProcess(mModel);
-
-      counter++;
-      DBG("Processing region: " << counter);
+    // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right? 
+    if (model == nullptr){
+        DBG("unhandled exception: model is null. we should probably open an error window here.");
+        return;
     }
-    processBroadcaster.sendChangeMessage();
-  });
+
+    // print how many jobs are currently in the threadpool
+    DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+
+    mModel = model;
+
+    int totalJobs = playbackRenderers.size();
+    int jobsFinished = 0;
+    // threadPool.removeAllJobs(true, 100);
+    std::vector<CustomThreadPoolJob*> customJobs;
+
+    for (auto& playbackRenderer : playbackRenderers) {
+        CustomThreadPoolJob* customJob = new CustomThreadPoolJob(
+            [this, &playbackRenderer, &jobsFinished, totalJobs] {
+                // Individual job code for each iteration
+                playbackRenderer->executeProcess(mModel);
+                // DBG("Processing region: " << playbackRenderer->getRegionName());
+
+                // Increment the counter when the job finishes
+                jobsFinished++;
+            }
+        );
+
+        // customJobs.push_back(customJob);
+        threadPool.addJob(customJob, false); 
+    }
+
+    // // Wait for all jobs to finish
+    // for (auto& customJob : customJobs) {
+    //     threadPool.waitForJobToFinish(customJob.get(), -1); // -1 for no timeout
+    // }
+
+    // // This will run after all jobs are done
+    // if (jobsFinished == totalJobs) {
+    //     processBroadcaster.sendChangeMessage();
+    // }
+    // Add a job to wait for all jobs and send the change message
+    threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
+
+    // threadPool.removeAllJobs()
+  // start the thread
+//   threadPool.addJob([this] {
+//     int counter = 0;
+//     for (auto& playbackRenderer : playbackRenderers) {
+//       playbackRenderer->executeProcess(mModel);
+
+//       counter++;
+//       DBG("Processing region: " << counter);
+//     }
+//     processBroadcaster.sendChangeMessage();
+//   });
+  
+    // int counter = 0;
+    // for (auto& playbackRenderer : playbackRenderers) {
+    //     threadPool.addJob([this,playbackRenderer] {
+    //         playbackRenderer->executeProcess(mModel);
+    //     });
+    // }
+    // processBroadcaster.sendChangeMessage();
+    // int counter = 0;
+    // for (auto& playbackRenderer : playbackRenderers) {
+    //   playbackRenderer->executeProcess(mModel);
+
+    //   counter++;
+    //   DBG("Processing region: " << counter);
+    // }
+    // processBroadcaster.sendChangeMessage();
+    // for (auto& playbackRenderer : playbackRenderers) {
+    //     threadPool.addJob([this, &playbackRenderer] {
+    //         // Individual job code for each iteration
+    //         playbackRenderer->executeProcess(mModel);
+    //         DBG("Processing region: " << playbackRenderer->getRegionName());
+    //     });
+    // }
+
+    // Wait for all jobs to finish
+    // threadPool.waitForAllJobsToFinish();
+
+    // This will run after all jobs are done
+    // processBroadcaster.sendChangeMessage();
 }
 
 void HARPDocumentControllerSpecialisation::willBeginEditing(
