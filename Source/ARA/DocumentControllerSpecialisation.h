@@ -58,7 +58,7 @@ public:
         }
     }
 
-private:
+// private:
     std::function<void()> jobFunction;
 };
 
@@ -72,84 +72,35 @@ class HARPDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
       private ProcessingLockInterface {
 public:
-  /**
-   * @brief Constructor.
-   * Uses ARA's document controller specialisation's constructor.
-   */
-  HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
-                                         const ARA::ARADocumentControllerHostInstance* instance) ;
+    /**
+     * @brief Constructor.
+     * Uses ARA's document controller specialisation's constructor.
+     */
+    HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+                                            const ARA::ARADocumentControllerHostInstance* instance) ;
 
-  PreviewState previewState; ///< Preview state.
+    PreviewState previewState; ///< Preview state.
 
-  std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
-  void executeLoad(const map<string, any> &params);
-  void executeProcess(std::shared_ptr<WebWave2Wave> model);
+    std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
+    void executeLoad(const map<string, any> &params);
+    void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
 public:
-  // TODO: these should probably be private, and we should have wrappers
-  // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
-  juce::ChangeBroadcaster loadBroadcaster;
-  juce::ChangeBroadcaster processBroadcaster;
+    // TODO: these should probably be private, and we should have wrappers
+    // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
+    juce::ChangeBroadcaster loadBroadcaster;
+    juce::ChangeBroadcaster processBroadcaster;
+    
+    void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
   
-  void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
   
-  
-protected:
-  void willBeginEditing(
-      ARADocument *) override; ///< Called when beginning to edit a document.
-  void didEndEditing(
-      ARADocument *) override; ///< Called when editing a document ends.
-
-  /**
-   * @brief Creates an audio modification.
-   * @return A new AudioModification instance.
-   */
-  ARAAudioModification *doCreateAudioModification(
-      ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
-      const ARAAudioModification *optionalModificationToClone) noexcept
-      override;
-
-  /**
-   * @brief Creates a playback region.
-   * @return A new PlaybackRegion instance.
-   */
-  ARAPlaybackRegion* doCreatePlaybackRegion (
-      ARAAudioModification* modification,
-      ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
-
-  /**
-   * @brief Creates a playback renderer.
-   * @return A new PlaybackRenderer instance.
-   */
-  ARAPlaybackRenderer *doCreatePlaybackRenderer() noexcept override;
-
-  // /**
-  //  * @brief Creates an editor renderer.
-  //  * @return A new EditorRenderer instance.
-  //  */
-  // EditorRenderer *doCreateEditorRenderer() noexcept override;
-
-  /**
-   * @brief Creates an editor view.
-   * @return A new EditorView instance.
-   */
-  EditorView *doCreateEditorView() noexcept override;
-
-  bool
-  doRestoreObjectsFromStream(ARAInputStream &input,
-                             const ARARestoreObjectsFilter *filter) noexcept
-      override; ///< Restores objects from a stream.
-  bool doStoreObjectsToStream(ARAOutputStream &output,
-                              const ARAStoreObjectsFilter *filter) noexcept
-      override; ///< Stores objects to a stream.
-
-private:
     class JobProcessorThread : public Thread
     {
     public:
         JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs, 
                             int& jobsFinished, 
                             int& totalJobs
+                            // ChangeBroadcaster& broadcaster
                         )
             : Thread("JobProcessorThread"), 
             customJobs(jobs), 
@@ -161,6 +112,7 @@ private:
         {
             for (auto& customJob : customJobs) {
                 threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
+                // customJob->runJob();
             }
 
             // Wait for all jobs to finish
@@ -175,13 +127,70 @@ private:
             // }
         }
 
+        ChangeBroadcaster processBroadcaster;
+
     private:
         const std::vector<CustomThreadPoolJob*>& customJobs;
         int& jobsFinished;
         int& totalJobs;
-        ChangeBroadcaster processBroadcaster;
+        
         juce::ThreadPool threadPool {3};  
     };
+
+    JobProcessorThread jobProcessorThread;
+
+
+protected:
+    void willBeginEditing(
+        ARADocument *) override; ///< Called when beginning to edit a document.
+    void didEndEditing(
+        ARADocument *) override; ///< Called when editing a document ends.
+
+    /**
+     * @brief Creates an audio modification.
+     * @return A new AudioModification instance.
+     */
+    ARAAudioModification *doCreateAudioModification(
+        ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
+        const ARAAudioModification *optionalModificationToClone) noexcept
+        override;
+
+    /**
+     * @brief Creates a playback region.
+     * @return A new PlaybackRegion instance.
+     */
+    ARAPlaybackRegion* doCreatePlaybackRegion (
+        ARAAudioModification* modification,
+        ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
+
+    /**
+     * @brief Creates a playback renderer.
+     * @return A new PlaybackRenderer instance.
+     */
+    ARAPlaybackRenderer *doCreatePlaybackRenderer() noexcept override;
+
+    // /**
+    //  * @brief Creates an editor renderer.
+    //  * @return A new EditorRenderer instance.
+    //  */
+    // EditorRenderer *doCreateEditorRenderer() noexcept override;
+
+    /**
+     * @brief Creates an editor view.
+     * @return A new EditorView instance.
+     */
+    EditorView *doCreateEditorView() noexcept override;
+
+    bool
+    doRestoreObjectsFromStream(ARAInputStream &input,
+                                const ARARestoreObjectsFilter *filter) noexcept
+        override; ///< Restores objects from a stream.
+    bool doStoreObjectsToStream(ARAOutputStream &output,
+                                const ARAStoreObjectsFilter *filter) noexcept
+        override; ///< Stores objects to a stream.
+
+private:
+    
     ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
     ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 
@@ -202,63 +211,9 @@ private:
 
     juce::ThreadPool threadPool {1};
 //   JobProcessorThread jobProcessorThread;
-
-
-    JobProcessorThread jobProcessorThread;
+    
     std::vector<CustomThreadPoolJob*> customJobs;
     // ChangeBroadcaster processBroadcaster;
     int jobsFinished = 0;
     int totalJobs = 0;
-
-
-
 };
-
-
-
-// class CustomThreadPoolJob : public ThreadPoolJob
-//     {
-//     public:
-//         CustomThreadPoolJob(std::function<void()> jobFunction)
-//             : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
-//         {}
-
-//         JobStatus runJob() override
-//         {
-//             jobFunction();
-//             return jobHasFinished;
-//         }
-
-//     private:
-//         std::function<void()> jobFunction;
-// };
-
-// class WaitForJobsJob : public ThreadPoolJob
-// {
-// public:
-//     explicit WaitForJobsJob(const std::vector<CustomThreadPoolJob*>& jobs, int& jobsFinished, int totalJobs, ChangeBroadcaster& broadcaster, ThreadPool& pool)
-//         : ThreadPoolJob("WaitForJobsJob"), customJobs(jobs), jobsFinished(jobsFinished), totalJobs(totalJobs), processBroadcaster(broadcaster), threadPool(pool)
-//     {}
-
-//     JobStatus runJob() override
-//     {
-//         // Wait for all jobs to finish
-//         for (auto& customJob : customJobs) {
-//             threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
-//         }
-
-//         // This will run after all jobs are done
-//         if (jobsFinished == totalJobs) {
-//             // processBroadcaster.sendChangeMessage();
-//         }
-
-//         return jobHasFinished;
-//     }
-
-// private:
-//     const std::vector<CustomThreadPoolJob*>& customJobs;
-//     int& jobsFinished;
-//     int totalJobs;
-//     ChangeBroadcaster& processBroadcaster;
-//     ThreadPool& threadPool;
-// };

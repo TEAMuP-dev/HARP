@@ -77,7 +77,7 @@ public:
     cancelButton.removeListener(this);
     loadModelButton.removeListener(this);
     mDocumentController->loadBroadcaster.removeChangeListener(this);
-    mDocumentController->processBroadcaster.removeChangeListener(this);
+    mDocumentController->jobProcessorThread.processBroadcaster.removeChangeListener(this);
 
     mModelStatusTimer.reset(nullptr);
   }

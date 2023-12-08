@@ -37,7 +37,7 @@ HARPProcessorEditor::HARPProcessorEditor(
                                                     HARPDocumentControllerSpecialisation>(
                                                     mEditorView->getDocumentController());
     mDocumentController->loadBroadcaster.addChangeListener(this);
-    mDocumentController->processBroadcaster.addChangeListener(this);
+    mDocumentController->jobProcessorThread.processBroadcaster.addChangeListener(this);
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
   else {
@@ -219,7 +219,7 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     loadModelButton.setEnabled(true);
     loadModelButton.setButtonText("load");
   }
-  else if (source == &mDocumentController->processBroadcaster) {
+  else if (source == &mDocumentController->jobProcessorThread.processBroadcaster) {
     // now, we can enable the process button
     processButton.setButtonText("process");
     processButton.setEnabled(true);
