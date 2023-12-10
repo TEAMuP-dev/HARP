@@ -56,6 +56,46 @@ class CustomThreadPoolJob : public ThreadPoolJob {
     std::function<void()> jobFunction;
 };
 
+// I don't like this
+class JobProcessorThread : public Thread {
+  public:
+    JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+                        int& jobsFinished,
+                        int& totalJobs,
+                        ChangeBroadcaster& processBroadcaster
+                    )
+        : Thread("JobProcessorThread"),
+        customJobs(jobs),
+        jobsFinished(jobsFinished),
+        totalJobs(totalJobs),
+        processBroadcaster(processBroadcaster)
+    {}
+
+    void run() override {
+      for (auto& customJob : customJobs) {
+          threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
+      }
+
+      // Wait for all jobs to finish
+      for (auto& customJob : customJobs) {
+          threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
+      }
+
+      // This will run after all jobs are done
+      // if (jobsFinished == totalJobs) {
+      processBroadcaster.sendChangeMessage();
+      DBG("Jobs finished");
+      // }
+    }
+
+  private:
+    const std::vector<CustomThreadPoolJob*>& customJobs;
+    int& jobsFinished;
+    int& totalJobs;
+    juce::ThreadPool threadPool {3};
+    ChangeBroadcaster& processBroadcaster;
+};
+
 /**
  * @class HARPDocumentControllerSpecialisation
  * @brief Specialises ARA's document controller, with added functionality for
@@ -78,53 +118,14 @@ public:
   void executeLoad(const map<string, any> &params);
   void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
-  // TODO: these should probably be private, and we should have wrappers
-  // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
-  juce::ChangeBroadcaster loadBroadcaster;
-  juce::ChangeBroadcaster processBroadcaster;
-
   void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
 
-  // I don't like this
-  class JobProcessorThread : public Thread {
-    public:
-      JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
-                          int& jobsFinished,
-                          int& totalJobs
-                      )
-          : Thread("JobProcessorThread"),
-          customJobs(jobs),
-          jobsFinished(jobsFinished),
-          totalJobs(totalJobs)
-      {}
-
-      void run() override {
-        for (auto& customJob : customJobs) {
-            threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
-        }
-
-        // Wait for all jobs to finish
-        for (auto& customJob : customJobs) {
-            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
-        }
-
-        // This will run after all jobs are done
-        // if (jobsFinished == totalJobs) {
-        processBroadcaster.sendChangeMessage();
-        DBG("Jobs finished");
-        // }
-      }
-
-    ChangeBroadcaster processBroadcaster;
-
-    private:
-      const std::vector<CustomThreadPoolJob*>& customJobs;
-      int& jobsFinished;
-      int& totalJobs;
-      juce::ThreadPool threadPool {3};
-  };
-
-  JobProcessorThread jobProcessorThread;
+  void addLoadListener(ChangeListener* listener);
+  void removeLoadListener(ChangeListener* listener);
+  void addProcessListener(ChangeListener* listener);
+  void removeProcessListener(ChangeListener* listener);
+  bool isLoadBroadcaster(ChangeBroadcaster* broadcaster);
+  bool isProcessBroadcaster(ChangeBroadcaster* broadcaster);
 
 protected:
   void willBeginEditing(
@@ -197,5 +198,9 @@ private:
   // ChangeBroadcaster processBroadcaster;
   int jobsFinished = 0;
   int totalJobs = 0;
+  juce::ChangeBroadcaster loadBroadcaster;
+  juce::ChangeBroadcaster processBroadcaster;
+  JobProcessorThread jobProcessorThread;
+
 };
 

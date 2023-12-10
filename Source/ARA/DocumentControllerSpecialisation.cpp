@@ -32,7 +32,7 @@ HARPDocumentControllerSpecialisation::
                                          const ARA::ARADocumentControllerHostInstance* instance)
             : ARADocumentControllerSpecialisation(entry, instance),
             jobsFinished(0), totalJobs(0),
-            jobProcessorThread(customJobs, jobsFinished, totalJobs){
+            jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster){
 }
 
 
@@ -104,6 +104,25 @@ void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWav
   // Add a job to wait for all jobs and send the change message
   // threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
 
+}
+
+void HARPDocumentControllerSpecialisation::addLoadListener(ChangeListener* listener) {
+  loadBroadcaster.addChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::removeLoadListener(ChangeListener* listener) {
+  loadBroadcaster.removeChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::addProcessListener(ChangeListener* listener) {
+  processBroadcaster.addChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::removeProcessListener(ChangeListener* listener) {
+  processBroadcaster.removeChangeListener(listener);
+}
+bool HARPDocumentControllerSpecialisation::isLoadBroadcaster(ChangeBroadcaster* broadcaster) {
+  return broadcaster == &loadBroadcaster;
+}
+bool HARPDocumentControllerSpecialisation::isProcessBroadcaster(ChangeBroadcaster* broadcaster) {
+  return broadcaster == &processBroadcaster;
 }
 
 void HARPDocumentControllerSpecialisation::willBeginEditing(
