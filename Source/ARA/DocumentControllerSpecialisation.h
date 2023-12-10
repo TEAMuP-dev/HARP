@@ -36,6 +36,26 @@
 // Forward declaration of the child class
 class PlaybackRenderer;
 
+class CustomThreadPoolJob : public ThreadPoolJob {
+  public:
+    CustomThreadPoolJob(std::function<void()> jobFunction)
+        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+    {}
+
+    JobStatus runJob() override {
+      if (jobFunction) {
+          jobFunction();
+          return jobHasFinished;
+      }
+      else {
+          return jobHasFinished; // or some other appropriate status
+      }
+    }
+
+  private:
+    std::function<void()> jobFunction;
+};
+
 /**
  * @class HARPDocumentControllerSpecialisation
  * @brief Specialises ARA's document controller, with added functionality for
@@ -109,6 +129,43 @@ protected:
       override; ///< Stores objects to a stream.
 
 private:
+  class JobProcessorThread : public Thread {
+    public:
+      JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+                          int& jobsFinished,
+                          int& totalJobs
+                      )
+          : Thread("JobProcessorThread"),
+          customJobs(jobs),
+          jobsFinished(jobsFinished),
+          totalJobs(totalJobs)
+      {}
+
+      void run() override {
+        for (auto& customJob : customJobs) {
+            threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
+        }
+
+        // Wait for all jobs to finish
+        for (auto& customJob : customJobs) {
+            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
+        }
+
+        // This will run after all jobs are done
+        // if (jobsFinished == totalJobs) {
+        processBroadcaster.sendChangeMessage();
+        DBG("Jobs finished");
+        // }
+      }
+
+    private:
+      const std::vector<CustomThreadPoolJob*>& customJobs;
+      int& jobsFinished;
+      int& totalJobs;
+      ChangeBroadcaster processBroadcaster;
+      juce::ThreadPool threadPool {3};
+  };
+
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
@@ -128,21 +185,12 @@ private:
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
 
-  juce::ThreadPool threadPool {3};
-};
-class CustomThreadPoolJob : public ThreadPoolJob {
-  public:
-    CustomThreadPoolJob(std::function<void()> jobFunction)
-        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
-    {}
-
-    JobStatus runJob() override {
-      jobFunction();
-      return jobHasFinished;
-    }
-
-  private:
-    std::function<void()> jobFunction;
+  juce::ThreadPool threadPool {1};
+  JobProcessorThread jobProcessorThread;
+  std::vector<CustomThreadPoolJob*> customJobs;
+  // ChangeBroadcaster processBroadcaster;
+  int jobsFinished = 0;
+  int totalJobs = 0;
 };
 
 class WaitForJobsJob : public ThreadPoolJob {

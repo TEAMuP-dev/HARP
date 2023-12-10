@@ -30,7 +30,9 @@
 HARPDocumentControllerSpecialisation::
             HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
-            : ARADocumentControllerSpecialisation(entry, instance) {
+            : ARADocumentControllerSpecialisation(entry, instance),
+            jobsFinished(0), totalJobs(0),
+            jobProcessorThread(customJobs, jobsFinished, totalJobs){
 }
 
 
@@ -74,15 +76,14 @@ void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWav
 
   mModel = model;
 
-  // start the thread
-  int totalJobs = playbackRenderers.size();
-  int jobsFinished = 0;
-  // threadPool.removeAllJobs(true, 100);
-  std::vector<CustomThreadPoolJob*> customJobs;
+  totalJobs = playbackRenderers.size();
+  jobsFinished = 0;
+  // empty customJobs
+  customJobs.clear();
 
   for (auto& playbackRenderer : playbackRenderers) {
       CustomThreadPoolJob* customJob = new CustomThreadPoolJob(
-          [this, &playbackRenderer, &jobsFinished, totalJobs] {
+          [this, &playbackRenderer] { // &jobsFinished, totalJobs
               // Individual job code for each iteration
               playbackRenderer->executeProcess(mModel);
               // DBG("Processing region: " << playbackRenderer->getRegionName());
@@ -91,10 +92,17 @@ void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWav
           }
       );
       // customJobs.push_back(customJob);
-      threadPool.addJob(customJob, false);
+      customJobs.push_back(customJob);
   }
+
+  // Add a thread to process the jobs and wait for them
+  // JobProcessorThread jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster);
+  jobProcessorThread.startThread();
+  // jobProcessorThread.waitForThreadToExit(-1);
+  DBG("Didn't wait");
+  //
   // Add a job to wait for all jobs and send the change message
-  threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
+  // threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
 
 }
 
