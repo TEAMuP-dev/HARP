@@ -3,15 +3,6 @@
 
 HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with deep learning models. HARP works by routing audio from a digital audio workstation ([DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation)) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets users of Digital Audio Workstations (e.g. [Reaper](https://www.reaper.fm)) access large state-of-the-art models in the cloud, without breaking their within-DAW workflow.
 
-# Available Models
-While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP:
-
-- Pitch shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
-- Harmonic/percussive source separation: [hugggof/harmonic_percussive]  (https://huggingface.co/spaces/hugggof/harmonic_percussive)
-- Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
-- Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-- Weird sound modification: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
-
 # OS and DAW compatibility 
 HARP has been tested on arm-based Mac computers running Mac OS (versions 13.0 and 13.4), using the [REAPER](https://www.reaper.fm) digital audio workstation. 
 
@@ -59,8 +50,21 @@ HARP should now be available as a VST3 plugin.
 * Add HARP(TeamUP) as a VST3 plugin. This will call up HARP
 <img width="1041" alt="harp-basic" src="https://github.com/audacitorch/HARP/assets/26678616/4794e2c9-fc97-4c31-bb63-bba3cadd5d1f">
 
-* Enter the gradio endpoint of a HARP model. 
+* Type the gradio endpoint of an available HARP mode where it says "path to a gradio endpoint." For example "hugggof/harmonic_percussive". This will bring up the model controls.
+<img width="1038" alt="harmonic_percussive" src="https://github.com/audacitorch/HARP/assets/26678616/44ee6ab1-e020-45d6-a87c-1ace3e76aefd">
 
+* Adjust the controls and hit "process"
+
+* To hear your result, just hit the space bar. 
+
+# Available Models
+While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP:
+
+- Pitch shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
+- Harmonic/percussive source separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+- Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
+- Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
+- Weird sound modification: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
 
 # Making a deep learning model compatible with HARP
