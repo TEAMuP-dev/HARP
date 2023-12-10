@@ -33,21 +33,32 @@ The windows build is still under development. There are no current plans to supp
 
 # Quickstart: Using HARP in the Reaper DAW on MacOS 13
 ## Making HARP available in Reaper
+
 * Install the latest [Reaper](https://www.reaper.fm)
+
 * Install HARP (see above)
+
 * Start Reaper
+
 * Open the preferences dialog by selecting the Reaper>Settings menu item
+
 * Scroll down to find Plug-ins>ARA and make sure "Enable ARA for plug-ins" is checked. 
   <img width="720" alt="reaper-preferences" src="https://github.com/audacitorch/HARP/assets/26678616/4fc157b1-4718-4da6-a395-37293af7e358">
+
 * Restart Reaper 
+
 HARP should now be available as a VST3 plugin. 
 
 ## Apply a HARP effect
+
 * Record a track in Reaper
+
 * Select "FX" on the track's channel strip. This brings up the following dialog 
 <img width="1196" alt="selecting-HARP" src="https://github.com/audacitorch/HARP/assets/26678616/4df7fdcd-582e-4e21-905e-fd06f374d0bf">
+
 * Add HARP(TeamUP) as a VST3 plugin. This will call up HARP
 <img width="1041" alt="harp-basic" src="https://github.com/audacitorch/HARP/assets/26678616/4794e2c9-fc97-4c31-bb63-bba3cadd5d1f">
+
 * Enter the gradio endpoint of a HARP model. 
 
 
