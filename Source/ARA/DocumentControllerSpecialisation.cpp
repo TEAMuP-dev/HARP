@@ -33,6 +33,7 @@ HARPDocumentControllerSpecialisation::
             : ARADocumentControllerSpecialisation(entry, instance),
             jobsFinished(0), totalJobs(0),
             jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster){
+  jobProcessorThread.startThread();
 }
 
 
@@ -95,14 +96,8 @@ void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWav
       customJobs.push_back(customJob);
   }
 
-  // Add a thread to process the jobs and wait for them
-  // JobProcessorThread jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster);
-  jobProcessorThread.startThread();
-  // jobProcessorThread.waitForThreadToExit(-1);
-  DBG("Didn't wait");
-  //
-  // Add a job to wait for all jobs and send the change message
-  // threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
+  // Now the customJobs are ready to be added to be run in the threadPool
+  jobProcessorThread.signalTask();
 
 }
 
