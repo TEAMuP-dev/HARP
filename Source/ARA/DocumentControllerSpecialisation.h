@@ -78,7 +78,6 @@ public:
   void executeLoad(const map<string, any> &params);
   void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
-public:
   // TODO: these should probably be private, and we should have wrappers
   // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
   juce::ChangeBroadcaster loadBroadcaster;
@@ -86,6 +85,46 @@ public:
 
   void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
 
+  // I don't like this
+  class JobProcessorThread : public Thread {
+    public:
+      JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+                          int& jobsFinished,
+                          int& totalJobs
+                      )
+          : Thread("JobProcessorThread"),
+          customJobs(jobs),
+          jobsFinished(jobsFinished),
+          totalJobs(totalJobs)
+      {}
+
+      void run() override {
+        for (auto& customJob : customJobs) {
+            threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
+        }
+
+        // Wait for all jobs to finish
+        for (auto& customJob : customJobs) {
+            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
+        }
+
+        // This will run after all jobs are done
+        // if (jobsFinished == totalJobs) {
+        processBroadcaster.sendChangeMessage();
+        DBG("Jobs finished");
+        // }
+      }
+
+    ChangeBroadcaster processBroadcaster;
+
+    private:
+      const std::vector<CustomThreadPoolJob*>& customJobs;
+      int& jobsFinished;
+      int& totalJobs;
+      juce::ThreadPool threadPool {3};
+  };
+
+  JobProcessorThread jobProcessorThread;
 
 protected:
   void willBeginEditing(
@@ -129,42 +168,7 @@ protected:
       override; ///< Stores objects to a stream.
 
 private:
-  class JobProcessorThread : public Thread {
-    public:
-      JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
-                          int& jobsFinished,
-                          int& totalJobs
-                      )
-          : Thread("JobProcessorThread"),
-          customJobs(jobs),
-          jobsFinished(jobsFinished),
-          totalJobs(totalJobs)
-      {}
 
-      void run() override {
-        for (auto& customJob : customJobs) {
-            threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
-        }
-
-        // Wait for all jobs to finish
-        for (auto& customJob : customJobs) {
-            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
-        }
-
-        // This will run after all jobs are done
-        // if (jobsFinished == totalJobs) {
-        processBroadcaster.sendChangeMessage();
-        DBG("Jobs finished");
-        // }
-      }
-
-    private:
-      const std::vector<CustomThreadPoolJob*>& customJobs;
-      int& jobsFinished;
-      int& totalJobs;
-      ChangeBroadcaster processBroadcaster;
-      juce::ThreadPool threadPool {3};
-  };
 
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
 
@@ -185,40 +189,13 @@ private:
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
 
+  // This one is used for Loading the models
+  // The thread pull for Processing lives inside the JobProcessorThread
   juce::ThreadPool threadPool {1};
-  JobProcessorThread jobProcessorThread;
+
   std::vector<CustomThreadPoolJob*> customJobs;
   // ChangeBroadcaster processBroadcaster;
   int jobsFinished = 0;
   int totalJobs = 0;
 };
-
-class WaitForJobsJob : public ThreadPoolJob {
-  public:
-    explicit WaitForJobsJob(const std::vector<CustomThreadPoolJob*>& jobs, int& jobsFinished, int totalJobs, ChangeBroadcaster& broadcaster, ThreadPool& pool)
-        : ThreadPoolJob("WaitForJobsJob"), customJobs(jobs), jobsFinished(jobsFinished), totalJobs(totalJobs), processBroadcaster(broadcaster), threadPool(pool)
-    {}
-
-    JobStatus runJob() override {
-        // Wait for all jobs to finish
-        for (auto& customJob : customJobs) {
-            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
-        }
-
-        // This will run after all jobs are done
-        if (jobsFinished == totalJobs) {
-            // processBroadcaster.sendChangeMessage();
-        }
-
-        return jobHasFinished;
-    }
-
-  private:
-    const std::vector<CustomThreadPoolJob*>& customJobs;
-    int& jobsFinished;
-    int totalJobs;
-    ChangeBroadcaster& processBroadcaster;
-    ThreadPool& threadPool;
-};
-
 
