@@ -6,11 +6,11 @@ HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allo
 # Available Models
 While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP:
 
-- [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
-- [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
-- [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
-- [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-- [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+- Pitch shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
+- Harmonic/percussive source separation: [hugggof/harmonic_percussive]  (https://huggingface.co/spaces/hugggof/harmonic_percussive)
+- Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
+- Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
+- Weird sound modification: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
 # OS and DAW compatibility 
 HARP has been tested on arm-based Mac computers running Mac OS (versions 13.0 and 13.4), using the [REAPER](https://www.reaper.fm) digital audio workstation. 
@@ -31,16 +31,26 @@ HARP requires a [DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation) t
 ## Windows & Linux
 The windows build is still under development. There are no current plans to support Linux
 
-# Getting started with HARP in the Reaper DAW
-
-* Download the latest [Reaper](https://www.reaper.fm)
-* Install HARP
+# Quickstart: Using HARP in the Reaper DAW on MacOS 13
+## Making HARP available in Reaper
+* Install the latest [Reaper](https://www.reaper.fm)
+* Install HARP (see above)
 * Start Reaper
 * Open the preferences dialog by selecting the Reaper>Settings menu item
-* Scroll down to find the
-* Restart Reaper
-  
-HARP should now be a
+* Scroll down to find Plug-ins>ARA and make sure "Enable ARA for plug-ins" is checked. 
+  <img width="720" alt="reaper-preferences" src="https://github.com/audacitorch/HARP/assets/26678616/4fc157b1-4718-4da6-a395-37293af7e358">
+* Restart Reaper 
+HARP should now be available as a VST3 plugin. 
+
+## Apply a HARP effect
+* Record a track in Reaper
+* Select "FX" on the track's channel strip. This brings up the following dialog 
+<img width="1196" alt="selecting-HARP" src="https://github.com/audacitorch/HARP/assets/26678616/4df7fdcd-582e-4e21-905e-fd06f374d0bf">
+* Add HARP(TeamUP) as a VST3 plugin. This will call up HARP
+<img width="1041" alt="harp-basic" src="https://github.com/audacitorch/HARP/assets/26678616/4794e2c9-fc97-4c31-bb63-bba3cadd5d1f">
+* Enter the gradio endpoint of a HARP model. 
+
+
 
 # Making a deep learning model compatible with HARP
 We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
