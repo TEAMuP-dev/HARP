@@ -28,7 +28,7 @@
 // #include "PlaybackRenderer.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
-#include "juce_core/juce_core.h" 
+#include "juce_core/juce_core.h"
 
 
 #include "../Util/PreviewState.h"
@@ -63,10 +63,10 @@ public:
   // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
   juce::ChangeBroadcaster loadBroadcaster;
   juce::ChangeBroadcaster processBroadcaster;
-  
+
   void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
-  
-  
+
+
 protected:
   void willBeginEditing(
       ARADocument *) override; ///< Called when beginning to edit a document.
@@ -128,8 +128,49 @@ private:
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
 
-  juce::ThreadPool threadPool {1};
-
-
-
+  juce::ThreadPool threadPool {3};
 };
+class CustomThreadPoolJob : public ThreadPoolJob {
+  public:
+    CustomThreadPoolJob(std::function<void()> jobFunction)
+        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+    {}
+
+    JobStatus runJob() override {
+      jobFunction();
+      return jobHasFinished;
+    }
+
+  private:
+    std::function<void()> jobFunction;
+};
+
+class WaitForJobsJob : public ThreadPoolJob {
+  public:
+    explicit WaitForJobsJob(const std::vector<CustomThreadPoolJob*>& jobs, int& jobsFinished, int totalJobs, ChangeBroadcaster& broadcaster, ThreadPool& pool)
+        : ThreadPoolJob("WaitForJobsJob"), customJobs(jobs), jobsFinished(jobsFinished), totalJobs(totalJobs), processBroadcaster(broadcaster), threadPool(pool)
+    {}
+
+    JobStatus runJob() override {
+        // Wait for all jobs to finish
+        for (auto& customJob : customJobs) {
+            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
+        }
+
+        // This will run after all jobs are done
+        if (jobsFinished == totalJobs) {
+            // processBroadcaster.sendChangeMessage();
+        }
+
+        return jobHasFinished;
+    }
+
+  private:
+    const std::vector<CustomThreadPoolJob*>& customJobs;
+    int& jobsFinished;
+    int totalJobs;
+    ChangeBroadcaster& processBroadcaster;
+    ThreadPool& threadPool;
+};
+
+
