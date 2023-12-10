@@ -30,131 +30,86 @@
 HARPDocumentControllerSpecialisation::
             HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
-            : ARADocumentControllerSpecialisation(entry, instance) , 
+            : ARADocumentControllerSpecialisation(entry, instance) ,
             jobsFinished(0), totalJobs(0),
-            jobProcessorThread(customJobs, jobsFinished, totalJobs)
-            {}
+            jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster){
+  jobProcessorThread.startThread();
+}
 
-
+HARPDocumentControllerSpecialisation::~HARPDocumentControllerSpecialisation() {
+  jobProcessorThread.signalThreadShouldExit();
+  // This will not actually run any processing task
+  // It'll just make sure that the thread is not waiting
+  // and it'll allow it to check for the threadShouldExit flag
+  jobProcessorThread.signalTask();
+  jobProcessorThread.waitForThreadToExit(-1);
+}
 void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete){
-    auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
-    playbackRenderers.erase(it, playbackRenderers.end());
-    DBG("playbackRenderers.size() after: " << playbackRenderers.size());
+  auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
+  playbackRenderers.erase(it, playbackRenderers.end());
+  DBG("playbackRenderers.size() after: " << playbackRenderers.size());
 }
 
 void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &params) {
-    // TODO: should we cancel all other jobs? 
-    // how do we deal with a process job that is currently running? 
+  // TODO: should we cancel all other jobs?
+  // how do we deal with a process job that is currently running?
 
-    // get the modelPath, pass it to the model
-    threadPool.addJob([this, params] {
-      DBG("HARPDocumentControllerSpecialisation::executeLoad");
-      try {
-          mModel->load(params);
-      } catch (const std::runtime_error& e) {
-          juce::AlertWindow::showMessageBoxAsync(
-              juce::AlertWindow::WarningIcon,
-              "Loading Error",
-              juce::String("An error occurred while loading the WebModel: ") + e.what()
-          );
-      }
-      DBG("HARPDocumentControllerSpecialisation::executeLoad done");
-      loadBroadcaster.sendChangeMessage();
-    });
+  // get the modelPath, pass it to the model
+  threadPool.addJob([this, params] {
+    DBG("HARPDocumentControllerSpecialisation::executeLoad");
+    try {
+      mModel->load(params);
+    } catch (const std::runtime_error& e) {
+      juce::AlertWindow::showMessageBoxAsync(
+          juce::AlertWindow::WarningIcon,
+          "Loading Error",
+          juce::String("An error occurred while loading the WebModel: ") + e.what()
+      );
+    }
+    DBG("HARPDocumentControllerSpecialisation::executeLoad done");
+    loadBroadcaster.sendChangeMessage();
+  });
 
-  }
+}
 
 void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWave2Wave> model) {
-    // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right? 
-    if (model == nullptr){
-        DBG("unhandled exception: model is null. we should probably open an error window here.");
-        return;
-    }
+  // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
+  if (model == nullptr){
+      DBG("unhandled exception: model is null. we should probably open an error window here.");
+      return;
+  }
 
-    // print how many jobs are currently in the threadpool
-    DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+  // print how many jobs are currently in the threadpool
+  DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
 
-    mModel = model;
+  mModel = model;
 
-    totalJobs = playbackRenderers.size();
-    jobsFinished = 0;
+  totalJobs = playbackRenderers.size();
+  jobsFinished = 0;
 
-    // std::vector<CustomThreadPoolJob*> customJobs;
-    // empty customJobs
-    customJobs.clear();
+  // std::vector<CustomThreadPoolJob*> customJobs;
+  // empty customJobs
+  customJobs.clear();
 
-    for (auto& playbackRenderer : playbackRenderers) {
-        CustomThreadPoolJob* customJob = new CustomThreadPoolJob(
-            [this, &playbackRenderer] { //  &jobsFinished, totalJobs
-                // Individual job code for each iteration
-                playbackRenderer->executeProcess(mModel);
-                // Increment the counter when the job finishes
-                jobsFinished++;
-            }
-        );
+  for (auto& playbackRenderer : playbackRenderers) {
+      CustomThreadPoolJob* customJob = new CustomThreadPoolJob(
+          [this, &playbackRenderer] { //  &jobsFinished, totalJobs
+              // Individual job code for each iteration
+              playbackRenderer->executeProcess(mModel);
+              // Increment the counter when the job finishes
+              jobsFinished++;
+          }
+      );
 
-        customJobs.push_back(customJob);
-    }
+      customJobs.push_back(customJob);
+  }
 
-    // Add a thread to process the jobs and wait for them
-    // JobProcessorThread jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster);
-    jobProcessorThread.startThread();
-    // jobProcessorThread.waitForThreadToExit(-1);
-    DBG("Didn't wait");
+  // Add a thread to process the jobs and wait for them
+  // JobProcessorThread jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster);
+  jobProcessorThread.signalTask();
+  // jobProcessorThread.waitForThreadToExit(-1);
+  DBG("Didn't wait");
 
-    // // Wait for all jobs to finish
-    // for (auto& customJob : customJobs) {
-    //     threadPool.waitForJobToFinish(customJob.get(), -1); // -1 for no timeout
-    // }
-
-    // // This will run after all jobs are done
-    // if (jobsFinished == totalJobs) {
-    //     processBroadcaster.sendChangeMessage();
-    // }
-    // Add a job to wait for all jobs and send the change message
-    // threadPool.addJob(new WaitForJobsJob(customJobs, jobsFinished, totalJobs, processBroadcaster, threadPool), true);
-
-    // threadPool.removeAllJobs()
-  // start the thread
-//   threadPool.addJob([this] {
-//     int counter = 0;
-//     for (auto& playbackRenderer : playbackRenderers) {
-//       playbackRenderer->executeProcess(mModel);
-
-//       counter++;
-//       DBG("Processing region: " << counter);
-//     }
-//     processBroadcaster.sendChangeMessage();
-//   });
-  
-    // int counter = 0;
-    // for (auto& playbackRenderer : playbackRenderers) {
-    //     threadPool.addJob([this,playbackRenderer] {
-    //         playbackRenderer->executeProcess(mModel);
-    //     });
-    // }
-    // processBroadcaster.sendChangeMessage();
-    // int counter = 0;
-    // for (auto& playbackRenderer : playbackRenderers) {
-    //   playbackRenderer->executeProcess(mModel);
-
-    //   counter++;
-    //   DBG("Processing region: " << counter);
-    // }
-    // processBroadcaster.sendChangeMessage();
-    // for (auto& playbackRenderer : playbackRenderers) {
-    //     threadPool.addJob([this, &playbackRenderer] {
-    //         // Individual job code for each iteration
-    //         playbackRenderer->executeProcess(mModel);
-    //         DBG("Processing region: " << playbackRenderer->getRegionName());
-    //     });
-    // }
-
-    // Wait for all jobs to finish
-    // threadPool.waitForAllJobsToFinish();
-
-    // This will run after all jobs are done
-    // processBroadcaster.sendChangeMessage();
 }
 
 void HARPDocumentControllerSpecialisation::willBeginEditing(
@@ -170,12 +125,12 @@ ARAAudioModification *
 HARPDocumentControllerSpecialisation::doCreateAudioModification(
     ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
     const ARAAudioModification *optionalModificationToClone) noexcept {
-    
+
 
   return new AudioModification(
-      audioSource, hostRef,
-      static_cast<const AudioModification *>(optionalModificationToClone)
-    );
+    audioSource, hostRef,
+    static_cast<const AudioModification *>(optionalModificationToClone)
+  );
 }
 
 ARAPlaybackRegion*
@@ -214,7 +169,7 @@ ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
 //   return newEditorRenderer;
 // }
 
-// Use ARAEditorView instead of EditorView because DocumentView expects just that. 
+// Use ARAEditorView instead of EditorView because DocumentView expects just that.
 // TODO : change the type in DocumentView
 EditorView *
 HARPDocumentControllerSpecialisation::doCreateEditorView() noexcept {

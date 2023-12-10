@@ -25,10 +25,10 @@
 #include "../DeepLearning/WebModel.h"
 
 HARPProcessorEditor::HARPProcessorEditor(
-    HARPAudioProcessorImpl &ap, EditorRenderer *er, 
+    HARPAudioProcessorImpl &ap, EditorRenderer *er,
     PlaybackRenderer *pr, EditorView *ev)
     : AudioProcessorEditor(&ap), AudioProcessorEditorARAExtension(&ap) {
-  
+
   mEditorRenderer = er;
   mPlaybackRenderer = pr;
   mEditorView = ev;
@@ -36,8 +36,10 @@ HARPProcessorEditor::HARPProcessorEditor(
     mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
                                                     HARPDocumentControllerSpecialisation>(
                                                     mEditorView->getDocumentController());
-    mDocumentController->loadBroadcaster.addChangeListener(this);
-    mDocumentController->jobProcessorThread.processBroadcaster.addChangeListener(this);
+    // mDocumentController->loadBroadcaster.addChangeListener(this);
+    // mDocumentController->jobProcessorThread.processBroadcaster.addChangeListener(this);
+    mDocumentController->addLoadingListener(this);
+    mDocumentController->addProcessingListener(this);
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
   else {
@@ -50,18 +52,18 @@ HARPProcessorEditor::HARPProcessorEditor(
   }
   juce::LookAndFeel::setDefaultLookAndFeel (&mHARPLookAndFeel);
 
-  // TODO: what happens if the model is nullptr rn? 
+  // TODO: what happens if the model is nullptr rn?
   auto model = mEditorView->getModel();
   if (model == nullptr) {
     DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
     jassertfalse;
     return;
-  }  
+  }
 
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
-  model->ready() ? processButton.setEnabled(true) 
+  model->ready() ? processButton.setEnabled(true)
                 : processButton.setEnabled(false);
   addAndMakeVisible(processButton);
 
@@ -155,7 +157,7 @@ void HARPProcessorEditor::setModelCard(const ModelCard& card) {
 void HARPProcessorEditor::buttonClicked(Button *button) {
   if (button == &processButton) {
     DBG("HARPProcessorEditor::buttonClicked button listener activated");
-    
+
     auto model = mEditorView->getModel();
     mDocumentController->executeProcess(model);
     // set the button text to "processing {model.card().name}"
@@ -175,7 +177,7 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
     };
 
     resetUI();
-    // loading happens asynchronously. 
+    // loading happens asynchronously.
     // the document controller trigger a change listener callback, which will update the UI
     mDocumentController->executeLoad(params);
 
@@ -185,10 +187,10 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
 
     // disable the process button until the model is loaded
     processButton.setEnabled(false);
-    
+
     // set the descriptionLabel to "loading {url}..."
     // TODO: we need to get rid of the params map, and just pass the url around instead
-    // since it looks like we're sticking to webmodels. 
+    // since it looks like we're sticking to webmodels.
     juce::String url = juce::String(std::any_cast<std::string>(params.at("url")));
     descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting \n " + "huggingface.co/spaces/" + url + "\n Once the huggingface space is awake, try again." , juce::dontSendNotification);
 
@@ -200,12 +202,13 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
   }
   else {
     DBG("a button was pressed, but we didn't do anything. ");
-  } 
+  }
 }
 
 void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source) {
 
-  if (source == &mDocumentController->loadBroadcaster) {
+  // if (source == &mDocumentController->loadBroadcaster) {
+  if (mDocumentController->isLoadBroadcaster(source)) {
     // Model loading happens synchronously, so we can be sure that
     // the Editor View has the model card and UI attributes loaded
     DBG("Setting up model card, CtrlComponent, resizing.");
@@ -219,7 +222,8 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     loadModelButton.setEnabled(true);
     loadModelButton.setButtonText("load");
   }
-  else if (source == &mDocumentController->jobProcessorThread.processBroadcaster) {
+  // else if (source == &mDocumentController->jobProcessorThread.processBroadcaster) {
+  else if (mDocumentController->isProcessBroadcaster(source)) {
     // now, we can enable the process button
     processButton.setButtonText("process");
     processButton.setEnabled(true);
@@ -254,8 +258,8 @@ void HARPProcessorEditor::resized() {
     auto area = getLocalBounds();
     auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
-    auto docViewHeight = 100;  
-    
+    auto docViewHeight = 100;
+
     auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
     auto documentViewArea = area;  // what remains is the 15% area for documentView
 
@@ -289,7 +293,7 @@ void HARPProcessorEditor::resized() {
     // Row 6: Process Button (taken out in advance to preserve its height)
     auto row6Height = 25;  // adjust height as needed
     auto row6 = mainArea.removeFromBottom(row6Height);
-    
+
     // Row 5: CtrlComponent (flexible height)
     auto row5 = mainArea;  // the remaining area is for row 4
     ctrlComponent.setBounds(row5.reduced(margin));
