@@ -58,7 +58,7 @@ HARP should now be available as a VST3 plugin.
 * To hear your result, just hit the space bar. 
 
 # Available Models
-While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP:
+While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP. Just enter the gradio path (e.g. "hugggof/pitch_shifter" or "descript/vampnet") for any of these models into HARP.
 
 - Pitch shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
 - Harmonic/percussive source separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
