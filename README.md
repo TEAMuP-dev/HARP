@@ -1,21 +1,21 @@
 # HARP
 ![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
-HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from a digital audio workstation (DAW) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets  DAW users access large state-of-the-art models with GPU compute from the cloud without breaking their within-DAW workflow.
+HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with deep learning models. HARP works by routing audio from a digital audio workstation ([DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation)) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets users of Digital Audio Workstations (e.g. [Reaper](https://www.reaper.fm)) access large state-of-the-art models in the cloud, without breaking their within-DAW workflow.
 
 # Available Models
-At present, the following models are available for use within HARP:
+While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP:
+
 - [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
 - [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
 - [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
 - [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
 - [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-# Making a deep learning model compatible with HARP
-We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
-
 # OS and DAW compatibility 
-HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the [REAPER](https://www.reaper.fm) digital audio workstation. 
+HARP has been tested on arm-based Mac computers running Mac OS (versions 13.0 and 13.4), using the [REAPER](https://www.reaper.fm) digital audio workstation. 
+
+HARP requires a [DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation) that fully supports the [Audio Random Access](https://en.wikipedia.org/wiki/Audio_Random_Access) to [VST](https://en.wikipedia.org/wiki/Virtual_Studio_Technology) plugins.
 
 # Installing HARP
 ## MacOS
@@ -31,6 +31,21 @@ HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the [
 ## Windows & Linux
 The windows build is still under development. There are no current plans to support Linux
 
+# Getting started with HARP in the Reaper DAW
+
+* Download the latest [Reaper](https://www.reaper.fm)
+* Install HARP
+* Start Reaper
+* Open the preferences dialog by selecting the Reaper>Settings menu item
+* Scroll down to find the
+* Restart Reaper
+  
+HARP should now be a
+
+# Making a deep learning model compatible with HARP
+We provide a lightweight API called [pyHARP](https://github.com/audacitorch/pyharp) for building compatible [Gradio](https://www.gradio.app) audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.
+
+
 # Building the HARP plug-in from source code
 To build the HARP plugin from scratch, perform the following steps:
 
@@ -42,8 +57,7 @@ cd harp
 
 
 ## Mac OS
-
-Mac OS builds are known to work on apple silicon only. We've had trouble getting REAPER and ARA to work together on x86 (on apple silicon machines, to be fair). TODO: test on x86 macs.
+Mac OS builds of HARP are known to work on apple silicon only. We've had trouble getting REAPER and ARA to work together on x86. TODO: test on x86 macs.
 
 Configure
 ```
@@ -117,7 +131,7 @@ After running `package.sh`, you should have a signed and notarized dmg file in t
 
 TODO
 
-# Debugging
+# Debugging your build of HARP
 ### Mac
 1. download visual studio code for mac https://code.visualstudio.com/
 2. install Microsoft's C/C++ extension
