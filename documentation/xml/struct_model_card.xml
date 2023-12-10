@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_model_card" kind="struct" language="C++" prot="public">
+    <compoundname>ModelCard</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_model_card_1a15b46c41a014020c18b487afcf994b7c" prot="public" static="no" mutable="no">
+        <type>int</type>
+        <definition>int ModelCard::sampleRate</definition>
+        <argsstring></argsstring>
+        <name>sampleRate</name>
+        <qualifiedname>ModelCard::sampleRate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="30" column="7" bodyfile="Source/DeepLearning/Model.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_model_card_1a2de9eedfebf1050edcc4f271ab88505f" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string ModelCard::name</definition>
+        <argsstring></argsstring>
+        <name>name</name>
+        <qualifiedname>ModelCard::name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="31" column="15" bodyfile="Source/DeepLearning/Model.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_model_card_1ab5ed269b499a5fc9ab9069d8676018a3" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string ModelCard::description</definition>
+        <argsstring></argsstring>
+        <name>description</name>
+        <qualifiedname>ModelCard::description</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="32" column="15" bodyfile="Source/DeepLearning/Model.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_model_card_1aa76216ff14f6520cff4f966b4e4e02ea" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string ModelCard::author</definition>
+        <argsstring></argsstring>
+        <name>author</name>
+        <qualifiedname>ModelCard::author</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="33" column="15" bodyfile="Source/DeepLearning/Model.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_model_card_1a2e11c2fa6475048bc340f33342ba6cf9" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; ModelCard::tags</definition>
+        <argsstring></argsstring>
+        <name>tags</name>
+        <qualifiedname>ModelCard::tags</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="34" column="15" bodyfile="Source/DeepLearning/Model.h" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>ModelCard</label>
+        <link refid="struct_model_card"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>author</edgelabel>
+          <edgelabel>description</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/Model.h" line="29" column="1" bodyfile="Source/DeepLearning/Model.h" bodystart="29" bodyend="35"/>
+    <listofallmembers>
+      <member refid="struct_model_card_1aa76216ff14f6520cff4f966b4e4e02ea" prot="public" virt="non-virtual"><scope>ModelCard</scope><name>author</name></member>
+      <member refid="struct_model_card_1ab5ed269b499a5fc9ab9069d8676018a3" prot="public" virt="non-virtual"><scope>ModelCard</scope><name>description</name></member>
+      <member refid="struct_model_card_1a2de9eedfebf1050edcc4f271ab88505f" prot="public" virt="non-virtual"><scope>ModelCard</scope><name>name</name></member>
+      <member refid="struct_model_card_1a15b46c41a014020c18b487afcf994b7c" prot="public" virt="non-virtual"><scope>ModelCard</scope><name>sampleRate</name></member>
+      <member refid="struct_model_card_1a2e11c2fa6475048bc340f33342ba6cf9" prot="public" virt="non-virtual"><scope>ModelCard</scope><name>tags</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

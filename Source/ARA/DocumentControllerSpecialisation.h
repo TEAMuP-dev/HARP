@@ -29,7 +29,7 @@
 #include "PlaybackRegion.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
-#include "juce_core/juce_core.h" 
+#include "juce_core/juce_core.h"
 
 
 #include "../Util/PreviewState.h"
@@ -41,25 +41,23 @@ class PlaybackRenderer;
 class CustomThreadPoolJob : public ThreadPoolJob
 {
 public:
-    CustomThreadPoolJob(std::function<void()> jobFunction)
-        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
-    {}
-
-    JobStatus runJob() override
-    {
-        if (jobFunction)
-        {
-            jobFunction();
-            return jobHasFinished;
-        }
-        else
-        {
-            return jobHasFinished; // or some other appropriate status
-        }
-    }
-
-// private:
-    std::function<void()> jobFunction;
+  CustomThreadPoolJob(std::function<void()> jobFunction)
+      : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+  {}
+  JobStatus runJob() override
+  {
+      if (jobFunction)
+      {
+          jobFunction();
+          return jobHasFinished;
+      }
+      else
+      {
+          return jobHasFinished; // or some other appropriate status
+      }
+  }
+  // private:
+  std::function<void()> jobFunction;
 };
 
 
@@ -71,7 +69,7 @@ public:
 class HARPDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
       private ProcessingLockInterface {
-public:
+  public:
     /**
      * @brief Constructor.
      * Uses ARA's document controller specialisation's constructor.
@@ -85,25 +83,25 @@ public:
     void executeLoad(const map<string, any> &params);
     void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
-public:
+  public:
     // TODO: these should probably be private, and we should have wrappers
     // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
     juce::ChangeBroadcaster loadBroadcaster;
     juce::ChangeBroadcaster processBroadcaster;
-    
+
     void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
-  
-  
+
+
     class JobProcessorThread : public Thread
-    {
-    public:
-        JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs, 
-                            int& jobsFinished, 
+      {
+      public:
+        JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+                            int& jobsFinished,
                             int& totalJobs
                             // ChangeBroadcaster& broadcaster
                         )
-            : Thread("JobProcessorThread"), 
-            customJobs(jobs), 
+            : Thread("JobProcessorThread"),
+            customJobs(jobs),
             jobsFinished(jobsFinished),
             totalJobs(totalJobs)
         {}
@@ -123,24 +121,23 @@ public:
             // This will run after all jobs are done
             // if (jobsFinished == totalJobs) {
             processBroadcaster.sendChangeMessage();
-            DBG("Jobs finished");
             // }
         }
 
         ChangeBroadcaster processBroadcaster;
 
-    private:
+      private:
         const std::vector<CustomThreadPoolJob*>& customJobs;
         int& jobsFinished;
         int& totalJobs;
-        
-        juce::ThreadPool threadPool {3};  
+
+        juce::ThreadPool threadPool {2};
     };
 
     JobProcessorThread jobProcessorThread;
 
 
-protected:
+  protected:
     void willBeginEditing(
         ARADocument *) override; ///< Called when beginning to edit a document.
     void didEndEditing(
@@ -189,8 +186,8 @@ protected:
                                 const ARAStoreObjectsFilter *filter) noexcept
         override; ///< Stores objects to a stream.
 
-private:
-    
+  private:
+
     ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
     ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 
@@ -210,8 +207,8 @@ private:
     std::unique_ptr<juce::AlertWindow> processingWindow;
 
     juce::ThreadPool threadPool {1};
-//   JobProcessorThread jobProcessorThread;
-    
+    //   JobProcessorThread jobProcessorThread;
+
     std::vector<CustomThreadPoolJob*> customJobs;
     // ChangeBroadcaster processBroadcaster;
     int jobsFinished = 0;

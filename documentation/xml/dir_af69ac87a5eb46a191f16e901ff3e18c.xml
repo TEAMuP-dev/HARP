@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_af69ac87a5eb46a191f16e901ff3e18c" kind="dir">
+    <compoundname>Source/WaveformCache</compoundname>
+    <innerfile refid="_waveform_cache_8h">WaveformCache.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/WaveformCache/"/>
+  </compounddef>
+</doxygen>

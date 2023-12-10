@@ -1,0 +1,420 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_playback_region_view" kind="class" language="C++" prot="public">
+    <compoundname>PlaybackRegionView</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">juce::ChangeListener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">juce::SettableTooltipClient</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARAAudioSource::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARAPlaybackRegion::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARAEditorView::Listener</basecompoundref>
+    <includes refid="_playback_region_view_8h" local="no">PlaybackRegionView.h</includes>
+    <innerclass refid="class_playback_region_view_1_1_preview_region_overlay" prot="private">PlaybackRegionView::PreviewRegionOverlay</innerclass>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_playback_region_view_1a434c41847fb1114fa30dd1de3d21a34c" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+        <definition>EditorView&amp; PlaybackRegionView::araEditorView</definition>
+        <argsstring></argsstring>
+        <name>araEditorView</name>
+        <qualifiedname>PlaybackRegionView::araEditorView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="103" column="14" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_region_view_1a219cd748a7ce65c27e64b803f2db97a0" prot="private" static="no" mutable="no">
+        <type>ARAPlaybackRegion &amp;</type>
+        <definition>ARAPlaybackRegion&amp; PlaybackRegionView::playbackRegion</definition>
+        <argsstring></argsstring>
+        <name>playbackRegion</name>
+        <qualifiedname>PlaybackRegionView::playbackRegion</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="104" column="21" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_region_view_1a9c5f562868b0ceb685acdfa5305ded6a" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref> &amp;</type>
+        <definition>WaveformCache&amp; PlaybackRegionView::waveformCache</definition>
+        <argsstring></argsstring>
+        <name>waveformCache</name>
+        <qualifiedname>PlaybackRegionView::waveformCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="105" column="17" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="105" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_region_view_1a08bea2489e44aaaaddd6e94feae9b21e" prot="private" static="no" mutable="no">
+        <type>PreviewRegionOverlay</type>
+        <definition>PreviewRegionOverlay PlaybackRegionView::previewRegionOverlay</definition>
+        <argsstring></argsstring>
+        <name>previewRegionOverlay</name>
+        <qualifiedname>PlaybackRegionView::previewRegionOverlay</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="106" column="24" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="106" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_region_view_1a0f9cde13d5c2cc23d0a4c6b459789f77" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool PlaybackRegionView::isSelected</definition>
+        <argsstring></argsstring>
+        <name>isSelected</name>
+        <qualifiedname>PlaybackRegionView::isSelected</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="107" column="8" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="107" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_region_view_1a110c7116435277d0389f65e726f77c41" prot="private" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref></type>
+        <definition>HARPLookAndFeel PlaybackRegionView::mHARPLookAndFeel</definition>
+        <argsstring></argsstring>
+        <name>mHARPLookAndFeel</name>
+        <qualifiedname>PlaybackRegionView::mHARPLookAndFeel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="108" column="19" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_playback_region_view_1a6eee62398640ffbf9f794c818d7bae44" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRegionView::PlaybackRegionView</definition>
+        <argsstring>(EditorView &amp;editorView, ARAPlaybackRegion &amp;region, WaveformCache &amp;cache)</argsstring>
+        <name>PlaybackRegionView</name>
+        <qualifiedname>PlaybackRegionView::PlaybackRegionView</qualifiedname>
+        <param>
+          <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+          <declname>editorView</declname>
+        </param>
+        <param>
+          <type>ARAPlaybackRegion &amp;</type>
+          <declname>region</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref> &amp;</type>
+          <declname>cache</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="41" column="3" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="3" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a51f387b4810c9fe5553e2a7a05362e03" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRegionView::~PlaybackRegionView</definition>
+        <argsstring>() override</argsstring>
+        <name>~PlaybackRegionView</name>
+        <qualifiedname>PlaybackRegionView::~PlaybackRegionView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="43" column="3" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="30" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a91e0919b1d8c7dab6138f3405791b6e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::mouseDown</definition>
+        <argsstring>(const juce::MouseEvent &amp;m) override</argsstring>
+        <name>mouseDown</name>
+        <qualifiedname>PlaybackRegionView::mouseDown</qualifiedname>
+        <param>
+          <type>const juce::MouseEvent &amp;</type>
+          <declname>m</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="46" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="45" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a91e62b146b7fb30e85ca66db4c4901e5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::mouseUp</definition>
+        <argsstring>(const juce::MouseEvent &amp;) override</argsstring>
+        <name>mouseUp</name>
+        <qualifiedname>PlaybackRegionView::mouseUp</qualifiedname>
+        <param>
+          <type>const juce::MouseEvent &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="47" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="61" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a7578ffd6172d02770042b9031d7521be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::changeListenerCallback</definition>
+        <argsstring>(juce::ChangeBroadcaster *) override</argsstring>
+        <name>changeListenerCallback</name>
+        <qualifiedname>PlaybackRegionView::changeListenerCallback</qualifiedname>
+        <param>
+          <type>juce::ChangeBroadcaster *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="49" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="73" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a8e8f74a060147cf66e470bb440f2bb4f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::didEnableAudioSourceSamplesAccess</definition>
+        <argsstring>(ARAAudioSource *, bool) override</argsstring>
+        <name>didEnableAudioSourceSamplesAccess</name>
+        <qualifiedname>PlaybackRegionView::didEnableAudioSourceSamplesAccess</qualifiedname>
+        <param>
+          <type>ARAAudioSource *</type>
+        </param>
+        <param>
+          <type>bool</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="52" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="77" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a4fd3042a93c72ebd60160a1d2cf18888" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::willUpdatePlaybackRegionProperties</definition>
+        <argsstring>(ARAPlaybackRegion *, ARAPlaybackRegion::PropertiesPtr newProperties) override</argsstring>
+        <name>willUpdatePlaybackRegionProperties</name>
+        <qualifiedname>PlaybackRegionView::willUpdatePlaybackRegionProperties</qualifiedname>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+        </param>
+        <param>
+          <type>ARAPlaybackRegion::PropertiesPtr</type>
+          <declname>newProperties</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="53" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="82" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a4f4d5bf019922072fa5d34a7b3562846" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::didUpdatePlaybackRegionContent</definition>
+        <argsstring>(ARAPlaybackRegion *, ARAContentUpdateScopes) override</argsstring>
+        <name>didUpdatePlaybackRegionContent</name>
+        <qualifiedname>PlaybackRegionView::didUpdatePlaybackRegionContent</qualifiedname>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+        </param>
+        <param>
+          <type>ARAContentUpdateScopes</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="56" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="90" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a2ef83b6ec5dc3371d1b00bb58e162644" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::onNewSelection</definition>
+        <argsstring>(const ARAViewSelection &amp;viewSelection) override</argsstring>
+        <name>onNewSelection</name>
+        <qualifiedname>PlaybackRegionView::onNewSelection</qualifiedname>
+        <param>
+          <type>const ARAViewSelection &amp;</type>
+          <declname>viewSelection</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="58" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="95" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1a96f7a6221e261429f3d7c4b2acaa3a37" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::paint</definition>
+        <argsstring>(juce::Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>PlaybackRegionView::paint</qualifiedname>
+        <param>
+          <type>juce::Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="61" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="109" bodyend="147"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1aa755c2575a01557a0b747950e86f7c4d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>PlaybackRegionView::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="62" column="8" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="149" bodyend="149"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_playback_region_view_1ac4eabc29c37d65ad42db9ade924bc25c" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref> *</type>
+        <definition>HARPDocumentControllerSpecialisation * PlaybackRegionView::getDocumentController</definition>
+        <argsstring>() const</argsstring>
+        <name>getDocumentController</name>
+        <qualifiedname>PlaybackRegionView::getDocumentController</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="102" column="40" bodyfile="Source/Timeline/PlaybackRegionView.cpp" bodystart="152" bodyend="156"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A class responsible for audio playback view and interactions. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="5">
+        <label>ARAAudioSource::Listener</label>
+      </node>
+      <node id="7">
+        <label>ARAEditorView::Listener</label>
+      </node>
+      <node id="6">
+        <label>ARAPlaybackRegion::Listener</label>
+      </node>
+      <node id="1">
+        <label>PlaybackRegionView</label>
+        <link refid="class_playback_region_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+        <childnode refid="7" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::ChangeListener</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+      <node id="4">
+        <label>juce::SettableTooltipClient</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>ARAAudioSource::Listener</label>
+      </node>
+      <node id="7">
+        <label>ARAEditorView::Listener</label>
+      </node>
+      <node id="6">
+        <label>ARAPlaybackRegion::Listener</label>
+      </node>
+      <node id="1">
+        <label>PlaybackRegionView</label>
+        <link refid="class_playback_region_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+        <childnode refid="7" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::ChangeListener</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+      <node id="4">
+        <label>juce::SettableTooltipClient</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/Timeline/PlaybackRegionView.h" line="34" column="1" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="39" bodyend="109"/>
+    <listofallmembers>
+      <member refid="class_playback_region_view_1a434c41847fb1114fa30dd1de3d21a34c" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>araEditorView</name></member>
+      <member refid="class_playback_region_view_1a7578ffd6172d02770042b9031d7521be" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>changeListenerCallback</name></member>
+      <member refid="class_playback_region_view_1a8e8f74a060147cf66e470bb440f2bb4f" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>didEnableAudioSourceSamplesAccess</name></member>
+      <member refid="class_playback_region_view_1a4f4d5bf019922072fa5d34a7b3562846" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>didUpdatePlaybackRegionContent</name></member>
+      <member refid="class_playback_region_view_1ac4eabc29c37d65ad42db9ade924bc25c" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>getDocumentController</name></member>
+      <member refid="class_playback_region_view_1a0f9cde13d5c2cc23d0a4c6b459789f77" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>isSelected</name></member>
+      <member refid="class_playback_region_view_1a110c7116435277d0389f65e726f77c41" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>mHARPLookAndFeel</name></member>
+      <member refid="class_playback_region_view_1a91e0919b1d8c7dab6138f3405791b6e9" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>mouseDown</name></member>
+      <member refid="class_playback_region_view_1a91e62b146b7fb30e85ca66db4c4901e5" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>mouseUp</name></member>
+      <member refid="class_playback_region_view_1a2ef83b6ec5dc3371d1b00bb58e162644" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>onNewSelection</name></member>
+      <member refid="class_playback_region_view_1a96f7a6221e261429f3d7c4b2acaa3a37" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>paint</name></member>
+      <member refid="class_playback_region_view_1a219cd748a7ce65c27e64b803f2db97a0" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>playbackRegion</name></member>
+      <member refid="class_playback_region_view_1a6eee62398640ffbf9f794c818d7bae44" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>PlaybackRegionView</name></member>
+      <member refid="class_playback_region_view_1a08bea2489e44aaaaddd6e94feae9b21e" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>previewRegionOverlay</name></member>
+      <member refid="class_playback_region_view_1aa755c2575a01557a0b747950e86f7c4d" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>resized</name></member>
+      <member refid="class_playback_region_view_1a9c5f562868b0ceb685acdfa5305ded6a" prot="private" virt="non-virtual"><scope>PlaybackRegionView</scope><name>waveformCache</name></member>
+      <member refid="class_playback_region_view_1a4fd3042a93c72ebd60160a1d2cf18888" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>willUpdatePlaybackRegionProperties</name></member>
+      <member refid="class_playback_region_view_1a51f387b4810c9fe5553e2a7a05362e03" prot="public" virt="non-virtual"><scope>PlaybackRegionView</scope><name>~PlaybackRegionView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

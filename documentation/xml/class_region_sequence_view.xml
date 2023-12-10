@@ -1,0 +1,411 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_region_sequence_view" kind="class" language="C++" prot="public">
+    <compoundname>RegionSequenceView</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">juce::ChangeBroadcaster</basecompoundref>
+    <basecompoundref refid="class_time_to_view_scaling_1_1_listener" prot="private" virt="non-virtual">TimeToViewScaling::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">juce::ARARegionSequence::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARAPlaybackRegion::Listener</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_region_sequence_view_1a08c3681c3990b9c1b56c5e814ed0b324" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+        <definition>EditorView&amp; RegionSequenceView::araEditorView</definition>
+        <argsstring></argsstring>
+        <name>araEditorView</name>
+        <qualifiedname>RegionSequenceView::araEditorView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="57" column="14" bodyfile="Source/UI/RegionSequenceView.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_region_sequence_view_1a9cd0bde73f00ee05094a72471fa1be11" prot="private" static="no" mutable="no">
+        <type><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref> &amp;</type>
+        <definition>TimeToViewScaling&amp; RegionSequenceView::timeToViewScaling</definition>
+        <argsstring></argsstring>
+        <name>timeToViewScaling</name>
+        <qualifiedname>RegionSequenceView::timeToViewScaling</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="58" column="21" bodyfile="Source/UI/RegionSequenceView.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_region_sequence_view_1aaac40d9be56f454d061035374589df97" prot="private" static="no" mutable="no">
+        <type>ARARegionSequence &amp;</type>
+        <definition>ARARegionSequence&amp; RegionSequenceView::regionSequence</definition>
+        <argsstring></argsstring>
+        <name>regionSequence</name>
+        <qualifiedname>RegionSequenceView::regionSequence</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="59" column="21" bodyfile="Source/UI/RegionSequenceView.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_region_sequence_view_1a5bc56b669d27a744217cb0b549456570" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref> &amp;</type>
+        <definition>WaveformCache&amp; RegionSequenceView::waveformCache</definition>
+        <argsstring></argsstring>
+        <name>waveformCache</name>
+        <qualifiedname>RegionSequenceView::waveformCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="60" column="17" bodyfile="Source/UI/RegionSequenceView.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_region_sequence_view_1a52dbcd3fe7b119616e3d763cc30d3d09" prot="private" static="no" mutable="no">
+        <type>std::unordered_map&lt; ARAPlaybackRegion *, unique_ptr&lt; <ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref> &gt; &gt;</type>
+        <definition>std::unordered_map&lt;ARAPlaybackRegion *, unique_ptr&lt;PlaybackRegionView&gt; &gt; RegionSequenceView::playbackRegionViews</definition>
+        <argsstring></argsstring>
+        <name>playbackRegionViews</name>
+        <qualifiedname>RegionSequenceView::playbackRegionViews</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="62" column="7" bodyfile="Source/UI/RegionSequenceView.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_region_sequence_view_1a0ed747db0e0cc29e9d729aa9e3e91eb0" prot="private" static="no" mutable="no">
+        <type>double</type>
+        <definition>double RegionSequenceView::playbackDuration</definition>
+        <argsstring></argsstring>
+        <name>playbackDuration</name>
+        <qualifiedname>RegionSequenceView::playbackDuration</qualifiedname>
+        <initializer>= 0.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="63" column="10" bodyfile="Source/UI/RegionSequenceView.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_region_sequence_view_1a41b8b91b80dc3f887688172ef37968f3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>RegionSequenceView::RegionSequenceView</definition>
+        <argsstring>(EditorView &amp;editorView, TimeToViewScaling &amp;scaling, ARARegionSequence &amp;rs, WaveformCache &amp;cache)</argsstring>
+        <name>RegionSequenceView</name>
+        <qualifiedname>RegionSequenceView::RegionSequenceView</qualifiedname>
+        <param>
+          <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+          <declname>editorView</declname>
+        </param>
+        <param>
+          <type><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref> &amp;</type>
+          <declname>scaling</declname>
+        </param>
+        <param>
+          <type>ARARegionSequence &amp;</type>
+          <declname>rs</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref> &amp;</type>
+          <declname>cache</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="35" column="3" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="23" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1a980b984491610ecb50fc5069433c705c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>RegionSequenceView::~RegionSequenceView</definition>
+        <argsstring>() override</argsstring>
+        <name>~RegionSequenceView</name>
+        <qualifiedname>RegionSequenceView::~RegionSequenceView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="37" column="3" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="39" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1a77464939783709e682f0f8aac5d5b8a3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::willUpdateRegionSequenceProperties</definition>
+        <argsstring>(ARARegionSequence *, ARARegionSequence::PropertiesPtr newProperties) override</argsstring>
+        <name>willUpdateRegionSequenceProperties</name>
+        <qualifiedname>RegionSequenceView::willUpdateRegionSequenceProperties</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+        </param>
+        <param>
+          <type>ARARegionSequence::PropertiesPtr</type>
+          <declname>newProperties</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="39" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="48" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1add69bc3272ada31fe4b426327fbb2bb4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::willRemovePlaybackRegionFromRegionSequence</definition>
+        <argsstring>(ARARegionSequence *, ARAPlaybackRegion *playbackRegion) override</argsstring>
+        <name>willRemovePlaybackRegionFromRegionSequence</name>
+        <qualifiedname>RegionSequenceView::willRemovePlaybackRegionFromRegionSequence</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+        </param>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+          <declname>playbackRegion</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="42" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="56" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1ac6e77ff03b5678a38874941d6a0d385d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::didAddPlaybackRegionToRegionSequence</definition>
+        <argsstring>(ARARegionSequence *, ARAPlaybackRegion *playbackRegion) override</argsstring>
+        <name>didAddPlaybackRegionToRegionSequence</name>
+        <qualifiedname>RegionSequenceView::didAddPlaybackRegionToRegionSequence</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+        </param>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+          <declname>playbackRegion</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="44" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="64" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1acdd5d9fb44fa8c70c9ec7b198bfb6523" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::willDestroyPlaybackRegion</definition>
+        <argsstring>(ARAPlaybackRegion *playbackRegion) override</argsstring>
+        <name>willDestroyPlaybackRegion</name>
+        <qualifiedname>RegionSequenceView::willDestroyPlaybackRegion</qualifiedname>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+          <declname>playbackRegion</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="46" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="70" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1a4a035ad73679d39dca561c7177aafe07" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::didUpdatePlaybackRegionProperties</definition>
+        <argsstring>(ARAPlaybackRegion *) override</argsstring>
+        <name>didUpdatePlaybackRegionProperties</name>
+        <qualifiedname>RegionSequenceView::didUpdatePlaybackRegionProperties</qualifiedname>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="47" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="78" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1ae9b98981f83c00e5ae6c78c47d9dba70" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::zoomLevelChanged</definition>
+        <argsstring>(double) override</argsstring>
+        <name>zoomLevelChanged</name>
+        <qualifiedname>RegionSequenceView::zoomLevelChanged</qualifiedname>
+        <reimplements refid="class_time_to_view_scaling_1_1_listener_1aeb1bc5a6324e2a737ff731197a179fb2">zoomLevelChanged</reimplements>
+        <param>
+          <type>double</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="48" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="83" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1a42def84f591c70200163f60928eeb227" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>RegionSequenceView::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="49" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="85" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1a30d3113f11b915d53ce857006e7057d6" prot="public" static="no" const="yes" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type>auto</type>
+        <definition>auto RegionSequenceView::getPlaybackDuration</definition>
+        <argsstring>() const noexcept</argsstring>
+        <name>getPlaybackDuration</name>
+        <qualifiedname>RegionSequenceView::getPlaybackDuration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="51" column="8" bodyfile="Source/UI/RegionSequenceView.h" bodystart="51" bodyend="51"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_region_sequence_view_1a8e770a46b32776ca983b5ca3d2a36143" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::createAndAddPlaybackRegionView</definition>
+        <argsstring>(ARAPlaybackRegion *playbackRegion)</argsstring>
+        <name>createAndAddPlaybackRegionView</name>
+        <qualifiedname>RegionSequenceView::createAndAddPlaybackRegionView</qualifiedname>
+        <param>
+          <type>ARAPlaybackRegion *</type>
+          <declname>playbackRegion</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="54" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="97" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="class_region_sequence_view_1ab2833e02b325ce6a1b4ded3cc8fac7d8" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RegionSequenceView::updatePlaybackDuration</definition>
+        <argsstring>()</argsstring>
+        <name>updatePlaybackDuration</name>
+        <qualifiedname>RegionSequenceView::updatePlaybackDuration</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RegionSequenceView.h" line="55" column="8" bodyfile="Source/UI/RegionSequenceView.cpp" bodystart="105" bodyend="118"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="6">
+        <label>ARAPlaybackRegion::Listener</label>
+      </node>
+      <node id="1">
+        <label>RegionSequenceView</label>
+        <link refid="class_region_sequence_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="private-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>TimeToViewScaling::Listener</label>
+        <link refid="class_time_to_view_scaling_1_1_listener"/>
+      </node>
+      <node id="5">
+        <label>juce::ARARegionSequence::Listener</label>
+      </node>
+      <node id="3">
+        <label>juce::ChangeBroadcaster</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="6">
+        <label>ARAPlaybackRegion::Listener</label>
+      </node>
+      <node id="1">
+        <label>RegionSequenceView</label>
+        <link refid="class_region_sequence_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="private-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>TimeToViewScaling::Listener</label>
+        <link refid="class_time_to_view_scaling_1_1_listener"/>
+      </node>
+      <node id="5">
+        <label>juce::ARARegionSequence::Listener</label>
+      </node>
+      <node id="3">
+        <label>juce::ChangeBroadcaster</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/RegionSequenceView.h" line="29" column="1" bodyfile="Source/UI/RegionSequenceView.h" bodystart="33" bodyend="64"/>
+    <listofallmembers>
+      <member refid="class_region_sequence_view_1a08c3681c3990b9c1b56c5e814ed0b324" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>araEditorView</name></member>
+      <member refid="class_region_sequence_view_1a8e770a46b32776ca983b5ca3d2a36143" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>createAndAddPlaybackRegionView</name></member>
+      <member refid="class_region_sequence_view_1ac6e77ff03b5678a38874941d6a0d385d" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>didAddPlaybackRegionToRegionSequence</name></member>
+      <member refid="class_region_sequence_view_1a4a035ad73679d39dca561c7177aafe07" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>didUpdatePlaybackRegionProperties</name></member>
+      <member refid="class_region_sequence_view_1a30d3113f11b915d53ce857006e7057d6" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>getPlaybackDuration</name></member>
+      <member refid="class_region_sequence_view_1a0ed747db0e0cc29e9d729aa9e3e91eb0" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>playbackDuration</name></member>
+      <member refid="class_region_sequence_view_1a52dbcd3fe7b119616e3d763cc30d3d09" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>playbackRegionViews</name></member>
+      <member refid="class_region_sequence_view_1aaac40d9be56f454d061035374589df97" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>regionSequence</name></member>
+      <member refid="class_region_sequence_view_1a41b8b91b80dc3f887688172ef37968f3" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>RegionSequenceView</name></member>
+      <member refid="class_region_sequence_view_1a42def84f591c70200163f60928eeb227" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>resized</name></member>
+      <member refid="class_region_sequence_view_1a9cd0bde73f00ee05094a72471fa1be11" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>timeToViewScaling</name></member>
+      <member refid="class_region_sequence_view_1ab2833e02b325ce6a1b4ded3cc8fac7d8" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>updatePlaybackDuration</name></member>
+      <member refid="class_region_sequence_view_1a5bc56b669d27a744217cb0b549456570" prot="private" virt="non-virtual"><scope>RegionSequenceView</scope><name>waveformCache</name></member>
+      <member refid="class_region_sequence_view_1acdd5d9fb44fa8c70c9ec7b198bfb6523" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>willDestroyPlaybackRegion</name></member>
+      <member refid="class_region_sequence_view_1add69bc3272ada31fe4b426327fbb2bb4" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>willRemovePlaybackRegionFromRegionSequence</name></member>
+      <member refid="class_region_sequence_view_1a77464939783709e682f0f8aac5d5b8a3" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>willUpdateRegionSequenceProperties</name></member>
+      <member refid="class_region_sequence_view_1ae9b98981f83c00e5ae6c78c47d9dba70" prot="public" virt="virtual"><scope>RegionSequenceView</scope><name>zoomLevelChanged</name></member>
+      <member refid="class_region_sequence_view_1a980b984491610ecb50fc5069433c705c" prot="public" virt="non-virtual"><scope>RegionSequenceView</scope><name>~RegionSequenceView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

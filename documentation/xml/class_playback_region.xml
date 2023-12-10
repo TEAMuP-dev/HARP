@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_playback_region" kind="class" language="C++" prot="public">
+    <compoundname>PlaybackRegion</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::ARAPlaybackRegion</basecompoundref>
+    <includes refid="_playback_region_8h" local="no">PlaybackRegion.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_playback_region_1afaa1616cba80b463a652952da9994835" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool PlaybackRegion::selected</definition>
+        <argsstring></argsstring>
+        <name>selected</name>
+        <qualifiedname>PlaybackRegion::selected</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRegion.h" line="33" column="10" bodyfile="Source/ARA/PlaybackRegion.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_playback_region_1a96359866dc68c95156e7a1aee0329831" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRegion::PlaybackRegion</definition>
+        <argsstring>(juce::ARAAudioModification *modification, ARA::ARAPlaybackRegionHostRef hostRef)</argsstring>
+        <name>PlaybackRegion</name>
+        <qualifiedname>PlaybackRegion::PlaybackRegion</qualifiedname>
+        <param>
+          <type>juce::ARAAudioModification *</type>
+          <declname>modification</declname>
+        </param>
+        <param>
+          <type>ARA::ARAPlaybackRegionHostRef</type>
+          <declname>hostRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRegion.h" line="26" column="5" bodyfile="Source/ARA/PlaybackRegion.cpp" bodystart="3" bodyend="7"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_1a3c48bf874f084cc50bc982297872ed93" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool PlaybackRegion::isSelected</definition>
+        <argsstring>() const</argsstring>
+        <name>isSelected</name>
+        <qualifiedname>PlaybackRegion::isSelected</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRegion.h" line="29" column="10" bodyfile="Source/ARA/PlaybackRegion.cpp" bodystart="9" bodyend="9"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_1a095161f8380926dec139d7de0b492419" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegion::setSelected</definition>
+        <argsstring>(bool selectedFlag)</argsstring>
+        <name>setSelected</name>
+        <qualifiedname>PlaybackRegion::setSelected</qualifiedname>
+        <param>
+          <type>bool</type>
+          <declname>selectedFlag</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRegion.h" line="30" column="10" bodyfile="Source/ARA/PlaybackRegion.cpp" bodystart="10" bodyend="13"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This class provides methods for manipulating playback regions. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>We override the ARAPlaybackRegion class to add flags for when a playback region is selected for processing Each playback region has its own audio modification, </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>PlaybackRegion</label>
+        <link refid="class_playback_region"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAPlaybackRegion</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>PlaybackRegion</label>
+        <link refid="class_playback_region"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAPlaybackRegion</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/PlaybackRegion.h" line="22" column="1" bodyfile="Source/ARA/PlaybackRegion.h" bodystart="22" bodyend="34"/>
+    <listofallmembers>
+      <member refid="class_playback_region_1a3c48bf874f084cc50bc982297872ed93" prot="public" virt="non-virtual"><scope>PlaybackRegion</scope><name>isSelected</name></member>
+      <member refid="class_playback_region_1a96359866dc68c95156e7a1aee0329831" prot="public" virt="non-virtual"><scope>PlaybackRegion</scope><name>PlaybackRegion</name></member>
+      <member refid="class_playback_region_1afaa1616cba80b463a652952da9994835" prot="private" virt="non-virtual"><scope>PlaybackRegion</scope><name>selected</name></member>
+      <member refid="class_playback_region_1a095161f8380926dec139d7de0b492419" prot="public" virt="non-virtual"><scope>PlaybackRegion</scope><name>setSelected</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

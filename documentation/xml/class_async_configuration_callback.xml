@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_async_configuration_callback" kind="class" language="C++" prot="public">
+    <compoundname>AsyncConfigurationCallback</compoundname>
+    <basecompoundref prot="private" virt="non-virtual">juce::AsyncUpdater</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_async_configuration_callback_1ac984ab1e8720525506db3a131121fbf6" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void()&gt;</type>
+        <definition>std::function&lt;void()&gt; AsyncConfigurationCallback::callback</definition>
+        <argsstring></argsstring>
+        <name>callback</name>
+        <qualifiedname>AsyncConfigurationCallback::callback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="47" column="17" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_async_configuration_callback_1a05590bc75fd655589cfa44e532f0df1b" prot="private" static="no" mutable="no">
+        <type>juce::SpinLock</type>
+        <definition>juce::SpinLock AsyncConfigurationCallback::processingFlag</definition>
+        <argsstring></argsstring>
+        <name>processingFlag</name>
+        <qualifiedname>AsyncConfigurationCallback::processingFlag</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="48" column="18" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_async_configuration_callback_1a591123b9f52bccf4c08368b15c002c07" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>AsyncConfigurationCallback::AsyncConfigurationCallback</definition>
+        <argsstring>(std::function&lt; void()&gt; callbackIn)</argsstring>
+        <name>AsyncConfigurationCallback</name>
+        <qualifiedname>AsyncConfigurationCallback::AsyncConfigurationCallback</qualifiedname>
+        <param>
+          <type>std::function&lt; void()&gt;</type>
+          <declname>callbackIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="29" column="12" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="29" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="class_async_configuration_callback_1a233123645ff8b405b20c4625037db171" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>AsyncConfigurationCallback::~AsyncConfigurationCallback</definition>
+        <argsstring>() override</argsstring>
+        <name>~AsyncConfigurationCallback</name>
+        <qualifiedname>AsyncConfigurationCallback::~AsyncConfigurationCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="32" column="3" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="32" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="class_async_configuration_callback_1a82cf8cfdc0fe45154f3ac6558a77c743" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename RequiresLock</type>
+          </param>
+        </templateparamlist>
+        <type>auto</type>
+        <definition>auto AsyncConfigurationCallback::withLock</definition>
+        <argsstring>(RequiresLock &amp;&amp;fn)</argsstring>
+        <name>withLock</name>
+        <qualifiedname>AsyncConfigurationCallback::withLock</qualifiedname>
+        <param>
+          <type>RequiresLock &amp;&amp;</type>
+          <declname>fn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="34" column="20" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="34" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="class_async_configuration_callback_1aa6b2d32df7446fc2c24bb2c4d293f3e4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void AsyncConfigurationCallback::startConfigure</definition>
+        <argsstring>()</argsstring>
+        <name>startConfigure</name>
+        <qualifiedname>AsyncConfigurationCallback::startConfigure</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="39" column="8" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="39" bodyend="39"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_async_configuration_callback_1a68ee75c902541dd6a1736321ee0db1e2" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void AsyncConfigurationCallback::handleAsyncUpdate</definition>
+        <argsstring>() override</argsstring>
+        <name>handleAsyncUpdate</name>
+        <qualifiedname>AsyncConfigurationCallback::handleAsyncUpdate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/AsyncConfigurationCallback.h" line="42" column="8" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="42" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>AsyncConfigurationCallback</label>
+        <link refid="class_async_configuration_callback"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::AsyncUpdater</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>AsyncConfigurationCallback</label>
+        <link refid="class_async_configuration_callback"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::AsyncUpdater</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/Util/AsyncConfigurationCallback.h" line="27" column="1" bodyfile="Source/Util/AsyncConfigurationCallback.h" bodystart="27" bodyend="49"/>
+    <listofallmembers>
+      <member refid="class_async_configuration_callback_1a591123b9f52bccf4c08368b15c002c07" prot="public" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>AsyncConfigurationCallback</name></member>
+      <member refid="class_async_configuration_callback_1ac984ab1e8720525506db3a131121fbf6" prot="private" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>callback</name></member>
+      <member refid="class_async_configuration_callback_1a68ee75c902541dd6a1736321ee0db1e2" prot="private" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>handleAsyncUpdate</name></member>
+      <member refid="class_async_configuration_callback_1a05590bc75fd655589cfa44e532f0df1b" prot="private" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>processingFlag</name></member>
+      <member refid="class_async_configuration_callback_1aa6b2d32df7446fc2c24bb2c4d293f3e4" prot="public" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>startConfigure</name></member>
+      <member refid="class_async_configuration_callback_1a82cf8cfdc0fe45154f3ac6558a77c743" prot="public" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>withLock</name></member>
+      <member refid="class_async_configuration_callback_1a233123645ff8b405b20c4625037db171" prot="public" virt="non-virtual"><scope>AsyncConfigurationCallback</scope><name>~AsyncConfigurationCallback</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

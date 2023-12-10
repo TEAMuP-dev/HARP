@@ -1,0 +1,320 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_overlay_component" kind="class" language="C++" prot="public">
+    <compoundname>OverlayComponent</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">juce::Timer</basecompoundref>
+    <basecompoundref refid="class_time_to_view_scaling_1_1_listener" prot="private" virt="non-virtual">TimeToViewScaling::Listener</basecompoundref>
+    <innerclass refid="class_overlay_component_1_1_playhead_marker_component" prot="public">OverlayComponent::PlayheadMarkerComponent</innerclass>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="class_overlay_component_1a8c1e1140624686833bed703f0db5d991" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr double</type>
+        <definition>constexpr double OverlayComponent::markerWidth</definition>
+        <argsstring></argsstring>
+        <name>markerWidth</name>
+        <qualifiedname>OverlayComponent::markerWidth</qualifiedname>
+        <initializer>= 2.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="67" column="27" bodyfile="Source/UI/Layout.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_overlay_component_1a10053312ddfc27044c76a66fd2c1f2e4" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref> &amp;</type>
+        <definition>PlayHeadState&amp; OverlayComponent::playHeadState</definition>
+        <argsstring></argsstring>
+        <name>playHeadState</name>
+        <qualifiedname>OverlayComponent::playHeadState</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="69" column="17" bodyfile="Source/UI/Layout.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_overlay_component_1ad89555a2855f041e4cbcb3267aad17bc" prot="private" static="no" mutable="no">
+        <type><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref> &amp;</type>
+        <definition>TimeToViewScaling&amp; OverlayComponent::timeToViewScaling</definition>
+        <argsstring></argsstring>
+        <name>timeToViewScaling</name>
+        <qualifiedname>OverlayComponent::timeToViewScaling</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="70" column="21" bodyfile="Source/UI/Layout.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_overlay_component_1a54ddecdb6f662faa65dedae2f669aa97" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int OverlayComponent::horizontalOffset</definition>
+        <argsstring></argsstring>
+        <name>horizontalOffset</name>
+        <qualifiedname>OverlayComponent::horizontalOffset</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="71" column="7" bodyfile="Source/UI/Layout.h" bodystart="71" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_overlay_component_1a44cf0c6161b7c499a9bcb51e0f840c31" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; ARA::ARAContentTimeRange &gt;</type>
+        <definition>std::optional&lt;ARA::ARAContentTimeRange&gt; OverlayComponent::selectedTimeRange</definition>
+        <argsstring></argsstring>
+        <name>selectedTimeRange</name>
+        <qualifiedname>OverlayComponent::selectedTimeRange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="72" column="17" bodyfile="Source/UI/Layout.h" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_overlay_component_1a8a6f7a380c564a89eaca4571523a8bc8" prot="private" static="no" mutable="no">
+        <type><ref refid="class_overlay_component_1_1_playhead_marker_component" kindref="compound">PlayheadMarkerComponent</ref></type>
+        <definition>PlayheadMarkerComponent OverlayComponent::playheadMarker</definition>
+        <argsstring></argsstring>
+        <name>playheadMarker</name>
+        <qualifiedname>OverlayComponent::playheadMarker</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="73" column="27" bodyfile="Source/UI/Layout.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_overlay_component_1a7da937ba34509494fc60cfd0ad756629" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OverlayComponent::OverlayComponent</definition>
+        <argsstring>(PlayHeadState &amp;playHeadStateIn, TimeToViewScaling &amp;timeToViewScalingIn)</argsstring>
+        <name>OverlayComponent</name>
+        <qualifiedname>OverlayComponent::OverlayComponent</qualifiedname>
+        <param>
+          <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref> &amp;</type>
+          <declname>playHeadStateIn</declname>
+        </param>
+        <param>
+          <type><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref> &amp;</type>
+          <declname>timeToViewScalingIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="54" column="3" bodyfile="Source/UI/Layout.cpp" bodystart="50" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1a03bd790a4fa3457c4db5994a6a6fcddb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>OverlayComponent::~OverlayComponent</definition>
+        <argsstring>() override</argsstring>
+        <name>~OverlayComponent</name>
+        <qualifiedname>OverlayComponent::~OverlayComponent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="56" column="3" bodyfile="Source/UI/Layout.cpp" bodystart="60" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1ab11b9d3b7b9040a0d55d8ba3b6644b9f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>OverlayComponent::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="57" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="66" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1a4ae4b70714d1201fc4b102ed5d12edaa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::setHorizontalOffset</definition>
+        <argsstring>(int offset)</argsstring>
+        <name>setHorizontalOffset</name>
+        <qualifiedname>OverlayComponent::setHorizontalOffset</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>offset</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="58" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="68" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1ab18a720a8f7e57f9ce49dcccbe217049" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::setSelectedTimeRange</definition>
+        <argsstring>(std::optional&lt; ARA::ARAContentTimeRange &gt; timeRange)</argsstring>
+        <name>setSelectedTimeRange</name>
+        <qualifiedname>OverlayComponent::setSelectedTimeRange</qualifiedname>
+        <param>
+          <type>std::optional&lt; ARA::ARAContentTimeRange &gt;</type>
+          <declname>timeRange</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="59" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="72" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1a6b9e2d4f0758339b558768d8e40d0c65" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::zoomLevelChanged</definition>
+        <argsstring>(double) override</argsstring>
+        <name>zoomLevelChanged</name>
+        <qualifiedname>OverlayComponent::zoomLevelChanged</qualifiedname>
+        <reimplements refid="class_time_to_view_scaling_1_1_listener_1aeb1bc5a6324e2a737ff731197a179fb2">zoomLevelChanged</reimplements>
+        <param>
+          <type>double</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="60" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="78" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1aaa7c62f5b780a6678679ecb083d28471" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>OverlayComponent::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="61" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="83" bodyend="97"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_overlay_component_1a04eaf294cd6de15f5a487c206822a381" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::updatePlayHeadPosition</definition>
+        <argsstring>()</argsstring>
+        <name>updatePlayHeadPosition</name>
+        <qualifiedname>OverlayComponent::updatePlayHeadPosition</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="64" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="99" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="class_overlay_component_1a664192d4b3120a0800b897d3c552b487" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::timerCallback</definition>
+        <argsstring>() override</argsstring>
+        <name>timerCallback</name>
+        <qualifiedname>OverlayComponent::timerCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="65" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="115" bodyend="115"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>OverlayComponent</label>
+        <link refid="class_overlay_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+        <childnode refid="4" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>TimeToViewScaling::Listener</label>
+        <link refid="class_time_to_view_scaling_1_1_listener"/>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+      <node id="3">
+        <label>juce::Timer</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>OverlayComponent</label>
+        <link refid="class_overlay_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+        <childnode refid="4" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>TimeToViewScaling::Listener</label>
+        <link refid="class_time_to_view_scaling_1_1_listener"/>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+      <node id="3">
+        <label>juce::Timer</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/Layout.h" line="46" column="1" bodyfile="Source/UI/Layout.h" bodystart="48" bodyend="74"/>
+    <listofallmembers>
+      <member refid="class_overlay_component_1a54ddecdb6f662faa65dedae2f669aa97" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>horizontalOffset</name></member>
+      <member refid="class_overlay_component_1a8c1e1140624686833bed703f0db5d991" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>markerWidth</name></member>
+      <member refid="class_overlay_component_1a7da937ba34509494fc60cfd0ad756629" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>OverlayComponent</name></member>
+      <member refid="class_overlay_component_1aaa7c62f5b780a6678679ecb083d28471" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>paint</name></member>
+      <member refid="class_overlay_component_1a8a6f7a380c564a89eaca4571523a8bc8" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>playheadMarker</name></member>
+      <member refid="class_overlay_component_1a10053312ddfc27044c76a66fd2c1f2e4" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>playHeadState</name></member>
+      <member refid="class_overlay_component_1ab11b9d3b7b9040a0d55d8ba3b6644b9f" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>resized</name></member>
+      <member refid="class_overlay_component_1a44cf0c6161b7c499a9bcb51e0f840c31" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>selectedTimeRange</name></member>
+      <member refid="class_overlay_component_1a4ae4b70714d1201fc4b102ed5d12edaa" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>setHorizontalOffset</name></member>
+      <member refid="class_overlay_component_1ab18a720a8f7e57f9ce49dcccbe217049" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>setSelectedTimeRange</name></member>
+      <member refid="class_overlay_component_1a664192d4b3120a0800b897d3c552b487" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>timerCallback</name></member>
+      <member refid="class_overlay_component_1ad89555a2855f041e4cbcb3267aad17bc" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>timeToViewScaling</name></member>
+      <member refid="class_overlay_component_1a04eaf294cd6de15f5a487c206822a381" prot="private" virt="non-virtual"><scope>OverlayComponent</scope><name>updatePlayHeadPosition</name></member>
+      <member refid="class_overlay_component_1a6b9e2d4f0758339b558768d8e40d0c65" prot="public" virt="virtual"><scope>OverlayComponent</scope><name>zoomLevelChanged</name></member>
+      <member refid="class_overlay_component_1a03bd790a4fa3457c4db5994a6a6fcddb" prot="public" virt="non-virtual"><scope>OverlayComponent</scope><name>~OverlayComponent</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

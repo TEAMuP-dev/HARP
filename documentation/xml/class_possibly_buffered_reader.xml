@@ -1,0 +1,134 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_possibly_buffered_reader" kind="class" language="C++" prot="public">
+    <compoundname>PossiblyBufferedReader</compoundname>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_possibly_buffered_reader_1a814415006b6ed7541b6ce964fde8fe5e" prot="private" static="no" mutable="no">
+        <type>std::function&lt; void(int)&gt;</type>
+        <definition>std::function&lt;void(int)&gt; PossiblyBufferedReader::setTimeoutFn</definition>
+        <argsstring></argsstring>
+        <name>setTimeoutFn</name>
+        <qualifiedname>PossiblyBufferedReader::setTimeoutFn</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="41" column="17" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_possibly_buffered_reader_1a2ca775a4d2abaf79dddd6c6f46c5370a" prot="private" static="no" mutable="no">
+        <type>unique_ptr&lt; AudioFormatReader &gt;</type>
+        <definition>unique_ptr&lt;AudioFormatReader&gt; PossiblyBufferedReader::reader</definition>
+        <argsstring></argsstring>
+        <name>reader</name>
+        <qualifiedname>PossiblyBufferedReader::reader</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="42" column="14" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_possibly_buffered_reader_1a3560e8c469e02789a20e4c0dac56850e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PossiblyBufferedReader::PossiblyBufferedReader</definition>
+        <argsstring>()=default</argsstring>
+        <name>PossiblyBufferedReader</name>
+        <qualifiedname>PossiblyBufferedReader::PossiblyBufferedReader</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="24" column="3"/>
+      </memberdef>
+      <memberdef kind="function" id="class_possibly_buffered_reader_1af0aca4b1e9b5c84a07c5a880103c0e4a" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>PossiblyBufferedReader::PossiblyBufferedReader</definition>
+        <argsstring>(unique_ptr&lt; BufferingAudioReader &gt; readerIn)</argsstring>
+        <name>PossiblyBufferedReader</name>
+        <qualifiedname>PossiblyBufferedReader::PossiblyBufferedReader</qualifiedname>
+        <param>
+          <type>unique_ptr&lt; BufferingAudioReader &gt;</type>
+          <declname>readerIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="26" column="12" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="26" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="function" id="class_possibly_buffered_reader_1a64087f746db52656ec6110937b519936" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>PossiblyBufferedReader::PossiblyBufferedReader</definition>
+        <argsstring>(unique_ptr&lt; AudioFormatReader &gt; readerIn)</argsstring>
+        <name>PossiblyBufferedReader</name>
+        <qualifiedname>PossiblyBufferedReader::PossiblyBufferedReader</qualifiedname>
+        <param>
+          <type>unique_ptr&lt; AudioFormatReader &gt;</type>
+          <declname>readerIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="31" column="12" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="31" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="class_possibly_buffered_reader_1aa91ca69f565a5343c20800c12a035d2a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void PossiblyBufferedReader::setReadTimeout</definition>
+        <argsstring>(int ms)</argsstring>
+        <name>setReadTimeout</name>
+        <qualifiedname>PossiblyBufferedReader::setReadTimeout</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>ms</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="34" column="8" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="34" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="class_possibly_buffered_reader_1ab154656153884515c97e8bae2bad70a1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>AudioFormatReader *</type>
+        <definition>AudioFormatReader * PossiblyBufferedReader::get</definition>
+        <argsstring>() const</argsstring>
+        <name>get</name>
+        <qualifiedname>PossiblyBufferedReader::get</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PossiblyBufferedReader.h" line="38" column="21" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="38" bodyend="38"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Util/PossiblyBufferedReader.h" line="22" column="1" bodyfile="Source/Util/PossiblyBufferedReader.h" bodystart="22" bodyend="43"/>
+    <listofallmembers>
+      <member refid="class_possibly_buffered_reader_1ab154656153884515c97e8bae2bad70a1" prot="public" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>get</name></member>
+      <member refid="class_possibly_buffered_reader_1a3560e8c469e02789a20e4c0dac56850e" prot="public" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>PossiblyBufferedReader</name></member>
+      <member refid="class_possibly_buffered_reader_1af0aca4b1e9b5c84a07c5a880103c0e4a" prot="public" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>PossiblyBufferedReader</name></member>
+      <member refid="class_possibly_buffered_reader_1a64087f746db52656ec6110937b519936" prot="public" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>PossiblyBufferedReader</name></member>
+      <member refid="class_possibly_buffered_reader_1a2ca775a4d2abaf79dddd6c6f46c5370a" prot="private" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>reader</name></member>
+      <member refid="class_possibly_buffered_reader_1aa91ca69f565a5343c20800c12a035d2a" prot="public" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>setReadTimeout</name></member>
+      <member refid="class_possibly_buffered_reader_1a814415006b6ed7541b6ce964fde8fe5e" prot="private" virt="non-virtual"><scope>PossiblyBufferedReader</scope><name>setTimeoutFn</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

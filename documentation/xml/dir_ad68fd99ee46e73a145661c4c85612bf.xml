@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_ad68fd99ee46e73a145661c4c85612bf" kind="dir">
+    <compoundname>Source/UI</compoundname>
+    <innerfile refid="_custom_components_8h">CustomComponents.h</innerfile>
+    <innerfile refid="_document_view_8cpp">DocumentView.cpp</innerfile>
+    <innerfile refid="_document_view_8h">DocumentView.h</innerfile>
+    <innerfile refid="_layout_8cpp">Layout.cpp</innerfile>
+    <innerfile refid="_layout_8h">Layout.h</innerfile>
+    <innerfile refid="_look_and_feel_8h">LookAndFeel.h</innerfile>
+    <innerfile refid="_region_sequence_view_8cpp">RegionSequenceView.cpp</innerfile>
+    <innerfile refid="_region_sequence_view_8h">RegionSequenceView.h</innerfile>
+    <innerfile refid="_rulers_header_8cpp">RulersHeader.cpp</innerfile>
+    <innerfile refid="_rulers_header_8h">RulersHeader.h</innerfile>
+    <innerfile refid="_rulers_view_8cpp">RulersView.cpp</innerfile>
+    <innerfile refid="_rulers_view_8h">RulersView.h</innerfile>
+    <innerfile refid="_track_header_8h">TrackHeader.h</innerfile>
+    <innerfile refid="_zoom_controls_8h">ZoomControls.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/UI/"/>
+  </compounddef>
+</doxygen>

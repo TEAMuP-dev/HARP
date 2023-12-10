@@ -1,0 +1,503 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_document_controller_specialisation_8h" kind="file" language="C++">
+    <compoundname>DocumentControllerSpecialisation.h</compoundname>
+    <includes refid="_editor_renderer_8h" local="yes">EditorRenderer.h</includes>
+    <includes refid="_playback_region_8h" local="yes">PlaybackRegion.h</includes>
+    <includes refid="_editor_view_8h" local="yes">EditorView.h</includes>
+    <includes refid="_web_model_8h" local="yes">../DeepLearning/WebModel.h</includes>
+    <includes local="yes">juce_core/juce_core.h</includes>
+    <includes refid="_preview_state_8h" local="yes">../Util/PreviewState.h</includes>
+    <includedby refid="_document_controller_specialisation_8cpp" local="yes">Source/ARA/DocumentControllerSpecialisation.cpp</includedby>
+    <includedby refid="_playback_renderer_8h" local="yes">Source/ARA/PlaybackRenderer.h</includedby>
+    <includedby refid="_processor_editor_8h" local="yes">Source/ARA/ProcessorEditor.h</includedby>
+    <includedby refid="_main_8cpp" local="yes">Source/Main.cpp</includedby>
+    <includedby refid="_playback_region_view_8h" local="yes">Source/Timeline/PlaybackRegionView.h</includedby>
+    <incdepgraph>
+      <node id="5">
+        <label>ARA_Library/PlugIn/ARAPlug.h</label>
+      </node>
+      <node id="6">
+        <label>ARA_Library/Utilities/ARAPitchInterpretation.h</label>
+      </node>
+      <node id="7">
+        <label>ARA_Library/Utilities/ARATimelineConversion.h</label>
+      </node>
+      <node id="17">
+        <label>AudioModification.h</label>
+        <link refid="_audio_modification_8h"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/ARA/DocumentControllerSpecialisation.h</label>
+        <link refid="_document_controller_specialisation_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>EditorRenderer.h</label>
+        <link refid="_editor_renderer_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>EditorView.h</label>
+        <link refid="_editor_view_8h"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>PlaybackRegion.h</label>
+        <link refid="_playback_region_8h_source"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>Model.h</label>
+        <link refid="_model_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>Wave2Wave.h</label>
+        <link refid="_wave2_wave_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>../DeepLearning/WebModel.h</label>
+        <link refid="_web_model_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>../Timeline/SharedTimeSliceThread.h</label>
+        <link refid="_shared_time_slice_thread_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>../UI/CustomComponents.h</label>
+        <link refid="_custom_components_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>../Util/AsyncConfigurationCallback.h</label>
+        <link refid="_async_configuration_callback_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>Crossfade.h</label>
+        <link refid="_crossfade_8h"/>
+      </node>
+      <node id="12">
+        <label>../Util/Looper.h</label>
+        <link refid="_looper_8h"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>../Util/PreviewState.h</label>
+        <link refid="_preview_state_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>../Util/ProcessingLockInterface.h</label>
+        <link refid="_processing_lock_interface_8h"/>
+      </node>
+      <node id="3">
+        <label>any</label>
+      </node>
+      <node id="15">
+        <label>atomic</label>
+      </node>
+      <node id="19">
+        <label>fstream</label>
+      </node>
+      <node id="9">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="10">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+      <node id="25">
+        <label>juce_core/juce_core.h</label>
+      </node>
+      <node id="23">
+        <label>juce_events/juce_events.h</label>
+      </node>
+      <node id="28">
+        <label>juce_gui_basics/juce_gui_basics.h</label>
+      </node>
+      <node id="4">
+        <label>map</label>
+      </node>
+      <node id="21">
+        <label>string</label>
+      </node>
+      <node id="22">
+        <label>unordered_map</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="6">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Source/ARA/DocumentControllerSpecialisation.cpp</label>
+        <link refid="_document_controller_specialisation_8cpp"/>
+      </node>
+      <node id="1">
+        <label>Source/ARA/DocumentControllerSpecialisation.h</label>
+        <link refid="_document_controller_specialisation_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Source/ARA/PlaybackRenderer.cpp</label>
+        <link refid="_playback_renderer_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/ARA/PlaybackRenderer.h</label>
+        <link refid="_playback_renderer_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="5">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="9">
+        <label>Source/Timeline/PlaybackRegionView.h</label>
+        <link refid="_playback_region_view_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="11">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Source/UI/RegionSequenceView.cpp</label>
+        <link refid="_region_sequence_view_8cpp"/>
+      </node>
+      <node id="10">
+        <label>Source/UI/RegionSequenceView.h</label>
+        <link refid="_region_sequence_view_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_custom_thread_pool_job" prot="public">CustomThreadPoolJob</innerclass>
+    <innerclass refid="class_h_a_r_p_document_controller_specialisation" prot="public">HARPDocumentControllerSpecialisation</innerclass>
+    <innerclass refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" prot="public">HARPDocumentControllerSpecialisation::JobProcessorThread</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>Implementation of the ARA document controller. This controller is needed for any ARA plugin and handles functions for editing and playback of audio, analysis of content from the host, and it maintains the ARA model graph. More information can be found on the offical JUCE documentation: <ulink url="https://docs.juce.com/master/classARADocumentControllerSpecialisation.html#details">https://docs.juce.com/master/classARADocumentControllerSpecialisation.html#details</ulink> <simplesect kind="author"><para>JUCE, aldo aguilar, hugo flores garcia, xribene </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="_editor_renderer_8h" kindref="compound">EditorRenderer.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="comment">//<sp/>#include<sp/>&quot;PlaybackRenderer.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PlaybackRegion.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="_editor_view_8h" kindref="compound">EditorView.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../DeepLearning/WebModel.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_core/juce_core.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../Util/PreviewState.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Forward<sp/>declaration<sp/>of<sp/>the<sp/>child<sp/>class</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref>;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41" refid="class_custom_thread_pool_job" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_custom_thread_pool_job" kindref="compound">CustomThreadPoolJob</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>ThreadPoolJob</highlight></codeline>
+<codeline lineno="42"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><ref refid="class_custom_thread_pool_job" kindref="compound">CustomThreadPoolJob</ref>(std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">()&gt;<sp/>jobFunction)</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>ThreadPoolJob(</highlight><highlight class="stringliteral">&quot;CustomThreadPoolJob&quot;</highlight><highlight class="normal">),<sp/>jobFunction(jobFunction)</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/>{}</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/>JobStatus<sp/>runJob()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="48"><highlight class="keyword"><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(jobFunction)</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jobFunction();</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>jobHasFinished;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>jobHasFinished;<sp/></highlight><highlight class="comment">//<sp/>or<sp/>some<sp/>other<sp/>appropriate<sp/>status</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>private:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/>std::function&lt;void()&gt;<sp/>jobFunction;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69" refid="class_h_a_r_p_document_controller_specialisation" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>ARADocumentControllerSpecialisation,</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref><sp/>{</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ARA::PlugIn::PlugInEntry*<sp/>entry,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ARA::ARADocumentControllerHostInstance*<sp/>instance)<sp/>;</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80" refid="class_h_a_r_p_document_controller_specialisation_1a6075631f429b0f8485c231fb619fd462" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="struct_preview_state" kindref="compound">PreviewState</ref><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1a6075631f429b0f8485c231fb619fd462" kindref="member">previewState</ref>;<sp/></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WebWave2Wave&gt;<sp/>getModel()<sp/>{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>mModel;<sp/>}</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>executeLoad(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>map&lt;string,<sp/>any&gt;<sp/>&amp;params);</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>executeProcess(std::shared_ptr&lt;WebWave2Wave&gt;<sp/>model);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO:<sp/>these<sp/>should<sp/>probably<sp/>be<sp/>private,<sp/>and<sp/>we<sp/>should<sp/>have<sp/>wrappers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>around<sp/>add/remove<sp/>Listener,<sp/>and<sp/>a<sp/>way<sp/>to<sp/>check<sp/>which<sp/>changebroadcaster<sp/>is<sp/>being<sp/>used<sp/>in<sp/>a<sp/>callback</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::ChangeBroadcaster<sp/>loadBroadcaster;</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::ChangeBroadcaster<sp/>processBroadcaster;</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>cleanDeletedPlaybackRenderers(<ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref>*<sp/>playbackRendererToDelete);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95" refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kindref="compound">JobProcessorThread</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Thread</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kindref="compound">JobProcessorThread</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;CustomThreadPoolJob*&gt;&amp;<sp/>jobs,</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&amp;<sp/>jobsFinished,</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&amp;<sp/>totalJobs</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>ChangeBroadcaster&amp;<sp/>broadcaster</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>Thread(</highlight><highlight class="stringliteral">&quot;JobProcessorThread&quot;</highlight><highlight class="normal">),</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>customJobs(jobs),</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>jobsFinished(jobsFinished),</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>totalJobs(totalJobs)</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{}</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>run()</highlight><highlight class="keyword"><sp/>override</highlight></codeline>
+<codeline lineno="110"><highlight class="keyword"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal">&amp;<sp/>customJob<sp/>:<sp/>customJobs)<sp/>{</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>threadPool.addJob(customJob,<sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">);<sp/></highlight><highlight class="comment">//<sp/>The<sp/>pool<sp/>will<sp/>take<sp/>ownership<sp/>and<sp/>delete<sp/>the<sp/>job<sp/>when<sp/>finished</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>customJob-&gt;runJob();</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Wait<sp/>for<sp/>all<sp/>jobs<sp/>to<sp/>finish</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal">&amp;<sp/>customJob<sp/>:<sp/>customJobs)<sp/>{</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>threadPool.waitForJobToFinish(customJob,<sp/>-1);<sp/></highlight><highlight class="comment">//<sp/>-1<sp/>for<sp/>no<sp/>timeout</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>This<sp/>will<sp/>run<sp/>after<sp/>all<sp/>jobs<sp/>are<sp/>done</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>if<sp/>(jobsFinished<sp/>==<sp/>totalJobs)<sp/>{</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>processBroadcaster.sendChangeMessage();</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ChangeBroadcaster<sp/>processBroadcaster;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;CustomThreadPoolJob*&gt;&amp;<sp/>customJobs;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&amp;<sp/>jobsFinished;</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal">&amp;<sp/>totalJobs;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>juce::ThreadPool<sp/>threadPool<sp/>{2};</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kindref="compound">JobProcessorThread</ref><sp/>jobProcessorThread;</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"></highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">protected</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1a20b33f391588d5dc10ae305327cb9f52" kindref="member">willBeginEditing</ref>(</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARADocument<sp/>*)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;<sp/></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1acdc48267dcd1d0afb05ee67935d3174e" kindref="member">didEndEditing</ref>(</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARADocument<sp/>*)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;<sp/></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"></highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/>ARAAudioModification<sp/>*<ref refid="class_h_a_r_p_document_controller_specialisation_1ab037fa3bd760b517947b42b39a8ca71c" kindref="member">doCreateAudioModification</ref>(</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARAAudioSource<sp/>*audioSource,<sp/>ARA::ARAAudioModificationHostRef<sp/>hostRef,</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ARAAudioModification<sp/>*optionalModificationToClone)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"></highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/>ARAPlaybackRegion*<sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1a0ad7675cb1138ba01d8b43a983ca312f" kindref="member">doCreatePlaybackRegion</ref><sp/>(</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARAAudioModification*<sp/>modification,</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARA::ARAPlaybackRegionHostRef<sp/>hostRef)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"></highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/>ARAPlaybackRenderer<sp/>*<ref refid="class_h_a_r_p_document_controller_specialisation_1a62265e12389c9e11148b5f0ef98e79f2" kindref="member">doCreatePlaybackRenderer</ref>()<sp/>noexcept<sp/>override;</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>/**</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/>*<sp/>@brief<sp/>Creates<sp/>an<sp/>editor<sp/>renderer.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/>*<sp/>@return<sp/>A<sp/>new<sp/>EditorRenderer<sp/>instance.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>EditorRenderer<sp/>*doCreateEditorRenderer()<sp/>noexcept<sp/>override;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_editor_view" kindref="compound">EditorView</ref><sp/>*<ref refid="class_h_a_r_p_document_controller_specialisation_1ab41c9eb07a5a13ef6e50ddaa5233735a" kindref="member">doCreateEditorView</ref>()<sp/>noexcept<sp/>override;</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"></highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1a042991557cc31f3e981eea33be426b43" kindref="member">doRestoreObjectsFromStream</ref>(ARAInputStream<sp/>&amp;input,</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>const<sp/>ARARestoreObjectsFilter<sp/>*filter)<sp/>noexcept</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>override;<sp/></highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="class_h_a_r_p_document_controller_specialisation_1ad6038a38139c5d282785abce90ba8a93" kindref="member">doStoreObjectsToStream</ref>(ARAOutputStream<sp/>&amp;output,</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>const<sp/>ARAStoreObjectsFilter<sp/>*filter)<sp/>noexcept</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>override;<sp/></highlight></codeline>
+<codeline lineno="188"><highlight class="normal"></highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/>private:</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/>ScopedTryReadLock<sp/>getProcessingLock()<sp/>override;<sp/></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/>ReadWriteLock<sp/>processBlockLock;<sp/></highlight></codeline>
+<codeline lineno="193"><highlight class="normal"></highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>We<sp/>need<sp/>the<sp/>DocController<sp/>to<sp/>have<sp/>access<sp/>to<sp/>the<sp/>EditorView</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>so<sp/>that<sp/>we<sp/>can<sp/>update<sp/>the<sp/>view<sp/>when<sp/>the<sp/>model<sp/>is<sp/>loaded</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>(another<sp/>option<sp/>is<sp/>to<sp/>use<sp/>a<sp/>listener<sp/>pattern)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_editor_view" kindref="compound">EditorView</ref><sp/>*editorView<sp/>{</highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">};<sp/></highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>PlaybackRenderer<sp/>*playbackRenderer<sp/>{nullptr};<sp/>///&lt;<sp/>Playback<sp/>renderer.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_editor_renderer" kindref="compound">EditorRenderer</ref><sp/>*editorRenderer<sp/>{</highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">};<sp/></highlight></codeline>
+<codeline lineno="200"><highlight class="normal"></highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>store<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>model</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/>std::shared_ptr&lt;WebWave2Wave&gt;<sp/>mModel<sp/>{</highlight><highlight class="keyword">new</highlight><highlight class="normal"><sp/><ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref>()};<sp/></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>In<sp/>contrast<sp/>to<sp/>EditorView<sp/>and<sp/>EditorRenderer<sp/>which<sp/>are<sp/>unique<sp/>for<sp/>the<sp/>plugin</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>there<sp/>are<sp/>multiple<sp/>playbackRenderers<sp/>(one<sp/>for<sp/>each<sp/>playbackRegion)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;PlaybackRenderer*&gt;<sp/>playbackRenderers;</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/>std::unique_ptr&lt;juce::AlertWindow&gt;<sp/>processingWindow;</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"></highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::ThreadPool<sp/>threadPool<sp/>{1};</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/><sp/><sp/>JobProcessorThread<sp/>jobProcessorThread;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="211"><highlight class="normal"></highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>std::vector&lt;CustomThreadPoolJob*&gt;<sp/>customJobs;</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>ChangeBroadcaster<sp/>processBroadcaster;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>jobsFinished<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>totalJobs<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="216"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/ARA/DocumentControllerSpecialisation.h"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_shared_time_slice_thread" kind="class" language="C++" prot="public">
+    <compoundname>SharedTimeSliceThread</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::TimeSliceThread</basecompoundref>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_shared_time_slice_thread_1a98a364dcd71c0fa9494ba7a50a53a7a1" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>SharedTimeSliceThread::SharedTimeSliceThread</definition>
+        <argsstring>()</argsstring>
+        <name>SharedTimeSliceThread</name>
+        <qualifiedname>SharedTimeSliceThread::SharedTimeSliceThread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/SharedTimeSliceThread.h" line="29" column="3" bodyfile="Source/Timeline/SharedTimeSliceThread.h" bodystart="29" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>SharedTimeSliceThread</label>
+        <link refid="class_shared_time_slice_thread"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::TimeSliceThread</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>SharedTimeSliceThread</label>
+        <link refid="class_shared_time_slice_thread"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::TimeSliceThread</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/Timeline/SharedTimeSliceThread.h" line="27" column="1" bodyfile="Source/Timeline/SharedTimeSliceThread.h" bodystart="27" bodyend="35"/>
+    <listofallmembers>
+      <member refid="class_shared_time_slice_thread_1a98a364dcd71c0fa9494ba7a50a53a7a1" prot="public" virt="non-virtual"><scope>SharedTimeSliceThread</scope><name>SharedTimeSliceThread</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

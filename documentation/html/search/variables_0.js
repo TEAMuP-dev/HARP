@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['previewstate_0',['previewState',['../class_tensor_juce_document_controller_specialisation.html#af7a8ce95d7c0370bad87d559400b2a21',1,'TensorJuceDocumentControllerSpecialisation']]]
+  ['previewstate_0',['previewState',['../class_h_a_r_p_document_controller_specialisation.html#a6075631f429b0f8485c231fb619fd462',1,'HARPDocumentControllerSpecialisation']]]
 ];

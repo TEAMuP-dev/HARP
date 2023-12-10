@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_audio_in_ctrl" kind="struct" language="C++" prot="public">
+    <compoundname>AudioInCtrl</compoundname>
+    <basecompoundref refid="struct_ctrl" prot="public" virt="non-virtual">Ctrl</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_audio_in_ctrl_1a94299e9374f8331b167119eee6757b83" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string AudioInCtrl::value</definition>
+        <argsstring></argsstring>
+        <name>value</name>
+        <qualifiedname>AudioInCtrl::value</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="40" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>AudioInCtrl</label>
+        <link refid="struct_audio_in_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>AudioInCtrl</label>
+        <link refid="struct_audio_in_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>value</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>label</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="39" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="39" bodyend="41"/>
+    <listofallmembers>
+      <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" virt="non-virtual"><scope>AudioInCtrl</scope><name>id</name></member>
+      <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" virt="non-virtual"><scope>AudioInCtrl</scope><name>label</name></member>
+      <member refid="struct_audio_in_ctrl_1a94299e9374f8331b167119eee6757b83" prot="public" virt="non-virtual"><scope>AudioInCtrl</scope><name>value</name></member>
+      <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" virt="virtual"><scope>AudioInCtrl</scope><name>~Ctrl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

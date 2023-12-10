@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_b073964416d7f8342ebcedc866343c1b" kind="dir">
+    <compoundname>Source/Timeline</compoundname>
+    <innerfile refid="_playback_region_view_8cpp">PlaybackRegionView.cpp</innerfile>
+    <innerfile refid="_playback_region_view_8h">PlaybackRegionView.h</innerfile>
+    <innerfile refid="_playhead_position_label_8cpp">PlayheadPositionLabel.cpp</innerfile>
+    <innerfile refid="_playhead_position_label_8h">PlayheadPositionLabel.h</innerfile>
+    <innerfile refid="_shared_time_slice_thread_8h">SharedTimeSliceThread.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Timeline/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_zoom_controls" kind="class" language="C++" prot="public">
+    <compoundname>ZoomControls</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">Component</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_zoom_controls_1aa6c25a874e418ca67010bb6539049431" prot="private" static="no" mutable="no">
+        <type>TextButton</type>
+        <definition>TextButton ZoomControls::zoomInButton</definition>
+        <argsstring></argsstring>
+        <name>zoomInButton</name>
+        <qualifiedname>ZoomControls::zoomInButton</qualifiedname>
+        <initializer>{&quot;+&quot;}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="49" column="14" bodyfile="Source/UI/ZoomControls.h" bodystart="49" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_zoom_controls_1a51375e5bc7260fdf5185355ba2661ace" prot="private" static="no" mutable="no">
+        <type>TextButton</type>
+        <definition>TextButton ZoomControls::zoomOutButton</definition>
+        <argsstring></argsstring>
+        <name>zoomOutButton</name>
+        <qualifiedname>ZoomControls::zoomOutButton</qualifiedname>
+        <initializer>{&quot;-&quot;}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="49" column="27" bodyfile="Source/UI/ZoomControls.h" bodystart="49" bodyend="49"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_zoom_controls_1a5a4906d87faf13aa445afc80652d673f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>ZoomControls::ZoomControls</definition>
+        <argsstring>()</argsstring>
+        <name>ZoomControls</name>
+        <qualifiedname>ZoomControls::ZoomControls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="24" column="3" bodyfile="Source/UI/ZoomControls.h" bodystart="24" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="class_zoom_controls_1a198d6851eee29c54a63b631b8ac9e43b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ZoomControls::setZoomInCallback</definition>
+        <argsstring>(std::function&lt; void()&gt; cb)</argsstring>
+        <name>setZoomInCallback</name>
+        <qualifiedname>ZoomControls::setZoomInCallback</qualifiedname>
+        <param>
+          <type>std::function&lt; void()&gt;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="29" column="8" bodyfile="Source/UI/ZoomControls.h" bodystart="29" bodyend="31"/>
+      </memberdef>
+      <memberdef kind="function" id="class_zoom_controls_1a3c092426beaacbf72e6b9c461ea608db" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ZoomControls::setZoomOutCallback</definition>
+        <argsstring>(std::function&lt; void()&gt; cb)</argsstring>
+        <name>setZoomOutCallback</name>
+        <qualifiedname>ZoomControls::setZoomOutCallback</qualifiedname>
+        <param>
+          <type>std::function&lt; void()&gt;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="32" column="8" bodyfile="Source/UI/ZoomControls.h" bodystart="32" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="class_zoom_controls_1a6c882aabcdd6cab9d51e72be6e93d1f9" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ZoomControls::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>ZoomControls::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/ZoomControls.h" line="36" column="8" bodyfile="Source/UI/ZoomControls.h" bodystart="36" bodyend="46"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Component</label>
+      </node>
+      <node id="1">
+        <label>ZoomControls</label>
+        <link refid="class_zoom_controls"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Component</label>
+      </node>
+      <node id="1">
+        <label>ZoomControls</label>
+        <link refid="class_zoom_controls"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/ZoomControls.h" line="22" column="1" bodyfile="Source/UI/ZoomControls.h" bodystart="22" bodyend="50"/>
+    <listofallmembers>
+      <member refid="class_zoom_controls_1a6c882aabcdd6cab9d51e72be6e93d1f9" prot="public" virt="non-virtual"><scope>ZoomControls</scope><name>resized</name></member>
+      <member refid="class_zoom_controls_1a198d6851eee29c54a63b631b8ac9e43b" prot="public" virt="non-virtual"><scope>ZoomControls</scope><name>setZoomInCallback</name></member>
+      <member refid="class_zoom_controls_1a3c092426beaacbf72e6b9c461ea608db" prot="public" virt="non-virtual"><scope>ZoomControls</scope><name>setZoomOutCallback</name></member>
+      <member refid="class_zoom_controls_1a5a4906d87faf13aa445afc80652d673f" prot="public" virt="non-virtual"><scope>ZoomControls</scope><name>ZoomControls</name></member>
+      <member refid="class_zoom_controls_1aa6c25a874e418ca67010bb6539049431" prot="private" virt="non-virtual"><scope>ZoomControls</scope><name>zoomInButton</name></member>
+      <member refid="class_zoom_controls_1a51375e5bc7260fdf5185355ba2661ace" prot="private" virt="non-virtual"><scope>ZoomControls</scope><name>zoomOutButton</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_vertical_layout_viewport_content" kind="class" language="C++" prot="public">
+    <compoundname>VerticalLayoutViewportContent</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_vertical_layout_viewport_content_1a45e27908cb1a7fdd90b68e845d11ae4c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void VerticalLayoutViewportContent::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>VerticalLayoutViewportContent::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="30" column="8" bodyfile="Source/UI/Layout.cpp" bodystart="22" bodyend="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>VerticalLayoutViewportContent</label>
+        <link refid="class_vertical_layout_viewport_content"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>VerticalLayoutViewportContent</label>
+        <link refid="class_vertical_layout_viewport_content"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/Layout.h" line="28" column="1" bodyfile="Source/UI/Layout.h" bodystart="28" bodyend="31"/>
+    <listofallmembers>
+      <member refid="class_vertical_layout_viewport_content_1a45e27908cb1a7fdd90b68e845d11ae4c" prot="public" virt="non-virtual"><scope>VerticalLayoutViewportContent</scope><name>resized</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

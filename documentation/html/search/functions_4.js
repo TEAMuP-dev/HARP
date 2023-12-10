@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['init_0',['init',['../class_audio_modification.html#aa99f5c127ae475ac110d8b4312c92e4e',1,'AudioModification']]]
+  ['forward_0',['forward',['../class_torch_model.html#aafc7a2718e1c2f30d4515a78bbd517c1',1,'TorchModel']]]
 ];

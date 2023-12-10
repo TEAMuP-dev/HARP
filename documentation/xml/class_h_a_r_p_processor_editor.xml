@@ -1,0 +1,535 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_processor_editor" kind="class" language="C++" prot="public">
+    <compoundname>HARPProcessorEditor</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">AudioProcessorEditor</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">AudioProcessorEditorARAExtension</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">Button::Listener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">ChangeListener</basecompoundref>
+    <includes refid="_processor_editor_8h" local="no">ProcessorEditor.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1ae5d17f6233c9c25566525f85179a5ee7" prot="private" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref></type>
+        <definition>HARPLookAndFeel HARPProcessorEditor::mHARPLookAndFeel</definition>
+        <argsstring></argsstring>
+        <name>mHARPLookAndFeel</name>
+        <qualifiedname>HARPProcessorEditor::mHARPLookAndFeel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="108" column="19" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1ada5eb33f5fd9ece75ff3a39ab990f52f" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="class_model_status_timer" kindref="compound">ModelStatusTimer</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;ModelStatusTimer&gt; HARPProcessorEditor::mModelStatusTimer</definition>
+        <argsstring></argsstring>
+        <name>mModelStatusTimer</name>
+        <qualifiedname>HARPProcessorEditor::mModelStatusTimer</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="110" column="19" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="110" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a1a8b53b062b0a5c0ae85dd0b38bb8d2e" prot="private" static="no" mutable="no">
+        <type>unique_ptr&lt; Component &gt;</type>
+        <definition>unique_ptr&lt;Component&gt; HARPProcessorEditor::documentView</definition>
+        <argsstring></argsstring>
+        <name>documentView</name>
+        <qualifiedname>HARPProcessorEditor::documentView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="112" column="14" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="112" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a60d0e4282d0a674779e39b04540b4027" prot="private" static="no" mutable="no">
+        <type>juce::TextEditor</type>
+        <definition>juce::TextEditor HARPProcessorEditor::modelPathTextBox</definition>
+        <argsstring></argsstring>
+        <name>modelPathTextBox</name>
+        <qualifiedname>HARPProcessorEditor::modelPathTextBox</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="113" column="20" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="113" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a02fd2910bd8a22df8307be522aaa419d" prot="private" static="no" mutable="no">
+        <type>juce::TextButton</type>
+        <definition>juce::TextButton HARPProcessorEditor::loadModelButton</definition>
+        <argsstring></argsstring>
+        <name>loadModelButton</name>
+        <qualifiedname>HARPProcessorEditor::loadModelButton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="114" column="20" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="114" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a4bd4e524a0018b77e606df21c5cd87cd" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::glossaryLabel</definition>
+        <argsstring></argsstring>
+        <name>glossaryLabel</name>
+        <qualifiedname>HARPProcessorEditor::glossaryLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="115" column="15" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="115" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a823cb8fa58184e3a418b31337ff86695" prot="private" static="no" mutable="no">
+        <type>juce::HyperlinkButton</type>
+        <definition>juce::HyperlinkButton HARPProcessorEditor::glossaryButton</definition>
+        <argsstring></argsstring>
+        <name>glossaryButton</name>
+        <qualifiedname>HARPProcessorEditor::glossaryButton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="116" column="25" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a6f8bf49d3f9d121b0437605be5ac4999" prot="private" static="no" mutable="no">
+        <type>juce::TextButton</type>
+        <definition>juce::TextButton HARPProcessorEditor::processButton</definition>
+        <argsstring></argsstring>
+        <name>processButton</name>
+        <qualifiedname>HARPProcessorEditor::processButton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="117" column="20" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a8c8ca00fe9f9d3f4e7261af506904083" prot="private" static="no" mutable="no">
+        <type>juce::TextButton</type>
+        <definition>juce::TextButton HARPProcessorEditor::cancelButton</definition>
+        <argsstring></argsstring>
+        <name>cancelButton</name>
+        <qualifiedname>HARPProcessorEditor::cancelButton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="118" column="20" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="118" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a54b8f5f41878bc57f6036ddbdf01f936" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::statusLabel</definition>
+        <argsstring></argsstring>
+        <name>statusLabel</name>
+        <qualifiedname>HARPProcessorEditor::statusLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="119" column="15" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a044c8aff6c20efc0b362de245a2388c6" prot="private" static="no" mutable="no">
+        <type><ref refid="class_ctrl_component" kindref="compound">CtrlComponent</ref></type>
+        <definition>CtrlComponent HARPProcessorEditor::ctrlComponent</definition>
+        <argsstring></argsstring>
+        <name>ctrlComponent</name>
+        <qualifiedname>HARPProcessorEditor::ctrlComponent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="121" column="17" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a440bca62b7fb530ab73827ae3fa063e1" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::nameLabel</definition>
+        <argsstring></argsstring>
+        <name>nameLabel</name>
+        <qualifiedname>HARPProcessorEditor::nameLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="123" column="15" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1ab0b5dba0ca25cecb4335ab1dfab5a095" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::authorLabel</definition>
+        <argsstring></argsstring>
+        <name>authorLabel</name>
+        <qualifiedname>HARPProcessorEditor::authorLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="123" column="25" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a38fd2f3dcd8b9edfa4ca2072be9e9f20" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::descriptionLabel</definition>
+        <argsstring></argsstring>
+        <name>descriptionLabel</name>
+        <qualifiedname>HARPProcessorEditor::descriptionLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="123" column="37" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a024ec671f9aeb50386750f98fd0aaff3" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label HARPProcessorEditor::tagsLabel</definition>
+        <argsstring></argsstring>
+        <name>tagsLabel</name>
+        <qualifiedname>HARPProcessorEditor::tagsLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="123" column="54" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1aadf9b672dbc67a5b38b714f3064d548a" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_renderer" kindref="compound">EditorRenderer</ref> *</type>
+        <definition>EditorRenderer* HARPProcessorEditor::mEditorRenderer</definition>
+        <argsstring></argsstring>
+        <name>mEditorRenderer</name>
+        <qualifiedname>HARPProcessorEditor::mEditorRenderer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="125" column="18" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="125" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1acb9b08d6a0b5a8af2f48ccb224943708" prot="private" static="no" mutable="no">
+        <type><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> *</type>
+        <definition>PlaybackRenderer* HARPProcessorEditor::mPlaybackRenderer</definition>
+        <argsstring></argsstring>
+        <name>mPlaybackRenderer</name>
+        <qualifiedname>HARPProcessorEditor::mPlaybackRenderer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="126" column="20" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1a74b6f13da94416665fd5f6c970013f38" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> *</type>
+        <definition>EditorView* HARPProcessorEditor::mEditorView</definition>
+        <argsstring></argsstring>
+        <name>mEditorView</name>
+        <qualifiedname>HARPProcessorEditor::mEditorView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="127" column="14" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_processor_editor_1afdb943a9eb0686274109033c509fef67" prot="private" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref> *</type>
+        <definition>HARPDocumentControllerSpecialisation* HARPProcessorEditor::mDocumentController</definition>
+        <argsstring></argsstring>
+        <name>mDocumentController</name>
+        <qualifiedname>HARPProcessorEditor::mDocumentController</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="128" column="40" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="128" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1a200f72ee5d0dc350eeba50832dcdd028" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>HARPProcessorEditor::HARPProcessorEditor</definition>
+        <argsstring>(HARPAudioProcessorImpl &amp;p, EditorRenderer *er, PlaybackRenderer *pr, EditorView *ev)</argsstring>
+        <name>HARPProcessorEditor</name>
+        <qualifiedname>HARPProcessorEditor::HARPProcessorEditor</qualifiedname>
+        <param>
+          <type><ref refid="class_h_a_r_p_audio_processor_impl" kindref="compound">HARPAudioProcessorImpl</ref> &amp;</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type><ref refid="class_editor_renderer" kindref="compound">EditorRenderer</ref> *</type>
+          <declname>er</declname>
+        </param>
+        <param>
+          <type><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> *</type>
+          <declname>pr</declname>
+        </param>
+        <param>
+          <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> *</type>
+          <declname>ev</declname>
+        </param>
+        <briefdescription>
+<para>Constructor for <ref refid="class_h_a_r_p_processor_editor" kindref="compound">HARPProcessorEditor</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>p</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Reference to <ref refid="class_h_a_r_p_audio_processor_impl" kindref="compound">HARPAudioProcessorImpl</ref> object. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>er</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to <ref refid="class_editor_renderer" kindref="compound">EditorRenderer</ref> object. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="62" column="12" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="27" bodyend="143"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1acc3a8dfa508787026e03332bf76345e0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>HARPProcessorEditor::~HARPProcessorEditor</definition>
+        <argsstring>() override</argsstring>
+        <name>~HARPProcessorEditor</name>
+        <qualifiedname>HARPProcessorEditor::~HARPProcessorEditor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="69" column="3" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="69" bodyend="83"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1ab8528a18e36a50c993e8abd7301ee737" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::buttonClicked</definition>
+        <argsstring>(Button *button) override</argsstring>
+        <name>buttonClicked</name>
+        <qualifiedname>HARPProcessorEditor::buttonClicked</qualifiedname>
+        <param>
+          <type>Button *</type>
+          <declname>button</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="85" column="8" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="155" bodyend="204"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1a558d46db8e5b7e6ae8bfaf1edf290ace" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>HARPProcessorEditor::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="88" column="8" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="240" bodyend="250"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1a44e951c981b0e88892cdd4db6267044c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>HARPProcessorEditor::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="91" column="8" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="253" bodyend="310"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1a313a7650ea9ceefc2694ba9a65c4dd53" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::changeListenerCallback</definition>
+        <argsstring>(ChangeBroadcaster *source) override</argsstring>
+        <name>changeListenerCallback</name>
+        <qualifiedname>HARPProcessorEditor::changeListenerCallback</qualifiedname>
+        <param>
+          <type>ChangeBroadcaster *</type>
+          <declname>source</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="94" column="8" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="206" bodyend="237"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1aae13bc68bf17884020259ebe468722da" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::resetUI</definition>
+        <argsstring>()</argsstring>
+        <name>resetUI</name>
+        <qualifiedname>HARPProcessorEditor::resetUI</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="97" column="8" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="97" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_processor_editor_1a3be4da7797cca0b7cd7d67ea44cf18bb" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPProcessorEditor::setModelCard</definition>
+        <argsstring>(const ModelCard &amp;card)</argsstring>
+        <name>setModelCard</name>
+        <qualifiedname>HARPProcessorEditor::setModelCard</qualifiedname>
+        <param>
+          <type>const <ref refid="struct_model_card" kindref="compound">ModelCard</ref> &amp;</type>
+          <declname>card</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/ProcessorEditor.h" line="105" column="8" bodyfile="Source/ARA/ProcessorEditor.cpp" bodystart="145" bodyend="153"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class responsible for managing the plugin&apos;s graphical interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class extends the base class AudioProcessorEditor and its ARA extension, and implements Button::Listener, Slider::Listener, and ComboBox::Listener interfaces. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>AudioProcessorEditor</label>
+      </node>
+      <node id="3">
+        <label>AudioProcessorEditorARAExtension</label>
+      </node>
+      <node id="4">
+        <label>Button::Listener</label>
+      </node>
+      <node id="5">
+        <label>ChangeListener</label>
+      </node>
+      <node id="1">
+        <label>HARPProcessorEditor</label>
+        <link refid="class_h_a_r_p_processor_editor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>AudioProcessorEditor</label>
+      </node>
+      <node id="3">
+        <label>AudioProcessorEditorARAExtension</label>
+      </node>
+      <node id="4">
+        <label>Button::Listener</label>
+      </node>
+      <node id="5">
+        <label>ChangeListener</label>
+      </node>
+      <node id="1">
+        <label>HARPProcessorEditor</label>
+        <link refid="class_h_a_r_p_processor_editor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/ProcessorEditor.h" line="50" column="1" bodyfile="Source/ARA/ProcessorEditor.h" bodystart="54" bodyend="131"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_processor_editor_1ab0b5dba0ca25cecb4335ab1dfab5a095" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>authorLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1ab8528a18e36a50c993e8abd7301ee737" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>buttonClicked</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a8c8ca00fe9f9d3f4e7261af506904083" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>cancelButton</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a313a7650ea9ceefc2694ba9a65c4dd53" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>changeListenerCallback</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a044c8aff6c20efc0b362de245a2388c6" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>ctrlComponent</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a38fd2f3dcd8b9edfa4ca2072be9e9f20" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>descriptionLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a1a8b53b062b0a5c0ae85dd0b38bb8d2e" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>documentView</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a823cb8fa58184e3a418b31337ff86695" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>glossaryButton</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a4bd4e524a0018b77e606df21c5cd87cd" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>glossaryLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a200f72ee5d0dc350eeba50832dcdd028" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>HARPProcessorEditor</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a02fd2910bd8a22df8307be522aaa419d" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>loadModelButton</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1afdb943a9eb0686274109033c509fef67" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mDocumentController</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1aadf9b672dbc67a5b38b714f3064d548a" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mEditorRenderer</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a74b6f13da94416665fd5f6c970013f38" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mEditorView</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1ae5d17f6233c9c25566525f85179a5ee7" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mHARPLookAndFeel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1ada5eb33f5fd9ece75ff3a39ab990f52f" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mModelStatusTimer</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a60d0e4282d0a674779e39b04540b4027" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>modelPathTextBox</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1acb9b08d6a0b5a8af2f48ccb224943708" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>mPlaybackRenderer</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a440bca62b7fb530ab73827ae3fa063e1" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>nameLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a558d46db8e5b7e6ae8bfaf1edf290ace" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>paint</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a6f8bf49d3f9d121b0437605be5ac4999" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>processButton</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1aae13bc68bf17884020259ebe468722da" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>resetUI</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a44e951c981b0e88892cdd4db6267044c" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>resized</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a3be4da7797cca0b7cd7d67ea44cf18bb" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>setModelCard</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a54b8f5f41878bc57f6036ddbdf01f936" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>statusLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1a024ec671f9aeb50386750f98fd0aaff3" prot="private" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>tagsLabel</name></member>
+      <member refid="class_h_a_r_p_processor_editor_1acc3a8dfa508787026e03332bf76345e0" prot="public" virt="non-virtual"><scope>HARPProcessorEditor</scope><name>~HARPProcessorEditor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

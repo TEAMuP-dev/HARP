@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_preview_state" kind="struct" language="C++" prot="public">
+    <compoundname>PreviewState</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_preview_state_1a8725793bede07dd11991a25b8c493422" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; double &gt;</type>
+        <definition>std::atomic&lt;double&gt; PreviewState::previewTime</definition>
+        <argsstring></argsstring>
+        <name>previewTime</name>
+        <qualifiedname>PreviewState::previewTime</qualifiedname>
+        <initializer>{0.0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PreviewState.h" line="29" column="15" bodyfile="Source/Util/PreviewState.h" bodystart="29" bodyend="29"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_preview_state_1a4004b06dc0abeefced0cdb92dd9e926f" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; juce::ARAPlaybackRegion * &gt;</type>
+        <definition>std::atomic&lt;juce::ARAPlaybackRegion *&gt; PreviewState::previewedRegion</definition>
+        <argsstring></argsstring>
+        <name>previewedRegion</name>
+        <qualifiedname>PreviewState::previewedRegion</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/PreviewState.h" line="30" column="15" bodyfile="Source/Util/PreviewState.h" bodystart="30" bodyend="30"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Util/PreviewState.h" line="28" column="1" bodyfile="Source/Util/PreviewState.h" bodystart="28" bodyend="31"/>
+    <listofallmembers>
+      <member refid="struct_preview_state_1a4004b06dc0abeefced0cdb92dd9e926f" prot="public" virt="non-virtual"><scope>PreviewState</scope><name>previewedRegion</name></member>
+      <member refid="struct_preview_state_1a8725793bede07dd11991a25b8c493422" prot="public" virt="non-virtual"><scope>PreviewState</scope><name>previewTime</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

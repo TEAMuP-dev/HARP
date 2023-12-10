@@ -1,0 +1,412 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_editor_renderer" kind="class" language="C++" prot="public">
+    <compoundname>EditorRenderer</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::ARAEditorRenderer</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">juce::ARARegionSequence::Listener</basecompoundref>
+    <includes refid="_editor_renderer_8h" local="no">EditorRenderer.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_editor_renderer_1ac1a733c0580b313b866947d54fb91e16" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref> &amp;</type>
+        <definition>ProcessingLockInterface&amp; EditorRenderer::lockInterface</definition>
+        <argsstring></argsstring>
+        <name>lockInterface</name>
+        <qualifiedname>EditorRenderer::lockInterface</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="81" column="27" bodyfile="Source/ARA/EditorRenderer.h" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1ab8169308164240d149ccae79befafc4a" prot="private" static="no" mutable="no">
+        <type>const <ref refid="struct_preview_state" kindref="compound">PreviewState</ref> *</type>
+        <definition>const PreviewState* EditorRenderer::previewState</definition>
+        <argsstring></argsstring>
+        <name>previewState</name>
+        <qualifiedname>EditorRenderer::previewState</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="82" column="22" bodyfile="Source/ARA/EditorRenderer.h" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1a6d77c63029ea2f27ff54594cd5b960a1" prot="private" static="no" mutable="no">
+        <type><ref refid="class_async_configuration_callback" kindref="compound">AsyncConfigurationCallback</ref></type>
+        <definition>AsyncConfigurationCallback EditorRenderer::asyncConfigCallback</definition>
+        <argsstring></argsstring>
+        <name>asyncConfigCallback</name>
+        <qualifiedname>EditorRenderer::asyncConfigCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="83" column="30" bodyfile="Source/ARA/EditorRenderer.h" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1a594729736c36a654c4891a59d44c1712" prot="private" static="no" mutable="no">
+        <type>juce::ARAPlaybackRegion *</type>
+        <definition>juce::ARAPlaybackRegion* EditorRenderer::lastPlaybackRegion</definition>
+        <argsstring></argsstring>
+        <name>lastPlaybackRegion</name>
+        <qualifiedname>EditorRenderer::lastPlaybackRegion</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="84" column="27" bodyfile="Source/ARA/EditorRenderer.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1a7fa030a9dc339874942d47b03e808cf8" prot="private" static="no" mutable="no">
+        <type>double</type>
+        <definition>double EditorRenderer::sampleRate</definition>
+        <argsstring></argsstring>
+        <name>sampleRate</name>
+        <qualifiedname>EditorRenderer::sampleRate</qualifiedname>
+        <initializer>= 48000.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="86" column="10" bodyfile="Source/ARA/EditorRenderer.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1af56002846f35028afa63d8ddde8c7615" prot="private" static="no" mutable="no">
+        <type>juce::SharedResourcePointer&lt; <ref refid="class_shared_time_slice_thread" kindref="compound">SharedTimeSliceThread</ref> &gt;</type>
+        <definition>juce::SharedResourcePointer&lt;SharedTimeSliceThread&gt; EditorRenderer::timeSliceThread</definition>
+        <argsstring></argsstring>
+        <name>timeSliceThread</name>
+        <qualifiedname>EditorRenderer::timeSliceThread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="87" column="31" bodyfile="Source/ARA/EditorRenderer.h" bodystart="87" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1a5feb07c69ee893360df4cd1a69899559" prot="private" static="no" mutable="no">
+        <type>std::map&lt; juce::ARAAudioSource *, unique_ptr&lt; juce::BufferingAudioReader &gt; &gt;</type>
+        <definition>std::map&lt;juce::ARAAudioSource *, unique_ptr&lt;juce::BufferingAudioReader&gt; &gt; EditorRenderer::audioSourceReaders</definition>
+        <argsstring></argsstring>
+        <name>audioSourceReaders</name>
+        <qualifiedname>EditorRenderer::audioSourceReaders</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="89" column="7" bodyfile="Source/ARA/EditorRenderer.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_editor_renderer_1a79e72daa3805ecf7bbd61f9d0c5b91f6" prot="private" static="no" mutable="no">
+        <type>std::set&lt; juce::ARARegionSequence * &gt;</type>
+        <definition>std::set&lt;juce::ARARegionSequence *&gt; EditorRenderer::regionSequences</definition>
+        <argsstring></argsstring>
+        <name>regionSequences</name>
+        <qualifiedname>EditorRenderer::regionSequences</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="91" column="12" bodyfile="Source/ARA/EditorRenderer.h" bodystart="91" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_editor_renderer_1a2960e576b8d77d56ecc423b81648d82d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>EditorRenderer::EditorRenderer</definition>
+        <argsstring>(ARA::PlugIn::DocumentController *documentController, const PreviewState *previewStateIn, ProcessingLockInterface &amp;lockInterfaceIn)</argsstring>
+        <name>EditorRenderer</name>
+        <qualifiedname>EditorRenderer::EditorRenderer</qualifiedname>
+        <param>
+          <type>ARA::PlugIn::DocumentController *</type>
+          <declname>documentController</declname>
+        </param>
+        <param>
+          <type>const <ref refid="struct_preview_state" kindref="compound">PreviewState</ref> *</type>
+          <declname>previewStateIn</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref> &amp;</type>
+          <declname>lockInterfaceIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="50" column="3" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="33" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1ab0a86ff9c9f32d9790daa810dd88c8f8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::didAddPlaybackRegionToRegionSequence</definition>
+        <argsstring>(juce::ARARegionSequence *, juce::ARAPlaybackRegion *) override</argsstring>
+        <name>didAddPlaybackRegionToRegionSequence</name>
+        <qualifiedname>EditorRenderer::didAddPlaybackRegionToRegionSequence</qualifiedname>
+        <param>
+          <type>juce::ARARegionSequence *</type>
+        </param>
+        <param>
+          <type>juce::ARAPlaybackRegion *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="55" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="48" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1ae581e8766311701fda11ab3f25151965" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::didAddRegionSequence</definition>
+        <argsstring>(ARA::PlugIn::RegionSequence *rs) noexcept override</argsstring>
+        <name>didAddRegionSequence</name>
+        <qualifiedname>EditorRenderer::didAddRegionSequence</qualifiedname>
+        <param>
+          <type>ARA::PlugIn::RegionSequence *</type>
+          <declname>rs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="57" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="53" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1acb40203dbba74564d65a3d44f6e07ea5" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::didAddPlaybackRegion</definition>
+        <argsstring>(ARA::PlugIn::PlaybackRegion *) noexcept override</argsstring>
+        <name>didAddPlaybackRegion</name>
+        <qualifiedname>EditorRenderer::didAddPlaybackRegion</qualifiedname>
+        <param>
+          <type>ARA::PlugIn::PlaybackRegion *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="58" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="61" bodyend="64"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1ad41014b114f12dc0cc6e7964b24f40b9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::executeProcess</definition>
+        <argsstring>(std::map&lt; std::string, std::any &gt; &amp;params)</argsstring>
+        <name>executeProcess</name>
+        <qualifiedname>EditorRenderer::executeProcess</qualifiedname>
+        <param>
+          <type>std::map&lt; std::string, std::any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="61" column="8"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1afa1ff91c05010914cb8d15a9303a0ba3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename Callback</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void EditorRenderer::forEachPlaybackRegion</definition>
+        <argsstring>(Callback &amp;&amp;cb)</argsstring>
+        <name>forEachPlaybackRegion</name>
+        <qualifiedname>EditorRenderer::forEachPlaybackRegion</qualifiedname>
+        <param>
+          <type>Callback &amp;&amp;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="63" column="20" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="68" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1ab05f5faa10f1b73853a3698220b99d99" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::prepareToPlay</definition>
+        <argsstring>(double sampleRateIn, int maximumExpectedSamplesPerBlock, int numChannels, juce::AudioProcessor::ProcessingPrecision, AlwaysNonRealtime alwaysNonRealtime) override</argsstring>
+        <name>prepareToPlay</name>
+        <qualifiedname>EditorRenderer::prepareToPlay</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>sampleRateIn</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>maximumExpectedSamplesPerBlock</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>numChannels</declname>
+        </param>
+        <param>
+          <type>juce::AudioProcessor::ProcessingPrecision</type>
+        </param>
+        <param>
+          <type>AlwaysNonRealtime</type>
+          <declname>alwaysNonRealtime</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="65" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="79" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1ab75d36140a59de4fb9e14779e69aadeb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::releaseResources</definition>
+        <argsstring>() override</argsstring>
+        <name>releaseResources</name>
+        <qualifiedname>EditorRenderer::releaseResources</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="69" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="89" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1a3a0d9744a609834860c06038965b7a9f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::reset</definition>
+        <argsstring>() override</argsstring>
+        <name>reset</name>
+        <qualifiedname>EditorRenderer::reset</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="70" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="91" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_renderer_1a54cb8c119a42af97cb1b17b729f6e810" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool EditorRenderer::processBlock</definition>
+        <argsstring>(juce::AudioBuffer&lt; float &gt; &amp;buffer, juce::AudioProcessor::Realtime realtime, const juce::AudioPlayHead::PositionInfo &amp;positionInfo) noexcept override</argsstring>
+        <name>processBlock</name>
+        <qualifiedname>EditorRenderer::processBlock</qualifiedname>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>juce::AudioProcessor::Realtime</type>
+          <declname>realtime</declname>
+        </param>
+        <param>
+          <type>const juce::AudioPlayHead::PositionInfo &amp;</type>
+          <declname>positionInfo</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="72" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="93" bodyend="100"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_editor_renderer_1a0dccabc600e8c857faac829231b71529" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorRenderer::configure</definition>
+        <argsstring>()</argsstring>
+        <name>configure</name>
+        <qualifiedname>EditorRenderer::configure</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorRenderer.h" line="79" column="8" bodyfile="Source/ARA/EditorRenderer.cpp" bodystart="102" bodyend="120"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>TODO: Write brief class description. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>EditorRenderer</label>
+        <link refid="class_editor_renderer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAEditorRenderer</label>
+      </node>
+      <node id="3">
+        <label>juce::ARARegionSequence::Listener</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>EditorRenderer</label>
+        <link refid="class_editor_renderer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAEditorRenderer</label>
+      </node>
+      <node id="3">
+        <label>juce::ARARegionSequence::Listener</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/EditorRenderer.h" line="47" column="1" bodyfile="Source/ARA/EditorRenderer.h" bodystart="48" bodyend="92"/>
+    <listofallmembers>
+      <member refid="class_editor_renderer_1a6d77c63029ea2f27ff54594cd5b960a1" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>asyncConfigCallback</name></member>
+      <member refid="class_editor_renderer_1a5feb07c69ee893360df4cd1a69899559" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>audioSourceReaders</name></member>
+      <member refid="class_editor_renderer_1a0dccabc600e8c857faac829231b71529" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>configure</name></member>
+      <member refid="class_editor_renderer_1acb40203dbba74564d65a3d44f6e07ea5" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>didAddPlaybackRegion</name></member>
+      <member refid="class_editor_renderer_1ab0a86ff9c9f32d9790daa810dd88c8f8" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>didAddPlaybackRegionToRegionSequence</name></member>
+      <member refid="class_editor_renderer_1ae581e8766311701fda11ab3f25151965" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>didAddRegionSequence</name></member>
+      <member refid="class_editor_renderer_1a2960e576b8d77d56ecc423b81648d82d" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>EditorRenderer</name></member>
+      <member refid="class_editor_renderer_1ad41014b114f12dc0cc6e7964b24f40b9" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>executeProcess</name></member>
+      <member refid="class_editor_renderer_1afa1ff91c05010914cb8d15a9303a0ba3" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>forEachPlaybackRegion</name></member>
+      <member refid="class_editor_renderer_1a594729736c36a654c4891a59d44c1712" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>lastPlaybackRegion</name></member>
+      <member refid="class_editor_renderer_1ac1a733c0580b313b866947d54fb91e16" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>lockInterface</name></member>
+      <member refid="class_editor_renderer_1ab05f5faa10f1b73853a3698220b99d99" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>prepareToPlay</name></member>
+      <member refid="class_editor_renderer_1ab8169308164240d149ccae79befafc4a" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>previewState</name></member>
+      <member refid="class_editor_renderer_1a54cb8c119a42af97cb1b17b729f6e810" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>processBlock</name></member>
+      <member refid="class_editor_renderer_1a79e72daa3805ecf7bbd61f9d0c5b91f6" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>regionSequences</name></member>
+      <member refid="class_editor_renderer_1ab75d36140a59de4fb9e14779e69aadeb" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>releaseResources</name></member>
+      <member refid="class_editor_renderer_1a3a0d9744a609834860c06038965b7a9f" prot="public" virt="non-virtual"><scope>EditorRenderer</scope><name>reset</name></member>
+      <member refid="class_editor_renderer_1a7fa030a9dc339874942d47b03e808cf8" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>sampleRate</name></member>
+      <member refid="class_editor_renderer_1af56002846f35028afa63d8ddde8c7615" prot="private" virt="non-virtual"><scope>EditorRenderer</scope><name>timeSliceThread</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

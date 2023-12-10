@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_look_and_feel_8h" kind="file" language="C++">
+    <compoundname>LookAndFeel.h</compoundname>
+    <includes local="yes">juce_core/juce_core.h</includes>
+    <includes local="yes">juce_gui_basics/juce_gui_basics.h</includes>
+    <includedby refid="_ctrl_component_8h" local="yes">Source/ARA/CtrlComponent.h</includedby>
+    <includedby refid="_processor_editor_8h" local="yes">Source/ARA/ProcessorEditor.h</includedby>
+    <includedby refid="_playback_region_view_8h" local="yes">Source/Timeline/PlaybackRegionView.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>Source/UI/LookAndFeel.h</label>
+        <link refid="_look_and_feel_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce_core/juce_core.h</label>
+      </node>
+      <node id="3">
+        <label>juce_gui_basics/juce_gui_basics.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="4">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="7">
+        <label>Source/Timeline/PlaybackRegionView.h</label>
+        <link refid="_playback_region_view_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="9">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/UI/LookAndFeel.h</label>
+        <link refid="_look_and_feel_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>Source/UI/RegionSequenceView.cpp</label>
+        <link refid="_region_sequence_view_8cpp"/>
+      </node>
+      <node id="8">
+        <label>Source/UI/RegionSequenceView.h</label>
+        <link refid="_region_sequence_view_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_h_a_r_p_look_and_feel" prot="public">HARPLookAndFeel</innerclass>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#include<sp/>&quot;juce_core/juce_core.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_gui_basics/juce_gui_basics.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight></codeline>
+<codeline lineno="6" refid="class_h_a_r_p_look_and_feel" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>juce::LookAndFeel_V4</highlight></codeline>
+<codeline lineno="7"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="9"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>using<sp/>juce::LookAndFeel_V4::LookAndFeel_V4;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref>()</highlight></codeline>
+<codeline lineno="11"><highlight class="normal"><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Set<sp/>up<sp/>the<sp/>color<sp/>palette</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::Slider::thumbColourId,<sp/>highlightColor);</highlight></codeline>
+<codeline lineno="16"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::Slider::rotarySliderOutlineColourId,<sp/>highlightColor);</highlight></codeline>
+<codeline lineno="17"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::Slider::trackColourId,<sp/>platinum);</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::Slider::rotarySliderFillColourId,<sp/>eerieBlack.brighter(0.5));</highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::TextButton::buttonColourId,<sp/>highlightColor);</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::TextButton::textColourOffId,<sp/>white);</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::TextEditor::backgroundColourId,<sp/>eerieBlack);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::TextEditor::textColourId,<sp/>white);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::TextEditor::highlightColourId,<sp/>highlightColor);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::ComboBox::backgroundColourId,<sp/>eerieBlack.brighter(0.5));</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::ComboBox::textColourId,<sp/>white);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::ResizableWindow::backgroundColourId,<sp/>eerieBlack);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setColour(juce::ScrollBar::thumbColourId,<sp/>highlightColor);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>highlightColor<sp/><sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xff846BD3&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>textHeaderColor<sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xffCBFF8C&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Define<sp/>the<sp/>colors<sp/>based<sp/>on<sp/>the<sp/>new<sp/>provided<sp/>palette</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>eerieBlack<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xff1c1c1c&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>celadon<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xff8fcb9b&quot;</highlight><highlight class="normal">).darker();</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>platinum<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xffeae6e5&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>savoyBlue<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>juce::Colour::fromString(</highlight><highlight class="stringliteral">&quot;0xff5762d5&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>juce::Colour<sp/>white<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>=<sp/>juce::Colours::white;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(<ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref>)</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/UI/LookAndFeel.h"/>
+  </compounddef>
+</doxygen>

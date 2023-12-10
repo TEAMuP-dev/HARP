@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_overlay_component_1_1_playhead_marker_component" kind="class" language="C++" prot="public">
+    <compoundname>OverlayComponent::PlayheadMarkerComponent</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_overlay_component_1_1_playhead_marker_component_1a911ac16cf829ae5d03e3842422555b16" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void OverlayComponent::PlayheadMarkerComponent::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>OverlayComponent::PlayheadMarkerComponent::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/Layout.h" line="51" column="10" bodyfile="Source/UI/Layout.cpp" bodystart="46" bodyend="48"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>OverlayComponent::PlayheadMarkerComponent</label>
+        <link refid="class_overlay_component_1_1_playhead_marker_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>OverlayComponent::PlayheadMarkerComponent</label>
+        <link refid="class_overlay_component_1_1_playhead_marker_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/Layout.h" line="50" column="3" bodyfile="Source/UI/Layout.h" bodystart="50" bodyend="52"/>
+    <listofallmembers>
+      <member refid="class_overlay_component_1_1_playhead_marker_component_1a911ac16cf829ae5d03e3842422555b16" prot="private" virt="non-virtual"><scope>OverlayComponent::PlayheadMarkerComponent</scope><name>paint</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_wave2_wave" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>Wave2Wave</compoundname>
+    <derivedcompoundref refid="class_web_wave2_wave" prot="public" virt="non-virtual">WebWave2Wave</derivedcompoundref>
+    <includes refid="_wave2_wave_8h" local="no">Wave2Wave.h</includes>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="class_wave2_wave_1a40fe2e288d48f25eec36b4b18e3712ec" prot="protected" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool Wave2Wave::save_buffer_to_file</definition>
+        <argsstring>(const juce::AudioBuffer&lt; float &gt; &amp;buffer, const juce::File &amp;outputFile, int sampleRate) const</argsstring>
+        <name>save_buffer_to_file</name>
+        <qualifiedname>Wave2Wave::save_buffer_to_file</qualifiedname>
+        <param>
+          <type>const juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>const juce::File &amp;</type>
+          <declname>outputFile</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>sampleRate</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Wave2Wave.h" line="26" column="8" bodyfile="Source/DeepLearning/Wave2Wave.h" bodystart="26" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="class_wave2_wave_1a9af3adcc8ecae0fdb1d3150892f5eaf6" prot="protected" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool Wave2Wave::load_buffer_from_file</definition>
+        <argsstring>(const juce::File &amp;inputFile, juce::AudioBuffer&lt; float &gt; &amp;buffer, int targetSampleRate) const</argsstring>
+        <name>load_buffer_from_file</name>
+        <qualifiedname>Wave2Wave::load_buffer_from_file</qualifiedname>
+        <param>
+          <type>const juce::File &amp;</type>
+          <declname>inputFile</declname>
+        </param>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>targetSampleRate</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Wave2Wave.h" line="69" column="8" bodyfile="Source/DeepLearning/Wave2Wave.h" bodystart="69" bodyend="112"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_wave2_wave_1a49502f7af71ed9fbe486e74e8337128a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void Wave2Wave::process</definition>
+        <argsstring>(juce::AudioBuffer&lt; float &gt; *bufferToProcess, int sourceSampleRate, int dawSampleRate) const =0</argsstring>
+        <name>process</name>
+        <qualifiedname>Wave2Wave::process</qualifiedname>
+        <reimplementedby refid="class_web_wave2_wave_1a0f9ee373c16dffc46ba6d9e5a34427d2">process</reimplementedby>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; *</type>
+          <declname>bufferToProcess</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>sourceSampleRate</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dawSampleRate</declname>
+        </param>
+        <briefdescription>
+<para>Processes a buffer of audio data with the model. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bufferToProcess</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Buffer to be processed by the model. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>sampleRate</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The sample rate of the audio data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Wave2Wave.h" line="120" column="16"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class that represents <ref refid="class_wave2_wave" kindref="compound">Wave2Wave</ref> <ref refid="class_model" kindref="compound">Model</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>Wave2Wave</label>
+        <link refid="class_wave2_wave"/>
+      </node>
+      <node id="2">
+        <label>WebWave2Wave</label>
+        <link refid="class_web_wave2_wave"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <location file="Source/DeepLearning/Wave2Wave.h" line="24" column="1" bodyfile="Source/DeepLearning/Wave2Wave.h" bodystart="24" bodyend="122"/>
+    <listofallmembers>
+      <member refid="class_wave2_wave_1a9af3adcc8ecae0fdb1d3150892f5eaf6" prot="protected" virt="non-virtual"><scope>Wave2Wave</scope><name>load_buffer_from_file</name></member>
+      <member refid="class_wave2_wave_1a49502f7af71ed9fbe486e74e8337128a" prot="public" virt="pure-virtual"><scope>Wave2Wave</scope><name>process</name></member>
+      <member refid="class_wave2_wave_1a40fe2e288d48f25eec36b4b18e3712ec" prot="protected" virt="non-virtual"><scope>Wave2Wave</scope><name>save_buffer_to_file</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

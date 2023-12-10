@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_editor_view" kind="class" language="C++" prot="public">
+    <compoundname>EditorView</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::ARAEditorView</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">ChangeBroadcaster</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_editor_view_1a91d6304e2313ad51051497808e7be034" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WebWave2Wave&gt; EditorView::mModel</definition>
+        <argsstring></argsstring>
+        <name>mModel</name>
+        <qualifiedname>EditorView::mModel</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+<para><ref refid="class_model" kindref="compound">Model</ref> for audio processing. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorView.h" line="45" column="21" bodyfile="Source/ARA/EditorView.h" bodystart="45" bodyend="45"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_editor_view_1aac090fc8dd0412c31b03f15274ee1892" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>EditorView::~EditorView</definition>
+        <argsstring>() override</argsstring>
+        <name>~EditorView</name>
+        <qualifiedname>EditorView::~EditorView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorView.h" line="31" column="5" bodyfile="Source/ARA/EditorView.h" bodystart="31" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_view_1acf7786910827395124ac550ee7e93298" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorView::triggerRepaint</definition>
+        <argsstring>()</argsstring>
+        <name>triggerRepaint</name>
+        <qualifiedname>EditorView::triggerRepaint</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorView.h" line="35" column="10" bodyfile="Source/ARA/EditorView.h" bodystart="35" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_view_1a70af17ce15a4644eedc950f93e56d21e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; WebWave2Wave &gt; EditorView::getModel</definition>
+        <argsstring>()</argsstring>
+        <name>getModel</name>
+        <qualifiedname>EditorView::getModel</qualifiedname>
+        <briefdescription>
+<para>returns the active model </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>std::shared_ptr&lt;WebWave2Wave&gt; </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorView.h" line="40" column="21" bodyfile="Source/ARA/EditorView.h" bodystart="40" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="class_editor_view_1a1338ef073e1f1909d2ae54537fd05b22" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void EditorView::setModel</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model)</argsstring>
+        <name>setModel</name>
+        <qualifiedname>EditorView::setModel</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/EditorView.h" line="42" column="10" bodyfile="Source/ARA/EditorView.h" bodystart="42" bodyend="42"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>ChangeBroadcaster</label>
+      </node>
+      <node id="1">
+        <label>EditorView</label>
+        <link refid="class_editor_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAEditorView</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>ChangeBroadcaster</label>
+      </node>
+      <node id="1">
+        <label>EditorView</label>
+        <link refid="class_editor_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAEditorView</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/EditorView.h" line="24" column="1" bodyfile="Source/ARA/EditorView.h" bodystart="25" bodyend="46"/>
+    <listofallmembers>
+      <member refid="class_editor_view_1a70af17ce15a4644eedc950f93e56d21e" prot="public" virt="non-virtual"><scope>EditorView</scope><name>getModel</name></member>
+      <member refid="class_editor_view_1a91d6304e2313ad51051497808e7be034" prot="private" virt="non-virtual"><scope>EditorView</scope><name>mModel</name></member>
+      <member refid="class_editor_view_1a1338ef073e1f1909d2ae54537fd05b22" prot="public" virt="non-virtual"><scope>EditorView</scope><name>setModel</name></member>
+      <member refid="class_editor_view_1acf7786910827395124ac550ee7e93298" prot="public" virt="non-virtual"><scope>EditorView</scope><name>triggerRepaint</name></member>
+      <member refid="class_editor_view_1aac090fc8dd0412c31b03f15274ee1892" prot="public" virt="non-virtual"><scope>EditorView</scope><name>~EditorView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

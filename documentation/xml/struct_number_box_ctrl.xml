@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_number_box_ctrl" kind="struct" language="C++" prot="public">
+    <compoundname>NumberBoxCtrl</compoundname>
+    <basecompoundref refid="struct_ctrl" prot="public" virt="non-virtual">Ctrl</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_number_box_ctrl_1a6f2d00459428701e47a6b6e2be259cee" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double NumberBoxCtrl::min</definition>
+        <argsstring></argsstring>
+        <name>min</name>
+        <qualifiedname>NumberBoxCtrl::min</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="45" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="45" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_number_box_ctrl_1ae819c7b22dcb3a6bac33427d7ddcaeed" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double NumberBoxCtrl::max</definition>
+        <argsstring></argsstring>
+        <name>max</name>
+        <qualifiedname>NumberBoxCtrl::max</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="46" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_number_box_ctrl_1a24878570b1e335ed6a0b6db6c8c112bf" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double NumberBoxCtrl::value</definition>
+        <argsstring></argsstring>
+        <name>value</name>
+        <qualifiedname>NumberBoxCtrl::value</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="47" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+      </node>
+      <node id="1">
+        <label>NumberBoxCtrl</label>
+        <link refid="struct_number_box_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>label</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>NumberBoxCtrl</label>
+        <link refid="struct_number_box_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="44" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="44" bodyend="48"/>
+    <listofallmembers>
+      <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" virt="non-virtual"><scope>NumberBoxCtrl</scope><name>id</name></member>
+      <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" virt="non-virtual"><scope>NumberBoxCtrl</scope><name>label</name></member>
+      <member refid="struct_number_box_ctrl_1ae819c7b22dcb3a6bac33427d7ddcaeed" prot="public" virt="non-virtual"><scope>NumberBoxCtrl</scope><name>max</name></member>
+      <member refid="struct_number_box_ctrl_1a6f2d00459428701e47a6b6e2be259cee" prot="public" virt="non-virtual"><scope>NumberBoxCtrl</scope><name>min</name></member>
+      <member refid="struct_number_box_ctrl_1a24878570b1e335ed6a0b6db6c8c112bf" prot="public" virt="non-virtual"><scope>NumberBoxCtrl</scope><name>value</name></member>
+      <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" virt="virtual"><scope>NumberBoxCtrl</scope><name>~Ctrl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

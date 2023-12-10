@@ -1,0 +1,433 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_playback_region_view_8h" kind="file" language="C++">
+    <compoundname>PlaybackRegionView.h</compoundname>
+    <includes refid="_audio_modification_8h" local="yes">../ARA/AudioModification.h</includes>
+    <includes refid="_editor_view_8h" local="yes">../ARA/EditorView.h</includes>
+    <includes refid="_document_controller_specialisation_8h" local="yes">../ARA/DocumentControllerSpecialisation.h</includes>
+    <includes refid="_playback_region_8h" local="yes">../ARA/PlaybackRegion.h</includes>
+    <includes refid="_waveform_cache_8h" local="yes">../WaveformCache/WaveformCache.h</includes>
+    <includes refid="_look_and_feel_8h" local="yes">../UI/LookAndFeel.h</includes>
+    <includes local="no">JuceHeader.h</includes>
+    <includedby refid="_playback_region_view_8cpp" local="yes">Source/Timeline/PlaybackRegionView.cpp</includedby>
+    <includedby refid="_region_sequence_view_8h" local="yes">Source/UI/RegionSequenceView.h</includedby>
+    <incdepgraph>
+      <node id="15">
+        <label>ARA_Library/PlugIn/ARAPlug.h</label>
+      </node>
+      <node id="18">
+        <label>ARA_Library/Utilities/ARAPitchInterpretation.h</label>
+      </node>
+      <node id="19">
+        <label>ARA_Library/Utilities/ARATimelineConversion.h</label>
+      </node>
+      <node id="2">
+        <label>../ARA/AudioModification.h</label>
+        <link refid="_audio_modification_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>../ARA/DocumentControllerSpecialisation.h</label>
+        <link refid="_document_controller_specialisation_8h"/>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>EditorRenderer.h</label>
+        <link refid="_editor_renderer_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>../ARA/EditorView.h</label>
+        <link refid="_editor_view_8h"/>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>PlaybackRegion.h</label>
+        <link refid="_playback_region_8h_source"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>Model.h</label>
+        <link refid="_model_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>Wave2Wave.h</label>
+        <link refid="_wave2_wave_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>../DeepLearning/WebModel.h</label>
+        <link refid="_web_model_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/Timeline/PlaybackRegionView.h</label>
+        <link refid="_playback_region_view_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>../Timeline/SharedTimeSliceThread.h</label>
+        <link refid="_shared_time_slice_thread_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>../UI/CustomComponents.h</label>
+        <link refid="_custom_components_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>../UI/LookAndFeel.h</label>
+        <link refid="_look_and_feel_8h_source"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>../Util/AsyncConfigurationCallback.h</label>
+        <link refid="_async_configuration_callback_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>Crossfade.h</label>
+        <link refid="_crossfade_8h"/>
+      </node>
+      <node id="25">
+        <label>../Util/Looper.h</label>
+        <link refid="_looper_8h"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>../Util/PreviewState.h</label>
+        <link refid="_preview_state_8h"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>../Util/ProcessingLockInterface.h</label>
+        <link refid="_processing_lock_interface_8h"/>
+      </node>
+      <node id="31">
+        <label>../WaveformCache/WaveformCache.h</label>
+        <link refid="_waveform_cache_8h"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>JuceHeader.h</label>
+      </node>
+      <node id="6">
+        <label>any</label>
+      </node>
+      <node id="28">
+        <label>atomic</label>
+      </node>
+      <node id="4">
+        <label>fstream</label>
+      </node>
+      <node id="11">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="13">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+      <node id="32">
+        <label>juce_audio_utils/juce_audio_utils.h</label>
+      </node>
+      <node id="14">
+        <label>juce_core/juce_core.h</label>
+      </node>
+      <node id="10">
+        <label>juce_events/juce_events.h</label>
+      </node>
+      <node id="17">
+        <label>juce_gui_basics/juce_gui_basics.h</label>
+      </node>
+      <node id="7">
+        <label>map</label>
+      </node>
+      <node id="8">
+        <label>string</label>
+      </node>
+      <node id="9">
+        <label>unordered_map</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="6">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="5">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="1">
+        <label>Source/Timeline/PlaybackRegionView.h</label>
+        <link refid="_playback_region_view_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>Source/UI/RegionSequenceView.cpp</label>
+        <link refid="_region_sequence_view_8cpp"/>
+      </node>
+      <node id="2">
+        <label>Source/UI/RegionSequenceView.h</label>
+        <link refid="_region_sequence_view_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_playback_region_view" prot="public">PlaybackRegionView</innerclass>
+    <innerclass refid="class_playback_region_view_1_1_preview_region_overlay" prot="private">PlaybackRegionView::PreviewRegionOverlay</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>This class handles interactions with a playback region on the plugins UI. <simplesect kind="author"><para>hugo flores garcia, aldo aguilar </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../ARA/AudioModification.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../ARA/EditorView.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../ARA/DocumentControllerSpecialisation.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../ARA/PlaybackRegion.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../WaveformCache/WaveformCache.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../UI/LookAndFeel.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;JuceHeader.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34" refid="class_playback_region_view" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>juce::Component,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>juce::ChangeListener,</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>juce::SettableTooltipClient,</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>ARAAudioSource::Listener,</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>ARAPlaybackRegion::Listener,</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal"><sp/>ARAEditorView::Listener<sp/>{</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref>(<ref refid="class_editor_view" kindref="compound">EditorView</ref><sp/>&amp;editorView,<sp/>ARAPlaybackRegion<sp/>&amp;region,</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref><sp/>&amp;cache);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><ref refid="class_playback_region_view" kindref="compound">~PlaybackRegionView</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Event<sp/>handlers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>mouseDown(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>juce::MouseEvent<sp/>&amp;m)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>mouseUp(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>juce::MouseEvent<sp/>&amp;)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>void<sp/>mouseDoubleClick(const<sp/>juce::MouseEvent<sp/>&amp;)<sp/>override;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>changeListenerCallback(juce::ChangeBroadcaster<sp/>*)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>ARA<sp/>event<sp/>handlers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>didEnableAudioSourceSamplesAccess(ARAAudioSource<sp/>*,<sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal">)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>willUpdatePlaybackRegionProperties(</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ARAPlaybackRegion<sp/>*,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>ARAPlaybackRegion::PropertiesPtr<sp/>newProperties)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>didUpdatePlaybackRegionContent(ARAPlaybackRegion<sp/>*,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ARAContentUpdateScopes)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>onNewSelection(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ARAViewSelection<sp/>&amp;viewSelection)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Juce<sp/>paint<sp/>and<sp/>resize</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>paint(juce::Graphics<sp/>&amp;g)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>resized()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal">PreviewRegionOverlay<sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Component<sp/>{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>previewLength<sp/>=<sp/>0.5;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/>PreviewRegionOverlay(<ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref><sp/>&amp;ownerIn)<sp/>:<sp/>owner(ownerIn)<sp/>{}</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>update()<sp/>{</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>&amp;previewState<sp/>=<sp/>owner.getDocumentController()-&gt;previewState;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(previewState.previewedRegion.load()<sp/>==<sp/>&amp;owner.playbackRegion)<sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>previewStartTime<sp/>=</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>previewState.previewTime.load()<sp/>-</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>owner.playbackRegion.getStartInPlaybackTime();</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>pixelPerSecond<sp/>=</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>owner.getWidth()<sp/>/<sp/>owner.playbackRegion.getDurationInPlaybackTime();</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setBounds(</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>roundToInt((previewStartTime<sp/>-<sp/>previewLength<sp/>/<sp/>2)<sp/>*<sp/>pixelPerSecond),</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>0,<sp/>roundToInt(previewLength<sp/>*<sp/>pixelPerSecond),<sp/>owner.getHeight());</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setVisible(</highlight><highlight class="keyword">true</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>setVisible(</highlight><highlight class="keyword">false</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>repaint();</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="92"><highlight class="normal"></highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>paint(Graphics<sp/>&amp;g)</highlight><highlight class="keyword"><sp/>override<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>g.setColour(Colours::darkred.withAlpha(0.5f));</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>g.fillRect(getLocalBounds());</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref><sp/>&amp;owner;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref><sp/>*getDocumentController()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><ref refid="class_editor_view" kindref="compound">EditorView</ref><sp/>&amp;araEditorView;</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/>ARAPlaybackRegion<sp/>&amp;playbackRegion;</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref><sp/>&amp;waveformCache;</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/>PreviewRegionOverlay<sp/>previewRegionOverlay;</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>isSelected<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref><sp/>mHARPLookAndFeel;</highlight></codeline>
+<codeline lineno="109"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/Timeline/PlaybackRegionView.h"/>
+  </compounddef>
+</doxygen>

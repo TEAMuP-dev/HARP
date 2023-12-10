@@ -1,0 +1,364 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_ctrl_component" kind="class" language="C++" prot="public">
+    <compoundname>CtrlComponent</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">Button::Listener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">Slider::Listener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">ComboBox::Listener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">TextEditor::Listener</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_ctrl_component_1a0dbb200d427af61b98a9d121639fb815" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WebWave2Wave&gt; CtrlComponent::mModel</definition>
+        <argsstring></argsstring>
+        <name>mModel</name>
+        <qualifiedname>CtrlComponent::mModel</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="295" column="19" bodyfile="Source/ARA/CtrlComponent.h" bodystart="295" bodyend="295"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1ac2bb186cdec46ecc80588f80d4d55011" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label CtrlComponent::headerLabel</definition>
+        <argsstring></argsstring>
+        <name>headerLabel</name>
+        <qualifiedname>CtrlComponent::headerLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="297" column="15" bodyfile="Source/ARA/CtrlComponent.h" bodystart="297" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1a857193218f11e3281eb386febe84d955" prot="private" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_look_and_feel" kindref="compound">HARPLookAndFeel</ref></type>
+        <definition>HARPLookAndFeel CtrlComponent::mHARPLookAndFeel</definition>
+        <argsstring></argsstring>
+        <name>mHARPLookAndFeel</name>
+        <qualifiedname>CtrlComponent::mHARPLookAndFeel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="298" column="19" bodyfile="Source/ARA/CtrlComponent.h" bodystart="298" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1a1973c8b1431277e33fb44f18e630b45a" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::unique_ptr&lt; <ref refid="class_slider_with_label" kindref="compound">SliderWithLabel</ref> &gt; &gt;</type>
+        <definition>std::vector&lt;std::unique_ptr&lt;SliderWithLabel&gt; &gt; CtrlComponent::sliders</definition>
+        <argsstring></argsstring>
+        <name>sliders</name>
+        <qualifiedname>CtrlComponent::sliders</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="301" column="15" bodyfile="Source/ARA/CtrlComponent.h" bodystart="301" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1a206761f1d1e233edd35d363266466722" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::unique_ptr&lt; juce::ToggleButton &gt; &gt;</type>
+        <definition>std::vector&lt;std::unique_ptr&lt;juce::ToggleButton&gt; &gt; CtrlComponent::toggles</definition>
+        <argsstring></argsstring>
+        <name>toggles</name>
+        <qualifiedname>CtrlComponent::toggles</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="302" column="15" bodyfile="Source/ARA/CtrlComponent.h" bodystart="302" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1a52ce36de74f4142927de1c64d5040046" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::unique_ptr&lt; juce::ComboBox &gt; &gt;</type>
+        <definition>std::vector&lt;std::unique_ptr&lt;juce::ComboBox&gt; &gt; CtrlComponent::optionCtrls</definition>
+        <argsstring></argsstring>
+        <name>optionCtrls</name>
+        <qualifiedname>CtrlComponent::optionCtrls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="303" column="15" bodyfile="Source/ARA/CtrlComponent.h" bodystart="303" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_ctrl_component_1a1331fb4a11518cecd63f44abee676979" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::unique_ptr&lt; <ref refid="class_titled_text_box" kindref="compound">TitledTextBox</ref> &gt; &gt;</type>
+        <definition>std::vector&lt;std::unique_ptr&lt;TitledTextBox&gt; &gt; CtrlComponent::textCtrls</definition>
+        <argsstring></argsstring>
+        <name>textCtrls</name>
+        <qualifiedname>CtrlComponent::textCtrls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="304" column="15" bodyfile="Source/ARA/CtrlComponent.h" bodystart="304" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_ctrl_component_1ae705f0b598421e6e8cf8f73fa2bf57ea" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>CtrlComponent::CtrlComponent</definition>
+        <argsstring>()</argsstring>
+        <name>CtrlComponent</name>
+        <qualifiedname>CtrlComponent::CtrlComponent</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="46" column="3" bodyfile="Source/ARA/CtrlComponent.h" bodystart="46" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1af685e6085574ce19aa1235f6b798bf75" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::setModel</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model)</argsstring>
+        <name>setModel</name>
+        <qualifiedname>CtrlComponent::setModel</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="48" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="48" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a9b13b808f23807b0a1349724b5b345e8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::populateGui</definition>
+        <argsstring>()</argsstring>
+        <name>populateGui</name>
+        <qualifiedname>CtrlComponent::populateGui</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="52" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="52" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1af74fff7aa9f022d1b00776c562280e73" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::resetUI</definition>
+        <argsstring>()</argsstring>
+        <name>resetUI</name>
+        <qualifiedname>CtrlComponent::resetUI</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="132" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="132" bodyend="155"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a5095afa62a7b5e71c5757e852f34d8dc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>CtrlComponent::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="158" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="158" bodyend="214"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a95d365ca8ef76d6168a34567a3483f91" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::buttonClicked</definition>
+        <argsstring>(Button *button)</argsstring>
+        <name>buttonClicked</name>
+        <qualifiedname>CtrlComponent::buttonClicked</qualifiedname>
+        <param>
+          <type>Button *</type>
+          <declname>button</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="218" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="218" bodyend="234"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a64e5c214ee359a8e49ad43c5ba4405ee" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::comboBoxChanged</definition>
+        <argsstring>(ComboBox *comboBox)</argsstring>
+        <name>comboBoxChanged</name>
+        <qualifiedname>CtrlComponent::comboBoxChanged</qualifiedname>
+        <param>
+          <type>ComboBox *</type>
+          <declname>comboBox</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="236" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="236" bodyend="251"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a58516f58dbbfc48b365e64c83f62784a" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::textEditorTextChanged</definition>
+        <argsstring>(TextEditor &amp;textEditor)</argsstring>
+        <name>textEditorTextChanged</name>
+        <qualifiedname>CtrlComponent::textEditorTextChanged</qualifiedname>
+        <param>
+          <type>TextEditor &amp;</type>
+          <declname>textEditor</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="253" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="253" bodyend="268"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a56930a8c42292dfdb678e0732724634f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::sliderValueChanged</definition>
+        <argsstring>(Slider *slider)</argsstring>
+        <name>sliderValueChanged</name>
+        <qualifiedname>CtrlComponent::sliderValueChanged</qualifiedname>
+        <param>
+          <type>Slider *</type>
+          <declname>slider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="270" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="270" bodyend="272"/>
+      </memberdef>
+      <memberdef kind="function" id="class_ctrl_component_1a94c9ac7f59262eba61ee71710502786d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void CtrlComponent::sliderDragEnded</definition>
+        <argsstring>(Slider *slider)</argsstring>
+        <name>sliderDragEnded</name>
+        <qualifiedname>CtrlComponent::sliderDragEnded</qualifiedname>
+        <param>
+          <type>Slider *</type>
+          <declname>slider</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="274" column="8" bodyfile="Source/ARA/CtrlComponent.h" bodystart="274" bodyend="291"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>Button::Listener</label>
+      </node>
+      <node id="5">
+        <label>ComboBox::Listener</label>
+      </node>
+      <node id="1">
+        <label>CtrlComponent</label>
+        <link refid="class_ctrl_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Slider::Listener</label>
+      </node>
+      <node id="6">
+        <label>TextEditor::Listener</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>Button::Listener</label>
+      </node>
+      <node id="5">
+        <label>ComboBox::Listener</label>
+      </node>
+      <node id="1">
+        <label>CtrlComponent</label>
+        <link refid="class_ctrl_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Slider::Listener</label>
+      </node>
+      <node id="6">
+        <label>TextEditor::Listener</label>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/CtrlComponent.h" line="37" column="1" bodyfile="Source/ARA/CtrlComponent.h" bodystart="42" bodyend="306"/>
+    <listofallmembers>
+      <member refid="class_ctrl_component_1a95d365ca8ef76d6168a34567a3483f91" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>buttonClicked</name></member>
+      <member refid="class_ctrl_component_1a64e5c214ee359a8e49ad43c5ba4405ee" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>comboBoxChanged</name></member>
+      <member refid="class_ctrl_component_1ae705f0b598421e6e8cf8f73fa2bf57ea" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>CtrlComponent</name></member>
+      <member refid="class_ctrl_component_1ac2bb186cdec46ecc80588f80d4d55011" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>headerLabel</name></member>
+      <member refid="class_ctrl_component_1a857193218f11e3281eb386febe84d955" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>mHARPLookAndFeel</name></member>
+      <member refid="class_ctrl_component_1a0dbb200d427af61b98a9d121639fb815" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>mModel</name></member>
+      <member refid="class_ctrl_component_1a52ce36de74f4142927de1c64d5040046" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>optionCtrls</name></member>
+      <member refid="class_ctrl_component_1a9b13b808f23807b0a1349724b5b345e8" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>populateGui</name></member>
+      <member refid="class_ctrl_component_1af74fff7aa9f022d1b00776c562280e73" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>resetUI</name></member>
+      <member refid="class_ctrl_component_1a5095afa62a7b5e71c5757e852f34d8dc" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>resized</name></member>
+      <member refid="class_ctrl_component_1af685e6085574ce19aa1235f6b798bf75" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>setModel</name></member>
+      <member refid="class_ctrl_component_1a94c9ac7f59262eba61ee71710502786d" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>sliderDragEnded</name></member>
+      <member refid="class_ctrl_component_1a1973c8b1431277e33fb44f18e630b45a" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>sliders</name></member>
+      <member refid="class_ctrl_component_1a56930a8c42292dfdb678e0732724634f" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>sliderValueChanged</name></member>
+      <member refid="class_ctrl_component_1a1331fb4a11518cecd63f44abee676979" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>textCtrls</name></member>
+      <member refid="class_ctrl_component_1a58516f58dbbfc48b365e64c83f62784a" prot="public" virt="non-virtual"><scope>CtrlComponent</scope><name>textEditorTextChanged</name></member>
+      <member refid="class_ctrl_component_1a206761f1d1e233edd35d363266466722" prot="private" virt="non-virtual"><scope>CtrlComponent</scope><name>toggles</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_rulers_header_8cpp" kind="file" language="C++">
+    <compoundname>RulersHeader.cpp</compoundname>
+    <includes refid="_rulers_header_8h" local="yes">RulersHeader.h</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>Source/UI/RulersHeader.cpp</label>
+        <link refid="_rulers_header_8cpp"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>RulersHeader.h</label>
+        <link refid="_rulers_header_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="4">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>Header of the UI above the document view, shows ticks for time and can dispaly other information depending on the DAW. region sequences. <simplesect kind="author"><para>JUCE, hugo flores garcia, aldo aguilar </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="_rulers_header_8h" kindref="compound">RulersHeader.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><ref refid="class_rulers_header_1a959d86fe205f4a99cdb139c9a02e2d53" kindref="member">RulersHeader::RulersHeader</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/>chordsLabel.setText(</highlight><highlight class="stringliteral">&quot;Chords&quot;</highlight><highlight class="normal">,<sp/>NotificationType::dontSendNotification);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/>addAndMakeVisible(chordsLabel);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/>barsLabel.setText(</highlight><highlight class="stringliteral">&quot;Bars&quot;</highlight><highlight class="normal">,<sp/>NotificationType::dontSendNotification);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/>addAndMakeVisible(barsLabel);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/>timeLabel.setText(</highlight><highlight class="stringliteral">&quot;Time&quot;</highlight><highlight class="normal">,<sp/>NotificationType::dontSendNotification);</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/>addAndMakeVisible(timeLabel);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_rulers_header_1a8defaa93d9eaa868fcb945b793a70dc2" kindref="member">RulersHeader::resized</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>bounds<sp/>=<sp/>getLocalBounds();</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>rulerHeight<sp/>=<sp/>bounds.getHeight()<sp/>/<sp/>3;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*label<sp/>:<sp/>{&amp;chordsLabel,<sp/>&amp;barsLabel,<sp/>&amp;timeLabel})</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/>label-&gt;setBounds(bounds.removeFromTop(rulerHeight));</highlight></codeline>
+<codeline lineno="41"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_rulers_header_1af4dcad9c96f66955676b0244c77b0ca8" kindref="member">RulersHeader::paint</ref>(Graphics<sp/>&amp;g)<sp/>{</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>bounds<sp/>=<sp/>getLocalBounds();</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>rulerHeight<sp/>=<sp/>bounds.getHeight()<sp/>/<sp/>3;</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/>g.setColour(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/>g.fillRect(bounds);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/>g.setColour(getLookAndFeel()</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.findColour(ResizableWindow::backgroundColourId)</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>.contrasting());</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>g.drawRect(bounds);</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/>bounds.removeFromTop(rulerHeight);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/>g.drawRect(bounds.removeFromTop(rulerHeight));</highlight></codeline>
+<codeline lineno="54"><highlight class="normal">}</highlight></codeline>
+    </programlisting>
+    <location file="Source/UI/RulersHeader.cpp"/>
+  </compounddef>
+</doxygen>

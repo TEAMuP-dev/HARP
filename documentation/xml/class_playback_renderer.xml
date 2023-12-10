@@ -1,0 +1,439 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_playback_renderer" kind="class" language="C++" prot="public">
+    <compoundname>PlaybackRenderer</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">ARAPlaybackRenderer</basecompoundref>
+    <includes refid="_playback_renderer_8h" local="no">PlaybackRenderer.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_playback_renderer_1a6d683415e06ff2231e69e39e6dc1a920" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref> &amp;</type>
+        <definition>ProcessingLockInterface&amp; PlaybackRenderer::lockInterface</definition>
+        <argsstring></argsstring>
+        <name>lockInterface</name>
+        <qualifiedname>PlaybackRenderer::lockInterface</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="126" column="27" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1a619f5282b19d16f63b5f6f92884adbcb" prot="private" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref> &amp;</type>
+        <definition>HARPDocumentControllerSpecialisation&amp; PlaybackRenderer::harpDCS</definition>
+        <argsstring></argsstring>
+        <name>harpDCS</name>
+        <qualifiedname>PlaybackRenderer::harpDCS</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="127" column="40" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1a3837c826dee9482d0c0d1ffb7decc8a3" prot="private" static="no" mutable="no">
+        <type>SharedResourcePointer&lt; <ref refid="class_shared_time_slice_thread" kindref="compound">SharedTimeSliceThread</ref> &gt;</type>
+        <definition>SharedResourcePointer&lt;SharedTimeSliceThread&gt; PlaybackRenderer::sharedTimesliceThread</definition>
+        <argsstring></argsstring>
+        <name>sharedTimesliceThread</name>
+        <qualifiedname>PlaybackRenderer::sharedTimesliceThread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="128" column="25" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="128" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1aebb92f9022156493f3a06bcb0e831e90" prot="private" static="no" mutable="no">
+        <type>std::map&lt; ARAAudioSource *, unique_ptr&lt; juce::ResamplingAudioSource &gt; &gt;</type>
+        <definition>std::map&lt;ARAAudioSource *, unique_ptr&lt;juce::ResamplingAudioSource&gt; &gt; PlaybackRenderer::resamplingSources</definition>
+        <argsstring></argsstring>
+        <name>resamplingSources</name>
+        <qualifiedname>PlaybackRenderer::resamplingSources</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="130" column="7" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="130" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1aed5117b3d57238c24ef1cb566465bd22" prot="private" static="no" mutable="no">
+        <type>std::map&lt; ARAAudioSource *, unique_ptr&lt; AudioFormatReaderSource &gt; &gt;</type>
+        <definition>std::map&lt;ARAAudioSource *, unique_ptr&lt;AudioFormatReaderSource&gt; &gt; PlaybackRenderer::positionableSources</definition>
+        <argsstring></argsstring>
+        <name>positionableSources</name>
+        <qualifiedname>PlaybackRenderer::positionableSources</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="132" column="7" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="132" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1a11041a2e7798ca6e6c2070cbbc1e4bc9" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int PlaybackRenderer::numChannels</definition>
+        <argsstring></argsstring>
+        <name>numChannels</name>
+        <qualifiedname>PlaybackRenderer::numChannels</qualifiedname>
+        <initializer>= 2</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="133" column="7" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="133" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1a6f0a973014f71aaebfedf296bf36924f" prot="private" static="no" mutable="no">
+        <type>double</type>
+        <definition>double PlaybackRenderer::dawSampleRate</definition>
+        <argsstring></argsstring>
+        <name>dawSampleRate</name>
+        <qualifiedname>PlaybackRenderer::dawSampleRate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="134" column="10" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="134" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1af31ad6a67985899f6fe57d8d64230220" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int PlaybackRenderer::maximumSamplesPerBlock</definition>
+        <argsstring></argsstring>
+        <name>maximumSamplesPerBlock</name>
+        <qualifiedname>PlaybackRenderer::maximumSamplesPerBlock</qualifiedname>
+        <initializer>= 128</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="135" column="7" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="135" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playback_renderer_1a769033ff453bc3d0fc98bd3ed75ccf7b" prot="private" static="no" mutable="no">
+        <type>unique_ptr&lt; AudioBuffer&lt; float &gt; &gt;</type>
+        <definition>unique_ptr&lt;AudioBuffer&lt;float&gt; &gt; PlaybackRenderer::tempBuffer</definition>
+        <argsstring></argsstring>
+        <name>tempBuffer</name>
+        <qualifiedname>PlaybackRenderer::tempBuffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="136" column="14" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="136" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_playback_renderer_1a2a12e8493154666320c8aa8b9c44b6ab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRenderer::PlaybackRenderer</definition>
+        <argsstring>(ARA::PlugIn::DocumentController *dc, ProcessingLockInterface &amp;lockInterfaceIn, HARPDocumentControllerSpecialisation &amp;harpDCS)</argsstring>
+        <name>PlaybackRenderer</name>
+        <qualifiedname>PlaybackRenderer::PlaybackRenderer</qualifiedname>
+        <param>
+          <type>ARA::PlugIn::DocumentController *</type>
+          <declname>dc</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref> &amp;</type>
+          <declname>lockInterfaceIn</declname>
+        </param>
+        <param>
+          <type><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref> &amp;</type>
+          <declname>harpDCS</declname>
+        </param>
+        <briefdescription>
+<para>Constructor for <ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>dc</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>DocumentController instance. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>lockInterfaceIn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Lock interface to use during processing. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="74" column="3" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="33" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1a0fe59df5bb8af58364a5ef3e121f1685" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRenderer::~PlaybackRenderer</definition>
+        <argsstring>()</argsstring>
+        <name>~PlaybackRenderer</name>
+        <qualifiedname>PlaybackRenderer::~PlaybackRenderer</qualifiedname>
+        <briefdescription>
+<para>Destructor for <ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="81" column="5" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="40" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1a275e328fe658af0b84baf74f918df587" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRenderer::prepareToPlay</definition>
+        <argsstring>(double sampleRateIn, int maximumSamplesPerBlockIn, int numChannelsIn, AudioProcessor::ProcessingPrecision, AlwaysNonRealtime alwaysNonRealtime) override</argsstring>
+        <name>prepareToPlay</name>
+        <qualifiedname>PlaybackRenderer::prepareToPlay</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>sampleRateIn</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>maximumSamplesPerBlockIn</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>numChannelsIn</declname>
+        </param>
+        <param>
+          <type>AudioProcessor::ProcessingPrecision</type>
+        </param>
+        <param>
+          <type>AlwaysNonRealtime</type>
+          <declname>alwaysNonRealtime</declname>
+        </param>
+        <briefdescription>
+<para>Prepares for playback by initializing necessary parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>sampleRateIn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The sample rate to use for playback. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>maximumSamplesPerBlockIn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The maximum number of samples per block. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>numChannelsIn</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of audio channels. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>alwaysNonRealtime</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Flag indicating whether to always use non-realtime mode. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="92" column="8" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="44" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1aafe1fadc78981fb5bcad211d46eb2fc9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRenderer::releaseResources</definition>
+        <argsstring>() override</argsstring>
+        <name>releaseResources</name>
+        <qualifiedname>PlaybackRenderer::releaseResources</qualifiedname>
+        <briefdescription>
+<para>Releases all resources used by the <ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="99" column="8" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="103" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1a827c919d2c9bae841ad6a2b30241c953" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool PlaybackRenderer::processBlock</definition>
+        <argsstring>(AudioBuffer&lt; float &gt; &amp;buffer, AudioProcessor::Realtime realtime, const AudioPlayHead::PositionInfo &amp;positionInfo) noexcept override</argsstring>
+        <name>processBlock</name>
+        <qualifiedname>PlaybackRenderer::processBlock</qualifiedname>
+        <param>
+          <type>AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>AudioProcessor::Realtime</type>
+          <declname>realtime</declname>
+        </param>
+        <param>
+          <type>const AudioPlayHead::PositionInfo &amp;</type>
+          <declname>positionInfo</declname>
+        </param>
+        <briefdescription>
+<para>Processes an audio block for playback. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The audio buffer to process. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>realtime</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The Realtime processing mode to use. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>positionInfo</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Position information for the playback head.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>True if the process was successful, false otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="111" column="8" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="117" bodyend="333"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1adc4c637ccc303aecee8cac92fa3ba036" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRenderer::executeProcess</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model)</argsstring>
+        <name>executeProcess</name>
+        <qualifiedname>PlaybackRenderer::executeProcess</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <briefdescription>
+<para>Processes the each of the playback regions using the Neural <ref refid="class_model" kindref="compound">Model</ref>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The parameters from the UI to use for processing. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>void </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="121" column="8" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="335" bodyend="356"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_renderer_1ad7cdead3edf2e73fe6e582bc34aedb31" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename Callback</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void PlaybackRenderer::forEachPlaybackRegion</definition>
+        <argsstring>(Callback &amp;&amp;cb)</argsstring>
+        <name>forEachPlaybackRegion</name>
+        <qualifiedname>PlaybackRenderer::forEachPlaybackRegion</qualifiedname>
+        <param>
+          <type>Callback &amp;&amp;</type>
+          <declname>cb</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/PlaybackRenderer.h" line="123" column="20" bodyfile="Source/ARA/PlaybackRenderer.cpp" bodystart="359" bodyend="379"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class responsible for rendering playback. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class inherits from the ARAPlaybackRenderer base class. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>ARAPlaybackRenderer</label>
+      </node>
+      <node id="1">
+        <label>PlaybackRenderer</label>
+        <link refid="class_playback_renderer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>ARAPlaybackRenderer</label>
+      </node>
+      <node id="1">
+        <label>PlaybackRenderer</label>
+        <link refid="class_playback_renderer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/PlaybackRenderer.h" line="66" column="1" bodyfile="Source/ARA/PlaybackRenderer.h" bodystart="66" bodyend="137"/>
+    <listofallmembers>
+      <member refid="class_playback_renderer_1a6f0a973014f71aaebfedf296bf36924f" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>dawSampleRate</name></member>
+      <member refid="class_playback_renderer_1adc4c637ccc303aecee8cac92fa3ba036" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>executeProcess</name></member>
+      <member refid="class_playback_renderer_1ad7cdead3edf2e73fe6e582bc34aedb31" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>forEachPlaybackRegion</name></member>
+      <member refid="class_playback_renderer_1a619f5282b19d16f63b5f6f92884adbcb" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>harpDCS</name></member>
+      <member refid="class_playback_renderer_1a6d683415e06ff2231e69e39e6dc1a920" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>lockInterface</name></member>
+      <member refid="class_playback_renderer_1af31ad6a67985899f6fe57d8d64230220" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>maximumSamplesPerBlock</name></member>
+      <member refid="class_playback_renderer_1a11041a2e7798ca6e6c2070cbbc1e4bc9" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>numChannels</name></member>
+      <member refid="class_playback_renderer_1a2a12e8493154666320c8aa8b9c44b6ab" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>PlaybackRenderer</name></member>
+      <member refid="class_playback_renderer_1aed5117b3d57238c24ef1cb566465bd22" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>positionableSources</name></member>
+      <member refid="class_playback_renderer_1a275e328fe658af0b84baf74f918df587" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>prepareToPlay</name></member>
+      <member refid="class_playback_renderer_1a827c919d2c9bae841ad6a2b30241c953" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>processBlock</name></member>
+      <member refid="class_playback_renderer_1aafe1fadc78981fb5bcad211d46eb2fc9" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>releaseResources</name></member>
+      <member refid="class_playback_renderer_1aebb92f9022156493f3a06bcb0e831e90" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>resamplingSources</name></member>
+      <member refid="class_playback_renderer_1a3837c826dee9482d0c0d1ffb7decc8a3" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>sharedTimesliceThread</name></member>
+      <member refid="class_playback_renderer_1a769033ff453bc3d0fc98bd3ed75ccf7b" prot="private" virt="non-virtual"><scope>PlaybackRenderer</scope><name>tempBuffer</name></member>
+      <member refid="class_playback_renderer_1a0fe59df5bb8af58364a5ef3e121f1685" prot="public" virt="non-virtual"><scope>PlaybackRenderer</scope><name>~PlaybackRenderer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

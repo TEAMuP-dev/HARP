@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_document_view_1_1_region_sequence_view_key" kind="struct" language="C++" prot="private">
+    <compoundname>DocumentView::RegionSequenceViewKey</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_document_view_1_1_region_sequence_view_key_1ae8fd17c2b386bf105b4ade9bf84e7257" prot="public" static="no" mutable="no">
+        <type>ARA::ARAInt32</type>
+        <definition>ARA::ARAInt32 DocumentView::RegionSequenceViewKey::orderIndex</definition>
+        <argsstring></argsstring>
+        <name>orderIndex</name>
+        <qualifiedname>DocumentView::RegionSequenceViewKey::orderIndex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="116" column="19" bodyfile="Source/UI/DocumentView.h" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_document_view_1_1_region_sequence_view_key_1a20f638cd4d309e23defa66d242c7e174" prot="public" static="no" mutable="no">
+        <type>ARARegionSequence *</type>
+        <definition>ARARegionSequence* DocumentView::RegionSequenceViewKey::sequence</definition>
+        <argsstring></argsstring>
+        <name>sequence</name>
+        <qualifiedname>DocumentView::RegionSequenceViewKey::sequence</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="117" column="23" bodyfile="Source/UI/DocumentView.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="struct_document_view_1_1_region_sequence_view_key_1a42b380465e0f780a9258e6c2414eeddc" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>DocumentView::RegionSequenceViewKey::RegionSequenceViewKey</definition>
+        <argsstring>(ARARegionSequence *regionSequence)</argsstring>
+        <name>RegionSequenceViewKey</name>
+        <qualifiedname>DocumentView::RegionSequenceViewKey::RegionSequenceViewKey</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+          <declname>regionSequence</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="107" column="14" bodyfile="Source/UI/DocumentView.h" bodystart="107" bodyend="109"/>
+      </memberdef>
+      <memberdef kind="function" id="struct_document_view_1_1_region_sequence_view_key_1a48d2db99c04b0b82e17bbdd7e5e37fda" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool DocumentView::RegionSequenceViewKey::operator&lt;</definition>
+        <argsstring>(const RegionSequenceViewKey &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>DocumentView::RegionSequenceViewKey::operator&lt;</qualifiedname>
+        <param>
+          <type>const RegionSequenceViewKey &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="111" column="5" bodyfile="Source/UI/DocumentView.h" bodystart="111" bodyend="114"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/UI/DocumentView.h" line="106" column="3" bodyfile="Source/UI/DocumentView.h" bodystart="106" bodyend="118"/>
+    <listofallmembers>
+      <member refid="struct_document_view_1_1_region_sequence_view_key_1a48d2db99c04b0b82e17bbdd7e5e37fda" prot="public" virt="non-virtual"><scope>DocumentView::RegionSequenceViewKey</scope><name>operator&lt;</name></member>
+      <member refid="struct_document_view_1_1_region_sequence_view_key_1ae8fd17c2b386bf105b4ade9bf84e7257" prot="public" virt="non-virtual"><scope>DocumentView::RegionSequenceViewKey</scope><name>orderIndex</name></member>
+      <member refid="struct_document_view_1_1_region_sequence_view_key_1a42b380465e0f780a9258e6c2414eeddc" prot="public" virt="non-virtual"><scope>DocumentView::RegionSequenceViewKey</scope><name>RegionSequenceViewKey</name></member>
+      <member refid="struct_document_view_1_1_region_sequence_view_key_1a20f638cd4d309e23defa66d242c7e174" prot="public" virt="non-virtual"><scope>DocumentView::RegionSequenceViewKey</scope><name>sequence</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_rulers_view_1_1_cycle_marker_component" kind="class" language="C++" prot="public">
+    <compoundname>RulersView::CycleMarkerComponent</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_rulers_view_1_1_cycle_marker_component_1afa20c0bd802179d818a1cc884fb9766f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RulersView::CycleMarkerComponent::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>RulersView::CycleMarkerComponent::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersView.h" line="32" column="10" bodyfile="Source/UI/RulersView.cpp" bodystart="21" bodyend="26"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>RulersView::CycleMarkerComponent</label>
+        <link refid="class_rulers_view_1_1_cycle_marker_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>RulersView::CycleMarkerComponent</label>
+        <link refid="class_rulers_view_1_1_cycle_marker_component"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/RulersView.h" line="31" column="3" bodyfile="Source/UI/RulersView.h" bodystart="31" bodyend="33"/>
+    <listofallmembers>
+      <member refid="class_rulers_view_1_1_cycle_marker_component_1afa20c0bd802179d818a1cc884fb9766f" prot="private" virt="non-virtual"><scope>RulersView::CycleMarkerComponent</scope><name>paint</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

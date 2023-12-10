@@ -1,0 +1,597 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_document_controller_specialisation" kind="class" language="C++" prot="public">
+    <compoundname>HARPDocumentControllerSpecialisation</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">ARADocumentControllerSpecialisation</basecompoundref>
+    <basecompoundref refid="struct_processing_lock_interface" prot="private" virt="non-virtual">ProcessingLockInterface</basecompoundref>
+    <includes refid="_document_controller_specialisation_8h" local="no">DocumentControllerSpecialisation.h</includes>
+    <innerclass refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" prot="public">HARPDocumentControllerSpecialisation::JobProcessorThread</innerclass>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a6075631f429b0f8485c231fb619fd462" prot="public" static="no" mutable="no">
+        <type><ref refid="struct_preview_state" kindref="compound">PreviewState</ref></type>
+        <definition>PreviewState HARPDocumentControllerSpecialisation::previewState</definition>
+        <argsstring></argsstring>
+        <name>previewState</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::previewState</qualifiedname>
+        <briefdescription>
+<para>Preview state. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="80" column="18" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="80" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a171bed013af0fdee5efab6aebab5b4ca" prot="public" static="no" mutable="no">
+        <type>juce::ChangeBroadcaster</type>
+        <definition>juce::ChangeBroadcaster HARPDocumentControllerSpecialisation::loadBroadcaster</definition>
+        <argsstring></argsstring>
+        <name>loadBroadcaster</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::loadBroadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="89" column="29" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a1304310b4989013ef38f79833242277d" prot="public" static="no" mutable="no">
+        <type>juce::ChangeBroadcaster</type>
+        <definition>juce::ChangeBroadcaster HARPDocumentControllerSpecialisation::processBroadcaster</definition>
+        <argsstring></argsstring>
+        <name>processBroadcaster</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::processBroadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="90" column="29" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="90" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1ace726f3d63e52ca078e972109e317ae6" prot="public" static="no" mutable="no">
+        <type><ref refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kindref="compound">JobProcessorThread</ref></type>
+        <definition>JobProcessorThread HARPDocumentControllerSpecialisation::jobProcessorThread</definition>
+        <argsstring></argsstring>
+        <name>jobProcessorThread</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::jobProcessorThread</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="137" column="24" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="137" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a4f68262af9dfc98df5e32b2c84384c9f" prot="private" static="no" mutable="no">
+        <type>ReadWriteLock</type>
+        <definition>ReadWriteLock HARPDocumentControllerSpecialisation::processBlockLock</definition>
+        <argsstring></argsstring>
+        <name>processBlockLock</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::processBlockLock</qualifiedname>
+        <briefdescription>
+<para>Lock for processing blocks. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="192" column="19" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="192" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1ab30ad839fb839ab99ed39ee729b8318a" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> *</type>
+        <definition>EditorView* HARPDocumentControllerSpecialisation::editorView</definition>
+        <argsstring></argsstring>
+        <name>editorView</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::editorView</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+<para>Editor view. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="197" column="16" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="197" bodyend="197"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a2de40d17e6492f2a99fba77b7e05427f" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_renderer" kindref="compound">EditorRenderer</ref> *</type>
+        <definition>EditorRenderer* HARPDocumentControllerSpecialisation::editorRenderer</definition>
+        <argsstring></argsstring>
+        <name>editorRenderer</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::editorRenderer</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+<para>Editor renderer. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="199" column="20" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="199" bodyend="199"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a4ccced7929507dbfedb3357254ba9cf8" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WebWave2Wave&gt; HARPDocumentControllerSpecialisation::mModel</definition>
+        <argsstring></argsstring>
+        <name>mModel</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::mModel</qualifiedname>
+        <initializer>{new <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref>()}</initializer>
+        <briefdescription>
+<para><ref refid="class_model" kindref="compound">Model</ref> for audio processing. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="202" column="21" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="202" bodyend="202"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a9c52f2d639eebf011c7dc3538f42d650" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> * &gt;</type>
+        <definition>std::vector&lt;PlaybackRenderer*&gt; HARPDocumentControllerSpecialisation::playbackRenderers</definition>
+        <argsstring></argsstring>
+        <name>playbackRenderers</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::playbackRenderers</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="206" column="17" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="206" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1abfe0af68105a14c5c999dae0ae0d96ac" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; juce::AlertWindow &gt;</type>
+        <definition>std::unique_ptr&lt;juce::AlertWindow&gt; HARPDocumentControllerSpecialisation::processingWindow</definition>
+        <argsstring></argsstring>
+        <name>processingWindow</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::processingWindow</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="207" column="21" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="207" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a03302e0b4a70f1b4201d646cc53669ca" prot="private" static="no" mutable="no">
+        <type>juce::ThreadPool</type>
+        <definition>juce::ThreadPool HARPDocumentControllerSpecialisation::threadPool</definition>
+        <argsstring></argsstring>
+        <name>threadPool</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::threadPool</qualifiedname>
+        <initializer>{1}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="209" column="22" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="209" bodyend="209"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1aa065c45fa95cd67ad9d076eca0ab8079" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; <ref refid="class_custom_thread_pool_job" kindref="compound">CustomThreadPoolJob</ref> * &gt;</type>
+        <definition>std::vector&lt;CustomThreadPoolJob*&gt; HARPDocumentControllerSpecialisation::customJobs</definition>
+        <argsstring></argsstring>
+        <name>customJobs</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::customJobs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="212" column="17" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="212" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a1908d6b519edd400950ffd15110407fa" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int HARPDocumentControllerSpecialisation::jobsFinished</definition>
+        <argsstring></argsstring>
+        <name>jobsFinished</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::jobsFinished</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="214" column="9" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="214" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1a62534412055295fa4482b8a08d4e72ba" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int HARPDocumentControllerSpecialisation::totalJobs</definition>
+        <argsstring></argsstring>
+        <name>totalJobs</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::totalJobs</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="215" column="9" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="215" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1aa04a903d7d750f10c0c7510e71d49598" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>HARPDocumentControllerSpecialisation::HARPDocumentControllerSpecialisation</definition>
+        <argsstring>(const ARA::PlugIn::PlugInEntry *entry, const ARA::ARADocumentControllerHostInstance *instance)</argsstring>
+        <name>HARPDocumentControllerSpecialisation</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::HARPDocumentControllerSpecialisation</qualifiedname>
+        <param>
+          <type>const ARA::PlugIn::PlugInEntry *</type>
+          <declname>entry</declname>
+        </param>
+        <param>
+          <type>const ARA::ARADocumentControllerHostInstance *</type>
+          <declname>instance</declname>
+        </param>
+        <briefdescription>
+<para>Constructor. Uses ARA&apos;s document controller specialisation&apos;s constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="77" column="5" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="31" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a63f0fc251fa1a8a315cc44db81826665" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; WebWave2Wave &gt; HARPDocumentControllerSpecialisation::getModel</definition>
+        <argsstring>()</argsstring>
+        <name>getModel</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::getModel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="82" column="21" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="82" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a86406418013e2fbeaaac2531c3541194" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::executeLoad</definition>
+        <argsstring>(const map&lt; string, any &gt; &amp;params)</argsstring>
+        <name>executeLoad</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::executeLoad</qualifiedname>
+        <param>
+          <type>const map&lt; string, any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="83" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="45" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a47b3dd50b111fbc0f872a74411ba6732" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::executeProcess</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model)</argsstring>
+        <name>executeProcess</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::executeProcess</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="84" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="67" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1af0f8e375fb38b3f5299dfc5bca090b63" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers</definition>
+        <argsstring>(PlaybackRenderer *playbackRendererToDelete)</argsstring>
+        <name>cleanDeletedPlaybackRenderers</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers</qualifiedname>
+        <param>
+          <type><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> *</type>
+          <declname>playbackRendererToDelete</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="92" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="39" bodyend="43"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a20b33f391588d5dc10ae305327cb9f52" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::willBeginEditing</definition>
+        <argsstring>(ARADocument *) override</argsstring>
+        <name>willBeginEditing</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::willBeginEditing</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <briefdescription>
+<para>Called when beginning to edit a document. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="141" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="160" bodyend="163"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1acdc48267dcd1d0afb05ee67935d3174e" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::didEndEditing</definition>
+        <argsstring>(ARADocument *) override</argsstring>
+        <name>didEndEditing</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::didEndEditing</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <briefdescription>
+<para>Called when editing a document ends. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="143" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="165" bodyend="167"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1ab037fa3bd760b517947b42b39a8ca71c" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>ARAAudioModification *</type>
+        <definition>ARAAudioModification * HARPDocumentControllerSpecialisation::doCreateAudioModification</definition>
+        <argsstring>(ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef, const ARAAudioModification *optionalModificationToClone) noexcept override</argsstring>
+        <name>doCreateAudioModification</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doCreateAudioModification</qualifiedname>
+        <param>
+          <type>ARAAudioSource *</type>
+          <declname>audioSource</declname>
+        </param>
+        <param>
+          <type>ARA::ARAAudioModificationHostRef</type>
+          <declname>hostRef</declname>
+        </param>
+        <param>
+          <type>const ARAAudioModification *</type>
+          <declname>optionalModificationToClone</declname>
+        </param>
+        <briefdescription>
+<para>Creates an audio modification. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A new <ref refid="class_audio_modification" kindref="compound">AudioModification</ref> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="150" column="26" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="170" bodyend="179"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a0ad7675cb1138ba01d8b43a983ca312f" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>ARAPlaybackRegion *</type>
+        <definition>ARAPlaybackRegion * HARPDocumentControllerSpecialisation::doCreatePlaybackRegion</definition>
+        <argsstring>(ARAAudioModification *modification, ARA::ARAPlaybackRegionHostRef hostRef) noexcept override</argsstring>
+        <name>doCreatePlaybackRegion</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doCreatePlaybackRegion</qualifiedname>
+        <param>
+          <type>ARAAudioModification *</type>
+          <declname>modification</declname>
+        </param>
+        <param>
+          <type>ARA::ARAPlaybackRegionHostRef</type>
+          <declname>hostRef</declname>
+        </param>
+        <briefdescription>
+<para>Creates a playback region. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A new <ref refid="class_playback_region" kindref="compound">PlaybackRegion</ref> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="159" column="23" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="182" bodyend="188"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a62265e12389c9e11148b5f0ef98e79f2" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>ARAPlaybackRenderer *</type>
+        <definition>ARAPlaybackRenderer * HARPDocumentControllerSpecialisation::doCreatePlaybackRenderer</definition>
+        <argsstring>() noexcept override</argsstring>
+        <name>doCreatePlaybackRenderer</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doCreatePlaybackRenderer</qualifiedname>
+        <briefdescription>
+<para>Creates a playback renderer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A new <ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="167" column="25" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="202" bodyend="206"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1ab41c9eb07a5a13ef6e50ddaa5233735a" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> *</type>
+        <definition>EditorView * HARPDocumentControllerSpecialisation::doCreateEditorView</definition>
+        <argsstring>() noexcept override</argsstring>
+        <name>doCreateEditorView</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doCreateEditorView</qualifiedname>
+        <briefdescription>
+<para>Creates an editor view. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A new <ref refid="class_editor_view" kindref="compound">EditorView</ref> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="179" column="16" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="220" bodyend="225"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1a042991557cc31f3e981eea33be426b43" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPDocumentControllerSpecialisation::doRestoreObjectsFromStream</definition>
+        <argsstring>(ARAInputStream &amp;input, const ARARestoreObjectsFilter *filter) noexcept override</argsstring>
+        <name>doRestoreObjectsFromStream</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doRestoreObjectsFromStream</qualifiedname>
+        <param>
+          <type>ARAInputStream &amp;</type>
+          <declname>input</declname>
+        </param>
+        <param>
+          <type>const ARARestoreObjectsFilter *</type>
+          <declname>filter</declname>
+        </param>
+        <briefdescription>
+<para>Restores objects from a stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="182" column="5" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="227" bodyend="269"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1ad6038a38139c5d282785abce90ba8a93" prot="protected" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPDocumentControllerSpecialisation::doStoreObjectsToStream</definition>
+        <argsstring>(ARAOutputStream &amp;output, const ARAStoreObjectsFilter *filter) noexcept override</argsstring>
+        <name>doStoreObjectsToStream</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::doStoreObjectsToStream</qualifiedname>
+        <param>
+          <type>ARAOutputStream &amp;</type>
+          <declname>output</declname>
+        </param>
+        <param>
+          <type>const ARAStoreObjectsFilter *</type>
+          <declname>filter</declname>
+        </param>
+        <briefdescription>
+<para>Stores objects to a stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="185" column="10" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="272" bodyend="300"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1ab21ef74c0dba5bc8fedd67a6d68eadfc" prot="private" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type>ScopedTryReadLock</type>
+        <definition>ScopedTryReadLock HARPDocumentControllerSpecialisation::getProcessingLock</definition>
+        <argsstring>() override</argsstring>
+        <name>getProcessingLock</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::getProcessingLock</qualifiedname>
+        <reimplements refid="struct_processing_lock_interface_1addfc3798882b75669cf24f4d8870fbc8">getProcessingLock</reimplements>
+        <briefdescription>
+<para>Gets the processing lock. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="191" column="23" bodyfile="Source/ARA/DocumentControllerSpecialisation.cpp" bodystart="303" bodyend="305"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Specialises ARA&apos;s document controller, with added functionality for audio modifications, playback rendering, and editor rendering. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>ARADocumentControllerSpecialisation</label>
+      </node>
+      <node id="1">
+        <label>HARPDocumentControllerSpecialisation</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>ProcessingLockInterface</label>
+        <link refid="struct_processing_lock_interface"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>ARADocumentControllerSpecialisation</label>
+      </node>
+      <node id="1">
+        <label>HARPDocumentControllerSpecialisation</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>previewState</edgelabel>
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>jobProcessorThread</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>HARPDocumentControllerSpecialisation::JobProcessorThread</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread"/>
+        <childnode refid="6" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>PreviewState</label>
+        <link refid="struct_preview_state"/>
+      </node>
+      <node id="3">
+        <label>ProcessingLockInterface</label>
+        <link refid="struct_processing_lock_interface"/>
+      </node>
+      <node id="6">
+        <label>Thread</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/DocumentControllerSpecialisation.h" line="69" column="1" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="71" bodyend="216"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1af0f8e375fb38b3f5299dfc5bca090b63" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>cleanDeletedPlaybackRenderers</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1aa065c45fa95cd67ad9d076eca0ab8079" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>customJobs</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1acdc48267dcd1d0afb05ee67935d3174e" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>didEndEditing</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ab037fa3bd760b517947b42b39a8ca71c" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doCreateAudioModification</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ab41c9eb07a5a13ef6e50ddaa5233735a" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doCreateEditorView</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a0ad7675cb1138ba01d8b43a983ca312f" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doCreatePlaybackRegion</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a62265e12389c9e11148b5f0ef98e79f2" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doCreatePlaybackRenderer</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a042991557cc31f3e981eea33be426b43" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doRestoreObjectsFromStream</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ad6038a38139c5d282785abce90ba8a93" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>doStoreObjectsToStream</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a2de40d17e6492f2a99fba77b7e05427f" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>editorRenderer</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ab30ad839fb839ab99ed39ee729b8318a" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>editorView</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a86406418013e2fbeaaac2531c3541194" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>executeLoad</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a47b3dd50b111fbc0f872a74411ba6732" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>executeProcess</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a63f0fc251fa1a8a315cc44db81826665" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>getModel</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ab21ef74c0dba5bc8fedd67a6d68eadfc" prot="private" virt="virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>getProcessingLock</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1aa04a903d7d750f10c0c7510e71d49598" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>HARPDocumentControllerSpecialisation</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1ace726f3d63e52ca078e972109e317ae6" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>jobProcessorThread</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a1908d6b519edd400950ffd15110407fa" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>jobsFinished</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a171bed013af0fdee5efab6aebab5b4ca" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>loadBroadcaster</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a4ccced7929507dbfedb3357254ba9cf8" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>mModel</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a9c52f2d639eebf011c7dc3538f42d650" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>playbackRenderers</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a6075631f429b0f8485c231fb619fd462" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>previewState</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a4f68262af9dfc98df5e32b2c84384c9f" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>processBlockLock</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a1304310b4989013ef38f79833242277d" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>processBroadcaster</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1abfe0af68105a14c5c999dae0ae0d96ac" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>processingWindow</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a03302e0b4a70f1b4201d646cc53669ca" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>threadPool</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a62534412055295fa4482b8a08d4e72ba" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>totalJobs</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1a20b33f391588d5dc10ae305327cb9f52" prot="protected" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation</scope><name>willBeginEditing</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

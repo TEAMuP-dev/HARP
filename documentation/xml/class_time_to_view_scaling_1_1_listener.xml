@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_time_to_view_scaling_1_1_listener" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>TimeToViewScaling::Listener</compoundname>
+    <derivedcompoundref refid="class_overlay_component" prot="private" virt="non-virtual">OverlayComponent</derivedcompoundref>
+    <derivedcompoundref refid="class_region_sequence_view" prot="private" virt="non-virtual">RegionSequenceView</derivedcompoundref>
+    <derivedcompoundref refid="class_rulers_view" prot="private" virt="non-virtual">RulersView</derivedcompoundref>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_time_to_view_scaling_1_1_listener_1a53c6f2add43cb6f27b87f3f8cba359af" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual TimeToViewScaling::Listener::~Listener</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Listener</name>
+        <qualifiedname>TimeToViewScaling::Listener::~Listener</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="31" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1_1_listener_1aeb1bc5a6324e2a737ff731197a179fb2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void TimeToViewScaling::Listener::zoomLevelChanged</definition>
+        <argsstring>(double newPixelPerSecond)=0</argsstring>
+        <name>zoomLevelChanged</name>
+        <qualifiedname>TimeToViewScaling::Listener::zoomLevelChanged</qualifiedname>
+        <reimplementedby refid="class_overlay_component_1a6b9e2d4f0758339b558768d8e40d0c65">zoomLevelChanged</reimplementedby>
+        <reimplementedby refid="class_region_sequence_view_1ae9b98981f83c00e5ae6c78c47d9dba70">zoomLevelChanged</reimplementedby>
+        <reimplementedby refid="class_rulers_view_1aff9852262abda5076cb506d2596b614d">zoomLevelChanged</reimplementedby>
+        <param>
+          <type>double</type>
+          <declname>newPixelPerSecond</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="33" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>OverlayComponent</label>
+        <link refid="class_overlay_component"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>RegionSequenceView</label>
+        <link refid="class_region_sequence_view"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>RulersView</label>
+        <link refid="class_rulers_view"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>TimeToViewScaling::Listener</label>
+        <link refid="class_time_to_view_scaling_1_1_listener"/>
+      </node>
+    </inheritancegraph>
+    <location file="Source/Util/TimeToViewScaling.h" line="29" column="3" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="29" bodyend="34"/>
+    <listofallmembers>
+      <member refid="class_time_to_view_scaling_1_1_listener_1aeb1bc5a6324e2a737ff731197a179fb2" prot="public" virt="pure-virtual"><scope>TimeToViewScaling::Listener</scope><name>zoomLevelChanged</name></member>
+      <member refid="class_time_to_view_scaling_1_1_listener_1a53c6f2add43cb6f27b87f3f8cba359af" prot="public" virt="virtual"><scope>TimeToViewScaling::Listener</scope><name>~Listener</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_zoom_controls_8h" kind="file" language="C++">
+    <compoundname>ZoomControls.h</compoundname>
+    <includedby refid="_document_view_8h" local="yes">Source/UI/DocumentView.h</includedby>
+    <invincdepgraph>
+      <node id="5">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="4">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="8">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="2">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/UI/ZoomControls.h</label>
+        <link refid="_zoom_controls_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_zoom_controls" prot="public">ZoomControls</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>Controls for zooming in and out of the timeline. <simplesect kind="author"><para>JUCE, hugo flores garcia, aldo aguilar </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22" refid="class_zoom_controls" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_zoom_controls" kindref="compound">ZoomControls</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>Component<sp/>{</highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"><sp/><sp/><ref refid="class_zoom_controls" kindref="compound">ZoomControls</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/>addAndMakeVisible(zoomInButton);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>addAndMakeVisible(zoomOutButton);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>setZoomInCallback(std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">()&gt;<sp/>cb)<sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/>zoomInButton.onClick<sp/>=<sp/>std::move(cb);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>setZoomOutCallback(std::function&lt;</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">()&gt;<sp/>cb)<sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>zoomOutButton.onClick<sp/>=<sp/>std::move(cb);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>resized()</highlight><highlight class="keyword"><sp/>override<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/><sp/><sp/>FlexBox<sp/>fb;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/>fb.justifyContent<sp/>=<sp/>FlexBox::JustifyContent::flexEnd;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>*button<sp/>:<sp/>{&amp;zoomInButton,<sp/>&amp;zoomOutButton})</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>fb.items.add(</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>FlexItem(*button).withMinHeight(30.0f).withMinWidth(30.0f).withMargin(</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{5,<sp/>5,<sp/>5,<sp/>0}));</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>fb.performLayout(getLocalBounds());</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/>TextButton<sp/>zoomInButton{</highlight><highlight class="stringliteral">&quot;+&quot;</highlight><highlight class="normal">},<sp/>zoomOutButton{</highlight><highlight class="stringliteral">&quot;-&quot;</highlight><highlight class="normal">};</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/UI/ZoomControls.h"/>
+  </compounddef>
+</doxygen>

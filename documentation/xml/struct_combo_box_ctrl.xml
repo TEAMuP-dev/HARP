@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_combo_box_ctrl" kind="struct" language="C++" prot="public">
+    <compoundname>ComboBoxCtrl</compoundname>
+    <basecompoundref refid="struct_ctrl" prot="public" virt="non-virtual">Ctrl</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_combo_box_ctrl_1aba9ba297cfb07852e269843b00afc102" prot="public" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; ComboBoxCtrl::options</definition>
+        <argsstring></argsstring>
+        <name>options</name>
+        <qualifiedname>ComboBoxCtrl::options</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="55" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_combo_box_ctrl_1aa7e83e95c66c5d2f684c498a71381238" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string ComboBoxCtrl::value</definition>
+        <argsstring></argsstring>
+        <name>value</name>
+        <qualifiedname>ComboBoxCtrl::value</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="56" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>ComboBoxCtrl</label>
+        <link refid="struct_combo_box_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>ComboBoxCtrl</label>
+        <link refid="struct_combo_box_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>value</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>label</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="54" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="54" bodyend="57"/>
+    <listofallmembers>
+      <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" virt="non-virtual"><scope>ComboBoxCtrl</scope><name>id</name></member>
+      <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" virt="non-virtual"><scope>ComboBoxCtrl</scope><name>label</name></member>
+      <member refid="struct_combo_box_ctrl_1aba9ba297cfb07852e269843b00afc102" prot="public" virt="non-virtual"><scope>ComboBoxCtrl</scope><name>options</name></member>
+      <member refid="struct_combo_box_ctrl_1aa7e83e95c66c5d2f684c498a71381238" prot="public" virt="non-virtual"><scope>ComboBoxCtrl</scope><name>value</name></member>
+      <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" virt="virtual"><scope>ComboBoxCtrl</scope><name>~Ctrl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

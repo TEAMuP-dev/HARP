@@ -1,0 +1,160 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kind="class" language="C++" prot="public">
+    <compoundname>HARPDocumentControllerSpecialisation::JobProcessorThread</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">Thread</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ae1876f8523ba41e84cbded22f6b96426" prot="public" static="no" mutable="no">
+        <type>ChangeBroadcaster</type>
+        <definition>ChangeBroadcaster HARPDocumentControllerSpecialisation::JobProcessorThread::processBroadcaster</definition>
+        <argsstring></argsstring>
+        <name>processBroadcaster</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::processBroadcaster</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="127" column="27" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ab8fd864b9b9cdc51e47f6ceb53a2f57f" prot="private" static="no" mutable="no">
+        <type>const std::vector&lt; <ref refid="class_custom_thread_pool_job" kindref="compound">CustomThreadPoolJob</ref> * &gt; &amp;</type>
+        <definition>const std::vector&lt;CustomThreadPoolJob*&gt;&amp; HARPDocumentControllerSpecialisation::JobProcessorThread::customJobs</definition>
+        <argsstring></argsstring>
+        <name>customJobs</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::customJobs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="130" column="27" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="130" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a9fbbd56031010cac0d08a6a5493cb852" prot="private" static="no" mutable="no">
+        <type>int &amp;</type>
+        <definition>int&amp; HARPDocumentControllerSpecialisation::JobProcessorThread::jobsFinished</definition>
+        <argsstring></argsstring>
+        <name>jobsFinished</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::jobsFinished</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="131" column="13" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="131" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a938c78d9438b4cc3292e33cc68e34bd9" prot="private" static="no" mutable="no">
+        <type>int &amp;</type>
+        <definition>int&amp; HARPDocumentControllerSpecialisation::JobProcessorThread::totalJobs</definition>
+        <argsstring></argsstring>
+        <name>totalJobs</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::totalJobs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="132" column="13" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="132" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a34d9018dec1456a881bee3d50ce7eb38" prot="private" static="no" mutable="no">
+        <type>juce::ThreadPool</type>
+        <definition>juce::ThreadPool HARPDocumentControllerSpecialisation::JobProcessorThread::threadPool</definition>
+        <argsstring></argsstring>
+        <name>threadPool</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::threadPool</qualifiedname>
+        <initializer>{2}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="134" column="26" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="134" bodyend="134"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a49cc77945e613991eebecfd2fa4bb5e6" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>HARPDocumentControllerSpecialisation::JobProcessorThread::JobProcessorThread</definition>
+        <argsstring>(const std::vector&lt; CustomThreadPoolJob * &gt; &amp;jobs, int &amp;jobsFinished, int &amp;totalJobs)</argsstring>
+        <name>JobProcessorThread</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::JobProcessorThread</qualifiedname>
+        <param>
+          <type>const std::vector&lt; <ref refid="class_custom_thread_pool_job" kindref="compound">CustomThreadPoolJob</ref> * &gt; &amp;</type>
+          <declname>jobs</declname>
+        </param>
+        <param>
+          <type>int &amp;</type>
+          <declname>jobsFinished</declname>
+        </param>
+        <param>
+          <type>int &amp;</type>
+          <declname>totalJobs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="98" column="9" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="98" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1af601fb79d765cdb713559843fcc3e4f7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPDocumentControllerSpecialisation::JobProcessorThread::run</definition>
+        <argsstring>() override</argsstring>
+        <name>run</name>
+        <qualifiedname>HARPDocumentControllerSpecialisation::JobProcessorThread::run</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="109" column="14" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="109" bodyend="125"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>HARPDocumentControllerSpecialisation::JobProcessorThread</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Thread</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>HARPDocumentControllerSpecialisation::JobProcessorThread</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Thread</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/DocumentControllerSpecialisation.h" line="95" column="5" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="96" bodyend="135"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ab8fd864b9b9cdc51e47f6ceb53a2f57f" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>customJobs</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a49cc77945e613991eebecfd2fa4bb5e6" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>JobProcessorThread</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a9fbbd56031010cac0d08a6a5493cb852" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>jobsFinished</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ae1876f8523ba41e84cbded22f6b96426" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>processBroadcaster</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1af601fb79d765cdb713559843fcc3e4f7" prot="public" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>run</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a34d9018dec1456a881bee3d50ce7eb38" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>threadPool</name></member>
+      <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a938c78d9438b4cc3292e33cc68e34bd9" prot="private" virt="non-virtual"><scope>HARPDocumentControllerSpecialisation::JobProcessorThread</scope><name>totalJobs</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

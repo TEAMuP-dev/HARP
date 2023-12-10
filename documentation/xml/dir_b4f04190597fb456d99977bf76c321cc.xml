@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_b4f04190597fb456d99977bf76c321cc" kind="dir">
+    <compoundname>Source/DeepLearning</compoundname>
+    <innerfile refid="_model_8h">Model.h</innerfile>
+    <innerfile refid="_torch_model_8cpp">TorchModel.cpp</innerfile>
+    <innerfile refid="_torch_model_8h">TorchModel.h</innerfile>
+    <innerfile refid="_wave2_wave_8h">Wave2Wave.h</innerfile>
+    <innerfile refid="_web_model_8h">WebModel.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/DeepLearning/"/>
+  </compounddef>
+</doxygen>

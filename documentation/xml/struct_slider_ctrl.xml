@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_slider_ctrl" kind="struct" language="C++" prot="public">
+    <compoundname>SliderCtrl</compoundname>
+    <basecompoundref refid="struct_ctrl" prot="public" virt="non-virtual">Ctrl</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_slider_ctrl_1ab771ed9482091529fd45fdda2775cad3" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double SliderCtrl::minimum</definition>
+        <argsstring></argsstring>
+        <name>minimum</name>
+        <qualifiedname>SliderCtrl::minimum</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="29" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="29" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_slider_ctrl_1aff3b0874f2d657b6babb8d1f5ab3a438" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double SliderCtrl::maximum</definition>
+        <argsstring></argsstring>
+        <name>maximum</name>
+        <qualifiedname>SliderCtrl::maximum</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="30" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="30" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_slider_ctrl_1a8b872d594886221a3a87b48cc5795d5e" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double SliderCtrl::step</definition>
+        <argsstring></argsstring>
+        <name>step</name>
+        <qualifiedname>SliderCtrl::step</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="31" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="31" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_slider_ctrl_1a2f5fa4a4fef0b95780b6902f089c0245" prot="public" static="no" mutable="no">
+        <type>double</type>
+        <definition>double SliderCtrl::value</definition>
+        <argsstring></argsstring>
+        <name>value</name>
+        <qualifiedname>SliderCtrl::value</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="32" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+      </node>
+      <node id="1">
+        <label>SliderCtrl</label>
+        <link refid="struct_slider_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>label</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>SliderCtrl</label>
+        <link refid="struct_slider_ctrl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="28" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="28" bodyend="33"/>
+    <listofallmembers>
+      <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>id</name></member>
+      <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>label</name></member>
+      <member refid="struct_slider_ctrl_1aff3b0874f2d657b6babb8d1f5ab3a438" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>maximum</name></member>
+      <member refid="struct_slider_ctrl_1ab771ed9482091529fd45fdda2775cad3" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>minimum</name></member>
+      <member refid="struct_slider_ctrl_1a8b872d594886221a3a87b48cc5795d5e" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>step</name></member>
+      <member refid="struct_slider_ctrl_1a2f5fa4a4fef0b95780b6902f089c0245" prot="public" virt="non-virtual"><scope>SliderCtrl</scope><name>value</name></member>
+      <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" virt="virtual"><scope>SliderCtrl</scope><name>~Ctrl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

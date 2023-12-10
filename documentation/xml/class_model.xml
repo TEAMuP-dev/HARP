@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_model" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>Model</compoundname>
+    <derivedcompoundref refid="class_torch_model" prot="public" virt="non-virtual">TorchModel</derivedcompoundref>
+    <derivedcompoundref refid="class_web_wave2_wave" prot="public" virt="non-virtual">WebWave2Wave</derivedcompoundref>
+    <includes refid="_model_8h" local="no">Model.h</includes>
+    <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="class_model_1a6074c50634070cf63c2370444be4bd08" prot="protected" static="no" mutable="no">
+        <type><ref refid="struct_model_card" kindref="compound">ModelCard</ref></type>
+        <definition>ModelCard Model::m_card</definition>
+        <argsstring></argsstring>
+        <name>m_card</name>
+        <qualifiedname>Model::m_card</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="63" column="13" bodyfile="Source/DeepLearning/Model.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_model_1a50adbd5a78c050f5e086cb44fddd4eda" prot="protected" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool Model::m_loaded</definition>
+        <argsstring></argsstring>
+        <name>m_loaded</name>
+        <qualifiedname>Model::m_loaded</qualifiedname>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="64" column="8" bodyfile="Source/DeepLearning/Model.h" bodystart="64" bodyend="64"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_model_1ac15b9777c4026f171078d3ecc38a34af" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>void</type>
+        <definition>virtual void Model::load</definition>
+        <argsstring>(const map&lt; string, any &gt; &amp;params)=0</argsstring>
+        <name>load</name>
+        <qualifiedname>Model::load</qualifiedname>
+        <reimplementedby refid="class_web_wave2_wave_1a33d9ad447f7ed0f30cdc99e9870b1005">load</reimplementedby>
+        <param>
+          <type>const map&lt; string, any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+<para>Load the model parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A map of parameters for the model. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>void. will throw a std::runtime_error if loading fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="49" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="class_model_1a2da73e5a1f8e1404cdc1eb318b81d406" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>bool</type>
+        <definition>virtual bool Model::ready</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ready</name>
+        <qualifiedname>Model::ready</qualifiedname>
+        <reimplementedby refid="class_torch_model_1a024d4fd3970ec32ad68ea779db7e81c2">ready</reimplementedby>
+        <reimplementedby refid="class_web_wave2_wave_1ae9594ce12323324fb5aa6eb60cdfa276">ready</reimplementedby>
+        <briefdescription>
+<para>Checks if the model is ready. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A boolean indicating whether the model is ready. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="55" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="class_model_1a2004629072f7863d0b4bc4da44560c32" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="struct_model_card" kindref="compound">ModelCard</ref> &amp;</type>
+        <definition>ModelCard &amp; Model::card</definition>
+        <argsstring>()</argsstring>
+        <name>card</name>
+        <qualifiedname>Model::card</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="59" column="13" bodyfile="Source/DeepLearning/Model.h" bodystart="59" bodyend="59"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract class for different types of deep learning processors. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>Model</label>
+        <link refid="class_model"/>
+      </node>
+      <node id="2">
+        <label>TorchModel</label>
+        <link refid="class_torch_model"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>WebWave2Wave</label>
+        <link refid="class_web_wave2_wave"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>Model</label>
+        <link refid="class_model"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>m_card</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ModelCard</label>
+        <link refid="struct_model_card"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>author</edgelabel>
+          <edgelabel>description</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/Model.h" line="42" column="1" bodyfile="Source/DeepLearning/Model.h" bodystart="42" bodyend="66"/>
+    <listofallmembers>
+      <member refid="class_model_1a2004629072f7863d0b4bc4da44560c32" prot="public" virt="non-virtual"><scope>Model</scope><name>card</name></member>
+      <member refid="class_model_1ac15b9777c4026f171078d3ecc38a34af" prot="public" virt="pure-virtual"><scope>Model</scope><name>load</name></member>
+      <member refid="class_model_1a6074c50634070cf63c2370444be4bd08" prot="protected" virt="non-virtual"><scope>Model</scope><name>m_card</name></member>
+      <member refid="class_model_1a50adbd5a78c050f5e086cb44fddd4eda" prot="protected" virt="non-virtual"><scope>Model</scope><name>m_loaded</name></member>
+      <member refid="class_model_1a2da73e5a1f8e1404cdc1eb318b81d406" prot="public" virt="pure-virtual"><scope>Model</scope><name>ready</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

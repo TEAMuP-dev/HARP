@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="namespacemodelparams" kind="namespace" language="C++">
+    <compoundname>modelparams</compoundname>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="_model_8h_1a4788597ea216dd112383bcb4621e64a4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool modelparams::contains</definition>
+        <argsstring>(const map&lt; string, any &gt; &amp;params, const string &amp;key)</argsstring>
+        <name>contains</name>
+        <qualifiedname>modelparams::contains</qualifiedname>
+        <param>
+          <type>const map&lt; string, any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <param>
+          <type>const string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/Model.h" line="24" column="15" bodyfile="Source/DeepLearning/Model.h" bodystart="24" bodyend="26"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/DeepLearning/Model.h" line="23" column="1"/>
+  </compounddef>
+</doxygen>

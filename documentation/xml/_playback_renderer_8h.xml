@@ -1,0 +1,379 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_playback_renderer_8h" kind="file" language="C++">
+    <compoundname>PlaybackRenderer.h</compoundname>
+    <includes refid="_document_controller_specialisation_8h" local="yes">DocumentControllerSpecialisation.h</includes>
+    <includes local="yes">juce_audio_basics/juce_audio_basics.h</includes>
+    <includes local="yes">juce_audio_formats/juce_audio_formats.h</includes>
+    <includes local="no">ARA_Library/PlugIn/ARAPlug.h</includes>
+    <includes local="no">ARA_Library/Utilities/ARAPitchInterpretation.h</includes>
+    <includes local="no">ARA_Library/Utilities/ARATimelineConversion.h</includes>
+    <includes refid="_shared_time_slice_thread_8h" local="yes">../Timeline/SharedTimeSliceThread.h</includes>
+    <includes refid="_processing_lock_interface_8h" local="yes">../Util/ProcessingLockInterface.h</includes>
+    <includes refid="_audio_modification_8h" local="yes">AudioModification.h</includes>
+    <includes refid="_playback_region_8h" local="yes">PlaybackRegion.h</includes>
+    <includedby refid="_document_controller_specialisation_8cpp" local="yes">Source/ARA/DocumentControllerSpecialisation.cpp</includedby>
+    <includedby refid="_playback_renderer_8cpp" local="yes">Source/ARA/PlaybackRenderer.cpp</includedby>
+    <includedby refid="_processor_editor_8h" local="yes">Source/ARA/ProcessorEditor.h</includedby>
+    <incdepgraph>
+      <node id="6">
+        <label>ARA_Library/PlugIn/ARAPlug.h</label>
+      </node>
+      <node id="7">
+        <label>ARA_Library/Utilities/ARAPitchInterpretation.h</label>
+      </node>
+      <node id="8">
+        <label>ARA_Library/Utilities/ARATimelineConversion.h</label>
+      </node>
+      <node id="18">
+        <label>AudioModification.h</label>
+        <link refid="_audio_modification_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>DocumentControllerSpecialisation.h</label>
+        <link refid="_document_controller_specialisation_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>EditorRenderer.h</label>
+        <link refid="_editor_renderer_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>EditorView.h</label>
+        <link refid="_editor_view_8h"/>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>PlaybackRegion.h</label>
+        <link refid="_playback_region_8h_source"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/ARA/PlaybackRenderer.h</label>
+        <link refid="_playback_renderer_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>Model.h</label>
+        <link refid="_model_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>Wave2Wave.h</label>
+        <link refid="_wave2_wave_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="19">
+        <label>../DeepLearning/WebModel.h</label>
+        <link refid="_web_model_8h"/>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>../Timeline/SharedTimeSliceThread.h</label>
+        <link refid="_shared_time_slice_thread_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>../UI/CustomComponents.h</label>
+        <link refid="_custom_components_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>../Util/AsyncConfigurationCallback.h</label>
+        <link refid="_async_configuration_callback_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Crossfade.h</label>
+        <link refid="_crossfade_8h"/>
+      </node>
+      <node id="13">
+        <label>../Util/Looper.h</label>
+        <link refid="_looper_8h"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>../Util/PreviewState.h</label>
+        <link refid="_preview_state_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>../Util/ProcessingLockInterface.h</label>
+        <link refid="_processing_lock_interface_8h"/>
+      </node>
+      <node id="4">
+        <label>any</label>
+      </node>
+      <node id="16">
+        <label>atomic</label>
+      </node>
+      <node id="20">
+        <label>fstream</label>
+      </node>
+      <node id="10">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="11">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+      <node id="26">
+        <label>juce_core/juce_core.h</label>
+      </node>
+      <node id="24">
+        <label>juce_events/juce_events.h</label>
+      </node>
+      <node id="29">
+        <label>juce_gui_basics/juce_gui_basics.h</label>
+      </node>
+      <node id="5">
+        <label>map</label>
+      </node>
+      <node id="22">
+        <label>string</label>
+      </node>
+      <node id="23">
+        <label>unordered_map</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="5">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>Source/ARA/DocumentControllerSpecialisation.cpp</label>
+        <link refid="_document_controller_specialisation_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/ARA/PlaybackRenderer.cpp</label>
+        <link refid="_playback_renderer_8cpp"/>
+      </node>
+      <node id="1">
+        <label>Source/ARA/PlaybackRenderer.h</label>
+        <link refid="_playback_renderer_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="4">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_playback_renderer" prot="public">PlaybackRenderer</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>Implementation of the ARA Playback Renderer. This class serves samples back to the DAW for playback, and handles mixing across tracks. We use this class to serve samples that have been processed from a deeplearning model. When the host requests samples, we view which playback region the playhead is located on, retrive the audio modification for that playback region, and read the samples from the audio modifications modified/processed audio buffered. <simplesect kind="author"><para>JUCE, aldo aguilar, hugo flores garcia </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="_document_controller_specialisation_8h" kindref="compound">DocumentControllerSpecialisation.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_basics/juce_audio_basics.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_formats/juce_audio_formats.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ARA_Library/PlugIn/ARAPlug.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ARA_Library/Utilities/ARAPitchInterpretation.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;ARA_Library/Utilities/ARATimelineConversion.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../Timeline/SharedTimeSliceThread.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../Util/ProcessingLockInterface.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="_audio_modification_8h" kindref="compound">AudioModification.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;PlaybackRegion.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="keyword">using<sp/>namespace<sp/></highlight><highlight class="normal">juce;</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">std::unique_ptr;</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight><highlight class="comment">//<sp/>class<sp/>SampleRange<sp/>:<sp/>public<sp/>Range&lt;int64&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="comment">//<sp/>{</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight><highlight class="comment">//<sp/>public:</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>using<sp/>Range&lt;int64&gt;::Range;<sp/>//<sp/>Inherit<sp/>constructors<sp/>from<sp/>the<sp/>base<sp/>class</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>//<sp/>Constructor<sp/>to<sp/>create<sp/>a<sp/>ScalableRange<sp/>from<sp/>a<sp/>Range</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>ScalableRange(const<sp/>Range&lt;int64&gt;&amp;<sp/>range)<sp/>noexcept<sp/>:<sp/>Range&lt;int64&gt;(range)<sp/>{}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>//<sp/>Scale<sp/>the<sp/>range<sp/>by<sp/>a<sp/>&lt;double&gt;<sp/>factor</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>ScalableRange<sp/>operator*(const<sp/>double<sp/>factor)<sp/>const<sp/>noexcept</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>{</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>ScalableRange(roundToInt(this-&gt;getStart()<sp/>*<sp/>factor),<sp/></highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>roundToInt(this-&gt;getEnd()<sp/>*<sp/>factor));</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/><sp/><sp/><sp/>}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight><highlight class="comment">//<sp/>};</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66" refid="class_playback_renderer" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>ARAPlaybackRenderer<sp/>{</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><ref refid="class_playback_renderer" kindref="compound">PlaybackRenderer</ref>(ARA::PlugIn::DocumentController<sp/>*dc,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref><sp/>&amp;lockInterfaceIn,</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref><sp/>&amp;harpDCS);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="class_playback_renderer_1a0fe59df5bb8af58364a5ef3e121f1685" kindref="member">~PlaybackRenderer</ref>();</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_playback_renderer_1a275e328fe658af0b84baf74f918df587" kindref="member">prepareToPlay</ref>(</highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>sampleRateIn,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>maximumSamplesPerBlockIn,</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>numChannelsIn,<sp/>AudioProcessor::ProcessingPrecision,</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>AlwaysNonRealtime<sp/>alwaysNonRealtime)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_playback_renderer_1aafe1fadc78981fb5bcad211d46eb2fc9" kindref="member">releaseResources</ref>()<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>void<sp/>didAddPlaybackRegion<sp/>(ARA::PlugIn::PlaybackRegion*<sp/>playbackRegion)<sp/>noexcept<sp/>override<sp/>{}</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>void<sp/>didAddPlaybackRegion(ARA::PlugIn::PlaybackRegion<sp/>*)<sp/>noexcept<sp/>override;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="class_playback_renderer_1a827c919d2c9bae841ad6a2b30241c953" kindref="member">processBlock</ref>(</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>AudioBuffer&lt;float&gt;<sp/>&amp;buffer,<sp/>AudioProcessor::Realtime<sp/>realtime,</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>AudioPlayHead::PositionInfo<sp/>&amp;positionInfo)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal">ARAPlaybackRenderer::processBlock;</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="class_playback_renderer_1adc4c637ccc303aecee8cac92fa3ba036" kindref="member">executeProcess</ref>(std::shared_ptr&lt;WebWave2Wave&gt;<sp/>model);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal"><sp/>Callback&gt;<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>forEachPlaybackRegion(Callback<sp/>&amp;&amp;cb);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><ref refid="struct_processing_lock_interface" kindref="compound">ProcessingLockInterface</ref><sp/>&amp;lockInterface;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><ref refid="class_h_a_r_p_document_controller_specialisation" kindref="compound">HARPDocumentControllerSpecialisation</ref><sp/>&amp;harpDCS;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/>SharedResourcePointer&lt;SharedTimeSliceThread&gt;<sp/>sharedTimesliceThread;</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/>std::map&lt;ARAAudioSource<sp/>*,<sp/>unique_ptr&lt;juce::ResamplingAudioSource&gt;&gt;</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>resamplingSources;</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/>std::map&lt;ARAAudioSource<sp/>*,<sp/>unique_ptr&lt;AudioFormatReaderSource&gt;&gt;</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>positionableSources;</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>numChannels<sp/>=<sp/>2;</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>dawSampleRate;</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>maximumSamplesPerBlock<sp/>=<sp/>128;</highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/>unique_ptr&lt;AudioBuffer&lt;float&gt;&gt;<sp/>tempBuffer;</highlight></codeline>
+<codeline lineno="137"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/ARA/PlaybackRenderer.h"/>
+  </compounddef>
+</doxygen>

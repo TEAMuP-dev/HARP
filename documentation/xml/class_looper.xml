@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_looper" kind="class" language="C++" prot="public">
+    <compoundname>Looper</compoundname>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="class_looper_1a67ecad199c607916aceab122685eedf9" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int Looper::desiredCrossfadeLengthSamples</definition>
+        <argsstring></argsstring>
+        <name>desiredCrossfadeLengthSamples</name>
+        <qualifiedname>Looper::desiredCrossfadeLengthSamples</qualifiedname>
+        <initializer>= 50</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="96" column="24" bodyfile="Source/Util/Looper.h" bodystart="96" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_looper_1a3556e52023e2f0cae0c1d0bdf7dea8b2" prot="private" static="no" mutable="no">
+        <type>const juce::AudioBuffer&lt; float &gt; *</type>
+        <definition>const juce::AudioBuffer&lt;float&gt;* Looper::inputBuffer</definition>
+        <argsstring></argsstring>
+        <name>inputBuffer</name>
+        <qualifiedname>Looper::inputBuffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="98" column="27" bodyfile="Source/Util/Looper.h" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_looper_1afddb362bc6650f91378111aaba3196ba" prot="private" static="no" mutable="no">
+        <type>juce::Range&lt; juce::int64 &gt;</type>
+        <definition>juce::Range&lt;juce::int64&gt; Looper::loopRange</definition>
+        <argsstring></argsstring>
+        <name>loopRange</name>
+        <qualifiedname>Looper::loopRange</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="99" column="15" bodyfile="Source/Util/Looper.h" bodystart="99" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_looper_1a1a5926fb03aa44c67169afbff1b483a2" prot="private" static="no" mutable="no">
+        <type>juce::int64</type>
+        <definition>juce::int64 Looper::pos</definition>
+        <argsstring></argsstring>
+        <name>pos</name>
+        <qualifiedname>Looper::pos</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="100" column="15" bodyfile="Source/Util/Looper.h" bodystart="100" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_looper_1aa701c58f56736b8c9fc67d4c16b7f17b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>Looper::Looper</definition>
+        <argsstring>()</argsstring>
+        <name>Looper</name>
+        <qualifiedname>Looper::Looper</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="27" column="3" bodyfile="Source/Util/Looper.h" bodystart="27" bodyend="27"/>
+      </memberdef>
+      <memberdef kind="function" id="class_looper_1a1c3fa7f420a2cc6360e76c13a9dd17ca" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>Looper::Looper</definition>
+        <argsstring>(const juce::AudioBuffer&lt; float &gt; *buffer, juce::Range&lt; juce::int64 &gt; range)</argsstring>
+        <name>Looper</name>
+        <qualifiedname>Looper::Looper</qualifiedname>
+        <param>
+          <type>const juce::AudioBuffer&lt; float &gt; *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>juce::Range&lt; juce::int64 &gt;</type>
+          <declname>range</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="29" column="3" bodyfile="Source/Util/Looper.h" bodystart="29" bodyend="30"/>
+      </memberdef>
+      <memberdef kind="function" id="class_looper_1aa09fc6965408045cba6992b43947d584" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void Looper::writeInto</definition>
+        <argsstring>(juce::AudioBuffer&lt; float &gt; &amp;buffer)</argsstring>
+        <name>writeInto</name>
+        <qualifiedname>Looper::writeInto</qualifiedname>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/Looper.h" line="32" column="8" bodyfile="Source/Util/Looper.h" bodystart="32" bodyend="93"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Util/Looper.h" line="25" column="1" bodyfile="Source/Util/Looper.h" bodystart="25" bodyend="101"/>
+    <listofallmembers>
+      <member refid="class_looper_1a67ecad199c607916aceab122685eedf9" prot="private" virt="non-virtual"><scope>Looper</scope><name>desiredCrossfadeLengthSamples</name></member>
+      <member refid="class_looper_1a3556e52023e2f0cae0c1d0bdf7dea8b2" prot="private" virt="non-virtual"><scope>Looper</scope><name>inputBuffer</name></member>
+      <member refid="class_looper_1aa701c58f56736b8c9fc67d4c16b7f17b" prot="public" virt="non-virtual"><scope>Looper</scope><name>Looper</name></member>
+      <member refid="class_looper_1a1c3fa7f420a2cc6360e76c13a9dd17ca" prot="public" virt="non-virtual"><scope>Looper</scope><name>Looper</name></member>
+      <member refid="class_looper_1afddb362bc6650f91378111aaba3196ba" prot="private" virt="non-virtual"><scope>Looper</scope><name>loopRange</name></member>
+      <member refid="class_looper_1a1a5926fb03aa44c67169afbff1b483a2" prot="private" virt="non-virtual"><scope>Looper</scope><name>pos</name></member>
+      <member refid="class_looper_1aa09fc6965408045cba6992b43947d584" prot="public" virt="non-virtual"><scope>Looper</scope><name>writeInto</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

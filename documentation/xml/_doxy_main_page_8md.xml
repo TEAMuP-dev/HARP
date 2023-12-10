@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_doxy_main_page_8md" kind="file" language="Markdown">
+    <compoundname>DoxyMainPage.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>HARP</highlight></codeline>
+<codeline><highlight class="normal">![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">HARP<sp/>is<sp/>an<sp/>[ARA](https://www.synchroarts.com/blog/what-is-ara)<sp/>plug-in<sp/>that<sp/>allows<sp/>for<sp/>**h**osted,<sp/>**a**synchronous,<sp/>**r**emote<sp/>**p**rocessing<sp/>with<sp/>deep<sp/>learning<sp/>models<sp/>by<sp/>routing<sp/>audio<sp/>from<sp/>a<sp/>digital<sp/>audio<sp/>workstation<sp/>(DAW)<sp/>through<sp/>[Gradio](https://www.gradio.app)<sp/>endpoints.<sp/>Because<sp/>Gradio<sp/>apps<sp/>can<sp/>be<sp/>hosted<sp/>locally<sp/>or<sp/>in<sp/>the<sp/>cloud<sp/>(e.g.,<sp/>HuggingFace<sp/>Spaces),<sp/>HARP<sp/>lets<sp/><sp/>DAW<sp/>users<sp/>access<sp/>large<sp/>state-of-the-art<sp/>models<sp/>with<sp/>GPU<sp/>compute<sp/>from<sp/>the<sp/>cloud<sp/>without<sp/>breaking<sp/>their<sp/>within-DAW<sp/>workflow.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Available<sp/>Models</highlight></codeline>
+<codeline><highlight class="normal">At<sp/>present,<sp/>the<sp/>following<sp/>models<sp/>are<sp/>available<sp/>for<sp/>use<sp/>within<sp/>HARP:</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>[hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>[hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>[hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>[descript/vampnet](https://huggingface.co/spaces/descript/vampnet)</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>[cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Making<sp/>a<sp/>deep<sp/>learning<sp/>model<sp/>compatible<sp/>with<sp/>HARP</highlight></codeline>
+<codeline><highlight class="normal">We<sp/>provide<sp/>a<sp/>lightweight<sp/>API<sp/>called<sp/>[pyHARP](https://github.com/audacitorch/pyharp)<sp/>for<sp/>building<sp/>compatible<sp/>[Gradio](https://www.gradio.app)<sp/>audio-processing<sp/>apps<sp/>with<sp/>optional<sp/>interactive<sp/>controls.<sp/>This<sp/>lets<sp/>deep<sp/>learning<sp/>model<sp/>developers<sp/>create<sp/>user<sp/>interfaces<sp/>for<sp/>virtually<sp/>any<sp/>audio<sp/>processing<sp/>model<sp/>with<sp/>only<sp/>a<sp/>few<sp/>lines<sp/>of<sp/>Python<sp/>code.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>OS<sp/>and<sp/>DAW<sp/>compatibility</highlight></codeline>
+<codeline><highlight class="normal">HARP<sp/>has<sp/>been<sp/>tested<sp/>on<sp/>arm-based<sp/>Mac<sp/>computers<sp/>running<sp/>Mac<sp/>OS<sp/>13.0,<sp/>using<sp/>the<sp/>[REAPER](https://www.reaper.fm)<sp/>digital<sp/>audio<sp/>workstation.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Installing<sp/>HARP</highlight></codeline>
+<codeline><highlight class="normal">##<sp/>MacOS</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Download<sp/>the<sp/>HARP<sp/>DMG<sp/>file<sp/>from<sp/>from<sp/>the<sp/>HARP<sp/>[releases](https://github.com/audacitorch/HARP/releases)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>Double<sp/>click<sp/>on<sp/>the<sp/>DMG<sp/>file.<sp/>This<sp/>will<sp/>open<sp/>the<sp/>window<sp/>below</highlight></codeline>
+<codeline><highlight class="normal">&lt;img<sp/>width=&quot;397&quot;<sp/>alt=&quot;harp_dmg&quot;<sp/>src=&quot;https://github.com/audacitorch/HARP/assets/26678616/61acf9f3-8e00-4b85-9433-77366b262e19&quot;&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>Double<sp/>click<sp/>on<sp/>&quot;Your<sp/>Mac&apos;s<sp/>VST3<sp/>folder&quot;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>Drag<sp/>HARP.vst3<sp/>to<sp/>the<sp/>folder<sp/>that<sp/>was<sp/>opened<sp/>in<sp/>the<sp/>previous<sp/>step</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Windows<sp/>&amp;<sp/>Linux</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>windows<sp/>build<sp/>is<sp/>still<sp/>under<sp/>development.<sp/>There<sp/>are<sp/>no<sp/>current<sp/>plans<sp/>to<sp/>support<sp/>Linux</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Building<sp/>the<sp/>HARP<sp/>plug-in<sp/>from<sp/>source<sp/>code</highlight></codeline>
+<codeline><highlight class="normal">To<sp/>build<sp/>the<sp/>HARP<sp/>plugin<sp/>from<sp/>scratch,<sp/>perform<sp/>the<sp/>following<sp/>steps:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">clone<sp/>the<sp/>HARP<sp/>repo</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>clone<sp/>--recurse-submodules<sp/>git@github.com:audacitorch/HARP.git</highlight></codeline>
+<codeline><highlight class="normal">cd<sp/>harp</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Mac<sp/>OS</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Mac<sp/>OS<sp/>builds<sp/>are<sp/>known<sp/>to<sp/>work<sp/>on<sp/>apple<sp/>silicon<sp/>only.<sp/>We&apos;ve<sp/>had<sp/>trouble<sp/>getting<sp/>REAPER<sp/>and<sp/>ARA<sp/>to<sp/>work<sp/>together<sp/>on<sp/>x86<sp/>(on<sp/>apple<sp/>silicon<sp/>machines,<sp/>to<sp/>be<sp/>fair).<sp/>TODO:<sp/>test<sp/>on<sp/>x86<sp/>macs.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Configure</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">mkdir<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cd<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>..<sp/><sp/>-DCMAKE_BUILD_TYPE=Debug</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Build</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">make<sp/>-jNUM_PROCESSORS</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Building<sp/>for<sp/>ARM<sp/>vs<sp/>x86<sp/>MacOS</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>specify<sp/>which<sp/>OSX<sp/>architecture<sp/>you&apos;d<sp/>like<sp/>to<sp/>build<sp/>for,<sp/>set<sp/><sp/>`CMAKE_OSX_ARCHITECTURES`<sp/>to<sp/>either<sp/>`arm64`<sp/>or<sp/>`x86_64`:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">(for<sp/>example,<sp/>for<sp/>an<sp/>x86_64<sp/>build)</highlight></codeline>
+<codeline><highlight class="normal">```bash</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>..<sp/>DCMAKE_OSX_ARCHITECTURES=x86_64</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Windows</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>An<sp/>Important<sp/>Note</highlight></codeline>
+<codeline><highlight class="normal">For<sp/>now,<sp/>this<sp/>build<sp/>works<sp/>on<sp/>MacOS<sp/>only,<sp/>since<sp/>it<sp/>has<sp/>a<sp/>custom<sp/>build<sp/>process<sp/>that<sp/>makes<sp/>use<sp/>of<sp/>[pyinstaller](https://pyinstaller.org/en/stable/usage.html).</highlight></codeline>
+<codeline><highlight class="normal">**TODO**:<sp/>add<sp/>cmake<sp/>options<sp/>to<sp/>build<sp/>on<sp/>windows.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Here<sp/>are<sp/>the<sp/>commands<sp/>used<sp/>in<sp/>VSCode<sp/>(Cmake<sp/>Tools<sp/>extension)<sp/>and<sp/>Windows<sp/>10.</highlight></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>if<sp/>you&apos;re<sp/>using<sp/>Reaper<sp/>x64,<sp/>you<sp/>need<sp/>to<sp/>build<sp/>the<sp/>64bit<sp/>version<sp/>of<sp/>the<sp/>plugin.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>Configure</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```php</highlight></codeline>
+<codeline><highlight class="normal">&quot;C:\Program<sp/>Files\CMake\bin\cmake.EXE&quot;<sp/>--no-warn-unused-cli<sp/>-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE<sp/>-SC:/Users/xribene/Projects/audacitorch/plugin_sandbox<sp/>-Bc:/Users/xribene/Projects/audacitorch/HARP/build<sp/>-G<sp/>&quot;Visual<sp/>Studio<sp/>17<sp/>2022&quot;<sp/>-A<sp/>x64</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```php</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--no-warn-unused-cli<sp/>-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE<sp/>-S<sp/>.<sp/>-B<sp/>build<sp/>-G<sp/>&quot;Visual<sp/>Studio<sp/>17<sp/>2022&quot;<sp/>-A<sp/>x64</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Build</highlight></codeline>
+<codeline><highlight class="normal">```php</highlight></codeline>
+<codeline><highlight class="normal">&quot;C:\Program<sp/>Files\CMake\bin\cmake.EXE&quot;<sp/>--build<sp/>c:/Users/xribene/Projects/audacitorch/HARP/build<sp/>--config<sp/>Debug<sp/>--target<sp/>ALL_BUILD<sp/>-j<sp/>14<sp/>--</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build<sp/>--config<sp/>Debug<sp/>--target<sp/>ALL_BUILD<sp/>-j<sp/>14</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Codesigning<sp/>and<sp/>Distribution</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Mac<sp/>OS</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Codesigning<sp/>and<sp/>packaging<sp/>for<sp/>distribution<sp/>is<sp/>done<sp/>through<sp/>the<sp/>script<sp/>located<sp/>at<sp/>`packaging/package.sh`.</highlight></codeline>
+<codeline><highlight class="normal">You&apos;ll<sp/>need<sp/>to<sp/>set<sp/>up<sp/>a<sp/>developer<sp/>account<sp/>with<sp/>Apple<sp/>and<sp/>create<sp/>a<sp/>certificate<sp/>for<sp/>signing<sp/>the<sp/>plugin.</highlight></codeline>
+<codeline><highlight class="normal">For<sp/>more<sp/>information<sp/>on<sp/>codesigning<sp/>and<sp/>notarization<sp/>for<sp/>mac,<sp/>refer<sp/>to<sp/>the<sp/>[pamplejuce](https://github.com/sudara/pamplejuce)<sp/>template.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>script<sp/>requires<sp/>the<sp/>following<sp/><sp/>variables<sp/>to<sp/>be<sp/>passed:</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">#<sp/>Retrieve<sp/>values<sp/>from<sp/>either<sp/>environment<sp/>variables<sp/>or<sp/>command-line<sp/>arguments</highlight></codeline>
+<codeline><highlight class="normal">DEV_ID_APPLICATION<sp/>#<sp/>Developer<sp/>ID<sp/>Application<sp/>certificate</highlight></codeline>
+<codeline><highlight class="normal">ARTIFACTS_PATH<sp/>#<sp/>should<sp/>be<sp/>packaging/dmg/HARP.vst3</highlight></codeline>
+<codeline><highlight class="normal">PROJECT_NAME<sp/>#<sp/>&quot;HARP&quot;</highlight></codeline>
+<codeline><highlight class="normal">PRODUCT_NAME<sp/>#<sp/>&quot;HARP&quot;</highlight></codeline>
+<codeline><highlight class="normal">NOTARIZATION_USERNAME<sp/>#<sp/>Apple<sp/>ID</highlight></codeline>
+<codeline><highlight class="normal">NOTARIZATION_PASSWORD<sp/>#<sp/>App-specific<sp/>password<sp/>for<sp/>notarization</highlight></codeline>
+<codeline><highlight class="normal">TEAM_ID<sp/>#<sp/>Team<sp/>ID<sp/>for<sp/>notarization</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Usage:</highlight></codeline>
+<codeline><highlight class="normal">```bash</highlight></codeline>
+<codeline><highlight class="normal">bash<sp/>packaging/package.sh<sp/>&lt;Developer<sp/>ID<sp/>Application&gt;<sp/>&lt;Artifacts<sp/>Path&gt;<sp/>&lt;Project<sp/>Name&gt;<sp/>&lt;Product<sp/>Name&gt;<sp/>&lt;Notarization<sp/>Username&gt;<sp/>&lt;Notarization<sp/>Password&gt;<sp/>&lt;Team<sp/>ID&gt;</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">After<sp/>running<sp/>`package.sh`,<sp/>you<sp/>should<sp/>have<sp/>a<sp/>signed<sp/>and<sp/>notarized<sp/>dmg<sp/>file<sp/>in<sp/>the<sp/>`packaging/`<sp/>directory.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Windows</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">TODO</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">#<sp/>Debugging</highlight></codeline>
+<codeline><highlight class="normal">###<sp/>Mac</highlight></codeline>
+<codeline><highlight class="normal">1.<sp/>download<sp/>visual<sp/>studio<sp/>code<sp/>for<sp/>mac<sp/>https://code.visualstudio.com/</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>install<sp/>Microsoft&apos;s<sp/>C/C++<sp/>extension</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>open<sp/>the<sp/>&quot;Run<sp/>and<sp/>Debug&quot;<sp/>tab<sp/>in<sp/>vsc,<sp/>and<sp/>press<sp/>&quot;create<sp/>a<sp/>launch.json<sp/>file&quot;<sp/>using<sp/>the<sp/>LLDB</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>create<sp/>a<sp/>configuration<sp/>for<sp/>attaching<sp/>to<sp/>a<sp/>process,<sp/>here&apos;s<sp/>an<sp/>example<sp/>launch.json<sp/>you<sp/>could<sp/>use</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;version&quot;:<sp/>&quot;0.2.0&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;configurations&quot;:<sp/>[</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;name&quot;:<sp/>&quot;lldb<sp/>reaper&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;type&quot;:<sp/>&quot;cppdbg&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;request&quot;:<sp/>&quot;launch&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;program&quot;:<sp/>&quot;/Applications/REAPER.app/Contents/MacOS/REAPER&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;args&quot;:<sp/>[],</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;cwd&quot;:<sp/>&quot;${fileDirname}&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>&quot;MIMode&quot;:<sp/>&quot;lldb&quot;,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>]</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">5.<sp/>build<sp/>the<sp/>plugin<sp/>using<sp/>this<sp/>flag<sp/>`-DCMAKE_BUILD_TYPE=Debug`</highlight></codeline>
+<codeline><highlight class="normal">6.<sp/>run<sp/>the<sp/>debugger<sp/>and<sp/>add<sp/>break<sp/>poitns</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">&lt;!--<sp/>##<sp/>Thanks<sp/>--&gt;</highlight></codeline>
+<codeline><highlight class="normal">&lt;!--<sp/>Thanks<sp/>to<sp/>[shakfu]()<sp/>for<sp/>their<sp/>help<sp/>getting<sp/>the<sp/>relocatable<sp/>python<sp/>working<sp/>for<sp/>Mac<sp/>OS,<sp/><sp/>and<sp/>to<sp/>Ryan<sp/>Devens<sp/>for<sp/>meaningful<sp/>conversations<sp/>on<sp/>the<sp/>subject<sp/>of<sp/>JUCE<sp/>and<sp/>ARA<sp/>programming.<sp/><sp/>--&gt;</highlight></codeline>
+    </programlisting>
+    <location file="DoxyMainPage.md"/>
+  </compounddef>
+</doxygen>

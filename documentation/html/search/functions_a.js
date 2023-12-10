@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['_7edocumentview_0',['~DocumentView',['../class_document_view.html#af64fe7f4310c228d205dddb1f6eef883',1,'DocumentView']]]
+  ['willbeginediting_0',['willBeginEditing',['../class_h_a_r_p_document_controller_specialisation.html#a20b33f391588d5dc10ae305327cb9f52',1,'HARPDocumentControllerSpecialisation']]]
 ];

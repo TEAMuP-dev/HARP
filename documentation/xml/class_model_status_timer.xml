@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_model_status_timer" kind="class" language="C++" prot="public">
+    <compoundname>ModelStatusTimer</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Timer</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">juce::ChangeBroadcaster</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_model_status_timer_1a81fef794437e8c83565a9bd248d5a192" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;WebWave2Wave&gt; ModelStatusTimer::m_model</definition>
+        <argsstring></argsstring>
+        <name>m_model</name>
+        <qualifiedname>ModelStatusTimer::m_model</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="502" column="19" bodyfile="Source/DeepLearning/WebModel.h" bodystart="502" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_model_status_timer_1a8a81b29d50eb06387f83263d2ac18b74" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string ModelStatusTimer::m_last_status</definition>
+        <argsstring></argsstring>
+        <name>m_last_status</name>
+        <qualifiedname>ModelStatusTimer::m_last_status</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="503" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="503" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_model_status_timer_1a2bc05c42f9c4541830f278b3e40f5afe" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>ModelStatusTimer::ModelStatusTimer</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model)</argsstring>
+        <name>ModelStatusTimer</name>
+        <qualifiedname>ModelStatusTimer::ModelStatusTimer</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="487" column="3" bodyfile="Source/DeepLearning/WebModel.h" bodystart="487" bodyend="488"/>
+      </memberdef>
+      <memberdef kind="function" id="class_model_status_timer_1a43d1f73952e458eb37e8c6d6ab2ba627" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ModelStatusTimer::timerCallback</definition>
+        <argsstring>() override</argsstring>
+        <name>timerCallback</name>
+        <qualifiedname>ModelStatusTimer::timerCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="490" column="8" bodyfile="Source/DeepLearning/WebModel.h" bodystart="490" bodyend="499"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>ModelStatusTimer</label>
+        <link refid="class_model_status_timer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::ChangeBroadcaster</label>
+      </node>
+      <node id="2">
+        <label>juce::Timer</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>ModelStatusTimer</label>
+        <link refid="class_model_status_timer"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::ChangeBroadcaster</label>
+      </node>
+      <node id="2">
+        <label>juce::Timer</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="484" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="485" bodyend="504"/>
+    <listofallmembers>
+      <member refid="class_model_status_timer_1a8a81b29d50eb06387f83263d2ac18b74" prot="private" virt="non-virtual"><scope>ModelStatusTimer</scope><name>m_last_status</name></member>
+      <member refid="class_model_status_timer_1a81fef794437e8c83565a9bd248d5a192" prot="private" virt="non-virtual"><scope>ModelStatusTimer</scope><name>m_model</name></member>
+      <member refid="class_model_status_timer_1a2bc05c42f9c4541830f278b3e40f5afe" prot="public" virt="non-virtual"><scope>ModelStatusTimer</scope><name>ModelStatusTimer</name></member>
+      <member refid="class_model_status_timer_1a43d1f73952e458eb37e8c6d6ab2ba627" prot="public" virt="non-virtual"><scope>ModelStatusTimer</scope><name>timerCallback</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

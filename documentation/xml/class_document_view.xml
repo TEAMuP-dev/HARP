@@ -1,0 +1,827 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_document_view" kind="class" language="C++" prot="public">
+    <compoundname>DocumentView</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">ChangeListener</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">ARAMusicalContext::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARADocument::Listener</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">ARAEditorView::Listener</basecompoundref>
+    <includes refid="_document_view_8h" local="no">DocumentView.h</includes>
+    <innerclass refid="struct_document_view_1_1_region_sequence_view_key" prot="private">DocumentView::RegionSequenceViewKey</innerclass>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="class_document_view_1a87a67e06d1fbeb48769265157bf6b752" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr int</type>
+        <definition>constexpr int DocumentView::headerWidth</definition>
+        <argsstring></argsstring>
+        <name>headerWidth</name>
+        <qualifiedname>DocumentView::headerWidth</qualifiedname>
+        <initializer>= 120</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="103" column="24" bodyfile="Source/UI/DocumentView.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_document_view_1ac5bf0a2dadceee0bd5702eac35f77200" prot="private" static="no" mutable="no">
+        <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+        <definition>EditorView&amp; DocumentView::araEditorView</definition>
+        <argsstring></argsstring>
+        <name>araEditorView</name>
+        <qualifiedname>DocumentView::araEditorView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="132" column="14" bodyfile="Source/UI/DocumentView.h" bodystart="132" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1ac2aeacc7cd6f8b1ce30de825340c814c" prot="private" static="no" mutable="no">
+        <type>ARADocument &amp;</type>
+        <definition>ARADocument&amp; DocumentView::araDocument</definition>
+        <argsstring></argsstring>
+        <name>araDocument</name>
+        <qualifiedname>DocumentView::araDocument</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="133" column="15" bodyfile="Source/UI/DocumentView.h" bodystart="133" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1ad84f7b2f1f53990f8db8fad3e866e3ab" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool DocumentView::regionSequenceViewsAreValid</definition>
+        <argsstring></argsstring>
+        <name>regionSequenceViewsAreValid</name>
+        <qualifiedname>DocumentView::regionSequenceViewsAreValid</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="134" column="8" bodyfile="Source/UI/DocumentView.h" bodystart="134" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a2d3a3fabaccaa469ccb58a716305135d" prot="private" static="no" mutable="no">
+        <type><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref></type>
+        <definition>TimeToViewScaling DocumentView::timeToViewScaling</definition>
+        <argsstring></argsstring>
+        <name>timeToViewScaling</name>
+        <qualifiedname>DocumentView::timeToViewScaling</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="135" column="21" bodyfile="Source/UI/DocumentView.h" bodystart="135" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a09e0bd41945a94135792b5fc02d729fc" prot="private" static="no" mutable="no">
+        <type>double</type>
+        <definition>double DocumentView::timelineLength</definition>
+        <argsstring></argsstring>
+        <name>timelineLength</name>
+        <qualifiedname>DocumentView::timelineLength</qualifiedname>
+        <initializer>= 0.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="136" column="10" bodyfile="Source/UI/DocumentView.h" bodystart="136" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1ac418286f00d09878476c4bb8c9f0f43e" prot="private" static="no" mutable="no">
+        <type>ARAMusicalContext *</type>
+        <definition>ARAMusicalContext* DocumentView::selectedMusicalContext</definition>
+        <argsstring></argsstring>
+        <name>selectedMusicalContext</name>
+        <qualifiedname>DocumentView::selectedMusicalContext</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="137" column="21" bodyfile="Source/UI/DocumentView.h" bodystart="137" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a24bd78829f0936fe4fc66f41d8ae5a9e" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; ARARegionSequence * &gt;</type>
+        <definition>std::vector&lt;ARARegionSequence *&gt; DocumentView::hiddenRegionSequences</definition>
+        <argsstring></argsstring>
+        <name>hiddenRegionSequences</name>
+        <qualifiedname>DocumentView::hiddenRegionSequences</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="138" column="15" bodyfile="Source/UI/DocumentView.h" bodystart="138" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1ac2a9ddffea328ce7d3aeee8e1b172744" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_waveform_cache" kindref="compound">WaveformCache</ref></type>
+        <definition>WaveformCache DocumentView::waveformCache</definition>
+        <argsstring></argsstring>
+        <name>waveformCache</name>
+        <qualifiedname>DocumentView::waveformCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="139" column="17" bodyfile="Source/UI/DocumentView.h" bodystart="139" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1af6695790bfc67c8d4295799b2344be88" prot="private" static="no" mutable="no">
+        <type>std::map&lt; RegionSequenceViewKey, unique_ptr&lt; <ref refid="class_track_header" kindref="compound">TrackHeader</ref> &gt; &gt;</type>
+        <definition>std::map&lt;RegionSequenceViewKey, unique_ptr&lt;TrackHeader&gt; &gt; DocumentView::trackHeaders</definition>
+        <argsstring></argsstring>
+        <name>trackHeaders</name>
+        <qualifiedname>DocumentView::trackHeaders</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="140" column="12" bodyfile="Source/UI/DocumentView.h" bodystart="140" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a3aa206863e8de6c86c110b91946ce58f" prot="private" static="no" mutable="no">
+        <type>std::map&lt; RegionSequenceViewKey, unique_ptr&lt; <ref refid="class_region_sequence_view" kindref="compound">RegionSequenceView</ref> &gt; &gt;</type>
+        <definition>std::map&lt;RegionSequenceViewKey, unique_ptr&lt;RegionSequenceView&gt; &gt; DocumentView::regionSequenceViews</definition>
+        <argsstring></argsstring>
+        <name>regionSequenceViews</name>
+        <qualifiedname>DocumentView::regionSequenceViews</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="142" column="7" bodyfile="Source/UI/DocumentView.h" bodystart="142" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a06cc367bd8b2c9612cf3429319804dfa" prot="private" static="no" mutable="no">
+        <type><ref refid="class_rulers_header" kindref="compound">RulersHeader</ref></type>
+        <definition>RulersHeader DocumentView::rulersHeader</definition>
+        <argsstring></argsstring>
+        <name>rulersHeader</name>
+        <qualifiedname>DocumentView::rulersHeader</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="143" column="16" bodyfile="Source/UI/DocumentView.h" bodystart="143" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1af76a0d3cbdc2b649183b3999db183a98" prot="private" static="no" mutable="no">
+        <type><ref refid="class_rulers_view" kindref="compound">RulersView</ref></type>
+        <definition>RulersView DocumentView::rulersView</definition>
+        <argsstring></argsstring>
+        <name>rulersView</name>
+        <qualifiedname>DocumentView::rulersView</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="144" column="14" bodyfile="Source/UI/DocumentView.h" bodystart="144" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a03d7a6e5ea6df0cd742f18d91214b9c7" prot="private" static="no" mutable="no">
+        <type><ref refid="class_vertical_layout_viewport" kindref="compound">VerticalLayoutViewport</ref></type>
+        <definition>VerticalLayoutViewport DocumentView::viewport</definition>
+        <argsstring></argsstring>
+        <name>viewport</name>
+        <qualifiedname>DocumentView::viewport</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="145" column="26" bodyfile="Source/UI/DocumentView.h" bodystart="145" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1acca68f7fc2976a077eadd5abacf276ff" prot="private" static="no" mutable="no">
+        <type><ref refid="class_overlay_component" kindref="compound">OverlayComponent</ref></type>
+        <definition>OverlayComponent DocumentView::overlay</definition>
+        <argsstring></argsstring>
+        <name>overlay</name>
+        <qualifiedname>DocumentView::overlay</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="146" column="20" bodyfile="Source/UI/DocumentView.h" bodystart="146" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a72036a14a350915df0e885ff921807fe" prot="private" static="no" mutable="no">
+        <type><ref refid="class_zoom_controls" kindref="compound">ZoomControls</ref></type>
+        <definition>ZoomControls DocumentView::zoomControls</definition>
+        <argsstring></argsstring>
+        <name>zoomControls</name>
+        <qualifiedname>DocumentView::zoomControls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="147" column="16" bodyfile="Source/UI/DocumentView.h" bodystart="147" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a1047be9660ea437a718c1cddbef63836" prot="private" static="no" mutable="no">
+        <type><ref refid="class_playhead_position_label" kindref="compound">PlayheadPositionLabel</ref></type>
+        <definition>PlayheadPositionLabel DocumentView::playheadPositionLabel</definition>
+        <argsstring></argsstring>
+        <name>playheadPositionLabel</name>
+        <qualifiedname>DocumentView::playheadPositionLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="148" column="25" bodyfile="Source/UI/DocumentView.h" bodystart="148" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a7490456345c9027e08ca1e4e356267ef" prot="private" static="no" mutable="no">
+        <type>TooltipWindow</type>
+        <definition>TooltipWindow DocumentView::tooltip</definition>
+        <argsstring></argsstring>
+        <name>tooltip</name>
+        <qualifiedname>DocumentView::tooltip</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="149" column="17" bodyfile="Source/UI/DocumentView.h" bodystart="149" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_document_view_1a647405444bbdc7862eba407389675918" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int DocumentView::viewportHeightOffset</definition>
+        <argsstring></argsstring>
+        <name>viewportHeightOffset</name>
+        <qualifiedname>DocumentView::viewportHeightOffset</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="150" column="7" bodyfile="Source/UI/DocumentView.h" bodystart="150" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_document_view_1aade2a1e9c5d5dac9a44e2bff6280490c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>DocumentView::DocumentView</definition>
+        <argsstring>(EditorView &amp;editorView, PlayHeadState &amp;playHeadState)</argsstring>
+        <name>DocumentView</name>
+        <qualifiedname>DocumentView::DocumentView</qualifiedname>
+        <param>
+          <type><ref refid="class_editor_view" kindref="compound">EditorView</ref> &amp;</type>
+          <declname>editorView</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref> &amp;</type>
+          <declname>playHeadState</declname>
+        </param>
+        <briefdescription>
+<para>Constructor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>editorView</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>playHeadState</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="57" column="3" bodyfile="Source/UI/DocumentView.cpp" bodystart="26" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1af64fe7f4310c228d205dddb1f6eef883" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>DocumentView::~DocumentView</definition>
+        <argsstring>() override</argsstring>
+        <name>~DocumentView</name>
+        <qualifiedname>DocumentView::~DocumentView</qualifiedname>
+        <briefdescription>
+<para>Destructor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="62" column="3" bodyfile="Source/UI/DocumentView.cpp" bodystart="61" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1aeee870612c05703a0098dd045d7e465c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::didAddMusicalContextToDocument</definition>
+        <argsstring>(ARADocument *, ARAMusicalContext *musicalContext) override</argsstring>
+        <name>didAddMusicalContextToDocument</name>
+        <qualifiedname>DocumentView::didAddMusicalContextToDocument</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <param>
+          <type>ARAMusicalContext *</type>
+          <declname>musicalContext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="67" column="3" bodyfile="Source/UI/DocumentView.cpp" bodystart="67" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a5f549b9f25481f9b1ac88efbbc92523b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::willDestroyMusicalContext</definition>
+        <argsstring>(ARAMusicalContext *musicalContext) override</argsstring>
+        <name>willDestroyMusicalContext</name>
+        <qualifiedname>DocumentView::willDestroyMusicalContext</qualifiedname>
+        <param>
+          <type>ARAMusicalContext *</type>
+          <declname>musicalContext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="69" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="73" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a9fac181174ff707fbd2bd0287adeeb27" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::didReorderRegionSequencesInDocument</definition>
+        <argsstring>(ARADocument *) override</argsstring>
+        <name>didReorderRegionSequencesInDocument</name>
+        <qualifiedname>DocumentView::didReorderRegionSequencesInDocument</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="70" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="79" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1aeb0b205bc01737dba854e6417d9bac88" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::didAddRegionSequenceToDocument</definition>
+        <argsstring>(ARADocument *, ARARegionSequence *) override</argsstring>
+        <name>didAddRegionSequenceToDocument</name>
+        <qualifiedname>DocumentView::didAddRegionSequenceToDocument</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <param>
+          <type>ARARegionSequence *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="71" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="83" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a0c569cc01d4a175066c4b40f2edeeeb0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::willRemoveRegionSequenceFromDocument</definition>
+        <argsstring>(ARADocument *, ARARegionSequence *regionSequence) override</argsstring>
+        <name>willRemoveRegionSequenceFromDocument</name>
+        <qualifiedname>DocumentView::willRemoveRegionSequenceFromDocument</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <param>
+          <type>ARARegionSequence *</type>
+          <declname>regionSequence</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="73" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="88" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a8d5f7f0aa4e62223d8e8b90dbf31e8c5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::didEndEditing</definition>
+        <argsstring>(ARADocument *) override</argsstring>
+        <name>didEndEditing</name>
+        <qualifiedname>DocumentView::didEndEditing</qualifiedname>
+        <param>
+          <type>ARADocument *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="75" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="93" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1aecf9a173f070e23cebcf471e5ad67730" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::changeListenerCallback</definition>
+        <argsstring>(ChangeBroadcaster *source) override</argsstring>
+        <name>changeListenerCallback</name>
+        <qualifiedname>DocumentView::changeListenerCallback</qualifiedname>
+        <param>
+          <type>ChangeBroadcaster *</type>
+          <declname>source</declname>
+        </param>
+        <briefdescription>
+<para>Implements changeListenerCallback from ChangeListener class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>source</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="82" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="98" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a436318eebaf8328b89a7a30d7e8aa0f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::onNewSelection</definition>
+        <argsstring>(const ARAViewSelection &amp;viewSelection) override</argsstring>
+        <name>onNewSelection</name>
+        <qualifiedname>DocumentView::onNewSelection</qualifiedname>
+        <param>
+          <type>const ARAViewSelection &amp;</type>
+          <declname>viewSelection</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="86" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="100" bodyend="124"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a30ab6cbd91ee06807ba5948bbdf9b795" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::onHideRegionSequences</definition>
+        <argsstring>(const std::vector&lt; ARARegionSequence * &gt; &amp;regionSequences) override</argsstring>
+        <name>onHideRegionSequences</name>
+        <qualifiedname>DocumentView::onHideRegionSequences</qualifiedname>
+        <param>
+          <type>const std::vector&lt; ARARegionSequence * &gt; &amp;</type>
+          <declname>regionSequences</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="87" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="126" bodyend="130"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a7539a2065e9c57a468ae4fae55e68edb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>DocumentView::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+<para>Overrides the paint method from Component class. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>g</parametername>
+</parameternamelist>
+<parameterdescription>
+<para></para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="95" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="132" bodyend="136"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a534cdbb71bfccc314bfc352826030c97" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>DocumentView::resized</qualifiedname>
+        <briefdescription>
+<para>Overrides the resized method from Component class. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="100" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="138" bodyend="160"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_document_view_1a8575764c2d3af61408813cbfa1e375a9" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::selectMusicalContext</definition>
+        <argsstring>(ARAMusicalContext *newSelectedMusicalContext)</argsstring>
+        <name>selectMusicalContext</name>
+        <qualifiedname>DocumentView::selectMusicalContext</qualifiedname>
+        <param>
+          <type>ARAMusicalContext *</type>
+          <declname>newSelectedMusicalContext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="120" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="162" bodyend="176"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a80a129dbbe5e6d7075077f4a44778c87" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::zoom</definition>
+        <argsstring>(double factor)</argsstring>
+        <name>zoom</name>
+        <qualifiedname>DocumentView::zoom</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>factor</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="121" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="178" bodyend="181"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1adbf5bd9e508702435d5efd8acc0fcbba" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename T</type>
+          </param>
+        </templateparamlist>
+        <type>void</type>
+        <definition>void DocumentView::layOutVertically</definition>
+        <argsstring>(Rectangle&lt; int &gt; bounds, T &amp;components, int verticalOffset=0)</argsstring>
+        <name>layOutVertically</name>
+        <qualifiedname>DocumentView::layOutVertically</qualifiedname>
+        <param>
+          <type>Rectangle&lt; int &gt;</type>
+          <declname>bounds</declname>
+        </param>
+        <param>
+          <type>T &amp;</type>
+          <declname>components</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>verticalOffset</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="123" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="184" bodyend="193"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a1be35cfda58b41945cafaf0aa7d52dc7" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::update</definition>
+        <argsstring>()</argsstring>
+        <name>update</name>
+        <qualifiedname>DocumentView::update</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="125" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="195" bodyend="203"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1ab9f07c6bb3896b813ba52a9f5189373f" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::addTrackViews</definition>
+        <argsstring>(ARARegionSequence *regionSequence)</argsstring>
+        <name>addTrackViews</name>
+        <qualifiedname>DocumentView::addTrackViews</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+          <declname>regionSequence</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="126" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="205" bodyend="224"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1afc5a633bb1bb2e61011e64ccd21862c0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::removeRegionSequenceView</definition>
+        <argsstring>(ARARegionSequence *regionSequence)</argsstring>
+        <name>removeRegionSequenceView</name>
+        <qualifiedname>DocumentView::removeRegionSequenceView</qualifiedname>
+        <param>
+          <type>ARARegionSequence *</type>
+          <declname>regionSequence</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="127" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="226" bodyend="236"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1ac9f5bbb356770bc2411b4dc36a2a6575" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::invalidateRegionSequenceViews</definition>
+        <argsstring>()</argsstring>
+        <name>invalidateRegionSequenceViews</name>
+        <qualifiedname>DocumentView::invalidateRegionSequenceViews</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="128" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="238" bodyend="241"/>
+      </memberdef>
+      <memberdef kind="function" id="class_document_view_1a645b56553e083fb289ea4083e262d37e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void DocumentView::rebuildRegionSequenceViews</definition>
+        <argsstring>()</argsstring>
+        <name>rebuildRegionSequenceViews</name>
+        <qualifiedname>DocumentView::rebuildRegionSequenceViews</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/DocumentView.h" line="129" column="8" bodyfile="Source/UI/DocumentView.cpp" bodystart="243" bodyend="265"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This class handles the <ref refid="class_document_view" kindref="compound">DocumentView</ref> related functions. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="5">
+        <label>ARADocument::Listener</label>
+      </node>
+      <node id="6">
+        <label>ARAEditorView::Listener</label>
+      </node>
+      <node id="4">
+        <label>ARAMusicalContext::Listener</label>
+      </node>
+      <node id="3">
+        <label>ChangeListener</label>
+      </node>
+      <node id="1">
+        <label>DocumentView</label>
+        <link refid="class_document_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="5">
+        <label>ARADocument::Listener</label>
+      </node>
+      <node id="6">
+        <label>ARAEditorView::Listener</label>
+      </node>
+      <node id="4">
+        <label>ARAMusicalContext::Listener</label>
+      </node>
+      <node id="3">
+        <label>ChangeListener</label>
+      </node>
+      <node id="1">
+        <label>DocumentView</label>
+        <link refid="class_document_view"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="private-inheritance">
+        </childnode>
+        <childnode refid="6" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/DocumentView.h" line="44" column="1" bodyfile="Source/UI/DocumentView.h" bodystart="48" bodyend="151"/>
+    <listofallmembers>
+      <member refid="class_document_view_1ab9f07c6bb3896b813ba52a9f5189373f" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>addTrackViews</name></member>
+      <member refid="class_document_view_1ac2aeacc7cd6f8b1ce30de825340c814c" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>araDocument</name></member>
+      <member refid="class_document_view_1ac5bf0a2dadceee0bd5702eac35f77200" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>araEditorView</name></member>
+      <member refid="class_document_view_1aecf9a173f070e23cebcf471e5ad67730" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>changeListenerCallback</name></member>
+      <member refid="class_document_view_1aeee870612c05703a0098dd045d7e465c" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>didAddMusicalContextToDocument</name></member>
+      <member refid="class_document_view_1aeb0b205bc01737dba854e6417d9bac88" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>didAddRegionSequenceToDocument</name></member>
+      <member refid="class_document_view_1a8d5f7f0aa4e62223d8e8b90dbf31e8c5" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>didEndEditing</name></member>
+      <member refid="class_document_view_1a9fac181174ff707fbd2bd0287adeeb27" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>didReorderRegionSequencesInDocument</name></member>
+      <member refid="class_document_view_1aade2a1e9c5d5dac9a44e2bff6280490c" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>DocumentView</name></member>
+      <member refid="class_document_view_1a87a67e06d1fbeb48769265157bf6b752" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>headerWidth</name></member>
+      <member refid="class_document_view_1a24bd78829f0936fe4fc66f41d8ae5a9e" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>hiddenRegionSequences</name></member>
+      <member refid="class_document_view_1ac9f5bbb356770bc2411b4dc36a2a6575" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>invalidateRegionSequenceViews</name></member>
+      <member refid="class_document_view_1adbf5bd9e508702435d5efd8acc0fcbba" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>layOutVertically</name></member>
+      <member refid="class_document_view_1a30ab6cbd91ee06807ba5948bbdf9b795" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>onHideRegionSequences</name></member>
+      <member refid="class_document_view_1a436318eebaf8328b89a7a30d7e8aa0f7" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>onNewSelection</name></member>
+      <member refid="class_document_view_1acca68f7fc2976a077eadd5abacf276ff" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>overlay</name></member>
+      <member refid="class_document_view_1a7539a2065e9c57a468ae4fae55e68edb" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>paint</name></member>
+      <member refid="class_document_view_1a1047be9660ea437a718c1cddbef63836" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>playheadPositionLabel</name></member>
+      <member refid="class_document_view_1a645b56553e083fb289ea4083e262d37e" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>rebuildRegionSequenceViews</name></member>
+      <member refid="class_document_view_1a3aa206863e8de6c86c110b91946ce58f" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>regionSequenceViews</name></member>
+      <member refid="class_document_view_1ad84f7b2f1f53990f8db8fad3e866e3ab" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>regionSequenceViewsAreValid</name></member>
+      <member refid="class_document_view_1afc5a633bb1bb2e61011e64ccd21862c0" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>removeRegionSequenceView</name></member>
+      <member refid="class_document_view_1a534cdbb71bfccc314bfc352826030c97" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>resized</name></member>
+      <member refid="class_document_view_1a06cc367bd8b2c9612cf3429319804dfa" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>rulersHeader</name></member>
+      <member refid="class_document_view_1af76a0d3cbdc2b649183b3999db183a98" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>rulersView</name></member>
+      <member refid="class_document_view_1ac418286f00d09878476c4bb8c9f0f43e" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>selectedMusicalContext</name></member>
+      <member refid="class_document_view_1a8575764c2d3af61408813cbfa1e375a9" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>selectMusicalContext</name></member>
+      <member refid="class_document_view_1a09e0bd41945a94135792b5fc02d729fc" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>timelineLength</name></member>
+      <member refid="class_document_view_1a2d3a3fabaccaa469ccb58a716305135d" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>timeToViewScaling</name></member>
+      <member refid="class_document_view_1a7490456345c9027e08ca1e4e356267ef" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>tooltip</name></member>
+      <member refid="class_document_view_1af6695790bfc67c8d4295799b2344be88" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>trackHeaders</name></member>
+      <member refid="class_document_view_1a1be35cfda58b41945cafaf0aa7d52dc7" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>update</name></member>
+      <member refid="class_document_view_1a03d7a6e5ea6df0cd742f18d91214b9c7" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>viewport</name></member>
+      <member refid="class_document_view_1a647405444bbdc7862eba407389675918" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>viewportHeightOffset</name></member>
+      <member refid="class_document_view_1ac2a9ddffea328ce7d3aeee8e1b172744" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>waveformCache</name></member>
+      <member refid="class_document_view_1a5f549b9f25481f9b1ac88efbbc92523b" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>willDestroyMusicalContext</name></member>
+      <member refid="class_document_view_1a0c569cc01d4a175066c4b40f2edeeeb0" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>willRemoveRegionSequenceFromDocument</name></member>
+      <member refid="class_document_view_1a80a129dbbe5e6d7075077f4a44778c87" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>zoom</name></member>
+      <member refid="class_document_view_1a72036a14a350915df0e885ff921807fe" prot="private" virt="non-virtual"><scope>DocumentView</scope><name>zoomControls</name></member>
+      <member refid="class_document_view_1af64fe7f4310c228d205dddb1f6eef883" prot="public" virt="non-virtual"><scope>DocumentView</scope><name>~DocumentView</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

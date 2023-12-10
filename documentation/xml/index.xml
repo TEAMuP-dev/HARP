@@ -1,0 +1,716 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygenindex xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="index.xsd" version="1.9.8" xml:lang="en-US">
+  <compound refid="class_async_configuration_callback" kind="class"><name>AsyncConfigurationCallback</name>
+    <member refid="class_async_configuration_callback_1ac984ab1e8720525506db3a131121fbf6" kind="variable"><name>callback</name></member>
+    <member refid="class_async_configuration_callback_1a05590bc75fd655589cfa44e532f0df1b" kind="variable"><name>processingFlag</name></member>
+    <member refid="class_async_configuration_callback_1a591123b9f52bccf4c08368b15c002c07" kind="function"><name>AsyncConfigurationCallback</name></member>
+    <member refid="class_async_configuration_callback_1a233123645ff8b405b20c4625037db171" kind="function"><name>~AsyncConfigurationCallback</name></member>
+    <member refid="class_async_configuration_callback_1a82cf8cfdc0fe45154f3ac6558a77c743" kind="function"><name>withLock</name></member>
+    <member refid="class_async_configuration_callback_1aa6b2d32df7446fc2c24bb2c4d293f3e4" kind="function"><name>startConfigure</name></member>
+    <member refid="class_async_configuration_callback_1a68ee75c902541dd6a1736321ee0db1e2" kind="function"><name>handleAsyncUpdate</name></member>
+  </compound>
+  <compound refid="struct_audio_in_ctrl" kind="struct"><name>AudioInCtrl</name>
+    <member refid="struct_audio_in_ctrl_1a94299e9374f8331b167119eee6757b83" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="class_audio_modification" kind="class"><name>AudioModification</name>
+    <member refid="class_audio_modification_1a0f2e709466012e4d6e5f7e7df5071b74" kind="variable"><name>mIsModified</name></member>
+    <member refid="class_audio_modification_1a1647b610e88183b07dfe7f3fc552105a" kind="variable"><name>mThumbCreated</name></member>
+    <member refid="class_audio_modification_1ae7e2a614c9a599a9befdcdad35f390e3" kind="variable"><name>mAudioSourceName</name></member>
+    <member refid="class_audio_modification_1a41bf5526a28b9395f4d5167f56ff2e00" kind="variable"><name>mSampleRate</name></member>
+    <member refid="class_audio_modification_1a70c3418974305c510d6856d4d554f53f" kind="variable"><name>mAudioSourceReader</name></member>
+    <member refid="class_audio_modification_1a77e99453ef1b6e8e724799deb4d369a5" kind="variable"><name>mAudioBuffer</name></member>
+    <member refid="class_audio_modification_1a292b55d0527b0515e7df8ab9bc9d1e31" kind="function"><name>AudioModification</name></member>
+    <member refid="class_audio_modification_1a9ff4ff7c20c1c4843f66b2a0e1c7c4ed" kind="function"><name>setThumbCreated</name></member>
+    <member refid="class_audio_modification_1a37cffab150a3d4255bc360d23b4a0f3b" kind="function"><name>isThumbCreated</name></member>
+    <member refid="class_audio_modification_1a86890ad38684652fdf26e728fe11b989" kind="function"><name>getSourceName</name></member>
+    <member refid="class_audio_modification_1a02637957e0d459d239faf9392af0a32a" kind="function"><name>process</name></member>
+    <member refid="class_audio_modification_1af8c8c935eee89740ce1db0991b5f0846" kind="function"><name>getModifiedAudioBuffer</name></member>
+    <member refid="class_audio_modification_1a0d0b5727fafae59f9e32a9cc99db1aa8" kind="function"><name>getIsModified</name></member>
+  </compound>
+  <compound refid="struct_combo_box_ctrl" kind="struct"><name>ComboBoxCtrl</name>
+    <member refid="struct_combo_box_ctrl_1aba9ba297cfb07852e269843b00afc102" kind="variable"><name>options</name></member>
+    <member refid="struct_combo_box_ctrl_1aa7e83e95c66c5d2f684c498a71381238" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="struct_ctrl" kind="struct"><name>Ctrl</name>
+    <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" kind="variable"><name>id</name></member>
+    <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" kind="variable"><name>label</name></member>
+    <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" kind="function"><name>~Ctrl</name></member>
+  </compound>
+  <compound refid="class_ctrl_component" kind="class"><name>CtrlComponent</name>
+    <member refid="class_ctrl_component_1a0dbb200d427af61b98a9d121639fb815" kind="variable"><name>mModel</name></member>
+    <member refid="class_ctrl_component_1ac2bb186cdec46ecc80588f80d4d55011" kind="variable"><name>headerLabel</name></member>
+    <member refid="class_ctrl_component_1a857193218f11e3281eb386febe84d955" kind="variable"><name>mHARPLookAndFeel</name></member>
+    <member refid="class_ctrl_component_1a1973c8b1431277e33fb44f18e630b45a" kind="variable"><name>sliders</name></member>
+    <member refid="class_ctrl_component_1a206761f1d1e233edd35d363266466722" kind="variable"><name>toggles</name></member>
+    <member refid="class_ctrl_component_1a52ce36de74f4142927de1c64d5040046" kind="variable"><name>optionCtrls</name></member>
+    <member refid="class_ctrl_component_1a1331fb4a11518cecd63f44abee676979" kind="variable"><name>textCtrls</name></member>
+    <member refid="class_ctrl_component_1ae705f0b598421e6e8cf8f73fa2bf57ea" kind="function"><name>CtrlComponent</name></member>
+    <member refid="class_ctrl_component_1af685e6085574ce19aa1235f6b798bf75" kind="function"><name>setModel</name></member>
+    <member refid="class_ctrl_component_1a9b13b808f23807b0a1349724b5b345e8" kind="function"><name>populateGui</name></member>
+    <member refid="class_ctrl_component_1af74fff7aa9f022d1b00776c562280e73" kind="function"><name>resetUI</name></member>
+    <member refid="class_ctrl_component_1a5095afa62a7b5e71c5757e852f34d8dc" kind="function"><name>resized</name></member>
+    <member refid="class_ctrl_component_1a95d365ca8ef76d6168a34567a3483f91" kind="function"><name>buttonClicked</name></member>
+    <member refid="class_ctrl_component_1a64e5c214ee359a8e49ad43c5ba4405ee" kind="function"><name>comboBoxChanged</name></member>
+    <member refid="class_ctrl_component_1a58516f58dbbfc48b365e64c83f62784a" kind="function"><name>textEditorTextChanged</name></member>
+    <member refid="class_ctrl_component_1a56930a8c42292dfdb678e0732724634f" kind="function"><name>sliderValueChanged</name></member>
+    <member refid="class_ctrl_component_1a94c9ac7f59262eba61ee71710502786d" kind="function"><name>sliderDragEnded</name></member>
+  </compound>
+  <compound refid="class_custom_thread_pool_job" kind="class"><name>CustomThreadPoolJob</name>
+    <member refid="class_custom_thread_pool_job_1a7afcb1c1d632e7e424f53e10146cddb0" kind="variable"><name>jobFunction</name></member>
+    <member refid="class_custom_thread_pool_job_1a2801c7aece7d0635c94aa133761c9a36" kind="function"><name>CustomThreadPoolJob</name></member>
+    <member refid="class_custom_thread_pool_job_1ae16071e87c758164abfb6464e65a3626" kind="function"><name>runJob</name></member>
+  </compound>
+  <compound refid="class_rulers_view_1_1_cycle_marker_component" kind="class"><name>RulersView::CycleMarkerComponent</name>
+    <member refid="class_rulers_view_1_1_cycle_marker_component_1afa20c0bd802179d818a1cc884fb9766f" kind="function"><name>paint</name></member>
+  </compound>
+  <compound refid="class_document_view" kind="class"><name>DocumentView</name>
+    <member refid="class_document_view_1a87a67e06d1fbeb48769265157bf6b752" kind="variable"><name>headerWidth</name></member>
+    <member refid="class_document_view_1ac5bf0a2dadceee0bd5702eac35f77200" kind="variable"><name>araEditorView</name></member>
+    <member refid="class_document_view_1ac2aeacc7cd6f8b1ce30de825340c814c" kind="variable"><name>araDocument</name></member>
+    <member refid="class_document_view_1ad84f7b2f1f53990f8db8fad3e866e3ab" kind="variable"><name>regionSequenceViewsAreValid</name></member>
+    <member refid="class_document_view_1a2d3a3fabaccaa469ccb58a716305135d" kind="variable"><name>timeToViewScaling</name></member>
+    <member refid="class_document_view_1a09e0bd41945a94135792b5fc02d729fc" kind="variable"><name>timelineLength</name></member>
+    <member refid="class_document_view_1ac418286f00d09878476c4bb8c9f0f43e" kind="variable"><name>selectedMusicalContext</name></member>
+    <member refid="class_document_view_1a24bd78829f0936fe4fc66f41d8ae5a9e" kind="variable"><name>hiddenRegionSequences</name></member>
+    <member refid="class_document_view_1ac2a9ddffea328ce7d3aeee8e1b172744" kind="variable"><name>waveformCache</name></member>
+    <member refid="class_document_view_1af6695790bfc67c8d4295799b2344be88" kind="variable"><name>trackHeaders</name></member>
+    <member refid="class_document_view_1a3aa206863e8de6c86c110b91946ce58f" kind="variable"><name>regionSequenceViews</name></member>
+    <member refid="class_document_view_1a06cc367bd8b2c9612cf3429319804dfa" kind="variable"><name>rulersHeader</name></member>
+    <member refid="class_document_view_1af76a0d3cbdc2b649183b3999db183a98" kind="variable"><name>rulersView</name></member>
+    <member refid="class_document_view_1a03d7a6e5ea6df0cd742f18d91214b9c7" kind="variable"><name>viewport</name></member>
+    <member refid="class_document_view_1acca68f7fc2976a077eadd5abacf276ff" kind="variable"><name>overlay</name></member>
+    <member refid="class_document_view_1a72036a14a350915df0e885ff921807fe" kind="variable"><name>zoomControls</name></member>
+    <member refid="class_document_view_1a1047be9660ea437a718c1cddbef63836" kind="variable"><name>playheadPositionLabel</name></member>
+    <member refid="class_document_view_1a7490456345c9027e08ca1e4e356267ef" kind="variable"><name>tooltip</name></member>
+    <member refid="class_document_view_1a647405444bbdc7862eba407389675918" kind="variable"><name>viewportHeightOffset</name></member>
+    <member refid="class_document_view_1aade2a1e9c5d5dac9a44e2bff6280490c" kind="function"><name>DocumentView</name></member>
+    <member refid="class_document_view_1af64fe7f4310c228d205dddb1f6eef883" kind="function"><name>~DocumentView</name></member>
+    <member refid="class_document_view_1aeee870612c05703a0098dd045d7e465c" kind="function"><name>didAddMusicalContextToDocument</name></member>
+    <member refid="class_document_view_1a5f549b9f25481f9b1ac88efbbc92523b" kind="function"><name>willDestroyMusicalContext</name></member>
+    <member refid="class_document_view_1a9fac181174ff707fbd2bd0287adeeb27" kind="function"><name>didReorderRegionSequencesInDocument</name></member>
+    <member refid="class_document_view_1aeb0b205bc01737dba854e6417d9bac88" kind="function"><name>didAddRegionSequenceToDocument</name></member>
+    <member refid="class_document_view_1a0c569cc01d4a175066c4b40f2edeeeb0" kind="function"><name>willRemoveRegionSequenceFromDocument</name></member>
+    <member refid="class_document_view_1a8d5f7f0aa4e62223d8e8b90dbf31e8c5" kind="function"><name>didEndEditing</name></member>
+    <member refid="class_document_view_1aecf9a173f070e23cebcf471e5ad67730" kind="function"><name>changeListenerCallback</name></member>
+    <member refid="class_document_view_1a436318eebaf8328b89a7a30d7e8aa0f7" kind="function"><name>onNewSelection</name></member>
+    <member refid="class_document_view_1a30ab6cbd91ee06807ba5948bbdf9b795" kind="function"><name>onHideRegionSequences</name></member>
+    <member refid="class_document_view_1a7539a2065e9c57a468ae4fae55e68edb" kind="function"><name>paint</name></member>
+    <member refid="class_document_view_1a534cdbb71bfccc314bfc352826030c97" kind="function"><name>resized</name></member>
+    <member refid="class_document_view_1a8575764c2d3af61408813cbfa1e375a9" kind="function"><name>selectMusicalContext</name></member>
+    <member refid="class_document_view_1a80a129dbbe5e6d7075077f4a44778c87" kind="function"><name>zoom</name></member>
+    <member refid="class_document_view_1adbf5bd9e508702435d5efd8acc0fcbba" kind="function"><name>layOutVertically</name></member>
+    <member refid="class_document_view_1a1be35cfda58b41945cafaf0aa7d52dc7" kind="function"><name>update</name></member>
+    <member refid="class_document_view_1ab9f07c6bb3896b813ba52a9f5189373f" kind="function"><name>addTrackViews</name></member>
+    <member refid="class_document_view_1afc5a633bb1bb2e61011e64ccd21862c0" kind="function"><name>removeRegionSequenceView</name></member>
+    <member refid="class_document_view_1ac9f5bbb356770bc2411b4dc36a2a6575" kind="function"><name>invalidateRegionSequenceViews</name></member>
+    <member refid="class_document_view_1a645b56553e083fb289ea4083e262d37e" kind="function"><name>rebuildRegionSequenceViews</name></member>
+  </compound>
+  <compound refid="class_editor_renderer" kind="class"><name>EditorRenderer</name>
+    <member refid="class_editor_renderer_1ac1a733c0580b313b866947d54fb91e16" kind="variable"><name>lockInterface</name></member>
+    <member refid="class_editor_renderer_1ab8169308164240d149ccae79befafc4a" kind="variable"><name>previewState</name></member>
+    <member refid="class_editor_renderer_1a6d77c63029ea2f27ff54594cd5b960a1" kind="variable"><name>asyncConfigCallback</name></member>
+    <member refid="class_editor_renderer_1a594729736c36a654c4891a59d44c1712" kind="variable"><name>lastPlaybackRegion</name></member>
+    <member refid="class_editor_renderer_1a7fa030a9dc339874942d47b03e808cf8" kind="variable"><name>sampleRate</name></member>
+    <member refid="class_editor_renderer_1af56002846f35028afa63d8ddde8c7615" kind="variable"><name>timeSliceThread</name></member>
+    <member refid="class_editor_renderer_1a5feb07c69ee893360df4cd1a69899559" kind="variable"><name>audioSourceReaders</name></member>
+    <member refid="class_editor_renderer_1a79e72daa3805ecf7bbd61f9d0c5b91f6" kind="variable"><name>regionSequences</name></member>
+    <member refid="class_editor_renderer_1a2960e576b8d77d56ecc423b81648d82d" kind="function"><name>EditorRenderer</name></member>
+    <member refid="class_editor_renderer_1ab0a86ff9c9f32d9790daa810dd88c8f8" kind="function"><name>didAddPlaybackRegionToRegionSequence</name></member>
+    <member refid="class_editor_renderer_1ae581e8766311701fda11ab3f25151965" kind="function"><name>didAddRegionSequence</name></member>
+    <member refid="class_editor_renderer_1acb40203dbba74564d65a3d44f6e07ea5" kind="function"><name>didAddPlaybackRegion</name></member>
+    <member refid="class_editor_renderer_1ad41014b114f12dc0cc6e7964b24f40b9" kind="function"><name>executeProcess</name></member>
+    <member refid="class_editor_renderer_1afa1ff91c05010914cb8d15a9303a0ba3" kind="function"><name>forEachPlaybackRegion</name></member>
+    <member refid="class_editor_renderer_1ab05f5faa10f1b73853a3698220b99d99" kind="function"><name>prepareToPlay</name></member>
+    <member refid="class_editor_renderer_1ab75d36140a59de4fb9e14779e69aadeb" kind="function"><name>releaseResources</name></member>
+    <member refid="class_editor_renderer_1a3a0d9744a609834860c06038965b7a9f" kind="function"><name>reset</name></member>
+    <member refid="class_editor_renderer_1a54cb8c119a42af97cb1b17b729f6e810" kind="function"><name>processBlock</name></member>
+    <member refid="class_editor_renderer_1a0dccabc600e8c857faac829231b71529" kind="function"><name>configure</name></member>
+  </compound>
+  <compound refid="class_editor_view" kind="class"><name>EditorView</name>
+    <member refid="class_editor_view_1a91d6304e2313ad51051497808e7be034" kind="variable"><name>mModel</name></member>
+    <member refid="class_editor_view_1aac090fc8dd0412c31b03f15274ee1892" kind="function"><name>~EditorView</name></member>
+    <member refid="class_editor_view_1acf7786910827395124ac550ee7e93298" kind="function"><name>triggerRepaint</name></member>
+    <member refid="class_editor_view_1a70af17ce15a4644eedc950f93e56d21e" kind="function"><name>getModel</name></member>
+    <member refid="class_editor_view_1a1338ef073e1f1909d2ae54537fd05b22" kind="function"><name>setModel</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_audio_processor" kind="class"><name>HARPAudioProcessor</name>
+    <member refid="class_h_a_r_p_audio_processor_1a10968a7ebe092d8799ff1d77abe464f3" kind="function"><name>hasEditor</name></member>
+    <member refid="class_h_a_r_p_audio_processor_1a0b615cdb7cdce8fcf3ee1054e510d594" kind="function"><name>createEditor</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_audio_processor_impl" kind="class"><name>HARPAudioProcessorImpl</name>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a6b368ad793dc37c2fca2fd367949b731" kind="variable"><name>playHeadState</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a10a563d1f8fe20126234c2e817cb290f" kind="function"><name>HARPAudioProcessorImpl</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a20eec507fb9da0c2a92ff8371f3e196b" kind="function"><name>~HARPAudioProcessorImpl</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a56f78efeea6e548f68bb9e2da471cc06" kind="function"><name>prepareToPlay</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1af9d12d308027d2fba8bb952533af7066" kind="function"><name>releaseResources</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a42b17bf6f1dec5ae7434c730ed03ab4a" kind="function"><name>isBusesLayoutSupported</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a926f84130178b8058c085463ed7a51ce" kind="function"><name>processBlock</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1abb07c73a1d87d1a3f16c400a2b3b3e75" kind="function"><name>getName</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1afc63bb85d0c5e612bde4cad60beada70" kind="function"><name>acceptsMidi</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a400135bc943c105d807750c2345f0bb8" kind="function"><name>producesMidi</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a1b6e5abf70487024f602696065d90a92" kind="function"><name>getTailLengthSeconds</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a7af5602112b2755a1710b9e10cc8ec0d" kind="function"><name>getNumPrograms</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1acc0242e15952f9f413faa65ffd8469de" kind="function"><name>getCurrentProgram</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a222ee07e120728b2d29aac1e703db82b" kind="function"><name>setCurrentProgram</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1aa7eea77caa3f29a34c18ae61fa2433a0" kind="function"><name>getProgramName</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a665ba411f863d10795607eb5fc0273dc" kind="function"><name>changeProgramName</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a86e9d55f83b811e6a26055a95372bfb7" kind="function"><name>getStateInformation</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a714781511ec3f5c1f5f73f2529cae8a8" kind="function"><name>setStateInformation</name></member>
+    <member refid="class_h_a_r_p_audio_processor_impl_1a33fc7db28be8224c473e091ef643c41f" kind="function"><name>getBusesProperties</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_document_controller_specialisation" kind="class"><name>HARPDocumentControllerSpecialisation</name>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a6075631f429b0f8485c231fb619fd462" kind="variable"><name>previewState</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a171bed013af0fdee5efab6aebab5b4ca" kind="variable"><name>loadBroadcaster</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a1304310b4989013ef38f79833242277d" kind="variable"><name>processBroadcaster</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ace726f3d63e52ca078e972109e317ae6" kind="variable"><name>jobProcessorThread</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a4f68262af9dfc98df5e32b2c84384c9f" kind="variable"><name>processBlockLock</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ab30ad839fb839ab99ed39ee729b8318a" kind="variable"><name>editorView</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a2de40d17e6492f2a99fba77b7e05427f" kind="variable"><name>editorRenderer</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a4ccced7929507dbfedb3357254ba9cf8" kind="variable"><name>mModel</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a9c52f2d639eebf011c7dc3538f42d650" kind="variable"><name>playbackRenderers</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1abfe0af68105a14c5c999dae0ae0d96ac" kind="variable"><name>processingWindow</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a03302e0b4a70f1b4201d646cc53669ca" kind="variable"><name>threadPool</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1aa065c45fa95cd67ad9d076eca0ab8079" kind="variable"><name>customJobs</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a1908d6b519edd400950ffd15110407fa" kind="variable"><name>jobsFinished</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a62534412055295fa4482b8a08d4e72ba" kind="variable"><name>totalJobs</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1aa04a903d7d750f10c0c7510e71d49598" kind="function"><name>HARPDocumentControllerSpecialisation</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a63f0fc251fa1a8a315cc44db81826665" kind="function"><name>getModel</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a86406418013e2fbeaaac2531c3541194" kind="function"><name>executeLoad</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a47b3dd50b111fbc0f872a74411ba6732" kind="function"><name>executeProcess</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1af0f8e375fb38b3f5299dfc5bca090b63" kind="function"><name>cleanDeletedPlaybackRenderers</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a20b33f391588d5dc10ae305327cb9f52" kind="function"><name>willBeginEditing</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1acdc48267dcd1d0afb05ee67935d3174e" kind="function"><name>didEndEditing</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ab037fa3bd760b517947b42b39a8ca71c" kind="function"><name>doCreateAudioModification</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a0ad7675cb1138ba01d8b43a983ca312f" kind="function"><name>doCreatePlaybackRegion</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a62265e12389c9e11148b5f0ef98e79f2" kind="function"><name>doCreatePlaybackRenderer</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ab41c9eb07a5a13ef6e50ddaa5233735a" kind="function"><name>doCreateEditorView</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1a042991557cc31f3e981eea33be426b43" kind="function"><name>doRestoreObjectsFromStream</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ad6038a38139c5d282785abce90ba8a93" kind="function"><name>doStoreObjectsToStream</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1ab21ef74c0dba5bc8fedd67a6d68eadfc" kind="function"><name>getProcessingLock</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_look_and_feel" kind="class"><name>HARPLookAndFeel</name>
+    <member refid="class_h_a_r_p_look_and_feel_1a2c635ecd2e9f0f29e1bf4621c9b8ef13" kind="variable"><name>highlightColor</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a51a272691c949c8e210ac945445b8f98" kind="variable"><name>textHeaderColor</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a9e7be5ecf6e79be4976f3f42bee632e0" kind="variable"><name>eerieBlack</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1ab57fb9e3423c6e6d3fa4b671076ae55d" kind="variable"><name>celadon</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a3623c401776d6fbc8f9a53bbea4212eb" kind="variable"><name>platinum</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a3b248a4096ccc1d32185e9177fcedb4b" kind="variable"><name>savoyBlue</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a91d6435ad68b2955822d9d6830e501dd" kind="variable"><name>white</name></member>
+    <member refid="class_h_a_r_p_look_and_feel_1a4ff6621ecba4882df513f08c11c0f538" kind="function"><name>HARPLookAndFeel</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_processor_editor" kind="class"><name>HARPProcessorEditor</name>
+    <member refid="class_h_a_r_p_processor_editor_1ae5d17f6233c9c25566525f85179a5ee7" kind="variable"><name>mHARPLookAndFeel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1ada5eb33f5fd9ece75ff3a39ab990f52f" kind="variable"><name>mModelStatusTimer</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a1a8b53b062b0a5c0ae85dd0b38bb8d2e" kind="variable"><name>documentView</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a60d0e4282d0a674779e39b04540b4027" kind="variable"><name>modelPathTextBox</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a02fd2910bd8a22df8307be522aaa419d" kind="variable"><name>loadModelButton</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a4bd4e524a0018b77e606df21c5cd87cd" kind="variable"><name>glossaryLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a823cb8fa58184e3a418b31337ff86695" kind="variable"><name>glossaryButton</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a6f8bf49d3f9d121b0437605be5ac4999" kind="variable"><name>processButton</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a8c8ca00fe9f9d3f4e7261af506904083" kind="variable"><name>cancelButton</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a54b8f5f41878bc57f6036ddbdf01f936" kind="variable"><name>statusLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a044c8aff6c20efc0b362de245a2388c6" kind="variable"><name>ctrlComponent</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a440bca62b7fb530ab73827ae3fa063e1" kind="variable"><name>nameLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1ab0b5dba0ca25cecb4335ab1dfab5a095" kind="variable"><name>authorLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a38fd2f3dcd8b9edfa4ca2072be9e9f20" kind="variable"><name>descriptionLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a024ec671f9aeb50386750f98fd0aaff3" kind="variable"><name>tagsLabel</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1aadf9b672dbc67a5b38b714f3064d548a" kind="variable"><name>mEditorRenderer</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1acb9b08d6a0b5a8af2f48ccb224943708" kind="variable"><name>mPlaybackRenderer</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a74b6f13da94416665fd5f6c970013f38" kind="variable"><name>mEditorView</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1afdb943a9eb0686274109033c509fef67" kind="variable"><name>mDocumentController</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a200f72ee5d0dc350eeba50832dcdd028" kind="function"><name>HARPProcessorEditor</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1acc3a8dfa508787026e03332bf76345e0" kind="function"><name>~HARPProcessorEditor</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1ab8528a18e36a50c993e8abd7301ee737" kind="function"><name>buttonClicked</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a558d46db8e5b7e6ae8bfaf1edf290ace" kind="function"><name>paint</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a44e951c981b0e88892cdd4db6267044c" kind="function"><name>resized</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a313a7650ea9ceefc2694ba9a65c4dd53" kind="function"><name>changeListenerCallback</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1aae13bc68bf17884020259ebe468722da" kind="function"><name>resetUI</name></member>
+    <member refid="class_h_a_r_p_processor_editor_1a3be4da7797cca0b7cd7d67ea44cf18bb" kind="function"><name>setModelCard</name></member>
+  </compound>
+  <compound refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread" kind="class"><name>HARPDocumentControllerSpecialisation::JobProcessorThread</name>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ae1876f8523ba41e84cbded22f6b96426" kind="variable"><name>processBroadcaster</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1ab8fd864b9b9cdc51e47f6ceb53a2f57f" kind="variable"><name>customJobs</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a9fbbd56031010cac0d08a6a5493cb852" kind="variable"><name>jobsFinished</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a938c78d9438b4cc3292e33cc68e34bd9" kind="variable"><name>totalJobs</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a34d9018dec1456a881bee3d50ce7eb38" kind="variable"><name>threadPool</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1a49cc77945e613991eebecfd2fa4bb5e6" kind="function"><name>JobProcessorThread</name></member>
+    <member refid="class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread_1af601fb79d765cdb713559843fcc3e4f7" kind="function"><name>run</name></member>
+  </compound>
+  <compound refid="class_time_to_view_scaling_1_1_listener" kind="class"><name>TimeToViewScaling::Listener</name>
+    <member refid="class_time_to_view_scaling_1_1_listener_1a53c6f2add43cb6f27b87f3f8cba359af" kind="function"><name>~Listener</name></member>
+    <member refid="class_time_to_view_scaling_1_1_listener_1aeb1bc5a6324e2a737ff731197a179fb2" kind="function"><name>zoomLevelChanged</name></member>
+  </compound>
+  <compound refid="class_looper" kind="class"><name>Looper</name>
+    <member refid="class_looper_1a67ecad199c607916aceab122685eedf9" kind="variable"><name>desiredCrossfadeLengthSamples</name></member>
+    <member refid="class_looper_1a3556e52023e2f0cae0c1d0bdf7dea8b2" kind="variable"><name>inputBuffer</name></member>
+    <member refid="class_looper_1afddb362bc6650f91378111aaba3196ba" kind="variable"><name>loopRange</name></member>
+    <member refid="class_looper_1a1a5926fb03aa44c67169afbff1b483a2" kind="variable"><name>pos</name></member>
+    <member refid="class_looper_1aa701c58f56736b8c9fc67d4c16b7f17b" kind="function"><name>Looper</name></member>
+    <member refid="class_looper_1a1c3fa7f420a2cc6360e76c13a9dd17ca" kind="function"><name>Looper</name></member>
+    <member refid="class_looper_1aa09fc6965408045cba6992b43947d584" kind="function"><name>writeInto</name></member>
+  </compound>
+  <compound refid="class_model" kind="class"><name>Model</name>
+    <member refid="class_model_1a6074c50634070cf63c2370444be4bd08" kind="variable"><name>m_card</name></member>
+    <member refid="class_model_1a50adbd5a78c050f5e086cb44fddd4eda" kind="variable"><name>m_loaded</name></member>
+    <member refid="class_model_1ac15b9777c4026f171078d3ecc38a34af" kind="function"><name>load</name></member>
+    <member refid="class_model_1a2da73e5a1f8e1404cdc1eb318b81d406" kind="function"><name>ready</name></member>
+    <member refid="class_model_1a2004629072f7863d0b4bc4da44560c32" kind="function"><name>card</name></member>
+  </compound>
+  <compound refid="struct_model_card" kind="struct"><name>ModelCard</name>
+    <member refid="struct_model_card_1a15b46c41a014020c18b487afcf994b7c" kind="variable"><name>sampleRate</name></member>
+    <member refid="struct_model_card_1a2de9eedfebf1050edcc4f271ab88505f" kind="variable"><name>name</name></member>
+    <member refid="struct_model_card_1ab5ed269b499a5fc9ab9069d8676018a3" kind="variable"><name>description</name></member>
+    <member refid="struct_model_card_1aa76216ff14f6520cff4f966b4e4e02ea" kind="variable"><name>author</name></member>
+    <member refid="struct_model_card_1a2e11c2fa6475048bc340f33342ba6cf9" kind="variable"><name>tags</name></member>
+  </compound>
+  <compound refid="class_model_status_timer" kind="class"><name>ModelStatusTimer</name>
+    <member refid="class_model_status_timer_1a81fef794437e8c83565a9bd248d5a192" kind="variable"><name>m_model</name></member>
+    <member refid="class_model_status_timer_1a8a81b29d50eb06387f83263d2ac18b74" kind="variable"><name>m_last_status</name></member>
+    <member refid="class_model_status_timer_1a2bc05c42f9c4541830f278b3e40f5afe" kind="function"><name>ModelStatusTimer</name></member>
+    <member refid="class_model_status_timer_1a43d1f73952e458eb37e8c6d6ab2ba627" kind="function"><name>timerCallback</name></member>
+  </compound>
+  <compound refid="struct_number_box_ctrl" kind="struct"><name>NumberBoxCtrl</name>
+    <member refid="struct_number_box_ctrl_1a6f2d00459428701e47a6b6e2be259cee" kind="variable"><name>min</name></member>
+    <member refid="struct_number_box_ctrl_1ae819c7b22dcb3a6bac33427d7ddcaeed" kind="variable"><name>max</name></member>
+    <member refid="struct_number_box_ctrl_1a24878570b1e335ed6a0b6db6c8c112bf" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="class_overlay_component" kind="class"><name>OverlayComponent</name>
+    <member refid="class_overlay_component_1a8c1e1140624686833bed703f0db5d991" kind="variable"><name>markerWidth</name></member>
+    <member refid="class_overlay_component_1a10053312ddfc27044c76a66fd2c1f2e4" kind="variable"><name>playHeadState</name></member>
+    <member refid="class_overlay_component_1ad89555a2855f041e4cbcb3267aad17bc" kind="variable"><name>timeToViewScaling</name></member>
+    <member refid="class_overlay_component_1a54ddecdb6f662faa65dedae2f669aa97" kind="variable"><name>horizontalOffset</name></member>
+    <member refid="class_overlay_component_1a44cf0c6161b7c499a9bcb51e0f840c31" kind="variable"><name>selectedTimeRange</name></member>
+    <member refid="class_overlay_component_1a8a6f7a380c564a89eaca4571523a8bc8" kind="variable"><name>playheadMarker</name></member>
+    <member refid="class_overlay_component_1a7da937ba34509494fc60cfd0ad756629" kind="function"><name>OverlayComponent</name></member>
+    <member refid="class_overlay_component_1a03bd790a4fa3457c4db5994a6a6fcddb" kind="function"><name>~OverlayComponent</name></member>
+    <member refid="class_overlay_component_1ab11b9d3b7b9040a0d55d8ba3b6644b9f" kind="function"><name>resized</name></member>
+    <member refid="class_overlay_component_1a4ae4b70714d1201fc4b102ed5d12edaa" kind="function"><name>setHorizontalOffset</name></member>
+    <member refid="class_overlay_component_1ab18a720a8f7e57f9ce49dcccbe217049" kind="function"><name>setSelectedTimeRange</name></member>
+    <member refid="class_overlay_component_1a6b9e2d4f0758339b558768d8e40d0c65" kind="function"><name>zoomLevelChanged</name></member>
+    <member refid="class_overlay_component_1aaa7c62f5b780a6678679ecb083d28471" kind="function"><name>paint</name></member>
+    <member refid="class_overlay_component_1a04eaf294cd6de15f5a487c206822a381" kind="function"><name>updatePlayHeadPosition</name></member>
+    <member refid="class_overlay_component_1a664192d4b3120a0800b897d3c552b487" kind="function"><name>timerCallback</name></member>
+  </compound>
+  <compound refid="class_playback_region" kind="class"><name>PlaybackRegion</name>
+    <member refid="class_playback_region_1afaa1616cba80b463a652952da9994835" kind="variable"><name>selected</name></member>
+    <member refid="class_playback_region_1a96359866dc68c95156e7a1aee0329831" kind="function"><name>PlaybackRegion</name></member>
+    <member refid="class_playback_region_1a3c48bf874f084cc50bc982297872ed93" kind="function"><name>isSelected</name></member>
+    <member refid="class_playback_region_1a095161f8380926dec139d7de0b492419" kind="function"><name>setSelected</name></member>
+  </compound>
+  <compound refid="class_playback_region_view" kind="class"><name>PlaybackRegionView</name>
+    <member refid="class_playback_region_view_1a434c41847fb1114fa30dd1de3d21a34c" kind="variable"><name>araEditorView</name></member>
+    <member refid="class_playback_region_view_1a219cd748a7ce65c27e64b803f2db97a0" kind="variable"><name>playbackRegion</name></member>
+    <member refid="class_playback_region_view_1a9c5f562868b0ceb685acdfa5305ded6a" kind="variable"><name>waveformCache</name></member>
+    <member refid="class_playback_region_view_1a08bea2489e44aaaaddd6e94feae9b21e" kind="variable"><name>previewRegionOverlay</name></member>
+    <member refid="class_playback_region_view_1a0f9cde13d5c2cc23d0a4c6b459789f77" kind="variable"><name>isSelected</name></member>
+    <member refid="class_playback_region_view_1a110c7116435277d0389f65e726f77c41" kind="variable"><name>mHARPLookAndFeel</name></member>
+    <member refid="class_playback_region_view_1a6eee62398640ffbf9f794c818d7bae44" kind="function"><name>PlaybackRegionView</name></member>
+    <member refid="class_playback_region_view_1a51f387b4810c9fe5553e2a7a05362e03" kind="function"><name>~PlaybackRegionView</name></member>
+    <member refid="class_playback_region_view_1a91e0919b1d8c7dab6138f3405791b6e9" kind="function"><name>mouseDown</name></member>
+    <member refid="class_playback_region_view_1a91e62b146b7fb30e85ca66db4c4901e5" kind="function"><name>mouseUp</name></member>
+    <member refid="class_playback_region_view_1a7578ffd6172d02770042b9031d7521be" kind="function"><name>changeListenerCallback</name></member>
+    <member refid="class_playback_region_view_1a8e8f74a060147cf66e470bb440f2bb4f" kind="function"><name>didEnableAudioSourceSamplesAccess</name></member>
+    <member refid="class_playback_region_view_1a4fd3042a93c72ebd60160a1d2cf18888" kind="function"><name>willUpdatePlaybackRegionProperties</name></member>
+    <member refid="class_playback_region_view_1a4f4d5bf019922072fa5d34a7b3562846" kind="function"><name>didUpdatePlaybackRegionContent</name></member>
+    <member refid="class_playback_region_view_1a2ef83b6ec5dc3371d1b00bb58e162644" kind="function"><name>onNewSelection</name></member>
+    <member refid="class_playback_region_view_1a96f7a6221e261429f3d7c4b2acaa3a37" kind="function"><name>paint</name></member>
+    <member refid="class_playback_region_view_1aa755c2575a01557a0b747950e86f7c4d" kind="function"><name>resized</name></member>
+    <member refid="class_playback_region_view_1ac4eabc29c37d65ad42db9ade924bc25c" kind="function"><name>getDocumentController</name></member>
+  </compound>
+  <compound refid="class_playback_renderer" kind="class"><name>PlaybackRenderer</name>
+    <member refid="class_playback_renderer_1a6d683415e06ff2231e69e39e6dc1a920" kind="variable"><name>lockInterface</name></member>
+    <member refid="class_playback_renderer_1a619f5282b19d16f63b5f6f92884adbcb" kind="variable"><name>harpDCS</name></member>
+    <member refid="class_playback_renderer_1a3837c826dee9482d0c0d1ffb7decc8a3" kind="variable"><name>sharedTimesliceThread</name></member>
+    <member refid="class_playback_renderer_1aebb92f9022156493f3a06bcb0e831e90" kind="variable"><name>resamplingSources</name></member>
+    <member refid="class_playback_renderer_1aed5117b3d57238c24ef1cb566465bd22" kind="variable"><name>positionableSources</name></member>
+    <member refid="class_playback_renderer_1a11041a2e7798ca6e6c2070cbbc1e4bc9" kind="variable"><name>numChannels</name></member>
+    <member refid="class_playback_renderer_1a6f0a973014f71aaebfedf296bf36924f" kind="variable"><name>dawSampleRate</name></member>
+    <member refid="class_playback_renderer_1af31ad6a67985899f6fe57d8d64230220" kind="variable"><name>maximumSamplesPerBlock</name></member>
+    <member refid="class_playback_renderer_1a769033ff453bc3d0fc98bd3ed75ccf7b" kind="variable"><name>tempBuffer</name></member>
+    <member refid="class_playback_renderer_1a2a12e8493154666320c8aa8b9c44b6ab" kind="function"><name>PlaybackRenderer</name></member>
+    <member refid="class_playback_renderer_1a0fe59df5bb8af58364a5ef3e121f1685" kind="function"><name>~PlaybackRenderer</name></member>
+    <member refid="class_playback_renderer_1a275e328fe658af0b84baf74f918df587" kind="function"><name>prepareToPlay</name></member>
+    <member refid="class_playback_renderer_1aafe1fadc78981fb5bcad211d46eb2fc9" kind="function"><name>releaseResources</name></member>
+    <member refid="class_playback_renderer_1a827c919d2c9bae841ad6a2b30241c953" kind="function"><name>processBlock</name></member>
+    <member refid="class_playback_renderer_1adc4c637ccc303aecee8cac92fa3ba036" kind="function"><name>executeProcess</name></member>
+    <member refid="class_playback_renderer_1ad7cdead3edf2e73fe6e582bc34aedb31" kind="function"><name>forEachPlaybackRegion</name></member>
+  </compound>
+  <compound refid="class_overlay_component_1_1_playhead_marker_component" kind="class"><name>OverlayComponent::PlayheadMarkerComponent</name>
+    <member refid="class_overlay_component_1_1_playhead_marker_component_1a911ac16cf829ae5d03e3842422555b16" kind="function"><name>paint</name></member>
+  </compound>
+  <compound refid="class_playhead_position_label" kind="class"><name>PlayheadPositionLabel</name>
+    <member refid="class_playhead_position_label_1a0d99a332331b93bbcb03435b42fafa47" kind="variable"><name>playHeadState</name></member>
+    <member refid="class_playhead_position_label_1a9fc0e4e347d9ef5e789d8d1fcd35cba9" kind="variable"><name>selectedMusicalContext</name></member>
+    <member refid="class_playhead_position_label_1af7a13adbcff11bde6125e4796e9970e2" kind="function"><name>PlayheadPositionLabel</name></member>
+    <member refid="class_playhead_position_label_1ad3009d62f0c9d7e9c7abeeb22400c338" kind="function"><name>~PlayheadPositionLabel</name></member>
+    <member refid="class_playhead_position_label_1a43b291829f7271ae4ca313513ff7de0a" kind="function"><name>selectMusicalContext</name></member>
+    <member refid="class_playhead_position_label_1ac4d4e0c342dd1b2c34aaeaedb326a6fb" kind="function"><name>timerCallback</name></member>
+    <member refid="class_playhead_position_label_1afb2a60d599723f817d2e9a61b4f71dd8" kind="function"><name>timeToTimecodeString</name></member>
+  </compound>
+  <compound refid="struct_play_head_state" kind="struct"><name>PlayHeadState</name>
+    <member refid="struct_play_head_state_1aff5963c2af60b45c5bf1aa470d41c47e" kind="variable"><name>isPlaying</name></member>
+    <member refid="struct_play_head_state_1afee11b1304ce6550d0bfcefa4da7f054" kind="variable"><name>isLooping</name></member>
+    <member refid="struct_play_head_state_1aac5f9ebc47ba0b67318eb92737d1cc4c" kind="variable"><name>timeInSeconds</name></member>
+    <member refid="struct_play_head_state_1a2427d2a458e7535888b16add5012b4e4" kind="variable"><name>loopPpqStart</name></member>
+    <member refid="struct_play_head_state_1ad055970f416cbb63a77c2e07a5832991" kind="variable"><name>loopPpqEnd</name></member>
+    <member refid="struct_play_head_state_1aa8f3dfd3849d632d5e914098700a187e" kind="function"><name>update</name></member>
+  </compound>
+  <compound refid="class_possibly_buffered_reader" kind="class"><name>PossiblyBufferedReader</name>
+    <member refid="class_possibly_buffered_reader_1a814415006b6ed7541b6ce964fde8fe5e" kind="variable"><name>setTimeoutFn</name></member>
+    <member refid="class_possibly_buffered_reader_1a2ca775a4d2abaf79dddd6c6f46c5370a" kind="variable"><name>reader</name></member>
+    <member refid="class_possibly_buffered_reader_1a3560e8c469e02789a20e4c0dac56850e" kind="function"><name>PossiblyBufferedReader</name></member>
+    <member refid="class_possibly_buffered_reader_1af0aca4b1e9b5c84a07c5a880103c0e4a" kind="function"><name>PossiblyBufferedReader</name></member>
+    <member refid="class_possibly_buffered_reader_1a64087f746db52656ec6110937b519936" kind="function"><name>PossiblyBufferedReader</name></member>
+    <member refid="class_possibly_buffered_reader_1aa91ca69f565a5343c20800c12a035d2a" kind="function"><name>setReadTimeout</name></member>
+    <member refid="class_possibly_buffered_reader_1ab154656153884515c97e8bae2bad70a1" kind="function"><name>get</name></member>
+  </compound>
+  <compound refid="class_playback_region_view_1_1_preview_region_overlay" kind="class"><name>PlaybackRegionView::PreviewRegionOverlay</name>
+    <member refid="class_playback_region_view_1_1_preview_region_overlay_1a094102e1ce457818fbb997ebe8a10aad" kind="variable"><name>previewLength</name></member>
+    <member refid="class_playback_region_view_1_1_preview_region_overlay_1ae9487bbb398a90757238c6946eebf6de" kind="variable"><name>owner</name></member>
+    <member refid="class_playback_region_view_1_1_preview_region_overlay_1a5d93cecc00953c573837747556d859f7" kind="function"><name>PreviewRegionOverlay</name></member>
+    <member refid="class_playback_region_view_1_1_preview_region_overlay_1ac74b412e0214437447ef595e6a3a34d8" kind="function"><name>update</name></member>
+    <member refid="class_playback_region_view_1_1_preview_region_overlay_1afcc633e2af077ae0a6e86a2213161a56" kind="function"><name>paint</name></member>
+  </compound>
+  <compound refid="struct_preview_state" kind="struct"><name>PreviewState</name>
+    <member refid="struct_preview_state_1a8725793bede07dd11991a25b8c493422" kind="variable"><name>previewTime</name></member>
+    <member refid="struct_preview_state_1a4004b06dc0abeefced0cdb92dd9e926f" kind="variable"><name>previewedRegion</name></member>
+  </compound>
+  <compound refid="struct_processing_lock_interface" kind="struct"><name>ProcessingLockInterface</name>
+    <member refid="struct_processing_lock_interface_1a2ca3e655a8bd2641d7e9859de69b18ec" kind="function"><name>~ProcessingLockInterface</name></member>
+    <member refid="struct_processing_lock_interface_1addfc3798882b75669cf24f4d8870fbc8" kind="function"><name>getProcessingLock</name></member>
+  </compound>
+  <compound refid="class_region_sequence_view" kind="class"><name>RegionSequenceView</name>
+    <member refid="class_region_sequence_view_1a08c3681c3990b9c1b56c5e814ed0b324" kind="variable"><name>araEditorView</name></member>
+    <member refid="class_region_sequence_view_1a9cd0bde73f00ee05094a72471fa1be11" kind="variable"><name>timeToViewScaling</name></member>
+    <member refid="class_region_sequence_view_1aaac40d9be56f454d061035374589df97" kind="variable"><name>regionSequence</name></member>
+    <member refid="class_region_sequence_view_1a5bc56b669d27a744217cb0b549456570" kind="variable"><name>waveformCache</name></member>
+    <member refid="class_region_sequence_view_1a52dbcd3fe7b119616e3d763cc30d3d09" kind="variable"><name>playbackRegionViews</name></member>
+    <member refid="class_region_sequence_view_1a0ed747db0e0cc29e9d729aa9e3e91eb0" kind="variable"><name>playbackDuration</name></member>
+    <member refid="class_region_sequence_view_1a41b8b91b80dc3f887688172ef37968f3" kind="function"><name>RegionSequenceView</name></member>
+    <member refid="class_region_sequence_view_1a980b984491610ecb50fc5069433c705c" kind="function"><name>~RegionSequenceView</name></member>
+    <member refid="class_region_sequence_view_1a77464939783709e682f0f8aac5d5b8a3" kind="function"><name>willUpdateRegionSequenceProperties</name></member>
+    <member refid="class_region_sequence_view_1add69bc3272ada31fe4b426327fbb2bb4" kind="function"><name>willRemovePlaybackRegionFromRegionSequence</name></member>
+    <member refid="class_region_sequence_view_1ac6e77ff03b5678a38874941d6a0d385d" kind="function"><name>didAddPlaybackRegionToRegionSequence</name></member>
+    <member refid="class_region_sequence_view_1acdd5d9fb44fa8c70c9ec7b198bfb6523" kind="function"><name>willDestroyPlaybackRegion</name></member>
+    <member refid="class_region_sequence_view_1a4a035ad73679d39dca561c7177aafe07" kind="function"><name>didUpdatePlaybackRegionProperties</name></member>
+    <member refid="class_region_sequence_view_1ae9b98981f83c00e5ae6c78c47d9dba70" kind="function"><name>zoomLevelChanged</name></member>
+    <member refid="class_region_sequence_view_1a42def84f591c70200163f60928eeb227" kind="function"><name>resized</name></member>
+    <member refid="class_region_sequence_view_1a30d3113f11b915d53ce857006e7057d6" kind="function"><name>getPlaybackDuration</name></member>
+    <member refid="class_region_sequence_view_1a8e770a46b32776ca983b5ca3d2a36143" kind="function"><name>createAndAddPlaybackRegionView</name></member>
+    <member refid="class_region_sequence_view_1ab2833e02b325ce6a1b4ded3cc8fac7d8" kind="function"><name>updatePlaybackDuration</name></member>
+  </compound>
+  <compound refid="struct_document_view_1_1_region_sequence_view_key" kind="struct"><name>DocumentView::RegionSequenceViewKey</name>
+    <member refid="struct_document_view_1_1_region_sequence_view_key_1ae8fd17c2b386bf105b4ade9bf84e7257" kind="variable"><name>orderIndex</name></member>
+    <member refid="struct_document_view_1_1_region_sequence_view_key_1a20f638cd4d309e23defa66d242c7e174" kind="variable"><name>sequence</name></member>
+    <member refid="struct_document_view_1_1_region_sequence_view_key_1a42b380465e0f780a9258e6c2414eeddc" kind="function"><name>RegionSequenceViewKey</name></member>
+    <member refid="struct_document_view_1_1_region_sequence_view_key_1a48d2db99c04b0b82e17bbdd7e5e37fda" kind="function"><name>operator&lt;</name></member>
+  </compound>
+  <compound refid="class_rulers_header" kind="class"><name>RulersHeader</name>
+    <member refid="class_rulers_header_1af19ca7f6795fd2f26ca596a26705363c" kind="variable"><name>chordsLabel</name></member>
+    <member refid="class_rulers_header_1a599bc7ad49232b050a0ad6363a7f6404" kind="variable"><name>barsLabel</name></member>
+    <member refid="class_rulers_header_1a34f26e6c800b16de05e60082ee458def" kind="variable"><name>timeLabel</name></member>
+    <member refid="class_rulers_header_1a959d86fe205f4a99cdb139c9a02e2d53" kind="function"><name>RulersHeader</name></member>
+    <member refid="class_rulers_header_1a8defaa93d9eaa868fcb945b793a70dc2" kind="function"><name>resized</name></member>
+    <member refid="class_rulers_header_1af4dcad9c96f66955676b0244c77b0ca8" kind="function"><name>paint</name></member>
+  </compound>
+  <compound refid="class_rulers_view" kind="class"><name>RulersView</name>
+    <member refid="class_rulers_view_1a6a9e290d82906640cfcf5426088458df" kind="variable"><name>playHeadState</name></member>
+    <member refid="class_rulers_view_1a8cd3bafa3d5c6962f291835c7bc11566" kind="variable"><name>timeToViewScaling</name></member>
+    <member refid="class_rulers_view_1ac3d02e8a4a9f0ae9859b2f603252871a" kind="variable"><name>araDocument</name></member>
+    <member refid="class_rulers_view_1a3041e50f2c1d6fa615e6550efa283fe7" kind="variable"><name>selectedMusicalContext</name></member>
+    <member refid="class_rulers_view_1a1cce80a6c58c39a1dd4425aee5266255" kind="variable"><name>cycleMarker</name></member>
+    <member refid="class_rulers_view_1ace3813ee220c3de4c0b29654a85388d4" kind="variable"><name>isDraggingCycle</name></member>
+    <member refid="class_rulers_view_1ac12e3e8d0059ca234773b5bca5651fc6" kind="function"><name>RulersView</name></member>
+    <member refid="class_rulers_view_1a7e7bb862fe5d88a4113dd9d0af74ac59" kind="function"><name>~RulersView</name></member>
+    <member refid="class_rulers_view_1a679322d997a40bc3db82d04eb98722f7" kind="function"><name>paint</name></member>
+    <member refid="class_rulers_view_1a817f1c3209f498a2fb0023f51c5dbd67" kind="function"><name>mouseDrag</name></member>
+    <member refid="class_rulers_view_1ac3a14df62bc7c3e3c75bee32a2274b94" kind="function"><name>mouseUp</name></member>
+    <member refid="class_rulers_view_1adeaffe30a184ca240a10ffa8f88af003" kind="function"><name>mouseDoubleClick</name></member>
+    <member refid="class_rulers_view_1a2014e21a97224629800e2abdb0591fe6" kind="function"><name>selectMusicalContext</name></member>
+    <member refid="class_rulers_view_1aff9852262abda5076cb506d2596b614d" kind="function"><name>zoomLevelChanged</name></member>
+    <member refid="class_rulers_view_1ae7e260e2f0538c819e70b53a488fdc0e" kind="function"><name>doUpdateMusicalContextContent</name></member>
+    <member refid="class_rulers_view_1a75a87d04efd384af035e085535baff29" kind="function"><name>updateCyclePosition</name></member>
+    <member refid="class_rulers_view_1a98e66752985b8c1d415be0f350334b8d" kind="function"><name>timerCallback</name></member>
+  </compound>
+  <compound refid="class_shared_time_slice_thread" kind="class"><name>SharedTimeSliceThread</name>
+    <member refid="class_shared_time_slice_thread_1a98a364dcd71c0fa9494ba7a50a53a7a1" kind="function"><name>SharedTimeSliceThread</name></member>
+  </compound>
+  <compound refid="struct_slider_ctrl" kind="struct"><name>SliderCtrl</name>
+    <member refid="struct_slider_ctrl_1ab771ed9482091529fd45fdda2775cad3" kind="variable"><name>minimum</name></member>
+    <member refid="struct_slider_ctrl_1aff3b0874f2d657b6babb8d1f5ab3a438" kind="variable"><name>maximum</name></member>
+    <member refid="struct_slider_ctrl_1a8b872d594886221a3a87b48cc5795d5e" kind="variable"><name>step</name></member>
+    <member refid="struct_slider_ctrl_1a2f5fa4a4fef0b95780b6902f089c0245" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="class_slider_with_label" kind="class"><name>SliderWithLabel</name>
+    <member refid="class_slider_with_label_1a5854491fa341df620a4114a81b8dd47d" kind="variable"><name>label</name></member>
+    <member refid="class_slider_with_label_1ae5325e0cc2cb8f5443f9bf43d8c7fb9c" kind="variable"><name>slider</name></member>
+    <member refid="class_slider_with_label_1a7c1502511b3e5684bbeb4611f47065f8" kind="function"><name>SliderWithLabel</name></member>
+    <member refid="class_slider_with_label_1a8bafb51b5a3f26ecce9b6052ef470511" kind="function"><name>resized</name></member>
+    <member refid="class_slider_with_label_1a2348d48d8993b2773a946e86c73adfbb" kind="function"><name>getSlider</name></member>
+    <member refid="class_slider_with_label_1afd1483e1eea218f4bfcd0142441c9c87" kind="function"><name>getLabel</name></member>
+  </compound>
+  <compound refid="struct_text_box_ctrl" kind="struct"><name>TextBoxCtrl</name>
+    <member refid="struct_text_box_ctrl_1af26986245c15c7ccd01065de1dbcae69" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="class_time_to_view_scaling" kind="class"><name>TimeToViewScaling</name>
+    <member refid="class_time_to_view_scaling_1a8c38e3a38845ec24d85011f692a60c04" kind="variable"><name>minimumZoom</name></member>
+    <member refid="class_time_to_view_scaling_1a42c5a8b5ccb7ff61ab046dcde4ba0ca2" kind="variable"><name>zoomLevelPixelPerSecond</name></member>
+    <member refid="class_time_to_view_scaling_1a93b505a54d0b8e1d3715c87730a8741c" kind="variable"><name>listeners</name></member>
+    <member refid="class_time_to_view_scaling_1a0f0bef0fe95eecc297ea57e426d0e416" kind="function"><name>addListener</name></member>
+    <member refid="class_time_to_view_scaling_1a9539a18468ea05b7c07e2fb03512d3de" kind="function"><name>removeListener</name></member>
+    <member refid="class_time_to_view_scaling_1a01815ae2dce0fdedaf8d0450f537cd39" kind="function"><name>TimeToViewScaling</name></member>
+    <member refid="class_time_to_view_scaling_1a13a3a587415ea340acd4a449d41e9a30" kind="function"><name>zoom</name></member>
+    <member refid="class_time_to_view_scaling_1a89f184fb9e9b6922f11cd3b8868f18cb" kind="function"><name>setZoomLevel</name></member>
+    <member refid="class_time_to_view_scaling_1a7eeba6a6bf2736601753de23477685aa" kind="function"><name>getXForTime</name></member>
+    <member refid="class_time_to_view_scaling_1a29df4cfad13a9f4b8878028ce8744ff2" kind="function"><name>getTimeForX</name></member>
+  </compound>
+  <compound refid="class_titled_text_box" kind="class"><name>TitledTextBox</name>
+    <member refid="class_titled_text_box_1a43b21acc1e32057a8ca37a2039310cec" kind="variable"><name>textBox</name></member>
+    <member refid="class_titled_text_box_1a40cec8d3d2cfc8a3ceb537d10bd131e8" kind="variable"><name>titleLabel</name></member>
+    <member refid="class_titled_text_box_1aa02b92df15ec0dac5afb6f7a609e3c7c" kind="function"><name>TitledTextBox</name></member>
+    <member refid="class_titled_text_box_1a69925fe77363fa73de04048276f43a39" kind="function"><name>resized</name></member>
+    <member refid="class_titled_text_box_1a883103e515d41fe6484a1acd0780ebce" kind="function"><name>setName</name></member>
+    <member refid="class_titled_text_box_1a00a70a9a1c26c94ae567e5dbd1c17c14" kind="function"><name>getName</name></member>
+    <member refid="class_titled_text_box_1ac4c6b472954061e15dd7554fa9275f24" kind="function"><name>setTitle</name></member>
+    <member refid="class_titled_text_box_1a7e4e33da9ced96584b43470a1f4eebfd" kind="function"><name>setText</name></member>
+    <member refid="class_titled_text_box_1a855be60412db5d214cad8ea590c32683" kind="function"><name>addListener</name></member>
+    <member refid="class_titled_text_box_1a93af8ae6f7a2129fd611307b2ce573e8" kind="function"><name>getText</name></member>
+  </compound>
+  <compound refid="struct_toggle_ctrl" kind="struct"><name>ToggleCtrl</name>
+    <member refid="struct_toggle_ctrl_1a9d3fe6a628ae9c427051017a7f25b28e" kind="variable"><name>value</name></member>
+  </compound>
+  <compound refid="class_torch_model" kind="class"><name>TorchModel</name>
+    <member refid="class_torch_model_1a9d408f0ff67993ed12918910e988badd" kind="variable"><name>m_modelPath</name></member>
+    <member refid="class_torch_model_1a7a5628d8064d1ba341bbffa45450d881" kind="variable"><name>m_model</name></member>
+    <member refid="class_torch_model_1ad15589d30684c007006fd0572daa1fa3" kind="variable"><name>m_loaded</name></member>
+    <member refid="class_torch_model_1a52e440eabdc90d1749554dfda8778823" kind="variable"><name>m_mutex</name></member>
+    <member refid="class_torch_model_1ae0127b0640820e7f8ff91bfd1b0fe672" kind="function"><name>TorchModel</name></member>
+    <member refid="class_torch_model_1afda3f812849688c27cb7a0507989ffb1" kind="function"><name>~TorchModel</name></member>
+    <member refid="class_torch_model_1aaa96fde53aa45f4856865dd5a4abe7f4" kind="function"><name>load</name></member>
+    <member refid="class_torch_model_1a024d4fd3970ec32ad68ea779db7e81c2" kind="function"><name>ready</name></member>
+    <member refid="class_torch_model_1aafc7a2718e1c2f30d4515a78bbd517c1" kind="function"><name>forward</name></member>
+    <member refid="class_torch_model_1ace998f8b33941cf2d7270625d3f19bb6" kind="function"><name>to_tensor</name></member>
+    <member refid="class_torch_model_1a0d449620f1b355f7f8529bc3693f24b6" kind="function"><name>to_buffer</name></member>
+  </compound>
+  <compound refid="class_track_header" kind="class"><name>TrackHeader</name>
+    <member refid="class_track_header_1aefb88cbb5a666d5461f0c78dc0288fc0" kind="variable"><name>araEditorView</name></member>
+    <member refid="class_track_header_1a211fbfd80e33032792549b7ca809a236" kind="variable"><name>regionSequence</name></member>
+    <member refid="class_track_header_1a65c53e4c8aac4eadceecbaddc6689ed7" kind="variable"><name>trackNameLabel</name></member>
+    <member refid="class_track_header_1a9de724d43193264a333474eb636544c0" kind="variable"><name>isSelected</name></member>
+    <member refid="class_track_header_1a42cb90cbd8666a9c54d35a21529321fc" kind="function"><name>TrackHeader</name></member>
+    <member refid="class_track_header_1a659c2e1af852a493f73c831e7d6e9350" kind="function"><name>~TrackHeader</name></member>
+    <member refid="class_track_header_1a6262972ce258e5d281a00f58100f1433" kind="function"><name>willUpdateRegionSequenceProperties</name></member>
+    <member refid="class_track_header_1ad74d7d10eec420d5b8546144cf74dc22" kind="function"><name>resized</name></member>
+    <member refid="class_track_header_1aa4550ae2888228574b9b7e457199712e" kind="function"><name>paint</name></member>
+    <member refid="class_track_header_1a417a7e19a2ac787757eb462793121dd4" kind="function"><name>onNewSelection</name></member>
+    <member refid="class_track_header_1a183b083d81f3d9ce33f5138c86b00f8b" kind="function"><name>updateTrackName</name></member>
+  </compound>
+  <compound refid="class_vertical_layout_viewport" kind="class"><name>VerticalLayoutViewport</name>
+    <member refid="class_vertical_layout_viewport_1ad557401b7eac42ca6ff9e181ec0c996f" kind="variable"><name>onVisibleAreaChanged</name></member>
+    <member refid="class_vertical_layout_viewport_1a7360779a1557b3356ad6a372366dcf2f" kind="variable"><name>content</name></member>
+    <member refid="class_vertical_layout_viewport_1a9ab2dbec814d4fb315fc5105201d0a0d" kind="function"><name>VerticalLayoutViewport</name></member>
+    <member refid="class_vertical_layout_viewport_1ac0b42feeab7e0bebd73dd25c96f04ff2" kind="function"><name>paint</name></member>
+    <member refid="class_vertical_layout_viewport_1ae1cd99eb94f8145c06a2d57d9ae5ff5c" kind="function"><name>visibleAreaChanged</name></member>
+  </compound>
+  <compound refid="class_vertical_layout_viewport_content" kind="class"><name>VerticalLayoutViewportContent</name>
+    <member refid="class_vertical_layout_viewport_content_1a45e27908cb1a7fdd90b68e845d11ae4c" kind="function"><name>resized</name></member>
+  </compound>
+  <compound refid="class_wave2_wave" kind="class"><name>Wave2Wave</name>
+    <member refid="class_wave2_wave_1a40fe2e288d48f25eec36b4b18e3712ec" kind="function"><name>save_buffer_to_file</name></member>
+    <member refid="class_wave2_wave_1a9af3adcc8ecae0fdb1d3150892f5eaf6" kind="function"><name>load_buffer_from_file</name></member>
+    <member refid="class_wave2_wave_1a49502f7af71ed9fbe486e74e8337128a" kind="function"><name>process</name></member>
+  </compound>
+  <compound refid="struct_waveform_cache" kind="struct"><name>WaveformCache</name>
+    <member refid="struct_waveform_cache_1aabda202d081458566a6a5bfebe1b76e8" kind="variable"><name>hash</name></member>
+    <member refid="struct_waveform_cache_1a269ec447e0d9a1edb89a71a2d015e9a8" kind="variable"><name>dummyManager</name></member>
+    <member refid="struct_waveform_cache_1adfc947b64db736b24d4aed5444787ef3" kind="variable"><name>thumbnailCache</name></member>
+    <member refid="struct_waveform_cache_1a69f74ab9443d11d4e24d9c13ca974189" kind="variable"><name>thumbnails</name></member>
+    <member refid="struct_waveform_cache_1a4cef62e90a7846f96d18bb4bddc0acf4" kind="function"><name>WaveformCache</name></member>
+    <member refid="struct_waveform_cache_1ac8d2ae1aa686d573042ab73e745f1c17" kind="function"><name>~WaveformCache</name></member>
+    <member refid="struct_waveform_cache_1abc69298b662796d53a53c004ac04757c" kind="function"><name>willDestroyAudioSource</name></member>
+    <member refid="struct_waveform_cache_1a27766f39fe2ebbdbcf103d2dce9e1566" kind="function"><name>getOrCreateThumbnail</name></member>
+    <member refid="struct_waveform_cache_1ac62dbe0600921b6236028096d219442d" kind="function"><name>removeAudioSource</name></member>
+  </compound>
+  <compound refid="class_web_wave2_wave" kind="class"><name>WebWave2Wave</name>
+    <member refid="class_web_wave2_wave_1a6ef9b216c856009ce1fd3b3914156bf4" kind="variable"><name>m_cancel_flag_file</name></member>
+    <member refid="class_web_wave2_wave_1a9dbda2f87a9c17cfb3e83ee8dbe38abd" kind="variable"><name>m_status_flag_file</name></member>
+    <member refid="class_web_wave2_wave_1a077fe132bacf5d63f38c8c53a7e3ce41" kind="variable"><name>m_ctrls</name></member>
+    <member refid="class_web_wave2_wave_1a0145fe3f63c602713c7971ec03fd5fbd" kind="variable"><name>m_url</name></member>
+    <member refid="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" kind="function"><name>WebWave2Wave</name></member>
+    <member refid="class_web_wave2_wave_1ae6f1be70e097a8d41bac5f4fa3e1169a" kind="function"><name>process</name></member>
+    <member refid="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" kind="function"><name>WebWave2Wave</name></member>
+    <member refid="class_web_wave2_wave_1af229fdf0bea55d45a40359408cea2cd3" kind="function"><name>~WebWave2Wave</name></member>
+    <member refid="class_web_wave2_wave_1ae9594ce12323324fb5aa6eb60cdfa276" kind="function"><name>ready</name></member>
+    <member refid="class_web_wave2_wave_1a5f31d5989c8a383a919e2d418d7214e8" kind="function"><name>space_url</name></member>
+    <member refid="class_web_wave2_wave_1a33d9ad447f7ed0f30cdc99e9870b1005" kind="function"><name>load</name></member>
+    <member refid="class_web_wave2_wave_1a81098350c250b4ec6ac7d5abe01477df" kind="function"><name>controls</name></member>
+    <member refid="class_web_wave2_wave_1a0f9ee373c16dffc46ba6d9e5a34427d2" kind="function"><name>process</name></member>
+    <member refid="class_web_wave2_wave_1a6e8aa8aa2284b44a3ced1e2717fb44b4" kind="function"><name>cancel</name></member>
+    <member refid="class_web_wave2_wave_1a3fcab4be5c5b160db938459a318f15a2" kind="function"><name>getStatus</name></member>
+    <member refid="class_web_wave2_wave_1aba1fabc964fe81431146698850d2a84b" kind="function"><name>getCancelFlagFile</name></member>
+    <member refid="class_web_wave2_wave_1aadb82dd6d51c9965987a66812af0194d" kind="function"><name>findCtrlByUuid</name></member>
+    <member refid="class_web_wave2_wave_1ae0d3ee6214f84048df10a607419cd968" kind="function"><name>loadJsonFromFile</name></member>
+    <member refid="class_web_wave2_wave_1a436e163fa9a6203646fcd7aaea2b37df" kind="function"><name>saveCtrls</name></member>
+  </compound>
+  <compound refid="class_zoom_controls" kind="class"><name>ZoomControls</name>
+    <member refid="class_zoom_controls_1aa6c25a874e418ca67010bb6539049431" kind="variable"><name>zoomInButton</name></member>
+    <member refid="class_zoom_controls_1a51375e5bc7260fdf5185355ba2661ace" kind="variable"><name>zoomOutButton</name></member>
+    <member refid="class_zoom_controls_1a5a4906d87faf13aa445afc80652d673f" kind="function"><name>ZoomControls</name></member>
+    <member refid="class_zoom_controls_1a198d6851eee29c54a63b631b8ac9e43b" kind="function"><name>setZoomInCallback</name></member>
+    <member refid="class_zoom_controls_1a3c092426beaacbf72e6b9c461ea608db" kind="function"><name>setZoomOutCallback</name></member>
+    <member refid="class_zoom_controls_1a6c882aabcdd6cab9d51e72be6e93d1f9" kind="function"><name>resized</name></member>
+  </compound>
+  <compound refid="namespace_0d18" kind="namespace"><name>@18</name>
+  </compound>
+  <compound refid="namespace_0d21" kind="namespace"><name>@21</name>
+  </compound>
+  <compound refid="namespace_a_r_a_audio_source" kind="namespace"><name>ARAAudioSource</name>
+  </compound>
+  <compound refid="namespace_a_r_a_document" kind="namespace"><name>ARADocument</name>
+  </compound>
+  <compound refid="namespace_a_r_a_editor_view" kind="namespace"><name>ARAEditorView</name>
+  </compound>
+  <compound refid="namespace_a_r_a_musical_context" kind="namespace"><name>ARAMusicalContext</name>
+  </compound>
+  <compound refid="namespace_a_r_a_playback_region" kind="namespace"><name>ARAPlaybackRegion</name>
+  </compound>
+  <compound refid="namespace_button" kind="namespace"><name>Button</name>
+  </compound>
+  <compound refid="namespace_combo_box" kind="namespace"><name>ComboBox</name>
+  </compound>
+  <compound refid="namespacejuce" kind="namespace"><name>juce</name>
+  </compound>
+  <compound refid="namespacejuce_1_1_a_r_a_audio_source" kind="namespace"><name>juce::ARAAudioSource</name>
+  </compound>
+  <compound refid="namespacejuce_1_1_a_r_a_region_sequence" kind="namespace"><name>juce::ARARegionSequence</name>
+  </compound>
+  <compound refid="namespacemodelparams" kind="namespace"><name>modelparams</name>
+    <member refid="_model_8h_1a4788597ea216dd112383bcb4621e64a4" kind="function"><name>contains</name></member>
+  </compound>
+  <compound refid="namespace_slider" kind="namespace"><name>Slider</name>
+  </compound>
+  <compound refid="namespace_text_editor" kind="namespace"><name>TextEditor</name>
+  </compound>
+  <compound refid="_doxy_main_page_8md" kind="file"><name>DoxyMainPage.md</name>
+  </compound>
+  <compound refid="_audio_modification_8cpp" kind="file"><name>AudioModification.cpp</name>
+  </compound>
+  <compound refid="_audio_modification_8h" kind="file"><name>AudioModification.h</name>
+  </compound>
+  <compound refid="_audio_processor_8h" kind="file"><name>AudioProcessor.h</name>
+  </compound>
+  <compound refid="_audio_processor_impl_8cpp" kind="file"><name>AudioProcessorImpl.cpp</name>
+  </compound>
+  <compound refid="_audio_processor_impl_8h" kind="file"><name>AudioProcessorImpl.h</name>
+  </compound>
+  <compound refid="_ctrl_component_8h" kind="file"><name>CtrlComponent.h</name>
+  </compound>
+  <compound refid="_document_controller_specialisation_8cpp" kind="file"><name>DocumentControllerSpecialisation.cpp</name>
+  </compound>
+  <compound refid="_document_controller_specialisation_8h" kind="file"><name>DocumentControllerSpecialisation.h</name>
+  </compound>
+  <compound refid="_editor_renderer_8cpp" kind="file"><name>EditorRenderer.cpp</name>
+  </compound>
+  <compound refid="_editor_renderer_8h" kind="file"><name>EditorRenderer.h</name>
+  </compound>
+  <compound refid="_editor_view_8h" kind="file"><name>EditorView.h</name>
+  </compound>
+  <compound refid="_playback_region_8cpp" kind="file"><name>PlaybackRegion.cpp</name>
+  </compound>
+  <compound refid="_playback_region_8h" kind="file"><name>PlaybackRegion.h</name>
+  </compound>
+  <compound refid="_playback_renderer_8cpp" kind="file"><name>PlaybackRenderer.cpp</name>
+  </compound>
+  <compound refid="_playback_renderer_8h" kind="file"><name>PlaybackRenderer.h</name>
+  </compound>
+  <compound refid="_processor_editor_8cpp" kind="file"><name>ProcessorEditor.cpp</name>
+  </compound>
+  <compound refid="_processor_editor_8h" kind="file"><name>ProcessorEditor.h</name>
+  </compound>
+  <compound refid="_model_8h" kind="file"><name>Model.h</name>
+  </compound>
+  <compound refid="_torch_model_8cpp" kind="file"><name>TorchModel.cpp</name>
+  </compound>
+  <compound refid="_torch_model_8h" kind="file"><name>TorchModel.h</name>
+  </compound>
+  <compound refid="_wave2_wave_8h" kind="file"><name>Wave2Wave.h</name>
+  </compound>
+  <compound refid="_web_model_8h" kind="file"><name>WebModel.h</name>
+    <member refid="_web_model_8h_1aee3aa7738bf4808ed143d7d04eac1f39" kind="typedef"><name>CtrlList</name></member>
+  </compound>
+  <compound refid="_main_8cpp" kind="file"><name>Main.cpp</name>
+    <member refid="_main_8cpp_1a62f69a86baff96d3ee5c287e100adc66" kind="function"><name>createPluginFilter</name></member>
+  </compound>
+  <compound refid="_playback_region_view_8cpp" kind="file"><name>PlaybackRegionView.cpp</name>
+  </compound>
+  <compound refid="_playback_region_view_8h" kind="file"><name>PlaybackRegionView.h</name>
+  </compound>
+  <compound refid="_playhead_position_label_8cpp" kind="file"><name>PlayheadPositionLabel.cpp</name>
+  </compound>
+  <compound refid="_playhead_position_label_8h" kind="file"><name>PlayheadPositionLabel.h</name>
+  </compound>
+  <compound refid="_shared_time_slice_thread_8h" kind="file"><name>SharedTimeSliceThread.h</name>
+  </compound>
+  <compound refid="_custom_components_8h" kind="file"><name>CustomComponents.h</name>
+  </compound>
+  <compound refid="_document_view_8cpp" kind="file"><name>DocumentView.cpp</name>
+  </compound>
+  <compound refid="_document_view_8h" kind="file"><name>DocumentView.h</name>
+  </compound>
+  <compound refid="_layout_8cpp" kind="file"><name>Layout.cpp</name>
+  </compound>
+  <compound refid="_layout_8h" kind="file"><name>Layout.h</name>
+    <member refid="_layout_8h_1af5be5b65a00634ecb8beaadd5e364594" kind="variable"><name>trackHeight</name></member>
+  </compound>
+  <compound refid="_look_and_feel_8h" kind="file"><name>LookAndFeel.h</name>
+  </compound>
+  <compound refid="_region_sequence_view_8cpp" kind="file"><name>RegionSequenceView.cpp</name>
+  </compound>
+  <compound refid="_region_sequence_view_8h" kind="file"><name>RegionSequenceView.h</name>
+  </compound>
+  <compound refid="_rulers_header_8cpp" kind="file"><name>RulersHeader.cpp</name>
+  </compound>
+  <compound refid="_rulers_header_8h" kind="file"><name>RulersHeader.h</name>
+  </compound>
+  <compound refid="_rulers_view_8cpp" kind="file"><name>RulersView.cpp</name>
+  </compound>
+  <compound refid="_rulers_view_8h" kind="file"><name>RulersView.h</name>
+  </compound>
+  <compound refid="_track_header_8h" kind="file"><name>TrackHeader.h</name>
+  </compound>
+  <compound refid="_zoom_controls_8h" kind="file"><name>ZoomControls.h</name>
+  </compound>
+  <compound refid="_async_configuration_callback_8h" kind="file"><name>AsyncConfigurationCallback.h</name>
+  </compound>
+  <compound refid="_crossfade_8h" kind="file"><name>Crossfade.h</name>
+    <member refid="_crossfade_8h_1a4bdf78657e14e11152a8f6e2e780b356" kind="function"><name>crossfade</name></member>
+  </compound>
+  <compound refid="_looper_8h" kind="file"><name>Looper.h</name>
+  </compound>
+  <compound refid="_possibly_buffered_reader_8h" kind="file"><name>PossiblyBufferedReader.h</name>
+  </compound>
+  <compound refid="_preview_state_8h" kind="file"><name>PreviewState.h</name>
+  </compound>
+  <compound refid="_processing_lock_interface_8h" kind="file"><name>ProcessingLockInterface.h</name>
+  </compound>
+  <compound refid="_time_to_view_scaling_8h" kind="file"><name>TimeToViewScaling.h</name>
+  </compound>
+  <compound refid="_waveform_cache_8h" kind="file"><name>WaveformCache.h</name>
+  </compound>
+  <compound refid="md__doxy_main_page" kind="page"><name>md__doxy_main_page</name>
+  </compound>
+  <compound refid="dir_4fd4d92e6e7420873057360f5ccad2ac" kind="dir"><name>Source/ARA</name>
+  </compound>
+  <compound refid="dir_b4f04190597fb456d99977bf76c321cc" kind="dir"><name>Source/DeepLearning</name>
+  </compound>
+  <compound refid="dir_74389ed8173ad57b461b9d623a1f3867" kind="dir"><name>Source</name>
+  </compound>
+  <compound refid="dir_b073964416d7f8342ebcedc866343c1b" kind="dir"><name>Source/Timeline</name>
+  </compound>
+  <compound refid="dir_ad68fd99ee46e73a145661c4c85612bf" kind="dir"><name>Source/UI</name>
+  </compound>
+  <compound refid="dir_7db6fad920da64edfd558eb6dbc0c610" kind="dir"><name>Source/Util</name>
+  </compound>
+  <compound refid="dir_af69ac87a5eb46a191f16e901ff3e18c" kind="dir"><name>Source/WaveformCache</name>
+  </compound>
+</doxygenindex>

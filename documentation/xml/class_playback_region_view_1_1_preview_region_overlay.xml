@@ -1,0 +1,124 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_playback_region_view_1_1_preview_region_overlay" kind="class" language="C++" prot="private">
+    <compoundname>PlaybackRegionView::PreviewRegionOverlay</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="class_playback_region_view_1_1_preview_region_overlay_1a094102e1ce457818fbb997ebe8a10aad" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto PlaybackRegionView::PreviewRegionOverlay::previewLength</definition>
+        <argsstring></argsstring>
+        <name>previewLength</name>
+        <qualifiedname>PlaybackRegionView::PreviewRegionOverlay::previewLength</qualifiedname>
+        <initializer>= 0.5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="66" column="27" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="66" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_playback_region_view_1_1_preview_region_overlay_1ae9487bbb398a90757238c6946eebf6de" prot="private" static="no" mutable="no">
+        <type><ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref> &amp;</type>
+        <definition>PlaybackRegionView&amp; PlaybackRegionView::PreviewRegionOverlay::owner</definition>
+        <argsstring></argsstring>
+        <name>owner</name>
+        <qualifiedname>PlaybackRegionView::PreviewRegionOverlay::owner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="99" column="24" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="99" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_playback_region_view_1_1_preview_region_overlay_1a5d93cecc00953c573837747556d859f7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>PlaybackRegionView::PreviewRegionOverlay::PreviewRegionOverlay</definition>
+        <argsstring>(PlaybackRegionView &amp;ownerIn)</argsstring>
+        <name>PreviewRegionOverlay</name>
+        <qualifiedname>PlaybackRegionView::PreviewRegionOverlay::PreviewRegionOverlay</qualifiedname>
+        <param>
+          <type><ref refid="class_playback_region_view" kindref="compound">PlaybackRegionView</ref> &amp;</type>
+          <declname>ownerIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="69" column="5" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="69" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1_1_preview_region_overlay_1ac74b412e0214437447ef595e6a3a34d8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::PreviewRegionOverlay::update</definition>
+        <argsstring>()</argsstring>
+        <name>update</name>
+        <qualifiedname>PlaybackRegionView::PreviewRegionOverlay::update</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="71" column="10" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="71" bodyend="91"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playback_region_view_1_1_preview_region_overlay_1afcc633e2af077ae0a6e86a2213161a56" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlaybackRegionView::PreviewRegionOverlay::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>PlaybackRegionView::PreviewRegionOverlay::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlaybackRegionView.h" line="93" column="10" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="93" bodyend="96"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>PlaybackRegionView::PreviewRegionOverlay</label>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>PlaybackRegionView::PreviewRegionOverlay</label>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/Timeline/PlaybackRegionView.h" line="65" column="3" bodyfile="Source/Timeline/PlaybackRegionView.h" bodystart="65" bodyend="100"/>
+    <listofallmembers>
+      <member refid="class_playback_region_view_1_1_preview_region_overlay_1ae9487bbb398a90757238c6946eebf6de" prot="private" virt="non-virtual"><scope>PlaybackRegionView::PreviewRegionOverlay</scope><name>owner</name></member>
+      <member refid="class_playback_region_view_1_1_preview_region_overlay_1afcc633e2af077ae0a6e86a2213161a56" prot="public" virt="non-virtual"><scope>PlaybackRegionView::PreviewRegionOverlay</scope><name>paint</name></member>
+      <member refid="class_playback_region_view_1_1_preview_region_overlay_1a094102e1ce457818fbb997ebe8a10aad" prot="private" virt="non-virtual"><scope>PlaybackRegionView::PreviewRegionOverlay</scope><name>previewLength</name></member>
+      <member refid="class_playback_region_view_1_1_preview_region_overlay_1a5d93cecc00953c573837747556d859f7" prot="public" virt="non-virtual"><scope>PlaybackRegionView::PreviewRegionOverlay</scope><name>PreviewRegionOverlay</name></member>
+      <member refid="class_playback_region_view_1_1_preview_region_overlay_1ac74b412e0214437447ef595e6a3a34d8" prot="public" virt="non-virtual"><scope>PlaybackRegionView::PreviewRegionOverlay</scope><name>update</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

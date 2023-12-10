@@ -1,0 +1,483 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_web_wave2_wave" kind="class" language="C++" prot="public">
+    <compoundname>WebWave2Wave</compoundname>
+    <basecompoundref refid="class_torch_model" prot="public" virt="non-virtual">TorchModel</basecompoundref>
+    <basecompoundref refid="class_model" prot="public" virt="non-virtual">Model</basecompoundref>
+    <basecompoundref refid="class_wave2_wave" prot="public" virt="non-virtual">Wave2Wave</basecompoundref>
+    <includes refid="_torch_model_8h" local="no">TorchModel.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_web_wave2_wave_1a6ef9b216c856009ce1fd3b3914156bf4" prot="private" static="no" mutable="no">
+        <type>juce::File</type>
+        <definition>juce::File WebWave2Wave::m_cancel_flag_file</definition>
+        <argsstring></argsstring>
+        <name>m_cancel_flag_file</name>
+        <qualifiedname>WebWave2Wave::m_cancel_flag_file</qualifiedname>
+        <initializer>{
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile(&quot;webwave2wave_CANCEL&quot;)
+  }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="472" column="14" bodyfile="Source/DeepLearning/WebModel.h" bodystart="472" bodyend="474"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_web_wave2_wave_1a9dbda2f87a9c17cfb3e83ee8dbe38abd" prot="private" static="no" mutable="no">
+        <type>juce::File</type>
+        <definition>juce::File WebWave2Wave::m_status_flag_file</definition>
+        <argsstring></argsstring>
+        <name>m_status_flag_file</name>
+        <qualifiedname>WebWave2Wave::m_status_flag_file</qualifiedname>
+        <initializer>{
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile(&quot;webwave2wave_STATUS&quot;)
+  }</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="475" column="14" bodyfile="Source/DeepLearning/WebModel.h" bodystart="475" bodyend="477"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_web_wave2_wave_1a077fe132bacf5d63f38c8c53a7e3ce41" prot="private" static="no" mutable="no">
+        <type>CtrlList</type>
+        <definition>CtrlList WebWave2Wave::m_ctrls</definition>
+        <argsstring></argsstring>
+        <name>m_ctrls</name>
+        <qualifiedname>WebWave2Wave::m_ctrls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="478" column="12" bodyfile="Source/DeepLearning/WebModel.h" bodystart="478" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_web_wave2_wave_1a0145fe3f63c602713c7971ec03fd5fbd" prot="private" static="no" mutable="no">
+        <type>string</type>
+        <definition>string WebWave2Wave::m_url</definition>
+        <argsstring></argsstring>
+        <name>m_url</name>
+        <qualifiedname>WebWave2Wave::m_url</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="479" column="10" bodyfile="Source/DeepLearning/WebModel.h" bodystart="479" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>WebWave2Wave::WebWave2Wave</definition>
+        <argsstring>()</argsstring>
+        <name>WebWave2Wave</name>
+        <qualifiedname>WebWave2Wave::WebWave2Wave</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="80" column="3" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="120" bodyend="120"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1ae6f1be70e097a8d41bac5f4fa3e1169a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void WebWave2Wave::process</definition>
+        <argsstring>(juce::AudioBuffer&lt; float &gt; *bufferToProcess, int sampleRate, std::map&lt; string, any &gt; &amp;params) const</argsstring>
+        <name>process</name>
+        <qualifiedname>WebWave2Wave::process</qualifiedname>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; *</type>
+          <declname>bufferToProcess</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>sampleRate</declname>
+        </param>
+        <param>
+          <type>std::map&lt; string, any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="82" column="8" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="122" bodyend="211"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>WebWave2Wave::WebWave2Wave</definition>
+        <argsstring>()</argsstring>
+        <name>WebWave2Wave</name>
+        <qualifiedname>WebWave2Wave::WebWave2Wave</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="75" column="3" bodyfile="Source/DeepLearning/WebModel.h" bodystart="75" bodyend="79"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1af229fdf0bea55d45a40359408cea2cd3" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>WebWave2Wave::~WebWave2Wave</definition>
+        <argsstring>()</argsstring>
+        <name>~WebWave2Wave</name>
+        <qualifiedname>WebWave2Wave::~WebWave2Wave</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="81" column="3" bodyfile="Source/DeepLearning/WebModel.h" bodystart="81" bodyend="85"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1ae9594ce12323324fb5aa6eb60cdfa276" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool WebWave2Wave::ready</definition>
+        <argsstring>() const override</argsstring>
+        <name>ready</name>
+        <qualifiedname>WebWave2Wave::ready</qualifiedname>
+        <reimplements refid="class_torch_model_1a024d4fd3970ec32ad68ea779db7e81c2">ready</reimplements>
+        <briefdescription>
+<para>checks if a model is loaded onto memory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="88" column="8" bodyfile="Source/DeepLearning/WebModel.h" bodystart="88" bodyend="88"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a5f31d5989c8a383a919e2d418d7214e8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string WebWave2Wave::space_url</definition>
+        <argsstring>() const</argsstring>
+        <name>space_url</name>
+        <qualifiedname>WebWave2Wave::space_url</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="89" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="89" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a33d9ad447f7ed0f30cdc99e9870b1005" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>void</type>
+        <definition>void WebWave2Wave::load</definition>
+        <argsstring>(const map&lt; string, any &gt; &amp;params) override</argsstring>
+        <name>load</name>
+        <qualifiedname>WebWave2Wave::load</qualifiedname>
+        <reimplements refid="class_model_1ac15b9777c4026f171078d3ecc38a34af">load</reimplements>
+        <param>
+          <type>const map&lt; string, any &gt; &amp;</type>
+          <declname>params</declname>
+        </param>
+        <briefdescription>
+<para>Load the model parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A map of parameters for the model. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>void. will throw a std::runtime_error if loading fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="91" column="8" bodyfile="Source/DeepLearning/WebModel.h" bodystart="91" bodyend="263"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a81098350c250b4ec6ac7d5abe01477df" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>CtrlList &amp;</type>
+        <definition>CtrlList &amp; WebWave2Wave::controls</definition>
+        <argsstring>()</argsstring>
+        <name>controls</name>
+        <qualifiedname>WebWave2Wave::controls</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="265" column="12" bodyfile="Source/DeepLearning/WebModel.h" bodystart="265" bodyend="267"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a0f9ee373c16dffc46ba6d9e5a34427d2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type>void</type>
+        <definition>virtual void WebWave2Wave::process</definition>
+        <argsstring>(juce::AudioBuffer&lt; float &gt; *bufferToProcess, int sourceSampleRate, int dawSampleRate) const override</argsstring>
+        <name>process</name>
+        <qualifiedname>WebWave2Wave::process</qualifiedname>
+        <reimplements refid="class_wave2_wave_1a49502f7af71ed9fbe486e74e8337128a">process</reimplements>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; *</type>
+          <declname>bufferToProcess</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>sourceSampleRate</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>dawSampleRate</declname>
+        </param>
+        <briefdescription>
+<para>Processes a buffer of audio data with the model. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bufferToProcess</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Buffer to be processed by the model. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>sampleRate</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The sample rate of the audio data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="269" column="16" bodyfile="Source/DeepLearning/WebModel.h" bodystart="269" bodyend="371"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a6e8aa8aa2284b44a3ced1e2717fb44b4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void WebWave2Wave::cancel</definition>
+        <argsstring>()</argsstring>
+        <name>cancel</name>
+        <qualifiedname>WebWave2Wave::cancel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="375" column="8" bodyfile="Source/DeepLearning/WebModel.h" bodystart="375" bodyend="378"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a3fcab4be5c5b160db938459a318f15a2" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string WebWave2Wave::getStatus</definition>
+        <argsstring>()</argsstring>
+        <name>getStatus</name>
+        <qualifiedname>WebWave2Wave::getStatus</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="380" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="380" bodyend="389"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1aba1fabc964fe81431146698850d2a84b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::File</type>
+        <definition>juce::File WebWave2Wave::getCancelFlagFile</definition>
+        <argsstring>() const</argsstring>
+        <name>getCancelFlagFile</name>
+        <qualifiedname>WebWave2Wave::getCancelFlagFile</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="391" column="14" bodyfile="Source/DeepLearning/WebModel.h" bodystart="391" bodyend="393"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1aadb82dd6d51c9965987a66812af0194d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>CtrlList::iterator</type>
+        <definition>CtrlList::iterator WebWave2Wave::findCtrlByUuid</definition>
+        <argsstring>(const juce::Uuid &amp;uuid)</argsstring>
+        <name>findCtrlByUuid</name>
+        <qualifiedname>WebWave2Wave::findCtrlByUuid</qualifiedname>
+        <param>
+          <type>const juce::Uuid &amp;</type>
+          <declname>uuid</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="395" column="22" bodyfile="Source/DeepLearning/WebModel.h" bodystart="395" bodyend="401"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_web_wave2_wave_1ae0d3ee6214f84048df10a607419cd968" prot="private" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::var</type>
+        <definition>juce::var WebWave2Wave::loadJsonFromFile</definition>
+        <argsstring>(const juce::File &amp;file) const</argsstring>
+        <name>loadJsonFromFile</name>
+        <qualifiedname>WebWave2Wave::loadJsonFromFile</qualifiedname>
+        <param>
+          <type>const juce::File &amp;</type>
+          <declname>file</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="404" column="13" bodyfile="Source/DeepLearning/WebModel.h" bodystart="404" bodyend="423"/>
+      </memberdef>
+      <memberdef kind="function" id="class_web_wave2_wave_1a436e163fa9a6203646fcd7aaea2b37df" prot="private" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool WebWave2Wave::saveCtrls</definition>
+        <argsstring>(juce::File savePath, std::string audioInputPath) const</argsstring>
+        <name>saveCtrls</name>
+        <qualifiedname>WebWave2Wave::saveCtrls</qualifiedname>
+        <param>
+          <type>juce::File</type>
+          <declname>savePath</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>audioInputPath</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="425" column="8" bodyfile="Source/DeepLearning/WebModel.h" bodystart="425" bodyend="470"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class that represents a <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> inherited from <ref refid="class_torch_model" kindref="compound">TorchModel</ref> and <ref refid="class_wave2_wave" kindref="compound">Wave2Wave</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>Model</label>
+        <link refid="class_model"/>
+      </node>
+      <node id="2">
+        <label>TorchModel</label>
+        <link refid="class_torch_model"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Wave2Wave</label>
+        <link refid="class_wave2_wave"/>
+      </node>
+      <node id="1">
+        <label>WebWave2Wave</label>
+        <link refid="class_web_wave2_wave"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>Model</label>
+        <link refid="class_model"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>m_card</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>ModelCard</label>
+        <link refid="struct_model_card"/>
+        <childnode refid="5" relation="usage">
+          <edgelabel>author</edgelabel>
+          <edgelabel>description</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>TorchModel</label>
+        <link refid="class_torch_model"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="6" relation="usage">
+          <edgelabel>m_model</edgelabel>
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Wave2Wave</label>
+        <link refid="class_wave2_wave"/>
+      </node>
+      <node id="1">
+        <label>WebWave2Wave</label>
+        <link refid="class_web_wave2_wave"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="7" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>string</label>
+      </node>
+      <node id="6">
+        <label>unique_ptr&lt; Module &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/TorchModel.h" line="78" column="1" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="78" bodyend="83"/>
+    <listofallmembers>
+      <member refid="class_web_wave2_wave_1a6e8aa8aa2284b44a3ced1e2717fb44b4" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>cancel</name></member>
+      <member refid="class_model_1a2004629072f7863d0b4bc4da44560c32" prot="public" virt="non-virtual" ambiguityscope="TorchModel::"><scope>WebWave2Wave</scope><name>card</name></member>
+      <member refid="class_model_1a2004629072f7863d0b4bc4da44560c32" prot="public" virt="non-virtual" ambiguityscope="Model::"><scope>WebWave2Wave</scope><name>card</name></member>
+      <member refid="class_web_wave2_wave_1a81098350c250b4ec6ac7d5abe01477df" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>controls</name></member>
+      <member refid="class_web_wave2_wave_1aadb82dd6d51c9965987a66812af0194d" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>findCtrlByUuid</name></member>
+      <member refid="class_torch_model_1aafc7a2718e1c2f30d4515a78bbd517c1" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>forward</name></member>
+      <member refid="class_web_wave2_wave_1aba1fabc964fe81431146698850d2a84b" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>getCancelFlagFile</name></member>
+      <member refid="class_web_wave2_wave_1a3fcab4be5c5b160db938459a318f15a2" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>getStatus</name></member>
+      <member refid="class_web_wave2_wave_1a33d9ad447f7ed0f30cdc99e9870b1005" prot="public" virt="virtual"><scope>WebWave2Wave</scope><name>load</name></member>
+      <member refid="class_torch_model_1aaa96fde53aa45f4856865dd5a4abe7f4" prot="public" virt="non-virtual" ambiguityscope="TorchModel::"><scope>WebWave2Wave</scope><name>load</name></member>
+      <member refid="class_wave2_wave_1a9af3adcc8ecae0fdb1d3150892f5eaf6" prot="protected" virt="non-virtual"><scope>WebWave2Wave</scope><name>load_buffer_from_file</name></member>
+      <member refid="class_web_wave2_wave_1ae0d3ee6214f84048df10a607419cd968" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>loadJsonFromFile</name></member>
+      <member refid="class_web_wave2_wave_1a6ef9b216c856009ce1fd3b3914156bf4" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_cancel_flag_file</name></member>
+      <member refid="class_model_1a6074c50634070cf63c2370444be4bd08" prot="protected" virt="non-virtual" ambiguityscope="TorchModel::"><scope>WebWave2Wave</scope><name>m_card</name></member>
+      <member refid="class_model_1a6074c50634070cf63c2370444be4bd08" prot="protected" virt="non-virtual" ambiguityscope="Model::"><scope>WebWave2Wave</scope><name>m_card</name></member>
+      <member refid="class_web_wave2_wave_1a077fe132bacf5d63f38c8c53a7e3ce41" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_ctrls</name></member>
+      <member refid="class_torch_model_1ad15589d30684c007006fd0572daa1fa3" prot="protected" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_loaded</name></member>
+      <member refid="class_torch_model_1a7a5628d8064d1ba341bbffa45450d881" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_model</name></member>
+      <member refid="class_torch_model_1a52e440eabdc90d1749554dfda8778823" prot="protected" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_mutex</name></member>
+      <member refid="class_web_wave2_wave_1a9dbda2f87a9c17cfb3e83ee8dbe38abd" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_status_flag_file</name></member>
+      <member refid="class_web_wave2_wave_1a0145fe3f63c602713c7971ec03fd5fbd" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>m_url</name></member>
+      <member refid="class_web_wave2_wave_1ae6f1be70e097a8d41bac5f4fa3e1169a" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>process</name></member>
+      <member refid="class_web_wave2_wave_1a0f9ee373c16dffc46ba6d9e5a34427d2" prot="public" virt="virtual"><scope>WebWave2Wave</scope><name>process</name></member>
+      <member refid="class_web_wave2_wave_1ae9594ce12323324fb5aa6eb60cdfa276" prot="public" virt="virtual"><scope>WebWave2Wave</scope><name>ready</name></member>
+      <member refid="class_wave2_wave_1a40fe2e288d48f25eec36b4b18e3712ec" prot="protected" virt="non-virtual"><scope>WebWave2Wave</scope><name>save_buffer_to_file</name></member>
+      <member refid="class_web_wave2_wave_1a436e163fa9a6203646fcd7aaea2b37df" prot="private" virt="non-virtual"><scope>WebWave2Wave</scope><name>saveCtrls</name></member>
+      <member refid="class_web_wave2_wave_1a5f31d5989c8a383a919e2d418d7214e8" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>space_url</name></member>
+      <member refid="class_torch_model_1a0d449620f1b355f7f8529bc3693f24b6" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>to_buffer</name></member>
+      <member refid="class_torch_model_1ace998f8b33941cf2d7270625d3f19bb6" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>to_tensor</name></member>
+      <member refid="class_torch_model_1ae0127b0640820e7f8ff91bfd1b0fe672" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>TorchModel</name></member>
+      <member refid="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>WebWave2Wave</name></member>
+      <member refid="class_web_wave2_wave_1a5c42e879bd0a3c4790b7b11079d5fcab" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>WebWave2Wave</name></member>
+      <member refid="class_torch_model_1afda3f812849688c27cb7a0507989ffb1" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>~TorchModel</name></member>
+      <member refid="class_web_wave2_wave_1af229fdf0bea55d45a40359408cea2cd3" prot="public" virt="non-virtual"><scope>WebWave2Wave</scope><name>~WebWave2Wave</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

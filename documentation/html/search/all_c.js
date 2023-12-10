@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['sharedtimeslicethread_0',['SharedTimeSliceThread',['../class_shared_time_slice_thread.html',1,'']]],
-  ['sharedtimeslicethread_2eh_1',['SharedTimeSliceThread.h',['../_shared_time_slice_thread_8h.html',1,'']]]
+  ['note_0',['An Important Note',['../md__doxy_main_page.html#autotoc_md11',1,'']]],
+  ['numberboxctrl_1',['NumberBoxCtrl',['../struct_number_box_ctrl.html',1,'']]]
 ];

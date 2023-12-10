@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_rulers_header" kind="class" language="C++" prot="public">
+    <compoundname>RulersHeader</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <includes refid="_rulers_header_8h" local="no">RulersHeader.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_rulers_header_1af19ca7f6795fd2f26ca596a26705363c" prot="private" static="no" mutable="no">
+        <type>Label</type>
+        <definition>Label RulersHeader::chordsLabel</definition>
+        <argsstring></argsstring>
+        <name>chordsLabel</name>
+        <qualifiedname>RulersHeader::chordsLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="50" column="9" bodyfile="Source/UI/RulersHeader.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_rulers_header_1a599bc7ad49232b050a0ad6363a7f6404" prot="private" static="no" mutable="no">
+        <type>Label</type>
+        <definition>Label RulersHeader::barsLabel</definition>
+        <argsstring></argsstring>
+        <name>barsLabel</name>
+        <qualifiedname>RulersHeader::barsLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="50" column="21" bodyfile="Source/UI/RulersHeader.h" bodystart="50" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_rulers_header_1a34f26e6c800b16de05e60082ee458def" prot="private" static="no" mutable="no">
+        <type>Label</type>
+        <definition>Label RulersHeader::timeLabel</definition>
+        <argsstring></argsstring>
+        <name>timeLabel</name>
+        <qualifiedname>RulersHeader::timeLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Labels for chords, bars, and time </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="51" column="7" bodyfile="Source/UI/RulersHeader.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_rulers_header_1a959d86fe205f4a99cdb139c9a02e2d53" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>RulersHeader::RulersHeader</definition>
+        <argsstring>()</argsstring>
+        <name>RulersHeader</name>
+        <qualifiedname>RulersHeader::RulersHeader</qualifiedname>
+        <briefdescription>
+<para>Construct a new Rulers Header object. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="37" column="3" bodyfile="Source/UI/RulersHeader.cpp" bodystart="24" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="class_rulers_header_1a8defaa93d9eaa868fcb945b793a70dc2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RulersHeader::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>RulersHeader::resized</qualifiedname>
+        <briefdescription>
+<para>Resize the <ref refid="class_rulers_header" kindref="compound">RulersHeader</ref> and its labels. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="42" column="8" bodyfile="Source/UI/RulersHeader.cpp" bodystart="35" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="class_rulers_header_1af4dcad9c96f66955676b0244c77b0ca8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void RulersHeader::paint</definition>
+        <argsstring>(Graphics &amp;g) override</argsstring>
+        <name>paint</name>
+        <qualifiedname>RulersHeader::paint</qualifiedname>
+        <param>
+          <type>Graphics &amp;</type>
+          <declname>g</declname>
+        </param>
+        <briefdescription>
+<para>Paint the <ref refid="class_rulers_header" kindref="compound">RulersHeader</ref> with its labels. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/RulersHeader.h" line="47" column="8" bodyfile="Source/UI/RulersHeader.cpp" bodystart="43" bodyend="54"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents a header that contains labels for chords, bars, and time. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>RulersHeader</label>
+        <link refid="class_rulers_header"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>RulersHeader</label>
+        <link refid="class_rulers_header"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/RulersHeader.h" line="32" column="1" bodyfile="Source/UI/RulersHeader.h" bodystart="32" bodyend="52"/>
+    <listofallmembers>
+      <member refid="class_rulers_header_1a599bc7ad49232b050a0ad6363a7f6404" prot="private" virt="non-virtual"><scope>RulersHeader</scope><name>barsLabel</name></member>
+      <member refid="class_rulers_header_1af19ca7f6795fd2f26ca596a26705363c" prot="private" virt="non-virtual"><scope>RulersHeader</scope><name>chordsLabel</name></member>
+      <member refid="class_rulers_header_1af4dcad9c96f66955676b0244c77b0ca8" prot="public" virt="non-virtual"><scope>RulersHeader</scope><name>paint</name></member>
+      <member refid="class_rulers_header_1a8defaa93d9eaa868fcb945b793a70dc2" prot="public" virt="non-virtual"><scope>RulersHeader</scope><name>resized</name></member>
+      <member refid="class_rulers_header_1a959d86fe205f4a99cdb139c9a02e2d53" prot="public" virt="non-virtual"><scope>RulersHeader</scope><name>RulersHeader</name></member>
+      <member refid="class_rulers_header_1a34f26e6c800b16de05e60082ee458def" prot="private" virt="non-virtual"><scope>RulersHeader</scope><name>timeLabel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_processing_lock_interface" kind="struct" language="C++" prot="public" abstract="yes">
+    <compoundname>ProcessingLockInterface</compoundname>
+    <derivedcompoundref refid="class_h_a_r_p_document_controller_specialisation" prot="private" virt="non-virtual">HARPDocumentControllerSpecialisation</derivedcompoundref>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="struct_processing_lock_interface_1a2ca3e655a8bd2641d7e9859de69b18ec" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual ProcessingLockInterface::~ProcessingLockInterface</definition>
+        <argsstring>()=default</argsstring>
+        <name>~ProcessingLockInterface</name>
+        <qualifiedname>ProcessingLockInterface::~ProcessingLockInterface</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/ProcessingLockInterface.h" line="23" column="11"/>
+      </memberdef>
+      <memberdef kind="function" id="struct_processing_lock_interface_1addfc3798882b75669cf24f4d8870fbc8" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type>juce::ScopedTryReadLock</type>
+        <definition>virtual juce::ScopedTryReadLock ProcessingLockInterface::getProcessingLock</definition>
+        <argsstring>()=0</argsstring>
+        <name>getProcessingLock</name>
+        <qualifiedname>ProcessingLockInterface::getProcessingLock</qualifiedname>
+        <reimplementedby refid="class_h_a_r_p_document_controller_specialisation_1ab21ef74c0dba5bc8fedd67a6d68eadfc">getProcessingLock</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/ProcessingLockInterface.h" line="24" column="35"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>HARPDocumentControllerSpecialisation</label>
+        <link refid="class_h_a_r_p_document_controller_specialisation"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>ProcessingLockInterface</label>
+        <link refid="struct_processing_lock_interface"/>
+      </node>
+    </inheritancegraph>
+    <location file="Source/Util/ProcessingLockInterface.h" line="22" column="1" bodyfile="Source/Util/ProcessingLockInterface.h" bodystart="22" bodyend="25"/>
+    <listofallmembers>
+      <member refid="struct_processing_lock_interface_1addfc3798882b75669cf24f4d8870fbc8" prot="public" virt="pure-virtual"><scope>ProcessingLockInterface</scope><name>getProcessingLock</name></member>
+      <member refid="struct_processing_lock_interface_1a2ca3e655a8bd2641d7e9859de69b18ec" prot="public" virt="virtual"><scope>ProcessingLockInterface</scope><name>~ProcessingLockInterface</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

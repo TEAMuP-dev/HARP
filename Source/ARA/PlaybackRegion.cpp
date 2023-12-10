@@ -3,7 +3,7 @@
 PlaybackRegion::PlaybackRegion(juce::ARAAudioModification *modification,
                                 ARA::ARAPlaybackRegionHostRef hostRef)
     : juce::ARAPlaybackRegion(modification, hostRef) {
-    selected = false;
+    selected = true;
 }
 
 bool PlaybackRegion::isSelected() const { return selected; }

@@ -1,0 +1,124 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_ctrl" kind="struct" language="C++" prot="public">
+    <compoundname>Ctrl</compoundname>
+    <derivedcompoundref refid="struct_audio_in_ctrl" prot="public" virt="non-virtual">AudioInCtrl</derivedcompoundref>
+    <derivedcompoundref refid="struct_combo_box_ctrl" prot="public" virt="non-virtual">ComboBoxCtrl</derivedcompoundref>
+    <derivedcompoundref refid="struct_number_box_ctrl" prot="public" virt="non-virtual">NumberBoxCtrl</derivedcompoundref>
+    <derivedcompoundref refid="struct_slider_ctrl" prot="public" virt="non-virtual">SliderCtrl</derivedcompoundref>
+    <derivedcompoundref refid="struct_text_box_ctrl" prot="public" virt="non-virtual">TextBoxCtrl</derivedcompoundref>
+    <derivedcompoundref refid="struct_toggle_ctrl" prot="public" virt="non-virtual">ToggleCtrl</derivedcompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" static="no" mutable="no">
+        <type>juce::Uuid</type>
+        <definition>juce::Uuid Ctrl::id</definition>
+        <argsstring></argsstring>
+        <name>id</name>
+        <qualifiedname>Ctrl::id</qualifiedname>
+        <initializer>{&quot;&quot;}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="23" column="14" bodyfile="Source/DeepLearning/WebModel.h" bodystart="23" bodyend="23"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string Ctrl::label</definition>
+        <argsstring></argsstring>
+        <name>label</name>
+        <qualifiedname>Ctrl::label</qualifiedname>
+        <initializer>{&quot;&quot;}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="24" column="15" bodyfile="Source/DeepLearning/WebModel.h" bodystart="24" bodyend="24"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual Ctrl::~Ctrl</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Ctrl</name>
+        <qualifiedname>Ctrl::~Ctrl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/WebModel.h" line="25" column="11"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>AudioInCtrl</label>
+        <link refid="struct_audio_in_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>ComboBoxCtrl</label>
+        <link refid="struct_combo_box_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+      </node>
+      <node id="4">
+        <label>NumberBoxCtrl</label>
+        <link refid="struct_number_box_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>SliderCtrl</label>
+        <link refid="struct_slider_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>TextBoxCtrl</label>
+        <link refid="struct_text_box_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>ToggleCtrl</label>
+        <link refid="struct_toggle_ctrl"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>Ctrl</label>
+        <link refid="struct_ctrl"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>label</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>string</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/WebModel.h" line="22" column="1" bodyfile="Source/DeepLearning/WebModel.h" bodystart="22" bodyend="26"/>
+    <listofallmembers>
+      <member refid="struct_ctrl_1af0bea7b034c680465c5ee2333032391f" prot="public" virt="non-virtual"><scope>Ctrl</scope><name>id</name></member>
+      <member refid="struct_ctrl_1af7ec5c3ae03a10af34ea78f2b4563a6c" prot="public" virt="non-virtual"><scope>Ctrl</scope><name>label</name></member>
+      <member refid="struct_ctrl_1a21cb9b6c5b9c62effe72cb108cd183ee" prot="public" virt="virtual"><scope>Ctrl</scope><name>~Ctrl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

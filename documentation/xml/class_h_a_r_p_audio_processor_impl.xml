@@ -1,0 +1,395 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_audio_processor_impl" kind="class" language="C++" prot="public">
+    <compoundname>HARPAudioProcessorImpl</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">AudioProcessor</basecompoundref>
+    <basecompoundref prot="public" virt="non-virtual">AudioProcessorARAExtension</basecompoundref>
+    <derivedcompoundref refid="class_h_a_r_p_audio_processor" prot="public" virt="non-virtual">HARPAudioProcessor</derivedcompoundref>
+    <includes refid="_audio_processor_impl_8h" local="no">AudioProcessorImpl.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_audio_processor_impl_1a6b368ad793dc37c2fca2fd367949b731" prot="public" static="no" mutable="no">
+        <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref></type>
+        <definition>PlayHeadState HARPAudioProcessorImpl::playHeadState</definition>
+        <argsstring></argsstring>
+        <name>playHeadState</name>
+        <qualifiedname>HARPAudioProcessorImpl::playHeadState</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="59" column="17" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="59" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a10a563d1f8fe20126234c2e817cb290f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>HARPAudioProcessorImpl::HARPAudioProcessorImpl</definition>
+        <argsstring>()</argsstring>
+        <name>HARPAudioProcessorImpl</name>
+        <qualifiedname>HARPAudioProcessorImpl::HARPAudioProcessorImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="33" column="3" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="33" bodyend="34"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a20eec507fb9da0c2a92ff8371f3e196b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>HARPAudioProcessorImpl::~HARPAudioProcessorImpl</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~HARPAudioProcessorImpl</name>
+        <qualifiedname>HARPAudioProcessorImpl::~HARPAudioProcessorImpl</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="35" column="3"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a56f78efeea6e548f68bb9e2da471cc06" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::prepareToPlay</definition>
+        <argsstring>(double sampleRate, int samplesPerBlock) override</argsstring>
+        <name>prepareToPlay</name>
+        <qualifiedname>HARPAudioProcessorImpl::prepareToPlay</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>sampleRate</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>samplesPerBlock</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="37" column="8" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="23" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1af9d12d308027d2fba8bb952533af7066" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::releaseResources</definition>
+        <argsstring>() override</argsstring>
+        <name>releaseResources</name>
+        <qualifiedname>HARPAudioProcessorImpl::releaseResources</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="38" column="8" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="30" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a42b17bf6f1dec5ae7434c730ed03ab4a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPAudioProcessorImpl::isBusesLayoutSupported</definition>
+        <argsstring>(const BusesLayout &amp;layouts) const override</argsstring>
+        <name>isBusesLayoutSupported</name>
+        <qualifiedname>HARPAudioProcessorImpl::isBusesLayoutSupported</qualifiedname>
+        <param>
+          <type>const BusesLayout &amp;</type>
+          <declname>layouts</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="39" column="8" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="35" bodyend="42"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a926f84130178b8058c085463ed7a51ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::processBlock</definition>
+        <argsstring>(AudioBuffer&lt; float &gt; &amp;buffer, MidiBuffer &amp;midiMessages) override</argsstring>
+        <name>processBlock</name>
+        <qualifiedname>HARPAudioProcessorImpl::processBlock</qualifiedname>
+        <param>
+          <type>AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type>MidiBuffer &amp;</type>
+          <declname>midiMessages</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="40" column="8" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="44" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1abb07c73a1d87d1a3f16c400a2b3b3e75" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>const String</type>
+        <definition>const String HARPAudioProcessorImpl::getName</definition>
+        <argsstring>() const override</argsstring>
+        <name>getName</name>
+        <qualifiedname>HARPAudioProcessorImpl::getName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="45" column="16" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="45" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1afc63bb85d0c5e612bde4cad60beada70" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPAudioProcessorImpl::acceptsMidi</definition>
+        <argsstring>() const override</argsstring>
+        <name>acceptsMidi</name>
+        <qualifiedname>HARPAudioProcessorImpl::acceptsMidi</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="46" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="46" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a400135bc943c105d807750c2345f0bb8" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPAudioProcessorImpl::producesMidi</definition>
+        <argsstring>() const override</argsstring>
+        <name>producesMidi</name>
+        <qualifiedname>HARPAudioProcessorImpl::producesMidi</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="47" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="47" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a1b6e5abf70487024f602696065d90a92" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>double</type>
+        <definition>double HARPAudioProcessorImpl::getTailLengthSeconds</definition>
+        <argsstring>() const override</argsstring>
+        <name>getTailLengthSeconds</name>
+        <qualifiedname>HARPAudioProcessorImpl::getTailLengthSeconds</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="48" column="10" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="57" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a7af5602112b2755a1710b9e10cc8ec0d" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>int</type>
+        <definition>int HARPAudioProcessorImpl::getNumPrograms</definition>
+        <argsstring>() override</argsstring>
+        <name>getNumPrograms</name>
+        <qualifiedname>HARPAudioProcessorImpl::getNumPrograms</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="50" column="7" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="50" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1acc0242e15952f9f413faa65ffd8469de" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>int</type>
+        <definition>int HARPAudioProcessorImpl::getCurrentProgram</definition>
+        <argsstring>() override</argsstring>
+        <name>getCurrentProgram</name>
+        <qualifiedname>HARPAudioProcessorImpl::getCurrentProgram</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="51" column="7" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="51" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a222ee07e120728b2d29aac1e703db82b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::setCurrentProgram</definition>
+        <argsstring>(int) override</argsstring>
+        <name>setCurrentProgram</name>
+        <qualifiedname>HARPAudioProcessorImpl::setCurrentProgram</qualifiedname>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="52" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="52" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1aa7eea77caa3f29a34c18ae61fa2433a0" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>const String</type>
+        <definition>const String HARPAudioProcessorImpl::getProgramName</definition>
+        <argsstring>(int) override</argsstring>
+        <name>getProgramName</name>
+        <qualifiedname>HARPAudioProcessorImpl::getProgramName</qualifiedname>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="53" column="16" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="53" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a665ba411f863d10795607eb5fc0273dc" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::changeProgramName</definition>
+        <argsstring>(int, const String &amp;) override</argsstring>
+        <name>changeProgramName</name>
+        <qualifiedname>HARPAudioProcessorImpl::changeProgramName</qualifiedname>
+        <param>
+          <type>int</type>
+        </param>
+        <param>
+          <type>const String &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="54" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="54" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a86e9d55f83b811e6a26055a95372bfb7" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::getStateInformation</definition>
+        <argsstring>(MemoryBlock &amp;) override</argsstring>
+        <name>getStateInformation</name>
+        <qualifiedname>HARPAudioProcessorImpl::getStateInformation</qualifiedname>
+        <param>
+          <type>MemoryBlock &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="56" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="56" bodyend="56"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a714781511ec3f5c1f5f73f2529cae8a8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void HARPAudioProcessorImpl::setStateInformation</definition>
+        <argsstring>(const void *, int) override</argsstring>
+        <name>setStateInformation</name>
+        <qualifiedname>HARPAudioProcessorImpl::setStateInformation</qualifiedname>
+        <param>
+          <type>const void *</type>
+        </param>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="57" column="8" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="57" bodyend="57"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_impl_1a33fc7db28be8224c473e091ef643c41f" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>BusesProperties</type>
+        <definition>juce::AudioProcessor::BusesProperties HARPAudioProcessorImpl::getBusesProperties</definition>
+        <argsstring>()</argsstring>
+        <name>getBusesProperties</name>
+        <qualifiedname>HARPAudioProcessorImpl::getBusesProperties</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessorImpl.h" line="62" column="26" bodyfile="Source/ARA/AudioProcessorImpl.cpp" bodystart="66" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A class that implements the audio processing for the plugin. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>AudioProcessor</label>
+      </node>
+      <node id="3">
+        <label>AudioProcessorARAExtension</label>
+      </node>
+      <node id="4">
+        <label>HARPAudioProcessor</label>
+        <link refid="class_h_a_r_p_audio_processor"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>HARPAudioProcessorImpl</label>
+        <link refid="class_h_a_r_p_audio_processor_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>AudioProcessor</label>
+      </node>
+      <node id="3">
+        <label>AudioProcessorARAExtension</label>
+      </node>
+      <node id="1">
+        <label>HARPAudioProcessorImpl</label>
+        <link refid="class_h_a_r_p_audio_processor_impl"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>playHeadState</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>PlayHeadState</label>
+        <link refid="struct_play_head_state"/>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/AudioProcessorImpl.h" line="30" column="1" bodyfile="Source/ARA/AudioProcessorImpl.h" bodystart="31" bodyend="65"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_audio_processor_impl_1afc63bb85d0c5e612bde4cad60beada70" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>acceptsMidi</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a665ba411f863d10795607eb5fc0273dc" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>changeProgramName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a33fc7db28be8224c473e091ef643c41f" prot="private" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getBusesProperties</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1acc0242e15952f9f413faa65ffd8469de" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getCurrentProgram</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1abb07c73a1d87d1a3f16c400a2b3b3e75" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a7af5602112b2755a1710b9e10cc8ec0d" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getNumPrograms</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1aa7eea77caa3f29a34c18ae61fa2433a0" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getProgramName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a86e9d55f83b811e6a26055a95372bfb7" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getStateInformation</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a1b6e5abf70487024f602696065d90a92" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>getTailLengthSeconds</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a10a563d1f8fe20126234c2e817cb290f" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>HARPAudioProcessorImpl</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a42b17bf6f1dec5ae7434c730ed03ab4a" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>isBusesLayoutSupported</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a6b368ad793dc37c2fca2fd367949b731" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>playHeadState</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a56f78efeea6e548f68bb9e2da471cc06" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>prepareToPlay</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a926f84130178b8058c085463ed7a51ce" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>processBlock</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a400135bc943c105d807750c2345f0bb8" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>producesMidi</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1af9d12d308027d2fba8bb952533af7066" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>releaseResources</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a222ee07e120728b2d29aac1e703db82b" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>setCurrentProgram</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a714781511ec3f5c1f5f73f2529cae8a8" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>setStateInformation</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a20eec507fb9da0c2a92ff8371f3e196b" prot="public" virt="non-virtual"><scope>HARPAudioProcessorImpl</scope><name>~HARPAudioProcessorImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

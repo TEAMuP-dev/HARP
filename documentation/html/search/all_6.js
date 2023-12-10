@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['init_0',['init',['../class_audio_modification.html#aa99f5c127ae475ac110d8b4312c92e4e',1,'AudioModification']]]
+  ['getmodel_0',['getModel',['../class_editor_view.html#a70af17ce15a4644eedc950f93e56d21e',1,'EditorView']]]
 ];

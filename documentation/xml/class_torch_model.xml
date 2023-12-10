@@ -1,0 +1,271 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_torch_model" kind="class" language="C++" prot="public">
+    <compoundname>TorchModel</compoundname>
+    <basecompoundref refid="class_model" prot="public" virt="non-virtual">Model</basecompoundref>
+    <derivedcompoundref refid="class_web_wave2_wave" prot="public" virt="non-virtual">WebWave2Wave</derivedcompoundref>
+    <includes refid="_torch_model_8h" local="no">TorchModel.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_torch_model_1a9d408f0ff67993ed12918910e988badd" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string TorchModel::m_modelPath</definition>
+        <argsstring></argsstring>
+        <name>m_modelPath</name>
+        <qualifiedname>TorchModel::m_modelPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="61" column="15" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_torch_model_1a7a5628d8064d1ba341bbffa45450d881" prot="public" static="no" mutable="no">
+        <type>unique_ptr&lt; Module &gt;</type>
+        <definition>unique_ptr&lt;Module&gt; TorchModel::m_model</definition>
+        <argsstring></argsstring>
+        <name>m_model</name>
+        <qualifiedname>TorchModel::m_model</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="64" column="14" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="class_torch_model_1ad15589d30684c007006fd0572daa1fa3" prot="protected" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool TorchModel::m_loaded</definition>
+        <argsstring></argsstring>
+        <name>m_loaded</name>
+        <qualifiedname>TorchModel::m_loaded</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="68" column="8" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_torch_model_1a52e440eabdc90d1749554dfda8778823" prot="protected" static="no" mutable="yes">
+        <type>std::mutex</type>
+        <definition>std::mutex TorchModel::m_mutex</definition>
+        <argsstring></argsstring>
+        <name>m_mutex</name>
+        <qualifiedname>TorchModel::m_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="69" column="22" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_torch_model_1ae0127b0640820e7f8ff91bfd1b0fe672" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TorchModel::TorchModel</definition>
+        <argsstring>()</argsstring>
+        <name>TorchModel</name>
+        <qualifiedname>TorchModel::TorchModel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="41" column="3" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="28" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_torch_model_1afda3f812849688c27cb7a0507989ffb1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TorchModel::~TorchModel</definition>
+        <argsstring>() override</argsstring>
+        <name>~TorchModel</name>
+        <qualifiedname>TorchModel::~TorchModel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="44" column="3" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="30" bodyend="33"/>
+      </memberdef>
+      <memberdef kind="function" id="class_torch_model_1aaa96fde53aa45f4856865dd5a4abe7f4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool TorchModel::load</definition>
+        <argsstring>(const string &amp;modelPath) override</argsstring>
+        <name>load</name>
+        <qualifiedname>TorchModel::load</qualifiedname>
+        <param>
+          <type>const string &amp;</type>
+          <declname>modelPath</declname>
+        </param>
+        <briefdescription>
+<para>loads a torchscript model from file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="47" column="8" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="35" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="class_torch_model_1a024d4fd3970ec32ad68ea779db7e81c2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>bool</type>
+        <definition>bool TorchModel::ready</definition>
+        <argsstring>() const override</argsstring>
+        <name>ready</name>
+        <qualifiedname>TorchModel::ready</qualifiedname>
+        <reimplements refid="class_model_1a2da73e5a1f8e1404cdc1eb318b81d406">ready</reimplements>
+        <reimplementedby refid="class_web_wave2_wave_1ae9594ce12323324fb5aa6eb60cdfa276">ready</reimplementedby>
+        <briefdescription>
+<para>checks if a model is loaded onto memory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="50" column="8" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="82" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="class_torch_model_1aafc7a2718e1c2f30d4515a78bbd517c1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>IValue</type>
+        <definition>IValue TorchModel::forward</definition>
+        <argsstring>(const std::vector&lt; IValue &gt; &amp;inputs) const</argsstring>
+        <name>forward</name>
+        <qualifiedname>TorchModel::forward</qualifiedname>
+        <param>
+          <type>const std::vector&lt; IValue &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+<para>forward pass </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="53" column="10" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="84" bodyend="86"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="class_torch_model_1ace998f8b33941cf2d7270625d3f19bb6" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>torch::Tensor</type>
+        <definition>torch::Tensor TorchModel::to_tensor</definition>
+        <argsstring>(const juce::AudioBuffer&lt; float &gt; &amp;buffer)</argsstring>
+        <name>to_tensor</name>
+        <qualifiedname>TorchModel::to_tensor</qualifiedname>
+        <param>
+          <type>const juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="55" column="24" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="88" bodyend="95"/>
+      </memberdef>
+      <memberdef kind="function" id="class_torch_model_1a0d449620f1b355f7f8529bc3693f24b6" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool TorchModel::to_buffer</definition>
+        <argsstring>(const torch::Tensor &amp;src_tensor, juce::AudioBuffer&lt; float &gt; &amp;dest_buffer)</argsstring>
+        <name>to_buffer</name>
+        <qualifiedname>TorchModel::to_buffer</qualifiedname>
+        <param>
+          <type>const torch::Tensor &amp;</type>
+          <declname>src_tensor</declname>
+        </param>
+        <param>
+          <type>juce::AudioBuffer&lt; float &gt; &amp;</type>
+          <declname>dest_buffer</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/DeepLearning/TorchModel.h" line="57" column="15" bodyfile="Source/DeepLearning/TorchModel.cpp" bodystart="97" bodyend="112"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Class that represents a base <ref refid="class_torch_model" kindref="compound">TorchModel</ref> inherited from <ref refid="class_model" kindref="compound">Model</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Model</label>
+        <link refid="class_model"/>
+      </node>
+      <node id="1">
+        <label>TorchModel</label>
+        <link refid="class_torch_model"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>WebWave2Wave</label>
+        <link refid="class_web_wave2_wave"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Model</label>
+        <link refid="class_model"/>
+        <childnode refid="3" relation="usage">
+          <edgelabel>m_card</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>ModelCard</label>
+        <link refid="struct_model_card"/>
+        <childnode refid="4" relation="usage">
+          <edgelabel>author</edgelabel>
+          <edgelabel>description</edgelabel>
+          <edgelabel>name</edgelabel>
+        </childnode>
+      </node>
+      <node id="1">
+        <label>TorchModel</label>
+        <link refid="class_torch_model"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>m_model</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>string</label>
+      </node>
+      <node id="5">
+        <label>unique_ptr&lt; Module &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/DeepLearning/TorchModel.h" line="38" column="1" bodyfile="Source/DeepLearning/TorchModel.h" bodystart="39" bodyend="71"/>
+    <listofallmembers>
+      <member refid="class_model_1a2004629072f7863d0b4bc4da44560c32" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>card</name></member>
+      <member refid="class_torch_model_1aafc7a2718e1c2f30d4515a78bbd517c1" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>forward</name></member>
+      <member refid="class_torch_model_1aaa96fde53aa45f4856865dd5a4abe7f4" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>load</name></member>
+      <member refid="class_model_1ac15b9777c4026f171078d3ecc38a34af" prot="public" virt="pure-virtual" ambiguityscope="Model::"><scope>TorchModel</scope><name>load</name></member>
+      <member refid="class_model_1a6074c50634070cf63c2370444be4bd08" prot="protected" virt="non-virtual"><scope>TorchModel</scope><name>m_card</name></member>
+      <member refid="class_torch_model_1ad15589d30684c007006fd0572daa1fa3" prot="protected" virt="non-virtual"><scope>TorchModel</scope><name>m_loaded</name></member>
+      <member refid="class_torch_model_1a7a5628d8064d1ba341bbffa45450d881" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>m_model</name></member>
+      <member refid="class_torch_model_1a9d408f0ff67993ed12918910e988badd" prot="private" virt="non-virtual"><scope>TorchModel</scope><name>m_modelPath</name></member>
+      <member refid="class_torch_model_1a52e440eabdc90d1749554dfda8778823" prot="protected" virt="non-virtual"><scope>TorchModel</scope><name>m_mutex</name></member>
+      <member refid="class_torch_model_1a024d4fd3970ec32ad68ea779db7e81c2" prot="public" virt="virtual"><scope>TorchModel</scope><name>ready</name></member>
+      <member refid="class_torch_model_1a0d449620f1b355f7f8529bc3693f24b6" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>to_buffer</name></member>
+      <member refid="class_torch_model_1ace998f8b33941cf2d7270625d3f19bb6" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>to_tensor</name></member>
+      <member refid="class_torch_model_1ae0127b0640820e7f8ff91bfd1b0fe672" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>TorchModel</name></member>
+      <member refid="class_torch_model_1afda3f812849688c27cb7a0507989ffb1" prot="public" virt="non-virtual"><scope>TorchModel</scope><name>~TorchModel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

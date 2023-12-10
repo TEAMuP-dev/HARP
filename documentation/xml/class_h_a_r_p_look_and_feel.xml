@@ -1,0 +1,167 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_look_and_feel" kind="class" language="C++" prot="public">
+    <compoundname>HARPLookAndFeel</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::LookAndFeel_V4</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a2c635ecd2e9f0f29e1bf4621c9b8ef13" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::highlightColor</definition>
+        <argsstring></argsstring>
+        <name>highlightColor</name>
+        <qualifiedname>HARPLookAndFeel::highlightColor</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xff846BD3&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="35" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a51a272691c949c8e210ac945445b8f98" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::textHeaderColor</definition>
+        <argsstring></argsstring>
+        <name>textHeaderColor</name>
+        <qualifiedname>HARPLookAndFeel::textHeaderColor</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xffCBFF8C&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="36" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a9e7be5ecf6e79be4976f3f42bee632e0" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::eerieBlack</definition>
+        <argsstring></argsstring>
+        <name>eerieBlack</name>
+        <qualifiedname>HARPLookAndFeel::eerieBlack</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xff1c1c1c&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="38" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1ab57fb9e3423c6e6d3fa4b671076ae55d" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::celadon</definition>
+        <argsstring></argsstring>
+        <name>celadon</name>
+        <qualifiedname>HARPLookAndFeel::celadon</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xff8fcb9b&quot;).darker()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="39" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="39" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a3623c401776d6fbc8f9a53bbea4212eb" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::platinum</definition>
+        <argsstring></argsstring>
+        <name>platinum</name>
+        <qualifiedname>HARPLookAndFeel::platinum</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xffeae6e5&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="40" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a3b248a4096ccc1d32185e9177fcedb4b" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::savoyBlue</definition>
+        <argsstring></argsstring>
+        <name>savoyBlue</name>
+        <qualifiedname>HARPLookAndFeel::savoyBlue</qualifiedname>
+        <initializer>= juce::Colour::fromString(&quot;0xff5762d5&quot;)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="41" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_h_a_r_p_look_and_feel_1a91d6435ad68b2955822d9d6830e501dd" prot="public" static="no" mutable="no">
+        <type>juce::Colour</type>
+        <definition>juce::Colour HARPLookAndFeel::white</definition>
+        <argsstring></argsstring>
+        <name>white</name>
+        <qualifiedname>HARPLookAndFeel::white</qualifiedname>
+        <initializer>= juce::Colours::white</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="42" column="18" bodyfile="Source/UI/LookAndFeel.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_look_and_feel_1a4ff6621ecba4882df513f08c11c0f538" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>HARPLookAndFeel::HARPLookAndFeel</definition>
+        <argsstring>()</argsstring>
+        <name>HARPLookAndFeel</name>
+        <qualifiedname>HARPLookAndFeel::HARPLookAndFeel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/LookAndFeel.h" line="10" column="5" bodyfile="Source/UI/LookAndFeel.h" bodystart="10" bodyend="33"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>HARPLookAndFeel</label>
+        <link refid="class_h_a_r_p_look_and_feel"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::LookAndFeel_V4</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>HARPLookAndFeel</label>
+        <link refid="class_h_a_r_p_look_and_feel"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::LookAndFeel_V4</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/LookAndFeel.h" line="6" column="1" bodyfile="Source/UI/LookAndFeel.h" bodystart="7" bodyend="45"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_look_and_feel_1ab57fb9e3423c6e6d3fa4b671076ae55d" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>celadon</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a9e7be5ecf6e79be4976f3f42bee632e0" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>eerieBlack</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a4ff6621ecba4882df513f08c11c0f538" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>HARPLookAndFeel</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a2c635ecd2e9f0f29e1bf4621c9b8ef13" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>highlightColor</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a3623c401776d6fbc8f9a53bbea4212eb" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>platinum</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a3b248a4096ccc1d32185e9177fcedb4b" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>savoyBlue</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a51a272691c949c8e210ac945445b8f98" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>textHeaderColor</name></member>
+      <member refid="class_h_a_r_p_look_and_feel_1a91d6435ad68b2955822d9d6830e501dd" prot="public" virt="non-virtual"><scope>HARPLookAndFeel</scope><name>white</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_4fd4d92e6e7420873057360f5ccad2ac" kind="dir">
+    <compoundname>Source/ARA</compoundname>
+    <innerfile refid="_audio_modification_8cpp">AudioModification.cpp</innerfile>
+    <innerfile refid="_audio_modification_8h">AudioModification.h</innerfile>
+    <innerfile refid="_audio_processor_8h">AudioProcessor.h</innerfile>
+    <innerfile refid="_audio_processor_impl_8cpp">AudioProcessorImpl.cpp</innerfile>
+    <innerfile refid="_audio_processor_impl_8h">AudioProcessorImpl.h</innerfile>
+    <innerfile refid="_ctrl_component_8h">CtrlComponent.h</innerfile>
+    <innerfile refid="_document_controller_specialisation_8cpp">DocumentControllerSpecialisation.cpp</innerfile>
+    <innerfile refid="_document_controller_specialisation_8h">DocumentControllerSpecialisation.h</innerfile>
+    <innerfile refid="_editor_renderer_8cpp">EditorRenderer.cpp</innerfile>
+    <innerfile refid="_editor_renderer_8h">EditorRenderer.h</innerfile>
+    <innerfile refid="_editor_view_8h">EditorView.h</innerfile>
+    <innerfile refid="_playback_region_8cpp">PlaybackRegion.cpp</innerfile>
+    <innerfile refid="_playback_region_8h">PlaybackRegion.h</innerfile>
+    <innerfile refid="_playback_renderer_8cpp">PlaybackRenderer.cpp</innerfile>
+    <innerfile refid="_playback_renderer_8h">PlaybackRenderer.h</innerfile>
+    <innerfile refid="_processor_editor_8cpp">ProcessorEditor.cpp</innerfile>
+    <innerfile refid="_processor_editor_8h">ProcessorEditor.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/ARA/"/>
+  </compounddef>
+</doxygen>

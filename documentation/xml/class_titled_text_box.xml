@@ -1,0 +1,208 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_titled_text_box" kind="class" language="C++" prot="public">
+    <compoundname>TitledTextBox</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <includes refid="_custom_components_8h" local="no">CustomComponents.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_titled_text_box_1a43b21acc1e32057a8ca37a2039310cec" prot="private" static="no" mutable="no">
+        <type>juce::TextEditor</type>
+        <definition>juce::TextEditor TitledTextBox::textBox</definition>
+        <argsstring></argsstring>
+        <name>textBox</name>
+        <qualifiedname>TitledTextBox::textBox</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="68" column="22" bodyfile="Source/UI/CustomComponents.h" bodystart="68" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_titled_text_box_1a40cec8d3d2cfc8a3ceb537d10bd131e8" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label TitledTextBox::titleLabel</definition>
+        <argsstring></argsstring>
+        <name>titleLabel</name>
+        <qualifiedname>TitledTextBox::titleLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="69" column="17" bodyfile="Source/UI/CustomComponents.h" bodystart="69" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_titled_text_box_1aa02b92df15ec0dac5afb6f7a609e3c7c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>TitledTextBox::TitledTextBox</definition>
+        <argsstring>()</argsstring>
+        <name>TitledTextBox</name>
+        <qualifiedname>TitledTextBox::TitledTextBox</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="21" column="5" bodyfile="Source/UI/CustomComponents.h" bodystart="21" bodyend="25"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a69925fe77363fa73de04048276f43a39" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TitledTextBox::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>TitledTextBox::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="27" column="10" bodyfile="Source/UI/CustomComponents.h" bodystart="27" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a883103e515d41fe6484a1acd0780ebce" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TitledTextBox::setName</definition>
+        <argsstring>(const juce::String &amp;nameId)</argsstring>
+        <name>setName</name>
+        <qualifiedname>TitledTextBox::setName</qualifiedname>
+        <param>
+          <type>const juce::String &amp;</type>
+          <declname>nameId</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="37" column="10" bodyfile="Source/UI/CustomComponents.h" bodystart="37" bodyend="40"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a00a70a9a1c26c94ae567e5dbd1c17c14" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::String</type>
+        <definition>juce::String TitledTextBox::getName</definition>
+        <argsstring>()</argsstring>
+        <name>getName</name>
+        <qualifiedname>TitledTextBox::getName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="42" column="18" bodyfile="Source/UI/CustomComponents.h" bodystart="42" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1ac4c6b472954061e15dd7554fa9275f24" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TitledTextBox::setTitle</definition>
+        <argsstring>(const juce::String &amp;title)</argsstring>
+        <name>setTitle</name>
+        <qualifiedname>TitledTextBox::setTitle</qualifiedname>
+        <param>
+          <type>const juce::String &amp;</type>
+          <declname>title</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="47" column="10" bodyfile="Source/UI/CustomComponents.h" bodystart="47" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a7e4e33da9ced96584b43470a1f4eebfd" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TitledTextBox::setText</definition>
+        <argsstring>(const juce::String &amp;text)</argsstring>
+        <name>setText</name>
+        <qualifiedname>TitledTextBox::setText</qualifiedname>
+        <param>
+          <type>const juce::String &amp;</type>
+          <declname>text</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="52" column="10" bodyfile="Source/UI/CustomComponents.h" bodystart="52" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a855be60412db5d214cad8ea590c32683" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TitledTextBox::addListener</definition>
+        <argsstring>(juce::TextEditor::Listener *listener)</argsstring>
+        <name>addListener</name>
+        <qualifiedname>TitledTextBox::addListener</qualifiedname>
+        <param>
+          <type>juce::TextEditor::Listener *</type>
+          <declname>listener</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="57" column="10" bodyfile="Source/UI/CustomComponents.h" bodystart="57" bodyend="60"/>
+      </memberdef>
+      <memberdef kind="function" id="class_titled_text_box_1a93af8ae6f7a2129fd611307b2ce573e8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::String</type>
+        <definition>juce::String TitledTextBox::getText</definition>
+        <argsstring>()</argsstring>
+        <name>getText</name>
+        <qualifiedname>TitledTextBox::getText</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/UI/CustomComponents.h" line="62" column="18" bodyfile="Source/UI/CustomComponents.h" bodystart="62" bodyend="65"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A class for defining the toolbar slider style. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>TitledTextBox</label>
+        <link refid="class_titled_text_box"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>TitledTextBox</label>
+        <link refid="class_titled_text_box"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/UI/CustomComponents.h" line="18" column="1" bodyfile="Source/UI/CustomComponents.h" bodystart="19" bodyend="72"/>
+    <listofallmembers>
+      <member refid="class_titled_text_box_1a855be60412db5d214cad8ea590c32683" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>addListener</name></member>
+      <member refid="class_titled_text_box_1a00a70a9a1c26c94ae567e5dbd1c17c14" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>getName</name></member>
+      <member refid="class_titled_text_box_1a93af8ae6f7a2129fd611307b2ce573e8" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>getText</name></member>
+      <member refid="class_titled_text_box_1a69925fe77363fa73de04048276f43a39" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>resized</name></member>
+      <member refid="class_titled_text_box_1a883103e515d41fe6484a1acd0780ebce" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>setName</name></member>
+      <member refid="class_titled_text_box_1a7e4e33da9ced96584b43470a1f4eebfd" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>setText</name></member>
+      <member refid="class_titled_text_box_1ac4c6b472954061e15dd7554fa9275f24" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>setTitle</name></member>
+      <member refid="class_titled_text_box_1a43b21acc1e32057a8ca37a2039310cec" prot="private" virt="non-virtual"><scope>TitledTextBox</scope><name>textBox</name></member>
+      <member refid="class_titled_text_box_1aa02b92df15ec0dac5afb6f7a609e3c7c" prot="public" virt="non-virtual"><scope>TitledTextBox</scope><name>TitledTextBox</name></member>
+      <member refid="class_titled_text_box_1a40cec8d3d2cfc8a3ceb537d10bd131e8" prot="private" virt="non-virtual"><scope>TitledTextBox</scope><name>titleLabel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

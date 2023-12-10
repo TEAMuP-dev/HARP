@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_74389ed8173ad57b461b9d623a1f3867" kind="dir">
+    <compoundname>Source</compoundname>
+    <innerdir refid="dir_4fd4d92e6e7420873057360f5ccad2ac">Source/ARA</innerdir>
+    <innerdir refid="dir_b4f04190597fb456d99977bf76c321cc">Source/DeepLearning</innerdir>
+    <innerdir refid="dir_b073964416d7f8342ebcedc866343c1b">Source/Timeline</innerdir>
+    <innerdir refid="dir_ad68fd99ee46e73a145661c4c85612bf">Source/UI</innerdir>
+    <innerdir refid="dir_7db6fad920da64edfd558eb6dbc0c610">Source/Util</innerdir>
+    <innerdir refid="dir_af69ac87a5eb46a191f16e901ff3e18c">Source/WaveformCache</innerdir>
+    <innerfile refid="_main_8cpp">Main.cpp</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/"/>
+  </compounddef>
+</doxygen>

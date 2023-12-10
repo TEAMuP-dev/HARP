@@ -1,0 +1,194 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_waveform_cache" kind="struct" language="C++" prot="public">
+    <compoundname>WaveformCache</compoundname>
+    <basecompoundref prot="private" virt="non-virtual">juce::ARAAudioSource::Listener</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="struct_waveform_cache_1aabda202d081458566a6a5bfebe1b76e8" prot="private" static="no" mutable="no">
+        <type>juce::int64</type>
+        <definition>juce::int64 WaveformCache::hash</definition>
+        <argsstring></argsstring>
+        <name>hash</name>
+        <qualifiedname>WaveformCache::hash</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="104" column="15" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_waveform_cache_1a269ec447e0d9a1edb89a71a2d015e9a8" prot="private" static="no" mutable="no">
+        <type>juce::AudioFormatManager</type>
+        <definition>juce::AudioFormatManager WaveformCache::dummyManager</definition>
+        <argsstring></argsstring>
+        <name>dummyManager</name>
+        <qualifiedname>WaveformCache::dummyManager</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="105" column="28" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="105" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_waveform_cache_1adfc947b64db736b24d4aed5444787ef3" prot="private" static="no" mutable="no">
+        <type>juce::AudioThumbnailCache</type>
+        <definition>juce::AudioThumbnailCache WaveformCache::thumbnailCache</definition>
+        <argsstring></argsstring>
+        <name>thumbnailCache</name>
+        <qualifiedname>WaveformCache::thumbnailCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="106" column="29" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="106" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_waveform_cache_1a69f74ab9443d11d4e24d9c13ca974189" prot="private" static="no" mutable="no">
+        <type>std::map&lt; juce::ARAAudioSource *, unique_ptr&lt; juce::AudioThumbnail &gt; &gt;</type>
+        <definition>std::map&lt;juce::ARAAudioSource *, unique_ptr&lt;juce::AudioThumbnail&gt; &gt; WaveformCache::thumbnails</definition>
+        <argsstring></argsstring>
+        <name>thumbnails</name>
+        <qualifiedname>WaveformCache::thumbnails</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="107" column="12" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="107" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="struct_waveform_cache_1a4cef62e90a7846f96d18bb4bddc0acf4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>WaveformCache::WaveformCache</definition>
+        <argsstring>()</argsstring>
+        <name>WaveformCache</name>
+        <qualifiedname>WaveformCache::WaveformCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="32" column="3" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="32" bodyend="32"/>
+      </memberdef>
+      <memberdef kind="function" id="struct_waveform_cache_1ac8d2ae1aa686d573042ab73e745f1c17" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>WaveformCache::~WaveformCache</definition>
+        <argsstring>() override</argsstring>
+        <name>~WaveformCache</name>
+        <qualifiedname>WaveformCache::~WaveformCache</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="34" column="3" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="34" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="struct_waveform_cache_1abc69298b662796d53a53c004ac04757c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void WaveformCache::willDestroyAudioSource</definition>
+        <argsstring>(juce::ARAAudioSource *audioSource) override</argsstring>
+        <name>willDestroyAudioSource</name>
+        <qualifiedname>WaveformCache::willDestroyAudioSource</qualifiedname>
+        <param>
+          <type>juce::ARAAudioSource *</type>
+          <declname>audioSource</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="41" column="8" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="41" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="struct_waveform_cache_1a27766f39fe2ebbdbcf103d2dce9e1566" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::AudioThumbnail &amp;</type>
+        <definition>juce::AudioThumbnail &amp; WaveformCache::getOrCreateThumbnail</definition>
+        <argsstring>(juce::ARAAudioSource *audioSource, AudioModification *audioModification)</argsstring>
+        <name>getOrCreateThumbnail</name>
+        <qualifiedname>WaveformCache::getOrCreateThumbnail</qualifiedname>
+        <param>
+          <type>juce::ARAAudioSource *</type>
+          <declname>audioSource</declname>
+        </param>
+        <param>
+          <type><ref refid="class_audio_modification" kindref="compound">AudioModification</ref> *</type>
+          <declname>audioModification</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="45" column="24" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="45" bodyend="96"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="struct_waveform_cache_1ac62dbe0600921b6236028096d219442d" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void WaveformCache::removeAudioSource</definition>
+        <argsstring>(juce::ARAAudioSource *audioSource)</argsstring>
+        <name>removeAudioSource</name>
+        <qualifiedname>WaveformCache::removeAudioSource</qualifiedname>
+        <param>
+          <type>juce::ARAAudioSource *</type>
+          <declname>audioSource</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/WaveformCache/WaveformCache.h" line="99" column="8" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="99" bodyend="102"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>WaveformCache</label>
+        <link refid="struct_waveform_cache"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAAudioSource::Listener</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>WaveformCache</label>
+        <link refid="struct_waveform_cache"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAAudioSource::Listener</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/WaveformCache/WaveformCache.h" line="31" column="1" bodyfile="Source/WaveformCache/WaveformCache.h" bodystart="31" bodyend="108"/>
+    <listofallmembers>
+      <member refid="struct_waveform_cache_1a269ec447e0d9a1edb89a71a2d015e9a8" prot="private" virt="non-virtual"><scope>WaveformCache</scope><name>dummyManager</name></member>
+      <member refid="struct_waveform_cache_1a27766f39fe2ebbdbcf103d2dce9e1566" prot="public" virt="non-virtual"><scope>WaveformCache</scope><name>getOrCreateThumbnail</name></member>
+      <member refid="struct_waveform_cache_1aabda202d081458566a6a5bfebe1b76e8" prot="private" virt="non-virtual"><scope>WaveformCache</scope><name>hash</name></member>
+      <member refid="struct_waveform_cache_1ac62dbe0600921b6236028096d219442d" prot="private" virt="non-virtual"><scope>WaveformCache</scope><name>removeAudioSource</name></member>
+      <member refid="struct_waveform_cache_1adfc947b64db736b24d4aed5444787ef3" prot="private" virt="non-virtual"><scope>WaveformCache</scope><name>thumbnailCache</name></member>
+      <member refid="struct_waveform_cache_1a69f74ab9443d11d4e24d9c13ca974189" prot="private" virt="non-virtual"><scope>WaveformCache</scope><name>thumbnails</name></member>
+      <member refid="struct_waveform_cache_1a4cef62e90a7846f96d18bb4bddc0acf4" prot="public" virt="non-virtual"><scope>WaveformCache</scope><name>WaveformCache</name></member>
+      <member refid="struct_waveform_cache_1abc69298b662796d53a53c004ac04757c" prot="public" virt="non-virtual"><scope>WaveformCache</scope><name>willDestroyAudioSource</name></member>
+      <member refid="struct_waveform_cache_1ac8d2ae1aa686d573042ab73e745f1c17" prot="public" virt="non-virtual"><scope>WaveformCache</scope><name>~WaveformCache</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_playhead_position_label" kind="class" language="C++" prot="public">
+    <compoundname>PlayheadPositionLabel</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">Label</basecompoundref>
+    <basecompoundref prot="private" virt="non-virtual">juce::Timer</basecompoundref>
+    <includes refid="_playhead_position_label_8h" local="no">PlayheadPositionLabel.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_playhead_position_label_1a0d99a332331b93bbcb03435b42fafa47" prot="private" static="no" mutable="no">
+        <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref> &amp;</type>
+        <definition>PlayHeadState&amp; PlayheadPositionLabel::playHeadState</definition>
+        <argsstring></argsstring>
+        <name>playHeadState</name>
+        <qualifiedname>PlayheadPositionLabel::playHeadState</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="56" column="17" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_playhead_position_label_1a9fc0e4e347d9ef5e789d8d1fcd35cba9" prot="private" static="no" mutable="no">
+        <type>ARAMusicalContext *</type>
+        <definition>ARAMusicalContext* PlayheadPositionLabel::selectedMusicalContext</definition>
+        <argsstring></argsstring>
+        <name>selectedMusicalContext</name>
+        <qualifiedname>PlayheadPositionLabel::selectedMusicalContext</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="57" column="21" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_playhead_position_label_1af7a13adbcff11bde6125e4796e9970e2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlayheadPositionLabel::PlayheadPositionLabel</definition>
+        <argsstring>(PlayHeadState &amp;playHeadStateIn)</argsstring>
+        <name>PlayheadPositionLabel</name>
+        <qualifiedname>PlayheadPositionLabel::PlayheadPositionLabel</qualifiedname>
+        <param>
+          <type><ref refid="struct_play_head_state" kindref="compound">PlayHeadState</ref> &amp;</type>
+          <declname>playHeadStateIn</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="47" column="3" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="40" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playhead_position_label_1ad3009d62f0c9d7e9c7abeeb22400c338" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>PlayheadPositionLabel::~PlayheadPositionLabel</definition>
+        <argsstring>() override</argsstring>
+        <name>~PlayheadPositionLabel</name>
+        <qualifiedname>PlayheadPositionLabel::~PlayheadPositionLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="48" column="3" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="45" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="class_playhead_position_label_1a43b291829f7271ae4ca313513ff7de0a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlayheadPositionLabel::selectMusicalContext</definition>
+        <argsstring>(ARAMusicalContext *newSelectedMusicalContext)</argsstring>
+        <name>selectMusicalContext</name>
+        <qualifiedname>PlayheadPositionLabel::selectMusicalContext</qualifiedname>
+        <param>
+          <type>ARAMusicalContext *</type>
+          <declname>newSelectedMusicalContext</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="50" column="8" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="47" bodyend="50"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_playhead_position_label_1ac4d4e0c342dd1b2c34aaeaedb326a6fb" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlayheadPositionLabel::timerCallback</definition>
+        <argsstring>() override</argsstring>
+        <name>timerCallback</name>
+        <qualifiedname>PlayheadPositionLabel::timerCallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="53" column="8" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="52" bodyend="119"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="class_playhead_position_label_1afb2a60d599723f817d2e9a61b4f71dd8" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>String</type>
+        <definition>String PlayheadPositionLabel::timeToTimecodeString</definition>
+        <argsstring>(double seconds)</argsstring>
+        <name>timeToTimecodeString</name>
+        <qualifiedname>PlayheadPositionLabel::timeToTimecodeString</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>seconds</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="54" column="17" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="121" bodyend="128"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A label that displays the playhead position and updates in real time. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Label</label>
+      </node>
+      <node id="1">
+        <label>PlayheadPositionLabel</label>
+        <link refid="class_playhead_position_label"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::Timer</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Label</label>
+      </node>
+      <node id="1">
+        <label>PlayheadPositionLabel</label>
+        <link refid="class_playhead_position_label"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>juce::Timer</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/Timeline/PlayheadPositionLabel.h" line="45" column="1" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="45" bodyend="58"/>
+    <listofallmembers>
+      <member refid="class_playhead_position_label_1af7a13adbcff11bde6125e4796e9970e2" prot="public" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>PlayheadPositionLabel</name></member>
+      <member refid="class_playhead_position_label_1a0d99a332331b93bbcb03435b42fafa47" prot="private" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>playHeadState</name></member>
+      <member refid="class_playhead_position_label_1a9fc0e4e347d9ef5e789d8d1fcd35cba9" prot="private" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>selectedMusicalContext</name></member>
+      <member refid="class_playhead_position_label_1a43b291829f7271ae4ca313513ff7de0a" prot="public" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>selectMusicalContext</name></member>
+      <member refid="class_playhead_position_label_1ac4d4e0c342dd1b2c34aaeaedb326a6fb" prot="private" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>timerCallback</name></member>
+      <member refid="class_playhead_position_label_1afb2a60d599723f817d2e9a61b4f71dd8" prot="private" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>timeToTimecodeString</name></member>
+      <member refid="class_playhead_position_label_1ad3009d62f0c9d7e9c7abeeb22400c338" prot="public" virt="non-virtual"><scope>PlayheadPositionLabel</scope><name>~PlayheadPositionLabel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

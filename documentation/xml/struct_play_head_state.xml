@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="struct_play_head_state" kind="struct" language="C++" prot="public">
+    <compoundname>PlayHeadState</compoundname>
+    <includes refid="_playhead_position_label_8h" local="no">PlayheadPositionLabel.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="struct_play_head_state_1aff5963c2af60b45c5bf1aa470d41c47e" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; PlayHeadState::isPlaying</definition>
+        <argsstring></argsstring>
+        <name>isPlaying</name>
+        <qualifiedname>PlayHeadState::isPlaying</qualifiedname>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="35" column="15" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="35" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_play_head_state_1afee11b1304ce6550d0bfcefa4da7f054" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; bool &gt;</type>
+        <definition>std::atomic&lt;bool&gt; PlayHeadState::isLooping</definition>
+        <argsstring></argsstring>
+        <name>isLooping</name>
+        <qualifiedname>PlayHeadState::isLooping</qualifiedname>
+        <initializer>{false}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="35" column="25" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="35" bodyend="35"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_play_head_state_1aac5f9ebc47ba0b67318eb92737d1cc4c" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; double &gt;</type>
+        <definition>std::atomic&lt;double&gt; PlayHeadState::timeInSeconds</definition>
+        <argsstring></argsstring>
+        <name>timeInSeconds</name>
+        <qualifiedname>PlayHeadState::timeInSeconds</qualifiedname>
+        <initializer>{0.0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="36" column="15" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_play_head_state_1a2427d2a458e7535888b16add5012b4e4" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; double &gt;</type>
+        <definition>std::atomic&lt;double&gt; PlayHeadState::loopPpqStart</definition>
+        <argsstring></argsstring>
+        <name>loopPpqStart</name>
+        <qualifiedname>PlayHeadState::loopPpqStart</qualifiedname>
+        <initializer>{0.0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="36" column="29" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="variable" id="struct_play_head_state_1ad055970f416cbb63a77c2e07a5832991" prot="public" static="no" mutable="no">
+        <type>std::atomic&lt; double &gt;</type>
+        <definition>std::atomic&lt;double&gt; PlayHeadState::loopPpqEnd</definition>
+        <argsstring></argsstring>
+        <name>loopPpqEnd</name>
+        <qualifiedname>PlayHeadState::loopPpqEnd</qualifiedname>
+        <initializer>{0.0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="36" column="42" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="struct_play_head_state_1aa8f3dfd3849d632d5e914098700a187e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void PlayHeadState::update</definition>
+        <argsstring>(const Optional&lt; AudioPlayHead::PositionInfo &gt; &amp;info)</argsstring>
+        <name>update</name>
+        <qualifiedname>PlayHeadState::update</qualifiedname>
+        <param>
+          <type>const Optional&lt; AudioPlayHead::PositionInfo &gt; &amp;</type>
+          <declname>info</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Timeline/PlayheadPositionLabel.h" line="38" column="8" bodyfile="Source/Timeline/PlayheadPositionLabel.cpp" bodystart="22" bodyend="38"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Struct representing the state of the playhead. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Timeline/PlayheadPositionLabel.h" line="34" column="1" bodyfile="Source/Timeline/PlayheadPositionLabel.h" bodystart="34" bodyend="39"/>
+    <listofallmembers>
+      <member refid="struct_play_head_state_1afee11b1304ce6550d0bfcefa4da7f054" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>isLooping</name></member>
+      <member refid="struct_play_head_state_1aff5963c2af60b45c5bf1aa470d41c47e" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>isPlaying</name></member>
+      <member refid="struct_play_head_state_1ad055970f416cbb63a77c2e07a5832991" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>loopPpqEnd</name></member>
+      <member refid="struct_play_head_state_1a2427d2a458e7535888b16add5012b4e4" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>loopPpqStart</name></member>
+      <member refid="struct_play_head_state_1aac5f9ebc47ba0b67318eb92737d1cc4c" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>timeInSeconds</name></member>
+      <member refid="struct_play_head_state_1aa8f3dfd3849d632d5e914098700a187e" prot="public" virt="non-virtual"><scope>PlayHeadState</scope><name>update</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

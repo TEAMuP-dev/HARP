@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_custom_thread_pool_job" kind="class" language="C++" prot="public">
+    <compoundname>CustomThreadPoolJob</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">ThreadPoolJob</basecompoundref>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="class_custom_thread_pool_job_1a7afcb1c1d632e7e424f53e10146cddb0" prot="public" static="no" mutable="no">
+        <type>std::function&lt; void()&gt;</type>
+        <definition>std::function&lt;void()&gt; CustomThreadPoolJob::jobFunction</definition>
+        <argsstring></argsstring>
+        <name>jobFunction</name>
+        <qualifiedname>CustomThreadPoolJob::jobFunction</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="60" column="17" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_custom_thread_pool_job_1a2801c7aece7d0635c94aa133761c9a36" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>CustomThreadPoolJob::CustomThreadPoolJob</definition>
+        <argsstring>(std::function&lt; void()&gt; jobFunction)</argsstring>
+        <name>CustomThreadPoolJob</name>
+        <qualifiedname>CustomThreadPoolJob::CustomThreadPoolJob</qualifiedname>
+        <param>
+          <type>std::function&lt; void()&gt;</type>
+          <declname>jobFunction</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="44" column="3" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="44" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="class_custom_thread_pool_job_1ae16071e87c758164abfb6464e65a3626" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>JobStatus</type>
+        <definition>JobStatus CustomThreadPoolJob::runJob</definition>
+        <argsstring>() override</argsstring>
+        <name>runJob</name>
+        <qualifiedname>CustomThreadPoolJob::runJob</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/DocumentControllerSpecialisation.h" line="47" column="13" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="47" bodyend="58"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>CustomThreadPoolJob</label>
+        <link refid="class_custom_thread_pool_job"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ThreadPoolJob</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>CustomThreadPoolJob</label>
+        <link refid="class_custom_thread_pool_job"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>ThreadPoolJob</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/DocumentControllerSpecialisation.h" line="41" column="1" bodyfile="Source/ARA/DocumentControllerSpecialisation.h" bodystart="42" bodyend="61"/>
+    <listofallmembers>
+      <member refid="class_custom_thread_pool_job_1a2801c7aece7d0635c94aa133761c9a36" prot="public" virt="non-virtual"><scope>CustomThreadPoolJob</scope><name>CustomThreadPoolJob</name></member>
+      <member refid="class_custom_thread_pool_job_1a7afcb1c1d632e7e424f53e10146cddb0" prot="public" virt="non-virtual"><scope>CustomThreadPoolJob</scope><name>jobFunction</name></member>
+      <member refid="class_custom_thread_pool_job_1ae16071e87c758164abfb6464e65a3626" prot="public" virt="non-virtual"><scope>CustomThreadPoolJob</scope><name>runJob</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_7db6fad920da64edfd558eb6dbc0c610" kind="dir">
+    <compoundname>Source/Util</compoundname>
+    <innerfile refid="_async_configuration_callback_8h">AsyncConfigurationCallback.h</innerfile>
+    <innerfile refid="_crossfade_8h">Crossfade.h</innerfile>
+    <innerfile refid="_looper_8h">Looper.h</innerfile>
+    <innerfile refid="_possibly_buffered_reader_8h">PossiblyBufferedReader.h</innerfile>
+    <innerfile refid="_preview_state_8h">PreviewState.h</innerfile>
+    <innerfile refid="_processing_lock_interface_8h">ProcessingLockInterface.h</innerfile>
+    <innerfile refid="_time_to_view_scaling_8h">TimeToViewScaling.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Util/"/>
+  </compounddef>
+</doxygen>

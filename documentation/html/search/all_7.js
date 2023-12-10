@@ -1,9 +1,10 @@
 var searchData=
 [
-  ['layout_2ecpp_0',['Layout.cpp',['../_layout_8cpp.html',1,'']]],
-  ['layout_2eh_1',['Layout.h',['../_layout_8h.html',1,'']]],
-  ['listener_2',['Listener',['../class_time_to_view_scaling_1_1_listener.html',1,'TimeToViewScaling']]],
-  ['load_3',['load',['../class_model.html#a7032424ce73e00b889fde5bfba4a0692',1,'Model::load()'],['../class_torch_model.html#a4d8f9eb5cc07e36cc14f2b11b2bf627d',1,'TorchModel::load()'],['../class_web_model.html#a01c1ce5f7295778a1e699d0ad3edd9c3',1,'WebModel::load()']]],
-  ['looper_4',['Looper',['../class_looper.html',1,'']]],
-  ['looper_2eh_5',['Looper.h',['../_looper_8h.html',1,'']]]
+  ['harp_0',['harp',['../md__doxy_main_page.html',1,'HARP'],['../md__doxy_main_page.html#autotoc_md4',1,'Installing HARP'],['../md__doxy_main_page.html#autotoc_md2',1,'Making a deep learning model compatible with HARP']]],
+  ['harp_20plug_20in_20from_20source_20code_1',['Building the HARP plug-in from source code',['../md__doxy_main_page.html#autotoc_md7',1,'']]],
+  ['harpaudioprocessor_2',['HARPAudioProcessor',['../class_h_a_r_p_audio_processor.html',1,'']]],
+  ['harpaudioprocessorimpl_3',['HARPAudioProcessorImpl',['../class_h_a_r_p_audio_processor_impl.html',1,'']]],
+  ['harpdocumentcontrollerspecialisation_4',['harpdocumentcontrollerspecialisation',['../class_h_a_r_p_document_controller_specialisation.html',1,'HARPDocumentControllerSpecialisation'],['../class_h_a_r_p_document_controller_specialisation.html#aa04a903d7d750f10c0c7510e71d49598',1,'HARPDocumentControllerSpecialisation::HARPDocumentControllerSpecialisation()']]],
+  ['harplookandfeel_5',['HARPLookAndFeel',['../class_h_a_r_p_look_and_feel.html',1,'']]],
+  ['harpprocessoreditor_6',['harpprocessoreditor',['../class_h_a_r_p_processor_editor.html',1,'HARPProcessorEditor'],['../class_h_a_r_p_processor_editor.html#a200f72ee5d0dc350eeba50832dcdd028',1,'HARPProcessorEditor::HARPProcessorEditor()']]]
 ];

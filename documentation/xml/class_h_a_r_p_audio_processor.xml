@@ -1,0 +1,115 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_h_a_r_p_audio_processor" kind="class" language="C++" prot="public">
+    <compoundname>HARPAudioProcessor</compoundname>
+    <basecompoundref refid="class_h_a_r_p_audio_processor_impl" prot="public" virt="non-virtual">HARPAudioProcessorImpl</basecompoundref>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_1a10968a7ebe092d8799ff1d77abe464f3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool HARPAudioProcessor::hasEditor</definition>
+        <argsstring>() const override</argsstring>
+        <name>hasEditor</name>
+        <qualifiedname>HARPAudioProcessor::hasEditor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessor.h" line="26" column="8" bodyfile="Source/ARA/AudioProcessor.h" bodystart="26" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="class_h_a_r_p_audio_processor_1a0b615cdb7cdce8fcf3ee1054e510d594" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>AudioProcessorEditor *</type>
+        <definition>AudioProcessorEditor * HARPAudioProcessor::createEditor</definition>
+        <argsstring>() override</argsstring>
+        <name>createEditor</name>
+        <qualifiedname>HARPAudioProcessor::createEditor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioProcessor.h" line="27" column="24" bodyfile="Source/ARA/AudioProcessor.h" bodystart="27" bodyend="34"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>AudioProcessor</label>
+      </node>
+      <node id="4">
+        <label>AudioProcessorARAExtension</label>
+      </node>
+      <node id="1">
+        <label>HARPAudioProcessor</label>
+        <link refid="class_h_a_r_p_audio_processor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>HARPAudioProcessorImpl</label>
+        <link refid="class_h_a_r_p_audio_processor_impl"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>AudioProcessor</label>
+      </node>
+      <node id="4">
+        <label>AudioProcessorARAExtension</label>
+      </node>
+      <node id="1">
+        <label>HARPAudioProcessor</label>
+        <link refid="class_h_a_r_p_audio_processor"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>HARPAudioProcessorImpl</label>
+        <link refid="class_h_a_r_p_audio_processor_impl"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+        <childnode refid="5" relation="usage">
+          <edgelabel>playHeadState</edgelabel>
+        </childnode>
+      </node>
+      <node id="5">
+        <label>PlayHeadState</label>
+        <link refid="struct_play_head_state"/>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/AudioProcessor.h" line="24" column="1" bodyfile="Source/ARA/AudioProcessor.h" bodystart="24" bodyend="35"/>
+    <listofallmembers>
+      <member refid="class_h_a_r_p_audio_processor_impl_1afc63bb85d0c5e612bde4cad60beada70" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>acceptsMidi</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a665ba411f863d10795607eb5fc0273dc" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>changeProgramName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_1a0b615cdb7cdce8fcf3ee1054e510d594" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>createEditor</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1acc0242e15952f9f413faa65ffd8469de" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getCurrentProgram</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1abb07c73a1d87d1a3f16c400a2b3b3e75" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a7af5602112b2755a1710b9e10cc8ec0d" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getNumPrograms</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1aa7eea77caa3f29a34c18ae61fa2433a0" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getProgramName</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a86e9d55f83b811e6a26055a95372bfb7" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getStateInformation</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a1b6e5abf70487024f602696065d90a92" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>getTailLengthSeconds</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a10a563d1f8fe20126234c2e817cb290f" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>HARPAudioProcessorImpl</name></member>
+      <member refid="class_h_a_r_p_audio_processor_1a10968a7ebe092d8799ff1d77abe464f3" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>hasEditor</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a42b17bf6f1dec5ae7434c730ed03ab4a" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>isBusesLayoutSupported</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a6b368ad793dc37c2fca2fd367949b731" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>playHeadState</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a56f78efeea6e548f68bb9e2da471cc06" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>prepareToPlay</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a926f84130178b8058c085463ed7a51ce" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>processBlock</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a400135bc943c105d807750c2345f0bb8" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>producesMidi</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1af9d12d308027d2fba8bb952533af7066" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>releaseResources</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a222ee07e120728b2d29aac1e703db82b" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>setCurrentProgram</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a714781511ec3f5c1f5f73f2529cae8a8" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>setStateInformation</name></member>
+      <member refid="class_h_a_r_p_audio_processor_impl_1a20eec507fb9da0c2a92ff8371f3e196b" prot="public" virt="non-virtual"><scope>HARPAudioProcessor</scope><name>~HARPAudioProcessorImpl</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

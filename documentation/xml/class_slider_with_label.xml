@@ -1,0 +1,138 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_slider_with_label" kind="class" language="C++" prot="public">
+    <compoundname>SliderWithLabel</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::Component</basecompoundref>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_slider_with_label_1a5854491fa341df620a4114a81b8dd47d" prot="private" static="no" mutable="no">
+        <type>juce::Label</type>
+        <definition>juce::Label SliderWithLabel::label</definition>
+        <argsstring></argsstring>
+        <name>label</name>
+        <qualifiedname>SliderWithLabel::label</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="32" column="17" bodyfile="Source/ARA/CtrlComponent.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_slider_with_label_1ae5325e0cc2cb8f5443f9bf43d8c7fb9c" prot="private" static="no" mutable="no">
+        <type>juce::Slider</type>
+        <definition>juce::Slider SliderWithLabel::slider</definition>
+        <argsstring></argsstring>
+        <name>slider</name>
+        <qualifiedname>SliderWithLabel::slider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="33" column="18" bodyfile="Source/ARA/CtrlComponent.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_slider_with_label_1a7c1502511b3e5684bbeb4611f47065f8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>SliderWithLabel::SliderWithLabel</definition>
+        <argsstring>(const juce::String &amp;labelText, juce::Slider::SliderStyle style)</argsstring>
+        <name>SliderWithLabel</name>
+        <qualifiedname>SliderWithLabel::SliderWithLabel</qualifiedname>
+        <param>
+          <type>const juce::String &amp;</type>
+          <declname>labelText</declname>
+        </param>
+        <param>
+          <type>juce::Slider::SliderStyle</type>
+          <declname>style</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="12" column="5" bodyfile="Source/ARA/CtrlComponent.h" bodystart="12" bodyend="19"/>
+      </memberdef>
+      <memberdef kind="function" id="class_slider_with_label_1a8bafb51b5a3f26ecce9b6052ef470511" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void SliderWithLabel::resized</definition>
+        <argsstring>() override</argsstring>
+        <name>resized</name>
+        <qualifiedname>SliderWithLabel::resized</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="21" column="10" bodyfile="Source/ARA/CtrlComponent.h" bodystart="21" bodyend="26"/>
+      </memberdef>
+      <memberdef kind="function" id="class_slider_with_label_1a2348d48d8993b2773a946e86c73adfbb" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::Slider &amp;</type>
+        <definition>juce::Slider &amp; SliderWithLabel::getSlider</definition>
+        <argsstring>()</argsstring>
+        <name>getSlider</name>
+        <qualifiedname>SliderWithLabel::getSlider</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="28" column="18" bodyfile="Source/ARA/CtrlComponent.h" bodystart="28" bodyend="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_slider_with_label_1afd1483e1eea218f4bfcd0142441c9c87" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>juce::Label &amp;</type>
+        <definition>juce::Label &amp; SliderWithLabel::getLabel</definition>
+        <argsstring>()</argsstring>
+        <name>getLabel</name>
+        <qualifiedname>SliderWithLabel::getLabel</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/CtrlComponent.h" line="29" column="17" bodyfile="Source/ARA/CtrlComponent.h" bodystart="29" bodyend="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>SliderWithLabel</label>
+        <link refid="class_slider_with_label"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>SliderWithLabel</label>
+        <link refid="class_slider_with_label"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::Component</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/CtrlComponent.h" line="9" column="1" bodyfile="Source/ARA/CtrlComponent.h" bodystart="10" bodyend="34"/>
+    <listofallmembers>
+      <member refid="class_slider_with_label_1afd1483e1eea218f4bfcd0142441c9c87" prot="public" virt="non-virtual"><scope>SliderWithLabel</scope><name>getLabel</name></member>
+      <member refid="class_slider_with_label_1a2348d48d8993b2773a946e86c73adfbb" prot="public" virt="non-virtual"><scope>SliderWithLabel</scope><name>getSlider</name></member>
+      <member refid="class_slider_with_label_1a5854491fa341df620a4114a81b8dd47d" prot="private" virt="non-virtual"><scope>SliderWithLabel</scope><name>label</name></member>
+      <member refid="class_slider_with_label_1a8bafb51b5a3f26ecce9b6052ef470511" prot="public" virt="non-virtual"><scope>SliderWithLabel</scope><name>resized</name></member>
+      <member refid="class_slider_with_label_1ae5325e0cc2cb8f5443f9bf43d8c7fb9c" prot="private" virt="non-virtual"><scope>SliderWithLabel</scope><name>slider</name></member>
+      <member refid="class_slider_with_label_1a7c1502511b3e5684bbeb4611f47065f8" prot="public" virt="non-virtual"><scope>SliderWithLabel</scope><name>SliderWithLabel</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

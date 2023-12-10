@@ -1,0 +1,177 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_time_to_view_scaling_8h" kind="file" language="C++">
+    <compoundname>TimeToViewScaling.h</compoundname>
+    <includes local="yes">juce_audio_basics/juce_audio_basics.h</includes>
+    <includes local="yes">juce_audio_formats/juce_audio_formats.h</includes>
+    <includedby refid="_layout_8h" local="yes">Source/UI/Layout.h</includedby>
+    <includedby refid="_region_sequence_view_8h" local="yes">Source/UI/RegionSequenceView.h</includedby>
+    <includedby refid="_rulers_view_8h" local="yes">Source/UI/RulersView.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>Source/Util/TimeToViewScaling.h</label>
+        <link refid="_time_to_view_scaling_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="3">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="6">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="5">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="9">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>Source/UI/Layout.cpp</label>
+        <link refid="_layout_8cpp"/>
+      </node>
+      <node id="2">
+        <label>Source/UI/Layout.h</label>
+        <link refid="_layout_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>Source/UI/RegionSequenceView.cpp</label>
+        <link refid="_region_sequence_view_8cpp"/>
+      </node>
+      <node id="11">
+        <label>Source/UI/RegionSequenceView.h</label>
+        <link refid="_region_sequence_view_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Source/UI/RulersView.cpp</label>
+        <link refid="_rulers_view_8cpp"/>
+      </node>
+      <node id="13">
+        <label>Source/UI/RulersView.h</label>
+        <link refid="_rulers_view_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/Util/TimeToViewScaling.h</label>
+        <link refid="_time_to_view_scaling_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_time_to_view_scaling" prot="public">TimeToViewScaling</innerclass>
+    <innerclass refid="class_time_to_view_scaling_1_1_listener" prot="public">TimeToViewScaling::Listener</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>Class to convert between time in a playback region and pixels on screen. <simplesect kind="author"><para>JUCE, hugo flores garcia, aldo aguilar </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_basics/juce_audio_basics.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_formats/juce_audio_formats.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="class_time_to_view_scaling" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="29" refid="class_time_to_view_scaling_1_1_listener" refkind="compound"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">Listener</ref><sp/>{</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">~Listener</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>zoomLevelChanged(</highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>newPixelPerSecond)<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/>};</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>addListener(<ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">Listener</ref><sp/>*l)<sp/>{<sp/>listeners.add(l);<sp/>}</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>removeListener(Listener<sp/>*l)<sp/>{<sp/>listeners.remove(l);<sp/>}</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><ref refid="class_time_to_view_scaling" kindref="compound">TimeToViewScaling</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>zoom(</highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>factor)<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>zoomLevelPixelPerSecond<sp/>=</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>juce::jlimit(minimumZoom,<sp/>minimumZoom<sp/>*<sp/>32,<sp/>zoomLevelPixelPerSecond<sp/>*<sp/>factor);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>setZoomLevel(zoomLevelPixelPerSecond);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>setZoomLevel(</highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>pixelPerSecond)<sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>zoomLevelPixelPerSecond<sp/>=<sp/>pixelPerSecond;</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>listeners.call(</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[</highlight><highlight class="keyword">this</highlight><highlight class="normal">](Listener<sp/>&amp;l)<sp/>{<sp/>l.zoomLevelChanged(zoomLevelPixelPerSecond);<sp/>});</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>getXForTime(</highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>time)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>roundToInt(time<sp/>*<sp/>zoomLevelPixelPerSecond);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>getTimeForX(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>x)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{<sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>x<sp/>/<sp/>zoomLevelPixelPerSecond;<sp/>}</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">auto</highlight><highlight class="normal"><sp/>minimumZoom<sp/>=<sp/>10.0;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordtype">double</highlight><highlight class="normal"><sp/>zoomLevelPixelPerSecond<sp/>=<sp/>minimumZoom<sp/>*<sp/>4;</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/>juce::ListenerList&lt;Listener&gt;<sp/>listeners;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/Util/TimeToViewScaling.h"/>
+  </compounddef>
+</doxygen>

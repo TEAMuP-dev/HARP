@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="_shared_time_slice_thread_8h" kind="file" language="C++">
+    <compoundname>SharedTimeSliceThread.h</compoundname>
+    <includes local="yes">juce_audio_basics/juce_audio_basics.h</includes>
+    <includes local="yes">juce_audio_formats/juce_audio_formats.h</includes>
+    <includedby refid="_editor_renderer_8h" local="yes">Source/ARA/EditorRenderer.h</includedby>
+    <includedby refid="_playback_renderer_8h" local="yes">Source/ARA/PlaybackRenderer.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>Source/Timeline/SharedTimeSliceThread.h</label>
+        <link refid="_shared_time_slice_thread_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce_audio_basics/juce_audio_basics.h</label>
+      </node>
+      <node id="3">
+        <label>juce_audio_formats/juce_audio_formats.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="8">
+        <label>Source/ARA/AudioProcessor.h</label>
+        <link refid="_audio_processor_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>Source/ARA/CtrlComponent.h</label>
+        <link refid="_ctrl_component_8h_source"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>Source/ARA/DocumentControllerSpecialisation.cpp</label>
+        <link refid="_document_controller_specialisation_8cpp"/>
+      </node>
+      <node id="3">
+        <label>Source/ARA/DocumentControllerSpecialisation.h</label>
+        <link refid="_document_controller_specialisation_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>Source/ARA/EditorRenderer.cpp</label>
+        <link refid="_editor_renderer_8cpp"/>
+      </node>
+      <node id="2">
+        <label>Source/ARA/EditorRenderer.h</label>
+        <link refid="_editor_renderer_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>Source/ARA/PlaybackRenderer.cpp</label>
+        <link refid="_playback_renderer_8cpp"/>
+      </node>
+      <node id="5">
+        <label>Source/ARA/PlaybackRenderer.h</label>
+        <link refid="_playback_renderer_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>Source/ARA/ProcessorEditor.cpp</label>
+        <link refid="_processor_editor_8cpp"/>
+      </node>
+      <node id="7">
+        <label>Source/ARA/ProcessorEditor.h</label>
+        <link refid="_processor_editor_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>Source/Main.cpp</label>
+        <link refid="_main_8cpp"/>
+      </node>
+      <node id="11">
+        <label>Source/Timeline/PlaybackRegionView.h</label>
+        <link refid="_playback_region_view_8h"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>Source/Timeline/SharedTimeSliceThread.h</label>
+        <link refid="_shared_time_slice_thread_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>Source/UI/DocumentView.cpp</label>
+        <link refid="_document_view_8cpp"/>
+      </node>
+      <node id="13">
+        <label>Source/UI/DocumentView.h</label>
+        <link refid="_document_view_8h"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>Source/UI/RegionSequenceView.cpp</label>
+        <link refid="_region_sequence_view_8cpp"/>
+      </node>
+      <node id="12">
+        <label>Source/UI/RegionSequenceView.h</label>
+        <link refid="_region_sequence_view_8h"/>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="class_shared_time_slice_thread" prot="public">SharedTimeSliceThread</innerclass>
+    <briefdescription>
+<para>This file is part of the JUCE examples. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright (c) 2022 - Raw Material Software Limited The code included in this file is provided under the terms of the ISC license <ulink url="http://www.isc.org/downloads/software-support-policy/isc-license">http://www.isc.org/downloads/software-support-policy/isc-license</ulink>. Permission To use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted provided that the above copyright notice and this permission notice appear in all copies.</para>
+<para>THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE DISCLAIMED.</para>
+<para>This class handles is a wrapper for the juceTimeSliceThread more information can be found on the JUCE documentation <ulink url="https://docs.juce.com/master/classTimeSliceThread.html">https://docs.juce.com/master/classTimeSliceThread.html</ulink> <simplesect kind="author"><para>hugo flores garcia, aldo aguilar </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_basics/juce_audio_basics.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;juce_audio_formats/juce_audio_formats.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="class_shared_time_slice_thread" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="class_shared_time_slice_thread" kindref="compound">SharedTimeSliceThread</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>juce::TimeSliceThread<sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><ref refid="class_shared_time_slice_thread" kindref="compound">SharedTimeSliceThread</ref>()</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>TimeSliceThread(juce::String(JucePlugin_Name)<sp/>+</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="stringliteral">&quot;<sp/>ARA<sp/>Sample<sp/>Reading<sp/>Thread&quot;</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/>startThread(Priority::high);<sp/></highlight><highlight class="comment">//<sp/>Above<sp/>default<sp/>priority<sp/>so<sp/>playback<sp/>is</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>fluent,<sp/>but<sp/>below<sp/>realtime</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="35"><highlight class="normal">};</highlight></codeline>
+    </programlisting>
+    <location file="Source/Timeline/SharedTimeSliceThread.h"/>
+  </compounddef>
+</doxygen>

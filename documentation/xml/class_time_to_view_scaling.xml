@@ -1,0 +1,196 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_time_to_view_scaling" kind="class" language="C++" prot="public">
+    <compoundname>TimeToViewScaling</compoundname>
+    <innerclass refid="class_time_to_view_scaling_1_1_listener" prot="public">TimeToViewScaling::Listener</innerclass>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="class_time_to_view_scaling_1a8c38e3a38845ec24d85011f692a60c04" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>constexpr auto</type>
+        <definition>constexpr auto TimeToViewScaling::minimumZoom</definition>
+        <argsstring></argsstring>
+        <name>minimumZoom</name>
+        <qualifiedname>TimeToViewScaling::minimumZoom</qualifiedname>
+        <initializer>= 10.0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="60" column="25" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_time_to_view_scaling_1a42c5a8b5ccb7ff61ab046dcde4ba0ca2" prot="private" static="no" mutable="no">
+        <type>double</type>
+        <definition>double TimeToViewScaling::zoomLevelPixelPerSecond</definition>
+        <argsstring></argsstring>
+        <name>zoomLevelPixelPerSecond</name>
+        <qualifiedname>TimeToViewScaling::zoomLevelPixelPerSecond</qualifiedname>
+        <initializer>= minimumZoom * 4</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="62" column="10" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_time_to_view_scaling_1a93b505a54d0b8e1d3715c87730a8741c" prot="private" static="no" mutable="no">
+        <type>juce::ListenerList&lt; <ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">Listener</ref> &gt;</type>
+        <definition>juce::ListenerList&lt;Listener&gt; TimeToViewScaling::listeners</definition>
+        <argsstring></argsstring>
+        <name>listeners</name>
+        <qualifiedname>TimeToViewScaling::listeners</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="63" column="22" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_time_to_view_scaling_1a0f0bef0fe95eecc297ea57e426d0e416" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TimeToViewScaling::addListener</definition>
+        <argsstring>(Listener *l)</argsstring>
+        <name>addListener</name>
+        <qualifiedname>TimeToViewScaling::addListener</qualifiedname>
+        <param>
+          <type><ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">Listener</ref> *</type>
+          <declname>l</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="36" column="8" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a9539a18468ea05b7c07e2fb03512d3de" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TimeToViewScaling::removeListener</definition>
+        <argsstring>(Listener *l)</argsstring>
+        <name>removeListener</name>
+        <qualifiedname>TimeToViewScaling::removeListener</qualifiedname>
+        <param>
+          <type><ref refid="class_time_to_view_scaling_1_1_listener" kindref="compound">Listener</ref> *</type>
+          <declname>l</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="37" column="8" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="37" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a01815ae2dce0fdedaf8d0450f537cd39" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>TimeToViewScaling::TimeToViewScaling</definition>
+        <argsstring>()=default</argsstring>
+        <name>TimeToViewScaling</name>
+        <qualifiedname>TimeToViewScaling::TimeToViewScaling</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="39" column="3"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a13a3a587415ea340acd4a449d41e9a30" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TimeToViewScaling::zoom</definition>
+        <argsstring>(double factor)</argsstring>
+        <name>zoom</name>
+        <qualifiedname>TimeToViewScaling::zoom</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>factor</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="41" column="8" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="41" bodyend="45"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a89f184fb9e9b6922f11cd3b8868f18cb" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void TimeToViewScaling::setZoomLevel</definition>
+        <argsstring>(double pixelPerSecond)</argsstring>
+        <name>setZoomLevel</name>
+        <qualifiedname>TimeToViewScaling::setZoomLevel</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>pixelPerSecond</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="47" column="8" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="47" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a7eeba6a6bf2736601753de23477685aa" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>int</type>
+        <definition>int TimeToViewScaling::getXForTime</definition>
+        <argsstring>(double time) const</argsstring>
+        <name>getXForTime</name>
+        <qualifiedname>TimeToViewScaling::getXForTime</qualifiedname>
+        <param>
+          <type>double</type>
+          <declname>time</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="53" column="7" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="class_time_to_view_scaling_1a29df4cfad13a9f4b8878028ce8744ff2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>double</type>
+        <definition>double TimeToViewScaling::getTimeForX</definition>
+        <argsstring>(int x) const</argsstring>
+        <name>getTimeForX</name>
+        <qualifiedname>TimeToViewScaling::getTimeForX</qualifiedname>
+        <param>
+          <type>int</type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/Util/TimeToViewScaling.h" line="57" column="10" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="57" bodyend="57"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="Source/Util/TimeToViewScaling.h" line="27" column="1" bodyfile="Source/Util/TimeToViewScaling.h" bodystart="27" bodyend="64"/>
+    <listofallmembers>
+      <member refid="class_time_to_view_scaling_1a0f0bef0fe95eecc297ea57e426d0e416" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>addListener</name></member>
+      <member refid="class_time_to_view_scaling_1a29df4cfad13a9f4b8878028ce8744ff2" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>getTimeForX</name></member>
+      <member refid="class_time_to_view_scaling_1a7eeba6a6bf2736601753de23477685aa" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>getXForTime</name></member>
+      <member refid="class_time_to_view_scaling_1a93b505a54d0b8e1d3715c87730a8741c" prot="private" virt="non-virtual"><scope>TimeToViewScaling</scope><name>listeners</name></member>
+      <member refid="class_time_to_view_scaling_1a8c38e3a38845ec24d85011f692a60c04" prot="private" virt="non-virtual"><scope>TimeToViewScaling</scope><name>minimumZoom</name></member>
+      <member refid="class_time_to_view_scaling_1a9539a18468ea05b7c07e2fb03512d3de" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>removeListener</name></member>
+      <member refid="class_time_to_view_scaling_1a89f184fb9e9b6922f11cd3b8868f18cb" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>setZoomLevel</name></member>
+      <member refid="class_time_to_view_scaling_1a01815ae2dce0fdedaf8d0450f537cd39" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>TimeToViewScaling</name></member>
+      <member refid="class_time_to_view_scaling_1a13a3a587415ea340acd4a449d41e9a30" prot="public" virt="non-virtual"><scope>TimeToViewScaling</scope><name>zoom</name></member>
+      <member refid="class_time_to_view_scaling_1a42c5a8b5ccb7ff61ab046dcde4ba0ca2" prot="private" virt="non-virtual"><scope>TimeToViewScaling</scope><name>zoomLevelPixelPerSecond</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,304 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="class_audio_modification" kind="class" language="C++" prot="public">
+    <compoundname>AudioModification</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">juce::ARAAudioModification</basecompoundref>
+    <includes refid="_audio_modification_8h" local="no">AudioModification.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_audio_modification_1a0f2e709466012e4d6e5f7e7df5071b74" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool AudioModification::mIsModified</definition>
+        <argsstring></argsstring>
+        <name>mIsModified</name>
+        <qualifiedname>AudioModification::mIsModified</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="54" column="8" bodyfile="Source/ARA/AudioModification.h" bodystart="54" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_audio_modification_1a1647b610e88183b07dfe7f3fc552105a" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool AudioModification::mThumbCreated</definition>
+        <argsstring></argsstring>
+        <name>mThumbCreated</name>
+        <qualifiedname>AudioModification::mThumbCreated</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="55" column="8" bodyfile="Source/ARA/AudioModification.h" bodystart="55" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_audio_modification_1ae7e2a614c9a599a9befdcdad35f390e3" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string AudioModification::mAudioSourceName</definition>
+        <argsstring></argsstring>
+        <name>mAudioSourceName</name>
+        <qualifiedname>AudioModification::mAudioSourceName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="57" column="15" bodyfile="Source/ARA/AudioModification.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_audio_modification_1a41bf5526a28b9395f4d5167f56ff2e00" prot="private" static="no" mutable="no">
+        <type>int</type>
+        <definition>int AudioModification::mSampleRate</definition>
+        <argsstring></argsstring>
+        <name>mSampleRate</name>
+        <qualifiedname>AudioModification::mSampleRate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="58" column="7" bodyfile="Source/ARA/AudioModification.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_audio_modification_1a70c3418974305c510d6856d4d554f53f" prot="private" static="no" mutable="no">
+        <type>unique_ptr&lt; juce::ARAAudioSourceReader &gt;</type>
+        <definition>unique_ptr&lt;juce::ARAAudioSourceReader&gt; AudioModification::mAudioSourceReader</definition>
+        <argsstring></argsstring>
+        <name>mAudioSourceReader</name>
+        <qualifiedname>AudioModification::mAudioSourceReader</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="59" column="14" bodyfile="Source/ARA/AudioModification.h" bodystart="59" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_audio_modification_1a77e99453ef1b6e8e724799deb4d369a5" prot="private" static="no" mutable="no">
+        <type>unique_ptr&lt; juce::AudioBuffer&lt; float &gt; &gt;</type>
+        <definition>unique_ptr&lt;juce::AudioBuffer&lt;float&gt; &gt; AudioModification::mAudioBuffer</definition>
+        <argsstring></argsstring>
+        <name>mAudioBuffer</name>
+        <qualifiedname>AudioModification::mAudioBuffer</qualifiedname>
+        <initializer>{nullptr}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="60" column="14" bodyfile="Source/ARA/AudioModification.h" bodystart="60" bodyend="60"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_audio_modification_1a292b55d0527b0515e7df8ab9bc9d1e31" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>AudioModification::AudioModification</definition>
+        <argsstring>(juce::ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef, const juce::ARAAudioModification *optionalModificationToClone)</argsstring>
+        <name>AudioModification</name>
+        <qualifiedname>AudioModification::AudioModification</qualifiedname>
+        <param>
+          <type>juce::ARAAudioSource *</type>
+          <declname>audioSource</declname>
+        </param>
+        <param>
+          <type>ARA::ARAAudioModificationHostRef</type>
+          <declname>hostRef</declname>
+        </param>
+        <param>
+          <type>const juce::ARAAudioModification *</type>
+          <declname>optionalModificationToClone</declname>
+        </param>
+        <briefdescription>
+<para>Construct a new <ref refid="class_audio_modification" kindref="compound">AudioModification</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>audioSource</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the ARAAudioSource </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>hostRef</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A reference to ARAAudioModificationHost </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>optionalModificationToClone</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A pointer to an optional modification to clone </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="40" column="3" bodyfile="Source/ARA/AudioModification.cpp" bodystart="31" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1a9ff4ff7c20c1c4843f66b2a0e1c7c4ed" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void AudioModification::setThumbCreated</definition>
+        <argsstring>(bool created)</argsstring>
+        <name>setThumbCreated</name>
+        <qualifiedname>AudioModification::setThumbCreated</qualifiedname>
+        <param>
+          <type>bool</type>
+          <declname>created</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="44" column="8" bodyfile="Source/ARA/AudioModification.cpp" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1a37cffab150a3d4255bc360d23b4a0f3b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool AudioModification::isThumbCreated</definition>
+        <argsstring>() const</argsstring>
+        <name>isThumbCreated</name>
+        <qualifiedname>AudioModification::isThumbCreated</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="45" column="8" bodyfile="Source/ARA/AudioModification.cpp" bodystart="51" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1a86890ad38684652fdf26e728fe11b989" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string AudioModification::getSourceName</definition>
+        <argsstring>()</argsstring>
+        <name>getSourceName</name>
+        <qualifiedname>AudioModification::getSourceName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="46" column="15" bodyfile="Source/ARA/AudioModification.cpp" bodystart="57" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1a02637957e0d459d239faf9392af0a32a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void AudioModification::process</definition>
+        <argsstring>(std::shared_ptr&lt; WebWave2Wave &gt; model, double dawSampleRate)</argsstring>
+        <name>process</name>
+        <qualifiedname>AudioModification::process</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="class_web_wave2_wave" kindref="compound">WebWave2Wave</ref> &gt;</type>
+          <declname>model</declname>
+        </param>
+        <param>
+          <type>double</type>
+          <declname>dawSampleRate</declname>
+        </param>
+        <briefdescription>
+<para>Process audio from audio source with deep learning effect. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>params</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map of parameters for learner </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="48" column="8" bodyfile="Source/ARA/AudioModification.cpp" bodystart="64" bodyend="107"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1af8c8c935eee89740ce1db0991b5f0846" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>juce::AudioBuffer&lt; float &gt; *</type>
+        <definition>juce::AudioBuffer&lt; float &gt; * AudioModification::getModifiedAudioBuffer</definition>
+        <argsstring>()</argsstring>
+        <name>getModifiedAudioBuffer</name>
+        <qualifiedname>AudioModification::getModifiedAudioBuffer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="50" column="21" bodyfile="Source/ARA/AudioModification.cpp" bodystart="109" bodyend="111"/>
+      </memberdef>
+      <memberdef kind="function" id="class_audio_modification_1a0d0b5727fafae59f9e32a9cc99db1aa8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool AudioModification::getIsModified</definition>
+        <argsstring>() const</argsstring>
+        <name>getIsModified</name>
+        <qualifiedname>AudioModification::getIsModified</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="Source/ARA/AudioModification.h" line="51" column="8" bodyfile="Source/ARA/AudioModification.cpp" bodystart="113" bodyend="113"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This class provides methods for manipulating audio modifications. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The <ref refid="class_audio_modification" kindref="compound">AudioModification</ref> class contains any modifications made to the audio. We utilize the class to perform deeplearning processing on a playback region. Each playback region has its own audio modification, so we can retrive the modified audio from a playback region. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>AudioModification</label>
+        <link refid="class_audio_modification"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAAudioModification</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>AudioModification</label>
+        <link refid="class_audio_modification"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>juce::ARAAudioModification</label>
+      </node>
+    </collaborationgraph>
+    <location file="Source/ARA/AudioModification.h" line="38" column="1" bodyfile="Source/ARA/AudioModification.h" bodystart="38" bodyend="61"/>
+    <listofallmembers>
+      <member refid="class_audio_modification_1a292b55d0527b0515e7df8ab9bc9d1e31" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>AudioModification</name></member>
+      <member refid="class_audio_modification_1a0d0b5727fafae59f9e32a9cc99db1aa8" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>getIsModified</name></member>
+      <member refid="class_audio_modification_1af8c8c935eee89740ce1db0991b5f0846" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>getModifiedAudioBuffer</name></member>
+      <member refid="class_audio_modification_1a86890ad38684652fdf26e728fe11b989" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>getSourceName</name></member>
+      <member refid="class_audio_modification_1a37cffab150a3d4255bc360d23b4a0f3b" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>isThumbCreated</name></member>
+      <member refid="class_audio_modification_1a77e99453ef1b6e8e724799deb4d369a5" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mAudioBuffer</name></member>
+      <member refid="class_audio_modification_1ae7e2a614c9a599a9befdcdad35f390e3" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mAudioSourceName</name></member>
+      <member refid="class_audio_modification_1a70c3418974305c510d6856d4d554f53f" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mAudioSourceReader</name></member>
+      <member refid="class_audio_modification_1a0f2e709466012e4d6e5f7e7df5071b74" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mIsModified</name></member>
+      <member refid="class_audio_modification_1a41bf5526a28b9395f4d5167f56ff2e00" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mSampleRate</name></member>
+      <member refid="class_audio_modification_1a1647b610e88183b07dfe7f3fc552105a" prot="private" virt="non-virtual"><scope>AudioModification</scope><name>mThumbCreated</name></member>
+      <member refid="class_audio_modification_1a02637957e0d459d239faf9392af0a32a" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>process</name></member>
+      <member refid="class_audio_modification_1a9ff4ff7c20c1c4843f66b2a0e1c7c4ed" prot="public" virt="non-virtual"><scope>AudioModification</scope><name>setThumbCreated</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

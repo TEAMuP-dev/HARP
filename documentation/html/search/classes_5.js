@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['listener_0',['Listener',['../class_time_to_view_scaling_1_1_listener.html',1,'TimeToViewScaling']]],
-  ['looper_1',['Looper',['../class_looper.html',1,'']]]
+  ['jobprocessorthread_0',['JobProcessorThread',['../class_h_a_r_p_document_controller_specialisation_1_1_job_processor_thread.html',1,'HARPDocumentControllerSpecialisation']]]
 ];
