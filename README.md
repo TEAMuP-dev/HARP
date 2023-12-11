@@ -1,10 +1,13 @@
 # HARP
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys)
+
 ![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
 HARP is an [ARA](https://www.synchroarts.com/blog/what-is-ara) plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with deep learning models. HARP works by routing audio from a digital audio workstation ([DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation)) through [Gradio](https://www.gradio.app) endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets users of Digital Audio Workstations (e.g. [Reaper](https://www.reaper.fm)) access large state-of-the-art models in the cloud, without breaking their within-DAW workflow.
 
-# OS and DAW compatibility 
-HARP has been tested on arm-based Mac computers running Mac OS (versions 13.0 and 13.4), using the [REAPER](https://www.reaper.fm) digital audio workstation. 
+# OS and DAW compatibility
+HARP has been tested on arm-based Mac computers running Mac OS (versions 13.0 and 13.4), using the [REAPER](https://www.reaper.fm) digital audio workstation.
 
 HARP requires a [DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation) that fully supports the [Audio Random Access](https://en.wikipedia.org/wiki/Audio_Random_Access) to [VST](https://en.wikipedia.org/wiki/Virtual_Studio_Technology) plugins.
 
@@ -16,7 +19,7 @@ HARP requires a [DAW](https://en.wikipedia.org/wiki/Digital_audio_workstation) t
 <img width="397" alt="harp_dmg" src="https://github.com/audacitorch/HARP/assets/26678616/61acf9f3-8e00-4b85-9433-77366b262e19">
 
 * Double click on "Your Mac's VST3 folder"
- 
+
 * Drag HARP.vst3 to the folder that was opened in the previous step
 
 ## Windows & Linux
@@ -33,18 +36,18 @@ The windows build is still under development. There are no current plans to supp
 
 * Open the preferences dialog by selecting the Reaper>Settings menu item
 
-* Scroll down to find Plug-ins>ARA and make sure "Enable ARA for plug-ins" is checked. 
+* Scroll down to find Plug-ins>ARA and make sure "Enable ARA for plug-ins" is checked.
   <img width="720" alt="reaper-preferences" src="https://github.com/audacitorch/HARP/assets/26678616/4fc157b1-4718-4da6-a395-37293af7e358">
 
-* Restart Reaper 
+* Restart Reaper
 
-HARP should now be available as a VST3 plugin. 
+HARP should now be available as a VST3 plugin.
 
 ## Apply a HARP effect
 
 * Record a track in Reaper
 
-* Select "FX" on the track's channel strip. This brings up the following dialog 
+* Select "FX" on the track's channel strip. This brings up the following dialog
 <img width="1196" alt="selecting-HARP" src="https://github.com/audacitorch/HARP/assets/26678616/4df7fdcd-582e-4e21-905e-fd06f374d0bf">
 
 * Add HARP(TeamUP) as a VST3 plugin. This will call up HARP
@@ -55,7 +58,7 @@ HARP should now be available as a VST3 plugin.
 
 * Adjust the controls and hit "process"
 
-* To hear your result, just hit the space bar. 
+* To hear your result, just hit the space bar.
 
 # Available Models
 While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP. Just enter the gradio path (e.g. "hugggof/pitch_shifter" or "descript/vampnet") for any of these models into HARP.
@@ -88,7 +91,7 @@ Configure
 ```
 mkdir build
 cd build
-cmake ..  -DCMAKE_BUILD_TYPE=Debug 
+cmake ..  -DCMAKE_BUILD_TYPE=Debug
 ```
 
 Build
@@ -108,8 +111,8 @@ cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
 ## Windows
 
 ### An Important Note
-For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html). 
-**TODO**: add cmake options to build on windows. 
+For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html).
+**TODO**: add cmake options to build on windows.
 
 Here are the commands used in VSCode (Cmake Tools extension) and Windows 10.
 Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
@@ -130,7 +133,7 @@ Note that if you're using Reaper x64, you need to build the 64bit version of the
 
 Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
 You'll need to set up a developer account with Apple and create a certificate for signing the plugin.
-For more information on codesigning and notarization for mac, refer to the [pamplejuce](https://github.com/sudara/pamplejuce) template. 
+For more information on codesigning and notarization for mac, refer to the [pamplejuce](https://github.com/sudara/pamplejuce) template.
 
 The script requires the following  variables to be passed:
 ```
