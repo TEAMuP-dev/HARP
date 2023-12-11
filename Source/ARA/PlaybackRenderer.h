@@ -36,6 +36,7 @@
 #include "../Timeline/SharedTimeSliceThread.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
+#include "PlaybackRegion.h" // might not be necessary
 
 using namespace juce;
 using std::unique_ptr;
@@ -50,7 +51,7 @@ using std::unique_ptr;
 //     // Scale the range by a <double> factor
 //     ScalableRange operator*(const double factor) const noexcept
 //     {
-//         return ScalableRange(roundToInt(this->getStart() * factor), 
+//         return ScalableRange(roundToInt(this->getStart() * factor),
 //                             roundToInt(this->getEnd() * factor));
 //     }
 // };
@@ -113,7 +114,7 @@ public:
 
   /**
    * @brief Processes the each of the playback regions using the Neural Model
-   * @param params The parameters from the UI to use for processing. 
+   * @param params The parameters from the UI to use for processing.
    * @return void
    */
   void executeProcess(std::shared_ptr<WebWave2Wave> model);

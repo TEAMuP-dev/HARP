@@ -149,6 +149,15 @@ return new AudioModification(
   );
 }
 
+ARAPlaybackRegion*
+HARPDocumentControllerSpecialisation::doCreatePlaybackRegion (
+    ARAAudioModification* modification,
+    ARA::ARAPlaybackRegionHostRef hostRef) noexcept {
+  PlaybackRegion* newPlaybackRegion = new PlaybackRegion(modification, hostRef);
+  ARAPlaybackRegion* newARAPlaybackRegion = static_cast<ARAPlaybackRegion*>(newPlaybackRegion);
+  return newARAPlaybackRegion;
+}
+
 ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {
   PlaybackRenderer* newPlaybackRenderer = new PlaybackRenderer(getDocumentController(), *this, *this);

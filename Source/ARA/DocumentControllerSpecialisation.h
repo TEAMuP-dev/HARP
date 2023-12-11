@@ -26,6 +26,7 @@
 
 #include "EditorRenderer.h"
 // #include "PlaybackRenderer.h"
+#include "PlaybackRegion.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
 #include "juce_core/juce_core.h"
@@ -174,6 +175,14 @@ protected:
       ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
       const ARAAudioModification *optionalModificationToClone) noexcept
       override;
+
+  /**
+   * @brief Creates a playback region.
+   * @return A new PlaybackRegion instance.
+   */
+  ARAPlaybackRegion* doCreatePlaybackRegion (
+      ARAAudioModification* modification,
+      ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
 
   /**
    * @brief Creates a playback renderer.
