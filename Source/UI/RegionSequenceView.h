@@ -24,7 +24,7 @@
 #include "../Timeline/PlaybackRegionView.h"
 #include "../Util/TimeToViewScaling.h"
 #include "../ARA/EditorView.h"
-#include "../ARA/PlaybackRegion.h"
+// #include "../ARA/PlaybackRegion.h"
 
 class RegionSequenceView : public Component,
                            public ChangeBroadcaster,

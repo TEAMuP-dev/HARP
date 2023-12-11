@@ -7,7 +7,7 @@ PlaybackRegion::PlaybackRegion(juce::ARAAudioModification *modification,
 }
 
 bool PlaybackRegion::isSelected() const { return selected; }
-void PlaybackRegion::setSelected(bool selectedFlag) { 
-    this->selected = selectedFlag; 
+void PlaybackRegion::setSelected(bool selectedFlag) {
+    this->selected = selectedFlag;
     DBG("PlaybackRegion::setSelect");
 }
