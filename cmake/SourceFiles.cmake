@@ -14,6 +14,8 @@ set(SourceFiles
     Source/ARA/ProcessorEditor.h
     Source/ARA/ProcessorEditor.cpp
     Source/ARA/EditorView.h
+    Source/ARA/PlaybackRegion.h
+    Source/ARA/PlaybackRegion.cpp
 
     Source/ARA/CtrlComponent.h
 
@@ -24,8 +26,8 @@ set(SourceFiles
     # Source/DeepLearning/TorchModel.cpp
     Source/DeepLearning/WebModel.h
 
-    Source/Timeline/PlaybackRegion.h
-    Source/Timeline/PlaybackRegion.cpp
+    Source/Timeline/PlaybackRegionView.h
+    Source/Timeline/PlaybackRegionView.cpp
     Source/Timeline/PlayheadPositionLabel.h
     Source/Timeline/PlayheadPositionLabel.cpp
 

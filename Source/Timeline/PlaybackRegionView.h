@@ -22,6 +22,7 @@
 #include "../ARA/AudioModification.h"
 #include "../ARA/EditorView.h"
 #include "../ARA/DocumentControllerSpecialisation.h"
+#include "../ARA/PlaybackRegion.h"
 #include "../WaveformCache/WaveformCache.h"
 #include "../UI/LookAndFeel.h"
 
