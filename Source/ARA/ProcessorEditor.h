@@ -31,7 +31,7 @@
 #include "EditorRenderer.h"
 #include "PlaybackRenderer.h"
 #include "EditorView.h"
-#include "AudioModification.h"  
+#include "AudioModification.h"
 #include "../UI/LookAndFeel.h"
 
 #include "DocumentControllerSpecialisation.h"
@@ -49,7 +49,7 @@
  */
 class HARPProcessorEditor : public AudioProcessorEditor,
                                   public AudioProcessorEditorARAExtension,
-                                  public Button::Listener, 
+                                  public Button::Listener,
                                   public ChangeListener
                                   {
 public:
@@ -76,8 +76,8 @@ public:
     processButton.removeListener(this);
     cancelButton.removeListener(this);
     loadModelButton.removeListener(this);
-    mDocumentController->loadBroadcaster.removeChangeListener(this);
-    mDocumentController->processBroadcaster.removeChangeListener(this);
+    mDocumentController->removeLoadListener(this);
+    mDocumentController->removeProcessListener(this);
 
     mModelStatusTimer.reset(nullptr);
   }

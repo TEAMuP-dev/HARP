@@ -31,7 +31,7 @@
 #include "PlaybackRenderer.h"
 
 PlaybackRenderer::PlaybackRenderer(ARA::PlugIn::DocumentController *dc,
-                                   ProcessingLockInterface &lockInterfaceIn, 
+                                   ProcessingLockInterface &lockInterfaceIn,
                                    HARPDocumentControllerSpecialisation& harpDCS)
     : ARAPlaybackRenderer(dc), lockInterface(lockInterfaceIn), harpDCS(harpDCS) {
     }
@@ -146,7 +146,7 @@ bool PlaybackRenderer::processBlock(
   if (isPlaying) {
     const auto blockRange =
         Range<int64>::withStartAndLength(timeInSamples, numSamples);
-    // const auto blockRange = 
+    // const auto blockRange =
     //     SampleRange::withStartAndLength(timeInSamples, numSamples);
     DBG("PlaybackRenderer::processBlock blockRange: " << blockRange.getStart()
                                                       << " "
@@ -171,7 +171,7 @@ bool PlaybackRenderer::processBlock(
       DBG("PlaybackRenderer::processBlock playbackSampleRange: " <<
               playbackSampleRange.getStart() << " " << playbackSampleRange.getEnd());
 
-      // blockRange may start before the playbackSampleRange, so we make sure 
+      // blockRange may start before the playbackSampleRange, so we make sure
       // the renderRange starts at the same time as the playbackSampleRange
       auto renderRange = blockRange.getIntersectionWith(playbackSampleRange);
       DBG("PlaybackRenderer::processBlock renderRange: " <<
@@ -207,10 +207,10 @@ bool PlaybackRenderer::processBlock(
       Range<int64> modificationSampleRange{
           playbackRegion->getStartInPlaybackSamples(dawSampleRate),
           playbackRegion->getEndInPlaybackSamples(dawSampleRate)};
-      
+
       const auto modificationSampleOffset_old =
           modificationSampleRange_assr.getStart() - roundToInt(playbackSampleRange.getStart() * resamplingSource->getResamplingRatio()); // playbackSampleRange is in DAW time
-      const auto modificationSampleOffset_assr = 
+      const auto modificationSampleOffset_assr =
           modificationSampleRange_assr.getStart() - playbackSampleRange_assr.getStart();
       jassert(modificationSampleOffset_assr == modificationSampleOffset_old);
       DBG("PlaybackRenderer::processBlock modificationSampleRange_assr: " <<
@@ -233,7 +233,7 @@ bool PlaybackRenderer::processBlock(
       // !
       // -----------------------------------------------------------------------------------------
 
-      
+
 
       // calculate buffer offsets
 
@@ -289,7 +289,7 @@ bool PlaybackRenderer::processBlock(
                        << " into " << startInBuffer << " sample position in DAW buffer");
         resamplingSource->getNextAudioBlock(
             juce::AudioSourceChannelInfo(readBuffer));
-        
+
         // resamplingSource->getNextAudioBlock(
         //     juce::AudioSourceChannelInfo(&readBuffer, startInBuffer, numSamplesToRead));
 
@@ -358,13 +358,15 @@ void PlaybackRenderer::executeProcess(std::shared_ptr<WebWave2Wave> model) {
 template <typename Callback>
 void PlaybackRenderer::forEachPlaybackRegion(Callback &&cb) {
   for (const auto &playbackRegion : getPlaybackRegions()) {
-     auto modification =
-        playbackRegion->getAudioModification<AudioModification>();
-    // // DBG modification->getSourceName()
-    DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
-        << modification->getSourceName()); 
-    if (!cb(playbackRegion))
-      return;
+    PlaybackRegion& region = static_cast<PlaybackRegion&>(*playbackRegion);
+    if (region.isSelected()){
+        auto modification =
+            playbackRegion->getAudioModification<AudioModification>();
+        DBG("PlaybackRenderer::forEachPlaybackRegion processing playbackRegion "
+            << modification->getSourceName());
+        if (!cb(playbackRegion))
+        return;
+    }
   }
   // NOTE : PlaybackRenderer doesn't get access to the regionSequences
   // for (const auto &regionSequence : getRegionSequences())

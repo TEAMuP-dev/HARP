@@ -24,7 +24,6 @@
 #include <ARA_Library/PlugIn/ARAPlug.h>
 #include <ARA_Library/Utilities/ARAPitchInterpretation.h>
 #include "../ARA/EditorView.h"
-
 #include "juce_audio_basics/juce_audio_basics.h"
 
 #include "../WaveformCache/WaveformCache.h"

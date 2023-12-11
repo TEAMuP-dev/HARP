@@ -26,15 +26,103 @@
 
 #include "EditorRenderer.h"
 // #include "PlaybackRenderer.h"
+#include "PlaybackRegion.h"
 #include "EditorView.h"
 #include "../DeepLearning/WebModel.h"
-#include "juce_core/juce_core.h" 
+#include "juce_core/juce_core.h"
 
 
 #include "../Util/PreviewState.h"
 
 // Forward declaration of the child class
 class PlaybackRenderer;
+
+class CustomThreadPoolJob : public ThreadPoolJob {
+  public:
+    CustomThreadPoolJob(std::function<void()> jobFunction)
+        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+    {}
+
+    JobStatus runJob() override {
+      if (jobFunction) {
+          jobFunction();
+          return jobHasFinished;
+      }
+      else {
+          return jobHasFinished;
+      }
+    }
+
+  private:
+    std::function<void()> jobFunction;
+};
+
+class JobProcessorThread : public Thread {
+  public:
+    JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+                        int& jobsFinished,
+                        int& totalJobs,
+                        juce::ChangeBroadcaster& broadcaster
+                    )
+        : Thread("JobProcessorThread"),
+        customJobs(jobs),
+        jobsFinished(jobsFinished),
+        totalJobs(totalJobs),
+        processBroadcaster(broadcaster)
+    {}
+
+    ~JobProcessorThread() override {
+      // threadPool.removeAllJobs(true, 1000);
+    }
+
+    // void initiateJobs() {}
+    void run() override {
+      while (!threadShouldExit()) {
+        // Wait for a signal to execute a task
+        signalEvent.wait(-1);
+
+        // Check if the thread should exit before executing the task
+        if (threadShouldExit()){
+          DBG("Thread should exit");
+          break;
+        }
+        // Execute your task here
+        executeTask();
+      }
+    }
+
+    void signalTask() {
+      // Send a signal to wake up the thread and execute a task
+      signalEvent.signal();
+    }
+
+  private:
+
+    void executeTask() {
+      for (auto& customJob : customJobs) {
+            threadPool.addJob(customJob, true); // The pool will take ownership and delete the job when finished
+            // customJob->runJob();
+        }
+
+        // Wait for all jobs to finish
+        for (auto& customJob : customJobs) {
+            threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
+        }
+
+        // This will run after all jobs are done
+        // if (jobsFinished == totalJobs) {
+        processBroadcaster.sendChangeMessage();
+        // }
+    }
+
+    const std::vector<CustomThreadPoolJob*>& customJobs;
+    int& jobsFinished;
+    int& totalJobs;
+    // ThreadPool for processing jobs (not loading)
+    juce::ThreadPool threadPool {10};
+    ChangeBroadcaster& processBroadcaster;
+    juce::WaitableEvent signalEvent;
+};
 
 /**
  * @class HARPDocumentControllerSpecialisation
@@ -52,21 +140,27 @@ public:
   HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance) ;
 
+  /**
+   * @brief Destructor.
+   * Uses ARA's document controller specialisation's destructor.
+   */
+  ~HARPDocumentControllerSpecialisation() override;
+
   PreviewState previewState; ///< Preview state.
 
   std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
   void executeLoad(const map<string, any> &params);
   void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
-public:
-  // TODO: these should probably be private, and we should have wrappers
-  // around add/remove Listener, and a way to check which changebroadcaster is being used in a callback
-  juce::ChangeBroadcaster loadBroadcaster;
-  juce::ChangeBroadcaster processBroadcaster;
-  
   void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
-  
-  
+
+  void addLoadListener(ChangeListener* listener);
+  void removeLoadListener(ChangeListener* listener);
+  void addProcessListener(ChangeListener* listener);
+  void removeProcessListener(ChangeListener* listener);
+  bool isLoadBroadcaster(ChangeBroadcaster* broadcaster);
+  bool isProcessBroadcaster(ChangeBroadcaster* broadcaster);
+
 protected:
   void willBeginEditing(
       ARADocument *) override; ///< Called when beginning to edit a document.
@@ -81,6 +175,14 @@ protected:
       ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
       const ARAAudioModification *optionalModificationToClone) noexcept
       override;
+
+  /**
+   * @brief Creates a playback region.
+   * @return A new PlaybackRegion instance.
+   */
+  ARAPlaybackRegion* doCreatePlaybackRegion (
+      ARAAudioModification* modification,
+      ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
 
   /**
    * @brief Creates a playback renderer.
@@ -109,6 +211,8 @@ protected:
       override; ///< Stores objects to a stream.
 
 private:
+
+
   ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
 
   ReadWriteLock processBlockLock; ///< Lock for processing blocks.
@@ -128,8 +232,17 @@ private:
   std::vector<PlaybackRenderer*> playbackRenderers;
   std::unique_ptr<juce::AlertWindow> processingWindow;
 
+  // This one is used for Loading the models
+  // The thread pull for Processing lives inside the JobProcessorThread
   juce::ThreadPool threadPool {1};
 
-
+  std::vector<CustomThreadPoolJob*> customJobs;
+  // ChangeBroadcaster processBroadcaster;
+  int jobsFinished = 0;
+  int totalJobs = 0;
+  juce::ChangeBroadcaster loadBroadcaster;
+  juce::ChangeBroadcaster processBroadcaster;
+  JobProcessorThread jobProcessorThread;
 
 };
+
