@@ -59,3 +59,9 @@ dist/
 Miniconda
 Miniconda3
 Miniconda*.sh
+
+# website
+node_modules
+temp
+cache
+dist

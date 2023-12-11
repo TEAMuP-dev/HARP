@@ -1,0 +1,3 @@
+# Our Team
+
+<Team />
