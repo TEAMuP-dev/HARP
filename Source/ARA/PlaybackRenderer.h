@@ -36,7 +36,6 @@
 #include "../Timeline/SharedTimeSliceThread.h"
 #include "../Util/ProcessingLockInterface.h"
 #include "AudioModification.h"
-#include "PlaybackRegion.h" // might not be necessary
 
 using namespace juce;
 using std::unique_ptr;
