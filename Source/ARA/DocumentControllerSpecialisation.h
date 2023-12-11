@@ -118,7 +118,7 @@ class JobProcessorThread : public Thread {
     int& jobsFinished;
     int& totalJobs;
     // ThreadPool for processing jobs (not loading)
-    juce::ThreadPool threadPool {3};
+    juce::ThreadPool threadPool {10};
     ChangeBroadcaster& processBroadcaster;
     juce::WaitableEvent signalEvent;
 };
@@ -138,6 +138,12 @@ public:
    */
   HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance) ;
+
+  /**
+   * @brief Destructor.
+   * Uses ARA's document controller specialisation's destructor.
+   */
+  ~HARPDocumentControllerSpecialisation() override;
 
   PreviewState previewState; ///< Preview state.
 

@@ -36,6 +36,14 @@ HARPDocumentControllerSpecialisation::
   jobProcessorThread.startThread();
 }
 
+HARPDocumentControllerSpecialisation::~HARPDocumentControllerSpecialisation() {
+  jobProcessorThread.signalThreadShouldExit();
+  // This will not actually run any processing task
+  // It'll just make sure that the thread is not waiting
+  // and it'll allow it to check for the threadShouldExit flag
+  jobProcessorThread.signalTask();
+  jobProcessorThread.waitForThreadToExit(-1);
+}
 
 void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete){
   auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
