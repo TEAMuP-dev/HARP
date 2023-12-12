@@ -37,26 +37,24 @@
 // Forward declaration of the child class
 class PlaybackRenderer;
 
-
 class CustomThreadPoolJob : public ThreadPoolJob {
-public:
-  CustomThreadPoolJob(std::function<void()> jobFunction)
-      : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
-  {}
-  JobStatus runJob() override
-  {
-      if (jobFunction)
-      {
+  public:
+    CustomThreadPoolJob(std::function<void()> jobFunction)
+        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+    {}
+
+    JobStatus runJob() override {
+      if (jobFunction) {
           jobFunction();
           return jobHasFinished;
       }
-      else
-      {
-          return jobHasFinished; // or some other appropriate status
+      else {
+          return jobHasFinished;
       }
-  }
-  // private:
-  std::function<void()> jobFunction;
+    }
+
+  private:
+    std::function<void()> jobFunction;
 };
 
 class JobProcessorThread : public Thread {
@@ -134,115 +132,117 @@ class JobProcessorThread : public Thread {
 class HARPDocumentControllerSpecialisation
     : public ARADocumentControllerSpecialisation,
       private ProcessingLockInterface {
-  public:
-    /**
-     * @brief Constructor.
-     * Uses ARA's document controller specialisation's constructor.
-     */
-    HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
-                                            const ARA::ARADocumentControllerHostInstance* instance) ;
+public:
+  /**
+   * @brief Constructor.
+   * Uses ARA's document controller specialisation's constructor.
+   */
+  HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
+                                         const ARA::ARADocumentControllerHostInstance* instance) ;
 
-    /**
-     * @brief Destructor.
-     * Uses ARA's document controller specialisation's destructor.
-     */
-    ~HARPDocumentControllerSpecialisation() override;
+  /**
+   * @brief Destructor.
+   * Uses ARA's document controller specialisation's destructor.
+   */
+  ~HARPDocumentControllerSpecialisation() override;
 
-    PreviewState previewState; ///< Preview state.
+  PreviewState previewState; ///< Preview state.
 
-    std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
-    void executeLoad(const map<string, any> &params);
-    void executeProcess(std::shared_ptr<WebWave2Wave> model);
-    void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
+  std::shared_ptr<WebWave2Wave> getModel() { return mModel; }
+  void executeLoad(const map<string, any> &params);
+  void executeProcess(std::shared_ptr<WebWave2Wave> model);
 
-    void addLoadingListener(ChangeListener* listener) { loadBroadcaster.addChangeListener(listener); }
-    void removeLoadingListener(ChangeListener* listener) { loadBroadcaster.removeChangeListener(listener); }
-    void addProcessingListener(ChangeListener* listener) { processBroadcaster.addChangeListener(listener); }
-    void removeProcessingListener(ChangeListener* listener) { processBroadcaster.removeChangeListener(listener); }
+  void cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete);
 
-    bool isLoadBroadcaster(ChangeBroadcaster* broadcaster) {
-      return broadcaster == &loadBroadcaster;
-    }
-    bool isProcessBroadcaster(ChangeBroadcaster* broadcaster) {
-      return broadcaster == &processBroadcaster;
-    }
+  void addLoadListener(ChangeListener* listener);
+  void removeLoadListener(ChangeListener* listener);
+  void addProcessListener(ChangeListener* listener);
+  void removeProcessListener(ChangeListener* listener);
+  bool isLoadBroadcaster(ChangeBroadcaster* broadcaster);
+  bool isProcessBroadcaster(ChangeBroadcaster* broadcaster);
 
-  protected:
-    void willBeginEditing(
-        ARADocument *) override; ///< Called when beginning to edit a document.
-    void didEndEditing(
-        ARADocument *) override; ///< Called when editing a document ends.
+protected:
+  void willBeginEditing(
+      ARADocument *) override; ///< Called when beginning to edit a document.
+  void didEndEditing(
+      ARADocument *) override; ///< Called when editing a document ends.
 
-    /**
-     * @brief Creates an audio modification.
-     * @return A new AudioModification instance.
-     */
-    ARAAudioModification *doCreateAudioModification(
-        ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
-        const ARAAudioModification *optionalModificationToClone) noexcept
-        override;
+  /**
+   * @brief Creates an audio modification.
+   * @return A new AudioModification instance.
+   */
+  ARAAudioModification *doCreateAudioModification(
+      ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
+      const ARAAudioModification *optionalModificationToClone) noexcept
+      override;
 
-    /**
-     * @brief Creates a playback region.
-     * @return A new PlaybackRegion instance.
-     */
-    ARAPlaybackRegion* doCreatePlaybackRegion (
-        ARAAudioModification* modification,
-        ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
+  /**
+   * @brief Creates a playback region.
+   * @return A new PlaybackRegion instance.
+   */
+  ARAPlaybackRegion* doCreatePlaybackRegion (
+      ARAAudioModification* modification,
+      ARA::ARAPlaybackRegionHostRef hostRef) noexcept override;
 
-    /**
-     * @brief Creates a playback renderer.
-     * @return A new PlaybackRenderer instance.
-     */
-    ARAPlaybackRenderer *doCreatePlaybackRenderer() noexcept override;
+  /**
+   * @brief Creates a playback renderer.
+   * @return A new PlaybackRenderer instance.
+   */
+  ARAPlaybackRenderer *doCreatePlaybackRenderer() noexcept override;
 
-    // /**
-    //  * @brief Creates an editor renderer.
-    //  * @return A new EditorRenderer instance.
-    //  */
-    // EditorRenderer *doCreateEditorRenderer() noexcept override;
+  // /**
+  //  * @brief Creates an editor renderer.
+  //  * @return A new EditorRenderer instance.
+  //  */
+  // EditorRenderer *doCreateEditorRenderer() noexcept override;
 
-    /**
-     * @brief Creates an editor view.
-     * @return A new EditorView instance.
-     */
-    EditorView *doCreateEditorView() noexcept override;
+  /**
+   * @brief Creates an editor view.
+   * @return A new EditorView instance.
+   */
+  EditorView *doCreateEditorView() noexcept override;
 
-    bool
-    doRestoreObjectsFromStream(ARAInputStream &input,
-                                const ARARestoreObjectsFilter *filter) noexcept
-        override; ///< Restores objects from a stream.
-    bool doStoreObjectsToStream(ARAOutputStream &output,
-                                const ARAStoreObjectsFilter *filter) noexcept
-        override; ///< Stores objects to a stream.
+  bool
+  doRestoreObjectsFromStream(ARAInputStream &input,
+                             const ARARestoreObjectsFilter *filter) noexcept
+      override; ///< Restores objects from a stream.
+  bool doStoreObjectsToStream(ARAOutputStream &output,
+                              const ARAStoreObjectsFilter *filter) noexcept
+      override; ///< Stores objects to a stream.
 
-  private:
+private:
 
-    ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
-    ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 
-    // We need the DocController to have access to the EditorView
-    // so that we can update the view when the model is loaded
-    // (another option is to use a listener pattern)
-    EditorView *editorView {nullptr}; ///< Editor view.
-    // PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
-    EditorRenderer *editorRenderer {nullptr}; ///< Editor renderer.
+  ScopedTryReadLock getProcessingLock() override; ///< Gets the processing lock.
 
-    // store a copy of the model
-    std::shared_ptr<WebWave2Wave> mModel {new WebWave2Wave()}; ///< Model for audio processing.
+  ReadWriteLock processBlockLock; ///< Lock for processing blocks.
 
-    // In contrast to EditorView and EditorRenderer which are unique for the plugin
-    // there are multiple playbackRenderers (one for each playbackRegion)
-    std::vector<PlaybackRenderer*> playbackRenderers;
-    std::unique_ptr<juce::AlertWindow> processingWindow;
+  // We need the DocController to have access to the EditorView
+  // so that we can update the view when the model is loaded
+  // (another option is to use a listener pattern)
+  EditorView *editorView {nullptr}; ///< Editor view.
+  // PlaybackRenderer *playbackRenderer {nullptr}; ///< Playback renderer.
+  EditorRenderer *editorRenderer {nullptr}; ///< Editor renderer.
 
-    juce::ThreadPool threadPool {1};
-    JobProcessorThread jobProcessorThread;
+  // store a copy of the model
+  std::shared_ptr<WebWave2Wave> mModel {new WebWave2Wave()}; ///< Model for audio processing.
 
-    std::vector<CustomThreadPoolJob*> customJobs;
-    juce::ChangeBroadcaster processBroadcaster;
-    juce::ChangeBroadcaster loadBroadcaster;
+  // In contrast to EditorView and EditorRenderer which are unique for the plugin
+  // there are multiple playbackRenderers (one for each playbackRegion)
+  std::vector<PlaybackRenderer*> playbackRenderers;
+  std::unique_ptr<juce::AlertWindow> processingWindow;
 
-    int jobsFinished = 0;
-    int totalJobs = 0;
+  // This one is used for Loading the models
+  // The thread pull for Processing lives inside the JobProcessorThread
+  juce::ThreadPool threadPool {1};
+
+  std::vector<CustomThreadPoolJob*> customJobs;
+  // ChangeBroadcaster processBroadcaster;
+  int jobsFinished = 0;
+  int totalJobs = 0;
+  juce::ChangeBroadcaster loadBroadcaster;
+  juce::ChangeBroadcaster processBroadcaster;
+  JobProcessorThread jobProcessorThread;
+
 };
+

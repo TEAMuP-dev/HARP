@@ -114,7 +114,7 @@ public:
         juce::File::currentApplicationFile
     ).getParentDirectory().getChildFile("gradiojuce_client/gradiojuce_client.exe");
 
-    juce::File tempLogFile = 
+    juce::File tempLogFile =
     juce::File::getSpecialLocation(juce::File::tempDirectory)
         .getChildFile("system_get_ctrls_log.txt");
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
@@ -122,9 +122,9 @@ public:
     std::string command = (
     //   "set PYTHONIOENCODING=UTF-8 && " +
       "start /B cmd /c set PYTHONIOENCODING=UTF-8 && " +
-      scriptPath.getFullPathName().toStdString() 
+      scriptPath.getFullPathName().toStdString()
       + " --mode get_ctrls"
-      + " --url " + m_url 
+      + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
       + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
       + " 2>&1"   // redirect stderr to the same file as stdout
@@ -153,7 +153,7 @@ public:
     juce::DynamicObject *ctrlDict = controls.getDynamicObject();
     if (ctrlDict == nullptr) {
         throw std::runtime_error("Failed to load control dict from JSON. ctrlDict is null.");
-    }    
+    }
 
     // the "ctrls" key should be a list of dicts
     // the "card" key should be the modelcard
@@ -167,13 +167,13 @@ public:
         throw std::runtime_error("Failed to load model card from JSON.");
     }
 
-    // TODO: probably need to check if these properties exist and if they're the right types. 
+    // TODO: probably need to check if these properties exist and if they're the right types.
     m_card = ModelCard();
     m_card.name = jsonCard->getProperty("name").toString().toStdString();
     m_card.description = jsonCard->getProperty("description").toString().toStdString();
     m_card.author = jsonCard->getProperty("author").toString().toStdString();
 
-    // tags is a list of str   
+    // tags is a list of str
     juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
     if (tags == nullptr) {
         throw std::runtime_error("Failed to load tags from JSON. tags is null.");
@@ -202,7 +202,7 @@ public:
       if (!ctrl.isObject()) {
           throw std::runtime_error("Failed to load controls from JSON. ctrl is not an object.");
       }
-      
+
       try{
           // get the ctrl type
           juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
@@ -242,7 +242,7 @@ public:
             number_box->min = ctrl["min"].toString().getFloatValue();
             number_box->max = ctrl["max"].toString().getFloatValue();
             number_box->value = ctrl["value"].toString().getFloatValue();
-            
+
             m_ctrls.push_back({number_box->id, number_box});
             LogAndDBG("Number Box: " + number_box->label + " added");
           }
@@ -282,6 +282,8 @@ public:
     }
 
     // a random string to append to the input/output.wav files
+    // This is necessary because more than 1 playback regions
+    // are processed at the same time.
     std::string randomString = juce::Uuid().toString().toStdString();
 
     // save the buffer to file
@@ -306,7 +308,7 @@ public:
             .getChildFile("ctrls_" + randomString + ".json");
     tempCtrlsFile.deleteFile();
 
-      
+
     // juce::File scriptPath = juce::File::getSpecialLocation(
     //   juce::File::currentApplicationFile
     // ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
@@ -321,16 +323,16 @@ public:
       throw std::runtime_error("Failed to save controls to file.");
     }
 
-    juce::File tempLogFile = 
+    juce::File tempLogFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("system_log_" + randomString + ".txt");
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
         // "start /B cmd /c " +
-        scriptPath.getFullPathName().toStdString() 
+        scriptPath.getFullPathName().toStdString()
         + " --mode predict"
-        + " --url " + m_url 
+        + " --url " + m_url
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
         + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
@@ -411,7 +413,7 @@ private:
     }
 
     juce::String fileContent = file.loadFileAsString();
-    
+
     juce::Result parseResult = juce::JSON::parse(fileContent, result);
 
     if (parseResult.failed()) {
@@ -481,7 +483,7 @@ private:
 
 
 // a timer that checks the status of the model and broadcasts a change if if there is one
-class ModelStatusTimer : public juce::Timer, 
+class ModelStatusTimer : public juce::Timer,
                          public juce::ChangeBroadcaster {
 public:
   ModelStatusTimer(std::shared_ptr<WebWave2Wave> model) : m_model(model) {

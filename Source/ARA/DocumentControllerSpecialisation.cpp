@@ -30,7 +30,7 @@
 HARPDocumentControllerSpecialisation::
             HARPDocumentControllerSpecialisation(const ARA::PlugIn::PlugInEntry* entry,
                                          const ARA::ARADocumentControllerHostInstance* instance)
-            : ARADocumentControllerSpecialisation(entry, instance) ,
+            : ARADocumentControllerSpecialisation(entry, instance),
             jobsFinished(0), totalJobs(0),
             jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster){
   jobProcessorThread.startThread();
@@ -44,6 +44,7 @@ HARPDocumentControllerSpecialisation::~HARPDocumentControllerSpecialisation() {
   jobProcessorThread.signalTask();
   jobProcessorThread.waitForThreadToExit(-1);
 }
+
 void HARPDocumentControllerSpecialisation::cleanDeletedPlaybackRenderers(PlaybackRenderer* playbackRendererToDelete){
   auto it = std::remove(playbackRenderers.begin(), playbackRenderers.end(), playbackRendererToDelete);
   playbackRenderers.erase(it, playbackRenderers.end());
@@ -58,13 +59,13 @@ void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &p
   threadPool.addJob([this, params] {
     DBG("HARPDocumentControllerSpecialisation::executeLoad");
     try {
-      mModel->load(params);
+        mModel->load(params);
     } catch (const std::runtime_error& e) {
-      juce::AlertWindow::showMessageBoxAsync(
-          juce::AlertWindow::WarningIcon,
-          "Loading Error",
-          juce::String("An error occurred while loading the WebModel: ") + e.what()
-      );
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Loading Error",
+            juce::String("An error occurred while loading the WebModel: ") + e.what()
+        );
     }
     DBG("HARPDocumentControllerSpecialisation::executeLoad done");
     loadBroadcaster.sendChangeMessage();
@@ -86,30 +87,45 @@ void HARPDocumentControllerSpecialisation::executeProcess(std::shared_ptr<WebWav
 
   totalJobs = playbackRenderers.size();
   jobsFinished = 0;
-
-  // std::vector<CustomThreadPoolJob*> customJobs;
   // empty customJobs
   customJobs.clear();
 
   for (auto& playbackRenderer : playbackRenderers) {
       CustomThreadPoolJob* customJob = new CustomThreadPoolJob(
-          [this, &playbackRenderer] { //  &jobsFinished, totalJobs
+          [this, &playbackRenderer] { // &jobsFinished, totalJobs
               // Individual job code for each iteration
               playbackRenderer->executeProcess(mModel);
+              // DBG("Processing region: " << playbackRenderer->getRegionName());
               // Increment the counter when the job finishes
               jobsFinished++;
           }
       );
-
+      // customJobs.push_back(customJob);
       customJobs.push_back(customJob);
   }
 
-  // Add a thread to process the jobs and wait for them
-  // JobProcessorThread jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster);
+  // Now the customJobs are ready to be added to be run in the threadPool
   jobProcessorThread.signalTask();
-  // jobProcessorThread.waitForThreadToExit(-1);
-  DBG("Didn't wait");
 
+}
+
+void HARPDocumentControllerSpecialisation::addLoadListener(ChangeListener* listener) {
+  loadBroadcaster.addChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::removeLoadListener(ChangeListener* listener) {
+  loadBroadcaster.removeChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::addProcessListener(ChangeListener* listener) {
+  processBroadcaster.addChangeListener(listener);
+}
+void HARPDocumentControllerSpecialisation::removeProcessListener(ChangeListener* listener) {
+  processBroadcaster.removeChangeListener(listener);
+}
+bool HARPDocumentControllerSpecialisation::isLoadBroadcaster(ChangeBroadcaster* broadcaster) {
+  return broadcaster == &loadBroadcaster;
+}
+bool HARPDocumentControllerSpecialisation::isProcessBroadcaster(ChangeBroadcaster* broadcaster) {
+  return broadcaster == &processBroadcaster;
 }
 
 void HARPDocumentControllerSpecialisation::willBeginEditing(
@@ -123,35 +139,24 @@ void HARPDocumentControllerSpecialisation::didEndEditing(ARADocument *) {
 
 ARAAudioModification *
 HARPDocumentControllerSpecialisation::doCreateAudioModification(
-    ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
-    const ARAAudioModification *optionalModificationToClone) noexcept {
+  ARAAudioSource *audioSource, ARA::ARAAudioModificationHostRef hostRef,
+  const ARAAudioModification *optionalModificationToClone) noexcept {
 
 
   return new AudioModification(
-    audioSource, hostRef,
-    static_cast<const AudioModification *>(optionalModificationToClone)
-  );
+      audioSource, hostRef,
+      static_cast<const AudioModification *>(optionalModificationToClone)
+    );
 }
 
 ARAPlaybackRegion*
 HARPDocumentControllerSpecialisation::doCreatePlaybackRegion (
     ARAAudioModification* modification,
     ARA::ARAPlaybackRegionHostRef hostRef) noexcept {
-    PlaybackRegion* newPlaybackRegion = new PlaybackRegion(modification, hostRef);
-    ARAPlaybackRegion* newARAPlaybackRegion = static_cast<ARAPlaybackRegion*>(newPlaybackRegion);
+  PlaybackRegion* newPlaybackRegion = new PlaybackRegion(modification, hostRef);
+  ARAPlaybackRegion* newARAPlaybackRegion = static_cast<ARAPlaybackRegion*>(newPlaybackRegion);
   return newARAPlaybackRegion;
 }
-
-// ARAPlaybackRegion*
-// HARPDocumentControllerSpecialisation::doCreatePlaybackRegion (
-//     ARAAudioModification* modification,
-//     ARA::ARAPlaybackRegionHostRef hostRef) noexcept {
-//   PlaybackRegion* newPlaybackRegion = new PlaybackRegion(modification, hostRef);
-//   // dynamic cast PlaybackRegion to ARAPlaybackRegion
-//     ARAPlaybackRegion* newARAPlaybackRegion = static_cast<ARAPlaybackRegion*>(newPlaybackRegion);
-//     // ARAPlaybackRegion* newARAPlaybackRegion = new ARAPlaybackRegion(modification, hostRef);
-//   return newARAPlaybackRegion;
-// }
 
 ARAPlaybackRenderer *HARPDocumentControllerSpecialisation::
     doCreatePlaybackRenderer() noexcept {

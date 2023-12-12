@@ -36,10 +36,8 @@ HARPProcessorEditor::HARPProcessorEditor(
     mDocumentController = ARADocumentControllerSpecialisation::getSpecialisedDocumentController<
                                                     HARPDocumentControllerSpecialisation>(
                                                     mEditorView->getDocumentController());
-    // mDocumentController->loadBroadcaster.addChangeListener(this);
-    // mDocumentController->jobProcessorThread.processBroadcaster.addChangeListener(this);
-    mDocumentController->addLoadingListener(this);
-    mDocumentController->addProcessingListener(this);
+    mDocumentController->addLoadListener(this);
+    mDocumentController->addProcessListener(this);
     documentView = std::make_unique<DocumentView>(*mEditorView, ap.playHeadState);
   }
   else {
@@ -207,7 +205,6 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
 
 void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source) {
 
-  // if (source == &mDocumentController->loadBroadcaster) {
   if (mDocumentController->isLoadBroadcaster(source)) {
     // Model loading happens synchronously, so we can be sure that
     // the Editor View has the model card and UI attributes loaded
@@ -222,7 +219,6 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     loadModelButton.setEnabled(true);
     loadModelButton.setButtonText("load");
   }
-  // else if (source == &mDocumentController->jobProcessorThread.processBroadcaster) {
   else if (mDocumentController->isProcessBroadcaster(source)) {
     // now, we can enable the process button
     processButton.setButtonText("process");

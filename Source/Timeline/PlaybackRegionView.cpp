@@ -97,9 +97,8 @@ void PlaybackRegionView::onNewSelection(const ARAViewSelection &viewSelection) {
   const bool selected =
       std::find(selectedPlaybackRegions.begin(), selectedPlaybackRegions.end(),
                 &playbackRegion) != selectedPlaybackRegions.end();
-//   playbackRegion->setSelected(selected);
-    PlaybackRegion& playbackRegion2 = static_cast<PlaybackRegion& >(playbackRegion);
-    playbackRegion2.setSelected(selected);
+  PlaybackRegion& playbackRegion2 = static_cast<PlaybackRegion& >(playbackRegion);
+  playbackRegion2.setSelected(selected);
   if (selected != isSelected) {
     isSelected = selected;
     repaint();
