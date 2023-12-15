@@ -45,6 +45,8 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
   juce::AudioThumbnail &getOrCreateThumbnail(juce::ARAAudioSource *audioSource,
                                        AudioModification *audioModification) {
     const auto iter = thumbnails.find(audioSource);
+    DBG("\n\n\nAddress of audioSource: " << audioSource);
+    DBG("Address of audioModification: " << audioModification);
 
     // if a thumbnail was found for this source,
     if (iter != std::end(thumbnails))
@@ -54,17 +56,18 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
         // That's why we'll check if a thumbnail has been
         // created for the latest processing step.
         if (audioModification->isThumbCreated()){
+          DBG("    No new processing - thumb is already created");
           // it means the current thumbnail is the updated one,
           // and we just need to return it.
           return *iter->second;
         }
         else{
-          // It means there has been a processing step since 
+          // It means there has been a processing step since
           // the last time the thumbnail was created, so we need
           // to update it.
           ++hash;
           iter->second->setSource(audioModification->getModifiedAudioBuffer(),
-                       audioSource->getSampleRate(), hash);
+                       audioModification->getDawSampleRate(), hash);
           audioModification->setThumbCreated(true);
           return *iter->second;
         }
@@ -74,7 +77,7 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
         // we just return the thumbnail previously created.
         return *iter->second;
       }
-      
+
 
     // if not found, create the thumbnail
     auto thumb =
@@ -84,7 +87,7 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
     ++hash;
     if (audioModification->getIsModified())
       thumb->setSource(audioModification->getModifiedAudioBuffer(),
-                       audioSource->getSampleRate(), hash);
+                       audioModification->getDawSampleRate(), hash);
 
     else
       thumb->setReader(new juce::ARAAudioSourceReader(audioSource), hash);

@@ -95,7 +95,9 @@ void DocumentView::didEndEditing(ARADocument *) {
   update();
 }
 
-void DocumentView::changeListenerCallback(ChangeBroadcaster *) { update(); }
+void DocumentView::changeListenerCallback(ChangeBroadcaster *) {
+  update();
+  }
 
 void DocumentView::onNewSelection(const ARAViewSelection &viewSelection) {
   auto getNewSelectedMusicalContext =

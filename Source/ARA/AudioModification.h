@@ -44,6 +44,7 @@ public:
   void setThumbCreated(bool created);
   bool isThumbCreated() const;
   std::string getSourceName();
+  int getDawSampleRate() const;
 
   void process(std::shared_ptr<WebWave2Wave> model, double dawSampleRate);
 
@@ -56,6 +57,7 @@ private:
 
   std::string mAudioSourceName;
   int mSampleRate;
+  int mDawSampleRate;
   unique_ptr<juce::ARAAudioSourceReader> mAudioSourceReader{nullptr};
   unique_ptr<juce::AudioBuffer<float>> mAudioBuffer{nullptr};
 };
