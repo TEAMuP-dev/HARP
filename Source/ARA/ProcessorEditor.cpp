@@ -103,11 +103,15 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setReadOnly(false);
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
-  modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", juce::Colour::greyLevel(0.5f));  // Default text
+  modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint",
+    juce::Colour::greyLevel(0.5f));  // Default text
   modelPathTextBox.onReturnKey = [this] {
-    processButton.grabKeyboardFocus();
     loadModelButton.triggerClick();
   };
+
+  if (model->ready()) {
+    modelPathTextBox.setText(model->space_url());
+  }
 
   addAndMakeVisible(modelPathTextBox);
 
@@ -122,13 +126,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   //glossaryButton.setJustificationType(juce::Justification::centredLeft);
   glossaryButton.addListener(this);
   addAndMakeVisible(glossaryButton);
-
-  if (model->ready()) {
-    modelPathTextBox.setText(model->space_url());  // Default text
-  } else {
-    modelPathTextBox.setText("path to a gradio endpoint");  // Default text
-  }
-  addAndMakeVisible(modelPathTextBox);
 
   // model controls
   ctrlComponent.setModel(mEditorView->getModel());
@@ -194,7 +191,6 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
 
     // disable the process button until the model is loaded
     processButton.setEnabled(false);
-    processButton.grabKeyboardFocus();
     // set the descriptionLabel to "loading {url}..."
     // TODO: we need to get rid of the params map, and just pass the url around instead
     // since it looks like we're sticking to webmodels.
@@ -215,8 +211,7 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
 void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source) {
 
   if (mDocumentController->isLoadBroadcaster(source)) {
-    // Model loading happens synchronously, so we can be sure that
-    // the Editor View has the model card and UI attributes loaded
+
     DBG("Setting up model card, CtrlComponent, resizing.");
     setModelCard(mEditorView->getModel()->card());
     ctrlComponent.setModel(mEditorView->getModel());

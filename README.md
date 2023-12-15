@@ -67,7 +67,7 @@ While any model can be made HARP-compatible with the [pyHARP API](https://github
 - Harmonic/percussive source separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
 - Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
 - Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-- Weird sound modification: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+- Pitch-preserving timbre-removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
 
 # Making a deep learning model compatible with HARP
@@ -110,30 +110,7 @@ cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
 
 ## Windows
 
-### An Important Note
-For now, this build works on MacOS only, since it has a custom build process that makes use of [pyinstaller](https://pyinstaller.org/en/stable/usage.html).
-**TODO**: add cmake options to build on windows.
-
-Here are the commands used in VSCode (Cmake Tools extension) and Windows 10.
-Note that if you're using Reaper x64, you need to build the 64bit version of the plugin.
-
-- Configure
-
-```php
-"C:\Program Files\CMake\bin\cmake.EXE" --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/HARP/build -G "Visual Studio 17 2022" -A x64
-```
-
-```php
-cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -S . -B build -G "Visual Studio 17 2022" -A x64
-```
-```
-- Build
-```php
-"C:\Program Files\CMake\bin\cmake.EXE" --build c:/Users/xribene/Projects/audacitorch/HARP/build --config Debug --target ALL_BUILD -j 14 --
-
-cmake --build build --config Debug --target ALL_BUILD -j 14
-
-```
+HARP has been tested on Windows 10 x64. You can checkout in the `windowsBuild` branch and follow the instructions there.
 
 # Codesigning and Distribution
 
