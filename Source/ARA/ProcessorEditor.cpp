@@ -58,6 +58,11 @@ HARPProcessorEditor::HARPProcessorEditor(
     return;
   }
 
+  // Set setWantsKeyboardFocus to true for this component
+  // Doing that, everytime we click outside the modelPathTextBox,
+  // the focus will be taken away from the modelPathTextBox
+  setWantsKeyboardFocus(true);
+
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
@@ -99,7 +104,11 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setScrollbarsShown(false);
   modelPathTextBox.setCaretVisible(true);
   modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", juce::Colour::greyLevel(0.5f));  // Default text
-  modelPathTextBox.onReturnKey = [this] { loadModelButton.triggerClick(); };
+  modelPathTextBox.onReturnKey = [this] {
+    processButton.grabKeyboardFocus();
+    loadModelButton.triggerClick();
+  };
+
   addAndMakeVisible(modelPathTextBox);
 
   // glossary label
@@ -185,7 +194,7 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
 
     // disable the process button until the model is loaded
     processButton.setEnabled(false);
-
+    processButton.grabKeyboardFocus();
     // set the descriptionLabel to "loading {url}..."
     // TODO: we need to get rid of the params map, and just pass the url around instead
     // since it looks like we're sticking to webmodels.
@@ -218,6 +227,7 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     processButton.setEnabled(true);
     loadModelButton.setEnabled(true);
     loadModelButton.setButtonText("load");
+    processButton.grabKeyboardFocus();
   }
   else if (mDocumentController->isProcessBroadcaster(source)) {
     // now, we can enable the process button

@@ -28,7 +28,8 @@
 #include "../ARA/AudioModification.h"
 
 
-struct WaveformCache : private juce::ARAAudioSource::Listener {
+struct WaveformCache : private juce::ARAAudioSource::Listener,
+                      private juce::ARAAudioModification::Listener {
   WaveformCache() : thumbnailCache(20) {}
 
   ~WaveformCache() override {
@@ -42,11 +43,15 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
     removeAudioSource(audioSource);
   }
 
+  void willDestroyAudioModification (juce::ARAAudioModification* audioModification) override {
+    DBG("willDestroyAudioModification");
+  }
+
   juce::AudioThumbnail &getOrCreateThumbnail(juce::ARAAudioSource *audioSource,
                                        AudioModification *audioModification) {
     const auto iter = thumbnails.find(audioSource);
-    DBG("\n\n\nAddress of audioSource: " << audioSource);
-    DBG("Address of audioModification: " << audioModification);
+    DBG("\n\n\nAddress of audioSource: ", audioSource);
+    DBG("Address of audioModification: ", audioModification);
 
     // if a thumbnail was found for this source,
     if (iter != std::end(thumbnails))
