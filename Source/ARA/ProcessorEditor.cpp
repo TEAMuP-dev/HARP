@@ -58,6 +58,11 @@ HARPProcessorEditor::HARPProcessorEditor(
     return;
   }
 
+  // Set setWantsKeyboardFocus to true for this component
+  // Doing that, everytime we click outside the modelPathTextBox,
+  // the focus will be taken away from the modelPathTextBox
+  setWantsKeyboardFocus(true);
+
   // initialize load and process buttons
   processButton.setButtonText("process");
   processButton.addListener(this);
@@ -100,6 +105,9 @@ HARPProcessorEditor::HARPProcessorEditor(
   modelPathTextBox.setCaretVisible(true);
   modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", juce::Colour::greyLevel(0.5f));  // Default text
   modelPathTextBox.onReturnKey = [this] { loadModelButton.triggerClick(); };
+  if (model->ready()) {
+    modelPathTextBox.setText(model->space_url());  // Chosen model path
+  }
   addAndMakeVisible(modelPathTextBox);
 
   // glossary label
@@ -113,13 +121,6 @@ HARPProcessorEditor::HARPProcessorEditor(
   //glossaryButton.setJustificationType(juce::Justification::centredLeft);
   glossaryButton.addListener(this);
   addAndMakeVisible(glossaryButton);
-
-  if (model->ready()) {
-    modelPathTextBox.setText(model->space_url());  // Chosen model path
-  } else {
-    modelPathTextBox.setText("");  // Default empty text
-  }
-  addAndMakeVisible(modelPathTextBox);
 
   // model controls
   ctrlComponent.setModel(mEditorView->getModel());
@@ -207,8 +208,6 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
 
   // if (source == &mDocumentController->loadBroadcaster) {
   if (mDocumentController->isLoadBroadcaster(source)) {
-    // Model loading happens synchronously, so we can be sure that
-    // the Editor View has the model card and UI attributes loaded
     DBG("Setting up model card, CtrlComponent, resizing.");
     setModelCard(mEditorView->getModel()->card());
     ctrlComponent.setModel(mEditorView->getModel());
@@ -219,6 +218,10 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     processButton.setEnabled(true);
     loadModelButton.setEnabled(true);
     loadModelButton.setButtonText("load");
+
+    // Set the focus to the process button
+    // so that the user can press SPACE to trigger the playback
+    processButton.grabKeyboardFocus();
   }
   // else if (source == &mDocumentController->processBroadcaster) {
   else if (mDocumentController->isProcessBroadcaster(source)) {
