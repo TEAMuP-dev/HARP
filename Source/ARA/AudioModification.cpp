@@ -39,6 +39,8 @@ AudioModification::AudioModification(
   mAudioSourceReader = std::make_unique<juce::ARAAudioSourceReader>(audioSource);
   mSampleRate = audioSource->getSampleRate();
   mAudioSourceName = audioSource->getName();
+  // Initialization, it 'll change when the process method is called
+  mDawSampleRate = 44100;
 }
 
 
@@ -46,6 +48,10 @@ bool AudioModification::isThumbCreated() const { return mThumbCreated; }
 
 void AudioModification::setThumbCreated(bool created) {
   mThumbCreated = created;
+}
+
+int AudioModification::getDawSampleRate() const {
+  return mDawSampleRate;
 }
 
 std::string AudioModification::getSourceName() { return mAudioSourceName; }
@@ -56,6 +62,7 @@ std::string AudioModification::getSourceName() { return mAudioSourceName; }
  * @param params Map of parameters for learner
  */
 void AudioModification::process(std::shared_ptr<WebWave2Wave> model, double dawSampleRate) {
+  mDawSampleRate = dawSampleRate;
   if (model == nullptr) {
     throw std::runtime_error("AudioModification::process: model is null");
     return;

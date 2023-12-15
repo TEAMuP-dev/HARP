@@ -59,12 +59,12 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
           return *iter->second;
         }
         else{
-          // It means there has been a processing step since 
+          // It means there has been a processing step since
           // the last time the thumbnail was created, so we need
           // to update it.
           ++hash;
           iter->second->setSource(audioModification->getModifiedAudioBuffer(),
-                       audioSource->getSampleRate(), hash);
+                              audioModification->getDawSampleRate(), hash);
           audioModification->setThumbCreated(true);
           return *iter->second;
         }
@@ -74,7 +74,7 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
         // we just return the thumbnail previously created.
         return *iter->second;
       }
-      
+
 
     // if not found, create the thumbnail
     auto thumb =
@@ -84,7 +84,7 @@ struct WaveformCache : private juce::ARAAudioSource::Listener {
     ++hash;
     if (audioModification->getIsModified())
       thumb->setSource(audioModification->getModifiedAudioBuffer(),
-                       audioSource->getSampleRate(), hash);
+                      audioModification->getDawSampleRate(), hash);
 
     else
       thumb->setReader(new juce::ARAAudioSourceReader(audioSource), hash);
