@@ -51,6 +51,8 @@ public:
   juce::AudioBuffer<float> *getModifiedAudioBuffer();
   bool getIsModified() const;
 
+  // void addListener(juce::ARAAudioModification::Listener *listener) override;
+
 private:
   bool mIsModified = false;
   bool mThumbCreated = false;

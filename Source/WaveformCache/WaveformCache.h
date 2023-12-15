@@ -28,7 +28,8 @@
 #include "../ARA/AudioModification.h"
 
 
-struct WaveformCache : private juce::ARAAudioSource::Listener,
+struct WaveformCache :
+    // private juce::ARAAudioSource::Listener,
                       private juce::ARAAudioModification::Listener {
   WaveformCache() : thumbnailCache(20) {}
 
@@ -39,17 +40,20 @@ struct WaveformCache : private juce::ARAAudioSource::Listener,
   }
 
   //==============================================================================
-  void willDestroyAudioSource(juce::ARAAudioSource *audioSource) override {
-    removeAudioSource(audioSource);
-  }
+  // void willDestroyAudioSource(juce::ARAAudioSource *audioSource) override {
+  //   removeAudioSource(audioSource);
+  // }
 
   void willDestroyAudioModification (juce::ARAAudioModification* audioModification) override {
     DBG("willDestroyAudioModification");
+    removeAudioModification(audioModification);
   }
 
   juce::AudioThumbnail &getOrCreateThumbnail(juce::ARAAudioSource *audioSource,
                                        AudioModification *audioModification) {
-    const auto iter = thumbnails.find(audioSource);
+    // const auto iter = thumbnails.find(audioSource);
+    const auto iter = thumbnails.find(audioModification);
+    // bool aa = iterMod != std::end(thumbnailsMod);
     DBG("\n\n\nAddress of audioSource: ", audioSource);
     DBG("Address of audioModification: ", audioModification);
 
@@ -97,20 +101,27 @@ struct WaveformCache : private juce::ARAAudioSource::Listener,
     else
       thumb->setReader(new juce::ARAAudioSourceReader(audioSource), hash);
 
-    audioSource->addListener(this);
-    thumbnails.emplace(audioSource, std::move(thumb));
+    // audioSource->addListener(this);
+    // thumbnails.emplace(audioSource, std::move(thumb));
+    audioModification->addListener(this);
+    thumbnails.emplace(audioModification, std::move(thumb));
     audioModification->setThumbCreated(true);
     return result;
   }
 
 private:
-  void removeAudioSource(juce::ARAAudioSource *audioSource) {
-    audioSource->removeListener(this);
-    thumbnails.erase(audioSource);
+  // void removeAudioSource(juce::ARAAudioSource *audioSource) {
+  //   audioSource->removeListener(this);
+  //   thumbnails.erase(audioSource);
+  // }
+  void removeAudioModification(juce::ARAAudioModification *audioModification) {
+    audioModification->removeListener(this);
+    thumbnails.erase(audioModification);
   }
 
   juce::int64 hash = 0;
   juce::AudioFormatManager dummyManager;
   juce::AudioThumbnailCache thumbnailCache;
-  std::map<juce::ARAAudioSource *, unique_ptr<juce::AudioThumbnail>> thumbnails;
+  // std::map<juce::ARAAudioSource *, unique_ptr<juce::AudioThumbnail>> thumbnails;
+  std::map<juce::ARAAudioModification *, unique_ptr<juce::AudioThumbnail>> thumbnails;
 };
