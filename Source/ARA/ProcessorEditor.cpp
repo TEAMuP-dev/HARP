@@ -224,6 +224,7 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
     processButton.setButtonText("process");
     processButton.setEnabled(true);
     cancelButton.setEnabled(false);
+    mEditorView->triggerRepaint();
   }
   else if (source == mModelStatusTimer.get()) {
     // update the status label
