@@ -84,9 +84,6 @@ public:
   // Button listener method
   void buttonClicked(Button *button) override;
 
-  // Hotkey listener method
-  bool keyPressed(const KeyPress &key) override;
-
   // Paint method
   void paint(Graphics &g) override;
 

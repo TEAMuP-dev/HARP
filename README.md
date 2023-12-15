@@ -60,6 +60,8 @@ HARP should now be available as a VST3 plugin.
 
 * To hear your result, just hit the space bar.
 
+Warning: please note that Reaper may block the use of hotkeys (i.e. CTRL + {A, C, V}) and the space bar within text fields by default. However, these can be enabled by checking "Send all keyboard input to plug-in" under the "FX" window.
+
 # Available Models
 While any model can be made HARP-compatible with the [pyHARP API](https://github.com/audacitorch/pyharp), at present, the following models are available for use within HARP. Just enter the gradio path (e.g. "hugggof/pitch_shifter" or "descript/vampnet") for any of these models into HARP.
 

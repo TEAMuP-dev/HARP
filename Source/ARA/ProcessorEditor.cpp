@@ -238,45 +238,6 @@ void HARPProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster *source
 
 }
 
-bool HARPProcessorEditor::keyPressed(const KeyPress &key) {
-  // Make sure key press occurred within text editor
-  if (modelPathTextBox.hasKeyboardFocus(false)) {
-    // SPACE key was pressed
-    if (key.isKeyCode(KeyPress::spaceKey)) {
-      // Insert a SPACE
-      modelPathTextBox.insertTextAtCaret(" ");
-
-      return true;
-    }
-    // CTRL or Command key is currently held down
-    else if (ModifierKeys::currentModifiers.isCtrlDown() or ModifierKeys::currentModifiers.isCommandDown()) {
-      if (String::charToString(key.getTextCharacter()) == "a") {
-        // Select current contents
-        modelPathTextBox.selectAll();
-
-        return true;
-      } else if (String::charToString(key.getTextCharacter()) == "c") {
-        // Copy current contents
-        modelPathTextBox.copyToClipboard();
-
-        return true;
-      } else if (String::charToString(key.getTextCharacter()) == "v") {
-        // Paste contents of clipboard
-        modelPathTextBox.pasteFromClipboard();
-
-        return true;
-      } else {
-        // Do nothing
-
-        return false;
-      }
-    } else {
-      // TODO - call modelPathTextBox.KeyPressed with arguments?
-
-      return false;
-    }
-  }
-
 
 void HARPProcessorEditor::paint(Graphics &g) {
   g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
