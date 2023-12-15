@@ -67,7 +67,7 @@ While any model can be made HARP-compatible with the [pyHARP API](https://github
 - Harmonic/percussive source separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
 - Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
 - Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-- Weird sound modification: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+- Pitch-preserving timbre-removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
 
 # Making a deep learning model compatible with HARP

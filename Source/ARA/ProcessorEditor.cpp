@@ -115,9 +115,9 @@ HARPProcessorEditor::HARPProcessorEditor(
   addAndMakeVisible(glossaryButton);
 
   if (model->ready()) {
-    modelPathTextBox.setText(model->space_url());  // Default text
+    modelPathTextBox.setText(model->space_url());  // Chosen model path
   } else {
-    modelPathTextBox.setText("path to a gradio endpoint");  // Default text
+    modelPathTextBox.setText("");  // Default empty text
   }
   addAndMakeVisible(modelPathTextBox);
 
