@@ -1,5 +1,7 @@
 # HARP
 
+check out the paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf
+
 [![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys)
 
 ![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
