@@ -60,6 +60,8 @@ void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &p
     DBG("HARPDocumentControllerSpecialisation::executeLoad");
     try {
         mModel->load(params);
+        DBG("HARPDocumentControllerSpecialisation::executeLoad done");
+        loadBroadcaster.sendChangeMessage();
     } catch (const std::runtime_error& e) {
         juce::AlertWindow::showMessageBoxAsync(
             juce::AlertWindow::WarningIcon,
@@ -67,8 +69,6 @@ void HARPDocumentControllerSpecialisation::executeLoad(const map<string, any> &p
             juce::String("An error occurred while loading the WebModel: ") + e.what()
         );
     }
-    DBG("HARPDocumentControllerSpecialisation::executeLoad done");
-    loadBroadcaster.sendChangeMessage();
   });
 
 }
