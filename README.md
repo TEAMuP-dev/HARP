@@ -69,8 +69,9 @@ While any model can be made HARP-compatible with the [pyHARP API](https://github
 
 - Pitch shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
 - Harmonic/percussive source separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
-- Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
 - Music audio generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
+- Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)
+- Music audio generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)
 - Pitch-preserving timbre-removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
 
