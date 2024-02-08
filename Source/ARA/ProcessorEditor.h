@@ -121,6 +121,7 @@ private:
   CtrlComponent ctrlComponent;
   // model card
   juce::Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
+  juce::HyperlinkButton spaceUrlButton;
 
   EditorRenderer *mEditorRenderer;
   PlaybackRenderer *mPlaybackRenderer;

@@ -190,9 +190,28 @@ void HARPProcessorEditor::buttonClicked(Button *button) {
     // TODO: we need to get rid of the params map, and just pass the url around instead
     // since it looks like we're sticking to webmodels.
     juce::String url = juce::String(std::any_cast<std::string>(params.at("url")));
-    descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting \n " + "huggingface.co/spaces/" + url + "\n Once the huggingface space is awake, try again." , juce::dontSendNotification);
+    descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , juce::dontSendNotification);
 
-    // TODO: here, we should also reset the highlighting of the playback regions to the default color
+    // TODO: here, we should also reset the highlighting of the playback regions 
+
+
+    // add a hyperlink to the hf space for the model
+    // TODO: make this less hacky? 
+    // we might have to append a "https://huggingface.co/spaces" to the url
+    // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
+    // and (has only one slash in it)
+    juce::String spaceUrl = url;
+    if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
+      DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
+    }
+    else {
+      DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
+      spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
+    }
+    spaceUrlButton.setButtonText("open " + url + " in browser");
+    spaceUrlButton.setURL(juce::URL(spaceUrl));
+    spaceUrlButton.addListener(this);
+    addAndMakeVisible(spaceUrlButton);
   }
   else if (button == &cancelButton) {
     DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
@@ -287,6 +306,14 @@ void HARPProcessorEditor::resized() {
     // Row 4: Description Label
     auto row4 = mainArea.removeFromTop(80);  // adjust height as needed
     descriptionLabel.setBounds(row4.reduced(margin));
+    // TODO: put the space url below the description
+
+    // Row 4.5: Space URL Hyperlink
+    auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
+    spaceUrlButton.setBounds(row45.reduced(margin));
+    spaceUrlButton.setFont(Font(11.0f), false, juce::Justification::centredLeft);
+
+  
 
     // Row 6: Process Button (taken out in advance to preserve its height)
     auto row6Height = 25;  // adjust height as needed
