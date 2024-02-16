@@ -117,6 +117,9 @@ cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
 
 HARP has been tested on Windows 10 x64. You can checkout in the `windowsBuild` branch and follow the instructions there.
 
+NOTE: when building on Windows, a setup screen will appear to help you install Miniconda. **Make sure that when you install Miniconda, you 
+install it onto the root directory of this repository under the name `Miniconda3`. That is, `<HARP_ROOT_DIR>/miniconda3` Otherwise, the rest of the build procedure will not find it.**
+
 # Codesigning and Distribution
 
 ## Mac OS
@@ -168,6 +171,24 @@ TODO
             "args": [],
             "cwd": "${fileDirname}",
             "MIMode": "lldb",
+        }
+    ]
+}
+```
+
+
+for windows:
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "lldb reaper",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "C:/Program Files/REAPER (x64)/reaper.exe",
+            "args": [],
+            "cwd": "${fileDirname}",
         }
     ]
 }

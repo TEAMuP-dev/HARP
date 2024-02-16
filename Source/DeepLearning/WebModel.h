@@ -105,9 +105,22 @@ public:
             .getChildFile("control_spec.json");
     outputPath.deleteFile();
 
-    juce::File scriptPath = juce::File::getSpecialLocation(
+
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+    //define something for Windows (32-bit and 64-bit, this part is common)
+      juce::File scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
-    ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+      ).getParentDirectory().getChildFile("gradiojuce_client/gradiojuce_client.exe");
+
+      std::string prefix_cmd = "start /B cmd /c set PYTHONIOENCODING=UTF-8 && ";
+    #elif __APPLE__
+      juce::File scriptPath = juce::File::getSpecialLocation(
+          juce::File::currentApplicationFile
+      ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+      std::string prefix_cmd = "";
+    #else
+      #error "gradiojuce_client has not been implemented for this platform"
+    #endif
 
     juce::File tempLogFile =
     juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -115,6 +128,7 @@ public:
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
+      prefix_cmd +
       scriptPath.getFullPathName().toStdString()
       + " --mode get_ctrls"
       + " --url " + m_url

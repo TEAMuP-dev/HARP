@@ -23,7 +23,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     message("Building for Windows...") 
     
     # ara settings
-    juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+    # juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+    juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
 
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # mac and linux library location
@@ -98,8 +99,13 @@ install_miniconda()
 
 # Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
 set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
-set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")  # On Windows, change /bin/ to /Scripts/ and python to python.exe
-set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")  # On Windows, change /bin/ to /Scripts/ and pyinstaller to pyinstaller.exe
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/python.exe")
+    set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/Scripts/pyinstaller.exe")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")
+    set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")
+endif()
 
 
 # Define the command sequence as a list
@@ -221,6 +227,20 @@ if (UNIX)
                         ${CMAKE_SOURCE_DIR}/py/client/dist/
                         "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
 
+    endforeach()
+elif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    foreach(format ${TENSORJUCE_FORMATS})
+        # make a resource directory
+        add_custom_command(TARGET ${PROJECT_NAME}_${format}
+                        POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E make_directory
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources")
+        # Use the native copy command with /Y to suppress prompt
+        add_custom_command(TARGET ${PROJECT_NAME}_${format}
+                        POST_BUILD
+                        COMMAND copy /Y
+                        ${CMAKE_SOURCE_DIR}/py/client/dist/*
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources")
     endforeach()
 endif()
 
