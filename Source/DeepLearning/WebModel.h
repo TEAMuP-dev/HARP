@@ -315,9 +315,9 @@ public:
     tempCtrlsFile.deleteFile();
 
 
-    juce::File scriptPath = juce::File::getSpecialLocation(
-      juce::File::currentApplicationFile
-    ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+    // juce::File scriptPath = juce::File::getSpecialLocation(
+    //   juce::File::currentApplicationFile
+    // ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
 
     LogAndDBG("saving controls...");
     if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString())) {
