@@ -20,8 +20,8 @@ add_subdirectory(JUCE)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # windows library location
-    message("Building for Windows...") 
-    
+    message("Building for Windows...")
+
     # ara settings
     # juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
     juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
@@ -49,43 +49,84 @@ function(install_miniconda)
     set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")
 
     if (EXISTS ${MINICONDA_DIR})
-        message(STATUS "Miniconda already installed at ${MINICONDA_DIR}")
+        message(STATUS "Miniconda is probably already installed at ${MINICONDA_DIR}")
+        message(STATUS "If you want to reinstall Miniconda, please delete the directory and run CMake again.")
         return()
+    else()
+        message(STATUS "Creating Miniconda directory at ${MINICONDA_DIR}")
+        file(MAKE_DIRECTORY ${MINICONDA_DIR})
     endif()
 
     set(MINICONDA_VERSION "py39_23.5.2-0")
 
+    # Find the appropriate Miniconda installer for the current platform
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
-        set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     else()
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     endif()
 
-    message(STATUS "Downloading Miniconda installer...")
-    file(DOWNLOAD
-        "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
-        "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
-    )
+    # If the Miniconda installer is not found, download it
+    if (EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        message(STATUS "Miniconda installer already exists at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+    else()
+        message(STATUS "Downloading Miniconda installer...")
+        file(DOWNLOAD
+            "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
+            "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
+            TIMEOUT 60  # Adds a timeout for the download
+        )
 
-    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
-        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+            message(FATAL_ERROR "Failed to download Miniconda installer from ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+            return()
+        endif()
     endif()
+
+    # Determine the install script based on the system
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        # set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
+        set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /D=${MINICONDA_DIR}")
+        # set(MINICONDA_INSTALL_SCRIPT "\"${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}\" /D=\"${MINICONDA_DIR}\"")
+
+    else()
+        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${MINICONDA_DIR}")
+    endif()
+
+
 
     message(STATUS "Installing Miniconda...")
-    execute_process(
-        COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-    )
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        message(STATUS "Running: ${MINICONDA_INSTALL_SCRIPT}")
+        # execute_process(
+        #     COMMAND ${MINICONDA_INSTALL_SCRIPT}
+        #     RESULT_VARIABLE result
+        #     OUTPUT_VARIABLE output
+        #     ERROR_VARIABLE error
+        # )
+        execute_process(
+            # COMMAND "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /S /D="${MINICONDA_DIR}"
+            COMMAND cmd.exe /C start /wait "" "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /D="${MINICONDA_DIR}"
+            # C:\Users\xribene\Projects\audacitorch\autoWindows\HARP\Miniconda3\
+
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+    else()
+        execute_process(
+            COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+        )
+    endif()
+
     if(result)
         message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
     else()
@@ -109,7 +150,7 @@ endif()
 
 
 # Define the command sequence as a list
-set(PYINSTALLER_COMMANDS 
+set(PYINSTALLER_COMMANDS
     "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
     "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
     "${PYINSTALLER_EXECUTABLE} -y gradiojuce_client.py --collect-all gradio_client"
@@ -117,13 +158,23 @@ set(PYINSTALLER_COMMANDS
 
 # Execute each command individually, and check the result of each
 foreach(cmd IN LISTS PYINSTALLER_COMMANDS)
-    execute_process(
-        COMMAND bash -c "${cmd}"  # Using bash -c to ensure command is executed in a shell
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client  # Ensure the working directory is set correctly
-    )
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        execute_process(
+            COMMAND cmd /c "${cmd}"  # Use cmd /c on Windows
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client  # Ensure the working directory is set correctly
+        )
+    else()
+        execute_process(
+            COMMAND bash -c "${cmd}"
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client
+        )
+    endif()
     if(result)
         message(FATAL_ERROR "Command '${cmd}' failed with result: ${result}. Output: ${output}. Error: ${error}")
     else()
@@ -228,25 +279,33 @@ if (UNIX)
                         "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
 
     endforeach()
-elif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    # message(STATUS "Creating Resources directory for ${PROJECT_NAME}_${format} on Windows")
+    message(STATUS "A Message during build time")
+    # add_custom_command()
     foreach(format ${TENSORJUCE_FORMATS})
-        # make a resource directory
+        message(STATUS "Creating Resources directory for ${PROJECT_NAME}_${format} on Windows")
+    #     # make a resource directory
+        add_custom_command(TARGET ${PROJECT_NAME}_${format}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E echo "Creating Resources directory at $<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+        # add_custom_command(TARGET ${PROJECT_NAME}_${format}
+        #             POST_BUILD
+        #             COMMAND ${CMAKE_COMMAND} -E make_directory
+        #             "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources")
+    #     # Use the native copy command with /Y to suppress prompt
+        # copy_directory automaticaly creates the destination directory if it doesnt exist
         add_custom_command(TARGET ${PROJECT_NAME}_${format}
                         POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources")
-        # Use the native copy command with /Y to suppress prompt
-        add_custom_command(TARGET ${PROJECT_NAME}_${format}
-                        POST_BUILD
-                        COMMAND copy /Y
-                        ${CMAKE_SOURCE_DIR}/py/client/dist/*
+                        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        ${CMAKE_SOURCE_DIR}/py/client/dist/
                         "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources")
     endforeach()
 endif()
 
 
 # this fixes the RPATH to be relative to the executable
-# in MacOS. Now, all we need to do is copy the 
+# in MacOS. Now, all we need to do is copy the
 # dynamic libraries to the executable directories
 if (APPLE)
     foreach(format ${TENSORJUCE_FORMATS})
