@@ -22,7 +22,7 @@
 # SOFTWARE.
 
 # follow this: https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/
-name: HARP
+name: HARPalone
 
 on:
   workflow_dispatch: # lets you run a build from the UI
@@ -34,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROJECT_NAME: HARP
+  PROJECT_NAME: HARPalone
   BUILD_TYPE: Debug
   BUILD_DIR: Builds
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
