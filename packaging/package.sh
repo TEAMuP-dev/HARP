@@ -49,8 +49,8 @@ chmod +x ./py/client/sign.sh
 
 # Sign the application
 codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/gradiojuce_client"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.app/Contents/MacOS/HARPalone"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.app"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options=runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/MacOS/HARPalone"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options=runtime --force "packaging/dmg/${PROJECT_NAME}.app"
 
 # Create the .dmg
 cd packaging && appdmg dmg.json "${PRODUCT_NAME}.dmg"
