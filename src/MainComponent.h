@@ -54,6 +54,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
+// #include <juce_events/timers/juce_Timer.h>
 #include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
@@ -64,6 +65,24 @@
 #include "ThreadPoolJob.h"
 
 using namespace juce;
+
+
+// this only calls the callback ONCE
+class TimedCallback : public Timer
+{
+public:
+    TimedCallback(std::function<void()> callback, int interval) : mCallback(callback), mInterval(interval) {
+        startTimer(mInterval);
+    }
+
+    void timerCallback() override {
+        mCallback();
+        stopTimer();
+    }
+private:
+    std::function<void()> mCallback;
+    int mInterval;
+};
 
 inline Colour getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour uiColour, Colour fallback = Colour (0xff4d4d4d)) noexcept
 {
@@ -462,7 +481,25 @@ public:
             threadPool.addJob([this, params] {
                 DBG("executeLoad!!");
                 try {
+                    // timeout after 10 seconds
+                    // TODO: this callback needs to be cleaned up in the destructor in case we quit
+                    std::atomic<bool> success = false;
+                    TimedCallback timedCallback([this, &success] {
+                        if (success)
+                            return;
+                        DBG("HARPProcessorEditor::buttonClicked timedCallback listener activated");
+                        juce::AlertWindow::showMessageBoxAsync(
+                            juce::AlertWindow::WarningIcon,
+                            "Loading Error",
+                            "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
+                        );
+                        model.reset(new WebWave2Wave());
+                        loadBroadcaster.sendChangeMessage();
+                        saveButton.setEnabled(false);
+                    }, 10000);
+
                     model->load(params);
+                    success = true;
                     DBG("executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
                 } catch (const std::runtime_error& e) {
