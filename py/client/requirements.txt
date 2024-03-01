@@ -1,4 +1,4 @@
 argbind
-gradio_client==0.7.0
+gradio_client==0.10
 pyinstaller @ git+https://github.com/hugofloresgarcia/pyinstaller.git@develop
 typing-extensions
