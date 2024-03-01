@@ -451,10 +451,12 @@ public:
         saveButton.onClick = [this] { // Save callback
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             // copy the file to the target location
+            DBG("copying file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
             currentAudioFile.getLocalFile().copyFileTo(currentAudioFileTarget.getLocalFile());
             saveButton.setEnabled(false);
         };
         saveButton.setEnabled(false);
+        saveButton.setVisible(false);
 
 
         cancelButton.setButtonText("cancel");
@@ -859,17 +861,18 @@ private:
     //==============================================================================
     void showAudioResource (URL resource)
     {
-        currentAudioFileTarget = std::move (resource);
+        currentAudioFileTarget = resource;
+        currentAudioFile = std::move(resource); 
         // make a duplicate of the current audio file target
         // so that we can use it to process the audio file
         // duplicte the file under currentAudioFile
 
         
-        currentAudioFile = URL(File(
-            File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/harpalone/"
-            + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
-            + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
-        ));
+        // currentAudioFile = URL(File(
+        //     File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/harpalone/"
+        //     + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
+        //     + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
+        // ));
         currentAudioFile.getLocalFile().getParentDirectory().createDirectory();
         currentAudioFileTarget.getLocalFile().copyFileTo(currentAudioFile.getLocalFile());
 
