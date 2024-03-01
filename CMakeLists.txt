@@ -1,171 +1,70 @@
+# Example GUI App CMakeLists.txt
+
+# To get started on a new GUI app, copy this entire folder (containing this file and C++ sources) to
+# a convenient location, and then start making modifications. For other examples of CMakeLists for
+# GUI apps, check `extras/Projucer` and `examples/DemoRunner` in the JUCE repo.
+
+# The first line of any CMake project should be a call to `cmake_minimum_required`, which checks
+# that the installed CMake will be able to understand the following CMakeLists, and ensures that
+# CMake's behaviour is compatible with the named version. This is a standard CMake command, so more
+# information can be found in the CMake docs.
 cmake_minimum_required(VERSION 3.21)
-set(PROJECT_NAME "HARP")
+set(PROJECT_NAME "HARPalone")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# set(JUCE_COPY_PLUGIN_AFTER_BUILD TRUE)
-
-set (TENSORJUCE_FORMATS "VST3" "Standalone")
-
-# defines SourceFiles
-include(cmake/SourceFiles.cmake)
-
-# Reads in our VERSION file and sticks in it CURRENT_VERSION variable
-# Be sure the file has no newlines!
 file(STRINGS VERSION CURRENT_VERSION)
 
+# The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
+# `project()` command. `project()` semats up some helpful variables that describe source/binary
+# directories, and the current project version. This is a standard CMake command.
+
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
-add_subdirectory(JUCE)
+add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    # windows library location
-    message("Building for Windows...") 
-    
-    # ara settings
-    juce_set_ara_sdk_path("C:\\SDKs\\ARA_SDK")
+# If your app depends the VST2 SDK, perhaps to host VST2 plugins, CMake needs to be told where
+# to find the SDK on your system. This setup should be done before calling `juce_add_gui_app`.
 
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # mac and linux library location
-    message("Building for UNIX...")
+# juce_set_vst2_sdk_path(...)
 
-    # ara settings
-    juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
+# `juce_add_gui_app` adds an executable target with the name passed as the first argument
+# (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set
+# up by default. This function accepts many optional arguments. Check the readme at
+# `docs/CMake API.md` in the JUCE repo for the full list.
+include(cmake/gradio_client.cmake)
 
-else()
-    message(FATAL_ERROR "Unsupported platform.")
-
-endif()
-
-# TODO:
-# make sure we have a variable for the python executable we'll be using for pyinstaller
-# cd into the py/client directory and run `pip install -r requirements.txt`
-# then run `pyinstaller gradiojuce_client.py --collect-all gradio_client`
-# the dist directory will be copied to the bundle later
-
-# New: Function to download and install Miniconda
-function(install_miniconda)
-    set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")
-
-    if (EXISTS ${MINICONDA_DIR})
-        message(STATUS "Miniconda already installed at ${MINICONDA_DIR}")
-        return()
-    endif()
-
-    set(MINICONDA_VERSION "py39_23.5.2-0")
-
-    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
-        set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
-    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
-        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
-    elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
-    else()
-        set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
-    endif()
-
-    message(STATUS "Downloading Miniconda installer...")
-    file(DOWNLOAD
-        "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
-        "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
-    )
-
-    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
-        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
-    endif()
-
-    message(STATUS "Installing Miniconda...")
-    execute_process(
-        COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-    )
-    if(result)
-        message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
-    else()
-        message(STATUS "Miniconda installed successfully.")
-    endif()
-endfunction()
-
-
-# Call the function to install Miniconda
-install_miniconda()
-
-# Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
-set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
-set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")  # On Windows, change /bin/ to /Scripts/ and python to python.exe
-set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")  # On Windows, change /bin/ to /Scripts/ and pyinstaller to pyinstaller.exe
-
-
-# Define the command sequence as a list
-set(PYINSTALLER_COMMANDS 
-    "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
-    "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
-    "${PYINSTALLER_EXECUTABLE} -y gradiojuce_client.py --collect-all gradio_client"
-)
-
-# Execute each command individually, and check the result of each
-foreach(cmd IN LISTS PYINSTALLER_COMMANDS)
-    execute_process(
-        COMMAND bash -c "${cmd}"  # Using bash -c to ensure command is executed in a shell
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/py/client  # Ensure the working directory is set correctly
-    )
-    if(result)
-        message(FATAL_ERROR "Command '${cmd}' failed with result: ${result}. Output: ${output}. Error: ${error}")
-    else()
-        message(STATUS "Command '${cmd}' succeeded. Output:\n${output}")
-    endif()
-endforeach()
-
-
-
-
-juce_add_plugin(${PROJECT_NAME}
-    # VERSION ...                               # Set this if the plugin version is different to the project version
-    # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
+juce_add_gui_app(${PROJECT_NAME}
+    # VERSION ...                       # Set this if the app version is different to the project version
+    # ICON_BIG ...                      # ICON_* arguments specify a path to an image file to use as an icon
     # ICON_SMALL ...
-    COMPANY_NAME "TEAMuP"             # Specify the name of the plugin's author
-    # IS_SYNTH FALSE                              # Is this a synth or an effect?
-    # NEEDS_MIDI_INPUT FALSE                      # Does the plugin need midi input?
-    # NEEDS_MIDI_OUTPUT FALSE                     # Does the plugin need midi output?
-    # IS_MIDI_EFFECT FALSE                        # Is this plugin a MIDI effect?
-    # EDITOR_WANTS_KEYBOARD_FOCUS FALSE           # Does the editor need keyboard focus?
-    # COPY_PLUGIN_AFTER_BUILD False               # Should the plugin be installed to a default location after building?
-    PLUGIN_MANUFACTURER_CODE ADeC               # A four-character manufacturer id with at least one upper-case character
-    PLUGIN_CODE AraS                            # A unique four-character plugin id with exactly one upper-case character
-                                                # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
-                                                # However this ID has been assigned before that behaviour was discovered, and remains as-is for backwards
-                                                # compatibility - GarageBand 10.3 does not support ARA anyways.
-    PRODUCT_NAME HARP                # The name of the final executable, which can differ from the target name
-    FORMATS ${TENSORJUCE_FORMATS}
-    # VST3_CATEGORIES "Tools"
-    # AU_SANDBOX_SAFE TRUE
-    # APP_SANDBOX_ENABLED TRUE
-    # HARDENED_RUNTIME_ENABLED TRUE
-    IS_ARA_EFFECT TRUE                          # Are we using ARA?
-    # ARA_FACTORY_ID "..."                      # Optional custom ARA factory ID (otherwise generated from bundle ID and version)
-    # ARA_DOCUMENT_ARCHIVE_ID "..."             # Optional custom ARA document archive ID (otherwise generated from bundle ID)
-                                                # This must be manually updated whenever changing the archive in non-backwards compatible ways!
-                                                # Note that if changing the document archive ID, you'll also have to add the previous ID to JucePlugin_ARACompatibleArchiveIDs!
-    # ARA_COMPATIBLE_ARCHIVE_IDS "...", "..."   # Initially empty, but will indicate upwards compatibility when changing ARA_DOCUMENT_ARCHIVE_ID.
-    # ARA_ANALYSIS_TYPES                        # If providing analyzable ARA content types to the host, define them as OR'd values here - defaults to 0.
-    # ARA_TRANSFORMATION_FLAGS                  # If supporting time-stretching or other ARA playback transformations, define them as OR'd values here - otherwise 0.
-)
+    DOCUMENT_EXTENSIONS wav mp3 aiff           # Specify file extensions that should be associated with this app
+    COMPANY_NAME "TEAMuP"                  # Specify the name of the app's author
+    PRODUCT_NAME "HARPalone")     # The name of the final executable, which can differ from the target name
 
+# `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
+# into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
+# this header will be automatically added to the target. The main function of the JuceHeader is to
+# include all your JUCE module headers; if you're happy to include module headers directly, you
+# probably don't need to call this.
 
-juce_generate_juce_header(${PROJECT_NAME})
+# juce_generate_juce_header(${PROJECT_NAME})
+
+# `target_sources` adds source files to a target. We pass the target that needs the sources as the
+# first argument, then a visibility parameter for the sources which should normally be PRIVATE.
+# Finally, we supply a list of source files that will be built into the target. This is a standard
+# CMake command.
 
 target_sources(${PROJECT_NAME}
     PRIVATE
-        ${SourceFiles}
+        src/Main.cpp
+        src/MainComponent.h
+
+        src/TitledTextBox.h
+        src/CtrlComponent.h
+        
+        src/Model.h 
+        src/WebModel.h
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -176,52 +75,64 @@ target_sources(${PROJECT_NAME}
 # definitions, pick unique names that are unlikely to collide! This is a standard CMake command.
 
 target_compile_definitions(${PROJECT_NAME}
-    PUBLIC
-        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
-        JUCE_USE_CURL=1    # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
-        JUCE_VST3_CAN_REPLACE_VST2=0)
+    PRIVATE
+        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
+        JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call
+        JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_PRODUCT_NAME>"
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>")
+
+# If your target needs extra binary assets, you can add them here. The first argument is the name of
+# a new static library target that will include all the binary resources. There is an optional
+# `NAMESPACE` argument that can specify the namespace of the generated binary data class. Finally,
+# the SOURCES argument should be followed by a list of source files that should be built into the
+# static library. These source files can be of any kind (wav data, images, fonts, icons etc.).
+# Conversion to binary-data will happen when your target is built.
+
+# juce_add_binary_data(GuiAppData SOURCES ...)
+
+# `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
+# we're linking our executable target to the `juce::juce_gui_extra` module. Inter-module
+# dependencies are resolved automatically, so `juce_core`, `juce_events` and so on will also be
+# linked automatically. If we'd generated a binary data target above, we would need to link to it
+# here too. This is a standard CMake command.
 
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        # AudioPluginData
+        # GuiAppData            # If we'd created a binary data target, we'd link to it here
+        juce::juce_gui_extra
         juce::juce_audio_basics
         juce::juce_audio_devices
         juce::juce_audio_formats
-        juce::juce_audio_plugin_client
         juce::juce_audio_processors
         juce::juce_audio_utils
         juce::juce_core
         juce::juce_data_structures
+        juce::juce_dsp
         juce::juce_events
-        juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags
-
-)
+        juce::juce_recommended_warning_flags)
 
 
 # copy the pyinstaller tools to the  bundle
 if (UNIX)
-    foreach(format ${TENSORJUCE_FORMATS})
-        # make a resource directory
-        add_custom_command(TARGET ${PROJECT_NAME}_${format}
-                        POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E make_directory
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
-        # Use the native cp command with -R to properly handle symlinks
-        add_custom_command(TARGET ${PROJECT_NAME}_${format}
-                        POST_BUILD
-                        COMMAND cp -R
-                        ${CMAKE_SOURCE_DIR}/py/client/dist/
-                        "$<TARGET_FILE_DIR:${PROJECT_NAME}_${format}>/../Resources/")
+    # make a resource directory
+    add_custom_command(TARGET ${PROJECT_NAME}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/")
+    # Use the native cp command with -R to properly handle symlinks
+    add_custom_command(TARGET ${PROJECT_NAME}
+                    POST_BUILD
+                    COMMAND cp -R
+                    ${CMAKE_SOURCE_DIR}/py/client/dist/
+                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/")
 
-    endforeach()
 endif()
 
 
@@ -229,11 +140,7 @@ endif()
 # in MacOS. Now, all we need to do is copy the 
 # dynamic libraries to the executable directories
 if (APPLE)
-    foreach(format ${TENSORJUCE_FORMATS})
-        set_property(TARGET ${PROJECT_NAME}_${format} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
-    endforeach()
+set_property(TARGET ${PROJECT_NAME} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
 
-    set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
+set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
 endif(APPLE)
-
-

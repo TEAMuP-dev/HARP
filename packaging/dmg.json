@@ -1,5 +1,5 @@
 {
-    "title": "HARP",
+    "title": "HARPalone",
     "window": {
       "position": {
         "x": 100,
@@ -12,7 +12,7 @@
     },
     "format": "UDZO",
     "contents": [
-      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARP.vst3" },
-      { "x": 480, "y": 405, "type": "link", "path": "/Library/Audio/Plug-Ins/VST3" }
+      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARPalone.app" },
+      { "x": 480, "y": 405, "type": "link", "path": "/Applications" }
     ]
 }

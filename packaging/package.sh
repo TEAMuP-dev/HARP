@@ -41,18 +41,16 @@ rm packaging/${PRODUCT_NAME}.dmg || true
 mkdir -p packaging/dmg
 
 # Create directories for the dmg symlinks
-sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/Components && sudo mkdir -m 755 -p /Library/Audio/Plug-Ins/VST3
-ln -s /Library/Audio/Plug-Ins/VST3 "packaging/dmg/Your Mac's VST3 folder"
-cp -r "${ARTIFACTS_PATH}/VST3/${PROJECT_NAME}.vst3" packaging/dmg
+cp -r "${ARTIFACTS_PATH}/${PROJECT_NAME}.app" packaging/dmg
 
 # Make sign.sh executable and run it
 chmod +x ./py/client/sign.sh
-./py/client/sign.sh "$DEV_ID_APPLICATION" "packaging/dmg/${PROJECT_NAME}.vst3/Contents/Resources/gradiojuce_client/"
+./py/client/sign.sh "$DEV_ID_APPLICATION" "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/"
 
 # Sign the application
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/Resources/gradiojuce_client/gradiojuce_client"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.vst3/Contents/MacOS/HARP"
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.vst3"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/gradiojuce_client"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.app/Contents/MacOS/HARPalone"
+codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --force "packaging/dmg/${PROJECT_NAME}.app"
 
 # Create the .dmg
 cd packaging && appdmg dmg.json "${PRODUCT_NAME}.dmg"

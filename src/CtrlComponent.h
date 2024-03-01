@@ -1,9 +1,5 @@
 #include "juce_gui_basics/juce_gui_basics.h"
-#include "../UI/DocumentView.h"
-#include "../UI/CustomComponents.h"
-#include "../UI/LookAndFeel.h"
-
-#include "EditorView.h"
+#include "TitledTextBox.h"
 
 // Define the wrapper class
 class SliderWithLabel : public juce::Component
@@ -67,7 +63,7 @@ public:
         if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrlPtr.get())) {
             auto sliderWithLabel = std::make_unique<SliderWithLabel>(sliderCtrl->label, juce::Slider::RotaryHorizontalVerticalDrag);
             auto& label = sliderWithLabel->getLabel();
-            label.setColour(juce::Label::ColourIds::textColourId, mHARPLookAndFeel.textHeaderColor);
+            // label.setColour(juce::Label::ColourIds::textColourId, mHARPLookAndFeel.textHeaderColor);
             auto& slider = sliderWithLabel->getSlider();
             slider.setName(sliderCtrl->id.toString());
             slider.setRange(sliderCtrl->minimum, sliderCtrl->maximum, sliderCtrl->step);
@@ -122,7 +118,6 @@ public:
           optionCtrls.push_back(std::move(comboBox));
           DBG("Combo Box: " + comboBoxCtrl->label + " added");
       }
-
 
     }
     repaint();
@@ -295,7 +290,7 @@ private:
   std::shared_ptr<WebWave2Wave> mModel {nullptr};
 
   juce::Label headerLabel;
-  HARPLookAndFeel mHARPLookAndFeel;
+  // HARPLookAndFeel mHARPLookAndFeel;
 
   // Vectors of unique pointers to widgets
   std::vector<std::unique_ptr<SliderWithLabel>> sliders;  

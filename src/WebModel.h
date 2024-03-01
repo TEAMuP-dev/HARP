@@ -13,7 +13,6 @@
 
 
 #include "Model.h"
-#include "Wave2Wave.h"
 
 #include "juce_core/juce_core.h"
 // #include "juce_data_structres/juce_data_structures.h"
@@ -70,7 +69,7 @@ namespace{
   }
 }
 
-class WebWave2Wave : public Model, public Wave2Wave {
+class WebWave2Wave : public Model {
 public:
   WebWave2Wave() { // TODO: should be a singleton
     juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
@@ -260,10 +259,7 @@ public:
     return m_ctrls;
   }
 
-  virtual void process(
-    juce::AudioBuffer<float> *bufferToProcess, int sourceSampleRate, int dawSampleRate
-
-  ) const override {
+  void process(juce::File filetoProcess) const {
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
@@ -284,9 +280,8 @@ public:
         juce::File::getSpecialLocation(juce::File::tempDirectory)
             .getChildFile("input_" + randomString + ".wav");
     tempFile.deleteFile();
-    if (!save_buffer_to_file(*bufferToProcess, tempFile, sourceSampleRate)) {
-      throw std::runtime_error("Failed to save buffer to file.");
-    }
+    // copy the file to a temp file
+    filetoProcess.copyFileTo(tempFile);
 
     // a tarrget output file
     juce::File tempOutputFile =
@@ -341,12 +336,8 @@ public:
 
     tempLogFile.deleteFile();  // delete the temporary log file
 
-    // read the output file to a buffer
-    // TODO: the sample rate should not be the incoming sample rate, but
-    // rather the output sample rate of the daw?
-    LogAndDBG("Reading output file to buffer");
-    load_buffer_from_file(tempOutputFile, *bufferToProcess, dawSampleRate);
-
+    // move the temp output file to the original input file
+    tempOutputFile.moveFileTo(filetoProcess);
 
     // delete the temp input file
     tempFile.deleteFile();
