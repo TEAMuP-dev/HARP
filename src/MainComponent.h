@@ -502,6 +502,10 @@ public:
                     success = true;
                     DBG("executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
+                    // since we're on a helper thread, 
+                    // it's ok to sleep for 10s 
+                    // to let the timeout callback do its thing
+                    juce::Thread::sleep(10000);
                 } catch (const std::runtime_error& e) {
                     juce::AlertWindow::showMessageBoxAsync(
                         juce::AlertWindow::WarningIcon,
