@@ -452,6 +452,7 @@ public:
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             // copy the file to the target location
             currentAudioFile.getLocalFile().copyFileTo(currentAudioFileTarget.getLocalFile());
+            saveButton.setEnabled(false);
         };
         saveButton.setEnabled(false);
 
