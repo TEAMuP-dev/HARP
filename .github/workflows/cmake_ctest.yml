@@ -56,11 +56,7 @@ jobs:
           #   os: ubuntu-22.04
           #   pluginval-binary: ./pluginval
           #   ccache: ccache
-          - name: macOS_x86
-            os: macos-11
-            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            ccache: ccache
-          - name: macOS_arm
+          - name: macOS
             os: macos-13
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             ccache: ccache
