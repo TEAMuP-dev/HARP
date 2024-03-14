@@ -1,5 +1,5 @@
 {
-    "title": "HARPalone",
+    "title": "HARP",
     "window": {
       "position": {
         "x": 100,
@@ -12,7 +12,7 @@
     },
     "format": "UDZO",
     "contents": [
-      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARPalone.app" },
+      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARP.app" },
       { "x": 480, "y": 405, "type": "link", "path": "/Applications" }
     ]
 }

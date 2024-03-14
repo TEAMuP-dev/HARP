@@ -1,6 +1,6 @@
-# HARPalone
+# HARP
 
-TODO - keep name as HARPalone or consolidate to HARP?
+TODO - keep name as HARP or consolidate to HARP?
 
 A standalone application for HARP.
 
@@ -68,7 +68,7 @@ TODO
 ## Reaper
 * Right click the audio for the track you want to process and select _Render items as new take_ to bounce the track.
 
-* Right click the bounced audio and select _Open items in editor > Open items in 'HARPalone.app'_.
+* Right click the bounced audio and select _Open items in editor > Open items in 'HARP.app'_.
 
 TODO - add external editor selection figure here
 
@@ -191,7 +191,7 @@ TODO
             "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/HARPalone_artefacts/Debug/HARPalone.app",
+            "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app",
             "args": ["./test.wav"], // TODO - remove?
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

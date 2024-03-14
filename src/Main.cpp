@@ -51,11 +51,11 @@ public:
         if(audioFile.existsAsFile())
         {
             URL audioURL = URL(audioFile);
-            mainWindow->setContentOwned(new AudioPlaybackDemo(audioURL), true);
+            mainWindow->setContentOwned(new HARPComponent(audioURL), true);
         }
         else
         {
-            mainWindow->setContentOwned(new AudioPlaybackDemo(), true);
+            mainWindow->setContentOwned(new HARPComponent(), true);
         }
 
     }
@@ -90,7 +90,7 @@ public:
                               DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar (true);
-            setContentOwned (new AudioPlaybackDemo(), true);
+            setContentOwned (new HARPComponent(), true);
 
            #if JUCE_IOS || JUCE_ANDROID
             setFullScreen (true);

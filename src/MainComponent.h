@@ -23,7 +23,7 @@
 
  BEGIN_JUCE_PIP_METADATA
 
- name:             AudioPlaybackDemo
+ name:             HARPComponent
  version:          1.0.0
  vendor:           JUCE
  website:          http://juce.com
@@ -36,7 +36,7 @@
  exporters:        xcode_mac, vs2022, linux_make, androidstudio, xcode_iphone
 
  type:             Component
- mainClass:        AudioPlaybackDemo
+ mainClass:        HARPComponent
 
  useLocalCopy:     1
 
@@ -324,14 +324,14 @@ private:
 };
 
 //==============================================================================
-class AudioPlaybackDemo  : public Component,
+class HARPComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
                            private Button::Listener,
                           #endif
                            private ChangeListener
 {
 public:
-    explicit AudioPlaybackDemo(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
+    explicit HARPComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         addAndMakeVisible (zoomLabel);
@@ -634,7 +634,7 @@ public:
         resized();
     }
 
-    ~AudioPlaybackDemo() override
+    ~HARPComponent() override
     {
         transportSource  .setSource (nullptr);
         audioSourcePlayer.setSource (nullptr);
@@ -869,7 +869,7 @@ private:
 
         
         // currentAudioFile = URL(File(
-        //     File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/harpalone/"
+        //     File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
         //     + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
         //     + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
         // ));
@@ -945,7 +945,7 @@ private:
         {
             if (! RuntimePermissions::isGranted (RuntimePermissions::readExternalStorage))
             {
-                SafePointer<AudioPlaybackDemo> safeThis (this);
+                SafePointer<HARPComponent> safeThis (this);
                 RuntimePermissions::request (RuntimePermissions::readExternalStorage,
                                              [safeThis] (bool granted) mutable
                                              {
@@ -1026,5 +1026,5 @@ private:
         }
     }
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPlaybackDemo)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HARPComponent)
 };

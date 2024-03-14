@@ -1,15 +1,9 @@
-# Example GUI App CMakeLists.txt
-
-# To get started on a new GUI app, copy this entire folder (containing this file and C++ sources) to
-# a convenient location, and then start making modifications. For other examples of CMakeLists for
-# GUI apps, check `extras/Projucer` and `examples/DemoRunner` in the JUCE repo.
-
 # The first line of any CMake project should be a call to `cmake_minimum_required`, which checks
 # that the installed CMake will be able to understand the following CMakeLists, and ensures that
 # CMake's behaviour is compatible with the named version. This is a standard CMake command, so more
 # information can be found in the CMake docs.
 cmake_minimum_required(VERSION 3.21)
-set(PROJECT_NAME "HARPalone")
+set(PROJECT_NAME "HARP")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,10 +17,6 @@ file(STRINGS VERSION CURRENT_VERSION)
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
-# If your app depends the VST2 SDK, perhaps to host VST2 plugins, CMake needs to be told where
-# to find the SDK on your system. This setup should be done before calling `juce_add_gui_app`.
-
-# juce_set_vst2_sdk_path(...)
 
 # `juce_add_gui_app` adds an executable target with the name passed as the first argument
 # (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set
@@ -40,7 +30,7 @@ juce_add_gui_app(${PROJECT_NAME}
     # ICON_SMALL ...
     DOCUMENT_EXTENSIONS wav mp3 aiff           # Specify file extensions that should be associated with this app
     COMPANY_NAME "TEAMuP"                  # Specify the name of the app's author
-    PRODUCT_NAME "HARPalone")     # The name of the final executable, which can differ from the target name
+    PRODUCT_NAME "HARP")     # The name of the final executable, which can differ from the target name
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
