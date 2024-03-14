@@ -37,17 +37,9 @@ def main(
         print(f"Getting controls for {url}...")
         # ctrls will be a dict, instead of a path now
         # ctrls = client.predict(api_name="/wav2wav-ctrls")
-        job = client.submit(api_name="/wav2wav-ctrls")
+        print(f"calling predict ")
+        ctrls = client.predict(api_name="/wav2wav-ctrls")
 
-        # wait for the job to finish or timeout
-        start_time = time.time()
-        while not job.done():
-            time.sleep(0.05)
-            if time.time() - start_time > ctrls_timeout:
-                raise TimeoutError(f"Timeout reached while waiting for controls from {url}.")
-
-        # done
-        ctrls = job.result()
         print(f"got ctrls: {ctrls}")
         # if it's a string, it's a filepath
         if isinstance(ctrls, str):

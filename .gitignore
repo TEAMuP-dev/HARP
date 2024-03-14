@@ -54,10 +54,8 @@ py/client/*.spec
 dist*/
 
 
-Miniconda*
 dist/
-Miniconda
-Miniconda3
+Miniconda3/
 Miniconda*.sh
 
 # website

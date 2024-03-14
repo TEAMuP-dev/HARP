@@ -124,9 +124,7 @@ jobs:
       run: |
         VERSION=$(cat VERSION)
         echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-        echo "VST3_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/VST3/${{ env.PROJECT_NAME }}.vst3" >> $GITHUB_ENV
-        echo "AU_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AU/${{ env.PROJECT_NAME }}.component" >> $GITHUB_ENV
-        echo "AUV3_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/AUv3/${{ env.PROJECT_NAME }}.appex" >> $GITHUB_ENV
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
         echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
 
     - name: ccache
@@ -149,48 +147,6 @@ jobs:
     - name: Build
       shell: bash
       run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
-
-    # - name: Test
-    #   working-directory: ${{ env.BUILD_DIR }}
-    #   run: ctest --output-on-failure -j4 -VV
-
-    # - name: Pluginval
-    #   working-directory: ${{ env.BUILD_DIR }}
-    #   shell: bash
-    #   run: |
-    #     curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${{ matrix.name }}.zip"
-    #     7z x pluginval_${{ matrix.name }}.zip
-    #     ${{ matrix.pluginval-binary }} --strictness-level 10 --verbose --validate "${{ env.VST3_PATH }}"
-
-    # - name: Codesign (macOS)
-    #   working-directory: ${{ env.BUILD_DIR }}
-    #   if: ${{ matrix.name == 'macOS' }}
-    #   run: |
-    #     # Each plugin must be code signed
-    #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.VST3_PATH }} --deep --strict --options=runtime --timestamp
-    #     # codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v ${{ env.AU_PATH }} --deep --strict --options=runtime --timestamp
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -vvv --timestamp --deep -i com.HARP.HARP --force --entitlements ${{ env.BUILD_DIR }}/py/client/entitlements.plist ${{ env.VST3_PATH }}/Contents/Resources/gradiojuce_client/
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.HARP.HARP --force ${{ env.VST3_PATH }}/Contents/MacOS/HARP
-    #     # codesign -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" --timestamp -i com.HARP.HARP --force ${{ env.VST3_PATH }}
-        
-
-    # - name: Add Custom Icons (macOS)
-    #   if: ${{ matrix.name == 'macOS' }}
-    #   working-directory: ${{ env.BUILD_DIR }}
-    #   run: |
-    #     # add the icns as its own icon resource (meta!)
-    #     sips -i ../packaging/HARP.icns
-
-    #     # Grab the resource, put in tempfile
-    #     DeRez -only icns ../packaging/HARP.icns > /tmp/icons
-
-    #     # Stuff the resource into the strange Icon? file's resource fork
-    #     Rez -a /tmp/icons -o ${{ env.VST3_PATH }}/Icon$'\r'
-    #     # Rez -a /tmp/icons -o ${{ env.AU_PATH }}/Icon$'\r'
-
-    #     # Set custom icon attribute
-    #     SetFile -a C ${{ env.VST3_PATH }}
-    #     # SetFile -a C ${{ env.AU_PATH }}
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
     - name: Install Python dependencies

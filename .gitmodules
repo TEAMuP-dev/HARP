@@ -2,9 +2,6 @@
     path = JUCE
     url = https://github.com/juce-framework/JUCE.git
     branch = develop
-[submodule "ARA_SDK"]
-	path = ARA_SDK
-	url = https://github.com/Celemony/ARA_SDK
 [submodule "py/pyharp"]
 	path = py/pyharp
 	url = https://github.com/audacitorch/pyharp
