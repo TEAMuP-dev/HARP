@@ -60,6 +60,11 @@ TODO
 # Opening HARP as an External Sample Editor
 After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
 
+## NOTE: HARP is a destructive file editor! What does this mean? 
+TODO
+
+**When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
+
 ## Reaper
 * Right click the audio for the track you want to process and select _Render items as new take_ to bounce the track.
 
@@ -68,7 +73,9 @@ After recording or loading audio into a track within your preferred DAW, it is r
 TODO - add external editor selection figure here
 
 ## Logic Pro X
-TODO
+To use HARP in Logic Pro X, fist set up `HARP.app` as an external sample editor using this guide: https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac. 
+
+Once HARP.app has been set up as an external editor, you can select any audio region and press Shift+W to open it correspnding audio file in HARP. Any changes you make in HARP will be automatically reflected in the DAW when you're done. 
 
 ## Ableton Live
 TODO
@@ -76,7 +83,7 @@ TODO
 # HARP Usage
 * After opening HARP as an external sample editor, the following window will appear.
 
-TODO - add new HARP landing figure here
+<img width="799" alt="Screenshot 2024-03-14 at 11 15 07 AM" src="https://github.com/audacitorch/HARP/assets/55194054/5fe8a28b-a612-4b08-9857-fe3df84afa20">
 
 * Type the [Gradio](https://www.gradio.app) endpoint of an available HARP-compatible model (_e.g._ "hugggof/harmonic_percussive") in the field with the text _path to a gradio endpoint_.
 
