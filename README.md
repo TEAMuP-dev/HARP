@@ -1,7 +1,5 @@
 # HARP
 
-TODO - keep name as HARP or consolidate to HARP?
-
 A standalone application for HARP.
 
 Check out the paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf.
