@@ -70,7 +70,7 @@ Once HARP.app has been set up as an external editor, you can select any audio re
 TODO
 ### Using HARP
 
-# Using HARP as an External Sample Editor
+# WARNING! HARP is a *destructive* file editor
 After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
 
 **When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
