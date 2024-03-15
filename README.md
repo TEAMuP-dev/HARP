@@ -1,6 +1,6 @@
 # HARP
 
-A standalone application for HARP.
+HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [Reaper](https://www.reaper.fm), Logic Pro X, or Ableton Live) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
 
 Check out the paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf.
 
@@ -9,8 +9,6 @@ Check out the paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4
 ![herofig_revised](https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
 TODO - update main figure with up-to-date screenshots
-
-HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [Reaper](https://www.reaper.fm), Logic Pro X, or Ableton Live) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
 
 ## OS and DAW compatibility
 HARP has been tested on the following:
