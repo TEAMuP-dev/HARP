@@ -23,7 +23,7 @@
 
  BEGIN_JUCE_PIP_METADATA
 
- name:             HARPComponent
+ name:             MainComponent
  version:          1.0.0
  vendor:           JUCE
  website:          http://juce.com
@@ -36,7 +36,7 @@
  exporters:        xcode_mac, vs2022, linux_make, androidstudio, xcode_iphone
 
  type:             Component
- mainClass:        HARPComponent
+ mainClass:        MainComponent
 
  useLocalCopy:     1
 
@@ -73,6 +73,10 @@ class TimedCallback : public Timer
 public:
     TimedCallback(std::function<void()> callback, int interval) : mCallback(callback), mInterval(interval) {
         startTimer(mInterval);
+    }
+
+    ~TimedCallback() {
+        stopTimer();
     }
 
     void timerCallback() override {
@@ -324,14 +328,14 @@ private:
 };
 
 //==============================================================================
-class HARPComponent  : public Component,
+class MainComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
                            private Button::Listener,
                           #endif
                            private ChangeListener
 {
 public:
-    explicit HARPComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
+    explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         addAndMakeVisible (zoomLabel);
@@ -382,7 +386,7 @@ public:
         // Load the initial file
         if (initialFileURL.isLocalFile())
         {
-            showAudioResource (initialFileURL);
+            addNewAudioFile (initialFileURL);
         }
 
         // initialize HARP UI
@@ -407,7 +411,7 @@ public:
             DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
             // set the button text to "processing {model.card().name}"
-            processButton.setButtonText("processing " + juce::String(model->card().name) + "...");
+            processButton.setButtonText("processing " + String(model->card().name) + "...");
             processButton.setEnabled(false);
 
             // enable the cancel button
@@ -419,6 +423,7 @@ public:
             // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
             if (model == nullptr){
                 DBG("unhandled exception: model is null. we should probably open an error window here.");
+                AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
                 return;
             }
 
@@ -451,12 +456,24 @@ public:
         saveButton.onClick = [this] { // Save callback
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             // copy the file to the target location
-            DBG("copying file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
-            currentAudioFile.getLocalFile().copyFileTo(currentAudioFileTarget.getLocalFile());
+            DBG("copying from " << currentAudioFile.getLocalFile().getFullPathName() << " to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+            // make a backup for the undo button
+            // rename the original file to have a _backup suffix
+            File backupFile = File(
+                currentAudioFileTarget.getLocalFile().getParentDirectory().getFullPathName() + "/"
+                + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() +
+                + "_BACKUP" + currentAudioFileTarget.getLocalFile().getFileExtension()
+            );
+
+            currentAudioFileTarget.getLocalFile().copyFileTo(backupFile);
+            DBG("made a backup of the original file at " << backupFile.getFullPathName());
+
+            currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile());
+            
+            addNewAudioFile(currentAudioFileTarget);
             saveButton.setEnabled(false);
         };
         saveButton.setEnabled(false);
-        saveButton.setVisible(false);
 
 
         cancelButton.setButtonText("cancel");
@@ -491,8 +508,8 @@ public:
                         if (success)
                             return;
                         DBG("HARPProcessorEditor::buttonClicked timedCallback listener activated");
-                        juce::AlertWindow::showMessageBoxAsync(
-                            juce::AlertWindow::WarningIcon,
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
                             "Loading Error",
                             "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
                         );
@@ -508,12 +525,12 @@ public:
                     // since we're on a helper thread, 
                     // it's ok to sleep for 10s 
                     // to let the timeout callback do its thing
-                    juce::Thread::sleep(10000);
+                    Thread::sleep(10000);
                 } catch (const std::runtime_error& e) {
-                    juce::AlertWindow::showMessageBoxAsync(
-                        juce::AlertWindow::WarningIcon,
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon,
                         "Loading Error",
-                        juce::String("An error occurred while loading the WebModel: ") + e.what()
+                        String("An error occurred while loading the WebModel: ") + e.what()
                     );
                     model.reset(new WebWave2Wave());
                     loadBroadcaster.sendChangeMessage();
@@ -541,8 +558,8 @@ public:
             // set the descriptionLabel to "loading {url}..."
             // TODO: we need to get rid of the params map, and just pass the url around instead
             // since it looks like we're sticking to webmodels.
-            juce::String url = juce::String(std::any_cast<std::string>(params.at("url")));
-            descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , juce::dontSendNotification);
+            String url = String(std::any_cast<std::string>(params.at("url")));
+            descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , dontSendNotification);
 
             // TODO: here, we should also reset the highlighting of the playback regions 
 
@@ -552,7 +569,7 @@ public:
             // we might have to append a "https://huggingface.co/spaces" to the url
             // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
             // and (has only one slash in it)
-            juce::String spaceUrl = url;
+            String spaceUrl = url;
             if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
             DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
             }
@@ -561,7 +578,7 @@ public:
             spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
             }
             spaceUrlButton.setButtonText("open " + url + " in browser");
-            spaceUrlButton.setURL(juce::URL(spaceUrl));
+            spaceUrlButton.setURL(URL(spaceUrl));
             addAndMakeVisible(spaceUrlButton);
         };
 
@@ -573,12 +590,12 @@ public:
             processButton.setButtonText("process");
         } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
             cancelButton.setEnabled(true);
-            processButton.setButtonText("processing " + juce::String(model->card().name) + "...");
+            processButton.setButtonText("processing " + String(model->card().name) + "...");
         }
         
 
         // status label
-        statusLabel.setText(currentStatus, juce::dontSendNotification);
+        statusLabel.setText(currentStatus, dontSendNotification);
         addAndMakeVisible(statusLabel);
 
         // add a status timer to update the status label periodically
@@ -592,7 +609,7 @@ public:
         modelPathTextBox.setReadOnly(false);
         modelPathTextBox.setScrollbarsShown(false);
         modelPathTextBox.setCaretVisible(true);
-        modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", juce::Colour::greyLevel(0.5f));  // Default text
+        modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", Colour::greyLevel(0.5f));  // Default text
         modelPathTextBox.onReturnKey = [this] { loadModelButton.triggerClick(); };
         if (model->ready()) {
             modelPathTextBox.setText(model->space_url());  // Chosen model path
@@ -600,14 +617,14 @@ public:
         addAndMakeVisible(modelPathTextBox);
 
         // glossary label
-        glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", juce::NotificationType::dontSendNotification);
-        glossaryLabel.setJustificationType(juce::Justification::centredRight);
+        glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", NotificationType::dontSendNotification);
+        glossaryLabel.setJustificationType(Justification::centredRight);
         addAndMakeVisible(glossaryLabel);
 
         // glossary link
         glossaryButton.setButtonText("Model Glossary");
-        glossaryButton.setURL(juce::URL("https://github.com/audacitorch/HARP#available-models"));
-        //glossaryButton.setJustificationType(juce::Justification::centredLeft);
+        glossaryButton.setURL(URL("https://github.com/audacitorch/HARP#available-models"));
+        //glossaryButton.setJustificationType(Justification::centredLeft);
         addAndMakeVisible(glossaryButton);
 
         // model controls
@@ -634,7 +651,7 @@ public:
         resized();
     }
 
-    ~HARPComponent() override
+    ~MainComponent() override
     {
         transportSource  .setSource (nullptr);
         audioSourcePlayer.setSource (nullptr);
@@ -672,7 +689,7 @@ public:
                                     if (file != File{})
                                     {
                                         URL fileURL = URL(file);
-                                        showAudioResource(fileURL);
+                                        addNewAudioFile(fileURL);
                                     }
                                 });
     }
@@ -703,7 +720,7 @@ public:
         glossaryLabel.setBounds(row2.removeFromLeft(row2.getWidth() * 0.8f).reduced(margin));
         glossaryButton.setBounds(row2.reduced(margin));
         glossaryLabel.setFont(Font(11.0f));
-        glossaryButton.setFont(Font(11.0f), false, juce::Justification::centredLeft);
+        glossaryButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 3: Name and Author Labels
         auto row3a = mainArea.removeFromTop(40);  // adjust height as needed
@@ -723,7 +740,7 @@ public:
         // Row 4.5: Space URL Hyperlink
         auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
         spaceUrlButton.setBounds(row45.reduced(margin));
-        spaceUrlButton.setFont(Font(11.0f), false, juce::Justification::centredLeft);
+        spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
         auto row5 = mainArea.removeFromTop(150);  // the remaining area is for row 4
@@ -782,12 +799,12 @@ public:
 
     void setModelCard(const ModelCard& card) {
         // Set the text for the labels
-        nameLabel.setText(juce::String(card.name), juce::dontSendNotification);
-        descriptionLabel.setText(juce::String(card.description), juce::dontSendNotification);
+        nameLabel.setText(String(card.name), dontSendNotification);
+        descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
         card.author.empty() ?
-            authorLabel.setText("", juce::dontSendNotification) :
-            authorLabel.setText("by " + juce::String(card.author), juce::dontSendNotification);
+            authorLabel.setText("", dontSendNotification) :
+            authorLabel.setText("by " + String(card.author), dontSendNotification);
     }
 
 
@@ -795,20 +812,21 @@ private:
     // HARP UI 
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
 
-    juce::TextEditor modelPathTextBox;
-    juce::TextButton loadModelButton;
-    juce::Label glossaryLabel;
-    juce::HyperlinkButton glossaryButton;
-    juce::TextButton processButton;
-    juce::TextButton cancelButton;
-    juce::TextButton saveButton;
-    juce::Label statusLabel;
+    TextEditor modelPathTextBox;
+    TextButton loadModelButton;
+    TextButton saveChangesButton {"save changes"};
+    Label glossaryLabel;
+    HyperlinkButton glossaryButton;
+    TextButton processButton;
+    TextButton cancelButton;
+    TextButton saveButton;
+    Label statusLabel;
 
     CtrlComponent ctrlComponent;
 
     // model card
-    juce::Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
-    juce::HyperlinkButton spaceUrlButton;
+    Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
+    HyperlinkButton spaceUrlButton;
 
     // the model itself
     std::shared_ptr<WebWave2Wave> model {new WebWave2Wave()};
@@ -849,33 +867,18 @@ private:
     /// CustomThreadPoolJob
     // This one is used for Loading the models
     // The thread pull for Processing lives inside the JobProcessorThread
-    juce::ThreadPool threadPool {1};
+    ThreadPool threadPool {1};
     int jobsFinished;
     int totalJobs;
     JobProcessorThread jobProcessorThread;
     std::vector<CustomThreadPoolJob*> customJobs;
     // ChangeBroadcaster processBroadcaster;
-    juce::ChangeBroadcaster loadBroadcaster;
-    juce::ChangeBroadcaster processBroadcaster;
+    ChangeBroadcaster loadBroadcaster;
+    ChangeBroadcaster processBroadcaster;
 
     //==============================================================================
     void showAudioResource (URL resource)
     {
-        currentAudioFileTarget = resource;
-        currentAudioFile = std::move(resource); 
-        // make a duplicate of the current audio file target
-        // so that we can use it to process the audio file
-        // duplicte the file under currentAudioFile
-
-        
-        // currentAudioFile = URL(File(
-        //     File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
-        //     + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
-        //     + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
-        // ));
-        currentAudioFile.getLocalFile().getParentDirectory().createDirectory();
-        currentAudioFileTarget.getLocalFile().copyFileTo(currentAudioFile.getLocalFile());
-
         if (! loadURLIntoTransport (currentAudioFile))
         {
             // Failed to load the audio file!
@@ -885,6 +888,27 @@ private:
 
         zoomSlider.setValue (0, dontSendNotification);
         thumbnail->setURL (currentAudioFile);
+    }
+
+    void addNewAudioFile (URL resource) 
+    {
+        currentAudioFileTarget = resource;
+        
+        currentAudioFile = URL(File(
+            File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
+            + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
+            + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
+        ));
+
+        currentAudioFile.getLocalFile().getParentDirectory().createDirectory();
+        if (!currentAudioFileTarget.getLocalFile().copyFileTo(currentAudioFile.getLocalFile())) {
+            DBG("MainComponent::addNewAudioFile: failed to copy file to " << currentAudioFile.getLocalFile().getFullPathName());
+            // show an error to the user, we cannot proceed!
+            AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
+        }
+        DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+
+        showAudioResource(currentAudioFile);
     }
 
     bool loadURLIntoTransport (const URL& audioURL)
@@ -945,7 +969,7 @@ private:
         {
             if (! RuntimePermissions::isGranted (RuntimePermissions::readExternalStorage))
             {
-                SafePointer<HARPComponent> safeThis (this);
+                SafePointer<MainComponent> safeThis (this);
                 RuntimePermissions::request (RuntimePermissions::readExternalStorage,
                                              [safeThis] (bool granted) mutable
                                              {
@@ -966,7 +990,7 @@ private:
                                               {
                                                   auto u = fc.getURLResult();
 
-                                                  showAudioResource (std::move (u));
+                                                  addNewAudioFile (std::move (u));
                                               }
 
                                               fileChooser = nullptr;
@@ -990,7 +1014,7 @@ private:
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == thumbnail.get())
-            showAudioResource (URL (thumbnail->getLastDroppedFile()));
+            addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
         else if (source == &loadBroadcaster) {
             DBG("Setting up model card, CtrlComponent, resizing.");
             setModelCard(model->card());
@@ -1008,23 +1032,25 @@ private:
             processButton.grabKeyboardFocus();
         }
         else if (source == &processBroadcaster) {
-            // now, we can enable the process button
+            // refresh the display for the new updated file
             showAudioResource(currentAudioFile);
+
+            // now, we can enable the process button
             processButton.setButtonText("process");
             processButton.setEnabled(true);
             cancelButton.setEnabled(false);
-            saveButton.setEnabled(true);
+            saveButton.setEnabled(true); 
             repaint();
         }
         else if (source == mModelStatusTimer.get()) {
             // update the status label
             DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
-            statusLabel.setText(model->getStatus(), juce::dontSendNotification);
+            statusLabel.setText(model->getStatus(), dontSendNotification);
         }
         else {
             DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
         }
     }
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HARPComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
