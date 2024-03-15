@@ -37,8 +37,9 @@ The windows build is still under development. See the `TODO` branch for updates 
 ## Linux
 TODO
 
-# Setting Up HARP as an External Sample Editor
-## Reaper
+# HARP Guide
+## REAPER
+### Setting Up
 * Choose _REAPER > Preferences_ on the file menu.
 
 * Scroll down to _External Editors_ and click _Add_.
@@ -49,21 +50,7 @@ TODO
 
 TODO - add new setup figure here
 
-## Logic Pro X
-TODO
-
-## Ableton Live
-TODO
-
-# Opening HARP as an External Sample Editor
-After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
-
-## NOTE: HARP is a destructive file editor! What does this mean? 
-TODO
-
-**When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
-
-## Reaper
+### Using HARP
 * Right click the audio for the track you want to process and select _Render items as new take_ to bounce the track.
 
 * Right click the bounced audio and select _Open items in editor > Open items in 'HARP.app'_.
@@ -71,12 +58,23 @@ TODO
 TODO - add external editor selection figure here
 
 ## Logic Pro X
+### Setting Up
 To use HARP in Logic Pro X, fist set up `HARP.app` as an external sample editor using this guide: https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac. 
 
+### Using HARP
 Once HARP.app has been set up as an external editor, you can select any audio region and press Shift+W to open it correspnding audio file in HARP. Any changes you make in HARP will be automatically reflected in the DAW when you're done. 
 
+
 ## Ableton Live
+### Setting Up
 TODO
+### Using HARP
+
+# Using HARP as an External Sample Editor
+After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
+
+**When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
+
 
 # HARP Usage
 * After opening HARP as an external sample editor, the following window will appear.
