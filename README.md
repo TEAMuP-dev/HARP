@@ -168,7 +168,7 @@ TEAM_ID # Team ID for notarization
 
 Usage:
 ```bash
-bash packaging/package.sh <Developer ID Application> <Artifacts Path> <Project Name> <Product Name> <Notarization Username> <Notarization Password> <Team ID>
+bash packaging/package.sh <DEV_ID_APPLICATION> <ARTIFACTS_PATH> <PROJECT_NAME> <PRODUCT_NAME> <NOTARIZATION_USERNAME> <NOTARIZATION_PASSWORD> <TEAM_ID>
 ```
 
 After running `package.sh`, you should have a signed and notarized dmg file in the `packaging/` directory.
@@ -180,7 +180,7 @@ TODO
 ## Mac
 1. Download [Visual Studio Code for macOS](https://code.visualstudio.com/).
 2. Install the C/C++ extension from Microsoft.
-3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using LLDB.
+3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using _CMake Debugger_.
 4. Create a configuration to attach to the process (see the following example code to be placed in `launch.json`).
 
 ```
