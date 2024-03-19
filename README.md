@@ -2,7 +2,7 @@
 
 HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [Reaper](https://www.reaper.fm), Logic Pro X, or Ableton Live) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
 
-Check out the paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf.
+Check out our paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf.
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys)
 
@@ -36,13 +36,13 @@ The windows build is still under development. See the `TODO` branch for updates 
 TODO
 
 # HARP Guide
-### WARNING! HARP is a *destructive* file editor
+### WARNING! HARP is a *destructive* file editor.
 After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
 
 **When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
 
 ## REAPER
-### Setting it Up
+### Setting Up HARP
 * Choose _REAPER > Preferences_ on the file menu.
 
 * Scroll down to _External Editors_ and click _Add_.
@@ -51,28 +51,28 @@ After recording or loading audio into a track within your preferred DAW, it is r
 
 * Navigate to your `HARP.app` installation and select "OK".
 
-TODO - add new setup figure here
+![setup](https://github.com/audacitorch/HARP/assets/33099118/cb233173-4aa4-45d8-9321-06d4f58daaa4)
 
 ### Opening HARP
 * Right click the audio for the track you want to process and select _Render items as new take_ to bounce the track.
 
 * Right click the bounced audio and select _Open items in editor > Open items in 'HARP.app'_.
 
-TODO - add external editor selection figure here
+![external_editor](https://github.com/audacitorch/HARP/assets/33099118/6914fa60-06a0-42b2-98f1-1d8b7124de21)
 
 ## Logic Pro X
-### Setting it Up
-To use HARP in Logic Pro X, fist set up `HARP.app` as an external sample editor using this guide: https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac. 
+### Setting Up HARP
+* Set `HARP.app` as an external sample editor following [this guide](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac).
 
 ### Opening HARP
-Once HARP.app has been set up as an external editor, you can select any audio region and press Shift+W to open it correspnding audio file in HARP. Any changes you make in HARP will be automatically reflected in the DAW when you're done. 
-
+* Select any audio region and press Shift+W to open the corresponding audio file in HARP.
 
 ## Ableton Live
-
-### Setting it Up
+### Setting Up HARP
 TODO
+
 ### Opening HARP
+TODO
 
 # HARP Usage
 * After opening HARP as an external sample editor, the following window will appear.
@@ -85,11 +85,13 @@ TODO
 
   * Loading may take some time if the [HuggingFace Space](https://huggingface.co/spaces) is asleep.
 
-TODO - add new harmonic-percussive figure here
+![harmonic_percussive](https://github.com/audacitorch/HARP/assets/33099118/20937933-01d1-402e-aab8-3253de0134c0)
 
 * Adjust the model controls to your liking and click _process_.
 
 * The resulting audio can be played by pressing the space bar or by clicking _Play/Stop_.
+
+* Any changes made in HARP will be automatically reflected in your DAW.
 
 # Available HARP-Compatible Models
 While any algorithm or model can be made HARP-compatible with the [PyHARP API](https://github.com/audacitorch/pyharp), at present, the following are available for use within HARP:
