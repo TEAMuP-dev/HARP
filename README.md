@@ -10,7 +10,7 @@ Check out our paper: https://neuripscreativityworkshop.github.io/2023/papers/ml4
 
 TODO - update main figure with up-to-date screenshots
 
-## OS and DAW compatibility
+## OS & DAW compatibility
 HARP has been tested on the following:
 * MacOS (ARM) versions 13.0 and 13.4
 * MacOS (x86) version 10.15
@@ -114,13 +114,17 @@ We also provide [PyHARP](https://github.com/audacitorch/pyharp), a lightweight A
 # Building HARP
 HARP can be built from scratch with the following steps:
 
-**Clone the HARP repository**
+**Clone the repository**
 ```bash
-git clone --recurse-submodules git@github.com:audacitorch/HARP.git
-cd harp
+git clone --recurse-submodules https://github.com/audacitorch/HARP
 ```
 
-## MacOS
+**Enter the project**
+```
+cd HARP/
+```
+
+## MacOS & Linux
 **Configure**
 ```bash
 mkdir build
@@ -130,10 +134,10 @@ cmake ..  -DCMAKE_BUILD_TYPE=Debug
 
 **Build**
 ```bash
-make -jNUM_PROCESSORS
+make -j <NUM_PROCESSORS>
 ```
 
-### Building for ARM vs x86 MacOS
+### Building for ARM vs. x86 MacOS
 The OSX architecture for the build can be specified explicitly by setting  `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
 ```bash
 cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
@@ -144,7 +148,7 @@ HARP has been tested on Windows 10 x64. You can checkout the `windowsBuild` bran
 
 TODO - is this still valid?
 
-# Codesigning and Distribution
+# Codesigning & Distribution
 ## MacOS
 Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
 You'll need to set up a developer account with Apple and create a certificate in order to sign the plugin.
