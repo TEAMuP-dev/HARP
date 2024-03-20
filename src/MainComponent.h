@@ -689,7 +689,17 @@ public:
                                     if (file != File{})
                                     {
                                         URL fileURL = URL(file);
-                                        addNewAudioFile(fileURL);
+                                        // addNewAudioFile(fileURL);
+                                        // Check the file extension to determine type
+                                        String fileExtension = file.getFileExtension();
+                                        if (fileExtension == ".mid")
+                                        {
+                                            addNewMidiFile(fileURL);
+                                        }
+                                        else
+                                        {
+                                            addNewAudioFile(fileURL);
+                                        }
                                     }
                                 });
     }
@@ -853,6 +863,8 @@ private:
 
     URL currentAudioFile;
     URL currentAudioFileTarget;
+    URL currentMidiFile;
+    URL currentMidiFileTarget;
     AudioSourcePlayer audioSourcePlayer;
     AudioTransportSource transportSource;
     std::unique_ptr<AudioFormatReaderSource> currentAudioFileSource;
@@ -890,6 +902,72 @@ private:
         thumbnail->setURL (currentAudioFile);
     }
 
+    void addNewMidiFile (URL resource)
+    {
+        currentMidiFileTarget = resource;
+        
+        currentAudioFile = URL(File(
+            File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
+            + currentMidiFileTarget.getLocalFile().getFileNameWithoutExtension() 
+            + "_harp" + currentMidiFileTarget.getLocalFile().getFileExtension()
+        ));
+
+        currentMidiFile.getLocalFile().getParentDirectory().createDirectory();
+        if (!currentMidiFileTarget.getLocalFile().copyFileTo(currentMidiFile.getLocalFile())) {
+            DBG("MainComponent::addNewMidiFile: failed to copy file to " << currentMidiFile.getLocalFile().getFullPathName());
+            // show an error to the user, we cannot proceed!
+            AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
+        }
+        DBG("MainComponent::addNewMidiFile: copied file to " << currentMidiFileTarget.getLocalFile().getFullPathName());
+
+        extractMidiData(currentMidiFile);
+
+    }
+
+    void extractMidiData (const URL& fileUrl)
+    {        
+        // Extract the path from the URL
+        String filePath = fileUrl.toString (true);
+
+        // Create a File object from the path
+        File file (filePath);
+
+        if (!file.existsAsFile())
+        {
+            DBG("File does not exist.");
+            return;
+        }
+
+        std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
+
+        // Read the MIDI file from the File object
+        MidiFile midiFile;
+
+        if (!midiFile.readFrom(*fileStream))
+        {
+            DBG("Failed to read MIDI data from file.");
+            return;
+        }
+
+        for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx)
+        {
+            const juce::MidiMessageSequence* track = midiFile.getTrack(trackIdx);
+            if (track != nullptr)
+            {
+                // Here you can process each track using the MidiMessageSequence
+                // For example, let's just print out the number of events in this track
+                DBG("Track " << trackIdx << " has " << track->getNumEvents() << " events.");
+
+                // Example processing: iterating over messages in the sequence
+                for (int eventIdx = 0; eventIdx < track->getNumEvents(); ++eventIdx)
+                {
+                    const auto& midiMessage = track->getEventPointer(eventIdx)->message;
+                    // Process each midiMessage here...
+                }
+            }
+        }
+
+    }
     void addNewAudioFile (URL resource) 
     {
         currentAudioFileTarget = resource;
