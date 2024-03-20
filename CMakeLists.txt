@@ -110,12 +110,19 @@ target_link_libraries(${PROJECT_NAME}
 
 
 # copy the pyinstaller tools to the  bundle
-add_custom_command(TARGET ${PROJECT_NAME}
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_SOURCE_DIR}/py/client/dist/
-                "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
-
+if (APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    ${CMAKE_SOURCE_DIR}/py/client/dist/
+                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources")
+else()
+    add_custom_command(TARGET ${PROJECT_NAME}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    ${CMAKE_SOURCE_DIR}/py/client/dist/
+                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
+endif()
 
 # this fixes the RPATH to be relative to the executable
 # in MacOS. Now, all we need to do is copy the 
