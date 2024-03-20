@@ -30,11 +30,15 @@ TODO - add new DMG figure here
 * Drag HARP.app to the `Applications/` folder to install HARP. 
 
 ## Windows
-* Download the appropriate EXE file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
-TODO the rest
+* Download the appropriate zip file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+
+* Extract the contents of the zip file to a folder of your choice.
+* Run `HARP.exe` to start the application.
 
 ## Linux
-TODO
+* Download the appropriate zip file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+* Extract the contents of the zip file to a folder of your choice.
+* Run `HARP` to start the application.
 
 # HARP Guide
 ### WARNING! HARP is a *destructive* file editor.
@@ -109,50 +113,41 @@ While any algorithm or model can be made HARP-compatible with the [PyHARP API](h
 
 * Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-# Making Code HARP-Compatible
+# Making your Model HARP-Compatible
 We also provide [PyHARP](https://github.com/audacitorch/pyharp), a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
 
 # Building HARP
 HARP can be built from scratch with the following steps:
 
-**Clone the repository**
+### 1. Clone the repository
 ```bash
 git clone --recurse-submodules https://github.com/audacitorch/HARP
 ```
 
-**Enter the project**
-```
+### 2. Enter the project
+```bash
 cd HARP/
 ```
-
-## MacOS & Linux
-**Configure**
+### 3. Configure
 ```bash
 mkdir build
 cd build
 cmake ..  -DCMAKE_BUILD_TYPE=Debug
 ```
 
-**Build**
-```bash
-make -j <NUM_PROCESSORS>
-```
-
-### Building for ARM vs. x86 MacOS
-The OSX architecture for the build can be specified explicitly by setting  `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+**ARM vs. x86 MacOS**  
+The OSX architecture for the build can be specified explicitly by setting  `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:  
 ```bash
 cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
 
-## Windows
-**Configure**
+### 4. Build
+**MacOS/Linux**
 ```bash
-mkdir build
-cd build
-cmake ..  -DCMAKE_BUILD_TYPE=Debug
+make -j <NUM_PROCESSORS>
 ```
 
-**Build**
+**Windows**
 ```bash
 cmake --build . --config Debug -j <NUM_PROCESSORS>
 ```
