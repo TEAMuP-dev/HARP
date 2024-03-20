@@ -49,7 +49,7 @@ function(install_miniconda)
     # Determine the install script based on the system
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         # set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /D=${MINICONDA_DIR}")
-        set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}${MINICONDA_INSTALLER}" /InstallationType=JustMe /RegisterPython=0 /S /D="${MINICONDA_DIR}")
+        set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /InstallationType=JustMe /RegisterPython=0 /S /D="${MINICONDA_DIR}")
     else()
         set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${MINICONDA_DIR}")
     endif()
@@ -60,7 +60,7 @@ function(install_miniconda)
         message(STATUS "Running: ${MINICONDA_INSTALL_SCRIPT}")
         execute_process(
             # COMMAND cmd.exe /C start /wait "" "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /D="${MINICONDA_DIR}"
-            COMMAND cmd.exe /C start /wait "" "${CMAKE_SOURCE_DIR}${MINICONDA_INSTALLER}" /InstallationType=JustMe /RegisterPython=0 /S /D="${MINICONDA_DIR}"
+            COMMAND cmd.exe /C start /wait "" "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /InstallationType=JustMe /RegisterPython=0 /S /D="${MINICONDA_DIR}"
             RESULT_VARIABLE result
             OUTPUT_VARIABLE output
             ERROR_VARIABLE error
