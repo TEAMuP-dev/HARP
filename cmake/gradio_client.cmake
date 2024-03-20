@@ -15,7 +15,6 @@ if(USING_MINICONDA)
     set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
 endif()
 # Update the paths to point to the Python executable and PyInstaller in the Miniconda environment
-# set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")  # Update this path if Miniconda is installed in a different location
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     if (USING_MINICONDA)
         set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/python.exe")
@@ -24,8 +23,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(PYTHON_EXECUTABLE "python")
         set(PYINSTALLER_EXECUTABLE "pyinstaller")
     endif()
-    # set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/python.exe")
-    # set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/Scripts/pyinstaller.exe")
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(PYTHON_EXECUTABLE "${MINICONDA_DIR}/bin/python")
     set(PYINSTALLER_EXECUTABLE "${MINICONDA_DIR}/bin/pyinstaller")
