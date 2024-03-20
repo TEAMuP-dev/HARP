@@ -182,11 +182,16 @@ jobs:
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
       
-    - name: Zip
+    - name: Zip (linux)
       if: ${{ matrix.name == 'Linux' }}
       working-directory: ${{ env.ARTIFACTS_PATH }}
       run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
     
+    - name: Zip (windows)
+      if: ${{ matrix.name == 'Windows' }}
+      working-directory: ${{ env.ARTIFACTS_PATH }}
+      run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
+
     # - name: Generate Installer and Sign with EV cert on Azure (Windows)
     #   if: ${{ matrix.name == 'Windows' }}
     #   shell: bash
@@ -197,17 +202,17 @@ jobs:
     #         AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
 
     # Remove that once we figure out the Azure-Sign step above
-    - name: Rename exe (windows)
-      if: ${{ matrix.name == 'Windows' }}
-      working-directory: ${{ env.ARTIFACTS_PATH }}
-      run: ren HARP.exe ${{ env.PRODUCT_NAME }}.exe
+    # - name: Rename exe (windows)
+    #   if: ${{ matrix.name == 'Windows' }}
+    #   working-directory: ${{ env.ARTIFACTS_PATH }}
+    #   run: ren HARP.exe ${{ env.PRODUCT_NAME }}.exe
 
-    - name: Upload Exe (Windows)
+    - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.PRODUCT_NAME }}.exe
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe'
+        name: ${{ env.PRODUCT_NAME }}.zip
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
