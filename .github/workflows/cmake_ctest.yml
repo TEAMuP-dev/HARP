@@ -52,18 +52,18 @@ jobs:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
         include:
-          # - name: Linux
-          #   os: ubuntu-22.04
-          #   pluginval-binary: ./pluginval
-          #   ccache: ccache
+          - name: Linux
+            os: ubuntu-22.04
+            pluginval-binary: ./pluginval
+            ccache: ccache
           - name: macOS
             os: macos-13
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             ccache: ccache
-          # - name: Windows
-          #   os: windows-latest
-          #   pluginval-binary: ./pluginval.exe
-          #   ccache: sccache
+          - name: Windows
+            os: windows-latest
+            pluginval-binary: ./pluginval.exe
+            ccache: sccache
 
     steps:
 
@@ -119,24 +119,49 @@ jobs:
       with:
         submodules: recursive # Get JUCE populated
 
-    - name: Setup Environment Variables
+    # - name: Setup Environment Variables
+    #   shell: bash
+    #   run: |
+    #     VERSION=$(cat VERSION)
+    #     echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+    #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+    #     echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
+    #   # run: |
+    #   #   VERSION=$(cat VERSION)
+    #   #   echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
+    #   #   echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
+    #   #   if [[ ${{ matrix.os }} == 'macOS-latest' || ${{ matrix.os }} == 'macos-11' ]]; then
+    #   #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+    #   #   elif [[ ${{ matrix.os }} == 'windows-latest' ]]; then
+    #   #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
+    #   #   else
+    #   #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
+    #   #   fi
+
+    - name: Setup Common Environment Variables
       shell: bash
       run: |
         VERSION=$(cat VERSION)
         echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
         echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
-      # run: |
-      #   VERSION=$(cat VERSION)
-      #   echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-      #   echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
-      #   if [[ ${{ matrix.os }} == 'macOS-latest' || ${{ matrix.os }} == 'macos-11' ]]; then
-      #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
-      #   elif [[ ${{ matrix.os }} == 'windows-latest' ]]; then
-      #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
-      #   else
-      #     echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
-      #   fi
+
+    - name: Setup Environment Variables for macOS
+      if: matrix.name == 'macOS'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+
+    - name: Setup Environment Variables for Windows
+      if: matrix.name == 'Windows'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
+
+    - name: Setup Environment Variables for Linux
+      if: matrix.name == 'Linux'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@main
@@ -175,14 +200,14 @@ jobs:
       working-directory: ${{ env.ARTIFACTS_PATH }}
       run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
     
-    - name: Generate Installer and Sign with EV cert on Azure (Windows)
-      if: ${{ matrix.name == 'Windows' }}
-      shell: bash
-      run: |
-        iscc "packaging\installer.iss"
-        mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
-            dotnet tool install --global AzureSignTool 
-            AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
+    # - name: Generate Installer and Sign with EV cert on Azure (Windows)
+    #   if: ${{ matrix.name == 'Windows' }}
+    #   shell: bash
+    #   run: |
+    #     iscc "packaging\installer.iss"
+    #     mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
+    #         dotnet tool install --global AzureSignTool 
+    #         AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
 
     - name: Upload Exe (Windows)
       if: ${{ matrix.name == 'Windows' }}
@@ -204,7 +229,7 @@ jobs:
       with:
         name: ${{ env.PRODUCT_NAME }}.dmg
         path: packaging/${{ env.PRODUCT_NAME }}.dmg
-
+ 
 
   release:
     if: contains(github.ref, 'tags/v')
