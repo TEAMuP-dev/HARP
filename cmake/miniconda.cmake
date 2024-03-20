@@ -17,35 +17,62 @@ function(install_miniconda)
 
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
-        set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
+        # set(MINICONDA_INSTALL_SCRIPT "start /wait ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /S /D=C:\\Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+        # set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+        # set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     else()
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh")
-        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
+        # set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${CMAKE_SOURCE_DIR}/Miniconda3")
     endif()
 
-    message(STATUS "Downloading Miniconda installer...")
-    file(DOWNLOAD
-        "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
-        "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
-    )
+    # If the Miniconda installer is not found, download it
+    if (EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        message(STATUS "Miniconda installer already exists at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+    else()
+        message(STATUS "Downloading Miniconda installer...")
+        file(DOWNLOAD
+            "https://repo.anaconda.com/miniconda/${MINICONDA_INSTALLER}"
+            "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
+            TIMEOUT 60  # Adds a timeout for the download
+        )
 
-    if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
-        message(FATAL_ERROR "Miniconda installer not found at ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+        if (NOT EXISTS "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+            message(FATAL_ERROR "Failed to download Miniconda installer from ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}")
+            return()
+        endif()
+    endif()
+
+    # Determine the install script based on the system
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(MINICONDA_INSTALL_SCRIPT "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} /D=${MINICONDA_DIR}")
+    else()
+        set(MINICONDA_INSTALL_SCRIPT "bash ${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER} -b -p ${MINICONDA_DIR}")
     endif()
 
     message(STATUS "Installing Miniconda...")
-    execute_process(
-        COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE output
-        ERROR_VARIABLE error
-    )
+    
+    if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        message(STATUS "Running: ${MINICONDA_INSTALL_SCRIPT}")
+        execute_process(
+            COMMAND cmd.exe /C start /wait "" "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}" /D="${MINICONDA_DIR}"
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+    else()
+        execute_process(
+            COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+        )
+    endif()
+
     if(result)
         message(FATAL_ERROR "Miniconda installation failed with result: ${result}. Output: ${output}. Error: ${error}")
     else()
