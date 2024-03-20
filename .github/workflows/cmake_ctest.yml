@@ -52,14 +52,14 @@ jobs:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
         include:
-          # - name: Linux
-          #   os: ubuntu-22.04
-          #   pluginval-binary: ./pluginval
-          #   ccache: ccache
-          # - name: macOS
-          #   os: macos-13
-          #   pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-          #   ccache: ccache
+          - name: Linux
+            os: ubuntu-22.04
+            pluginval-binary: ./pluginval
+            ccache: ccache
+          - name: macOS
+            os: macos-13
+            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
+            ccache: ccache
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
@@ -80,28 +80,28 @@ jobs:
         sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev xvfb ninja-build
         sudo /usr/bin/Xvfb $DISPLAY &
 
-    # - name: Cache IPP (Windows)
-    #   if: runner.os == 'Windows'
-    #   id: cache-ipp
-    #   uses: actions/cache@v3
-    #   with:
-    #     key: ipp-v1
-    #     path: C:\Program Files (x86)\Intel\oneAPI\ipp
+    - name: Cache IPP (Windows)
+      if: runner.os == 'Windows'
+      id: cache-ipp
+      uses: actions/cache@v3
+      with:
+        key: ipp-v1
+        path: C:\Program Files (x86)\Intel\oneAPI\ipp
 
-    # - name: Install IPP (Windows)
-    #   if: (runner.os == 'Windows') && (steps.cache-ipp.outputs.cache-hit != 'true')
-    #   shell: bash
-    #   run: |
-    #     curl --output oneapi.exe https://registrationcenter-download.intel.com/akdlm/irc_nas/19078/w_BaseKit_p_2023.0.0.25940_offline.exe
-    #     ./oneapi.exe -s -x -f oneapi
-    #     ./oneapi/bootstrapper.exe -s -c --action install --components=intel.oneapi.win.ipp.devel --eula=accept -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
+    - name: Install IPP (Windows)
+      if: (runner.os == 'Windows') && (steps.cache-ipp.outputs.cache-hit != 'true')
+      shell: bash
+      run: |
+        curl --output oneapi.exe https://registrationcenter-download.intel.com/akdlm/irc_nas/19078/w_BaseKit_p_2023.0.0.25940_offline.exe
+        ./oneapi.exe -s -x -f oneapi
+        ./oneapi/bootstrapper.exe -s -c --action install --components=intel.oneapi.win.ipp.devel --eula=accept -p=NEED_VS2022_INTEGRATION=1 --log-dir=.
 
-    # - name: Save IPP cache even on job fail
-    #   if: runner.os == 'Windows' && (steps.cache-ipp.outputs.cache-hit != 'true')
-    #   uses: actions/cache/save@v3
-    #   with:
-    #     path: C:\Program Files (x86)\Intel\oneAPI\ipp
-    #     key: ipp-v1
+    - name: Save IPP cache even on job fail
+      if: runner.os == 'Windows' && (steps.cache-ipp.outputs.cache-hit != 'true')
+      uses: actions/cache/save@v3
+      with:
+        path: C:\Program Files (x86)\Intel\oneAPI\ipp
+        key: ipp-v1
 
     # This lets us use sscache on Windows
     # We need to install ccache here for Windows to grab the right version
