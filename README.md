@@ -14,7 +14,7 @@ TODO - update main figure with up-to-date screenshots
 HARP has been tested on the following:
 * MacOS (ARM) versions 13.0 and 13.4
 * MacOS (x86) version 10.15
-* Windows - TODO
+* Windows 10 (TODO 11 ?)
 * Linux - TODO
 
 with [Reaper](https://www.reaper.fm) and Logic Pro X.
@@ -30,7 +30,8 @@ TODO - add new DMG figure here
 * Drag HARP.app to the `Applications/` folder to install HARP. 
 
 ## Windows
-The windows build is still under development. See the `TODO` branch for updates on our progress.
+* Download the appropriate EXE file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+TODO the rest
 
 ## Linux
 TODO
@@ -144,9 +145,17 @@ cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
 
 ## Windows
-HARP has been tested on Windows 10 x64. You can checkout the `windowsBuild` branch and follow the instructions in the README.
+**Configure**
+```bash
+mkdir build
+cd build
+cmake ..  -DCMAKE_BUILD_TYPE=Debug
+```
 
-TODO - is this still valid?
+**Build**
+```bash
+cmake --build . --config Debug -j <NUM_PROCESSORS>
+```
 
 # Codesigning & Distribution
 ## MacOS

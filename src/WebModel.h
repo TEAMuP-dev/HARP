@@ -79,7 +79,7 @@ public:
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
       scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
-      ).getParentDirectory().getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
+      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
 
       prefix_cmd = "start /B cmd /c set PYTHONIOENCODING=UTF-8 && ";
     #elif __APPLE__
@@ -90,7 +90,7 @@ public:
     #elif __linux__
       scriptPath = juce::File::getSpecialLocation(
           juce::File::currentApplicationFile
-      ).getParentDirectory().getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client");
+      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client");
       prefix_cmd = "";
     #else
       #error "gradiojuce_client has not been implemented for this platform"
