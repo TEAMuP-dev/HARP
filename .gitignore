@@ -55,7 +55,7 @@ dist*/
 
 
 dist/
-Miniconda3/
+Miniconda*/
 Miniconda*.sh
 
 # website

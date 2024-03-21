@@ -38,7 +38,7 @@ env:
   BUILD_TYPE: Debug
   BUILD_DIR: Builds
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DISPLAY: :0 # linux pluginval needs this
+  DISPLAY: :0 # Linux pluginval needs this
   CMAKE_BUILD_PARALLEL_LEVEL: 3 # Use up to 3 cpus to build juceaide, etc
   HOMEBREW_NO_INSTALL_CLEANUP: 1
 
@@ -52,18 +52,18 @@ jobs:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
         include:
-          # - name: Linux
-          #   os: ubuntu-22.04
-          #   pluginval-binary: ./pluginval
-          #   ccache: ccache
+          - name: Linux
+            os: ubuntu-22.04
+            pluginval-binary: ./pluginval
+            ccache: ccache
           - name: macOS
             os: macos-13
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             ccache: ccache
-          # - name: Windows
-          #   os: windows-latest
-          #   pluginval-binary: ./pluginval.exe
-          #   ccache: sccache
+          - name: Windows
+            os: windows-latest
+            pluginval-binary: ./pluginval.exe
+            ccache: sccache
 
     steps:
 
@@ -119,13 +119,30 @@ jobs:
       with:
         submodules: recursive # Get JUCE populated
 
-    - name: Setup Environment Variables
+    - name: Setup Common Environment Variables
       shell: bash
       run: |
         VERSION=$(cat VERSION)
         echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
         echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
+
+    - name: Setup Environment Variables for macOS
+      if: matrix.name == 'macOS'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+
+    - name: Setup Environment Variables for Windows
+      if: matrix.name == 'Windows'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
+
+    - name: Setup Environment Variables for Linux
+      if: matrix.name == 'Linux'
+      shell: bash
+      run: |
+        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@main
@@ -139,6 +156,12 @@ jobs:
       with:
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
+    - name: Set up Python ${{ matrix.python-version }} (Windows)
+      if: matrix.name == 'Windows'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
     - name: Configure
       shell: bash
@@ -159,26 +182,37 @@ jobs:
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
       
-    - name: Zip
+    - name: Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
       working-directory: ${{ env.ARTIFACTS_PATH }}
       run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
     
-    - name: Generate Installer and Sign with EV cert on Azure (Windows)
+    - name: Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
-      shell: bash
-      run: |
-        iscc "packaging\installer.iss"
-        mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
-            dotnet tool install --global AzureSignTool 
-            AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
+      working-directory: ${{ env.ARTIFACTS_PATH }}
+      run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
 
-    - name: Upload Exe (Windows)
+    # - name: Generate Installer and Sign with EV cert on Azure (Windows)
+    #   if: ${{ matrix.name == 'Windows' }}
+    #   shell: bash
+    #   run: |
+    #     iscc "packaging\installer.iss"
+    #     mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
+    #         dotnet tool install --global AzureSignTool 
+    #         AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
+
+    # Remove that once we figure out the Azure-Sign step above
+    # - name: Rename exe (Windows)
+    #   if: ${{ matrix.name == 'Windows' }}
+    #   working-directory: ${{ env.ARTIFACTS_PATH }}
+    #   run: ren HARP.exe ${{ env.PRODUCT_NAME }}.exe
+
+    - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.PRODUCT_NAME }}.exe
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe'
+        name: ${{ env.PRODUCT_NAME }}.zip
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
@@ -187,13 +221,13 @@ jobs:
         name: ${{ env.PRODUCT_NAME }}.zip
         path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
 
-    - name: Upload DMG (MacOS)
+    - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.dmg
         path: packaging/${{ env.PRODUCT_NAME }}.dmg
-
+ 
 
   release:
     if: contains(github.ref, 'tags/v')

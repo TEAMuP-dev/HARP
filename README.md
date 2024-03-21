@@ -14,32 +14,48 @@ TODO - update main figure with up-to-date screenshots
 HARP has been tested on the following:
 * MacOS (ARM) versions 13.0 and 13.4
 * MacOS (x86) version 10.15
-* Windows - TODO
+* Windows 10
+* Windows 11 - TODO
 * Linux - TODO
 
 with [Reaper](https://www.reaper.fm) and Logic Pro X.
 
 # Installing HARP
 ## MacOS
-* Download the appropriate DMG file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+* Download the macOS DMG file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
 
 * Double click on the DMG file. This will open the window shown below.
 
 TODO - add new DMG figure here
 
-* Drag HARP.app to the `Applications/` folder to install HARP. 
+* Drag `HARP.app` to the `Applications/` folder to install HARP.
 
 ## Windows
-The windows build is still under development. See the `TODO` branch for updates on our progress.
+* Download the Windows ZIP file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+
+* Extract the contents of the ZIP file (`HARP.exe`) to a folder of your choice, _e.g._ `C:\Program Files`.
 
 ## Linux
-TODO
+* Download the Linux ZIP file for HARP from the [releases](https://github.com/audacitorch/HARP/releases) page.
+
+* Extract the contents of the ZIP file (`HARP`) to a folder of your choice, _e.g._ `/usr/local/bin/`.
 
 # HARP Guide
 ### WARNING! HARP is a *destructive* file editor.
 After recording or loading audio into a track within your preferred DAW, it is recommended to bounce the track in order to avoid overwriting the original audio. If you would only like to process an excerpt of the track, trim the audio before performing the bounce.
 
 **When using HARP, it is recommended that you "bounce-in-place" any audio regions you'd like to process with HARP before processing them. This gives you the chance to undo changes and revert to a backup of your original file.**
+
+## Standalone
+### Opening HARP
+## MacOS
+* Run `HARP.app` to start the application.
+
+## Windows
+* Run `HARP.exe` to start the application.
+
+## Linux
+* Run `HARP` to start the application.
 
 ## REAPER
 ### Setting Up HARP
@@ -108,45 +124,44 @@ While any algorithm or model can be made HARP-compatible with the [PyHARP API](h
 
 * Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-# Making Code HARP-Compatible
+# Making a Model HARP-Compatible
 We also provide [PyHARP](https://github.com/audacitorch/pyharp), a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
 
 # Building HARP
 HARP can be built from scratch with the following steps:
 
-**Clone the repository**
+### 1. Clone the repository
 ```bash
 git clone --recurse-submodules https://github.com/audacitorch/HARP
 ```
 
-**Enter the project**
-```
+### 2. Enter the project
+```bash
 cd HARP/
 ```
-
-## MacOS & Linux
-**Configure**
+### 3. Configure
 ```bash
 mkdir build
 cd build
-cmake ..  -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 ```
 
-**Build**
+**(ARM vs. x86 MacOS)**
+The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+```bash
+cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
+```
+
+### 4. Build
+**MacOS/Linux**
 ```bash
 make -j <NUM_PROCESSORS>
 ```
 
-### Building for ARM vs. x86 MacOS
-The OSX architecture for the build can be specified explicitly by setting  `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+**Windows**
 ```bash
-cmake .. DCMAKE_OSX_ARCHITECTURES=x86_64
+cmake --build . --config Debug -j <NUM_PROCESSORS>
 ```
-
-## Windows
-HARP has been tested on Windows 10 x64. You can checkout the `windowsBuild` branch and follow the instructions in the README.
-
-TODO - is this still valid?
 
 # Codesigning & Distribution
 ## MacOS
@@ -177,27 +192,26 @@ After running `package.sh`, you should have a signed and notarized dmg file in t
 TODO
 
 # Debugging a HARP Build
-## Mac
-1. Download [Visual Studio Code for macOS](https://code.visualstudio.com/).
+## Visual Studio Code
+1. Download [Visual Studio Code](https://code.visualstudio.com/).
 2. Install the C/C++ extension from Microsoft.
 3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using _CMake Debugger_.
 4. Create a configuration to attach to the process (see the following example code to be placed in `launch.json`).
 
-```
+```json
 {
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Launch",
+            "name": "(lldb) Standalone",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app",
-            "args": ["./test.wav"], // TODO - remove?
-            "stopAtEntry": false,
+            "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app", // for macOS
+            // "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.exe", // for Windows
+            // "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP", // for Linux
+            "args": ["../test.wav"], // TODO - remove?
             "cwd": "${fileDirname}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb"
+            "MIMode": "lldb" // for macOS
         }
 
     ]
@@ -206,9 +220,3 @@ TODO
 
 5. Build the plugin using the flag `-DCMAKE_BUILD_TYPE=Debug`.
 6. Add break points and run the debugger.
-
-## Windows
-TODO
-
-## Linux
-TODO - same as mac?
