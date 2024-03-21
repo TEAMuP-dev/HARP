@@ -15,10 +15,10 @@ HARP has been tested on the following:
 * MacOS (ARM) versions 13.0 and 13.4
 * MacOS (x86) version 10.15
 * Windows 10
-* Windows 11 - TODO
-* Linux - TODO
+* Ubuntu 22.04
+* TODO - Windows 11
 
-with [Reaper](https://www.reaper.fm) and Logic Pro X.
+with [Reaper](https://www.reaper.fm) and Logic Pro X and as a standalone application.
 
 # Installing HARP
 ## MacOS
@@ -48,13 +48,13 @@ After recording or loading audio into a track within your preferred DAW, it is r
 
 ## Standalone
 ### Opening HARP
-## MacOS
+#### MacOS
 * Run `HARP.app` to start the application.
 
-## Windows
+#### Windows
 * Run `HARP.exe` to start the application.
 
-## Linux
+#### Linux
 * Run `HARP` to start the application.
 
 ## REAPER
@@ -198,7 +198,7 @@ TODO
 3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using _CMake Debugger_.
 4. Create a configuration to attach to the process (see the following example code to be placed in `launch.json`).
 
-```json
+```json5
 {
     "version": "0.2.0",
     "configurations": [
@@ -213,7 +213,6 @@ TODO
             "cwd": "${fileDirname}",
             "MIMode": "lldb" // for macOS
         }
-
     ]
 }
 ```
