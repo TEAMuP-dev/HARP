@@ -609,18 +609,25 @@ public:
         "descript/vampnet",
         "hugggof/nesquik",
         "hugggof/MusicGen",
-        "cwitkowitz/timbre-trap"
+        "cwitkowitz/timbre-trap",
+        "custom path..."
         };
 
-
-        for(const std::string& path : modelPaths) {
-            std::cout << path << std::endl;
-        }
 
         modelPathComboBox.setTextWhenNothingSelected("path to a gradio endpoint"); 
         for(size_t i = 0; i < modelPaths.size(); ++i) {
             modelPathComboBox.addItem(modelPaths[i], i+1);
         }
+
+        modelPathComboBox.onChange = [this] {
+            // Check if the last option (custom path) is selected
+            int option = modelPathComboBox.getSelectedItemIndex();
+            if(modelPathComboBox.getSelectedItemIndex() == modelPathComboBox.getNumItems()-1) {
+                modelPathComboBox.setEditableText(true);
+            } else {
+                modelPathComboBox.setEditableText(false);
+            }
+        };
         
 
         addAndMakeVisible(modelPathComboBox);
