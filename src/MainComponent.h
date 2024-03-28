@@ -63,6 +63,8 @@
 #include "CtrlComponent.h"
 #include "TitledTextBox.h"
 #include "ThreadPoolJob.h"
+#include "pianoRoll/PianoRollEditorComponent.hpp"
+
 
 using namespace juce;
 
@@ -338,6 +340,18 @@ public:
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
+        // Load the initial file
+        if (initialFileURL.isLocalFile())
+        {
+            // If file's extension is mid, call the addNewMidiFile function
+            // else call the addNewAudioFile function
+            if (initialFileURL.getLocalFile().getFileExtension() == ".mid")
+                isAudio = false;
+            else
+                isAudio = true;
+            addNewMediaFile(initialFileURL);
+        }
+
         addAndMakeVisible (zoomLabel);
         zoomLabel.setFont (Font (15.00f, Font::plain));
         zoomLabel.setJustificationType (Justification::centredRight);
@@ -358,12 +372,28 @@ public:
 
         addAndMakeVisible (zoomSlider);
         zoomSlider.setRange (0, 1, 0);
-        zoomSlider.onValueChange = [this] { thumbnail->setZoomFactor (zoomSlider.getValue()); };
+        zoomSlider.onValueChange = [this] { 
+            if (isAudio)
+                thumbnail->setZoomFactor (zoomSlider.getValue()); 
+            else
+                pianoRoll->setZoomFactor (zoomSlider.getValue());
+        };
         zoomSlider.setSkewFactor (2);
 
-        thumbnail = std::make_unique<DemoThumbnailComp> (formatManager, transportSource, zoomSlider);
-        addAndMakeVisible (thumbnail.get());
-        thumbnail->addChangeListener (this);
+        if (isAudio)
+        {
+            thumbnail = std::make_unique<DemoThumbnailComp> (formatManager, transportSource, zoomSlider);
+            addAndMakeVisible (thumbnail.get());
+            thumbnail->addChangeListener (this);
+        }
+        else
+        {
+            pianoRoll = std::make_unique<PianoRollEditorComponent> ();
+            addAndMakeVisible(pianoRoll.get());
+            //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
+            // pianoRoll = std::make_unique<PianoRollEditorComponent>();
+            pianoRoll->setup(10, 400, 10);
+        }
 
         addAndMakeVisible (startStopButton);
         startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
@@ -381,13 +411,6 @@ public:
 
         audioDeviceManager.addAudioCallback (&audioSourcePlayer);
         audioSourcePlayer.setSource (&transportSource);
-
-
-        // Load the initial file
-        if (initialFileURL.isLocalFile())
-        {
-            addNewAudioFile (initialFileURL);
-        }
 
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
@@ -437,7 +460,7 @@ public:
                 [this] { // &jobsFinished, totalJobs
                     // Individual job code for each iteration
                     // copy the audio file, with the same filename except for an added _harp to the stem
-                    model->process(currentAudioFile.getLocalFile());
+                    model->process(currentMediaFile.getLocalFile());
                     DBG("Processing finished");
                     // load the audio file again
                     processBroadcaster.sendChangeMessage();
@@ -456,21 +479,21 @@ public:
         saveButton.onClick = [this] { // Save callback
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             // copy the file to the target location
-            DBG("copying from " << currentAudioFile.getLocalFile().getFullPathName() << " to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+            DBG("copying from " << currentMediaFile.getLocalFile().getFullPathName() << " to " << currentMediaFileTarget.getLocalFile().getFullPathName());
             // make a backup for the undo button
             // rename the original file to have a _backup suffix
             File backupFile = File(
-                currentAudioFileTarget.getLocalFile().getParentDirectory().getFullPathName() + "/"
-                + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() +
-                + "_BACKUP" + currentAudioFileTarget.getLocalFile().getFileExtension()
+                currentMediaFileTarget.getLocalFile().getParentDirectory().getFullPathName() + "/"
+                + currentMediaFileTarget.getLocalFile().getFileNameWithoutExtension() +
+                + "_BACKUP" + currentMediaFileTarget.getLocalFile().getFileExtension()
             );
 
-            currentAudioFileTarget.getLocalFile().copyFileTo(backupFile);
+            currentMediaFileTarget.getLocalFile().copyFileTo(backupFile);
             DBG("made a backup of the original file at " << backupFile.getFullPathName());
 
-            currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile());
+            currentMediaFile.getLocalFile().moveFileTo(currentMediaFileTarget.getLocalFile());
             
-            addNewAudioFile(currentAudioFileTarget);
+            addNewMediaFile(currentMediaFileTarget);
             saveButton.setEnabled(false);
         };
         saveButton.setEnabled(false);
@@ -681,7 +704,7 @@ public:
 
     void openFileChooser()
     {
-        fileChooser = std::make_unique<FileChooser>("Select an audio file...", File(), "*.wav;*.aiff;*.mp3;*.flac");
+        fileChooser = std::make_unique<FileChooser>("Select an audio or midi file...", File(), "*.wav;*.aiff;*.mp3;*.flac;*.mid");
         fileChooser->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
                                 [this](const FileChooser& chooser)
                                 {
@@ -694,12 +717,14 @@ public:
                                         String fileExtension = file.getFileExtension();
                                         if (fileExtension == ".mid")
                                         {
-                                            addNewMidiFile(fileURL);
+                                            isAudio = false;
                                         }
                                         else
                                         {
-                                            addNewAudioFile(fileURL);
+                                            isAudio = true;
                                         }
+                                        addNewMediaFile(fileURL);
+
                                     }
                                 });
     }
@@ -717,9 +742,11 @@ public:
 
         auto docViewHeight = 100;
 
-        auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
-        auto documentViewArea = area;  // what remains is the 15% area for documentView
-
+        // auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
+        // auto documentViewArea = area;  // what remains is the 15% area for documentView
+        auto mainArea = area;
+        // pianoRoll.setBounds(mainArea.removeFromBottom (140));
+        // return;
         // Row 1: Model Path TextBox and Load Model Button
         auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
         modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
@@ -794,8 +821,12 @@ public:
        #if JUCE_ANDROID || JUCE_IOS
         thumbnail->setBounds (mainArea);
        #else
-        thumbnail->setBounds (mainArea.removeFromBottom (140));
-        mainArea.removeFromBottom (6);
+        auto thumbnailArea = mainArea.removeFromBottom (mainArea.getHeight() * 0.85f);
+        if (isAudio)
+            thumbnail->setBounds (thumbnailArea.reduced(margin));
+        else
+            pianoRoll->setBounds (thumbnailArea.reduced(margin));
+        // mainArea.removeFromBottom (6);
 
        #endif
     }
@@ -861,10 +892,12 @@ private:
     TextButton chooseFileButton {"Load File", "Load an audio file for playback"}; // Changed for desktop
    #endif
 
-    URL currentAudioFile;
-    URL currentAudioFileTarget;
-    URL currentMidiFile;
-    URL currentMidiFileTarget;
+    // URL currentAudioFile;
+    // URL currentAudioFileTarget;
+    // URL currentMidiFile;
+    // URL currentMidiFileTarget;
+    URL currentMediaFile;
+    URL currentMediaFileTarget;
     AudioSourcePlayer audioSourcePlayer;
     AudioTransportSource transportSource;
     std::unique_ptr<AudioFormatReaderSource> currentAudioFileSource;
@@ -875,6 +908,12 @@ private:
     ToggleButton followTransportButton  { "Follow Transport" };
     TextButton startStopButton          { "Play/Stop" };
 
+    // PianoRoll Component
+    st_int tickTest;
+    std::unique_ptr<PianoRollEditorComponent> pianoRoll;
+
+    // Flag to indicate audio vs midi
+    bool isAudio = true;
 
     /// CustomThreadPoolJob
     // This one is used for Loading the models
@@ -891,7 +930,7 @@ private:
     //==============================================================================
     void showAudioResource (URL resource)
     {
-        if (! loadURLIntoTransport (currentAudioFile))
+        if (! loadURLIntoTransport (currentMediaFile))
         {
             // Failed to load the audio file!
             jassertfalse;
@@ -899,44 +938,13 @@ private:
         }
 
         zoomSlider.setValue (0, dontSendNotification);
-        thumbnail->setURL (currentAudioFile);
-    }
-
-    void addNewMidiFile (URL resource)
-    {
-        currentMidiFileTarget = resource;
-        
-        currentAudioFile = URL(File(
-            File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
-            + currentMidiFileTarget.getLocalFile().getFileNameWithoutExtension() 
-            + "_harp" + currentMidiFileTarget.getLocalFile().getFileExtension()
-        ));
-
-        currentMidiFile.getLocalFile().getParentDirectory().createDirectory();
-        if (!currentMidiFileTarget.getLocalFile().copyFileTo(currentMidiFile.getLocalFile())) {
-            DBG("MainComponent::addNewMidiFile: failed to copy file to " << currentMidiFile.getLocalFile().getFullPathName());
-            // show an error to the user, we cannot proceed!
-            AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
-        }
-        DBG("MainComponent::addNewMidiFile: copied file to " << currentMidiFileTarget.getLocalFile().getFullPathName());
-
-        extractMidiData(currentMidiFile);
-
+        thumbnail->setURL (currentMediaFile);
     }
 
     void extractMidiData (const URL& fileUrl)
     {        
-        // Extract the path from the URL
-        String filePath = fileUrl.toString (true);
-
-        // Create a File object from the path
-        File file (filePath);
-
-        if (!file.existsAsFile())
-        {
-            DBG("File does not exist.");
-            return;
-        }
+        // Create the local file this URL points to
+        File file = fileUrl.getLocalFile();
 
         std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
 
@@ -962,31 +970,38 @@ private:
                 for (int eventIdx = 0; eventIdx < track->getNumEvents(); ++eventIdx)
                 {
                     const auto& midiMessage = track->getEventPointer(eventIdx)->message;
+                    DBG("Event " << eventIdx << ": " << midiMessage.getDescription());
                     // Process each midiMessage here...
                 }
             }
         }
 
     }
-    void addNewAudioFile (URL resource) 
+    void addNewMediaFile (URL resource) 
     {
-        currentAudioFileTarget = resource;
+        currentMediaFileTarget = resource;
         
-        currentAudioFile = URL(File(
+        currentMediaFile = URL(File(
             File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName() + "/HARP/"
-            + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() 
-            + "_harp" + currentAudioFileTarget.getLocalFile().getFileExtension()
+            + currentMediaFileTarget.getLocalFile().getFileNameWithoutExtension() 
+            + "_harp" + currentMediaFileTarget.getLocalFile().getFileExtension()
         ));
 
-        currentAudioFile.getLocalFile().getParentDirectory().createDirectory();
-        if (!currentAudioFileTarget.getLocalFile().copyFileTo(currentAudioFile.getLocalFile())) {
-            DBG("MainComponent::addNewAudioFile: failed to copy file to " << currentAudioFile.getLocalFile().getFullPathName());
+        currentMediaFile.getLocalFile().getParentDirectory().createDirectory();
+        if (!currentMediaFileTarget.getLocalFile().copyFileTo(currentMediaFile.getLocalFile())) {
+            DBG("MainComponent::addNewAudioFile: failed to copy file to " << currentMediaFile.getLocalFile().getFullPathName());
             // show an error to the user, we cannot proceed!
             AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
         }
-        DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+        DBG("MainComponent::addNewAudioFile: copied file to " << currentMediaFileTarget.getLocalFile().getFullPathName());
 
-        showAudioResource(currentAudioFile);
+        if (isAudio)
+            showAudioResource(currentMediaFile);
+        else
+        {
+            extractMidiData(currentMediaFile);
+            // showMidiResource(currentMediaFile); 
+        }       
     }
 
     bool loadURLIntoTransport (const URL& audioURL)
@@ -1092,7 +1107,7 @@ private:
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == thumbnail.get())
-            addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+            addNewMediaFile (URL (thumbnail->getLastDroppedFile()));
         else if (source == &loadBroadcaster) {
             DBG("Setting up model card, CtrlComponent, resizing.");
             setModelCard(model->card());
@@ -1111,7 +1126,7 @@ private:
         }
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
-            showAudioResource(currentAudioFile);
+            showAudioResource(currentMediaFile);
 
             // now, we can enable the process button
             processButton.setButtonText("process");

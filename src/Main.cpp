@@ -45,13 +45,13 @@ public:
 
     void resetWindow(const juce::String& commandLine) {
         
-        File audioFile(commandLine.unquoted().trim());
+        File inputMediaFile(commandLine.unquoted().trim());
 
         mainWindow.reset (new MainWindow (getApplicationName()));
-        if(audioFile.existsAsFile())
+        if(inputMediaFile.existsAsFile())
         {
-            URL audioURL = URL(audioFile);
-            mainWindow->setContentOwned(new MainComponent(audioURL), true);
+            URL inputMediaURL = URL(inputMediaFile);
+            mainWindow->setContentOwned(new MainComponent(inputMediaURL), true);
         }
         else
         {
