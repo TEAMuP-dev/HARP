@@ -327,6 +327,22 @@ private:
     }
 };
 
+//this is the callback for the add new path popup alert
+class CustomPathAlertCallback : public juce::ModalComponentManager::Callback {
+public:
+    CustomPathAlertCallback(std::function<void(int)> const& callback) : userCallback(callback) {}
+
+    void modalStateFinished(int result) override {
+        if(userCallback != nullptr) {
+            userCallback(result);
+        }
+    }
+private:
+    std::function<void(int)> userCallback;
+};
+
+
+
 //==============================================================================
 class MainComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
@@ -607,31 +623,55 @@ public:
 
        // model path textbox
        std::vector<std::string> modelPaths = {
+        "custom path...",
         "hugggof/pitch_shifter",
         "hugggof/harmonic_percussive",
         "descript/vampnet",
         "hugggof/nesquik",
         "hugggof/MusicGen",
         "cwitkowitz/timbre-trap",
-        "custom path..."
         };
 
 
-        modelPathComboBox.setTextWhenNothingSelected("path to a gradio endpoint"); 
+        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
         for(size_t i = 0; i < modelPaths.size(); ++i) {
             modelPathComboBox.addItem(modelPaths[i], i+1);
         }
 
+
+        // Usage within your existing onChange handler
         modelPathComboBox.onChange = [this] {
-            // Check if the last option (custom path) is selected
-            int option = modelPathComboBox.getSelectedItemIndex();
-            if(modelPathComboBox.getSelectedItemIndex() == modelPathComboBox.getNumItems()-1) {
-                modelPathComboBox.setEditableText(true);
-            } else {
-                modelPathComboBox.setEditableText(false);
+            // Check if the 'custom path...' option is selected
+            if (modelPathComboBox.getSelectedItemIndex() == 0) {
+                // Create an AlertWindow
+                auto* customPathWindow = new AlertWindow("Enter Custom Path",
+                                                        "Please enter the path to the gradio endpoint:",
+                                                        AlertWindow::NoIcon);
+
+                customPathWindow->addTextEditor("customPath", "", "Path:");
+                customPathWindow->addButton("OK", 1, KeyPress(KeyPress::returnKey));
+                customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
+                
+                // Show the window and handle the result asynchronously
+                customPathWindow->enterModalState(true, new CustomPathAlertCallback([this, customPathWindow](int result) {
+                    if (result == 1) { // OK was clicked
+                        // Retrieve the entered path
+                        String customPath = customPathWindow->getTextEditor("customPath")->getText();
+                        // Use the custom path as needed
+                        DBG("Custom path entered: " + customPath);
+                        int new_id = modelPathComboBox.getNumItems()+1;
+                        modelPathComboBox.addItem(customPath, new_id);
+                        modelPathComboBox.setSelectedId(new_id);
+
+                    } else { // Cancel was clicked or the window was closed
+                        DBG("Custom path entry was canceled.");
+                        modelPathComboBox.setSelectedId(0);
+                    }
+                    delete customPathWindow;
+                }), true);
             }
         };
-        
+
 
         addAndMakeVisible(modelPathComboBox);
 
@@ -700,7 +740,7 @@ public:
     }
 
     
-
+    
     void openFileChooser()
     {
         fileChooser = std::make_unique<FileChooser>("Select an audio file...", File(), "*.wav;*.aiff;*.mp3;*.flac");
