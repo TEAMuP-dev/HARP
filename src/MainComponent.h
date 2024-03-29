@@ -340,16 +340,6 @@ public:
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
-        // Load the initial file
-        if (initialFileURL.isLocalFile())
-        {
-            // If file's extension is mid, call the addNewMidiFile function
-            // else call the addNewAudioFile function
-            if (initialFileURL.getLocalFile().getFileExtension() == ".mid")
-                isAudio = false;
-            else
-                isAudio = true;
-        }
 
         addAndMakeVisible (zoomLabel);
         zoomLabel.setFont (Font (15.00f, Font::plain));
@@ -379,19 +369,31 @@ public:
         };
         zoomSlider.setSkewFactor (2);
 
-        if (isAudio)
-        {
+        // if (isAudio)
+        // {
             thumbnail = std::make_unique<DemoThumbnailComp> (formatManager, transportSource, zoomSlider);
             addAndMakeVisible (thumbnail.get());
             thumbnail->addChangeListener (this);
-        }
-        else
-        {
+        // }
+        // else
+        // {
             pianoRoll = std::make_unique<PianoRollEditorComponent> ();
             addAndMakeVisible(pianoRoll.get());
             //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
             // pianoRoll = std::make_unique<PianoRollEditorComponent>();
             pianoRoll->setup(10, 400, 10);
+        // }
+
+        // Load the initial file
+        if (initialFileURL.isLocalFile())
+        {
+            // If file's extension is mid, call the addNewMidiFile function
+            // else call the addNewAudioFile function
+            if (initialFileURL.getLocalFile().getFileExtension() == ".mid")
+                isAudio = false;
+            else
+                isAudio = true;
+            addNewMediaFile(initialFileURL);
         }
 
         addAndMakeVisible (startStopButton);
@@ -666,7 +668,7 @@ public:
 
         jobProcessorThread.startThread();
 
-        addNewMediaFile(initialFileURL);
+        
         
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
@@ -914,7 +916,7 @@ private:
     std::unique_ptr<PianoRollEditorComponent> pianoRoll;
 
     // Flag to indicate audio vs midi
-    bool isAudio = true;
+    bool isAudio = false;
 
     /// CustomThreadPoolJob
     // This one is used for Loading the models
@@ -1157,7 +1159,13 @@ private:
         }
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
-            showAudioResource(currentMediaFile);
+            if (isAudio)
+                showAudioResource(currentMediaFile);
+            else
+            {
+                PRESequence pianoRollSeqInput = extractMidiData(currentMediaFile);
+                pianoRoll->loadSequence(pianoRollSeqInput);
+            }
 
             // now, we can enable the process button
             processButton.setButtonText("process");

@@ -38,7 +38,8 @@ def main(
         # ctrls will be a dict, instead of a path now
         # ctrls = client.predict(api_name="/wav2wav-ctrls")
         print(f"calling predict ")
-        ctrls = client.predict(api_name="/wav2wav-ctrls")
+        # ctrls = client.predict(api_name="/wav2wav-ctrls")
+        ctrls = client.predict(api_name="/controls")
 
         print(f"got ctrls: {ctrls}")
         # if it's a string, it's a filepath
@@ -57,7 +58,7 @@ def main(
             assert isinstance(ctrls, list), "Controls must be a list of parameter values."
             print(f"loaded ctrls: {ctrls}")
         print(f"Predicting audio for {url}...")
-        job = client.submit(*ctrls, api_name="/wav2wav")
+        job = client.submit(*ctrls, api_name="/process")
 
         canceled = False
         while not job.done():
@@ -66,7 +67,7 @@ def main(
             if cancel_flag_path is not None:
                 if Path(cancel_flag_path).exists():
                     print("Cancel flag detected. Cancelling...")
-                    client.submit(api_name="/wav2wav-cancel")
+                    client.submit(api_name="/cancel")
                     canceled = True
                     Path(status_flag_path).write_text("Status.CANCELED")
                     break

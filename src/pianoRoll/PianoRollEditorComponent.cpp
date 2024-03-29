@@ -143,6 +143,14 @@ void PianoRollEditorComponent::loadSequence (PRESequence sequence)
 //    const float scrollRatio = middleNote / 127.0;
 //    setScroll(0.0, scrollRatio);
 }
+
+// void PianoRollEditorComponent::clearSequence()
+// {
+//     // noteGrid.loadSequence can be used to clear the grid by passing an empty PRESequence
+//     PRESequence emptySequence;
+//     noteGrid.loadSequence(emptySequence);
+// }
+
 PRESequence PianoRollEditorComponent::getSequence ()
 {
     return noteGrid.getSequence();

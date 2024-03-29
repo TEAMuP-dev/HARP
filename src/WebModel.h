@@ -286,7 +286,7 @@ public:
       throw std::runtime_error("Model not loaded");
     }
 
-    // a random string to append to the input/output.wav files
+    // a random string to append to the input/output.mid files
     // This is necessary because more than 1 playback regions
     // are processed at the same time.
     std::string randomString = juce::Uuid().toString().toStdString();
@@ -295,7 +295,7 @@ public:
     LogAndDBG("Saving buffer to file");
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("input_" + randomString + ".wav");
+            .getChildFile("input_" + randomString + ".mid");
     tempFile.deleteFile();
     // copy the file to a temp file
     filetoProcess.copyFileTo(tempFile);
@@ -303,7 +303,7 @@ public:
     // a tarrget output file
     juce::File tempOutputFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("output_" + randomString + ".wav");
+            .getChildFile("output_" + randomString + ".mid");
     tempOutputFile.deleteFile();
 
     // a ctrls file

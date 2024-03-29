@@ -93,6 +93,9 @@ public:
      Although this approach is probably inefficent, its unlikely to cause realtime performance issues...
      */
     void loadSequence (PRESequence sequence);
+
+    // void clearSequence();
+
     PRESequence getSequence ();
     
     
