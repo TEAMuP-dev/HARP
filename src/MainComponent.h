@@ -660,6 +660,7 @@ public:
         addAndMakeVisible(authorLabel);
         addAndMakeVisible(descriptionLabel);
         addAndMakeVisible(tagsLabel);
+        addAndMakeVisible(audioOrMidiLabel);
 
         // model card component
         // Get the modelCard from the EditorView
@@ -773,9 +774,13 @@ public:
         authorLabel.setFont(Font(10.0f));
 
         // Row 4: Description Label
-        auto row4 = mainArea.removeFromTop(80);  // adjust height as needed
+        auto row4 = mainArea.removeFromTop(40);  // adjust height as needed
         descriptionLabel.setBounds(row4.reduced(margin));
         // TODO: put the space url below the description
+
+        // Row 4.25: audioOrMidiLabel
+        auto row425 = mainArea.removeFromTop(20);  // adjust height as needed
+        audioOrMidiLabel.setBounds(row425.reduced(margin));
 
         // Row 4.5: Space URL Hyperlink
         auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
@@ -849,6 +854,12 @@ public:
         card.author.empty() ?
             authorLabel.setText("", dontSendNotification) :
             authorLabel.setText("by " + String(card.author), dontSendNotification);
+        // It is assumed we only support wav2wav or midi2midi models for now
+        if (card.midi_in == "1" && card.midi_out == "1") {
+            audioOrMidiLabel.setText("Model type: MIDI", dontSendNotification); // TODO: setting the text doesn't work for some reason
+        } else {
+            audioOrMidiLabel.setText("Model type: Audio", dontSendNotification);
+        }
     }
 
 
@@ -870,6 +881,9 @@ private:
 
     // model card
     Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
+    // For now it is assumed that both input and output types 
+    // of the model are the same (audio or midi)
+    Label audioOrMidiLabel;
     HyperlinkButton spaceUrlButton;
 
     // the model itself
