@@ -349,7 +349,6 @@ public:
                 isAudio = false;
             else
                 isAudio = true;
-            addNewMediaFile(initialFileURL);
         }
 
         addAndMakeVisible (zoomLabel);
@@ -667,6 +666,8 @@ public:
 
         jobProcessorThread.startThread();
 
+        addNewMediaFile(initialFileURL);
+        
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque (true);
@@ -941,7 +942,7 @@ private:
         thumbnail->setURL (currentMediaFile);
     }
 
-    void extractMidiData (const URL& fileUrl)
+    PRESequence extractMidiData (const URL& fileUrl)
     {        
         // Create the local file this URL points to
         File file = fileUrl.getLocalFile();
@@ -950,33 +951,62 @@ private:
 
         // Read the MIDI file from the File object
         MidiFile midiFile;
+        PRESequence sequence;
 
         if (!midiFile.readFrom(*fileStream))
         {
             DBG("Failed to read MIDI data from file.");
-            return;
+            return sequence;
         }
+
+        double tickLength = midiFile.getTimeFormat() / 960.0; // based on MIDI PPQ
 
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx)
         {
-            const juce::MidiMessageSequence* track = midiFile.getTrack(trackIdx);
-            if (track != nullptr)
+            const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
+            if (constTrack != nullptr)
             {
-                // Here you can process each track using the MidiMessageSequence
-                // For example, let's just print out the number of events in this track
-                DBG("Track " << trackIdx << " has " << track->getNumEvents() << " events.");
+                juce::MidiMessageSequence track(*constTrack);
+                track.updateMatchedPairs();
+
+                
+                DBG("Track " << trackIdx << " has " << track.getNumEvents() << " events.");
 
                 // Example processing: iterating over messages in the sequence
-                for (int eventIdx = 0; eventIdx < track->getNumEvents(); ++eventIdx)
+                for (int eventIdx = 0; eventIdx < track.getNumEvents(); ++eventIdx)
                 {
-                    const auto& midiMessage = track->getEventPointer(eventIdx)->message;
+                    const auto midiEvent = track.getEventPointer(eventIdx);
+                    const auto& midiMessage = midiEvent->message;
+
                     DBG("Event " << eventIdx << ": " << midiMessage.getDescription());
-                    // Process each midiMessage here...
+                    if (midiMessage.isNoteOn())
+                    {
+                        int noteNumber = midiMessage.getNoteNumber();
+                        int velocity = midiMessage.getVelocity();
+                        double startTime = midiEvent->message.getTimeStamp() * tickLength;
+
+                        // Find the matching note off event
+                        double noteLength = 0;
+                        for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx)
+                        {
+                            const auto offEvent = track.getEventPointer(offIdx);
+                            if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber)
+                            {
+                                noteLength = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp()) * tickLength;
+                                break;
+                            }
+                        }
+                        // Create a NoteModel for each midiEvent
+                        NoteModel::Flags flags;
+                        NoteModel noteModel(noteNumber, velocity, static_cast<st_int>(startTime), static_cast<st_int>(noteLength), flags);
+                        sequence.events.push_back(noteModel);
+                    }
                 }
             }
         }
-
+        return sequence;
     }
+
     void addNewMediaFile (URL resource) 
     {
         currentMediaFileTarget = resource;
@@ -999,8 +1029,9 @@ private:
             showAudioResource(currentMediaFile);
         else
         {
-            extractMidiData(currentMediaFile);
+            PRESequence pianoRollSeqInput = extractMidiData(currentMediaFile);
             // showMidiResource(currentMediaFile); 
+            pianoRoll->loadSequence(pianoRollSeqInput);
         }       
     }
 
