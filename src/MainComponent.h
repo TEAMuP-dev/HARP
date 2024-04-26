@@ -460,10 +460,33 @@ public:
             // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
             if (model == nullptr){
                 DBG("unhandled exception: model is null. we should probably open an error window here.");
-                AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Loading Error", 
+                    "Model is not loaded. Please load a model first."
+                );
                 return;
             }
 
+
+            // Check if the model's type (Audio or MIDI) matches the input file's type
+            // If not, show an error message and ask the user to either use another model
+            // or another appropriate file
+            if (isAudio && isAudioModel) {
+                DBG("Processing audio file");
+            } else if (!isAudio && !isAudioModel) {
+                DBG("Processing MIDI file");
+            } else {
+                DBG("Model and file type mismatch");
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Processing Error",
+                    "Model and file type mismatch. Please use an appropriate model or file."
+                );
+                // processBroadcaster.sendChangeMessage();
+                resetProcessingButtons();
+                return;
+            }
             // print how many jobs are currently in the threadpool
             DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
 
@@ -883,8 +906,10 @@ public:
         // It is assumed we only support wav2wav or midi2midi models for now
         if (card.midi_in == "1" && card.midi_out == "1") {
             audioOrMidiLabel.setText("MIDI", dontSendNotification); // TODO: setting the text doesn't work for some reason
+            isAudioModel = false;
         } else if (card.midi_in == "0" && card.midi_in == "0"){
             audioOrMidiLabel.setText("Audio", dontSendNotification);
+            isAudioModel = true;
         } else {
             audioOrMidiLabel.setText("", dontSendNotification);
         }
@@ -958,8 +983,13 @@ private:
     st_int tickTest;
     std::unique_ptr<PianoRollEditorComponent> pianoRoll;
 
-    // Flag to indicate audio vs midi
+    // These flags are very simplistic as they assume
+    // that we only have audio2audio or midi2midi models
+    // We can expand these in the future to support more types
+    // Flag to indicate audio vs midi (for input file)
     bool isAudio;
+    // Flag to indicate audio vs midi (for type of model)
+    bool isAudioModel;
 
     /// CustomThreadPoolJob
     // This one is used for Loading the models
@@ -1182,6 +1212,14 @@ private:
    #else
    #endif
 
+    void resetProcessingButtons() {
+        processButton.setButtonText("process");
+        processButton.setEnabled(true);
+        cancelButton.setEnabled(false);
+        saveButton.setEnabled(true); 
+        repaint();
+    }
+
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == thumbnail.get())
@@ -1213,11 +1251,7 @@ private:
             }
 
             // now, we can enable the process button
-            processButton.setButtonText("process");
-            processButton.setEnabled(true);
-            cancelButton.setEnabled(false);
-            saveButton.setEnabled(true); 
-            repaint();
+            resetProcessingButtons();
         }
         else if (source == mModelStatusTimer.get()) {
             // update the status label
