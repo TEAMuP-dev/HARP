@@ -36,6 +36,8 @@ struct ModelCard {
   // bool midi_out;
   std::string midi_in;
   std::string midi_out;
+  std::string audio_in;
+  std::string audio_out;
 };
 
 

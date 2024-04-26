@@ -785,20 +785,28 @@ public:
         auto row3a = mainArea.removeFromTop(40);  // adjust height as needed
         nameLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
+        // auto row425 = mainArea.removeFromTop(20);  // adjust height as needed
+        // audioOrMidiLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 5).reduced(margin));
+        
+
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
- 
+        auto row3c = mainArea.removeFromTop(30);
+        audioOrMidiLabel.setBounds(row3c.reduced(margin));
+        audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
+        audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
+
         auto row3b = mainArea.removeFromTop(30);
         authorLabel.setBounds(row3b.reduced(margin));
-        authorLabel.setFont(Font(10.0f));
+        authorLabel.setFont(Font(12.0f));
 
         // Row 4: Description Label
         auto row4 = mainArea.removeFromTop(40);  // adjust height as needed
         descriptionLabel.setBounds(row4.reduced(margin));
         // TODO: put the space url below the description
 
-        // Row 4.25: audioOrMidiLabel
-        auto row425 = mainArea.removeFromTop(20);  // adjust height as needed
-        audioOrMidiLabel.setBounds(row425.reduced(margin));
+        // // Row 4.25: audioOrMidiLabel
+        // auto row425 = mainArea.removeFromTop(20);  // adjust height as needed
+        // audioOrMidiLabel.setBounds(row425.reduced(margin));
 
         // Row 4.5: Space URL Hyperlink
         auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
@@ -874,10 +882,13 @@ public:
             authorLabel.setText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
         if (card.midi_in == "1" && card.midi_out == "1") {
-            audioOrMidiLabel.setText("Model type: MIDI", dontSendNotification); // TODO: setting the text doesn't work for some reason
+            audioOrMidiLabel.setText("MIDI", dontSendNotification); // TODO: setting the text doesn't work for some reason
+        } else if (card.midi_in == "0" && card.midi_in == "0"){
+            audioOrMidiLabel.setText("Audio", dontSendNotification);
         } else {
-            audioOrMidiLabel.setText("Model type: Audio", dontSendNotification);
+            audioOrMidiLabel.setText("", dontSendNotification);
         }
+        
     }
 
 
