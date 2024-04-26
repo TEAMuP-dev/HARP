@@ -390,7 +390,7 @@ public:
 
         // audio setup
         formatManager.registerBasicFormats();
-        
+
         // Load the initial file
         if (initialFileURL.isLocalFile())
         {
@@ -398,13 +398,16 @@ public:
             // else call the addNewAudioFile function
             if (initialFileURL.getLocalFile().getFileExtension() == ".mid") {
                 isAudio = false;
+                thumbnail->setVisible(false);
                 pianoRoll->setVisible(true);
             }
             else {
                 isAudio = true;
+                pianoRoll->setVisible(false);
                 thumbnail->setVisible(true);
             }
             addNewMediaFile(initialFileURL);
+            resized();
         }
 
         addAndMakeVisible (startStopButton);
@@ -732,12 +735,17 @@ public:
                                         if (fileExtension == ".mid")
                                         {
                                             isAudio = false;
+                                            thumbnail->setVisible(false);
+                                            pianoRoll->setVisible(true);
                                         }
                                         else
                                         {
                                             isAudio = true;
+                                            pianoRoll->setVisible(false);
+                                            thumbnail->setVisible(true);
                                         }
                                         addNewMediaFile(fileURL);
+                                        resized();
 
                                     }
                                 });
@@ -940,7 +948,7 @@ private:
     std::unique_ptr<PianoRollEditorComponent> pianoRoll;
 
     // Flag to indicate audio vs midi
-    bool isAudio = false;
+    bool isAudio;
 
     /// CustomThreadPoolJob
     // This one is used for Loading the models
@@ -966,6 +974,8 @@ private:
 
         zoomSlider.setValue (0, dontSendNotification);
         thumbnail->setURL (currentMediaFile);
+        thumbnail->setVisible( true );
+        DBG("Set visibility true again");
     }
 
     PRESequence extractMidiData (const URL& fileUrl)
