@@ -388,6 +388,9 @@ public:
             pianoRoll->setup(10, 400, 10);
         // }
 
+        // audio setup
+        formatManager.registerBasicFormats();
+        
         // Load the initial file
         if (initialFileURL.isLocalFile())
         {
@@ -409,8 +412,7 @@ public:
         startStopButton.setColour (TextButton::textColourOffId, Colours::black);
         startStopButton.onClick = [this] { startOrStop(); };
 
-        // audio setup
-        formatManager.registerBasicFormats();
+        
 
         thread.startThread (Thread::Priority::normal);
 
