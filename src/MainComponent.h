@@ -372,13 +372,17 @@ public:
         // if (isAudio)
         // {
             thumbnail = std::make_unique<DemoThumbnailComp> (formatManager, transportSource, zoomSlider);
-            addAndMakeVisible (thumbnail.get());
+            // addAndMakeVisible (thumbnail.get());
+            addChildComponent (thumbnail.get());
             thumbnail->addChangeListener (this);
+            
         // }
         // else
         // {
             pianoRoll = std::make_unique<PianoRollEditorComponent> ();
-            addAndMakeVisible(pianoRoll.get());
+            // addAndMakeVisible(pianoRoll.get());
+            addChildComponent(pianoRoll.get());
+            
             //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
             // pianoRoll = std::make_unique<PianoRollEditorComponent>();
             pianoRoll->setup(10, 400, 10);
@@ -389,10 +393,14 @@ public:
         {
             // If file's extension is mid, call the addNewMidiFile function
             // else call the addNewAudioFile function
-            if (initialFileURL.getLocalFile().getFileExtension() == ".mid")
+            if (initialFileURL.getLocalFile().getFileExtension() == ".mid") {
                 isAudio = false;
-            else
+                pianoRoll->setVisible(true);
+            }
+            else {
                 isAudio = true;
+                thumbnail->setVisible(true);
+            }
             addNewMediaFile(initialFileURL);
         }
 
