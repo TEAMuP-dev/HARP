@@ -26,7 +26,7 @@ with [Reaper](https://www.reaper.fm) and Logic Pro X and as a standalone applica
 
 * Double click on the DMG file. This will open the window shown below.
 
-TODO - add new DMG figure here
+![DMG](https://github.com/audacitorch/HARP/assets/33099118/9ac4b75f-b4a1-4a3d-93fb-6b47c6821dd4)
 
 * Drag `HARP.app` to the `Applications/` folder to install HARP.
 
