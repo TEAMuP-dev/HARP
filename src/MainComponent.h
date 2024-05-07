@@ -329,12 +329,30 @@ private:
     }
 };
 
+//this is the callback for the add new path popup alert
+class CustomPathAlertCallback : public juce::ModalComponentManager::Callback {
+public:
+    CustomPathAlertCallback(std::function<void(int)> const& callback) : userCallback(callback) {}
+
+    void modalStateFinished(int result) override {
+        if(userCallback != nullptr) {
+            userCallback(result);
+        }
+    }
+private:
+    std::function<void(int)> userCallback;
+};
+
+
+
 //==============================================================================
 class MainComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
                            private Button::Listener,
                           #endif
                            private ChangeListener
+                        
+                        
 {
 public:
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
@@ -552,9 +570,8 @@ public:
 
             // collect input parameters for the model.
             std::map<std::string, std::any> params = {
-            {"url", modelPathTextBox.getText().toStdString()},
+            {"url", modelPathComboBox.getText().toStdString()},
             };
-
             resetUI();
             // loading happens asynchronously.
             // the document controller trigger a change listener callback, which will update the UI
@@ -663,18 +680,60 @@ public:
         mModelStatusTimer->addChangeListener(this);
         mModelStatusTimer->startTimer(100);  // 100 ms interval
 
-        // model path textbox
-        modelPathTextBox.setMultiLine(false);
-        modelPathTextBox.setReturnKeyStartsNewLine(false);
-        modelPathTextBox.setReadOnly(false);
-        modelPathTextBox.setScrollbarsShown(false);
-        modelPathTextBox.setCaretVisible(true);
-        modelPathTextBox.setTextToShowWhenEmpty("path to a gradio endpoint", Colour::greyLevel(0.5f));  // Default text
-        modelPathTextBox.onReturnKey = [this] { loadModelButton.triggerClick(); };
-        if (model->ready()) {
-            modelPathTextBox.setText(model->space_url());  // Chosen model path
+
+       // model path textbox
+       std::vector<std::string> modelPaths = {
+        "custom path...",
+        "hugggof/pitch_shifter",
+        "hugggof/harmonic_percussive",
+        "descript/vampnet",
+        "hugggof/nesquik",
+        "hugggof/MusicGen",
+        "cwitkowitz/timbre-trap",
+        };
+
+
+        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
+        for(size_t i = 0; i < modelPaths.size(); ++i) {
+            modelPathComboBox.addItem(modelPaths[i], i+1);
         }
-        addAndMakeVisible(modelPathTextBox);
+
+
+        // Usage within your existing onChange handler
+        modelPathComboBox.onChange = [this] {
+            // Check if the 'custom path...' option is selected
+            if (modelPathComboBox.getSelectedItemIndex() == 0) {
+                // Create an AlertWindow
+                auto* customPathWindow = new AlertWindow("Enter Custom Path",
+                                                        "Please enter the path to the gradio endpoint:",
+                                                        AlertWindow::NoIcon);
+
+                customPathWindow->addTextEditor("customPath", "", "Path:");
+                customPathWindow->addButton("OK", 1, KeyPress(KeyPress::returnKey));
+                customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
+                
+                // Show the window and handle the result asynchronously
+                customPathWindow->enterModalState(true, new CustomPathAlertCallback([this, customPathWindow](int result) {
+                    if (result == 1) { // OK was clicked
+                        // Retrieve the entered path
+                        String customPath = customPathWindow->getTextEditor("customPath")->getText();
+                        // Use the custom path as needed
+                        DBG("Custom path entered: " + customPath);
+                        int new_id = modelPathComboBox.getNumItems()+1;
+                        modelPathComboBox.addItem(customPath, new_id);
+                        modelPathComboBox.setSelectedId(new_id);
+
+                    } else { // Cancel was clicked or the window was closed
+                        DBG("Custom path entry was canceled.");
+                        modelPathComboBox.setSelectedId(0);
+                    }
+                    delete customPathWindow;
+                }), true);
+            }
+        };
+
+
+        addAndMakeVisible(modelPathComboBox);
 
         // glossary label
         glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", NotificationType::dontSendNotification);
@@ -714,6 +773,7 @@ public:
         resized();
     }
 
+
     ~MainComponent() override
     {
         transportSource  .setSource (nullptr);
@@ -742,6 +802,8 @@ public:
         jobProcessorThread.waitForThreadToExit(-1);
     }
 
+    
+    
     void openFileChooser()
     {
         fileChooser = std::make_unique<FileChooser>("Select an audio or midi file...", File(), "*.wav;*.aiff;*.mp3;*.flac;*.mid");
@@ -794,7 +856,8 @@ public:
         // return;
         // Row 1: Model Path TextBox and Load Model Button
         auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
-        modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
+        modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
+        //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
 
         // Row 2: Glossary Label and Hyperlink
@@ -920,8 +983,7 @@ public:
 private:
     // HARP UI 
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
-
-    TextEditor modelPathTextBox;
+    ComboBox modelPathComboBox;
     TextButton loadModelButton;
     TextButton saveChangesButton {"save changes"};
     Label glossaryLabel;
