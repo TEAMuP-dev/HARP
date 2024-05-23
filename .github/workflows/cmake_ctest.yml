@@ -157,23 +157,19 @@ jobs:
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
-    - name: Set up Python ${{ matrix.python-version }} (Windows)
-      if: matrix.name == 'Windows'
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+    # - name: Set up Python ${{ matrix.python-version }} (Windows)
+    #   if: matrix.name == 'Windows'
+    #   uses: actions/setup-python@v5
+    #   with:
+    #     python-version: '3.10'
 
     - name: Configure
       shell: bash
       run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
-      # A dummy configure run just for faster CI testing
-      # run: mkdir -p ${{ env.BUILD_DIR }} && touch ${{ env.BUILD_DIR }}/CMakeCache.txt
 
     - name: Build
       shell: bash
       run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
-      # A dummy build run just for faster CI testing
-      # run: touch ${{ env.BUILD_DIR }}/dummy_build
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
     - name: Install Python dependencies for MACOS dmg
@@ -186,7 +182,7 @@ jobs:
         /usr/local/bin/python3 -m pip install packaging 
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
-      
+        
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
       uses: actions/upload-artifact@v4
@@ -210,7 +206,7 @@ jobs:
  
 
   release:
-    # if: contains(github.ref, 'tags/')
+    # if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
@@ -221,13 +217,20 @@ jobs:
       uses: dawidd6/action-download-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: ./artifacts
-        skip_unpack: true
+        path: ./artifacts-dawidd6
 
     - name: LS the artifacts
       run: |
         echo "Listing artifacts-dawidd6..."
-        ls -la ./artifacts
+        ls -la ./artifacts-dawidd6
+
+    - name: Get Artifacts
+      uses: actions/download-artifact@v3
+
+    - name: LS the artifacts
+      run: |
+        echo "Listing artifacts from actions/download-artifact..."
+        ls -la
 
     # - name: Create Release
     #   uses: softprops/action-gh-release@v1
