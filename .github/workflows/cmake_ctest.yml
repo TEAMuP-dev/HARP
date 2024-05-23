@@ -172,7 +172,8 @@ jobs:
       run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
-    - name: Install Python dependencies
+    - name: Install Python dependencies for MACOS dmg
+      if: ${{ matrix.name == 'macOS' }}
       run: python3 -m pip install --upgrade packaging pip setuptools
     
     - name: Create DMG, Notarize and Staple (macOS)
@@ -182,16 +183,6 @@ jobs:
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
       
-    # - name: Zip (Linux)
-    #   if: ${{ matrix.name == 'Linux' }}
-    #   working-directory: ${{ env.ARTIFACTS_PATH }}
-    #   run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
-    
-    # - name: Zip (Windows)
-    #   if: ${{ matrix.name == 'Windows' }}
-    #   working-directory: ${{ env.ARTIFACTS_PATH }}
-    #   run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
-
     # - name: Generate Installer and Sign with EV cert on Azure (Windows)
     #   if: ${{ matrix.name == 'Windows' }}
     #   shell: bash
@@ -230,21 +221,50 @@ jobs:
  
 
   release:
-    if: contains(github.ref, 'tags/v')
+    # if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
     steps:
+
+    - name: Download artifacts using dawidd6/action-download-artifact@v3
+      id: download-artifact
+      uses: dawidd6/action-download-artifact@v3
+      with:
+        name: ${{ env.PRODUCT_NAME }}
+        path: ./artifacts-dawidd6
+
+    - name: LS the artifacts
+      run: echo "Listing artifacts-dawidd6..."
+      run: ls -la ./artifacts-dawidd6
+
     - name: Get Artifacts
       uses: actions/download-artifact@v3
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        prerelease: true
-        # download-artifact puts these files in their own dirs...
-        # Using globs sidesteps having to pass the version around
-        files: |
-          */*.exe
-          */*.zip
-          */*.dmg
+    - name: LS the artifacts
+      run: echo "Listing artifacts from actions/download-artifact..."
+      run: ls -la
+
+
+    # - name: Create Release
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     prerelease: true
+    #     # download-artifact puts these files in their own dirs...
+    #     # Using globs sidesteps having to pass the version around
+    #     files: |
+    #       */*.exe
+    #       */*.zip
+    #       */*.dmg
+
+    # - name: Create Release
+    #   id: create_release
+    #   uses: ncipollo/release-action@v1
+    #   with:
+    #     tag: ${{ github.ref }}
+    #     name: Release ${{ github.ref }}
+    #     body: |
+    #       ## Changes
+    #       - Description of changes
+    #     artifacts: ./artifacts/*
+    #     token: ${{ secrets.GITHUB_TOKEN }}
