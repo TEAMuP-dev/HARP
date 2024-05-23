@@ -165,27 +165,27 @@ jobs:
 
     - name: Configure
       shell: bash
-      # run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
+      run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
       # A dummy configure run just for faster CI testing
-      run: mkdir -p ${{ env.BUILD_DIR }} && touch ${{ env.BUILD_DIR }}/CMakeCache.txt
+      # run: mkdir -p ${{ env.BUILD_DIR }} && touch ${{ env.BUILD_DIR }}/CMakeCache.txt
 
     - name: Build
       shell: bash
-      # run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
+      run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
       # A dummy build run just for faster CI testing
-      run: touch ${{ env.BUILD_DIR }}/dummy_build
+      # run: touch ${{ env.BUILD_DIR }}/dummy_build
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
-    # - name: Install Python dependencies for MACOS dmg
-    #   if: ${{ matrix.name == 'macOS' }}
-    #   run: python3 -m pip install --upgrade packaging pip setuptools
+    - name: Install Python dependencies for MACOS dmg
+      if: ${{ matrix.name == 'macOS' }}
+      run: python3 -m pip install --upgrade packaging pip setuptools
     
     # - name: Create DMG, Notarize and Staple (macOS)
-    #   if: ${{ matrix.name == 'macOS' }}
-    #   run: |
-    #     /usr/local/bin/python3 -m pip install packaging 
-    #     chmod +x ./packaging/package.sh
-    #     ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
+      if: ${{ matrix.name == 'macOS' }}
+      run: |
+        /usr/local/bin/python3 -m pip install packaging 
+        chmod +x ./packaging/package.sh
+        ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
       
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
