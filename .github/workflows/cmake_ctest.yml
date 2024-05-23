@@ -56,10 +56,10 @@ jobs:
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
             ccache: ccache
-          - name: macOS
-            os: macos-13
-            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            ccache: ccache
+          # - name: macOS
+          #   os: macos-13
+          #   pluginval-binary: pluginval.app/Contents/MacOS/pluginval
+          #   ccache: ccache
           # - name: Windows
           #   os: windows-latest
           #   pluginval-binary: ./pluginval.exe
@@ -217,27 +217,17 @@ jobs:
         name: ${{ env.PRODUCT_NAME }}
         path: ./artifacts
   
-    - name: Display structure of downloaded files
+    
+
+    # zip each of the folders in the artifacts folder
+    - name: Zip Artifacts
+      run: |
+        for d in ./artifacts/*; do
+          zip -r $d.zip $d
+        done
+        
+    - name: Display structure of downloaded and zipped files
       run: ls -R
-    # - name: Download artifacts using dawidd6/action-download-artifact@v3
-    #   id: download-artifact
-    #   uses: dawidd6/action-download-artifact@v3
-    #   with:
-    #     name: ${{ env.PRODUCT_NAME }}
-    #     path: ./artifacts-dawidd6
-
-    # - name: LS the artifacts
-    #   run: |
-    #     echo "Listing artifacts-dawidd6..."
-    #     ls -la ./artifacts-dawidd6
-
-    # - name: Get Artifacts
-    #   uses: actions/download-artifact@v3
-
-    # - name: LS the artifacts
-    #   run: |
-    #     echo "Listing artifacts from actions/download-artifact..."
-    #     ls -la
 
     # - name: Create Release
     #   uses: softprops/action-gh-release@v1
