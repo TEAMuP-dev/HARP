@@ -60,10 +60,10 @@ jobs:
             os: macos-13
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             ccache: ccache
-          - name: Windows
-            os: windows-latest
-            pluginval-binary: ./pluginval.exe
-            ccache: sccache
+          # - name: Windows
+          #   os: windows-latest
+          #   pluginval-binary: ./pluginval.exe
+          #   ccache: sccache
 
     steps:
 
@@ -165,39 +165,28 @@ jobs:
 
     - name: Configure
       shell: bash
-      run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
+      # run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
+      # A dummy configure run just for faster CI testing
+      run: mkdir -p ${{ env.BUILD_DIR }} && touch ${{ env.BUILD_DIR }}/CMakeCache.txt
 
     - name: Build
       shell: bash
-      run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
+      # run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
+      # A dummy build run just for faster CI testing
+      run: touch ${{ env.BUILD_DIR }}/dummy_build
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
-    - name: Install Python dependencies for MACOS dmg
-      if: ${{ matrix.name == 'macOS' }}
-      run: python3 -m pip install --upgrade packaging pip setuptools
+    # - name: Install Python dependencies for MACOS dmg
+    #   if: ${{ matrix.name == 'macOS' }}
+    #   run: python3 -m pip install --upgrade packaging pip setuptools
     
-    - name: Create DMG, Notarize and Staple (macOS)
-      if: ${{ matrix.name == 'macOS' }}
-      run: |
-        /usr/local/bin/python3 -m pip install packaging 
-        chmod +x ./packaging/package.sh
-        ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
-      
-    # - name: Generate Installer and Sign with EV cert on Azure (Windows)
-    #   if: ${{ matrix.name == 'Windows' }}
-    #   shell: bash
+    # - name: Create DMG, Notarize and Staple (macOS)
+    #   if: ${{ matrix.name == 'macOS' }}
     #   run: |
-    #     iscc "packaging\installer.iss"
-    #     mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
-    #         dotnet tool install --global AzureSignTool 
-    #         AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
-
-    # Remove that once we figure out the Azure-Sign step above
-    # - name: Rename exe (Windows)
-    #   if: ${{ matrix.name == 'Windows' }}
-    #   working-directory: ${{ env.ARTIFACTS_PATH }}
-    #   run: ren HARP.exe ${{ env.PRODUCT_NAME }}.exe
-
+    #     /usr/local/bin/python3 -m pip install packaging 
+    #     chmod +x ./packaging/package.sh
+    #     ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
+      
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
       uses: actions/upload-artifact@v4
@@ -221,7 +210,7 @@ jobs:
  
 
   release:
-    # if: contains(github.ref, 'tags/v')
+    if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
@@ -232,21 +221,13 @@ jobs:
       uses: dawidd6/action-download-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: ./artifacts-dawidd6
+        path: ./artifacts
+        skip_unpack: true
 
     - name: LS the artifacts
       run: |
         echo "Listing artifacts-dawidd6..."
-        ls -la ./artifacts-dawidd6
-
-    - name: Get Artifacts
-      uses: actions/download-artifact@v3
-
-    - name: LS the artifacts
-      run: |
-        echo "Listing artifacts from actions/download-artifact..."
-        ls -la
-
+        ls -la ./artifacts
 
     # - name: Create Release
     #   uses: softprops/action-gh-release@v1
@@ -259,14 +240,14 @@ jobs:
     #       */*.zip
     #       */*.dmg
 
-    # - name: Create Release
-    #   id: create_release
-    #   uses: ncipollo/release-action@v1
-    #   with:
-    #     tag: ${{ github.ref }}
-    #     name: Release ${{ github.ref }}
-    #     body: |
-    #       ## Changes
-    #       - Description of changes
-    #     artifacts: ./artifacts/*
-    #     token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create Release
+      id: create_release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ github.ref }}
+        name: Release ${{ github.ref }}
+        body: |
+          ## Changes
+          - Description of changes
+        artifacts: ./artifacts/*
+        token: ${{ secrets.GITHUB_TOKEN }}
