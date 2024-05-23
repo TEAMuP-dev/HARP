@@ -235,15 +235,17 @@ jobs:
         path: ./artifacts-dawidd6
 
     - name: LS the artifacts
-      run: echo "Listing artifacts-dawidd6..."
-      run: ls -la ./artifacts-dawidd6
+      run: |
+        echo "Listing artifacts-dawidd6..."
+        ls -la ./artifacts-dawidd6
 
     - name: Get Artifacts
       uses: actions/download-artifact@v3
 
     - name: LS the artifacts
-      run: echo "Listing artifacts from actions/download-artifact..."
-      run: ls -la
+      run: |
+        echo "Listing artifacts from actions/download-artifact..."
+        ls -la
 
 
     # - name: Create Release
