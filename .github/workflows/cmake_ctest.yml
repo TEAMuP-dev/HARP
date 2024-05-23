@@ -180,7 +180,7 @@ jobs:
       if: ${{ matrix.name == 'macOS' }}
       run: python3 -m pip install --upgrade packaging pip setuptools
     
-    # - name: Create DMG, Notarize and Staple (macOS)
+    - name: Create DMG, Notarize and Staple (macOS)
       if: ${{ matrix.name == 'macOS' }}
       run: |
         /usr/local/bin/python3 -m pip install packaging 
