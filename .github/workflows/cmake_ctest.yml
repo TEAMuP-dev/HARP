@@ -212,21 +212,21 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.zip
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}'
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.zip
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}'
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
 
     - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.dmg
-        path: packaging/${{ env.PRODUCT_NAME }}
+        path: packaging/${{ env.PRODUCT_NAME }}.dmg
  
 
   release:
