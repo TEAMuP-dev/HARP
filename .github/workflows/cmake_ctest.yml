@@ -35,7 +35,7 @@ concurrency:
 
 env:
   PROJECT_NAME: HARP
-  BUILD_TYPE: Debug
+  BUILD_TYPE: Release
   BUILD_DIR: Builds
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   DISPLAY: :0 # Linux pluginval needs this
@@ -212,21 +212,21 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.zip
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}'
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.zip
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}'
 
     - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.PRODUCT_NAME }}.dmg
-        path: packaging/${{ env.PRODUCT_NAME }}.dmg
+        path: packaging/${{ env.PRODUCT_NAME }}
  
 
   release:

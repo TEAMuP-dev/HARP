@@ -108,7 +108,6 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
-
 # copy the pyinstaller tools to the  bundle
 if (APPLE)
     add_custom_command(TARGET ${PROJECT_NAME}
@@ -128,7 +127,7 @@ endif()
 # in MacOS. Now, all we need to do is copy the 
 # dynamic libraries to the executable directories
 if (APPLE)
-set_property(TARGET ${PROJECT_NAME} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
+    set_property(TARGET ${PROJECT_NAME} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
 
-set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
+    set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
 endif(APPLE)
