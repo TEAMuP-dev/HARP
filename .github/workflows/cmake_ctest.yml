@@ -182,15 +182,15 @@ jobs:
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
       
-    - name: Zip (Linux)
-      if: ${{ matrix.name == 'Linux' }}
-      working-directory: ${{ env.ARTIFACTS_PATH }}
-      run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
+    # - name: Zip (Linux)
+    #   if: ${{ matrix.name == 'Linux' }}
+    #   working-directory: ${{ env.ARTIFACTS_PATH }}
+    #   run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
     
-    - name: Zip (Windows)
-      if: ${{ matrix.name == 'Windows' }}
-      working-directory: ${{ env.ARTIFACTS_PATH }}
-      run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
+    # - name: Zip (Windows)
+    #   if: ${{ matrix.name == 'Windows' }}
+    #   working-directory: ${{ env.ARTIFACTS_PATH }}
+    #   run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
 
     # - name: Generate Installer and Sign with EV cert on Azure (Windows)
     #   if: ${{ matrix.name == 'Windows' }}
@@ -209,21 +209,21 @@ jobs:
 
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: ${{ env.ARTIFACTS_PATH }}
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: ${{ env.ARTIFACTS_PATH }}
 
     - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
         path: packaging/${{ env.PRODUCT_NAME }}.dmg
