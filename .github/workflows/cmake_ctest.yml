@@ -209,7 +209,7 @@ jobs:
  
 
   release:
-    # if: contains(github.ref, 'tags/v')
+    if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
@@ -232,26 +232,16 @@ jobs:
     - name: Display structure of downloaded and zipped files
       run: ls -R
 
-    # - name: Create Release
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     prerelease: true
-    #     # download-artifact puts these files in their own dirs...
-    #     # Using globs sidesteps having to pass the version around
-    #     files: |
-    #       */*.exe
-    #       */*.zip
-    #       */*.dmg
-
     - name: Create Release
       id: create_release
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ github.ref_name }}
-        name: Release ${{ github.ref_name }}
-        body: |
-          ## Changes
-          - Description of changes
+        name: ${{ github.repository_id}} ${{ github.ref_name }}
+        # body: |
+        #   ## Changes
+        #   - Description of changes
+        bodyFile: ./CHANGELOG.md
         artifacts: ./artifacts/*
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
