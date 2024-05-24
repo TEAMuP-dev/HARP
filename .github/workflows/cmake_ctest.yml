@@ -220,7 +220,11 @@ jobs:
         name: ${{ env.PRODUCT_NAME }}
         path: ./artifacts
   
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 1
 
     # zip each of the folders in the artifacts folder
     - name: Zip Artifacts
