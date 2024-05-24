@@ -219,13 +219,7 @@ jobs:
       with:
         name: ${{ env.PRODUCT_NAME }}
         path: ./artifacts
-  
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}
-        fetch-depth: 1
-
+    
     # zip each of the folders in the artifacts folder
     - name: Zip Artifacts
       run: |
@@ -235,6 +229,27 @@ jobs:
 
     - name: Display structure of downloaded and zipped files
       run: ls -R
+
+    - name: Breakpoint if tests failed
+      # if: failure()
+      uses: namespacelabs/breakpoint-action@v0
+      with:
+        duration: 30m
+        authorized-users: xribene
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 1
+    
+    - name: Breakpoint if tests failed
+      # if: failure()
+      uses: namespacelabs/breakpoint-action@v0
+      with:
+        duration: 30m
+        authorized-users: xribene
+    
 
     - name: Create Release
       id: create_release
