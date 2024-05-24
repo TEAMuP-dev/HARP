@@ -56,14 +56,14 @@ jobs:
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
             ccache: ccache
-          # - name: macOS
-          #   os: macos-13
-          #   pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-          #   ccache: ccache
-          # - name: Windows
-          #   os: windows-latest
-          #   pluginval-binary: ./pluginval.exe
-          #   ccache: sccache
+          - name: macOS
+            os: macos-13
+            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
+            ccache: ccache
+          - name: Windows
+            os: windows-latest
+            pluginval-binary: ./pluginval.exe
+            ccache: sccache
 
     steps:
 
@@ -233,17 +233,18 @@ jobs:
       run: |
         for d in ./artifacts/*; do
           zip -r $d.zip $d
+          rm -rf $d
         done
 
     # - name: Display structure of downloaded and zipped files
     #   run: ls -R
 
-    - name: Breakpoint if tests failed
-      # if: failure()
-      uses: namespacelabs/breakpoint-action@v0
-      with:
-        duration: 30m
-        authorized-users: xribene
+    # - name: Breakpoint if tests failed
+    #   # if: failure()
+    #   uses: namespacelabs/breakpoint-action@v0
+    #   with:
+    #     duration: 30m
+    #     authorized-users: xribene
     
 
     - name: Create Release
