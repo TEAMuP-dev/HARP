@@ -13,6 +13,8 @@ public:
         sourcePlayer.setSource (nullptr);
 
         deviceManager.removeAudioCallback (&sourcePlayer);
+
+        thumbnail.setFollowsTransport(followCursorButton.getToggleState());
     }
 
     void setupDisplay()
@@ -27,7 +29,13 @@ public:
 
     void setZoomFactor(float xScale, float yScale)
     {
-        // TODO
+        if (thumbnail.getTotalLength() > 0)
+            {
+                auto newScale = jmax (0.001, thumbnail.getTotalLength() * (1.0 - jlimit (0.0, 0.99, factor)));
+                auto timeAtCentre = xToTime ((float) getWidth() / 2.0f);
+
+                setRange ({ timeAtCentre - newScale * 0.5, timeAtCentre + newScale * 0.5 });
+            }
     }
 
     void loadMediaFile(const URL& filePath)
@@ -90,10 +98,14 @@ public:
         }
     }
 
-    void updatePlayHeadState()
+    bool isPlaying()
     {
-        // TODO - seems this is more for initialization
-        thumbnail->setFollowsTransport(followPlayHeadButton.getToggleState());
+        return transportSource.isPlaying();
+    }
+
+    double getCurrentPosition()
+    {
+        return transportSource.getCurrentPosition();
     }
 
 private:

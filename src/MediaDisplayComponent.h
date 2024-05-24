@@ -45,8 +45,8 @@ public:
         };
         addAndMakeVisible(horizontalZoomSlider);
 
-        addAndMakeVisible(followPlayHeadButton);
-        followPlayHeadButton.onClick = [this] { updatePlayHeadState(); };
+        addAndMakeVisible(followCursorButton);
+        followCursorButton.onClick = [this] { updatePlayHeadState(); };
 
         playPauseButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
         playPauseButton.setColour (TextButton::textColourOffId, Colours::black);
@@ -140,7 +140,14 @@ public:
 
     void resetPlay(); // TODO
 
-    void updatePlayHeadState();
+    bool isPlaying();
+
+    bool isFollowing()
+    {
+        return followCursorButton.isDown();
+    }
+
+    double getCurrentPosition();
 
     void enableSaving(bool enable)
     {
@@ -174,7 +181,7 @@ public:
         //horizontalZoomLabel.setBounds();
         //horizontalZoomSlider.setBounds();
 
-        //followPlayHeadButton.setBounds();
+        //followCursorButton.setBounds();
 
         //auto controlRow2 = mainArea.removeFromTop();
 
@@ -188,9 +195,20 @@ public:
 
     }
 
+    void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
+    {
+        URL firstFilePath = URL(File(files[0]));
+
+        setTargetFilePath(firstFilePath);
+        loadMediaFile(firstFilePath);
+        generateTempFile();
+    }
+
 private:
     URL targetFilePath;
     URL tempFilePath;
+
+    DrawableRectangle currentPositionMarker;
 
     Label verticalZoomLabel{{}, "Vertical Scale"};
     Label horizontalZoomLabel{{}, "Horizontal Scale"};
@@ -198,7 +216,7 @@ private:
     Slider verticalZoomSlider{Slider::LinearVertical, Slider::NoTextBox};
     Slider horizontalZoomSlider{Slider::LinearHorizontal, Slider::NoTextBox};
 
-    ToggleButton followPlayHeadButton{"Follow"};
+    ToggleButton followCursorButton{"Follow"};
 
     TextButton playPauseButton{"Play"};
 
@@ -209,4 +227,45 @@ private:
 
     TextButton saveButton{"Save As"};
     //std::unique_ptr<FileChooser> fileBrowser;
+
+
+    float timeToX (const double time) const
+    {
+        if (visibleRange.getLength() <= 0)
+            return 0;
+
+        return (float) getWidth() * (float) ((time - visibleRange.getStart()) / visibleRange.getLength());
+    }
+
+    double xToTime (const float x) const
+    {
+        return (x / (float) getWidth()) * (visibleRange.getLength()) + visibleRange.getStart();
+    }
+
+    bool canMoveTransport() const noexcept
+    {
+        return !(isFollowing() && isPlaying());
+    }
+
+    void scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart) override
+    {
+        if (scrollBarThatHasMoved == &scrollbar)
+            if (! (isFollowing() && isPlaying()))
+                setRange (visibleRange.movedToStartAt (newRangeStart));
+    }
+
+    void timerCallback() override
+    {
+        if (canMoveTransport())
+            updateCursorPosition();
+        else
+            setRange (visibleRange.movedToStartAt (getCurrentPosition() - (visibleRange.getLength() / 2.0)));
+    }
+
+    void updateCursorPosition()
+    {
+        currentPositionMarker.setVisible(isPlaying() || isMouseButtonDown());
+        currentPositionMarker.setRectangle(Rectangle<float>(timeToX (getCurrentPosition()) - 0.75f, 0,
+                                                              1.5f, (float) (getHeight() - scrollbar.getHeight())));
+    }
 };

@@ -87,7 +87,12 @@ public:
         // TODO
     }
 
-    void updatePlayHeadState()
+    bool isPlaying()
+    {
+        // TODO
+    }
+
+    double getCurrentPosition()
     {
         // TODO
     }

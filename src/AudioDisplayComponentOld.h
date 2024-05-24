@@ -66,30 +66,12 @@ public:
         }
     }
 
-    URL getLastDroppedFile() const noexcept { return lastFileDropped; }
-
-    void setZoomFactor (double factor)
-    {
-        if (thumbnail.getTotalLength() > 0)
-        {
-            auto newScale = jmax (0.001, thumbnail.getTotalLength() * (1.0 - jlimit (0.0, 0.99, factor)));
-            auto timeAtCentre = xToTime ((float) getWidth() / 2.0f);
-
-            setRange ({ timeAtCentre - newScale * 0.5, timeAtCentre + newScale * 0.5 });
-        }
-    }
-
     void setRange (Range<double> newRange)
     {
         visibleRange = newRange;
         scrollbar.setCurrentRange (visibleRange);
         updateCursorPosition();
         repaint();
-    }
-
-    void setFollowsTransport (bool shouldFollow)
-    {
-        isFollowingTransport = shouldFollow;
     }
 
     void paint (Graphics& g) override
@@ -126,14 +108,6 @@ public:
     bool isInterestedInFileDrag (const StringArray& /*files*/) override
     {
         return true;
-    }
-
-    void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
-    {
-        lastFileDropped = URL (File (files[0]));
-        mediaDisplay->setTargetFilePath(initialFilePath);
-        mediaDisplay->loadMediaFile(initialFilePath);
-        mediaDisplay->generateTempFile();
     }
 
     void mouseDown (const MouseEvent& e) override
@@ -176,49 +150,4 @@ private:
     AudioThumbnailCache thumbnailCache  { 5 };
 
     Range<double> visibleRange;
-    bool isFollowingTransport = false;
-    URL lastFileDropped;
-
-    DrawableRectangle currentPositionMarker;
-
-    float timeToX (const double time) const
-    {
-        if (visibleRange.getLength() <= 0)
-            return 0;
-
-        return (float) getWidth() * (float) ((time - visibleRange.getStart()) / visibleRange.getLength());
-    }
-
-    double xToTime (const float x) const
-    {
-        return (x / (float) getWidth()) * (visibleRange.getLength()) + visibleRange.getStart();
-    }
-
-    bool canMoveTransport() const noexcept
-    {
-        return ! (isFollowingTransport && transportSource.isPlaying());
-    }
-
-    void scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart) override
-    {
-        if (scrollBarThatHasMoved == &scrollbar)
-            if (! (isFollowingTransport && transportSource.isPlaying()))
-                setRange (visibleRange.movedToStartAt (newRangeStart));
-    }
-
-    void timerCallback() override
-    {
-        if (canMoveTransport())
-            updateCursorPosition();
-        else
-            setRange (visibleRange.movedToStartAt (transportSource.getCurrentPosition() - (visibleRange.getLength() / 2.0)));
-    }
-
-    void updateCursorPosition()
-    {
-        currentPositionMarker.setVisible (transportSource.isPlaying() || isMouseButtonDown());
-
-        currentPositionMarker.setRectangle (Rectangle<float> (timeToX (transportSource.getCurrentPosition()) - 0.75f, 0,
-                                                              1.5f, (float) (getHeight() - scrollbar.getHeight())));
-    }
 };
