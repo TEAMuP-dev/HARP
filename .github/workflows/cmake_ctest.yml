@@ -241,7 +241,7 @@ jobs:
         # body: |
         #   ## Changes
         #   - Description of changes
-        bodyFile: ./CHANGELOG.md
+        bodyFile: ./RELEASE.md
         artifacts: ./artifacts/*
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
