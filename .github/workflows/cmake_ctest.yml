@@ -252,7 +252,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ github.ref_name }}
-        name: ${{ github.repository_id}} ${{ github.ref_name }}
+        name: ${{ github.event.repository.name}} ${{ github.ref_name }}
         # body: |
         #   ## Changes
         #   - Description of changes
