@@ -17,19 +17,22 @@ public:
     {
         setupDisplay();
 
-        addAndMakeVisible(verticalZoomLabel);
+        currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
+        addAndMakeVisible(currentPositionMarker);
+
         verticalZoomLabel.setEditable(false, false, false);
         verticalZoomLabel.setFont(Font(15.00f, Font::plain));
         verticalZoomLabel.setJustificationType(Justification::centredRight);
         verticalZoomLabel.setColour(TextEditor::textColourId, Colours::black);
         verticalZoomLabel.setColour(TextEditor::backgroundColourId, Colour (0x00000000));
+        addAndMakeVisible(verticalZoomLabel);
 
-        addAndMakeVisible(horizontalZoomLabel);
         horizontalZoomLabel.setEditable(false, false, false);
         horizontalZoomLabel.setFont(Font(15.00f, Font::plain));
         horizontalZoomLabel.setJustificationType(Justification::centredRight);
         horizontalZoomLabel.setColour(TextEditor::textColourId, Colours::black);
         horizontalZoomLabel.setColour(TextEditor::backgroundColourId, Colour (0x00000000));
+        addAndMakeVisible(horizontalZoomLabel);
 
         verticalZoomSlider.setSkewFactor(2);
         verticalZoomSlider.setRange(0, 1, 0);
@@ -45,8 +48,8 @@ public:
         };
         addAndMakeVisible(horizontalZoomSlider);
 
+        //followCursorButton.onClick = [this] {};
         addAndMakeVisible(followCursorButton);
-        followCursorButton.onClick = [this] { updatePlayHeadState(); };
 
         playPauseButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
         playPauseButton.setColour (TextButton::textColourOffId, Colours::black);
@@ -128,11 +131,11 @@ public:
         tempFile.getParentDirectory().createDirectory();
 
         if (!targetFile.copyFileTo(tempFile)) {
-            DBG("MediaDisplayComponent::createTempFile: Failed to copy file" << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
+            DBG("MediaDisplayComponent::createTempFile: Failed to copy file " << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
     
             AlertWindow("Error", "Failed to create temporary file for processing.", AlertWindow::WarningIcon);
         } else {
-            DBG("MediaDisplayComponent::createTempFile: Copied file" << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
+            DBG("MediaDisplayComponent::createTempFile: Copied file " << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
         }
     }
 

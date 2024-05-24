@@ -13,8 +13,6 @@ public:
         sourcePlayer.setSource (nullptr);
 
         deviceManager.removeAudioCallback (&sourcePlayer);
-
-        thumbnail.setFollowsTransport(followCursorButton.getToggleState());
     }
 
     void setupDisplay()
@@ -40,47 +38,44 @@ public:
 
     void loadMediaFile(const URL& filePath)
     {
-        // TODO - expecting URL, not URL&
-
         // unload the previous file source and delete it..
         transportSource.stop();
-        transportSource.setSource (nullptr);
-        currentAudioFileSource.reset();
+        transportSource.setSource(nullptr);
+        audioFileSource.reset();
 
-        const auto source = makeInputSource (audioURL);
+        const auto source = std::make_unique<URLInputSource>(filePath);
+
+        File audioFile = filePath.getLocalFile();
 
         if (source == nullptr)
-            return false;
+            DBG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName() << " does not exist.");
+            // TODO - better error handing
+            jassertfalse;
 
-        auto stream = rawToUniquePtr (source->createInputStream());
+        auto stream = rawToUniquePtr(source->createInputStream());
 
         if (stream == nullptr)
-            return false;
+            DBG("AudioDisplayComponent::loadMediaFile: Failed to load file " << audioFile.getFullPathName() << ".");
+            // TODO - better error handing
+            jassertfalse;
 
-        auto reader = rawToUniquePtr (formatManager.createReaderFor (std::move (stream)));
+        auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
 
         if (reader == nullptr)
-            return false;
+            DBG("AudioDisplayComponent::loadMediaFile: Failed to read file " << audioFile.getFullPathName() << ".");
+            // TODO - better error handing
+            jassertfalse;
 
-        currentAudioFileSource = std::make_unique<AudioFormatReaderSource> (reader.release(), true);
+        audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
 
         // ..and plug it into our transport source
-        transportSource.setSource (currentAudioFileSource.get(),
+        transportSource.setSource (audioFileSource.get(),
                                    32768,                   // tells it to buffer this many samples ahead
                                    &thread,                 // this is the background thread to use for reading-ahead
-                                   currentAudioFileSource->getAudioFormatReader()->sampleRate);     // allows for sample rate correction
-
-        return true;
-
-        if (! loadURLIntoTransport(filePath))
-        {
-            // Failed to load the audio file!
-            jassertfalse;
-            return;
-        }
+                                   audioFileSource->getAudioFormatReader()->sampleRate);     // allows for sample rate correction
 
         zoomSlider.setValue (0, dontSendNotification);
-        thumbnail->setURL (currentMediaFile);
+        thumbnail->setURL(getTempFilePath());
         thumbnail->setVisible( true );
         DBG("Set visibility true again");
     }
@@ -89,7 +84,7 @@ public:
     {
         if (transportSource.isPlaying())
         {
-            transportSource.stop();
+            transportSource.stop(); // TODO - pause
         }
         else
         {
@@ -109,13 +104,13 @@ public:
     }
 
 private:
-    AudioSourcePlayer sourcePlayer;
-    AudioTransportSource transportSource;
-    AudioThumbnail thumbnail;
-
-    std::unique_ptr<AudioFormatReaderSource> currentAudioFileSource;
-
+    AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
 
-    AudioFormatManager formatManager;
+    std::unique_ptr<AudioFormatReaderSource> audioFileSource;
+
+    AudioSourcePlayer sourcePlayer;
+    AudioTransportSource transportSource;
+
+    AudioThumbnail thumbnail;
 };

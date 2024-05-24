@@ -5,20 +5,6 @@
 
 using namespace juce;
 
-
-inline std::unique_ptr<InputSource> makeInputSource (const URL& url)
-{
-    if (const auto doc = AndroidDocument::fromDocument (url))
-        return std::make_unique<AndroidDocumentInputSource> (doc);
-
-   #if ! JUCE_IOS
-    if (url.isLocalFile())
-        return std::make_unique<FileInputSource> (url.getLocalFile());
-   #endif
-
-    return std::make_unique<URLInputSource> (url);
-}
-
 class AudioDisplayComponent : public Component,
                               public ChangeListener,
                               public FileDragAndDropTarget,
@@ -41,9 +27,6 @@ public:
         scrollbar.setRangeLimits (visibleRange);
         scrollbar.setAutoHide (false);
         scrollbar.addListener (this);
-
-        currentPositionMarker.setFill (Colours::white.withAlpha (0.85f));
-        addAndMakeVisible (currentPositionMarker);
     }
 
     ~AudioDisplayComponent() override
@@ -52,9 +35,9 @@ public:
         thumbnail.removeChangeListener (this);
     }
 
-    void setURL (const URL& url)
+    void setURL (const URL& filePath)
     {
-        if (auto inputSource = makeInputSource (url))
+        if (auto inputSource = std::make_unique<URLInputSource>(filePath))
         {
             thumbnail.setSource (inputSource.release());
 
