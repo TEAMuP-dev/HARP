@@ -214,6 +214,14 @@ jobs:
     needs: build_and_test
 
     steps:
+
+    # Needed to access the RELEASE.md file
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 1
+
     - name: Download Artifacts
       uses: actions/download-artifact@v4
       with:
@@ -227,22 +235,9 @@ jobs:
           zip -r $d.zip $d
         done
 
-    - name: Display structure of downloaded and zipped files
-      run: ls -R
+    # - name: Display structure of downloaded and zipped files
+    #   run: ls -R
 
-    - name: Breakpoint if tests failed
-      # if: failure()
-      uses: namespacelabs/breakpoint-action@v0
-      with:
-        duration: 30m
-        authorized-users: xribene
-
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}
-        fetch-depth: 1
-    
     - name: Breakpoint if tests failed
       # if: failure()
       uses: namespacelabs/breakpoint-action@v0
@@ -260,7 +255,7 @@ jobs:
         # body: |
         #   ## Changes
         #   - Description of changes
-        bodyFile: "RELEASE.md"
+        bodyFile: ./RELEASE.md
         artifacts: ./artifacts/*
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
