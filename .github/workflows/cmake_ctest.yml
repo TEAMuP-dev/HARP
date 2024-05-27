@@ -52,10 +52,10 @@ jobs:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
         include:
-          - name: Linux
-            os: ubuntu-22.04
-            pluginval-binary: ./pluginval
-            ccache: ccache
+          # - name: Linux
+          #   os: ubuntu-22.04
+          #   pluginval-binary: ./pluginval
+          #   ccache: ccache
           - name: macOS
             os: macos-13
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
@@ -83,7 +83,7 @@ jobs:
     - name: Cache IPP (Windows)
       if: runner.os == 'Windows'
       id: cache-ipp
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: ipp-v1
         path: C:\Program Files (x86)\Intel\oneAPI\ipp
@@ -115,7 +115,7 @@ jobs:
       run: brew install ninja osxutils
 
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive # Get JUCE populated
 
@@ -157,22 +157,26 @@ jobs:
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
-    - name: Set up Python ${{ matrix.python-version }} (Windows)
-      if: matrix.name == 'Windows'
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+    # - name: Set up Python ${{ matrix.python-version }} (Windows)
+    #   if: matrix.name == 'Windows'
+    #   uses: actions/setup-python@v5
+    #   with:
+    #     python-version: '3.10'
 
     - name: Configure
       shell: bash
       run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
-
+      # dummy configure
+      # run: mkdir -p ${{ env.BUILD_DIR }}
     - name: Build
       shell: bash
       run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
+      # dummy build
+      # run: touch dummy
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
-    - name: Install Python dependencies
+    - name: Install Python dependencies for MACOS dmg
+      if: ${{ matrix.name == 'macOS' }}
       run: python3 -m pip install --upgrade packaging pip setuptools
     
     - name: Create DMG, Notarize and Staple (macOS)
@@ -181,49 +185,24 @@ jobs:
         /usr/local/bin/python3 -m pip install packaging 
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
-      
-    - name: Zip (Linux)
-      if: ${{ matrix.name == 'Linux' }}
-      working-directory: ${{ env.ARTIFACTS_PATH }}
-      run: 7z a -tzip ${{ env.PRODUCT_NAME }}.zip .
-    
-    - name: Zip (Windows)
-      if: ${{ matrix.name == 'Windows' }}
-      working-directory: ${{ env.ARTIFACTS_PATH }}
-      run: Compress-Archive -Path ./* -DestinationPath ${{ env.PRODUCT_NAME }}.zip
-
-    # - name: Generate Installer and Sign with EV cert on Azure (Windows)
-    #   if: ${{ matrix.name == 'Windows' }}
-    #   shell: bash
-    #   run: |
-    #     iscc "packaging\installer.iss"
-    #     mv "packaging/Output/${{ env.PRODUCT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
-    #         dotnet tool install --global AzureSignTool 
-    #         AzureSignTool sign -kvu "${{ secrets.AZURE_KEY_VAULT_URI }}" -kvi "${{ secrets.AZURE_CLIENT_ID }}" -kvt "${{ secrets.AZURE_TENANT_ID }}" -kvs "${{ secrets.AZURE_CLIENT_SECRET }}" -kvc ${{ secrets.AZURE_CERT_NAME }} -tr http://timestamp.digicert.com -v "${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.exe"
-
-    # Remove that once we figure out the Azure-Sign step above
-    # - name: Rename exe (Windows)
-    #   if: ${{ matrix.name == 'Windows' }}
-    #   working-directory: ${{ env.ARTIFACTS_PATH }}
-    #   run: ren HARP.exe ${{ env.PRODUCT_NAME }}.exe
-
+        
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: ${{ env.ARTIFACTS_PATH }}
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: '${{ env.ARTIFACTS_PATH }}/${{ env.PRODUCT_NAME }}.zip'
+        path: ${{ env.ARTIFACTS_PATH }}
 
     - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
         path: packaging/${{ env.PRODUCT_NAME }}.dmg
@@ -235,16 +214,57 @@ jobs:
     needs: build_and_test
 
     steps:
-    - name: Get Artifacts
-      uses: actions/download-artifact@v3
+
+    # Needed to access the RELEASE.md file
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 1
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ env.PRODUCT_NAME }}
+        path: ./artifacts
+    
+
+    # - name: Breakpoint if tests failed
+    #   # if: failure()
+    #   uses: namespacelabs/breakpoint-action@v0
+    #   with:
+    #     duration: 30m
+    #     authorized-users: xribene
+
+    # zip each of the folders in the artifacts folder
+    - name: Zip Artifacts
+      run: |
+        for d in ./artifacts/*; do
+          if [ -d "$d" ]; then
+            echo $d
+            pushd "$d" > /dev/null
+            echo $PWD
+            zip -r ../$(basename "$PWD").zip *
+            cd ..
+            rm -rf $(basename "$d")
+            popd > /dev/null
+          fi
+        done
+
+    # - name: Display structure of downloaded and zipped files
+    #   run: ls -R
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      id: create_release
+      uses: ncipollo/release-action@v1
       with:
-        prerelease: true
-        # download-artifact puts these files in their own dirs...
-        # Using globs sidesteps having to pass the version around
-        files: |
-          */*.exe
-          */*.zip
-          */*.dmg
+        tag: ${{ github.ref_name }}
+        name: ${{ github.event.repository.name}} ${{ github.ref_name }}
+        # body: |
+        #   ## Changes
+        #   - Description of changes
+        bodyFile: ./RELEASE.md
+        artifacts: ./artifacts/*
+        token: ${{ secrets.GITHUB_TOKEN }}
+        allowUpdates: true
+        replacesArtifacts: true
