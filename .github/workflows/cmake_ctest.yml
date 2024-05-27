@@ -209,7 +209,7 @@ jobs:
  
 
   release:
-    if: contains(github.ref, 'tags/v')
+    # if: contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
@@ -232,11 +232,12 @@ jobs:
     - name: Zip Artifacts
       run: |
         for d in ./artifacts/*; do
-          if [ -d "$d" ];
+          if [ -d "$d" ]; then
             cd $d
             zip -r $d.zip $d
             cd ..
             rm -rf $d
+          fi
         done
 
     # - name: Display structure of downloaded and zipped files
