@@ -229,29 +229,30 @@ jobs:
         path: ./artifacts
     
 
-    - name: Breakpoint if tests failed
-      # if: failure()
-      uses: namespacelabs/breakpoint-action@v0
-      with:
-        duration: 30m
-        authorized-users: xribene
+    # - name: Breakpoint if tests failed
+    #   # if: failure()
+    #   uses: namespacelabs/breakpoint-action@v0
+    #   with:
+    #     duration: 30m
+    #     authorized-users: xribene
+
     # zip each of the folders in the artifacts folder
     - name: Zip Artifacts
       run: |
         for d in ./artifacts/*; do
           if [ -d "$d" ]; then
-            cd $d
-            zip -r $d.zip $d
+            echo $d
+            pushd "$d" > /dev/null
+            echo $PWD
+            zip -r ../$(basename "$PWD").zip *
             cd ..
-            rm -rf $d
+            rm -rf $(basename "$d")
+            popd > /dev/null
           fi
         done
 
     # - name: Display structure of downloaded and zipped files
     #   run: ls -R
-
-
-    
 
     - name: Create Release
       id: create_release
