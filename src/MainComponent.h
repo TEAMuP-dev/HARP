@@ -57,7 +57,12 @@
 // #include <juce_events/timers/juce_Timer.h>
 #include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+// #include <juce_gui_basics/commands/juce_ApplicationCommandManager.h>
+// #include <juce_gui_basics/commands/juce_ApplicationCommandTarget.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+// #include <juce_ApplicationCommandManager.h>
+// include juce_Array.h 
+
 
 #include "WebModel.h"
 #include "CtrlComponent.h"
@@ -342,16 +347,19 @@ private:
 };
 
 
-
+enum CommandIDs {
+    save = 0x2000,
+    saveAs = 0x2001
+};
 //==============================================================================
 class MainComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
                            private Button::Listener,
                           #endif
-                           private ChangeListener
-                        
-                        
+                           private ChangeListener,
+                           public ApplicationCommandTarget                 
 {
+    ApplicationCommandManager commandManager;            
 public:
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
@@ -419,6 +427,11 @@ public:
         // Doing that, everytime we click outside the modelPathTextBox,
         // the focus will be taken away from the modelPathTextBox
         setWantsKeyboardFocus(true);
+
+        // Register commands
+        commandManager.registerAllCommandsForTarget(this);
+        addKeyListener (commandManager.getKeyMappings());
+
 
         // initialize load and process buttons
         processButton.setButtonText("process");
@@ -870,6 +883,44 @@ public:
             authorLabel.setText("by " + String(card.author), dontSendNotification);
     }
 
+    ApplicationCommandTarget* getNextCommandTarget() override {
+        return nullptr;
+    }
+
+    // Fills the commands array with the commands that this component/target supports
+    void getAllCommands(Array<CommandID>& commands) override {
+        const CommandID ids[] = { save, saveAs };
+        commands.addArray(ids, numElementsInArray(ids));
+    }
+
+    // Gets the information about a specific command
+    void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override {
+        switch (commandID) {
+            case save:
+                result.setInfo("Save", "Saves the current document", "File", 0);
+                result.addDefaultKeypress('s', ModifierKeys::commandModifier);
+                break;
+            case saveAs:
+                result.setInfo("Save As", "Saves the current document with a new name", "File", 0);
+                result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                break;
+        }
+    }
+
+    // Callback for the save and saveAs commands
+    bool perform(const InvocationInfo& info) override {
+        switch (info.commandID) {
+            case save:
+                DBG("Save command invoked");
+                break;
+            case saveAs:
+                DBG("Save As command invoked");
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
 
 private:
     // HARP UI 
