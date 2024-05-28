@@ -54,15 +54,9 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
-// #include <juce_events/timers/juce_Timer.h>
 #include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-// #include <juce_gui_basics/commands/juce_ApplicationCommandManager.h>
-// #include <juce_gui_basics/commands/juce_ApplicationCommandTarget.h>
 #include <juce_gui_extra/juce_gui_extra.h>
-// #include <juce_ApplicationCommandManager.h>
-// include juce_Array.h 
-
 
 #include "WebModel.h"
 #include "CtrlComponent.h"
@@ -347,20 +341,123 @@ private:
 };
 
 
-enum CommandIDs {
-    save = 0x2000,
-    saveAs = 0x2001
-};
+
 //==============================================================================
 class MainComponent  : public Component,
                           #if (JUCE_ANDROID || JUCE_IOS)
                            private Button::Listener,
                           #endif
                            private ChangeListener,
-                           public ApplicationCommandTarget                 
+                           public MenuBarModel,
+                           public ApplicationCommandTarget
+                                     
 {
-    ApplicationCommandManager commandManager;            
 public:
+
+    enum CommandIDs {
+        open = 0x2005,
+        save = 0x2000,
+        saveAs = 0x2001,
+        showAbout = 0x2002,
+        openWebPage = 0x2003,
+        openGitHub = 0x2004
+    };
+
+    StringArray getMenuBarNames() override
+    {
+        return { "File", "About" };
+    }
+
+    PopupMenu getMenuForIndex (int menuIndex, const String& /*menuName*/) override
+    {
+        PopupMenu menu;
+
+        if (menuIndex == 0)
+        {   
+            menu.addCommandItem (&commandManager, CommandIDs::open);
+            menu.addCommandItem (&commandManager, CommandIDs::save);
+            // menu.addSeparator();
+            menu.addCommandItem (&commandManager, CommandIDs::saveAs);
+        } else if (menuIndex == 1) {
+            menu.addCommandItem(&commandManager, CommandIDs::showAbout);
+            menu.addCommandItem(&commandManager, CommandIDs::openWebPage);
+            menu.addCommandItem(&commandManager, CommandIDs::openGitHub);
+        }
+
+        return menu;
+    }
+    void menuItemSelected (int /*menuItemID*/, int /*topLevelMenuIndex*/) override {}
+
+    ApplicationCommandTarget* getNextCommandTarget() override {
+        return nullptr;
+    }
+
+    // Fills the commands array with the commands that this component/target supports
+    void getAllCommands(Array<CommandID>& commands) override {
+        const CommandID ids[] = { 
+            CommandIDs::open,
+            CommandIDs::save, 
+            CommandIDs::saveAs,
+            CommandIDs::showAbout,
+            CommandIDs::openWebPage,
+            CommandIDs::openGitHub};
+        commands.addArray(ids, numElementsInArray(ids));
+    }
+
+    // Gets the information about a specific command
+    void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override {
+        switch (commandID) {
+            case CommandIDs::open:
+                result.setInfo("Open", "Opens a file", "File", 0);
+                result.addDefaultKeypress('o', ModifierKeys::commandModifier);
+                break;
+            case CommandIDs::save:
+                result.setInfo("Save", "Saves the current document", "File", 0);
+                result.addDefaultKeypress('s', ModifierKeys::commandModifier);
+                break;
+            case CommandIDs::saveAs:
+                result.setInfo("Save As ...", "Saves the current document with a new name", "File", 0);
+                result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                break;
+            case CommandIDs::showAbout:
+                result.setInfo("About", "Shows information about the application", "Help", 0);
+                break;
+            case CommandIDs::openWebPage:
+                result.setInfo("Website", "Opens the application's webpage", "Help", 0);
+                break;
+            case CommandIDs::openGitHub:
+                result.setInfo("GitHub", "Opens the application's GitHub repository", "Help", 0);
+                break;
+        }
+    }
+
+    // Callback for the save and saveAs commands
+    bool perform(const InvocationInfo& info) override {
+        switch (info.commandID) {
+            case CommandIDs::save:
+                DBG("Save command invoked");
+                break;
+            case CommandIDs::saveAs:
+                DBG("Save As command invoked");
+                break;
+            case CommandIDs::open:
+                DBG("Open command invoked");
+                break;
+            case CommandIDs::showAbout:
+                DBG("About command invoked");
+                break;
+            case CommandIDs::openWebPage:
+                DBG("WebPage command invoked");
+                break;
+            case CommandIDs::openGitHub:
+                DBG("GitHub command invoked");
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
@@ -428,10 +525,23 @@ public:
         // the focus will be taken away from the modelPathTextBox
         setWantsKeyboardFocus(true);
 
+        
+
+        // init the menu bar
+        menuBar.reset (new MenuBarComponent (this));
+        addAndMakeVisible (menuBar.get());
+        setApplicationCommandManagerToWatch (&commandManager);
         // Register commands
         commandManager.registerAllCommandsForTarget(this);
+        // commandManager.setFirstCommandTarget(this);
         addKeyListener (commandManager.getKeyMappings());
 
+        #if JUCE_MAC
+          MenuBarModel::setMacMainMenu (this);
+        #endif
+
+        menuBar->setVisible (true);
+        menuItemsChanged();
 
         // initialize load and process buttons
         processButton.setButtonText("process");
@@ -883,44 +993,7 @@ public:
             authorLabel.setText("by " + String(card.author), dontSendNotification);
     }
 
-    ApplicationCommandTarget* getNextCommandTarget() override {
-        return nullptr;
-    }
-
-    // Fills the commands array with the commands that this component/target supports
-    void getAllCommands(Array<CommandID>& commands) override {
-        const CommandID ids[] = { save, saveAs };
-        commands.addArray(ids, numElementsInArray(ids));
-    }
-
-    // Gets the information about a specific command
-    void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override {
-        switch (commandID) {
-            case save:
-                result.setInfo("Save", "Saves the current document", "File", 0);
-                result.addDefaultKeypress('s', ModifierKeys::commandModifier);
-                break;
-            case saveAs:
-                result.setInfo("Save As", "Saves the current document with a new name", "File", 0);
-                result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
-                break;
-        }
-    }
-
-    // Callback for the save and saveAs commands
-    bool perform(const InvocationInfo& info) override {
-        switch (info.commandID) {
-            case save:
-                DBG("Save command invoked");
-                break;
-            case saveAs:
-                DBG("Save As command invoked");
-                break;
-            default:
-                return false;
-        }
-        return true;
-    }
+    
 
 private:
     // HARP UI 
@@ -988,6 +1061,11 @@ private:
     // ChangeBroadcaster processBroadcaster;
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
+
+    ApplicationCommandManager commandManager;  
+    // MenuBar
+    std::unique_ptr<MenuBarComponent> menuBar;
+    // MenuBarPosition menuBarPosition = MenuBarPosition::window;
 
     //==============================================================================
     void showAudioResource (URL resource)
