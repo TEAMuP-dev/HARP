@@ -453,6 +453,7 @@ public:
                 break;
             case CommandIDs::saveAs:
                 DBG("Save As command invoked");
+                saveAsCallback();
                 break;
             case CommandIDs::open:
                 DBG("Open command invoked");
@@ -539,10 +540,17 @@ public:
                 + "_BACKUP" + currentAudioFileTarget.getLocalFile().getFileExtension()
             );
 
-            currentAudioFileTarget.getLocalFile().copyFileTo(backupFile);
-            DBG("made a backup of the original file at " << backupFile.getFullPathName());
+            if (currentAudioFileTarget.getLocalFile().copyFileTo(backupFile)) {
+                DBG("made a backup of the original file at " << backupFile.getFullPathName());
+            } else {
+                DBG("failed to make a backup of the original file at " << backupFile.getFullPathName());
+            }
 
-            currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile());
+            if (currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile())) {
+                DBG("copied the file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+            } else {
+                DBG("failed to copy the file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+            }
             
             addNewAudioFile(currentAudioFileTarget);
             // saveButton.setEnabled(false);
@@ -552,9 +560,49 @@ public:
         }
     }
 
-    void saveAsCallback(){
+    
+    void saveAsCallback() {
+        // Create a unique_ptr to a FileChooser
+        // auto fileChooser2 = std::make_unique<FileChooser>(
+        //     "Save As...",                                 // Dialog window title
+        //     File::getCurrentWorkingDirectory(),           // Initial directory
+        //     "*.wav;*.aiff;*.mp3;*.flac",                  // File filter
+        //     true);                                        // Use native file chooser
 
+        // Launch the file chooser dialog asynchronously
+        fileChooser->launchAsync(
+            FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
+            [this](const FileChooser& chooser) {
+                File newFile = chooser.getResult();
+                if (newFile != File{}) {
+                    // Attempt to save the file to the new location
+                    bool saveSuccessful = currentAudioFile.getLocalFile().copyFileTo(newFile);
+                    if (saveSuccessful) {
+                        // Inform the user of success
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::InfoIcon,
+                            "Save As",
+                            "File successfully saved as:\n" + newFile.getFullPathName(),
+                            "OK");
+
+                        // Update any necessary internal state
+                        // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
+                        DBG("File successfully saved as " << newFile.getFullPathName());
+                    } else {
+                        // Inform the user of failure
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
+                            "Save As Failed",
+                            "Failed to save file as:\n" + newFile.getFullPathName(),
+                            "OK");
+                        DBG("Failed to save file as " << newFile.getFullPathName());
+                    }
+                } else {
+                    DBG("Save As operation was cancelled by the user.");
+                }
+            });
     }
+
 
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
@@ -954,17 +1002,21 @@ public:
     
     void openFileChooser()
     {
-        fileChooser = std::make_unique<FileChooser>("Select an audio file...", File(), "*.wav;*.aiff;*.mp3;*.flac");
-        fileChooser->launchAsync(FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
-                                [this](const FileChooser& chooser)
-                                {
-                                    File file = chooser.getResult();
-                                    if (file != File{})
-                                    {
-                                        URL fileURL = URL(file);
-                                        addNewAudioFile(fileURL);
-                                    }
-                                });
+        fileChooser = std::make_unique<FileChooser>(
+            "Select an audio file...", 
+            File(), 
+            "*.wav;*.aiff;*.mp3;*.flac");
+        fileChooser->launchAsync(
+            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+            [this](const FileChooser& chooser)
+            {
+                File file = chooser.getResult();
+                if (file != File{})
+                {
+                    URL fileURL = URL(file);
+                    addNewAudioFile(fileURL);
+                }
+            });
     }
 
 
