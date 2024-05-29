@@ -1027,9 +1027,17 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
+
+
+        #if not JUCE_MAC
+            menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
+                                                        .getDefaultMenuBarHeight()));
+        #endif
         auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
         auto docViewHeight = 100;
+
+
 
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
