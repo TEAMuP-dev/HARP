@@ -44,22 +44,6 @@ public:
         quit();
     }
 
-    // void resetWindow(const juce::String& commandLine) {
-        
-    //     File audioFile(commandLine.unquoted().trim());
-
-    //     // mainWindow.reset (new MainWindow (getApplicationName()));
-    //     if(audioFile.existsAsFile())
-    //     {
-    //         URL audioURL = URL(audioFile);
-    //         mainWindow->setContentOwned(new MainComponent(audioURL), true);
-    //     }
-    //     else
-    //     {
-    //         mainWindow->setContentOwned(new MainComponent(), true);
-    //     }
-
-    // }
     void resetWindow(const juce::String& commandLine)
     {
         File audioFile(commandLine.unquoted().trim());
