@@ -9,6 +9,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(STRINGS VERSION CURRENT_VERSION)
+# add_definitions(-DAPP_VERSION="${CURRENT_VERSION}")
+# add_definitions(-DAPP_NAME="${PROJECT_NAME}")
+# add_definitions(-DAPP_COPYRIGHT="TEAMuP")
+
+
 
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
 # `project()` command. `project()` semats up some helpful variables that describe source/binary
@@ -70,7 +75,13 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call
         JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_PRODUCT_NAME>"
-        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>")
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>"
+    PUBLIC
+        APP_VERSION="${CURRENT_VERSION}"
+        APP_COMPANY="TEAMuP"
+        APP_NAME="HARP"
+        APP_COPYRIGHT="Copyright 2024 TEAMuP. All rights reserved."    
+)
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
 # a new static library target that will include all the binary resources. There is an optional
