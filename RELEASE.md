@@ -1,3 +1,3 @@
 ### Added
-- CI and working binaries for Windows / MacOS / Linux
-- Introduced dropdown menu for loading models
+- MenuBar with "Save", "Save As", "Open File" actions and keyboard shortcuts
+- "About HARP" section 
