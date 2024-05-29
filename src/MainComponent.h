@@ -439,7 +439,7 @@ public:
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::about:
-                result.setInfo("About", "Shows information about the application", "About", 0);
+                result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
         }
     }
@@ -562,12 +562,6 @@ public:
 
     
     void saveAsCallback() {
-        // Create a unique_ptr to a FileChooser
-        // auto fileChooser2 = std::make_unique<FileChooser>(
-        //     "Save As...",                                 // Dialog window title
-        //     File::getCurrentWorkingDirectory(),           // Initial directory
-        //     "*.wav;*.aiff;*.mp3;*.flac",                  // File filter
-        //     true);                                        // Use native file chooser
 
         // Launch the file chooser dialog asynchronously
         fileChooser->launchAsync(
