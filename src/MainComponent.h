@@ -355,38 +355,56 @@ class MainComponent  : public Component,
 public:
 
     enum CommandIDs {
-        open = 0x2005,
-        save = 0x2000,
-        saveAs = 0x2001,
-        showAbout = 0x2002,
-        openWebPage = 0x2003,
-        openGitHub = 0x2004
+        open = 0x2000,
+        save = 0x2001,
+        saveAs = 0x2002,
+        about = 0x2003,
+        // settings = 0x2004,
     };
 
     StringArray getMenuBarNames() override
     {
-        return { "File", "About" };
+        #if JUCE_MAC
+            return {"File"};
+        #else
+            return {"File", "Help"};
+        #endif
+        // return {"File"};
     }
 
-    PopupMenu getMenuForIndex (int menuIndex, const String& /*menuName*/) override
+    // In mac, we want the "about" command to be in the application menu ("HARP" tab)
+    // For now, this is not used, as the extra commands appear grayed out
+    std::unique_ptr<PopupMenu> getMacExtraMenu() {
+        auto menu = std::make_unique<PopupMenu>();
+        menu->addCommandItem (&commandManager, CommandIDs::about);
+        return menu;
+    }
+
+    PopupMenu getMenuForIndex (int menuIndex, const String& menuName) override
     {
         PopupMenu menu;
 
-        if (menuIndex == 0)
+        if (menuName == "File")
         {   
             menu.addCommandItem (&commandManager, CommandIDs::open);
             menu.addCommandItem (&commandManager, CommandIDs::save);
-            // menu.addSeparator();
             menu.addCommandItem (&commandManager, CommandIDs::saveAs);
-        } else if (menuIndex == 1) {
-            menu.addCommandItem(&commandManager, CommandIDs::showAbout);
-            menu.addCommandItem(&commandManager, CommandIDs::openWebPage);
-            menu.addCommandItem(&commandManager, CommandIDs::openGitHub);
-        }
-
+            menu.addSeparator();
+            // menu.addCommandItem (&commandManager, CommandIDs::settings);
+            // menu.addSeparator();
+            menu.addCommandItem (&commandManager, CommandIDs::about);
+        } 
+        // else if (menuName == "Help") {
+        //     // menu.addCommandItem(&commandManager, CommandIDs::showAbout);
+        //     // menu.addCommandItem(&commandManager, CommandIDs::openWebPage);
+        //     // menu.addCommandItem(&commandManager, CommandIDs::openGitHub);
+        // }
         return menu;
     }
-    void menuItemSelected (int /*menuItemID*/, int /*topLevelMenuIndex*/) override {}
+    void menuItemSelected (int menuItemID, int topLevelMenuIndex) override {
+        DBG("menuItemSelected: " << menuItemID);
+        DBG("topLevelMenuIndex: " << topLevelMenuIndex);
+    }
 
     ApplicationCommandTarget* getNextCommandTarget() override {
         return nullptr;
@@ -398,9 +416,10 @@ public:
             CommandIDs::open,
             CommandIDs::save, 
             CommandIDs::saveAs,
-            CommandIDs::showAbout,
-            CommandIDs::openWebPage,
-            CommandIDs::openGitHub};
+            CommandIDs::about,
+            // CommandIDs::openWebPage,
+            // CommandIDs::openGitHub
+            };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
@@ -408,6 +427,8 @@ public:
     void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override {
         switch (commandID) {
             case CommandIDs::open:
+                // The third argument here doesn't indicate the command position in the menu
+                // it rather serves as a tag to categorize the command
                 result.setInfo("Open", "Opens a file", "File", 0);
                 result.addDefaultKeypress('o', ModifierKeys::commandModifier);
                 break;
@@ -419,15 +440,15 @@ public:
                 result.setInfo("Save As ...", "Saves the current document with a new name", "File", 0);
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
-            case CommandIDs::showAbout:
-                result.setInfo("About", "Shows information about the application", "Help", 0);
+            case CommandIDs::about:
+                result.setInfo("About", "Shows information about the application", "About", 0);
                 break;
-            case CommandIDs::openWebPage:
-                result.setInfo("Website", "Opens the application's webpage", "Help", 0);
-                break;
-            case CommandIDs::openGitHub:
-                result.setInfo("GitHub", "Opens the application's GitHub repository", "Help", 0);
-                break;
+            // case CommandIDs::openWebPage:
+            //     result.setInfo("Website", "Opens the application's webpage", "Help", 0);
+            //     break;
+            // case CommandIDs::openGitHub:
+            //     result.setInfo("GitHub", "Opens the application's GitHub repository", "Help", 0);
+            //     break;
         }
     }
 
@@ -443,19 +464,98 @@ public:
             case CommandIDs::open:
                 DBG("Open command invoked");
                 break;
-            case CommandIDs::showAbout:
+            case CommandIDs::about:
                 DBG("About command invoked");
-                break;
-            case CommandIDs::openWebPage:
-                DBG("WebPage command invoked");
-                break;
-            case CommandIDs::openGitHub:
-                DBG("GitHub command invoked");
+                std::cout << "Application Version: " << APP_VERSION << std::endl;
+                std::cout << "Application Name: " << APP_NAME << std::endl;
+                showAboutDialog();
+                // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
+                // URL("https://github.com/teamup-dev/harp").launchInDefaultBrowser();
                 break;
             default:
                 return false;
         }
         return true;
+    }
+
+    void showAboutDialog()
+    {
+        // Create main component to hold other components
+        auto* aboutComponent = new Component();
+        aboutComponent->setSize(400, 300);
+
+        // Create a label for the about text
+        auto* aboutText = new Label();
+        aboutText->setText(
+            String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
+            dontSendNotification);
+        aboutText->setJustificationType(Justification::centred);
+        aboutText->setSize(380, 100);  // Adjust size as needed
+
+        // Create hyperlink buttons
+        auto* visitWebpageButton = new HyperlinkButton("Visit HARP webpage",
+            URL("https://harp-plugin.netlify.app/"));
+        visitWebpageButton->setSize(380, 24);  // Adjust size as needed
+        visitWebpageButton->setTopLeftPosition(10, 110);  // Adjust position as needed
+        visitWebpageButton->setJustificationType(Justification::centred);
+        visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
+
+        auto* reportIssueButton = new HyperlinkButton("Report an issue",
+            URL("https://github.com/teamup-dev/harp/issues"));
+        reportIssueButton->setSize(380, 24);  // Adjust size as needed
+        reportIssueButton->setTopLeftPosition(10, 140);  // Adjust position as needed
+        reportIssueButton->setJustificationType(Justification::centred);
+        reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
+
+        // Create a label for the copyright
+        auto* copyrightLabel = new Label();
+        copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
+        copyrightLabel->setJustificationType(Justification::centred);
+        copyrightLabel->setSize(380, 100);  // Adjust size as needed
+        copyrightLabel->setTopLeftPosition(10, 170);  // Adjust position as needed
+        
+
+        // Add components to the main component
+        aboutComponent->addAndMakeVisible(aboutText);
+        aboutComponent->addAndMakeVisible(visitWebpageButton);
+        aboutComponent->addAndMakeVisible(reportIssueButton);
+        aboutComponent->addAndMakeVisible(copyrightLabel);
+
+        // Create a dialog window with the custom component as its content
+        DialogWindow::LaunchOptions dialog;
+        dialog.content.setOwned(aboutComponent);
+        dialog.dialogTitle = "About " + String(APP_NAME);
+        dialog.dialogBackgroundColour = Colours::grey;
+        dialog.escapeKeyTriggersCloseButton = true;
+        dialog.useNativeTitleBar = true;
+        dialog.resizable = false;
+
+        dialog.launchAsync();
+    }
+    void showAboutDialog2()
+    {
+        auto content = String (APP_NAME) + "\nVersion: " + APP_VERSION + "\n\n" +
+                    APP_COPYRIGHT + "\n\n";
+
+        // Create a text editor for showing the about text
+        TextEditor* aboutText = new TextEditor();
+        aboutText->setReadOnly(true);
+        aboutText->setMultiLine(true);
+        aboutText->setText(content);
+        aboutText->setCaretVisible(false);
+
+        // Create a dialog window with the text editor as its content component
+        DialogWindow::LaunchOptions options;
+        options.content.setOwned(aboutText);
+        options.dialogTitle = "About " + String(APP_NAME);
+        options.dialogBackgroundColour = Colours::white;
+        options.escapeKeyTriggersCloseButton = true;
+        options.useNativeTitleBar = true;
+        options.resizable = true;
+        // set size of options
+        options.content->setSize(400, 300);
+
+        options.launchAsync();
     }
 
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
@@ -525,8 +625,6 @@ public:
         // the focus will be taken away from the modelPathTextBox
         setWantsKeyboardFocus(true);
 
-        
-
         // init the menu bar
         menuBar.reset (new MenuBarComponent (this));
         addAndMakeVisible (menuBar.get());
@@ -536,8 +634,11 @@ public:
         // commandManager.setFirstCommandTarget(this);
         addKeyListener (commandManager.getKeyMappings());
 
+        
         #if JUCE_MAC
-          MenuBarModel::setMacMainMenu (this);
+            // Not used for now
+            // auto extraMenu = getMacExtraMenu();
+            MenuBarModel::setMacMainMenu (this);
         #endif
 
         menuBar->setVisible (true);
