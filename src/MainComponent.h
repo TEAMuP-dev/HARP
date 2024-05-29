@@ -597,7 +597,9 @@ public:
             });
     }
 
-
+    // void loadAudioFile(const URL& audioURL) {
+    //     addNewAudioFile(audioURL);
+    // }
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
@@ -990,11 +992,11 @@ public:
         // and it'll allow it to check for the threadShouldExit flag
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
-
+        
         #if JUCE_MAC
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
-        commandManager.setFirstCommandTarget (nullptr);
+        // commandManager.setFirstCommandTarget (nullptr);
     }
 
     
@@ -1140,7 +1142,9 @@ public:
             authorLabel.setText("by " + String(card.author), dontSendNotification);
     }
 
-    
+    void loadAudioFile(const URL& audioURL) {
+        addNewAudioFile(audioURL);
+    }
 
 private:
     // HARP UI 
