@@ -364,12 +364,12 @@ public:
 
     StringArray getMenuBarNames() override
     {
-        #if JUCE_MAC
-            return {"File"};
-        #else
-            return {"File", "Help"};
-        #endif
-        // return {"File"};
+        // #if JUCE_MAC
+        //     return {"File"};
+        // #else
+        //     return {"File", "Help"};
+        // #endif
+        return {"File"};
     }
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
@@ -417,8 +417,6 @@ public:
             CommandIDs::save, 
             CommandIDs::saveAs,
             CommandIDs::about,
-            // CommandIDs::openWebPage,
-            // CommandIDs::openGitHub
             };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -429,7 +427,7 @@ public:
             case CommandIDs::open:
                 // The third argument here doesn't indicate the command position in the menu
                 // it rather serves as a tag to categorize the command
-                result.setInfo("Open", "Opens a file", "File", 0);
+                result.setInfo("Open...", "Opens a file", "File", 0);
                 result.addDefaultKeypress('o', ModifierKeys::commandModifier);
                 break;
             case CommandIDs::save:
@@ -437,18 +435,12 @@ public:
                 result.addDefaultKeypress('s', ModifierKeys::commandModifier);
                 break;
             case CommandIDs::saveAs:
-                result.setInfo("Save As ...", "Saves the current document with a new name", "File", 0);
+                result.setInfo("Save As...", "Saves the current document with a new name", "File", 0);
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::about:
                 result.setInfo("About", "Shows information about the application", "About", 0);
                 break;
-            // case CommandIDs::openWebPage:
-            //     result.setInfo("Website", "Opens the application's webpage", "Help", 0);
-            //     break;
-            // case CommandIDs::openGitHub:
-            //     result.setInfo("GitHub", "Opens the application's GitHub repository", "Help", 0);
-            //     break;
         }
     }
 
@@ -457,17 +449,17 @@ public:
         switch (info.commandID) {
             case CommandIDs::save:
                 DBG("Save command invoked");
+                saveCallback();
                 break;
             case CommandIDs::saveAs:
                 DBG("Save As command invoked");
                 break;
             case CommandIDs::open:
                 DBG("Open command invoked");
+                openFileChooser();
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
-                std::cout << "Application Version: " << APP_VERSION << std::endl;
-                std::cout << "Application Name: " << APP_NAME << std::endl;
                 showAboutDialog();
                 // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
                 // URL("https://github.com/teamup-dev/harp").launchInDefaultBrowser();
@@ -480,39 +472,39 @@ public:
 
     void showAboutDialog()
     {
-        // Create main component to hold other components
+        // Maybe create a new class for the about dialog
         auto* aboutComponent = new Component();
         aboutComponent->setSize(400, 300);
 
-        // Create a label for the about text
+        // label for the about text
         auto* aboutText = new Label();
         aboutText->setText(
             String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
             dontSendNotification);
         aboutText->setJustificationType(Justification::centred);
-        aboutText->setSize(380, 100);  // Adjust size as needed
+        aboutText->setSize(380, 100); 
 
-        // Create hyperlink buttons
+        // hyperlink buttons
         auto* visitWebpageButton = new HyperlinkButton("Visit HARP webpage",
             URL("https://harp-plugin.netlify.app/"));
-        visitWebpageButton->setSize(380, 24);  // Adjust size as needed
-        visitWebpageButton->setTopLeftPosition(10, 110);  // Adjust position as needed
+        visitWebpageButton->setSize(380, 24); 
+        visitWebpageButton->setTopLeftPosition(10, 110); 
         visitWebpageButton->setJustificationType(Justification::centred);
         visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
         auto* reportIssueButton = new HyperlinkButton("Report an issue",
             URL("https://github.com/teamup-dev/harp/issues"));
-        reportIssueButton->setSize(380, 24);  // Adjust size as needed
-        reportIssueButton->setTopLeftPosition(10, 140);  // Adjust position as needed
+        reportIssueButton->setSize(380, 24); 
+        reportIssueButton->setTopLeftPosition(10, 140);  
         reportIssueButton->setJustificationType(Justification::centred);
         reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
-        // Create a label for the copyright
+        // label for the copyright
         auto* copyrightLabel = new Label();
         copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
         copyrightLabel->setJustificationType(Justification::centred);
-        copyrightLabel->setSize(380, 100);  // Adjust size as needed
-        copyrightLabel->setTopLeftPosition(10, 170);  // Adjust position as needed
+        copyrightLabel->setSize(380, 100); 
+        copyrightLabel->setTopLeftPosition(10, 170); 
         
 
         // Add components to the main component
@@ -521,7 +513,7 @@ public:
         aboutComponent->addAndMakeVisible(reportIssueButton);
         aboutComponent->addAndMakeVisible(copyrightLabel);
 
-        // Create a dialog window with the custom component as its content
+        // The dialog window with the custom component as its content
         DialogWindow::LaunchOptions dialog;
         dialog.content.setOwned(aboutComponent);
         dialog.dialogTitle = "About " + String(APP_NAME);
@@ -532,30 +524,36 @@ public:
 
         dialog.launchAsync();
     }
-    void showAboutDialog2()
-    {
-        auto content = String (APP_NAME) + "\nVersion: " + APP_VERSION + "\n\n" +
-                    APP_COPYRIGHT + "\n\n";
+    
 
-        // Create a text editor for showing the about text
-        TextEditor* aboutText = new TextEditor();
-        aboutText->setReadOnly(true);
-        aboutText->setMultiLine(true);
-        aboutText->setText(content);
-        aboutText->setCaretVisible(false);
+    void saveCallback(){
+        if (saveEnabled) {
+            DBG("HARPProcessorEditor::buttonClicked save button listener activated");
+            // copy the file to the target location
+            DBG("copying from " << currentAudioFile.getLocalFile().getFullPathName() << " to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+            // make a backup for the undo button
+            // rename the original file to have a _backup suffix
+            File backupFile = File(
+                currentAudioFileTarget.getLocalFile().getParentDirectory().getFullPathName() + "/"
+                + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() +
+                + "_BACKUP" + currentAudioFileTarget.getLocalFile().getFileExtension()
+            );
 
-        // Create a dialog window with the text editor as its content component
-        DialogWindow::LaunchOptions options;
-        options.content.setOwned(aboutText);
-        options.dialogTitle = "About " + String(APP_NAME);
-        options.dialogBackgroundColour = Colours::white;
-        options.escapeKeyTriggersCloseButton = true;
-        options.useNativeTitleBar = true;
-        options.resizable = true;
-        // set size of options
-        options.content->setSize(400, 300);
+            currentAudioFileTarget.getLocalFile().copyFileTo(backupFile);
+            DBG("made a backup of the original file at " << backupFile.getFullPathName());
 
-        options.launchAsync();
+            currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile());
+            
+            addNewAudioFile(currentAudioFileTarget);
+            // saveButton.setEnabled(false);
+            saveEnabled = false;
+        } else {
+            DBG("save button is disabled");
+        }
+    }
+
+    void saveAsCallback(){
+
     }
 
     explicit MainComponent(const URL& initialFileURL = URL()): jobsFinished(0), totalJobs(0),
@@ -658,7 +656,9 @@ public:
 
             // enable the cancel button
             cancelButton.setEnabled(true);
-            saveButton.setEnabled(false);
+            // saveButton.setEnabled(false);
+            saveEnabled = false;
+            isProcessing = true;
 
             // TODO: get the current audio file and process it
             // if we don't have one, let the user know
@@ -666,6 +666,7 @@ public:
             if (model == nullptr){
                 DBG("unhandled exception: model is null. we should probably open an error window here.");
                 AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
+                isProcessing = false;
                 return;
             }
 
@@ -693,29 +694,13 @@ public:
 
         processBroadcaster.addChangeListener(this);
 
-        saveButton.setButtonText("commit to file (destructive)");
-        addAndMakeVisible(saveButton);
-        saveButton.onClick = [this] { // Save callback
-            DBG("HARPProcessorEditor::buttonClicked save button listener activated");
-            // copy the file to the target location
-            DBG("copying from " << currentAudioFile.getLocalFile().getFullPathName() << " to " << currentAudioFileTarget.getLocalFile().getFullPathName());
-            // make a backup for the undo button
-            // rename the original file to have a _backup suffix
-            File backupFile = File(
-                currentAudioFileTarget.getLocalFile().getParentDirectory().getFullPathName() + "/"
-                + currentAudioFileTarget.getLocalFile().getFileNameWithoutExtension() +
-                + "_BACKUP" + currentAudioFileTarget.getLocalFile().getFileExtension()
-            );
-
-            currentAudioFileTarget.getLocalFile().copyFileTo(backupFile);
-            DBG("made a backup of the original file at " << backupFile.getFullPathName());
-
-            currentAudioFile.getLocalFile().moveFileTo(currentAudioFileTarget.getLocalFile());
-            
-            addNewAudioFile(currentAudioFileTarget);
-            saveButton.setEnabled(false);
-        };
-        saveButton.setEnabled(false);
+        // saveButton.setButtonText("commit to file (destructive)");
+        // addAndMakeVisible(saveButton);
+        // saveButton.onClick = [this] { // Save callback
+        //     saveCallback();
+        // };
+        // saveButton.setEnabled(false);
+        saveEnabled = false;
 
 
         cancelButton.setButtonText("cancel");
@@ -756,7 +741,8 @@ public:
                         );
                         model.reset(new WebWave2Wave());
                         loadBroadcaster.sendChangeMessage();
-                        saveButton.setEnabled(false);
+                        // saveButton.setEnabled(false);
+                        saveEnabled = false;
                     }, 10000);
 
                     model->load(params);
@@ -775,7 +761,8 @@ public:
                     );
                     model.reset(new WebWave2Wave());
                     loadBroadcaster.sendChangeMessage();
-                    saveButton.setEnabled(false);
+                    // saveButton.setEnabled(false);
+                    saveEnabled = false;
                 }
             });
 
@@ -858,8 +845,8 @@ public:
 
 
         modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
-        for(size_t i = 0; i < modelPaths.size(); ++i) {
-            modelPathComboBox.addItem(modelPaths[i], i+1);
+        for(int i = 0; i < modelPaths.size(); ++i) {
+            modelPathComboBox.addItem(modelPaths[i], i + 1);
         }
 
 
@@ -1047,7 +1034,7 @@ public:
         statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
 
         // place the save button to the right of the cancel button
-        saveButton.setBounds(cancelButton.getBounds().translated(110, 0));
+        // saveButton.setBounds(cancelButton.getBounds().translated(110, 0));
 
         auto controls = mainArea.removeFromBottom (90);
 
@@ -1106,8 +1093,11 @@ private:
     HyperlinkButton glossaryButton;
     TextButton processButton;
     TextButton cancelButton;
-    TextButton saveButton;
+    // TextButton saveButton;
     Label statusLabel;
+    // A flag that indicates if the audio file can be saved
+    bool saveEnabled = true;
+    bool isProcessing = false;
 
     CtrlComponent ctrlComponent;
 
@@ -1135,7 +1125,7 @@ private:
     std::unique_ptr<FileChooser> fileChooser;
     TextButton chooseFileButton {"Choose Audio File...", "Choose an audio file for playback"};
    #else
-    TextButton chooseFileButton {"Load File", "Load an audio file for playback"}; // Changed for desktop
+    TextButton chooseFileButton {"Open File", "Open an audio file for playback and editing"}; // Changed for desktop
    #endif
 
     URL currentAudioFile;
@@ -1331,7 +1321,9 @@ private:
             processButton.setButtonText("process");
             processButton.setEnabled(true);
             cancelButton.setEnabled(false);
-            saveButton.setEnabled(true); 
+            // saveButton.setEnabled(true); 
+            saveEnabled = true;
+            isProcessing = false;
             repaint();
         }
         else if (source == mModelStatusTimer.get()) {
