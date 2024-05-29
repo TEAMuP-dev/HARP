@@ -24,6 +24,7 @@ public:
         debugFile.appendText(getCommandLineParameters() + "\n", true, true);
         debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
 
+        mainWindow.reset(new MainWindow(getApplicationName()));
         resetWindow(commandLine);
 
     }
@@ -43,21 +44,31 @@ public:
         quit();
     }
 
-    void resetWindow(const juce::String& commandLine) {
+    // void resetWindow(const juce::String& commandLine) {
         
+    //     File audioFile(commandLine.unquoted().trim());
+
+    //     // mainWindow.reset (new MainWindow (getApplicationName()));
+    //     if(audioFile.existsAsFile())
+    //     {
+    //         URL audioURL = URL(audioFile);
+    //         mainWindow->setContentOwned(new MainComponent(audioURL), true);
+    //     }
+    //     else
+    //     {
+    //         mainWindow->setContentOwned(new MainComponent(), true);
+    //     }
+
+    // }
+    void resetWindow(const juce::String& commandLine)
+    {
         File audioFile(commandLine.unquoted().trim());
-
-        mainWindow.reset (new MainWindow (getApplicationName()));
-        if(audioFile.existsAsFile())
-        {
+        if (audioFile.existsAsFile()) {
             URL audioURL = URL(audioFile);
-            mainWindow->setContentOwned(new MainComponent(audioURL), true);
+            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
+                mainComp->loadAudioFile(audioURL);
+            }
         }
-        else
-        {
-            mainWindow->setContentOwned(new MainComponent(), true);
-        }
-
     }
 
     void anotherInstanceStarted (const juce::String& commandLine) override
