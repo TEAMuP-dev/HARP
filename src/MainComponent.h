@@ -990,6 +990,11 @@ public:
         // and it'll allow it to check for the threadShouldExit flag
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
+
+        #if JUCE_MAC
+            MenuBarModel::setMacMainMenu (nullptr);
+        #endif
+        commandManager.setFirstCommandTarget (nullptr);
     }
 
     
