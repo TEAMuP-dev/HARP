@@ -364,11 +364,6 @@ public:
 
     StringArray getMenuBarNames() override
     {
-        // #if JUCE_MAC
-        //     return {"File"};
-        // #else
-        //     return {"File", "Help"};
-        // #endif
         return {"File"};
     }
 
@@ -394,11 +389,6 @@ public:
             // menu.addSeparator();
             menu.addCommandItem (&commandManager, CommandIDs::about);
         } 
-        // else if (menuName == "Help") {
-        //     // menu.addCommandItem(&commandManager, CommandIDs::showAbout);
-        //     // menu.addCommandItem(&commandManager, CommandIDs::openWebPage);
-        //     // menu.addCommandItem(&commandManager, CommandIDs::openGitHub);
-        // }
         return menu;
     }
     void menuItemSelected (int menuItemID, int topLevelMenuIndex) override {
@@ -992,7 +982,7 @@ public:
         // and it'll allow it to check for the threadShouldExit flag
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
-        
+
         #if JUCE_MAC
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
@@ -1032,8 +1022,8 @@ public:
 
 
         #if not JUCE_MAC
-            menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
-                                                        .getDefaultMenuBarHeight()));
+        menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
+                                                    .getDefaultMenuBarHeight()));
         #endif
         auto margin = 10;  // Adjusted margin value for top and bottom spacing
 
