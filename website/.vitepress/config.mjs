@@ -34,7 +34,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the {{what}} License.',
-      copyright: 'Copyright © 2023-present Audacitorch'
+      copyright: 'Copyright © 2023-present TEAMuP-dev'
     },
     search: {
       provider: 'local'
@@ -51,7 +51,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/audacitorch/HARP' }
+      { icon: 'github', link: 'https://github.com/TEAMuP-dev/HARP' }
     ]
   }
 })

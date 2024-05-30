@@ -2,7 +2,7 @@
   import { VPTeamMembers } from 'vitepress/theme'
   import { ref, onMounted } from 'vue'
 
-  const owner = 'audacitorch';
+  const owner = 'TEAMuP-dev';
   const repo = 'HARP';
 
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contributors`;
