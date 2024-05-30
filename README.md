@@ -4,19 +4,9 @@ TODO - update main figure with up-to-date screenshots
 ![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys)
 
-HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [Reaper](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-pro/), or [Ableton Live](https://www.ableton.com/en/live/)) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
+HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [REAPER](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-pro/), or [Ableton Live](https://www.ableton.com/en/live/)) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
 
 For more information, please see our [NeurIPS paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf) presenting an earlier version of HARP.
-
-## Compatibility
-HARP has been tested on the following:
-* MacOS (ARM) versions 13.0 and 13.4
-* MacOS (x86) version 10.15
-* Windows 10
-* Ubuntu 22.04
-* TODO - Windows 11
-
-with [Reaper](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-pro/) and as a standalone application.
 
 ## Table of Contents
 * **[Installation](#installation)**
@@ -41,6 +31,10 @@ with [Reaper](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-
 
 
 # Installation
+| OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
+| :-: | :-: | :-: | :-: | :-: |
+| Versions | 13.0, 13.4 | 10.15 | 10 | 22.04 |
+
 ## MacOS
 * Download the macOS DMG file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
@@ -120,10 +114,14 @@ After recording or loading audio into a track within your preferred DAW, it is r
 ### PyHARP API
 [![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
 
+| HARP | PyHARP |
+| :-: | :-: |
+| 1.1.0 | 0.1.0 |
+
 We provide PyHARP, a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
 
 ### Available Models
-While any algorithm or model can be made HARP-compatible with the PyHARP API, at present, the following are available for use within HARP:
+While any algorithm or model can be made HARP-compatible with the PyHARP API, at present, the following have been deployed and are available for use within HARP:
 
 * Pitch Shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
 
