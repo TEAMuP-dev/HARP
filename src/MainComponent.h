@@ -74,7 +74,7 @@ public:
         startTimer(mInterval);
     }
 
-    ~TimedCallback() {
+    ~TimedCallback() override {
         stopTimer();
     }
 
@@ -684,6 +684,18 @@ public:
         processButton.onClick = [this] { // Process callback
             DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
+            // check if the audio file is loaded
+            if (!currentAudioFile.isLocalFile()) {
+                // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
+                //ShowMEssageBoxAsync
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Error",
+                    "Audio file is not loaded. Please load an audio file first."
+                );
+                return;
+            }
+
             // set the button text to "processing {model.card().name}"
             processButton.setButtonText("processing " + String(model->card().name) + "...");
             processButton.setEnabled(false);
@@ -791,7 +803,7 @@ public:
                     AlertWindow::showMessageBoxAsync(
                         AlertWindow::WarningIcon,
                         "Loading Error",
-                        String("An error occurred while loading the WebModel: ") + e.what()
+                        String("An error occurred while loading the WebModel: \n") + e.what()
                     );
                     model.reset(new WebWave2Wave());
                     loadBroadcaster.sendChangeMessage();
@@ -841,6 +853,9 @@ public:
             }
             spaceUrlButton.setButtonText("open " + url + " in browser");
             spaceUrlButton.setURL(URL(spaceUrl));
+            // set the font size 
+            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+
             addAndMakeVisible(spaceUrlButton);
         };
 
@@ -1214,7 +1229,7 @@ private:
     //==============================================================================
     void showAudioResource (URL resource)
     {
-        if (! loadURLIntoTransport (currentAudioFile))
+        if (! loadURLIntoTransport (resource))
         {
             // Failed to load the audio file!
             jassertfalse;
@@ -1222,7 +1237,7 @@ private:
         }
 
         zoomSlider.setValue (0, dontSendNotification);
-        thumbnail->setURL (currentAudioFile);
+        thumbnail->setURL (resource);
     }
 
     void addNewAudioFile (URL resource) 
