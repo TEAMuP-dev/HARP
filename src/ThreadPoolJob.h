@@ -4,8 +4,8 @@ using namespace juce;
 
 class CustomThreadPoolJob : public ThreadPoolJob {
   public:
-    CustomThreadPoolJob(std::function<void()> jobFunction)
-        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(jobFunction)
+    CustomThreadPoolJob(std::function<void()> _jobFunction)
+        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(_jobFunction)
     {}
 
     JobStatus runJob() override {
@@ -25,8 +25,8 @@ class CustomThreadPoolJob : public ThreadPoolJob {
 class JobProcessorThread : public Thread {
   public:
     JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
-                        int& jobsFinished,
-                        int& totalJobs,
+                        int& _jobsFinished,
+                        int& _totalJobs,
                         ChangeBroadcaster& broadcaster
                     )
         : Thread("JobProcessorThread"),
@@ -81,8 +81,11 @@ class JobProcessorThread : public Thread {
     }
 
     const std::vector<CustomThreadPoolJob*>& customJobs;
+
+     // HUGO: these are unused. What are they for?
     int& jobsFinished;
     int& totalJobs;
+    
     // ThreadPool for processing jobs (not loading)
     ThreadPool threadPool {10};
     ChangeBroadcaster& processBroadcaster;

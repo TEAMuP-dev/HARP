@@ -75,7 +75,7 @@ public:
         startTimer(mInterval);
     }
 
-    ~TimedCallback() {
+    ~TimedCallback() override {
         stopTimer();
     }
 
@@ -941,7 +941,7 @@ private:
     //==============================================================================
     void showAudioResource (URL resource)
     {
-        if (! loadURLIntoTransport (currentAudioFile))
+        if (! loadURLIntoTransport (resource))
         {
             // Failed to load the audio file!
             jassertfalse;
@@ -949,7 +949,7 @@ private:
         }
 
         zoomSlider.setValue (0, dontSendNotification);
-        thumbnail->setURL (currentAudioFile);
+        thumbnail->setURL (resource);
     }
 
     void addNewAudioFile (URL resource) 
