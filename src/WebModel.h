@@ -167,6 +167,22 @@ public:
         else if (logContent.contains("requests.exceptions.HTTPError")) {
             message = "The web request to " + m_url + " returned a 404 error. The space does not exist."; 
         }
+        else if (logContent.contains("httpx.ReadTimeout")) {
+            message = "The web request to " + m_url + " timed out. Make sure that the url is correct and the gradio server is running!";
+        }
+        // try to catch a generic Error:
+        else if (logContent.contains("Error:")) {
+            // get the error message
+            juce::StringArray lines;
+            lines.addLines(logContent);
+            for (auto line : lines) {
+                if (line.contains("Error:")) {
+                    message = line.toStdString();
+                    break;
+                }
+            }
+            // message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+        }
         else {
             message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
         }
@@ -366,8 +382,25 @@ public:
 
     if (result != 0) {
         // read the text from the temp log file.
-        std::string message = "An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
-        throw std::runtime_error(message);
+        
+        std::string message;
+        // check for a generic Error: in the log content
+        if (logContent.contains("Error:")) {
+            // get the error message
+            juce::StringArray lines;
+            lines.addLines(logContent);
+            for (auto line : lines) {
+                if (line.contains("Error:")) {
+                    message = line.toStdString();
+                    break;
+                }
+            }
+        }
+        else {
+            message = "An error occurred while calling the gradiojuce helper with mode predict. ";
+        }
+
+        message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
 
     tempLogFile.deleteFile();  // delete the temporary log file
