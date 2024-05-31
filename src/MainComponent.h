@@ -942,7 +942,7 @@ public:
 
         // glossary link
         glossaryButton.setButtonText("Model Glossary");
-        glossaryButton.setURL(URL("https://github.com/audacitorch/HARP#available-models"));
+        glossaryButton.setURL(URL("https://github.com/TEAMuP-dev/HARP#available-models"));
         //glossaryButton.setJustificationType(Justification::centredLeft);
         addAndMakeVisible(glossaryButton);
 
