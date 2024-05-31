@@ -888,7 +888,6 @@ public:
         "hugggof/harmonic_percussive",
         "descript/vampnet",
         "hugggof/nesquik",
-        "hugggof/MusicGen",
         "cwitkowitz/timbre-trap",
         };
 
