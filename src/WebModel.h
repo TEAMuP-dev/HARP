@@ -61,19 +61,17 @@ using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 namespace{
 
-  void LogAndDBG(const juce::String& message) {
-    DBG(message);
 
-    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
-    logFile.appendText(message + "\n");
-  }
 }
 
 class WebWave2Wave : public Model {
 public:
   WebWave2Wave() { // TODO: should be a singleton
-    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
-    logFile.deleteFile();
+
+    // create our logger
+    m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
+
+
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -101,6 +99,14 @@ public:
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
+  }
+
+  void LogAndDBG(const juce::String& message) const {
+    DBG(message);
+
+    if (m_logger) {
+      m_logger->logMessage(message);
+    }
   }
 
 
@@ -149,8 +155,25 @@ public:
 
     if (result != 0) {
         // read the text from the temp log file.
-        std::string message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        // check for a JSONDecodeError in the log content
+        // if so, let the user know that there there was an error parsing the get_ctrls response, 
+        // which means the space is likely broken or does not exist. 
+        // if we catch a 404, say that the space does not exist.
+
+        std::string message;
+        if (logContent.contains("JSONDecodeError")) {
+            message = "An error occurred while requesting controls from " +  m_url + ". The response from the space was not valid JSON. " ;
+        }
+        else if (logContent.contains("requests.exceptions.HTTPError")) {
+            message = "The web request to " + m_url + " returned a 404 error. The space does not exist."; 
+        }
+        else {
+            message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+        }
+
+        message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
         throw std::runtime_error(message);
+
     }
 
 
@@ -261,7 +284,7 @@ public:
           }
         }
         catch (const char* e) {
-          throw std::runtime_error("Failed to load controls from JSON. " + *e);
+          throw std::runtime_error("Failed to load controls from JSON. " + std::string(e));
         }
       }
 
@@ -469,6 +492,7 @@ private:
     juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
   };
   CtrlList m_ctrls;
+  std::unique_ptr<juce::FileLogger> m_logger {nullptr};
 
   string m_url;
   string prefix_cmd;
