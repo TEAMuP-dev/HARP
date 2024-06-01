@@ -63,8 +63,6 @@
 #include "TitledTextBox.h"
 #include "ThreadPoolJob.h"
 
-#include "gui/MultiButton.h"
-
 using namespace juce;
 
 
@@ -162,7 +160,6 @@ public:
     {
         if (auto inputSource = makeInputSource (url))
         {
-            thumbnailCache.clear();
             thumbnail.setSource (inputSource.release());
 
             Range<double> newRange (0.0, thumbnail.getTotalLength());
@@ -194,10 +191,10 @@ public:
         repaint();
     }
 
-    // void setFollowsTransport (bool shouldFollow)
-    // {
-    //     isFollowingTransport = shouldFollow;
-    // }
+    void setFollowsTransport (bool shouldFollow)
+    {
+        isFollowingTransport = shouldFollow;
+    }
 
     void paint (Graphics& g) override
     {
@@ -257,29 +254,22 @@ public:
         transportSource.start();
     }
 
-    
     void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& wheel) override
     {
-        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
         if (thumbnail.getTotalLength() > 0.0)
         {
-            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
-                auto newStart = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
-                newStart = jlimit(0.0, jmax(0.0, thumbnail.getTotalLength() - visibleRange.getLength()), newStart);
+            auto newStart = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
+            newStart = jlimit (0.0, jmax (0.0, thumbnail.getTotalLength() - (visibleRange.getLength())), newStart);
 
-                if (canMoveTransport())
-                    setRange({ newStart, newStart + visibleRange.getLength() });
-            } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
-                if (wheel.deltaY != 0) {
-                    zoomSlider.setValue(zoomSlider.getValue() - wheel.deltaY);
-                }
-            } else {
-                // Do nothing
-            }
+            if (canMoveTransport())
+                setRange ({ newStart, newStart + visibleRange.getLength() });
+
+            if (wheel.deltaY != 0.0f)
+                zoomSlider.setValue (zoomSlider.getValue() - wheel.deltaY);
+
             repaint();
         }
     }
-
 
 private:
     AudioTransportSource& transportSource;
@@ -289,7 +279,7 @@ private:
     AudioThumbnailCache thumbnailCache  { 5 };
     AudioThumbnail thumbnail;
     Range<double> visibleRange;
-    bool isFollowingTransport = true;
+    bool isFollowingTransport = false;
     URL lastFileDropped;
 
     DrawableRectangle currentPositionMarker;
@@ -359,8 +349,7 @@ class MainComponent  : public Component,
                           #endif
                            private ChangeListener,
                            public MenuBarModel,
-                           public ApplicationCommandTarget,
-                           public Timer
+                           public ApplicationCommandTarget
                                      
 {
 public:
@@ -409,6 +398,154 @@ public:
 
     ApplicationCommandTarget* getNextCommandTarget() override {
         return nullptr;
+    }
+
+    void appendtoModelPaths(String modelpath){
+        DBG("appendtoModelPaths" + modelpath);
+        juce::File modelPathsFile = juce::File::getCurrentWorkingDirectory().getChildFile("model_paths.txt");
+        modelPathsFile.appendText('\n' + modelpath);
+    }
+
+    void loadModelPathsIntoComboBox(){
+
+        JUCE_ASSERT_MESSAGE_MANAGER_IS_LOCKED;
+        
+        DBG("loadModelPathsIntoComboBox Called...");
+        juce::File modelPathsFile = juce::File::getCurrentWorkingDirectory().getChildFile("model_paths.txt");
+        if (!modelPathsFile.existsAsFile())
+        {
+            juce::StringArray defaultPaths = {
+                "custom path...",
+                "hugggof/pitch_shifter",
+                "hugggof/harmonic_percussive",
+                "descript/vampnet",
+                "hugggof/nesquik",
+                "cwitkowitz/timbre-trap"
+            };
+
+            modelPathsFile.replaceWithText(defaultPaths.joinIntoString("\n"));
+            juce::Logger::writeToLog("Created model_paths.txt with default paths.");
+        }
+
+        juce::String fileContent = modelPathsFile.loadFileAsString();
+        DBG("fileContent: " + fileContent);
+        juce::StringArray lines;
+        lines.addLines(fileContent);
+
+        modelPathComboBox.clear();
+        for (const auto& line : lines)
+        {
+            modelPathComboBox.addItem(line, modelPathComboBox.getNumItems() + 1);
+        }
+        DBG("modelPathComboBox reset");
+    }
+
+    bool loadModelFromGradio(bool isCustomPath = false){
+
+        DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
+
+        // collect input parameters for the model.
+        std::map<std::string, std::any> params = {
+        {"url", modelPathComboBox.getText().toStdString()},
+        };
+        resetUI();
+        // loading happens asynchronously.
+        // the document controller trigger a change listener callback, which will update the UI
+        threadPool.addJob([this, params, isCustomPath] {
+            DBG("executeLoad!!");
+            try {
+                // timeout after 10 seconds
+                // TODO: this callback needs to be cleaned up in the destructor in case we quit
+                std::atomic<bool> success = false;
+                TimedCallback timedCallback([this, &success] {
+                    if (success)
+                        return;
+                    DBG("HARPProcessorEditor::buttonClicked timedCallback listener activated");
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon,
+                        "Loading Error",
+                        "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
+                    );
+                    model.reset(new WebWave2Wave());
+                    loadBroadcaster.sendChangeMessage();
+                    // saveButton.setEnabled(false);
+                    saveEnabled = false;
+                }, 10000);
+
+                model->load(params);
+                success = true;
+                DBG("executeLoad done!!");
+
+                if (isCustomPath){
+                    appendtoModelPaths(std::any_cast<std::string>(params.at("url")));
+                    DBG("appendtoModelPaths done!!");
+                }
+                loadBroadcaster.sendChangeMessage();
+                return;
+                // since we're on a helper thread, 
+                // it's ok to sleep for 10s 
+                // to let the timeout callback do its thing
+                Thread::sleep(10000);
+                
+            } catch (const std::runtime_error& e) {
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Loading Error",
+                    String("An error occurred while loading the WebModel: \n") + e.what()
+                );
+                model.reset(new WebWave2Wave());
+                loadBroadcaster.sendChangeMessage();
+                // saveButton.setEnabled(false);
+                loadModelPathsIntoComboBox();
+                saveEnabled = false;
+            }
+        });
+
+        // disable the load button until the model is loaded
+        loadModelButton.setEnabled(false);
+        loadModelButton.setButtonText("loading...");
+
+        // TODO: enable the cancel button
+        // cancelButton.setEnabled(true);
+        // if the cancel button is pressed, forget the job and reset the model and UI
+        // cancelButton.onClick = [this] {
+        //     DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+        //     threadPool.removeAllJobs(true, 1000);
+        //     model->cancel();
+        //     resetUI();
+        // };
+
+        // disable the process button until the model is loaded
+        processButton.setEnabled(false);
+
+        // set the descriptionLabel to "loading {url}..."
+        // TODO: we need to get rid of the params map, and just pass the url around instead
+        // since it looks like we're sticking to webmodels.
+        String url = String(std::any_cast<std::string>(params.at("url")));
+        descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , dontSendNotification);
+
+        // TODO: here, we should also reset the highlighting of the playback regions 
+
+
+        // add a hyperlink to the hf space for the model
+        // TODO: make this less hacky? 
+        // we might have to append a "https://huggingface.co/spaces" to the url
+        // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
+        // and (has only one slash in it)
+        String spaceUrl = url;
+        if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
+        DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
+        }
+        else {
+        DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
+        spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
+        }
+        spaceUrlButton.setButtonText("open " + url + " in browser");
+        spaceUrlButton.setURL(URL(spaceUrl));
+        // set the font size 
+        // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+
+        addAndMakeVisible(spaceUrlButton);
     }
 
     // Fills the commands array with the commands that this component/target supports
@@ -464,7 +601,7 @@ public:
                 DBG("About command invoked");
                 showAboutDialog();
                 // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
-                // URL("https://github.com/TEAMuP-dev/harp").launchInDefaultBrowser();
+                // URL("https://github.com/teamup-dev/harp").launchInDefaultBrowser();
                 break;
             default:
                 return false;
@@ -487,24 +624,17 @@ public:
         aboutText->setSize(380, 100); 
 
         // hyperlink buttons
-        auto* modelGlossaryButton = new HyperlinkButton("Model Glossary",
-            URL("https://github.com/TEAMuP-dev/HARP#available-models"));
-        modelGlossaryButton->setSize(380, 24); 
-        modelGlossaryButton->setTopLeftPosition(10, 110); 
-        modelGlossaryButton->setJustificationType(Justification::centred);
-        modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
         auto* visitWebpageButton = new HyperlinkButton("Visit HARP webpage",
             URL("https://harp-plugin.netlify.app/"));
         visitWebpageButton->setSize(380, 24); 
-        visitWebpageButton->setTopLeftPosition(10, 140); 
+        visitWebpageButton->setTopLeftPosition(10, 110); 
         visitWebpageButton->setJustificationType(Justification::centred);
         visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
         auto* reportIssueButton = new HyperlinkButton("Report an issue",
-            URL("https://github.com/TEAMuP-dev/harp/issues"));
+            URL("https://github.com/teamup-dev/harp/issues"));
         reportIssueButton->setSize(380, 24); 
-        reportIssueButton->setTopLeftPosition(10, 170);  
+        reportIssueButton->setTopLeftPosition(10, 140);  
         reportIssueButton->setJustificationType(Justification::centred);
         reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
@@ -513,12 +643,11 @@ public:
         copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
         copyrightLabel->setJustificationType(Justification::centred);
         copyrightLabel->setSize(380, 100); 
-        copyrightLabel->setTopLeftPosition(10, 200); 
+        copyrightLabel->setTopLeftPosition(10, 170); 
         
 
         // Add components to the main component
         aboutComponent->addAndMakeVisible(aboutText);
-        aboutComponent->addAndMakeVisible(modelGlossaryButton);
         aboutComponent->addAndMakeVisible(visitWebpageButton);
         aboutComponent->addAndMakeVisible(reportIssueButton);
         aboutComponent->addAndMakeVisible(copyrightLabel);
@@ -606,29 +735,6 @@ public:
             });
     }
 
-    void resetModelPathComboBox()
-    {
-        resetUI();
-        //should I clear this?
-        spaceUrlButton.setButtonText("");
-        int numItems = modelPathComboBox.getNumItems();
-        std::vector<std::string> options;
-
-        for (int i = 1; i <= numItems; ++i) // item indexes are 1-based in JUCE
-        {
-            String itemText = modelPathComboBox.getItemText(i - 1);
-            options.push_back(itemText.toStdString());
-            DBG("Item " << i << ": " << itemText);
-        }
-
-        modelPathComboBox.clear();
-
-        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
-        for(int i = 0; i < options.size(); ++i) {
-            modelPathComboBox.addItem(options[i], i + 1);
-        }
-    }
-
     // void loadAudioFile(const URL& audioURL) {
     //     addNewAudioFile(audioURL);
     // }
@@ -642,8 +748,8 @@ public:
         zoomLabel.setColour (TextEditor::textColourId, Colours::black);
         zoomLabel.setColour (TextEditor::backgroundColourId, Colour (0x00000000));
 
-        // addAndMakeVisible (followTransportButton);
-        // followTransportButton.onClick = [this] { updateFollowTransportState(); };
+        addAndMakeVisible (followTransportButton);
+        followTransportButton.onClick = [this] { updateFollowTransportState(); };
 
        #if (JUCE_ANDROID || JUCE_IOS)
         addAndMakeVisible (chooseFileButton);
@@ -662,15 +768,10 @@ public:
         addAndMakeVisible (thumbnail.get());
         thumbnail->addChangeListener (this);
 
-        // addAndMakeVisible (startStopButton);
-        playStopButton.addMode(playButtonInfo);
-        playStopButton.addMode(stopButtonInfo);
-        playStopButton.setMode(playButtonInfo.label);
-        playStopButton.setEnabled(false);
-        addAndMakeVisible (playStopButton);
-        // startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
-        // startStopButton.setColour (TextButton::textColourOffId, Colours::black);
-        // playStopButton.onClick = [this] { startOrStop(); };
+        addAndMakeVisible (startStopButton);
+        startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
+        startStopButton.setColour (TextButton::textColourOffId, Colours::black);
+        startStopButton.onClick = [this] { startOrStop(); };
 
         // audio setup
         formatManager.registerBasicFormats();
@@ -723,145 +824,103 @@ public:
         menuBar->setVisible (true);
         menuItemsChanged();
 
-        // The Process/Cancel button        
-        processCancelButton.addMode(processButtonInfo);
-        processCancelButton.addMode(cancelButtonInfo);
-        processCancelButton.setMode(processButtonInfo.label);
-        processCancelButton.setEnabled(false);
-        addAndMakeVisible(processCancelButton);
+        // initialize load and process buttons
+        processButton.setButtonText("process");
+        model->ready() ? processButton.setEnabled(true)
+                        : processButton.setEnabled(false);
+        addAndMakeVisible(processButton);
+        processButton.onClick = [this] { // Process callback
+            DBG("HARPProcessorEditor::buttonClicked button listener activated");
+
+            // check if the audio file is loaded
+            if (!currentAudioFile.isLocalFile()) {
+                // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
+                //ShowMEssageBoxAsync
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Error",
+                    "Audio file is not loaded. Please load an audio file first."
+                );
+                return;
+            }
+
+            // set the button text to "processing {model.card().name}"
+            processButton.setButtonText("processing " + String(model->card().name) + "...");
+            processButton.setEnabled(false);
+
+            // enable the cancel button
+            cancelButton.setEnabled(true);
+            // saveButton.setEnabled(false);
+            saveEnabled = false;
+            isProcessing = true;
+
+            // TODO: get the current audio file and process it
+            // if we don't have one, let the user know
+            // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
+            if (model == nullptr){
+                DBG("unhandled exception: model is null. we should probably open an error window here.");
+                AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
+                isProcessing = false;
+                return;
+            }
+
+            // print how many jobs are currently in the threadpool
+            DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+
+            // empty customJobs
+            customJobs.clear();
+
+            customJobs.push_back(new CustomThreadPoolJob(
+                [this] { // &jobsFinished, totalJobs
+                    // Individual job code for each iteration
+                    // copy the audio file, with the same filename except for an added _harp to the stem
+                    model->process(currentAudioFile.getLocalFile());
+                    DBG("Processing finished");
+                    // load the audio file again
+                    processBroadcaster.sendChangeMessage();
+                    
+                }
+            ));
+
+            // Now the customJobs are ready to be added to be run in the threadPool
+            jobProcessorThread.signalTask();
+        };
 
         processBroadcaster.addChangeListener(this);
+
+        // saveButton.setButtonText("commit to file (destructive)");
+        // addAndMakeVisible(saveButton);
+        // saveButton.onClick = [this] { // Save callback
+        //     saveCallback();
+        // };
+        // saveButton.setEnabled(false);
         saveEnabled = false;
+
+
+        cancelButton.setButtonText("cancel");
+        cancelButton.setEnabled(false);
+        addAndMakeVisible(cancelButton);
+        cancelButton.onClick = [this] { // Cancel callback
+            DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+            model->cancel();
+        };
+
 
         loadModelButton.setButtonText("load");
         addAndMakeVisible(loadModelButton);
         loadModelButton.onClick = [this]{
-            DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
-
-            // collect input parameters for the model.
-            
-            
-            //ryan
-            std::string path_url;
-            if (modelPathComboBox.getSelectedItemIndex() == 0) {
-                path_url = customPath;
-            }else{
-                path_url = modelPathComboBox.getText().toStdString();
-            }
-
-            std::map<std::string, std::any> params = {
-            {"url", path_url},
-            };
-            resetUI();
-            // loading happens asynchronously.
-            // the document controller trigger a change listener callback, which will update the UI
-
-            threadPool.addJob([this, params] {
-                DBG("executeLoad!!");
-                try {
-                    // timeout after 10 seconds
-                    // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                    // cb: this timedCallback doesn't seem to run
-                    std::atomic<bool> success = false;
-                    TimedCallback timedCallback([this, &success] {
-                        if (success)
-                            return;
-                        DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
-                        AlertWindow::showMessageBoxAsync(
-                            AlertWindow::WarningIcon,
-                            "Loading Error",
-                            "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
-                        );
-                        MessageManager::callAsync([this] {
-                            resetModelPathComboBox();
-                        });
-                        model.reset(new WebWave2Wave());
-                        loadBroadcaster.sendChangeMessage();
-                        // saveButton.setEnabled(false);
-                        saveEnabled = false;
-                    }, 10000);
-
-                    model->load(params);
-                    success = true;
-                    MessageManager::callAsync([this] {
-                        if (modelPathComboBox.getSelectedItemIndex() == 0) {
-                            int new_id = modelPathComboBox.getNumItems() + 1;
-                            modelPathComboBox.addItem(customPath, new_id);
-                            modelPathComboBox.setSelectedId(new_id);
-                        }
-                    });
-                    DBG("executeLoad done!!");
-                    loadBroadcaster.sendChangeMessage();
-                    // since we're on a helper thread, 
-                    // it's ok to sleep for 10s 
-                    // to let the timeout callback do its thing
-                    //Thread::sleep(10000);
-                    //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
-                } catch (const std::runtime_error& e) {
-                    AlertWindow::showMessageBoxAsync(
-                        AlertWindow::WarningIcon,
-                        "Loading Error",
-                        String("An error occurred while loading the WebModel: \n") + e.what()
-                    );
-                    model.reset(new WebWave2Wave());
-                    loadBroadcaster.sendChangeMessage();
-                    // saveButton.setEnabled(false);
-                    saveEnabled = false;
-                    MessageManager::callAsync([this] {
-                        resetModelPathComboBox();
-                    });
-                    
-                }
-            });
-
-            // disable the load button until the model is loaded
-            loadModelButton.setEnabled(false);
-            modelPathComboBox.setEnabled(false);
-            loadModelButton.setButtonText("loading...");
-
-
-            // disable the process button until the model is loaded
-            processCancelButton.setEnabled(false);
-
-            // set the descriptionLabel to "loading {url}..."
-            // TODO: we need to get rid of the params map, and just pass the url around instead
-            // since it looks like we're sticking to webmodels.
-            String url = String(std::any_cast<std::string>(params.at("url")));
-            descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , dontSendNotification);
-
-            // TODO: here, we should also reset the highlighting of the playback regions 
-
-
-            // add a hyperlink to the hf space for the model
-            // TODO: make this less hacky? 
-            // we might have to append a "https://huggingface.co/spaces" to the url
-            // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
-            // and (has only one slash in it)
-            String spaceUrl = url;
-            if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
-            }
-            else {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
-                spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
-            }
-            spaceUrlButton.setButtonText("open " + url + " in browser");
-            spaceUrlButton.setURL(URL(spaceUrl));
-            // set the font size 
-            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-
-            addAndMakeVisible(spaceUrlButton);
+            loadModelFromGradio();
         };
 
         loadBroadcaster.addChangeListener(this);
 
         std::string currentStatus = model->getStatus();
         if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
-            processCancelButton.setEnabled(true);
-            processCancelButton.setMode(processButtonInfo.label);
+            processButton.setEnabled(true);
+            processButton.setButtonText("process");
         } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
-            processCancelButton.setEnabled(true);
-            processCancelButton.setMode(cancelButtonInfo.label);
+            cancelButton.setEnabled(true);
+            processButton.setButtonText("processing " + String(model->card().name) + "...");
         }
         
 
@@ -875,8 +934,9 @@ public:
         mModelStatusTimer->startTimer(100);  // 100 ms interval
 
 
+        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
        // model path textbox
-       std::vector<std::string> modelPaths = {
+/*        std::vector<std::string> modelPaths = {
         "custom path...",
         "hugggof/pitch_shifter",
         "hugggof/harmonic_percussive",
@@ -884,14 +944,11 @@ public:
         "hugggof/nesquik",
         "cwitkowitz/timbre-trap",
         };
-
-
-        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
         for(int i = 0; i < modelPaths.size(); ++i) {
             modelPathComboBox.addItem(modelPaths[i], i + 1);
-        }
+        } */
 
-
+        loadModelPathsIntoComboBox();
         // Usage within your existing onChange handler
         modelPathComboBox.onChange = [this] {
             // Check if the 'custom path...' option is selected
@@ -902,21 +959,28 @@ public:
                                                         AlertWindow::NoIcon);
 
                 customPathWindow->addTextEditor("customPath", "", "Path:");
-                customPathWindow->addButton("Load", 1, KeyPress(KeyPress::returnKey));
+                customPathWindow->addButton("OK", 1, KeyPress(KeyPress::returnKey));
                 customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
                 
                 // Show the window and handle the result asynchronously
                 customPathWindow->enterModalState(true, new CustomPathAlertCallback([this, customPathWindow](int result) {
                     if (result == 1) { // OK was clicked
                         // Retrieve the entered path
-                        customPath = customPathWindow->getTextEditor("customPath")->getText().toStdString();
+                        String customPath = customPathWindow->getTextEditor("customPath")->getText();
                         // Use the custom path as needed
                         DBG("Custom path entered: " + customPath);
-                        loadModelButton.triggerClick();
+                        int new_id = modelPathComboBox.getNumItems()+1;
+
+                        modelPathComboBox.addItem(customPath, new_id);
+                        modelPathComboBox.setSelectedId(new_id);
+
+                        modelPathComboBox.setEnabled(false);
+                        loadModelFromGradio(true);
+                        modelPathComboBox.setEnabled(true);
 
                     } else { // Cancel was clicked or the window was closed
                         DBG("Custom path entry was canceled.");
-                        resetModelPathComboBox();
+                        modelPathComboBox.setSelectedId(0);
                     }
                     delete customPathWindow;
                 }), true);
@@ -925,6 +989,17 @@ public:
 
 
         addAndMakeVisible(modelPathComboBox);
+
+        // glossary label
+        glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", NotificationType::dontSendNotification);
+        glossaryLabel.setJustificationType(Justification::centredRight);
+        addAndMakeVisible(glossaryLabel);
+
+        // glossary link
+        glossaryButton.setButtonText("Model Glossary");
+        glossaryButton.setURL(URL("https://github.com/audacitorch/HARP#available-models"));
+        //glossaryButton.setJustificationType(Justification::centredLeft);
+        addAndMakeVisible(glossaryButton);
 
         // model controls
         ctrlComponent.setModel(model);
@@ -943,7 +1018,6 @@ public:
 
         jobProcessorThread.startThread();
 
-        startTimerHz(10);
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque (true);
@@ -985,77 +1059,7 @@ public:
         // commandManager.setFirstCommandTarget (nullptr);
     }
 
-    void timerCallback() override
-    {
-        if (!transportSource.isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
-        {
-            playStopButton.setMode(playButtonInfo.label);
-            stopTimer();
-        }
-        
-    }
-
-    void cancelCallback()
-    {
-        DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-        model->cancel();
-        processCancelButton.setEnabled(false);
-    }
     
-    void processCallback()
-    {
-        DBG("HARPProcessorEditor::buttonClicked button listener activated");
-
-        // check if the audio file is loaded
-        if (!currentAudioFile.isLocalFile()) {
-            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
-            //ShowMEssageBoxAsync
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Error",
-                "Audio file is not loaded. Please load an audio file first."
-            );
-            return;
-        }
-
-
-        processCancelButton.setEnabled(true);
-        processCancelButton.setMode(cancelButtonInfo.label);
-
-        saveEnabled = false;
-        isProcessing = true;
-
-        // TODO: get the current audio file and process it
-        // if we don't have one, let the user know
-        // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
-        if (model == nullptr){
-            DBG("unhandled exception: model is null. we should probably open an error window here.");
-            AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
-            isProcessing = false;
-            return;
-        }
-
-        // print how many jobs are currently in the threadpool
-        DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
-
-        // empty customJobs
-        customJobs.clear();
-
-        customJobs.push_back(new CustomThreadPoolJob(
-            [this] { // &jobsFinished, totalJobs
-                // Individual job code for each iteration
-                // copy the audio file, with the same filename except for an added _harp to the stem
-                model->process(currentAudioFile.getLocalFile());
-                DBG("Processing finished");
-                // load the audio file again
-                processBroadcaster.sendChangeMessage();
-                
-            }
-        ));
-
-        // Now the customJobs are ready to be added to be run in the threadPool
-        jobProcessorThread.signalTask();
-    }
     
     void openFileChooser()
     {
@@ -1086,49 +1090,51 @@ public:
     {
         auto area = getLocalBounds();
 
+
         #if not JUCE_MAC
         menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
                                                     .getDefaultMenuBarHeight()));
         #endif
         auto margin = 10;  // Adjusted margin value for top and bottom spacing
+
         auto docViewHeight = 100;
+
+
+
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
+
         // Row 1: Model Path TextBox and Load Model Button
         auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
         modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
-        // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
-        nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
+
+        // Row 2: Glossary Label and Hyperlink
+        auto row2 = mainArea.removeFromTop(30);  // adjust height as needed
+        glossaryLabel.setBounds(row2.removeFromLeft(row2.getWidth() * 0.8f).reduced(margin));
+        glossaryButton.setBounds(row2.reduced(margin));
+        glossaryLabel.setFont(Font(11.0f));
+        glossaryButton.setFont(Font(11.0f), false, Justification::centredLeft);
+
+        // Row 3: Name and Author Labels
+        auto row3a = mainArea.removeFromTop(40);  // adjust height as needed
+        nameLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
  
-        auto row2b = mainArea.removeFromTop(30);
-        authorLabel.setBounds(row2b.reduced(margin));
+        auto row3b = mainArea.removeFromTop(30);
+        authorLabel.setBounds(row3b.reduced(margin));
         authorLabel.setFont(Font(10.0f));
 
-        // Row 3: Description Label
-        
-        // A way to dynamically adjust the height of the description label
-        // doesn't work perfectly yet, but it's good for now.
-        auto font = Font(15.0f); 
-        descriptionLabel.setFont(font);
-        // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = mainArea.getWidth();// - 2 * margin;
-        auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
-        int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+        // Row 4: Description Label
+        auto row4 = mainArea.removeFromTop(80);  // adjust height as needed
+        descriptionLabel.setBounds(row4.reduced(margin));
+        // TODO: put the space url below the description
 
-        if (textHeight < 80) {
-            textHeight = 80;
-        }
-        auto row3 = mainArea.removeFromTop(textHeight);//.reduced(margin) ; 
-        descriptionLabel.setBounds(row3);
-
-        // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
-        spaceUrlButton.setBounds(row4.reduced(margin));
+        // Row 4.5: Space URL Hyperlink
+        auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
+        spaceUrlButton.setBounds(row45.reduced(margin));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
@@ -1140,9 +1146,16 @@ public:
         auto row6 = mainArea.removeFromTop(row6Height);
 
         // Assign bounds to processButton
-        processCancelButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
+        processButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
+
+        // place the cancel button to the right of the process button (justified right)
+        cancelButton.setBounds(processButton.getBounds().translated(110, 0));
+
         // place the status label to the left of the process button (justified left)
-        statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
+        statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
+
+        // place the save button to the right of the cancel button
+        // saveButton.setBounds(cancelButton.getBounds().translated(110, 0));
 
         auto controls = mainArea.removeFromBottom (90);
 
@@ -1158,8 +1171,8 @@ public:
         zoomLabel .setBounds (zoom.removeFromLeft (50));
         zoomSlider.setBounds (zoom);
 
-        // followTransportButton.setBounds (controls.removeFromTop (25));
-        playStopButton      .setBounds (controls);
+        followTransportButton.setBounds (controls.removeFromTop (25));
+        startStopButton      .setBounds (controls);
 
         mainArea.removeFromBottom (6);
 
@@ -1199,31 +1212,16 @@ private:
     ComboBox modelPathComboBox;
     TextButton loadModelButton;
     TextButton saveChangesButton {"save changes"};
-    MultiButton processCancelButton;
-    MultiButton playStopButton;
-    MultiButton::Mode processButtonInfo{"Process", 
-            [this] { processCallback(); }, 
-            getUIColourIfAvailable(
-                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                Colours::lightgrey)};
-    MultiButton::Mode cancelButtonInfo{"Cancel", 
-            [this] { cancelCallback(); },
-            getUIColourIfAvailable(
-                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                Colours::lightgrey)};
-    MultiButton::Mode playButtonInfo{"Play", 
-            [this] { play(); }, 
-            Colours::limegreen};
-    MultiButton::Mode stopButtonInfo{"Stop", 
-            [this] { stop(); },
-            Colours::orangered};
-
+    Label glossaryLabel;
+    HyperlinkButton glossaryButton;
+    TextButton processButton;
+    TextButton cancelButton;
+    // TextButton saveButton;
     Label statusLabel;
     // A flag that indicates if the audio file can be saved
     bool saveEnabled = true;
     bool isProcessing = false;
 
-    std::string customPath;
     CtrlComponent ctrlComponent;
 
     // model card
@@ -1262,8 +1260,8 @@ private:
     std::unique_ptr<DemoThumbnailComp> thumbnail;
     Label zoomLabel                     { {}, "zoom:" };
     Slider zoomSlider                   { Slider::LinearHorizontal, Slider::NoTextBox };
-    // ToggleButton followTransportButton  { "Follow Transport" };
-    // TextButton startStopButton          { "Play/Stop" };
+    ToggleButton followTransportButton  { "Follow Transport" };
+    TextButton startStopButton          { "Play/Stop" };
 
 
     /// CustomThreadPoolJob
@@ -1315,7 +1313,6 @@ private:
         }
         DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
 
-        playStopButton.setEnabled(true);
         showAudioResource(currentAudioFile);
     }
 
@@ -1352,27 +1349,23 @@ private:
         return true;
     }
 
-    void play() {
-        if (!transportSource.isPlaying()) {
+    void startOrStop()
+    {
+        if (transportSource.isPlaying())
+        {
+            transportSource.stop();
+        }
+        else
+        {
             transportSource.setPosition (0);
             transportSource.start();
-            playStopButton.setMode(stopButtonInfo.label);
-            startTimerHz(10);
         }
     }
 
-    void stop()    {
-        if (transportSource.isPlaying()) {
-            transportSource.stop();
-            playStopButton.setMode(playButtonInfo.label);
-            stopTimer();
-        }
+    void updateFollowTransportState()
+    {
+        thumbnail->setFollowsTransport (followTransportButton.getToggleState());
     }
-
-    // void updateFollowTransportState()
-    // {
-    //     thumbnail->setFollowsTransport (followTransportButton.getToggleState());
-    // }
 
    #if (JUCE_ANDROID || JUCE_IOS)
     void buttonClicked (Button* btn) override
@@ -1435,27 +1428,23 @@ private:
             repaint();
 
             // now, we can enable the buttons
-            if (model->ready()) {
-                processCancelButton.setEnabled(true);
-                processCancelButton.setMode(processButtonInfo.label);
-            }
-
+            processButton.setEnabled(true);
             loadModelButton.setEnabled(true);
-            modelPathComboBox.setEnabled(true);
             loadModelButton.setButtonText("load");
 
             // Set the focus to the process button
             // so that the user can press SPACE to trigger the playback
-            processCancelButton.grabKeyboardFocus();
-            resized();
+            processButton.grabKeyboardFocus();
         }
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
             showAudioResource(currentAudioFile);
 
             // now, we can enable the process button
-            processCancelButton.setMode(processButtonInfo.label);
-            processCancelButton.setEnabled(true);
+            processButton.setButtonText("process");
+            processButton.setEnabled(true);
+            cancelButton.setEnabled(false);
+            // saveButton.setEnabled(true); 
             saveEnabled = true;
             isProcessing = false;
             repaint();
