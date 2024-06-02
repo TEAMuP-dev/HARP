@@ -453,7 +453,7 @@ public:
                 DBG("About command invoked");
                 showAboutDialog();
                 // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
-                // URL("https://github.com/teamup-dev/harp").launchInDefaultBrowser();
+                // URL("https://github.com/TEAMuP-dev/harp").launchInDefaultBrowser();
                 break;
             default:
                 return false;
@@ -476,17 +476,24 @@ public:
         aboutText->setSize(380, 100); 
 
         // hyperlink buttons
+        auto* modelGlossaryButton = new HyperlinkButton("Model Glossary",
+            URL("https://github.com/TEAMuP-dev/HARP#available-models"));
+        modelGlossaryButton->setSize(380, 24); 
+        modelGlossaryButton->setTopLeftPosition(10, 110); 
+        modelGlossaryButton->setJustificationType(Justification::centred);
+        modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
+
         auto* visitWebpageButton = new HyperlinkButton("Visit HARP webpage",
             URL("https://harp-plugin.netlify.app/"));
         visitWebpageButton->setSize(380, 24); 
-        visitWebpageButton->setTopLeftPosition(10, 110); 
+        visitWebpageButton->setTopLeftPosition(10, 140); 
         visitWebpageButton->setJustificationType(Justification::centred);
         visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
         auto* reportIssueButton = new HyperlinkButton("Report an issue",
-            URL("https://github.com/teamup-dev/harp/issues"));
+            URL("https://github.com/TEAMuP-dev/harp/issues"));
         reportIssueButton->setSize(380, 24); 
-        reportIssueButton->setTopLeftPosition(10, 140);  
+        reportIssueButton->setTopLeftPosition(10, 170);  
         reportIssueButton->setJustificationType(Justification::centred);
         reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
@@ -495,11 +502,12 @@ public:
         copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
         copyrightLabel->setJustificationType(Justification::centred);
         copyrightLabel->setSize(380, 100); 
-        copyrightLabel->setTopLeftPosition(10, 170); 
+        copyrightLabel->setTopLeftPosition(10, 200); 
         
 
         // Add components to the main component
         aboutComponent->addAndMakeVisible(aboutText);
+        aboutComponent->addAndMakeVisible(modelGlossaryButton);
         aboutComponent->addAndMakeVisible(visitWebpageButton);
         aboutComponent->addAndMakeVisible(reportIssueButton);
         aboutComponent->addAndMakeVisible(copyrightLabel);
@@ -934,17 +942,6 @@ public:
 
         addAndMakeVisible(modelPathComboBox);
 
-        // glossary label
-        glossaryLabel.setText("To view an index of available HARP-compatible models, please see our ", NotificationType::dontSendNotification);
-        glossaryLabel.setJustificationType(Justification::centredRight);
-        addAndMakeVisible(glossaryLabel);
-
-        // glossary link
-        glossaryButton.setButtonText("Model Glossary");
-        glossaryButton.setURL(URL("https://github.com/TEAMuP-dev/HARP#available-models"));
-        //glossaryButton.setJustificationType(Justification::centredLeft);
-        addAndMakeVisible(glossaryButton);
-
         // model controls
         ctrlComponent.setModel(model);
         addAndMakeVisible(ctrlComponent);
@@ -1054,31 +1051,24 @@ public:
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
 
-        // Row 2: Glossary Label and Hyperlink
-        auto row2 = mainArea.removeFromTop(30);  // adjust height as needed
-        glossaryLabel.setBounds(row2.removeFromLeft(row2.getWidth() * 0.8f).reduced(margin));
-        glossaryButton.setBounds(row2.reduced(margin));
-        glossaryLabel.setFont(Font(11.0f));
-        glossaryButton.setFont(Font(11.0f), false, Justification::centredLeft);
-
-        // Row 3: Name and Author Labels
-        auto row3a = mainArea.removeFromTop(40);  // adjust height as needed
-        nameLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 2).reduced(margin));
+        // Row 2: Name and Author Labels
+        auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
+        nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
  
-        auto row3b = mainArea.removeFromTop(30);
-        authorLabel.setBounds(row3b.reduced(margin));
+        auto row2b = mainArea.removeFromTop(30);
+        authorLabel.setBounds(row2b.reduced(margin));
         authorLabel.setFont(Font(10.0f));
 
-        // Row 4: Description Label
-        auto row4 = mainArea.removeFromTop(80);  // adjust height as needed
-        descriptionLabel.setBounds(row4.reduced(margin));
+        // Row 3: Description Label
+        auto row3 = mainArea.removeFromTop(80);  // adjust height as needed
+        descriptionLabel.setBounds(row3.reduced(margin));
         // TODO: put the space url below the description
 
-        // Row 4.5: Space URL Hyperlink
-        auto row45 = mainArea.removeFromTop(30);  // adjust height as needed
-        spaceUrlButton.setBounds(row45.reduced(margin));
+        // Row 4: Space URL Hyperlink
+        auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
+        spaceUrlButton.setBounds(row4.reduced(margin));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
@@ -1156,8 +1146,6 @@ private:
     ComboBox modelPathComboBox;
     TextButton loadModelButton;
     TextButton saveChangesButton {"save changes"};
-    Label glossaryLabel;
-    HyperlinkButton glossaryButton;
     TextButton processButton;
     TextButton cancelButton;
     // TextButton saveButton;
