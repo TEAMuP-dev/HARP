@@ -754,11 +754,42 @@ public:
                     // to let the timeout callback do its thing
                     Thread::sleep(10000);
                 } catch (const std::runtime_error& e) {
-                    AlertWindow::showMessageBoxAsync(
-                        AlertWindow::WarningIcon,
-                        "Loading Error",
-                        String("An error occurred while loading the WebModel: \n") + e.what()
-                    );
+                    
+                    auto msgOpts = MessageBoxOptions().withTitle("Loading Error")
+                        .withIconType(AlertWindow::WarningIcon)
+                        .withTitle("Error")
+                        .withMessage("An error occurred while loading the WebModel: \n" + String(e.what()))
+                        .withButton("Open Space URL")
+                        .withButton("Open HARP Logs")
+                        .withButton("Ok");
+                    auto alertCallback = [this, msgOpts](int result) {
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
+                        // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
+                        // auto chosen = msgOpts.getButtonText(result);
+                        // they're not the same as the order of the buttons in the alert
+                        // this is the order that I actually observed them to be. 
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                        std::map<int, std::string> observedButtonIndicesMap = {
+                            {1, "Open Space URL"},// should actually be 0 right? 
+                            {2, "Open HARP Logs"},// should actually be 1
+                            {0, "Ok"}// should be 2
+                        };
+                        auto chosen = observedButtonIndicesMap[result];
+
+                        // auto chosen = msgOpts.getButtonText();
+                        if (chosen == "Open HARP Logs") {
+                            model->getLogFile().revealToUser();
+                        } else if (chosen == "Open Space URL") {
+                            URL spaceUrl = resolveSpaceUrl(modelPathComboBox.getText().toStdString());
+                            bool success = spaceUrl.launchInDefaultBrowser();
+                        }
+                    };
+                    
+                    
+                    AlertWindow::showAsync(msgOpts,alertCallback);
+
                     model.reset(new WebWave2Wave());
                     loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
@@ -788,14 +819,7 @@ public:
             // we might have to append a "https://huggingface.co/spaces" to the url
             // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
             // and (has only one slash in it)
-            String spaceUrl = url;
-            if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
-            }
-            else {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
-                spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
-            }
+            String spaceUrl = resolveSpaceUrl(url);
             spaceUrlButton.setButtonText("open " + url + " in browser");
             spaceUrlButton.setURL(URL(spaceUrl));
             // set the font size 
