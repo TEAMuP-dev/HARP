@@ -12,15 +12,20 @@ MultiButton::MultiButton() {
 }
 
 void MultiButton::addMode(const Mode& mode) {
+    // Check if the mode.label already exists
+    if (modes.find(mode.label) != modes.end()) {
+        // If it does, print a warning
+        DBG("Mode with label " + mode.label + " already exists. Overwriting."); 
+    }
     modes[mode.label] = mode;
 }
 
 void MultiButton::setMode(const juce::String& modeName) {
-    if (modes.find(modeName) != modes.end()) {
-        // currentMode = modeName;
-        setButtonText(modes[modeName].label);
-        setColour(juce::TextButton::buttonColourId, modes[modeName].color);
-        onClick = modes[modeName].callback; 
+    if (modes.find(modeName) != modes.end() && currentMode != modeName) {
+        currentMode = modeName;
+        setButtonText(modes[currentMode].label);
+        setColour(juce::TextButton::buttonColourId, modes[currentMode].color);
+        onClick = modes[currentMode].callback; 
     }
 }
 
