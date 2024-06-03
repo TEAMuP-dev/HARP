@@ -168,7 +168,7 @@ public:
             message = "The web request to " + m_url + " returned a 404 error. The space does not exist."; 
         }
         else if (logContent.contains("httpx.ReadTimeout")) {
-            message = "The web request to " + m_url + " timed out. Make sure that the url is correct and the gradio server is running!";
+            message = "The web request to " + m_url + " timed out. The model is probably 'sleeping'. Make sure the gradio server is running and try again!";
         }
         // try to catch a generic Error:
         else if (logContent.contains("Error:")) {
@@ -182,6 +182,9 @@ public:
                 }
             }
             // message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+        }
+        else if (logContent.contains("argument --url: expected one argument")) {
+            message = "The model url is missing. Please provide a url to the model.";
         }
         else {
             message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";

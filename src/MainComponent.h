@@ -765,32 +765,32 @@ public:
             resetUI();
             // loading happens asynchronously.
             // the document controller trigger a change listener callback, which will update the UI
+
             threadPool.addJob([this, params] {
                 DBG("executeLoad!!");
                 try {
                     // timeout after 10 seconds
                     // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                    // std::atomic<bool> success = false;
-                    // TimedCallback timedCallback([this, &success] {
-                    //     DBG("AAAAAAAAAAAA: INSIDE TIMED CALLBACK");
-                    //     if (success)
-                    //         DBG("AAAAAAAAAAAAAA: SUCESS IS TRUE");
-                    //         return;
-                    //     DBG("AAAAAAAAAAAAAAAAA: buttonClicked timedCallback listener activated");
-                    //     AlertWindow::showMessageBoxAsync(
-                    //         AlertWindow::WarningIcon,
-                    //         "Loading Error",
-                    //         "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
-                    //     );
-                    //     model.reset(new WebWave2Wave());
-                    //     loadBroadcaster.sendChangeMessage();
-                    //     // saveButton.setEnabled(false);
-                    //     saveEnabled = false;
-                    // }, 10000);
+                    // cb: this timedCallback doesn't seem to run
+                    std::atomic<bool> success = false;
+                    TimedCallback timedCallback([this, &success] {
+                        if (success)
+                            return;
+                        DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
+                            "Loading Error",
+                            "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
+                        );
+                        model.reset(new WebWave2Wave());
+                        loadBroadcaster.sendChangeMessage();
+                        // saveButton.setEnabled(false);
+                        saveEnabled = false;
+                    }, 10000);
 
                     model->load(params);
-                    // success = true;
-                    DBG("AAAAAAAAAAAAAA: executeLoad done!!");
+                    success = true;
+                    DBG("LOADING-JOB: executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
                     // since we're on a helper thread, 
                     // it's ok to sleep for 10s 
@@ -803,7 +803,7 @@ public:
                         String("An error occurred while loading the WebModel: \n") + e.what()
                     );
                     model.reset(new WebWave2Wave());
-                    // loadBroadcaster.sendChangeMessage();
+                    loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
                     saveEnabled = false;
                 }
@@ -842,11 +842,11 @@ public:
             // and (has only one slash in it)
             String spaceUrl = url;
             if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
-            DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
+                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
             }
             else {
-            DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
-            spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
+                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
+                spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
             }
             spaceUrlButton.setButtonText("open " + url + " in browser");
             spaceUrlButton.setURL(URL(spaceUrl));
@@ -1414,7 +1414,10 @@ private:
             repaint();
 
             // now, we can enable the buttons
-            processButton.setEnabled(true);
+            if (model->ready()) {
+                processButton.setEnabled(true);
+            }
+            
             loadModelButton.setEnabled(true);
             loadModelButton.setButtonText("load");
 
