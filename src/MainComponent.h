@@ -1067,7 +1067,7 @@ public:
         // doesn't work perfectly yet, but it's good for now.
         auto font = Font(15.0f); 
         descriptionLabel.setFont(font);
-        descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
+        // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
         auto maxLabelWidth = mainArea.getWidth();// - 2 * margin;
         auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
         int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
