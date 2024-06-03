@@ -1039,26 +1039,19 @@ public:
     {
         auto area = getLocalBounds();
 
-
         #if not JUCE_MAC
         menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
                                                     .getDefaultMenuBarHeight()));
         #endif
         auto margin = 10;  // Adjusted margin value for top and bottom spacing
-
         auto docViewHeight = 100;
-
-
-
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
-
         // Row 1: Model Path TextBox and Load Model Button
         auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
         modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
-
         // Row 2: Name and Author Labels
         auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
@@ -1070,9 +1063,21 @@ public:
         authorLabel.setFont(Font(10.0f));
 
         // Row 3: Description Label
-        auto row3 = mainArea.removeFromTop(80);  // adjust height as needed
-        descriptionLabel.setBounds(row3.reduced(margin));
-        // TODO: put the space url below the description
+        
+        // A way to dynamically adjust the height of the description label
+        // doesn't work perfectly yet, but it's good for now.
+        auto font = Font(15.0f); 
+        descriptionLabel.setFont(font);
+        descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
+        auto maxLabelWidth = mainArea.getWidth();// - 2 * margin;
+        auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
+        int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+
+        if (textHeight < 80) {
+            textHeight = 80;
+        }
+        auto row3 = mainArea.removeFromTop(textHeight);//.reduced(margin) ; 
+        descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
         auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
@@ -1393,6 +1398,7 @@ private:
             // Set the focus to the process button
             // so that the user can press SPACE to trigger the playback
             processCancelButton.grabKeyboardFocus();
+            resized();
         }
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
