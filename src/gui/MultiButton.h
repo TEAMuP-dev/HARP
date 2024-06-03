@@ -12,6 +12,9 @@ public:
         juce::Colour color;
     };
 
+    std::function<void()> onMouseEnter;
+    std::function<void()> onMouseExit;
+
     MultiButton(const Mode& mode1, const Mode& mode2);
 
     MultiButton();
@@ -19,7 +22,8 @@ public:
     void setMode(const juce::String& modeName);
     juce::String  getModeName();
     void addMode(const Mode& mode);
-    // void toggleMode(const juce::String& newMode);
+    void mouseEnter(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
 
 private:
     std::unordered_map<juce::String, Mode> modes;

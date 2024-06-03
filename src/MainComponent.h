@@ -64,6 +64,7 @@
 #include "ThreadPoolJob.h"
 
 #include "gui/MultiButton.h"
+#include "gui/StatusComponent.h"
 
 using namespace juce;
 
@@ -563,8 +564,10 @@ public:
             addNewAudioFile(currentAudioFileTarget);
             // saveButton.setEnabled(false);
             saveEnabled = false;
+            setStatus("File saved successfully");
         } else {
             DBG("save button is disabled");
+            setStatus("Nothing to save");
         }
     }
 
@@ -621,13 +624,8 @@ public:
         // addAndMakeVisible (followTransportButton);
         // followTransportButton.onClick = [this] { updateFollowTransportState(); };
 
-       #if (JUCE_ANDROID || JUCE_IOS)
-        addAndMakeVisible (chooseFileButton);
-        chooseFileButton.addListener (this);
-       #else
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
-       #endif
 
         addAndMakeVisible (zoomSlider);
         zoomSlider.setRange (0, 1, 0);
@@ -644,9 +642,16 @@ public:
         playStopButton.setMode(playButtonInfo.label);
         playStopButton.setEnabled(false);
         addAndMakeVisible (playStopButton);
-        // startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
-        // startStopButton.setColour (TextButton::textColourOffId, Colours::black);
-        // playStopButton.onClick = [this] { startOrStop(); };
+        playStopButton.onMouseEnter = [this] {
+            if (playStopButton.getModeName() == playButtonInfo.label)
+                setInstructions("Click to start playback");
+            else if (playStopButton.getModeName() == stopButtonInfo.label)
+                setInstructions("Click to stop playback");
+        };
+        playStopButton.onMouseExit = [this] {
+            // playStopButton.setColour (TextButton::buttonColourId, getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::buttonOnColour));
+            clearInstructions();
+        };
 
         // audio setup
         formatManager.registerBasicFormats();
@@ -705,6 +710,16 @@ public:
         processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(false);
         addAndMakeVisible(processCancelButton);
+        processCancelButton.onMouseEnter = [this] {
+            if (processCancelButton.getModeName() == processButtonInfo.label)
+                setInstructions("Click to send the audio file for processing");
+            else if (processCancelButton.getModeName() == cancelButtonInfo.label)
+                setInstructions("Click to cancel the processing");
+        };
+        processCancelButton.onMouseExit = [this] {
+            // processCancelButton.setColour (TextButton::buttonColourId, getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::buttonOnColour));
+            clearInstructions();
+        };
 
         processBroadcaster.addChangeListener(this);
         saveEnabled = false;
@@ -816,8 +831,9 @@ public:
         
 
         // status label
-        statusLabel.setText(currentStatus, dontSendNotification);
-        addAndMakeVisible(statusLabel);
+        // statusLabel.setText(currentStatus, dontSendNotification);
+        // addAndMakeVisible(statusLabel);
+        setStatus(currentStatus);
 
         // add a status timer to update the status label periodically
         mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
@@ -888,6 +904,8 @@ public:
         addAndMakeVisible(descriptionLabel);
         addAndMakeVisible(tagsLabel);
 
+        addAndMakeVisible(statusArea);
+        addAndMakeVisible(instructionsArea);
         // model card component
         // Get the modelCard from the EditorView
         auto &card = model->card();
@@ -910,12 +928,6 @@ public:
         audioSourcePlayer.setSource (nullptr);
 
         audioDeviceManager.removeAudioCallback (&audioSourcePlayer);
-
-       #if (JUCE_ANDROID || JUCE_IOS)
-        chooseFileButton.removeListener (this);
-       #else
-
-       #endif
 
         thumbnail->removeChangeListener (this);
 
@@ -1043,7 +1055,7 @@ public:
                                                     .getDefaultMenuBarHeight()));
         #endif
         auto margin = 10;  // Adjusted margin value for top and bottom spacing
-        auto docViewHeight = 100;
+        auto docViewHeight = 1;
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
         // Row 1: Model Path TextBox and Load Model Button
@@ -1068,24 +1080,27 @@ public:
         auto font = Font(15.0f); 
         descriptionLabel.setFont(font);
         // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = mainArea.getWidth();// - 2 * margin;
+        auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
         auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
         int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
 
         if (textHeight < 80) {
             textHeight = 80;
         }
-        auto row3 = mainArea.removeFromTop(textHeight);//.reduced(margin) ; 
+        auto row3 = mainArea.removeFromTop(textHeight).reduced(margin) ; 
         descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
         auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
-        spaceUrlButton.setBounds(row4.reduced(margin));
+        spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
         auto row5 = mainArea.removeFromTop(150);  // the remaining area is for row 4
         ctrlComponent.setBounds(row5.reduced(margin));
+
+        // An empty space of 30px between the ctrl component and the process button
+        mainArea.removeFromTop(30);
 
         // Row 6: Process Button (taken out in advance to preserve its height)
         auto row6Height = 25;  // adjust height as needed
@@ -1094,34 +1109,28 @@ public:
         // Assign bounds to processButton
         processCancelButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
         // place the status label to the left of the process button (justified left)
-        statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
+        // statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
 
-        auto controls = mainArea.removeFromBottom (90);
+        // An empty space of 30px between the process button and the thumbnail area
+        mainArea.removeFromTop(30);
+        
+        // Row 7: thumbnail area
+        auto row7 = mainArea.removeFromTop(150).reduced(margin / 2);  // adjust height as needed
+        thumbnail->setBounds(row7);
 
-        auto controlRightBounds = controls.removeFromRight (controls.getWidth() / 3);
+        // Row 8: Buttons for Play/Stop and Open File
+        auto row8 = mainArea.removeFromTop(70);  // adjust height as needed
+        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
+        chooseFileButton.setBounds(row8.reduced(margin));
 
-       #if (JUCE_ANDROID || JUCE_IOS)
-        chooseFileButton.setBounds (controlRightBounds.reduced (10));
-       #else
-        chooseFileButton.setBounds (controlRightBounds.reduced (10));
-       #endif
-
-        auto zoom = controls.removeFromTop (25);
-        zoomLabel .setBounds (zoom.removeFromLeft (50));
-        zoomSlider.setBounds (zoom);
-
-        // followTransportButton.setBounds (controls.removeFromTop (25));
-        playStopButton      .setBounds (controls);
-
-        mainArea.removeFromBottom (6);
-
-       #if JUCE_ANDROID || JUCE_IOS
-        thumbnail->setBounds (mainArea);
-       #else
-        thumbnail->setBounds (mainArea.removeFromBottom (140));
-        mainArea.removeFromBottom (6);
-
-       #endif
+        // Status area
+        auto row9 = mainArea.removeFromBottom(80);
+        // Split row9 to two columns
+        auto row9a = row9.removeFromLeft(row9.getWidth() / 2);
+        auto row9b = row9;
+        statusArea.setBounds(row9a.reduced(margin));
+        instructionsArea.setBounds(row9b.reduced(margin));
+        
     }
 
     void resetUI(){
@@ -1145,6 +1154,25 @@ public:
         addNewAudioFile(audioURL);
     }
 
+    void setStatus(const juce::String& message)
+    {
+        statusArea.setStatusMessage(message);
+    }
+
+    void clearStatus()
+    {
+        statusArea.clearStatusMessage();
+    }
+
+    void setInstructions(const juce::String& message)
+    {
+        instructionsArea.setStatusMessage(message);
+    }
+
+    void clearInstructions()
+    {
+        instructionsArea.clearStatusMessage();
+    }
 private:
     // HARP UI 
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
@@ -1170,7 +1198,7 @@ private:
             [this] { stop(); },
             Colours::orangered};
 
-    Label statusLabel;
+    // Label statusLabel;
     // A flag that indicates if the audio file can be saved
     bool saveEnabled = true;
     bool isProcessing = false;
@@ -1180,6 +1208,9 @@ private:
     // model card
     Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
     HyperlinkButton spaceUrlButton;
+
+    StatusComponent statusArea;
+    StatusComponent instructionsArea;
 
     // the model itself
     std::shared_ptr<WebWave2Wave> model {new WebWave2Wave()};
@@ -1197,12 +1228,7 @@ private:
     AudioFormatManager formatManager;
     TimeSliceThread thread  { "audio file preview" };
 
-   #if (JUCE_ANDROID || JUCE_IOS)
-    std::unique_ptr<FileChooser> fileChooser;
-    TextButton chooseFileButton {"Choose Audio File...", "Choose an audio file for playback"};
-   #else
     TextButton chooseFileButton {"Open File", "Open an audio file for playback and editing"}; // Changed for desktop
-   #endif
 
     URL currentAudioFile;
     URL currentAudioFileTarget;
@@ -1325,55 +1351,6 @@ private:
     //     thumbnail->setFollowsTransport (followTransportButton.getToggleState());
     // }
 
-   #if (JUCE_ANDROID || JUCE_IOS)
-    void buttonClicked (Button* btn) override
-    {
-        if (btn == &chooseFileButton && fileChooser.get() == nullptr)
-        {
-            if (! RuntimePermissions::isGranted (RuntimePermissions::readExternalStorage))
-            {
-                SafePointer<MainComponent> safeThis (this);
-                RuntimePermissions::request (RuntimePermissions::readExternalStorage,
-                                             [safeThis] (bool granted) mutable
-                                             {
-                                                 if (safeThis != nullptr && granted)
-                                                     safeThis->buttonClicked (&safeThis->chooseFileButton);
-                                             });
-                return;
-            }
-
-            if (FileChooser::isPlatformDialogAvailable())
-            {
-                fileChooser = std::make_unique<FileChooser> ("Select an audio file...", File(), "*.wav;*.flac;*.aif");
-
-                fileChooser->launchAsync (FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
-                                          [this] (const FileChooser& fc) mutable
-                                          {
-                                              if (fc.getURLResults().size() > 0)
-                                              {
-                                                  auto u = fc.getURLResult();
-
-                                                  addNewAudioFile (std::move (u));
-                                              }
-
-                                              fileChooser = nullptr;
-                                          }, nullptr);
-            }
-            else
-            {
-                NativeMessageBox::showAsync (MessageBoxOptions()
-                                               .withIconType (MessageBoxIconType::WarningIcon)
-                                               .withTitle ("Enable Code Signing")
-                                               .withMessage ("You need to enable code-signing for your iOS project and enable \"iCloud Documents\" "
-                                                             "permissions to be able to open audio files on your iDevice. See: "
-                                                             "https://forum.juce.com/t/native-ios-android-file-choosers"),
-                                             nullptr);
-            }
-        }
-    }
-   #else
-   #endif
-
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == thumbnail.get())
@@ -1413,7 +1390,8 @@ private:
         else if (source == mModelStatusTimer.get()) {
             // update the status label
             DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
-            statusLabel.setText(model->getStatus(), dontSendNotification);
+            // statusLabel.setText(model->getStatus(), dontSendNotification);
+            setStatus(model->getStatus());
         }
         else {
             DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
