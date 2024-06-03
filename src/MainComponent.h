@@ -63,6 +63,8 @@
 #include "TitledTextBox.h"
 #include "ThreadPoolJob.h"
 
+#include "gui/MultiButton.h"
+
 using namespace juce;
 
 
@@ -691,66 +693,43 @@ public:
         menuBar->setVisible (true);
         menuItemsChanged();
 
+        // The Process/Cancel button        
+        MultiButton::Mode processMode{"Process", 
+                [this] { processCallback(); }, 
+                getUIColourIfAvailable(
+                    LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
+                    Colours::lightgrey)};
+        MultiButton::Mode cancelMode{"Cancel", 
+                [this] { cancelCallback(); },
+                getUIColourIfAvailable(
+                    LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
+                    Colours::lightgrey)};
+        processCancelButton.addMode(processMode);
+        processCancelButton.addMode(cancelMode);
+        processCancelButton.setMode(processMode.label);
+        processCancelButton.setEnabled(false);
+        addAndMakeVisible(processCancelButton);
+
+        // // Define another set of modes
+        // DualFunctionButton::Mode playMode{"Play", [this] { playAudio(); }};
+        // DualFunctionButton::Mode stopMode{"Stop", [this] { stopAudio(); }};
+
+        // // Create a button for process/cancel
+        // DualFunctionButton processCancelButton(processMode, cancelMode);
+
+        // // Optionally, create another button for play/stop
+        // DualFunctionButton playStopButton(playMode, stopMode);
+
+        // // Add to component and make visible
+        // addAndMakeVisible(&processCancelButton);
+        // addAndMakeVisible(&playStopButton);
         // initialize load and process buttons
         processButton.setButtonText("process");
         model->ready() ? processButton.setEnabled(true)
                         : processButton.setEnabled(false);
         addAndMakeVisible(processButton);
         processButton.onClick = [this] { // Process callback
-            DBG("HARPProcessorEditor::buttonClicked button listener activated");
-
-            // check if the audio file is loaded
-            if (!currentAudioFile.isLocalFile()) {
-                // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
-                //ShowMEssageBoxAsync
-                AlertWindow::showMessageBoxAsync(
-                    AlertWindow::WarningIcon,
-                    "Error",
-                    "Audio file is not loaded. Please load an audio file first."
-                );
-                return;
-            }
-
-            // set the button text to "processing {model.card().name}"
-            processButton.setButtonText("processing " + String(model->card().name) + "...");
-            processButton.setEnabled(false);
-
-            // enable the cancel button
-            cancelButton.setEnabled(true);
-            // saveButton.setEnabled(false);
-            saveEnabled = false;
-            isProcessing = true;
-
-            // TODO: get the current audio file and process it
-            // if we don't have one, let the user know
-            // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
-            if (model == nullptr){
-                DBG("unhandled exception: model is null. we should probably open an error window here.");
-                AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
-                isProcessing = false;
-                return;
-            }
-
-            // print how many jobs are currently in the threadpool
-            DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
-
-            // empty customJobs
-            customJobs.clear();
-
-            customJobs.push_back(new CustomThreadPoolJob(
-                [this] { // &jobsFinished, totalJobs
-                    // Individual job code for each iteration
-                    // copy the audio file, with the same filename except for an added _harp to the stem
-                    model->process(currentAudioFile.getLocalFile());
-                    DBG("Processing finished");
-                    // load the audio file again
-                    processBroadcaster.sendChangeMessage();
-                    
-                }
-            ));
-
-            // Now the customJobs are ready to be added to be run in the threadPool
-            jobProcessorThread.signalTask();
+            processCallback();
         };
 
         processBroadcaster.addChangeListener(this);
@@ -768,8 +747,9 @@ public:
         cancelButton.setEnabled(false);
         addAndMakeVisible(cancelButton);
         cancelButton.onClick = [this] { // Cancel callback
-            DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-            model->cancel();
+            // DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+            // model->cancel();
+            cancelCallback();
         };
 
 
@@ -790,25 +770,27 @@ public:
                 try {
                     // timeout after 10 seconds
                     // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                    std::atomic<bool> success = false;
-                    TimedCallback timedCallback([this, &success] {
-                        if (success)
-                            return;
-                        DBG("HARPProcessorEditor::buttonClicked timedCallback listener activated");
-                        AlertWindow::showMessageBoxAsync(
-                            AlertWindow::WarningIcon,
-                            "Loading Error",
-                            "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
-                        );
-                        model.reset(new WebWave2Wave());
-                        loadBroadcaster.sendChangeMessage();
-                        // saveButton.setEnabled(false);
-                        saveEnabled = false;
-                    }, 10000);
+                    // std::atomic<bool> success = false;
+                    // TimedCallback timedCallback([this, &success] {
+                    //     DBG("AAAAAAAAAAAA: INSIDE TIMED CALLBACK");
+                    //     if (success)
+                    //         DBG("AAAAAAAAAAAAAA: SUCESS IS TRUE");
+                    //         return;
+                    //     DBG("AAAAAAAAAAAAAAAAA: buttonClicked timedCallback listener activated");
+                    //     AlertWindow::showMessageBoxAsync(
+                    //         AlertWindow::WarningIcon,
+                    //         "Loading Error",
+                    //         "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
+                    //     );
+                    //     model.reset(new WebWave2Wave());
+                    //     loadBroadcaster.sendChangeMessage();
+                    //     // saveButton.setEnabled(false);
+                    //     saveEnabled = false;
+                    // }, 10000);
 
                     model->load(params);
-                    success = true;
-                    DBG("executeLoad done!!");
+                    // success = true;
+                    DBG("AAAAAAAAAAAAAA: executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
                     // since we're on a helper thread, 
                     // it's ok to sleep for 10s 
@@ -821,7 +803,7 @@ public:
                         String("An error occurred while loading the WebModel: \n") + e.what()
                     );
                     model.reset(new WebWave2Wave());
-                    loadBroadcaster.sendChangeMessage();
+                    // loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
                     saveEnabled = false;
                 }
@@ -1007,7 +989,69 @@ public:
         // commandManager.setFirstCommandTarget (nullptr);
     }
 
+    void cancelCallback()
+    {
+        DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+        model->cancel();
+    }
     
+    void processCallback()
+    {
+        DBG("HARPProcessorEditor::buttonClicked button listener activated");
+
+        // check if the audio file is loaded
+        if (!currentAudioFile.isLocalFile()) {
+            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
+            //ShowMEssageBoxAsync
+            AlertWindow::showMessageBoxAsync(
+                AlertWindow::WarningIcon,
+                "Error",
+                "Audio file is not loaded. Please load an audio file first."
+            );
+            return;
+        }
+
+        // set the button text to "processing {model.card().name}"
+        processButton.setButtonText("processing " + String(model->card().name) + "...");
+        processButton.setEnabled(false);
+
+        // enable the cancel button
+        cancelButton.setEnabled(true);
+        // saveButton.setEnabled(false);
+        saveEnabled = false;
+        isProcessing = true;
+
+        // TODO: get the current audio file and process it
+        // if we don't have one, let the user know
+        // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
+        if (model == nullptr){
+            DBG("unhandled exception: model is null. we should probably open an error window here.");
+            AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
+            isProcessing = false;
+            return;
+        }
+
+        // print how many jobs are currently in the threadpool
+        DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+
+        // empty customJobs
+        customJobs.clear();
+
+        customJobs.push_back(new CustomThreadPoolJob(
+            [this] { // &jobsFinished, totalJobs
+                // Individual job code for each iteration
+                // copy the audio file, with the same filename except for an added _harp to the stem
+                model->process(currentAudioFile.getLocalFile());
+                DBG("Processing finished");
+                // load the audio file again
+                processBroadcaster.sendChangeMessage();
+                
+            }
+        ));
+
+        // Now the customJobs are ready to be added to be run in the threadPool
+        jobProcessorThread.signalTask();
+    }
     
     void openFileChooser()
     {
@@ -1091,6 +1135,7 @@ public:
 
         // place the cancel button to the right of the process button (justified right)
         cancelButton.setBounds(processButton.getBounds().translated(110, 0));
+        processCancelButton.setBounds(cancelButton.getBounds().translated(110, 0));
 
         // place the status label to the left of the process button (justified left)
         statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
@@ -1155,6 +1200,8 @@ private:
     TextButton saveChangesButton {"save changes"};
     TextButton processButton;
     TextButton cancelButton;
+    MultiButton processCancelButton;
+    // MultiButton playStopButton;
     // TextButton saveButton;
     Label statusLabel;
     // A flag that indicates if the audio file can be saved

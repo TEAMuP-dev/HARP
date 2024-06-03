@@ -62,6 +62,9 @@ target_sources(${PROJECT_NAME}
         
         src/Model.h 
         src/WebModel.h
+
+        src/gui/MultiButton.h
+        src/gui/MultiButton.cpp
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
