@@ -163,6 +163,7 @@ public:
     {
         if (auto inputSource = makeInputSource (url))
         {
+            thumbnailCache.clear();
             thumbnail.setSource (inputSource.release());
 
             Range<double> newRange (0.0, thumbnail.getTotalLength());
