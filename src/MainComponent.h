@@ -358,7 +358,8 @@ class MainComponent  : public Component,
                           #endif
                            private ChangeListener,
                            public MenuBarModel,
-                           public ApplicationCommandTarget
+                           public ApplicationCommandTarget,
+                           public Timer
                                      
 {
 public:
@@ -637,10 +638,15 @@ public:
         addAndMakeVisible (thumbnail.get());
         thumbnail->addChangeListener (this);
 
-        addAndMakeVisible (startStopButton);
-        startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
-        startStopButton.setColour (TextButton::textColourOffId, Colours::black);
-        startStopButton.onClick = [this] { startOrStop(); };
+        // addAndMakeVisible (startStopButton);
+        playStopButton.addMode(playButtonInfo);
+        playStopButton.addMode(stopButtonInfo);
+        playStopButton.setMode(playButtonInfo.label);
+        playStopButton.setEnabled(false);
+        addAndMakeVisible (playStopButton);
+        // startStopButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
+        // startStopButton.setColour (TextButton::textColourOffId, Colours::black);
+        // playStopButton.onClick = [this] { startOrStop(); };
 
         // audio setup
         formatManager.registerBasicFormats();
@@ -889,6 +895,7 @@ public:
 
         jobProcessorThread.startThread();
 
+        startTimerHz(10);
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque (true);
@@ -928,6 +935,16 @@ public:
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
         // commandManager.setFirstCommandTarget (nullptr);
+    }
+
+    void timerCallback() override
+    {
+        if (!transportSource.isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
+        {
+            playStopButton.setMode(playButtonInfo.label);
+            stopTimer();
+        }
+        
     }
 
     void cancelCallback()
@@ -1089,7 +1106,7 @@ public:
         zoomSlider.setBounds (zoom);
 
         // followTransportButton.setBounds (controls.removeFromTop (25));
-        startStopButton      .setBounds (controls);
+        playStopButton      .setBounds (controls);
 
         mainArea.removeFromBottom (6);
 
@@ -1130,6 +1147,7 @@ private:
     TextButton loadModelButton;
     TextButton saveChangesButton {"save changes"};
     MultiButton processCancelButton;
+    MultiButton playStopButton;
     MultiButton::Mode processButtonInfo{"Process", 
             [this] { processCallback(); }, 
             getUIColourIfAvailable(
@@ -1140,8 +1158,13 @@ private:
             getUIColourIfAvailable(
                 LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
                 Colours::lightgrey)};
-    // MultiButton playStopButton;
-    // TextButton saveButton;
+    MultiButton::Mode playButtonInfo{"Play", 
+            [this] { play(); }, 
+            Colours::limegreen};
+    MultiButton::Mode stopButtonInfo{"Stop", 
+            [this] { stop(); },
+            Colours::orangered};
+
     Label statusLabel;
     // A flag that indicates if the audio file can be saved
     bool saveEnabled = true;
@@ -1186,7 +1209,7 @@ private:
     Label zoomLabel                     { {}, "zoom:" };
     Slider zoomSlider                   { Slider::LinearHorizontal, Slider::NoTextBox };
     // ToggleButton followTransportButton  { "Follow Transport" };
-    TextButton startStopButton          { "Play/Stop" };
+    // TextButton startStopButton          { "Play/Stop" };
 
 
     /// CustomThreadPoolJob
@@ -1238,6 +1261,7 @@ private:
         }
         DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
 
+        playStopButton.setEnabled(true);
         showAudioResource(currentAudioFile);
     }
 
@@ -1274,16 +1298,20 @@ private:
         return true;
     }
 
-    void startOrStop()
-    {
-        if (transportSource.isPlaying())
-        {
-            transportSource.stop();
-        }
-        else
-        {
+    void play() {
+        if (!transportSource.isPlaying()) {
             transportSource.setPosition (0);
             transportSource.start();
+            playStopButton.setMode(stopButtonInfo.label);
+            startTimerHz(10);
+        }
+    }
+
+    void stop()    {
+        if (transportSource.isPlaying()) {
+            transportSource.stop();
+            playStopButton.setMode(playButtonInfo.label);
+            stopTimer();
         }
     }
 
