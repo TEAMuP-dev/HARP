@@ -191,10 +191,10 @@ public:
         repaint();
     }
 
-    void setFollowsTransport (bool shouldFollow)
-    {
-        isFollowingTransport = shouldFollow;
-    }
+    // void setFollowsTransport (bool shouldFollow)
+    // {
+    //     isFollowingTransport = shouldFollow;
+    // }
 
     void paint (Graphics& g) override
     {
@@ -279,7 +279,7 @@ private:
     AudioThumbnailCache thumbnailCache  { 5 };
     AudioThumbnail thumbnail;
     Range<double> visibleRange;
-    bool isFollowingTransport = false;
+    bool isFollowingTransport = true;
     URL lastFileDropped;
 
     DrawableRectangle currentPositionMarker;
@@ -608,8 +608,8 @@ public:
         zoomLabel.setColour (TextEditor::textColourId, Colours::black);
         zoomLabel.setColour (TextEditor::backgroundColourId, Colour (0x00000000));
 
-        addAndMakeVisible (followTransportButton);
-        followTransportButton.onClick = [this] { updateFollowTransportState(); };
+        // addAndMakeVisible (followTransportButton);
+        // followTransportButton.onClick = [this] { updateFollowTransportState(); };
 
        #if (JUCE_ANDROID || JUCE_IOS)
         addAndMakeVisible (chooseFileButton);
@@ -1105,7 +1105,7 @@ public:
         zoomLabel .setBounds (zoom.removeFromLeft (50));
         zoomSlider.setBounds (zoom);
 
-        followTransportButton.setBounds (controls.removeFromTop (25));
+        // followTransportButton.setBounds (controls.removeFromTop (25));
         startStopButton      .setBounds (controls);
 
         mainArea.removeFromBottom (6);
@@ -1192,7 +1192,7 @@ private:
     std::unique_ptr<DemoThumbnailComp> thumbnail;
     Label zoomLabel                     { {}, "zoom:" };
     Slider zoomSlider                   { Slider::LinearHorizontal, Slider::NoTextBox };
-    ToggleButton followTransportButton  { "Follow Transport" };
+    // ToggleButton followTransportButton  { "Follow Transport" };
     TextButton startStopButton          { "Play/Stop" };
 
 
@@ -1294,10 +1294,10 @@ private:
         }
     }
 
-    void updateFollowTransportState()
-    {
-        thumbnail->setFollowsTransport (followTransportButton.getToggleState());
-    }
+    // void updateFollowTransportState()
+    // {
+    //     thumbnail->setFollowsTransport (followTransportButton.getToggleState());
+    // }
 
    #if (JUCE_ANDROID || JUCE_IOS)
     void buttonClicked (Button* btn) override
