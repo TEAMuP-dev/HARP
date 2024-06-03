@@ -694,64 +694,14 @@ public:
         menuItemsChanged();
 
         // The Process/Cancel button        
-        MultiButton::Mode processMode{"Process", 
-                [this] { processCallback(); }, 
-                getUIColourIfAvailable(
-                    LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                    Colours::lightgrey)};
-        MultiButton::Mode cancelMode{"Cancel", 
-                [this] { cancelCallback(); },
-                getUIColourIfAvailable(
-                    LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                    Colours::lightgrey)};
-        processCancelButton.addMode(processMode);
-        processCancelButton.addMode(cancelMode);
-        processCancelButton.setMode(processMode.label);
+        processCancelButton.addMode(processButtonInfo);
+        processCancelButton.addMode(cancelButtonInfo);
+        processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(false);
         addAndMakeVisible(processCancelButton);
 
-        // // Define another set of modes
-        // DualFunctionButton::Mode playMode{"Play", [this] { playAudio(); }};
-        // DualFunctionButton::Mode stopMode{"Stop", [this] { stopAudio(); }};
-
-        // // Create a button for process/cancel
-        // DualFunctionButton processCancelButton(processMode, cancelMode);
-
-        // // Optionally, create another button for play/stop
-        // DualFunctionButton playStopButton(playMode, stopMode);
-
-        // // Add to component and make visible
-        // addAndMakeVisible(&processCancelButton);
-        // addAndMakeVisible(&playStopButton);
-        // initialize load and process buttons
-        processButton.setButtonText("process");
-        model->ready() ? processButton.setEnabled(true)
-                        : processButton.setEnabled(false);
-        addAndMakeVisible(processButton);
-        processButton.onClick = [this] { // Process callback
-            processCallback();
-        };
-
         processBroadcaster.addChangeListener(this);
-
-        // saveButton.setButtonText("commit to file (destructive)");
-        // addAndMakeVisible(saveButton);
-        // saveButton.onClick = [this] { // Save callback
-        //     saveCallback();
-        // };
-        // saveButton.setEnabled(false);
         saveEnabled = false;
-
-
-        cancelButton.setButtonText("cancel");
-        cancelButton.setEnabled(false);
-        addAndMakeVisible(cancelButton);
-        cancelButton.onClick = [this] { // Cancel callback
-            // DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-            // model->cancel();
-            cancelCallback();
-        };
-
 
         loadModelButton.setButtonText("load");
         addAndMakeVisible(loadModelButton);
@@ -813,18 +763,9 @@ public:
             loadModelButton.setEnabled(false);
             loadModelButton.setButtonText("loading...");
 
-            // TODO: enable the cancel button
-            // cancelButton.setEnabled(true);
-            // if the cancel button is pressed, forget the job and reset the model and UI
-            // cancelButton.onClick = [this] {
-            //     DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-            //     threadPool.removeAllJobs(true, 1000);
-            //     model->cancel();
-            //     resetUI();
-            // };
 
             // disable the process button until the model is loaded
-            processButton.setEnabled(false);
+            processCancelButton.setEnabled(false);
 
             // set the descriptionLabel to "loading {url}..."
             // TODO: we need to get rid of the params map, and just pass the url around instead
@@ -860,11 +801,11 @@ public:
 
         std::string currentStatus = model->getStatus();
         if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
-            processButton.setEnabled(true);
-            processButton.setButtonText("process");
+            processCancelButton.setEnabled(true);
+            processCancelButton.setMode(processButtonInfo.label);
         } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
-            cancelButton.setEnabled(true);
-            processButton.setButtonText("processing " + String(model->card().name) + "...");
+            processCancelButton.setEnabled(true);
+            processCancelButton.setMode(cancelButtonInfo.label);
         }
         
 
@@ -993,6 +934,7 @@ public:
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
         model->cancel();
+        processCancelButton.setEnabled(false);
     }
     
     void processCallback()
@@ -1011,13 +953,10 @@ public:
             return;
         }
 
-        // set the button text to "processing {model.card().name}"
-        processButton.setButtonText("processing " + String(model->card().name) + "...");
-        processButton.setEnabled(false);
 
-        // enable the cancel button
-        cancelButton.setEnabled(true);
-        // saveButton.setEnabled(false);
+        processCancelButton.setEnabled(true);
+        processCancelButton.setMode(cancelButtonInfo.label);
+
         saveEnabled = false;
         isProcessing = true;
 
@@ -1131,17 +1070,9 @@ public:
         auto row6 = mainArea.removeFromTop(row6Height);
 
         // Assign bounds to processButton
-        processButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
-
-        // place the cancel button to the right of the process button (justified right)
-        cancelButton.setBounds(processButton.getBounds().translated(110, 0));
-        processCancelButton.setBounds(cancelButton.getBounds().translated(110, 0));
-
+        processCancelButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
         // place the status label to the left of the process button (justified left)
-        statusLabel.setBounds(processButton.getBounds().translated(-200, 0));
-
-        // place the save button to the right of the cancel button
-        // saveButton.setBounds(cancelButton.getBounds().translated(110, 0));
+        statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
 
         auto controls = mainArea.removeFromBottom (90);
 
@@ -1198,9 +1129,17 @@ private:
     ComboBox modelPathComboBox;
     TextButton loadModelButton;
     TextButton saveChangesButton {"save changes"};
-    TextButton processButton;
-    TextButton cancelButton;
     MultiButton processCancelButton;
+    MultiButton::Mode processButtonInfo{"Process", 
+            [this] { processCallback(); }, 
+            getUIColourIfAvailable(
+                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
+                Colours::lightgrey)};
+    MultiButton::Mode cancelButtonInfo{"Cancel", 
+            [this] { cancelCallback(); },
+            getUIColourIfAvailable(
+                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
+                Colours::lightgrey)};
     // MultiButton playStopButton;
     // TextButton saveButton;
     Label statusLabel;
@@ -1415,25 +1354,24 @@ private:
 
             // now, we can enable the buttons
             if (model->ready()) {
-                processButton.setEnabled(true);
+                processCancelButton.setEnabled(true);
+                processCancelButton.setMode(processButtonInfo.label);
             }
-            
+
             loadModelButton.setEnabled(true);
             loadModelButton.setButtonText("load");
 
             // Set the focus to the process button
             // so that the user can press SPACE to trigger the playback
-            processButton.grabKeyboardFocus();
+            processCancelButton.grabKeyboardFocus();
         }
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
             showAudioResource(currentAudioFile);
 
             // now, we can enable the process button
-            processButton.setButtonText("process");
-            processButton.setEnabled(true);
-            cancelButton.setEnabled(false);
-            // saveButton.setEnabled(true); 
+            processCancelButton.setMode(processButtonInfo.label);
+            processCancelButton.setEnabled(true);
             saveEnabled = true;
             isProcessing = false;
             repaint();
