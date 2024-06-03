@@ -254,22 +254,29 @@ public:
         transportSource.start();
     }
 
+    
     void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& wheel) override
     {
+        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
         if (thumbnail.getTotalLength() > 0.0)
         {
-            auto newStart = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
-            newStart = jlimit (0.0, jmax (0.0, thumbnail.getTotalLength() - (visibleRange.getLength())), newStart);
+            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
+                auto newStart = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
+                newStart = jlimit(0.0, jmax(0.0, thumbnail.getTotalLength() - visibleRange.getLength()), newStart);
 
-            if (canMoveTransport())
-                setRange ({ newStart, newStart + visibleRange.getLength() });
-
-            if (wheel.deltaY != 0.0f)
-                zoomSlider.setValue (zoomSlider.getValue() - wheel.deltaY);
-
+                if (canMoveTransport())
+                    setRange({ newStart, newStart + visibleRange.getLength() });
+            } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
+                if (wheel.deltaY != 0) {
+                    zoomSlider.setValue(zoomSlider.getValue() - wheel.deltaY);
+                }
+            } else {
+                // Do nothing
+            }
             repaint();
         }
     }
+
 
 private:
     AudioTransportSource& transportSource;
