@@ -255,6 +255,7 @@ public:
     void mouseUp (const MouseEvent&) override
     {
         transportSource.start();
+        sendChangeMessage();
     }
 
     
@@ -1449,8 +1450,14 @@ private:
 
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
-        if (source == thumbnail.get())
-            addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+        if (source == thumbnail.get()) {
+            if (transportSource.isPlaying()) {
+                playStopButton.setMode(stopButtonInfo.label);
+            }
+            else {
+                addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+            }
+        }
         else if (source == &loadBroadcaster) {
             DBG("Setting up model card, CtrlComponent, resizing.");
             setModelCard(model->card());
