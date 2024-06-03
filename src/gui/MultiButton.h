@@ -17,7 +17,7 @@ public:
     MultiButton();
 
     void setMode(const juce::String& modeName);
-    // void setModeProperty(const juce::String& modeName, const Mode& mode);
+    juce::String  getModeName();
     void addMode(const Mode& mode);
     // void toggleMode(const juce::String& newMode);
 

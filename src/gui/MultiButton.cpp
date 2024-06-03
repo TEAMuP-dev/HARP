@@ -29,8 +29,6 @@ void MultiButton::setMode(const juce::String& modeName) {
     }
 }
 
-// void MultiButton::setModeProperty(const juce::String& modeName, const Mode& mode) {
-//     if (modes.find(modeName) != modes.end()) {
-//         modes[modeName] = mode;
-//     }
-// }
+juce::String MultiButton::getModeName() {
+    return currentMode;
+}
