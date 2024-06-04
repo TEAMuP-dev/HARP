@@ -24,7 +24,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
 * **[Contributing](#contributing)**
     * **[Version Compatibility](#version-compatibility)**
     * **[Adding Models with PyHARP](#adding-models-with-pyharp)**
-    * **[Building](#building)**
+    * **[Building Harp](#building-harp)**
     * **[Debugging](#debugging)**
     * **[Distribution](#distribution)**
 * **[Citing](#citing)**
@@ -169,7 +169,7 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
 
 
 # Contributing
-To make a model that you can use in HARP, see [Adding Models with PyHARP](#adding-models-with-pyharp). To modify the HARP app, see [Building](#building). 
+To make a model that you can use in HARP, see [Adding Models with PyHARP](#adding-models-with-pyharp). To modify the HARP app, see [Building Harp](#building-harp). 
 
 ## Version Compatibility
 The current versions of HARP and PyHARP are shown below. They are fully compatible.
