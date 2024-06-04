@@ -55,9 +55,9 @@ HARP has been tested on the following operating systems:
 * Extract the contents of the ZIP file and move the directory containing `HARP` to a location of your choice, _e.g._ `/usr/local/bin/`.
 
 
-
 # Setup
 ## Standalone
+To work as a standalone application, you just need to open HARP and start using it.    
 ### Opening HARP
 #### MacOS
 Run `HARP.app` to start the application.
@@ -69,6 +69,7 @@ Run `HARP.exe` to start the application.
 Run `HARP` to start the application.
 
 ## [REAPER](https://www.reaper.fm)
+To use HARP from directly within Reaper, do the following.
 ### Setting Up HARP
 * Choose _REAPER > Preferences_ on the file menu.
 
@@ -88,6 +89,8 @@ Run `HARP` to start the application.
 ![external_editor](https://github.com/TEAMuP-dev/HARP/assets/33099118/6914fa60-06a0-42b2-98f1-1d8b7124de21)
 
 ## [Logic Pro X](https://www.apple.com/logic-pro/)
+To use HARP from directly within Reaper, do the following.
+
 ### Setting Up HARP
 * Set `HARP.app` as an external sample editor following [this guide](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac).
 
