@@ -56,14 +56,14 @@ jobs:
           #   os: ubuntu-22.04
           #   pluginval-binary: ./pluginval
           #   ccache: ccache
-          - name: macOS
-            os: macos-13
-            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            ccache: ccache
           # - name: Windows
           #   os: windows-latest
           #   pluginval-binary: ./pluginval.exe
           #   ccache: sccache
+          - name: macOS
+            os: macos-14
+            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
+            ccache: ccache
 
     steps:
 
