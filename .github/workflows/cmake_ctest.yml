@@ -177,7 +177,7 @@ jobs:
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
     - name: Install Python dependencies for MACOS dmg
       if: ${{ matrix.name == 'macOS' }}
-      run: python3 -m pip install --upgrade packaging pip setuptools
+      run: python3 -m pip install --upgrade packaging pip setuptools --break-system-packages --user
     
     - name: Create DMG, Notarize and Staple (macOS)
       if: ${{ matrix.name == 'macOS' }}
