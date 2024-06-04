@@ -41,12 +41,14 @@ HARP has been tested on the following operating systems:
 * Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
 * Unzip and double click on the DMG file. This will open the window shown below.
-
-![DMG](website/content/images/macos-install.png)
+<p align="center">
+   <img width="528" alt="HARP_DMG" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/3f0278b2-8ace-41a1-8383-9c4aed894d56">
+</p>
 
 * Drag `HARP.app` to the `Applications/` folder to install HARP.
 
 * Do NOT run  harp from the installation window above. It will not run correctly if you do so.
+
 ## Windows
 * Download the Windows ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
@@ -56,6 +58,7 @@ HARP has been tested on the following operating systems:
 * Download the Linux ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
 * Extract the contents of the ZIP file and move the directory containing `HARP` to a location of your choice, _e.g._ `/usr/local/bin/`.
+
 
 
 # Setup
@@ -81,15 +84,17 @@ To set up HARP for use from within Reaper, do the following.
 * Click _Browse_ to the right of the _Primary Editor_ field.
 
 * Navigate to your HARP installation (*e.g.* `HARP.app`) and select "OK".
-
-![setup](https://github.com/TEAMuP-dev/HARP/assets/33099118/cb233173-4aa4-45d8-9321-06d4f58daaa4)
+<p align="center">
+   <img width="1023" alt="REAPER_Setup" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/b828a2fd-5378-490c-be37-11f7404eb127">
+</p>
 
 ### Opening HARP
 * (Optional) Right click the audio for the track you want to process and select _Render items as new take_.
 
 * Right click the audio and select _Open items in editor > Open items in 'HARP.app'_.
-
-![external_editor](https://github.com/TEAMuP-dev/HARP/assets/33099118/6914fa60-06a0-42b2-98f1-1d8b7124de21)
+<p align="center">
+   <img width="1531" alt="REAPER_Opening" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/7f26857f-61de-4765-9671-fb69c4264dc4">
+</p>
 
 ## [Logic Pro X](https://www.apple.com/logic-pro/)
 To set up HARP for use from within Logic Pro, do the following.
