@@ -138,7 +138,9 @@ While any algorithm or model can be deployed to HARP using the PyHARP API, at pr
 ## Workflow
 * After opening HARP as an external sample editor or standalone application, the following window will appear.
 
-<img width="799" alt="Screenshot 2024-03-14 at 11 15 07 AM" src="https://github.com/TEAMuP-dev/HARP/assets/55194054/5fe8a28b-a612-4b08-9857-fe3df84afa20">
+<!-- <img width="799" alt="Screenshot 2024-03-14 at 11 15 07 AM" src="https://github.com/TEAMuP-dev/HARP/assets/55194054/5fe8a28b-a612-4b08-9857-fe3df84afa20"> -->
+<!-- <img width="798" alt="Screenshot 2024-06-04 at 3 11 35 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/35f22685-d4f3-451b-9051-321d139ffd59"> -->
+<img width="791" alt="Screenshot 2024-06-04 at 4 29 03 AM (1)" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/fa1d100c-519b-4eff-9296-c2900d05005c">
 
 * Select or type the [Gradio](https://www.gradio.app) endpoint of an available HARP-ready model (_e.g._ "hugggof/harmonic_percussive") in the field at the top of the application.
 
@@ -146,7 +148,9 @@ While any algorithm or model can be deployed to HARP using the PyHARP API, at pr
 
   * Loading can take some time if the [HuggingFace Space](https://huggingface.co/spaces) is asleep.
 
-![harmonic_percussive](https://github.com/TEAMuP-dev/HARP/assets/33099118/20937933-01d1-402e-aab8-3253de0134c0)
+<!-- ![harmonic_percussive](https://github.com/TEAMuP-dev/HARP/assets/33099118/20937933-01d1-402e-aab8-3253de0134c0) -->
+<!-- <img width="797" alt="Screenshot 2024-06-04 at 3 12 31 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/eeb7be3e-f6a4-4d07-a8dc-33f8bf5fcb77"> -->
+<img width="787" alt="Screenshot 2024-06-04 at 4 31 05 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/79dcaaa8-fa55-4ae9-b37b-7924fffd2331">
 
 * Adjust the model controls to your liking and click _process_.
 
