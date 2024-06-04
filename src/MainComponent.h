@@ -127,7 +127,7 @@ inline std::unique_ptr<OutputStream> makeOutputStream (const URL& url)
 
 
 
-class DemoThumbnailComp  : public Component,
+class ThumbnailComp  : public Component,
                            public ChangeListener,
                            public FileDragAndDropTarget,
                            public ChangeBroadcaster,
@@ -135,7 +135,15 @@ class DemoThumbnailComp  : public Component,
                            private Timer
 {
 public:
-    DemoThumbnailComp (AudioFormatManager& formatManager,
+
+    enum ActionType {
+        FileDropped,
+        TransportMoved,
+        TransportStarted
+    };
+    
+
+    ThumbnailComp (AudioFormatManager& formatManager,
                        AudioTransportSource& source,
                        Slider& slider)
         : transportSource (source),
@@ -153,7 +161,7 @@ public:
         addAndMakeVisible (currentPositionMarker);
     }
 
-    ~DemoThumbnailComp() override
+    ~ThumbnailComp() override
     {
         scrollbar.removeListener (this);
         thumbnail.removeChangeListener (this);
@@ -175,6 +183,7 @@ public:
     }
 
     URL getLastDroppedFile() const noexcept { return lastFileDropped; }
+    ActionType getLastActionType() const noexcept { return lastActionType; }
 
     void setZoomFactor (double amount)
     {
@@ -239,6 +248,7 @@ public:
     void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
     {
         lastFileDropped = URL (File (files[0]));
+        lastActionType = FileDropped;
         sendChangeMessage();
     }
 
@@ -251,12 +261,17 @@ public:
     {
         if (canMoveTransport())
             transportSource.setPosition (jmax (0.0, xToTime ((float) e.x)));
+            lastActionType = TransportMoved;
     }
 
     void mouseUp (const MouseEvent&) override
     {
-        transportSource.start();
-        sendChangeMessage();
+        if (lastActionType == TransportMoved) {
+            // transportSource.start();
+            lastActionType = TransportStarted;
+            sendChangeMessage();
+        }
+        
     }
 
     
@@ -293,6 +308,7 @@ private:
     Range<double> visibleRange;
     bool isFollowingTransport = true;
     URL lastFileDropped;
+    ActionType lastActionType;
 
     DrawableRectangle currentPositionMarker;
 
@@ -657,7 +673,7 @@ public:
         zoomSlider.onValueChange = [this] { thumbnail->setZoomFactor (zoomSlider.getValue()); };
         zoomSlider.setSkewFactor (2);
 
-        thumbnail = std::make_unique<DemoThumbnailComp> (formatManager, transportSource, zoomSlider);
+        thumbnail = std::make_unique<ThumbnailComp> (formatManager, transportSource, zoomSlider);
         addAndMakeVisible (thumbnail.get());
         thumbnail->addChangeListener (this);
 
@@ -1046,6 +1062,8 @@ public:
         {
             playStopButton.setMode(playButtonInfo.label);
             stopTimer();
+            transportSource.setPosition (0.0);
+            
         }
         
     }
@@ -1376,7 +1394,7 @@ private:
     AudioTransportSource transportSource;
     std::unique_ptr<AudioFormatReaderSource> currentAudioFileSource;
 
-    std::unique_ptr<DemoThumbnailComp> thumbnail;
+    std::unique_ptr<ThumbnailComp> thumbnail;
     Label zoomLabel                     { {}, "zoom:" };
     Slider zoomSlider                   { Slider::LinearHorizontal, Slider::NoTextBox };
     // ToggleButton followTransportButton  { "Follow Transport" };
@@ -1471,7 +1489,7 @@ private:
 
     void play() {
         if (!transportSource.isPlaying()) {
-            transportSource.setPosition (0);
+            // transportSource.setPosition (0);
             transportSource.start();
             playStopButton.setMode(stopButtonInfo.label);
             startTimerHz(10);
@@ -1481,6 +1499,7 @@ private:
     void stop()    {
         if (transportSource.isPlaying()) {
             transportSource.stop();
+            transportSource.setPosition (0);
             playStopButton.setMode(playButtonInfo.label);
             stopTimer();
         }
@@ -1494,11 +1513,18 @@ private:
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == thumbnail.get()) {
-            if (transportSource.isPlaying()) {
-                playStopButton.setMode(stopButtonInfo.label);
-            }
-            else {
+            // if (transportSource.isPlaying()) {
+            //     playStopButton.setMode(stopButtonInfo.label);
+            // }
+            // else {
+            //     addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+            // }
+            if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::FileDropped) {
+                stop();
                 addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+            } else if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::TransportStarted) {
+                play();
+
             }
         }
         else if (source == &loadBroadcaster) {
