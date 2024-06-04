@@ -813,14 +813,16 @@ public:
                     //Thread::sleep(10000);
                     //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
                 } catch (const std::runtime_error& e) {
+                    DBG("Caught exception: " << e.what());
                     
                     auto msgOpts = MessageBoxOptions().withTitle("Loading Error")
                         .withIconType(AlertWindow::WarningIcon)
                         .withTitle("Error")
-                        .withMessage("An error occurred while loading the WebModel: \n" + String(e.what()))
-                        .withButton("Open Space URL")
-                        .withButton("Open HARP Logs")
-                        .withButton("Ok");
+                        .withMessage("An error occurred while loading the WebModel: \n" + String(e.what()));
+                    if (!String(e.what()).contains("404")) {
+                        msgOpts = msgOpts.withButton("Open Space URL");
+                    }
+                        msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
                     auto alertCallback = [this, msgOpts](int result) {
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
@@ -830,11 +832,13 @@ public:
                         // this is the order that I actually observed them to be. 
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-                        std::map<int, std::string> observedButtonIndicesMap = {
-                            {1, "Open Space URL"},// should actually be 0 right? 
-                            {2, "Open HARP Logs"},// should actually be 1
-                            {0, "Ok"}// should be 2
-                        };
+                        std::map<int, std::string> observedButtonIndicesMap = {};
+                        if (msgOpts.getNumButtons() == 3) {
+                            observedButtonIndicesMap.insert({1, "Open Space URL"});// should actually be 0 right? 
+                        }
+                        observedButtonIndicesMap.insert({msgOpts.getNumButtons() - 1, "Open HARP Logs"});// should actually be 1
+                        observedButtonIndicesMap.insert({0, "Ok"});// should be 2
+ 
                         auto chosen = observedButtonIndicesMap[result];
 
                         // auto chosen = msgOpts.getButtonText();
@@ -844,6 +848,9 @@ public:
                             URL spaceUrl = resolveSpaceUrl(modelPathComboBox.getText().toStdString());
                             bool success = spaceUrl.launchInDefaultBrowser();
                         }
+                        MessageManager::callAsync([this] {
+                            resetModelPathComboBox();
+                        });
                     };
                     
                     
@@ -853,9 +860,6 @@ public:
                     loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
                     saveEnabled = false;
-                    MessageManager::callAsync([this] {
-                        resetModelPathComboBox();
-                    });
                     
                 }
             });
