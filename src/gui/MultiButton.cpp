@@ -29,6 +29,18 @@ void MultiButton::setMode(const juce::String& modeName) {
     }
 }
 
+void MultiButton::mouseEnter(const juce::MouseEvent& event) {
+    if (onMouseEnter) {
+        onMouseEnter();
+    }
+}
+
+void MultiButton::mouseExit(const juce::MouseEvent& event) {
+    if (onMouseExit) {
+        onMouseExit();
+    }
+}
+
 juce::String MultiButton::getModeName() {
     return currentMode;
 }
