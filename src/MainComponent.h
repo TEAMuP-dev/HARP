@@ -609,6 +609,29 @@ public:
             });
     }
 
+    void resetModelPathComboBox()
+    {
+        resetUI();
+        //should I clear this?
+        spaceUrlButton.setButtonText("");
+        int numItems = modelPathComboBox.getNumItems();
+        std::vector<std::string> options;
+
+        for (int i = 1; i <= numItems; ++i) // item indexes are 1-based in JUCE
+        {
+            String itemText = modelPathComboBox.getItemText(i - 1);
+            options.push_back(itemText.toStdString());
+            DBG("Item " << i << ": " << itemText);
+        }
+
+        modelPathComboBox.clear();
+
+        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
+        for(int i = 0; i < options.size(); ++i) {
+            modelPathComboBox.addItem(options[i], i + 1);
+        }
+    }
+
     // void loadAudioFile(const URL& audioURL) {
     //     addNewAudioFile(audioURL);
     // }
@@ -731,8 +754,18 @@ public:
             DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
 
             // collect input parameters for the model.
+            
+            
+            //ryan
+            std::string path_url;
+            if (modelPathComboBox.getSelectedItemIndex() == 0) {
+                path_url = customPath;
+            }else{
+                path_url = modelPathComboBox.getText().toStdString();
+            }
+
             std::map<std::string, std::any> params = {
-            {"url", modelPathComboBox.getText().toStdString()},
+            {"url", path_url},
             };
             resetUI();
             // loading happens asynchronously.
@@ -754,6 +787,9 @@ public:
                             "Loading Error",
                             "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
                         );
+                        MessageManager::callAsync([this] {
+                            resetModelPathComboBox();
+                        });
                         model.reset(new WebWave2Wave());
                         loadBroadcaster.sendChangeMessage();
                         // saveButton.setEnabled(false);
@@ -762,27 +798,71 @@ public:
 
                     model->load(params);
                     success = true;
-                    DBG("LOADING-JOB: executeLoad done!!");
+                    MessageManager::callAsync([this] {
+                        if (modelPathComboBox.getSelectedItemIndex() == 0) {
+                            int new_id = modelPathComboBox.getNumItems() + 1;
+                            modelPathComboBox.addItem(customPath, new_id);
+                            modelPathComboBox.setSelectedId(new_id);
+                        }
+                    });
+                    DBG("executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
                     // since we're on a helper thread, 
                     // it's ok to sleep for 10s 
                     // to let the timeout callback do its thing
-                    Thread::sleep(10000);
+                    //Thread::sleep(10000);
+                    //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
                 } catch (const std::runtime_error& e) {
-                    AlertWindow::showMessageBoxAsync(
-                        AlertWindow::WarningIcon,
-                        "Loading Error",
-                        String("An error occurred while loading the WebModel: \n") + e.what()
-                    );
+                    
+                    auto msgOpts = MessageBoxOptions().withTitle("Loading Error")
+                        .withIconType(AlertWindow::WarningIcon)
+                        .withTitle("Error")
+                        .withMessage("An error occurred while loading the WebModel: \n" + String(e.what()))
+                        .withButton("Open Space URL")
+                        .withButton("Open HARP Logs")
+                        .withButton("Ok");
+                    auto alertCallback = [this, msgOpts](int result) {
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
+                        // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
+                        // auto chosen = msgOpts.getButtonText(result);
+                        // they're not the same as the order of the buttons in the alert
+                        // this is the order that I actually observed them to be. 
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+                        std::map<int, std::string> observedButtonIndicesMap = {
+                            {1, "Open Space URL"},// should actually be 0 right? 
+                            {2, "Open HARP Logs"},// should actually be 1
+                            {0, "Ok"}// should be 2
+                        };
+                        auto chosen = observedButtonIndicesMap[result];
+
+                        // auto chosen = msgOpts.getButtonText();
+                        if (chosen == "Open HARP Logs") {
+                            model->getLogFile().revealToUser();
+                        } else if (chosen == "Open Space URL") {
+                            URL spaceUrl = resolveSpaceUrl(modelPathComboBox.getText().toStdString());
+                            bool success = spaceUrl.launchInDefaultBrowser();
+                        }
+                    };
+                    
+                    
+                    AlertWindow::showAsync(msgOpts,alertCallback);
+
                     model.reset(new WebWave2Wave());
                     loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
                     saveEnabled = false;
+                    MessageManager::callAsync([this] {
+                        resetModelPathComboBox();
+                    });
+                    
                 }
             });
 
             // disable the load button until the model is loaded
             loadModelButton.setEnabled(false);
+            modelPathComboBox.setEnabled(false);
             loadModelButton.setButtonText("loading...");
 
 
@@ -803,14 +883,7 @@ public:
             // we might have to append a "https://huggingface.co/spaces" to the url
             // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
             // and (has only one slash in it)
-            String spaceUrl = url;
-            if (spaceUrl.contains("localhost") || spaceUrl.contains("huggingface.co") || spaceUrl.contains("http")) {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is already a valid url");
-            }
-            else {
-                DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
-                spaceUrl = "https://huggingface.co/spaces/" + spaceUrl;
-            }
+            String spaceUrl = resolveSpaceUrl(url);
             spaceUrlButton.setButtonText("open " + url + " in browser");
             spaceUrlButton.setURL(URL(spaceUrl));
             // set the font size 
@@ -869,23 +942,21 @@ public:
                                                         AlertWindow::NoIcon);
 
                 customPathWindow->addTextEditor("customPath", "", "Path:");
-                customPathWindow->addButton("OK", 1, KeyPress(KeyPress::returnKey));
+                customPathWindow->addButton("Load", 1, KeyPress(KeyPress::returnKey));
                 customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
                 
                 // Show the window and handle the result asynchronously
                 customPathWindow->enterModalState(true, new CustomPathAlertCallback([this, customPathWindow](int result) {
                     if (result == 1) { // OK was clicked
                         // Retrieve the entered path
-                        String customPath = customPathWindow->getTextEditor("customPath")->getText();
+                        customPath = customPathWindow->getTextEditor("customPath")->getText().toStdString();
                         // Use the custom path as needed
                         DBG("Custom path entered: " + customPath);
-                        int new_id = modelPathComboBox.getNumItems()+1;
-                        modelPathComboBox.addItem(customPath, new_id);
-                        modelPathComboBox.setSelectedId(new_id);
+                        loadModelButton.triggerClick();
 
                     } else { // Cancel was clicked or the window was closed
                         DBG("Custom path entry was canceled.");
-                        modelPathComboBox.setSelectedId(0);
+                        resetModelPathComboBox();
                     }
                     delete customPathWindow;
                 }), true);
@@ -1204,6 +1275,7 @@ private:
     bool saveEnabled = true;
     bool isProcessing = false;
 
+    std::string customPath;
     CtrlComponent ctrlComponent;
 
     // model card
@@ -1370,6 +1442,7 @@ private:
             }
 
             loadModelButton.setEnabled(true);
+            modelPathComboBox.setEnabled(true);
             loadModelButton.setButtonText("load");
 
             // Set the focus to the process button
