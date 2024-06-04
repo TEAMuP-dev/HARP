@@ -740,11 +740,14 @@ public:
             DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
 
             // collect input parameters for the model.
-            
-            
-            //ryan
+                        
+            const std::string hf_url = "https://huggingface.co/spaces/";
+
             std::string path_url;
             if (modelPathComboBox.getSelectedItemIndex() == 0) {
+                if (customPath.find(hf_url) != std::string::npos) {
+                    customPath.replace(customPath.find(hf_url), hf_url.length(), "");
+                }
                 path_url = customPath;
             }else{
                 path_url = modelPathComboBox.getText().toStdString();
@@ -786,9 +789,20 @@ public:
                     success = true;
                     MessageManager::callAsync([this] {
                         if (modelPathComboBox.getSelectedItemIndex() == 0) {
-                            int new_id = modelPathComboBox.getNumItems() + 1;
-                            modelPathComboBox.addItem(customPath, new_id);
-                            modelPathComboBox.setSelectedId(new_id);
+                            bool alreadyInComboBox = false;
+
+                            for (int i = 1; i <= modelPathComboBox.getNumItems(); ++i) {
+                                if (modelPathComboBox.getItemText(i) == (String) customPath) {
+                                    alreadyInComboBox = true;
+                                    modelPathComboBox.setSelectedId(i + 1);
+                                }
+                            }
+
+                            if (!alreadyInComboBox) {
+                                int new_id = modelPathComboBox.getNumItems() + 1;
+                                modelPathComboBox.addItem(customPath, new_id);
+                                modelPathComboBox.setSelectedId(new_id);
+                            }
                         }
                     });
                     DBG("executeLoad done!!");
