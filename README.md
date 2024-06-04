@@ -19,13 +19,15 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     <!--* **[Ableton Live](#ableton-live)**-->
 * **[Usage](#usage)**
     * **[Warning!](#warning)**
-    * **[Models (PyHARP)](#models)**
+    * **[Models](#models)**
     * **[Workflow](#workflow)**
 * **[Contributing](#contributing)**
+    * **[Version Compatibility](#version-compatibility)**
+    * **[Adding Models with PyHARP](#adding-models-with-pyharp)**
     * **[Building](#building)**
     * **[Debugging](#debugging)**
     * **[Distribution](#distribution)**
-    * **[Citing](#citing)**
+* **[Citing](#citing)**
 
 
 
@@ -33,17 +35,18 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
 HARP has been tested on the following operating systems:
 | OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
 | :-: | :-: | :-: | :-: | :-: |
-| Version(s) | 13.0, 13.4 | 10.15 | 10 | 22.04 |
+| Version(s) | 13.0, 13.4, 14.2.1 | 10.15 | 10 | 22.04 |
 
 ## MacOS
 * Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
 * Unzip and double click on the DMG file. This will open the window shown below.
 
-![DMG](https://github.com/TEAMuP-dev/HARP/assets/33099118/9ac4b75f-b4a1-4a3d-93fb-6b47c6821dd4)
+![DMG](website/content/images/macos-install.png)
 
 * Drag `HARP.app` to the `Applications/` folder to install HARP.
 
+* Do NOT run  harp from the installation window above. It will not run correctly if you do so.
 ## Windows
 * Download the Windows ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
@@ -69,7 +72,7 @@ Run `HARP.exe` to start the application.
 Run `HARP` to start the application.
 
 ## [REAPER](https://www.reaper.fm)
-To use HARP from directly within Reaper, do the following.
+To set up HARP for use from within Reaper, do the following.
 ### Setting Up HARP
 * Choose _REAPER > Preferences_ on the file menu.
 
@@ -89,7 +92,7 @@ To use HARP from directly within Reaper, do the following.
 ![external_editor](https://github.com/TEAMuP-dev/HARP/assets/33099118/6914fa60-06a0-42b2-98f1-1d8b7124de21)
 
 ## [Logic Pro X](https://www.apple.com/logic-pro/)
-To use HARP from directly within Reaper, do the following.
+To set up HARP for use from within Logic Pro, do the following.
 
 ### Setting Up HARP
 * Set `HARP.app` as an external sample editor following [this guide](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac).
@@ -109,22 +112,22 @@ TODO
 
 
 # Usage
+HARP can be used to apply deep learning models to your audio either as a stand-alone or within any DAW (e.g. Logic Pro) that supports external sample editors.
+
+If you use it stand-alone, just load a file, load a model and apply the model to the audio file. When you're happy with the result, save the output.
+
+In a DAW, you select the exceprt you want to process, open it in HARP, process it, and select _Save_ from the  _File_ menu in HARP. This will return the processed file back to the DAW.
+
 ## Warning!
 **HARP is a *destructive* file editor.**
-After recording or loading audio into a track within your preferred DAW, it is recommended that you *bounce-in-place* the audio before processing it with HARP. In this way, you will avoid overwriting the original audio file and will be able to undo any changes introuced by HARP. If you would only like to process an excerpt of the track, perform a *bounce-in-place* and trim the audio before opening it in HARP. Alternatively, overwriting can be circumvented by using the _Save As_ functionality from the _File_ menu.
+When you select _Save_, HARP overwrites the existing audio. After recording or loading audio into a track within your preferred DAW, it is recommended that you *bounce-in-place* the audio before processing it with HARP. In this way, you will avoid overwriting the original audio file and will be able to undo any changes introuced by HARP. Alternatively, overwriting can be circumvented by using the _Save As_ functionality from the _File_ menu in HARP.
+
+### Processing just a portion of a track
+If you would like to process only an excerpt of a track, first trim the exceprt to the portion you want to process. Then, perform a *bounce-in-place* of the excerpt. This will make a new file that contains only the audio you want to process with HARP. Then, open the new file in HARP. 
 
 ## Models
-### PyHARP API
-[![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
 
-| HARP | PyHARP |
-| :-: | :-: |
-| 1.1.0 | 0.1.0 |
-
-We provide PyHARP, a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
-
-### Available Models
-While any algorithm or model can be deployed to HARP using the PyHARP API, at present, the following have been made available:
+While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
 
 * Pitch Shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
 
@@ -166,7 +169,22 @@ While any algorithm or model can be deployed to HARP using the PyHARP API, at pr
 
 
 # Contributing
-## Building
+To make a model that you can use in HARP, see [Adding Models with PyHARP](#adding-models-with-pyharp). To modify the HARP app, see [Building](#building). 
+
+## Version Compatibility
+The current versions of HARP and PyHARP are shown below. They are fully compatible.
+
+| HARP | PyHARP |
+| :-: | :-: |
+| 1.2.0 | 0.1.0 |
+
+## Adding Models with PyHARP
+[![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
+
+We provide PyHARP, a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
+
+
+## Building HARP
 HARP can be built from scratch with the following steps:
 ### 1. Clone Repository
 ```bash
@@ -203,6 +221,7 @@ cmake --build . --config Debug -j <NUM_PROCESSORS>
 ```
 
 ## Debugging
+To debug your HARP build in [Visual Studio Code](https://code.visualstudio.com/) it is helpful to do the following. 
 ### Visual Studio Code
 1. Download [Visual Studio Code](https://code.visualstudio.com/).
 2. Install the C/C++ extension from Microsoft.
