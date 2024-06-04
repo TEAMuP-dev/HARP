@@ -1093,12 +1093,60 @@ public:
         jobProcessorThread.signalTask();
     }
     
+
+    String getAllAudioFileExtensions(AudioFormatManager& formatManager)
+    {
+        StringArray extensions;
+        for (int i = 0; i < formatManager.getNumKnownFormats(); ++i)
+        {
+            auto* format = formatManager.getKnownFormat(i);
+            auto formatExtensions = format->getFileExtensions();
+            for (auto& ext : formatExtensions)
+            {
+                extensions.addTokens("*" + ext.trim(), ";", "\"");
+            }
+            // extensions.addTokens(format->getFileExtensions(), ";", "\"" );
+        }
+        extensions.removeDuplicates(false);
+        return extensions.joinIntoString(";");
+    }
+
+    std::string getAllAudioFileExtensions2(AudioFormatManager& formatManager)
+    {
+        std::set<std::string> uniqueExtensions;
+
+        for (int i = 0; i < formatManager.getNumKnownFormats(); ++i)
+        {
+            auto* format = formatManager.getKnownFormat(i);
+            juce::String extensionsString = format->getFileExtensions()[0];
+            StringArray extensions = StringArray::fromTokens(extensionsString, ";", "");
+            // StringArray extensions = StringArray::fromTokens(format->getFileExtensions(), ";", "");
+
+            for (auto& ext : extensions)
+            {
+                uniqueExtensions.insert(ext.toStdString());
+            }
+        }
+
+        // Join all extensions into a single string with semicolons
+        std::string allExtensions;
+        for (auto it = uniqueExtensions.begin(); it != uniqueExtensions.end(); ++it)
+        {
+            if (it != uniqueExtensions.begin()) {
+                allExtensions += ";";
+            }
+            allExtensions += *it;
+        }
+
+        return allExtensions;
+    }
     void openFileChooser()
     {
+        auto extensions = getAllAudioFileExtensions(formatManager);
         fileChooser = std::make_unique<FileChooser>(
             "Select an audio file...", 
             File(), 
-            "*.wav;*.aiff;*.mp3;*.flac");
+            extensions);
         fileChooser->launchAsync(
             FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
             [this](const FileChooser& chooser)
