@@ -1,3 +1,5 @@
 ### Added
-- MenuBar with "Save", "Save As", "Open File" actions and keyboard shortcuts
-- "About HARP" section 
+- Better error logging/feedback for users
+- Status & Instructions areas on MouseHover events
+- MenuBar actions
+- Tons of bug fixes
