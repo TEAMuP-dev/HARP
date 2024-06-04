@@ -1,10 +1,10 @@
 #include "StatusComponent.h"
 
-StatusComponent::StatusComponent()
+StatusComponent::StatusComponent(float fontSize, juce::Justification justification)
 {
+    statusLabel.setJustificationType(justification);
+    statusLabel.setFont(juce::Font(fontSize));
     addAndMakeVisible(statusLabel);
-    statusLabel.setJustificationType(juce::Justification::centred);
-    statusLabel.setFont(juce::Font(15.0f));
 }
 
 void StatusComponent::paint(juce::Graphics& g)
