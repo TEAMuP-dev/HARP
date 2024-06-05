@@ -919,11 +919,18 @@ public:
        // model path textbox
        std::vector<std::string> modelPaths = {
         "custom path...",
+        "descript/vampnet",
+        "cwitkowitz/timbre-trap",
+        "hugggof/vampnet-percussion",
+        "hugggof/vampnet-n64",
+        "hugggof/vampnet-choir",
+        "hugggof/vampnet-opera",
+        "hugggof/vampnet-machines",
+        "hugggof/vampnet-birds",
+        "pharoAIsanders420/micro-musicgen-jungle",
+        "hugggof/nesquik",
         "hugggof/pitch_shifter",
         "hugggof/harmonic_percussive",
-        "descript/vampnet",
-        "hugggof/nesquik",
-        "cwitkowitz/timbre-trap",
         };
 
 
