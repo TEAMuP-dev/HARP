@@ -60,7 +60,6 @@ HARP has been tested on the following operating systems:
 * Extract the contents of the ZIP file and move the directory containing `HARP` to a location of your choice, _e.g._ `/usr/local/bin/`.
 
 
-
 # Setup
 ## Standalone
 To work as a standalone application, you just need to open HARP and start using it.    
@@ -77,7 +76,7 @@ Run `HARP` to start the application.
 ## [REAPER](https://www.reaper.fm)
 To set up HARP for use from within Reaper, do the following.
 ### Setting Up HARP
-* Choose _REAPER > Preferences_ on the file menu.
+* Choose _REAPER > Preferences_ on the file menu for MacOS. OR hit keyboard command *control+p* on Windows
 
 * Scroll down to _External Editors_ and click _Add_.
 
@@ -103,6 +102,9 @@ To set up HARP for use from within Logic Pro, do the following.
 * Set `HARP.app` as an external sample editor following [this guide](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac).
 
 ### Opening HARP
+
+* (Optional) Right click the audio for the track you want to process and select _Bounce in Place_.
+
 * Select any audio region and press _Shift+W_ to open the corresponding audio file in HARP.
 
 <!--
@@ -125,7 +127,7 @@ In a DAW, you select the exceprt you want to process, open it in HARP, process i
 
 ## Warning!
 **HARP is a *destructive* file editor.**
-When you select _Save_, HARP overwrites the existing audio. After recording or loading audio into a track within your preferred DAW, it is recommended that you *bounce-in-place* the audio before processing it with HARP. In this way, you will avoid overwriting the original audio file and will be able to undo any changes introuced by HARP. Alternatively, overwriting can be circumvented by using the _Save As_ functionality from the _File_ menu in HARP.
+When you select _Save_, HARP overwrites the existing audio. After recording or loading audio into a track within your preferred DAW, it is recommended that you *bounce-in-place* (on Logic) or _Render items as new take_ (on Reaper) the audio before processing it with HARP. In this way, you will avoid overwriting the original audio file and will be able to undo any changes introuced by HARP. Alternatively, overwriting can be circumvented by using the _Save As_ functionality from the _File_ menu in HARP.
 
 ### Processing just a portion of a track
 If you would like to process only an excerpt of a track, first trim the exceprt to the portion you want to process. Then, perform a *bounce-in-place* of the excerpt. This will make a new file that contains only the audio you want to process with HARP. Then, open the new file in HARP. 
