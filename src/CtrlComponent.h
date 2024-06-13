@@ -62,7 +62,7 @@ public:
       // SliderCtrl
         if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrlPtr.get())) {
             auto sliderWithLabel = std::make_unique<SliderWithLabel>(sliderCtrl->label, juce::Slider::RotaryHorizontalVerticalDrag);
-            auto& label = sliderWithLabel->getLabel();
+            // auto& label = sliderWithLabel->getLabel();
             // label.setColour(juce::Label::ColourIds::textColourId, mHARPLookAndFeel.textHeaderColor);
             auto& slider = sliderWithLabel->getSlider();
             slider.setName(sliderCtrl->id.toString());
@@ -210,7 +210,7 @@ public:
 
 
 
-  void buttonClicked(Button *button) {
+  void buttonClicked(Button *button) override {
     auto id = juce::Uuid(button->getName().toStdString());
 
     CtrlList &ctrls = mModel->controls();
@@ -228,7 +228,7 @@ public:
 
   }
 
-  void comboBoxChanged(ComboBox *comboBox) {
+  void comboBoxChanged(ComboBox *comboBox) override {
     auto id = juce::Uuid(comboBox->getName().toStdString());
 
     CtrlList &ctrls = mModel->controls();
@@ -245,7 +245,7 @@ public:
     }
   }
 
-  void textEditorTextChanged (TextEditor& textEditor) {
+  void textEditorTextChanged (TextEditor& textEditor) override {
     auto id = juce::Uuid(textEditor.getName().toStdString());
 
     CtrlList &ctrls = mModel->controls();
@@ -262,11 +262,11 @@ public:
     }
   }
 
-  void sliderValueChanged(Slider* slider) {
+  void sliderValueChanged(Slider* slider) override {
     ignoreUnused(slider);
   }
 
-  void sliderDragEnded(Slider* slider) {
+  void sliderDragEnded(Slider* slider) override {
     auto id = juce::Uuid(slider->getName().toStdString());
 
     CtrlList &ctrls = mModel->controls();

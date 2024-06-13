@@ -9,6 +9,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(STRINGS VERSION CURRENT_VERSION)
+# add_definitions(-DAPP_VERSION="${CURRENT_VERSION}")
+# add_definitions(-DAPP_NAME="${PROJECT_NAME}")
+# add_definitions(-DAPP_COPYRIGHT="TEAMuP")
+
+
 
 # The top-level CMakeLists.txt file for a project must contain a literal, direct call to the
 # `project()` command. `project()` semats up some helpful variables that describe source/binary
@@ -26,8 +31,10 @@ include(cmake/gradio_client.cmake)
 
 juce_add_gui_app(${PROJECT_NAME}
     # VERSION ...                       # Set this if the app version is different to the project version
-    # ICON_BIG ...                      # ICON_* arguments specify a path to an image file to use as an icon
-    # ICON_SMALL ...
+    # ICON_* arguments specify a path to an image file to use as an icon
+    ICON_BIG "${CMAKE_SOURCE_DIR}/icons/harp_logo_1.png"  # Specify a big icon for the app
+    ICON_SMALL "${CMAKE_SOURCE_DIR}/icons/harp_logo_1.png"  # Specify a small icon for the app
+    
     DOCUMENT_EXTENSIONS wav mp3 aiff           # Specify file extensions that should be associated with this app
     COMPANY_NAME "TEAMuP"                  # Specify the name of the app's author
     PRODUCT_NAME "HARP")     # The name of the final executable, which can differ from the target name
@@ -56,6 +63,10 @@ target_sources(${PROJECT_NAME}
         src/Model.h 
         src/WebModel.h
 
+        src/gui/MultiButton.cpp
+        src/gui/StatusComponent.cpp
+        src/gui/HoverHandler.cpp
+
         # PianoRoll files
         src/pianoRoll/KeyboardComponent.cpp
         src/pianoRoll/NoteGridComponent.cpp
@@ -81,7 +92,17 @@ target_compile_definitions(${PROJECT_NAME}
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
         JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call
         JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_PRODUCT_NAME>"
-        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>")
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>"
+        JUCE_USE_FLAC=1
+        JUCE_USE_OGGVORBIS=1
+        JUCE_USE_MP3AUDIOFORMAT=1
+        JUCE_USE_WINDOWS_MEDIA_FORMAT=1
+        PUBLIC
+        APP_VERSION="${CURRENT_VERSION}"
+        APP_COMPANY="TEAMuP"
+        APP_NAME="HARP"
+        APP_COPYRIGHT="Copyright 2024 TEAMuP. All rights reserved."    
+)
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
 # a new static library target that will include all the binary resources. There is an optional
@@ -119,7 +140,59 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
+# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
+# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
+# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140.dll
+if (WIN32)
+    # Function to find the specific runtime DLLs
+    function(find_vc_runtime_dlls out_var)
+        message(STATUS "Searching for specific runtime DLLs...")
 
+        # Define the target DLLs
+        set(target_dlls
+            "msvcp140.dll"
+            "vcruntime140_1.dll"
+            "vcruntime140.dll"
+        )
+
+        # Set the base path for Visual Studio 2022 redistributable DLLs
+        set(VS_CRT_BASE_PATH "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT")
+
+        # Search for the DLLs in the specified base path
+        file(GLOB_RECURSE all_runtime_dlls
+            LIST_DIRECTORIES false
+            "${VS_CRT_BASE_PATH}/*.dll"
+        )
+
+        set(runtime_dlls)
+
+        foreach(dll ${all_runtime_dlls})
+            get_filename_component(dll_name ${dll} NAME)
+            if(dll_name IN_LIST target_dlls)
+                list(APPEND runtime_dlls ${dll})
+            endif()
+        endforeach()
+
+        if(runtime_dlls)
+            message(STATUS "Found specific runtime DLLs:")
+            foreach(dll ${runtime_dlls})
+                message(STATUS "${dll}")
+            endforeach()
+            set(${out_var} ${runtime_dlls} PARENT_SCOPE)
+        else()
+            message(FATAL_ERROR "Required specific runtime DLLs not found")
+        endif()
+    endfunction()
+
+    # Call the function to find the specific DLLs
+    find_vc_runtime_dlls(RUNTIME_DLLS)
+
+    # Add a post-build step to copy the specific DLLs to the output directory
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${RUNTIME_DLLS}
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+endif()
 # copy the pyinstaller tools to the  bundle
 if (APPLE)
     add_custom_command(TARGET ${PROJECT_NAME}
@@ -139,7 +212,7 @@ endif()
 # in MacOS. Now, all we need to do is copy the 
 # dynamic libraries to the executable directories
 if (APPLE)
-set_property(TARGET ${PROJECT_NAME} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
+    set_property(TARGET ${PROJECT_NAME} PROPERTY BUILD_RPATH "@loader_path/../Frameworks" )
 
-set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
+    set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
 endif(APPLE)

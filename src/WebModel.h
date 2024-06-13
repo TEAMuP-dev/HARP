@@ -59,24 +59,32 @@ struct ComboBoxCtrl : public Ctrl {
 };
 
 
+juce::String resolveSpaceUrl(juce::String urlOrName) {
+  if (urlOrName.contains("localhost") || urlOrName.contains("huggingface.co") || urlOrName.contains("http")) {
+    // do nothing! the url is already valid
+  }
+  else {
+      DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
+      urlOrName = "https://huggingface.co/spaces/" + urlOrName;
+  }
+  return urlOrName;
+}
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 namespace{
 
-  void LogAndDBG(const juce::String& message) {
-    DBG(message);
 
-    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
-    logFile.appendText(message + "\n");
-  }
 }
 
 class WebWave2Wave : public Model {
 public:
   WebWave2Wave() { // TODO: should be a singleton
-    juce::File logFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("HARP.log");
-    logFile.deleteFile();
+
+    // create our logger
+    m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
+
+
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
@@ -106,9 +114,21 @@ public:
     m_status_flag_file.deleteFile();
   }
 
+  void LogAndDBG(const juce::String& message) const {
+    DBG(message);
+
+    if (m_logger) {
+      m_logger->logMessage(message);
+    }
+  }
+
 
   bool ready() const override { return m_loaded; }
   std::string space_url() const { return m_url; }
+
+  juce::File getLogFile() const {
+    return m_logger->getLogFile();
+  }
 
   void load(const map<string, any> &params) override {
     m_ctrls.clear();
@@ -152,8 +172,44 @@ public:
 
     if (result != 0) {
         // read the text from the temp log file.
-        std::string message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
+        // check for a JSONDecodeError in the log content
+        // if so, let the user know that there there was an error parsing the get_ctrls response, 
+        // which means the space is likely broken or does not exist. 
+        // if we catch a 404, say that the space does not exist.
+
+        std::string message;
+        if (logContent.contains("JSONDecodeError")) {
+            message = "An error occurred while requesting controls from " +  m_url + ". The response from the space was not valid JSON. " ;
+        }
+        else if (logContent.contains("requests.exceptions.HTTPError")) {
+            message = "The web request to " + m_url + " returned a 404 error. The space does not exist."; 
+        }
+        else if (logContent.contains("httpx.ReadTimeout")) {
+            message = "The web request to " + m_url + " timed out. The model is probably 'sleeping'. Make sure the gradio server is running and try again!";
+        }
+        // try to catch a generic Error:
+        else if (logContent.contains("Error:")) {
+            // get the error message
+            juce::StringArray lines;
+            lines.addLines(logContent);
+            for (auto line : lines) {
+                if (line.contains("Error:")) {
+                    message = line.toStdString();
+                    break;
+                }
+            }
+            // message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+        }
+        else if (logContent.contains("argument --url: expected one argument")) {
+            message = "The model url is missing. Please provide a url to the model.";
+        }
+        else {
+            message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+        }
+
+        message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
         throw std::runtime_error(message);
+
     }
 
 
@@ -278,7 +334,7 @@ public:
           }
         }
         catch (const char* e) {
-          throw std::runtime_error("Failed to load controls from JSON. " + *e);
+          throw std::runtime_error("Failed to load controls from JSON. " + std::string(e));
         }
       }
 
@@ -360,8 +416,25 @@ public:
 
     if (result != 0) {
         // read the text from the temp log file.
-        std::string message = "An error occurred while calling the gradiojuce helper with mode predict. Check the logs (~/Documents/HARP.log) for more details.\nLog content: " + logContent.toStdString();
-        throw std::runtime_error(message);
+        
+        std::string message;
+        // check for a generic Error: in the log content
+        if (logContent.contains("Error:")) {
+            // get the error message
+            juce::StringArray lines;
+            lines.addLines(logContent);
+            for (auto line : lines) {
+                if (line.contains("Error:")) {
+                    message = line.toStdString();
+                    break;
+                }
+            }
+        }
+        else {
+            message = "An error occurred while calling the gradiojuce helper with mode predict. ";
+        }
+
+        message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
 
     tempLogFile.deleteFile();  // delete the temporary log file
@@ -489,6 +562,7 @@ private:
     juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
   };
   CtrlList m_ctrls;
+  std::unique_ptr<juce::FileLogger> m_logger {nullptr};
 
   string m_url;
   string prefix_cmd;
