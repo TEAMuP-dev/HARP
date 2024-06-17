@@ -101,4 +101,6 @@ private:
     PianoRollEditorComponent pianoRollEditor;
 
     st_int tickTest;
+
+    String mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
 };

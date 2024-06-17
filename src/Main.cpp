@@ -24,6 +24,7 @@ public:
         debugFile.appendText(getCommandLineParameters() + "\n", true, true);
         debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
 
+        mainWindow.reset(new MainWindow(getApplicationName()));
         resetWindow(commandLine);
 
     }
@@ -43,21 +44,16 @@ public:
         quit();
     }
 
-    void resetWindow(const juce::String& commandLine) {
-        
+    void resetWindow(const juce::String& commandLine)
+    {
         File inputMediaFile(commandLine.unquoted().trim());
 
-        mainWindow.reset (new MainWindow (getApplicationName()));
-        if(inputMediaFile.existsAsFile())
-        {
+        if (inputMediaFile.existsAsFile()) {
             URL inputMediaURL = URL(inputMediaFile);
-            mainWindow->setContentOwned(new MainComponent(inputMediaURL), true);
+            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
+                mainComp->loadMediaFile(inputMediaURL);
+            }
         }
-        else
-        {
-            mainWindow->setContentOwned(new MainComponent(), true);
-        }
-
     }
 
     void anotherInstanceStarted (const juce::String& commandLine) override

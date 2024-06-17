@@ -27,14 +27,14 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        auto topArea = area.removeFromTop(area.getHeight() * 0.1);
+        auto topArea = area.removeFromTop((int)(area.getHeight() * 0.1));
         titleLabel.setBounds(topArea);
         textBox.setBounds(area);
         addAndMakeVisible(textBox);
         addAndMakeVisible(titleLabel);
     }
 
-    void setName(const juce::String &nameId)
+    void setName(const juce::String &nameId) override
     {
         textBox.setName(nameId);
     }

@@ -13,6 +13,13 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
+
+    enum ActionType {
+        FileDropped,
+        TransportMoved,
+        TransportStarted
+    };
+
     MediaDisplayComponent()
     {
         setupDisplay();
@@ -47,9 +54,6 @@ public:
             this->setZoomFactor(horizontalZoomSlider.getValue(), 1.0f); // TODO
         };
         addAndMakeVisible(horizontalZoomSlider);
-
-        //followCursorButton.onClick = [this] {};
-        addAndMakeVisible(followCursorButton);
 
         playPauseButton.setColour (TextButton::buttonColourId, Colour (0xff79ed7f));
         playPauseButton.setColour (TextButton::textColourOffId, Colours::black);
@@ -87,6 +91,16 @@ public:
     }
 
     void setupDisplay();
+
+    void setupHandler()
+    {
+        mediaHandler = std::make_unique<HoverHandler>(this);
+        mediaHandler->onMouseEnter = [this]() { 
+            setInstructions(mediaHandlerInstructions); 
+        };
+        mediaHandler->onMouseExit = [this]() { clearInstructions(); };
+        mediaHandler->attach();
+    }
 
     void setZoomFactor(float xScale, float yScale);
 
@@ -145,11 +159,6 @@ public:
 
     bool isPlaying();
 
-    bool isFollowing()
-    {
-        return followCursorButton.isDown();
-    }
-
     double getCurrentPosition();
 
     void enableSaving(bool enable)
@@ -202,10 +211,17 @@ public:
     {
         URL firstFilePath = URL(File(files[0]));
 
+        //lastActionType = FileDropped;
+        //sendChangeMessage();
         setTargetFilePath(firstFilePath);
         loadMediaFile(firstFilePath);
         generateTempFile();
     }
+
+    //URL getLastDroppedFile() const noexcept { return lastFileDropped; }
+
+    //ActionType getLastActionType() const noexcept { return lastActionType; }
+
 
 private:
     URL targetFilePath;
@@ -219,8 +235,6 @@ private:
     Slider verticalZoomSlider{Slider::LinearVertical, Slider::NoTextBox};
     Slider horizontalZoomSlider{Slider::LinearHorizontal, Slider::NoTextBox};
 
-    ToggleButton followCursorButton{"Follow"};
-
     TextButton playPauseButton{"Play"};
 
     // TODO - reset (stop) button
@@ -231,6 +245,10 @@ private:
     TextButton saveButton{"Save As"};
     //std::unique_ptr<FileChooser> fileBrowser;
 
+    URL lastFileDropped;
+    ActionType lastActionType;
+
+    std::unique_ptr<HoverHandler> mediaHandler;
 
     float timeToX (const double time) const
     {
@@ -247,13 +265,13 @@ private:
 
     bool canMoveTransport() const noexcept
     {
-        return !(isFollowing() && isPlaying());
+        return !(isPlaying());
     }
 
     void scrollBarMoved (ScrollBar* scrollBarThatHasMoved, double newRangeStart) override
     {
         if (scrollBarThatHasMoved == &scrollbar)
-            if (! (isFollowing() && isPlaying()))
+            if (!(isPlaying()))
                 setRange (visibleRange.movedToStartAt (newRangeStart));
     }
 

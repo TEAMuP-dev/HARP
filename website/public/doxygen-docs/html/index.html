@@ -73,7 +73,7 @@ $(function() {
   <div class="headertitle"><div class="title">HARP </div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="md__r_e_a_d_m_e"></a><img src="https://github.com/audacitorch/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856" alt="herofig_revised" class="inline"/></p>
+<div class="textblock"><p><a class="anchor" id="md__r_e_a_d_m_e"></a><img src="https://github.com/TEAMuP-dev/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856" alt="herofig_revised" class="inline"/></p>
 <p>HARP is an <a href="https://www.synchroarts.com/blog/what-is-ara">ARA</a> plug-in that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing with deep learning models by routing audio from a digital audio workstation (DAW) through <a href="https://www.gradio.app">Gradio</a> endpoints. Because Gradio apps can be hosted locally or in the cloud (e.g., HuggingFace Spaces), HARP lets DAW users access large state-of-the-art models with GPU compute from the cloud without breaking their within-DAW workflow.</p>
 <h1><a class="anchor" id="autotoc_md1"></a>
 Available Models</h1>
@@ -86,7 +86,7 @@ Available Models</h1>
 </ul>
 <h1><a class="anchor" id="autotoc_md2"></a>
 Making a deep learning model compatible with HARP</h1>
-<p>We provide a lightweight API called <a href="https://github.com/audacitorch/pyharp">pyHARP</a> for building compatible <a href="https://www.gradio.app">Gradio</a> audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.</p>
+<p>We provide a lightweight API called <a href="https://github.com/TEAMuP-dev/pyharp">pyHARP</a> for building compatible <a href="https://www.gradio.app">Gradio</a> audio-processing apps with optional interactive controls. This lets deep learning model developers create user interfaces for virtually any audio processing model with only a few lines of Python code.</p>
 <h1><a class="anchor" id="autotoc_md3"></a>
 OS and DAW compatibility</h1>
 <p>HARP has been tested on arm-based Mac computers running Mac OS 13.0, using the <a href="https://www.reaper.fm">REAPER</a> digital audio workstation.</p>
@@ -95,8 +95,8 @@ Installing HARP</h1>
 <h2><a class="anchor" id="autotoc_md5"></a>
 MacOS</h2>
 <ul>
-<li>Download the HARP DMG file from from the HARP <a href="https://github.com/audacitorch/HARP/releases">releases</a></li>
-<li>Double click on the DMG file. This will open the window below <img src="https://github.com/audacitorch/HARP/assets/26678616/61acf9f3-8e00-4b85-9433-77366b262e19" alt="harp_dmg" width="397" class="inline"/></li>
+<li>Download the HARP DMG file from from the HARP <a href="https://github.com/TEAMuP-dev/HARP/releases">releases</a></li>
+<li>Double click on the DMG file. This will open the window below <img src="https://github.com/TEAMuP-dev/HARP/assets/26678616/61acf9f3-8e00-4b85-9433-77366b262e19" alt="harp_dmg" width="397" class="inline"/></li>
 <li>Double click on "Your Mac's VST3 folder"</li>
 <li>Drag HARP.vst3 to the folder that was opened in the previous step</li>
 </ul>
@@ -106,7 +106,7 @@ Windows &amp; Linux</h2>
 <h1><a class="anchor" id="autotoc_md7"></a>
 Building the HARP plug-in from source code</h1>
 <p>To build the HARP plugin from scratch, perform the following steps:</p>
-<p>clone the HARP repo </p><div class="fragment"><div class="line">git clone --recurse-submodules git@github.com:audacitorch/HARP.git</div>
+<p>clone the HARP repo </p><div class="fragment"><div class="line">git clone --recurse-submodules git@github.com:TEAMuP-dev/HARP.git</div>
 <div class="line">cd harp</div>
 </div><!-- fragment --><h2><a class="anchor" id="autotoc_md8"></a>
 Mac OS</h2>
@@ -128,10 +128,10 @@ An Important Note</h3>
 <ul>
 <li>Configure</li>
 </ul>
-<div class="fragment"><div class="line"><span class="stringliteral">&quot;C:\Program Files\CMake\bin\cmake.EXE&quot;</span> --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/audacitorch/plugin_sandbox -Bc:/Users/xribene/Projects/audacitorch/HARP/build -G <span class="stringliteral">&quot;Visual Studio 17 2022&quot;</span> -A x64</div>
+<div class="fragment"><div class="line"><span class="stringliteral">&quot;C:\Program Files\CMake\bin\cmake.EXE&quot;</span> --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -SC:/Users/xribene/Projects/TEAMuP-dev/plugin_sandbox -Bc:/Users/xribene/Projects/TEAMuP-dev/HARP/build -G <span class="stringliteral">&quot;Visual Studio 17 2022&quot;</span> -A x64</div>
 </div><!-- fragment --><div class="fragment"><div class="line">cmake --no-warn-unused-cli -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -S . -B build -G <span class="stringliteral">&quot;Visual Studio 17 2022&quot;</span> -A x64</div>
 </div><!-- fragment --> <div class="fragment"><div class="line">- Build</div>
-</div><!-- fragment --><p> php "C:\Program Files\CMake\bin\cmake.EXE" &ndash;build c:/Users/xribene/Projects/audacitorch/HARP/build &ndash;config Debug &ndash;target ALL_BUILD -j 14 &ndash;</p>
+</div><!-- fragment --><p> php "C:\Program Files\CMake\bin\cmake.EXE" &ndash;build c:/Users/xribene/Projects/TEAMuP-dev/HARP/build &ndash;config Debug &ndash;target ALL_BUILD -j 14 &ndash;</p>
 <p>cmake &ndash;build build &ndash;config Debug &ndash;target ALL_BUILD -j 14</p>
 <div class="fragment"><div class="line"># Codesigning and Distribution</div>
 <div class="line"> </div>

@@ -6,6 +6,8 @@
 
 # New: Function to download and install Miniconda
 function(install_miniconda)
+    message(STATUS "Host System Processor: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+    message(STATUS "System Name: ${CMAKE_SYSTEM_NAME}")
     set(MINICONDA_DIR "${CMAKE_SOURCE_DIR}/Miniconda3")
 
     if (EXISTS ${MINICONDA_DIR})
@@ -18,6 +20,7 @@ function(install_miniconda)
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+        message(STATUS "Detected Apple Silicon (arm64) processor")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-arm64.sh")
     elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-MacOSX-x86_64.sh")

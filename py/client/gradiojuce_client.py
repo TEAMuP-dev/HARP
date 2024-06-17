@@ -5,6 +5,10 @@ import json
 import signal
 import time
 
+
+class TimeoutError(Exception):
+    pass
+
 client = None
 def handler_stop_signals(signum, frame):
     global client
@@ -39,8 +43,24 @@ def main(
         # ctrls = client.predict(api_name="/wav2wav-ctrls")
         print(f"calling predict ")
         # ctrls = client.predict(api_name="/wav2wav-ctrls")
-        ctrls = client.predict(api_name="/controls")
 
+        job = client.submit(api_name="/controls")
+        canceled = False
+        t0 = time.time()
+        while not job.done():
+
+            if time.time() - t0 > ctrls_timeout:
+                print(f"Timeout of {ctrls_timeout} seconds reached. Cancelling...")
+                print(f"HARP.TimedOut")
+                client.submit(api_name="/wav2wav-cancel")
+                canceled = True
+                Path(status_flag_path).write_text("Status.CANCELED")
+                # break
+                raise TimeoutError("Timeout of {ctrls_timeout} seconds reached. Cancelling...")
+
+            time.sleep(0.05)
+
+        ctrls = job.result()
         print(f"got ctrls: {ctrls}")
         # if it's a string, it's a filepath
         if isinstance(ctrls, str):

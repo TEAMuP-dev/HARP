@@ -84,12 +84,18 @@ public:
     {
         if (transportSource.isPlaying())
         {
-            transportSource.stop(); // TODO - pause
+            // TODO - pause function?
+            transportSource.stop();
+            transportSource.setPosition (0);
+            playStopButton.setMode(playButtonInfo.label);
+            stopTimer();
         }
         else
         {
-            transportSource.setPosition(0);
+            // transportSource.setPosition (0);
             transportSource.start();
+            playStopButton.setMode(stopButtonInfo.label);
+            startTimerHz(10);
         }
     }
 
@@ -113,4 +119,6 @@ private:
     AudioTransportSource transportSource;
 
     AudioThumbnail thumbnail;
+
+    String mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 };
