@@ -15,15 +15,19 @@ public:
     const juce::String getApplicationVersion() override    { return JUCE_APPLICATION_VERSION_STRING; }
     bool moreThanOneInstanceAllowed() override             { return true; }
 
+    bool debugFilesOn()                                    { return false; }
+
     //==============================================================================
     void initialise (const juce::String& commandLine) override
     {
         // save the command line arguments to a debug file in my home directory
-        File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug.txt");
-        debugFile.appendText(commandLine + "\n", true, true);
-        debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-        debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
-
+        if (debugFilesOn()) {
+            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug.txt");
+            debugFile.appendText(commandLine + "\n", true, true);
+            debugFile.appendText(getCommandLineParameters() + "\n", true, true);
+            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+        }
+        
         mainWindow.reset(new MainWindow(getApplicationName()));
         resetWindow(commandLine);
 
@@ -61,10 +65,12 @@ public:
         // this method is invoked, and the commandLine parameter tells you what
         // the other instance's command-line arguments were.
         // save the command line arguments to a debug file in my home directory
-        File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug2.txt");
-        debugFile.appendText(commandLine + "\n", true, true);
-        debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-        debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+        if (debugFilesOn()) {
+            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug2.txt");
+            debugFile.appendText(commandLine + "\n", true, true);
+            debugFile.appendText(getCommandLineParameters() + "\n", true, true);
+            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+        }
 
         resetWindow(commandLine);
         
