@@ -29,13 +29,6 @@ class ThumbnailComp  : public Component,
 {
 public:
 
-    enum ActionType {
-        FileDropped,
-        TransportMoved,
-        TransportStarted
-    };
-    
-
     ThumbnailComp (AudioFormatManager& formatManager,
                        AudioTransportSource& source,
                        Slider& slider)
@@ -76,7 +69,6 @@ public:
     }
 
     URL getLastDroppedFile() const noexcept { return lastFileDropped; }
-    ActionType getLastActionType() const noexcept { return lastActionType; }
 
     void setZoomFactor (double amount)
     {
@@ -138,13 +130,6 @@ public:
         return true;
     }
 
-    void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
-    {
-        lastFileDropped = URL (File (files[0]));
-        lastActionType = FileDropped;
-        sendChangeMessage();
-    }
-
     void mouseDown (const MouseEvent& e) override
     {
         mouseDrag (e);
@@ -201,7 +186,6 @@ private:
     Range<double> visibleRange;
     bool isFollowingTransport = true;
     URL lastFileDropped;
-    ActionType lastActionType;
 
     DrawableRectangle currentPositionMarker;
 
