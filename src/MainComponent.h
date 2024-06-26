@@ -515,66 +515,25 @@ public:
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
 
-        addAndMakeVisible (zoomLabel);
-        zoomLabel.setFont (Font (15.00f, Font::plain));
-        zoomLabel.setJustificationType (Justification::centredRight);
-        zoomLabel.setEditable (false, false, false);
-        zoomLabel.setColour (TextEditor::textColourId, Colours::black);
-        zoomLabel.setColour (TextEditor::backgroundColourId, Colour (0x00000000));
-
-        // addAndMakeVisible (followTransportButton);
-        // followTransportButton.onClick = [this] { updateFollowTransportState(); };
-
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
         chooseFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to choose an audio file"); };
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
 
-        addAndMakeVisible (zoomSlider);
-        zoomSlider.setRange (0, 1, 0);
-        zoomSlider.onValueChange = [this] { 
-            if (isAudio)
-                thumbnail->setZoomFactor (zoomSlider.getValue()); 
-            else
-                pianoRoll->setZoomFactor (zoomSlider.getValue());
+        // Initialize the GUI with an audio thumbnail display
+        mediaDisplay = std::make_unique<AudioDisplayComponent>();
+
+        addChildComponent(mediaDisplay.get());
+        mediaDisplay->addChangeListener(this);
+
+        // TODO - may have to do this for every new display loaded
+        mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
+        mediaDisplayHandler->onMouseEnter = [this]() { 
+            setInstructions(mediaDisplay->getMediaHandlerInstructions()); 
         };
-        zoomSlider.setSkewFactor (2);
-
-        // if (isAudio)
-        // {
-            thumbnail = std::make_unique<ThumbnailComp> (formatManager, transportSource, zoomSlider);
-            // addAndMakeVisible (thumbnail.get());
-            addChildComponent (thumbnail.get());
-            thumbnail->addChangeListener (this);
-
-            thumbnailHandler = std::make_unique<HoverHandler>(*thumbnail);
-            thumbnailHandler->onMouseEnter = [this]() { 
-                setInstructions("Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform."); 
-            };
-            thumbnailHandler->onMouseExit = [this]() { clearInstructions(); };
-            thumbnailHandler->attach();
-        // }
-        // else
-        // {
-            pianoRoll = std::make_unique<PianoRollEditorComponent> ();
-            // addAndMakeVisible(pianoRoll.get());
-            addChildComponent(pianoRoll.get());
-            
-            //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
-            // pianoRoll = std::make_unique<PianoRollEditorComponent>();
-            pianoRoll->setup(10, 400, 10);
-
-            pianoRollHandler = std::make_unique<HoverHandler>(*pianoRoll);
-            pianoRollHandler->onMouseEnter = [this]() { 
-                setInstructions("MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll."); 
-            };
-            pianoRollHandler->onMouseExit = [this]() { clearInstructions(); };
-            pianoRollHandler->attach();
-        // }
-
-        // audio setup
-        formatManager.registerBasicFormats();
+        mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
+        mediaDisplayHandler->attach();
 
         // Load the initial file
         if (initialFilePath.isLocalFile())
@@ -597,15 +556,6 @@ public:
         playStopButton.onMouseExit = [this] {
             clearInstructions();
         };
-
-        
-
-        thread.startThread (Thread::Priority::normal);
-
-        audioDeviceManager.initialise (0, 2, nullptr, true, {}, nullptr);
-
-        audioDeviceManager.addAudioCallback (&audioSourcePlayer);
-        audioSourcePlayer.setSource (&transportSource);
 
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
@@ -784,12 +734,7 @@ public:
 
     ~MainComponent() override
     {
-        transportSource  .setSource (nullptr);
-        audioSourcePlayer.setSource (nullptr);
-
-        audioDeviceManager.removeAudioCallback (&audioSourcePlayer);
-
-        thumbnail->removeChangeListener (this);
+        mediaDisplay->removeChangeListener(this);
 
         // remove listeners
         mModelStatusTimer->removeChangeListener(this);
@@ -811,11 +756,11 @@ public:
 
     void timerCallback() override
     {
-        if (!transportSource.isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
+        if (!mediaDisplay->isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
         {
             playStopButton.setMode(playButtonInfo.label);
             stopTimer();
-            transportSource.setPosition (0.0);
+            //mediaDisplay->stopPlaying();
         }
         
     }
@@ -832,7 +777,7 @@ public:
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
         // check if the audio file is loaded
-        if (!currentMediaFile.isLocalFile()) {
+        if (!mediaDisplay->getTempFilePath().isLocalFile()) {
             // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
             //ShowMEssageBoxAsync
             AlertWindow::showMessageBoxAsync(
@@ -888,7 +833,7 @@ public:
             [this] { // &jobsFinished, totalJobs
                 // Individual job code for each iteration
                 // copy the audio file, with the same filename except for an added _harp to the stem
-                model->process(currentMediaFile.getLocalFile());
+                model->process(mediaDisplay->getTempFilePath().getLocalFile());
                 DBG("Processing finished");
                 // load the audio file again
                 processBroadcaster.sendChangeMessage();
@@ -904,6 +849,9 @@ public:
     {
         // Check the file extension to determine type
         String extension = mediaFile.getFileExtension();
+
+        removeChildComponent(mediaDisplay.get());
+        mediaDisplay->removeChangeListener(this);
 
         if (midiExtensions.contains(extension))
         {
@@ -921,6 +869,9 @@ public:
         {
             // TODO - not supported
         }
+
+        addChildComponent(mediaDisplay.get());
+        mediaDisplay->addChangeListener(this);
 
         mediaDisplay->loadMediaFile(URL(mediaFile));
 
@@ -1032,10 +983,7 @@ public:
         
         // Row 7: thumbnail area
         auto row7 = mainArea.removeFromTop(150).reduced(margin / 2);  // adjust height as needed
-        if (isAudio)
-            thumbnail->setBounds(row7);
-        else
-            pianoRoll->setBounds(row7);
+        mediaDisplay->setBounds(row7);
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(70);  // adjust height as needed
@@ -1162,10 +1110,14 @@ private:
 
     std::unique_ptr<MediaDisplayComponent> mediaDisplay;
 
+    std::unique_ptr<HoverHandler> mediaDisplayHandler;
+
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
 
-    StringArray allExtensions = StringArray(midiExtensions).mergeArray(audioExtensions);
+    StringArray allExtensions;
+    // TODO - uncomment after fixing getExtension functions
+    //StringArray allExtensions = StringArray(midiExtensions).mergeArray(audioExtensions);
 
     // These flags are very simplistic as they assume
     // that we only have audio2audio or midi2midi models
@@ -1195,18 +1147,17 @@ private:
     //==============================================================================
 
     void play() {
-        if (!transportSource.isPlaying()) {
+        if (!mediaDisplay->isPlaying()) {
             // transportSource.setPosition (0);
-            transportSource.start();
+            mediaDisplay->startPlaying();
             playStopButton.setMode(stopButtonInfo.label);
             startTimerHz(10);
         }
     }
 
     void stop()    {
-        if (transportSource.isPlaying()) {
-            transportSource.stop();
-            transportSource.setPosition (0);
+        if (mediaDisplay->isPlaying()) {
+            mediaDisplay->stopPlaying();
             playStopButton.setMode(playButtonInfo.label);
             stopTimer();
         }

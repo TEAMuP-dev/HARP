@@ -15,7 +15,10 @@ public:
 
     void setupDisplay()
     {
-        // TODO
+        //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
+        pianoRollEditor.setup(10, 400, 10);
+
+        mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
 
     static StringArray getSupportedExtensions()

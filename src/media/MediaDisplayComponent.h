@@ -25,15 +25,9 @@ public:
 
     void loadMediaFile(const URL& filePath);
 
-    URL getTargetFilePath()
-    {
-        return targetFilePath;
-    }
+    URL getTargetFilePath() { return targetFilePath; }
 
-    bool isFileLoaded()
-    {
-        return !targetFilePath.isEmpty();
-    }
+    bool isFileLoaded() { return !targetFilePath.isEmpty(); }
 
     void generateTempFile()
     {
@@ -61,10 +55,7 @@ public:
         }
     }
 
-    URL getTempFilePath()
-    {
-        return tempFilePath;
-    }
+    URL getTempFilePath() { return tempFilePath; }
 
     void overwriteTarget()
     {
@@ -123,6 +114,9 @@ public:
 
     ActionType getLastActionType() const noexcept { return lastActionType; }
 
+    String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
+
+
 protected:
 
     void setNewTarget(URL filePath)
@@ -131,6 +125,8 @@ protected:
         //tempFilePath = URL();
         generateTempFile();
     }
+
+    String mediaHandlerInstructions;
 
 private:
 

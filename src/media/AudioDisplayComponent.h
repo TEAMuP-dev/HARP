@@ -11,59 +11,29 @@ public:
 
     ~AudioDisplayComponent()
     {
-        // TODO
+        deviceManager.removeAudioCallback(&sourcePlayer);
+
+        transportSource.setSource(nullptr);
+        sourcePlayer.setSource(nullptr);
     }
 
     void setupDisplay()
     {
-        // TODO
+        thread.startThread (Thread::Priority::normal);
+
+        formatManager.registerBasicFormats();
+
+        deviceManager.initialise (0, 2, nullptr, true, {}, nullptr);
+        deviceManager.addAudioCallback(&sourcePlayer);
+
+        sourcePlayer.setSource(&transportSource);
+
+        mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
     }
 
     static StringArray getSupportedExtensions()
     {
-        StringArray extensions;
-        for (int i = 0; i < formatManager.getNumKnownFormats(); ++i)
-        {
-            auto* format = formatManager.getKnownFormat(i);
-            auto formatExtensions = format->getFileExtensions();
-            for (auto& ext : formatExtensions)
-            {
-                extensions.addTokens("*" + ext.trim(), ";", "\"");
-            }
-            // extensions.addTokens(format->getFileExtensions(), ";", "\"" );
-        }
-        extensions.removeDuplicates(false);
-        return extensions.joinIntoString(";");
-    }
-
-    std::string getAllAudioFileExtensions2(AudioFormatManager& formatManager)
-    {
-        std::set<std::string> uniqueExtensions;
-
-        for (int i = 0; i < formatManager.getNumKnownFormats(); ++i)
-        {
-            auto* format = formatManager.getKnownFormat(i);
-            juce::String extensionsString = format->getFileExtensions()[0];
-            StringArray extensions = StringArray::fromTokens(extensionsString, ";", "");
-            // StringArray extensions = StringArray::fromTokens(format->getFileExtensions(), ";", "");
-
-            for (auto& ext : extensions)
-            {
-                uniqueExtensions.insert(ext.toStdString());
-            }
-        }
-
-        // Join all extensions into a single string with semicolons
-        std::string allExtensions;
-        for (auto it = uniqueExtensions.begin(); it != uniqueExtensions.end(); ++it)
-        {
-            if (it != uniqueExtensions.begin()) {
-                allExtensions += ";";
-            }
-            allExtensions += *it;
-        }
-
-        return allExtensions;
+        // TODO
     }
 
     void loadMediaFile(const URL& filePath)
@@ -79,27 +49,30 @@ public:
 
         File audioFile = filePath.getLocalFile();
 
-        if (source == nullptr)
+        if (source == nullptr) {
             DBG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName() << " does not exist.");
             // TODO - better error handing
             jassertfalse;
-            return
+            return;
+        }
 
         auto stream = rawToUniquePtr(source->createInputStream());
 
-        if (stream == nullptr)
+        if (stream == nullptr) {
             DBG("AudioDisplayComponent::loadMediaFile: Failed to load file " << audioFile.getFullPathName() << ".");
             // TODO - better error handing
             jassertfalse;
-            return
+            return;
+        }
 
         auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
 
-        if (reader == nullptr)
+        if (reader == nullptr) {
             DBG("AudioDisplayComponent::loadMediaFile: Failed to read file " << audioFile.getFullPathName() << ".");
             // TODO - better error handing
             jassertfalse;
-            return
+            return;
+        }
 
         audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
 
@@ -117,14 +90,28 @@ public:
 
     void startPlaying()
     {
-        // TODO
+        transportSource.start();
     }
 
     void stopPlaying()
     {
-        // TODO
+        transportSource.stop();
+        transportSource.setPosition(0);
     }
 
 private:
 
+    AudioFormatManager formatManager;
+    AudioDeviceManager deviceManager;
+
+    std::unique_ptr<AudioFormatReaderSource> audioFileSource;
+
+    AudioSourcePlayer sourcePlayer;
+    AudioTransportSource transportSource;
+
+    AudioThumbnailCache thumbnailCache{ 5 };
+
+    AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);;
+
+    TimeSliceThread thread{ "audio file preview" };
 };
