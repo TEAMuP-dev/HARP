@@ -21,6 +21,33 @@ public:
 
     void setupDisplay();
 
+    void drawMainArea(Graphics& g);
+
+    void paint(Graphics& g) override
+    {
+        g.fillAll (Colours::darkgrey);
+        g.setColour (Colours::lightblue);
+
+        if (isFileLoaded())
+        {
+            auto area = getLocalBounds();
+
+            //area.removeFromBottom(scrollbar.getHeight() + 4);
+            drawMainArea(g);
+        }
+        else
+        {
+            g.setFont(14.0f);
+            g.drawFittedText ("No audio file selected", getLocalBounds(), Justification::centred, 2);
+        }
+    }
+
+    void changeListenerCallback(ChangeBroadcaster*) override
+    {
+        // this method is called by the thumbnail when it has changed, so we should repaint it.
+        repaint();
+    }
+
     static StringArray getSupportedExtensions();
 
     void loadMediaFile(const URL& filePath);
@@ -85,15 +112,15 @@ public:
         generateTempFile();
     }
 
-    void startPlaying();
+    enum ActionType {
+        FileDropped,
+        TransportMoved,
+        TransportStarted
+    };
 
-    void stopPlaying();
+    ActionType getLastActionType() const noexcept { return lastActionType; }
 
-    bool isPlaying();
-
-    // TODO - cursor functionality
-
-    // TODO - zoom functionality
+    bool isInterestedInFileDrag (const StringArray& /*files*/) override { return true; }
 
     void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
     {
@@ -106,16 +133,39 @@ public:
         generateTempFile();
     }
 
-    enum ActionType {
-        FileDropped,
-        TransportMoved,
-        TransportStarted
-    };
+    void setPlaybackPosition(float x);
 
-    ActionType getLastActionType() const noexcept { return lastActionType; }
+    float getPlaybackPosition();
+
+    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
+
+    void mouseDrag (const MouseEvent& e) override
+    {
+        if (canMoveTransport()) {
+            setPlaybackPosition((float) e.x);
+            lastActionType = TransportMoved;
+        }
+    }
+
+    void mouseUp (const MouseEvent&) override
+    {
+        if (lastActionType == TransportMoved) {
+            // transportSource.start();
+            lastActionType = TransportStarted;
+            sendChangeMessage();
+        }
+        
+    }
+
+    void startPlaying();
+
+    void stopPlaying();
+
+    bool isPlaying();
+
+    // TODO - zoom functionality
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
-
 
 protected:
 
@@ -128,10 +178,43 @@ protected:
 
     String mediaHandlerInstructions;
 
+    double xToTime (const float x) const
+    {
+        return (x / (float) getWidth()) * (visibleRange.getLength()) + visibleRange.getStart();
+    }
+
+    float timeToX (const double time) const
+    {
+        if (visibleRange.getLength() <= 0) {
+            return 0;
+        }
+
+        return (float) getWidth() * (float) ((time - visibleRange.getStart()) / visibleRange.getLength());
+    }
+
 private:
+
+    bool canMoveTransport() { return !isPlaying(); }
+
+    void updateCursorPosition()
+    {
+        currentPositionMarker.setVisible(isPlaying() || isMouseButtonDown());
+        currentPositionMarker.setRectangle(Rectangle<float>(timeToX(getPlaybackPosition()) - 0.75f, 0, 1.5f,
+        (float) (getHeight() - scrollbar.getHeight())));
+    }
+
+    void timerCallback() override
+    {
+        if (canMoveTransport())
+            updateCursorPosition();
+        else
+            setRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0)));
+    }
 
     URL targetFilePath;
     URL tempFilePath;
 
     ActionType lastActionType;
+
+    DrawableRectangle currentPositionMarker;
 };

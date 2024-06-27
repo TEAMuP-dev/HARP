@@ -15,6 +15,9 @@ public:
 
         transportSource.setSource(nullptr);
         sourcePlayer.setSource(nullptr);
+
+        thumbnail.removeChangeListener(this);
+        //scrollbar.removeListener(this);
     }
 
     void setupDisplay()
@@ -28,7 +31,20 @@ public:
 
         sourcePlayer.setSource(&transportSource);
 
+        thumbnail.addChangeListener (this);
+
+        //addAndMakeVisible (scrollbar);
+        //scrollbar.setRangeLimits(visibleRange);
+        //scrollbar.setAutoHide(false);
+        //scrollbar.addListener(this);
+
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
+    }
+
+    void drawMainArea(Graphics& g)
+    {
+        thumbnail.drawChannels(g, thumbArea.reduced(2),
+                               visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
     static StringArray getSupportedExtensions()
@@ -88,6 +104,11 @@ public:
         DBG("Set visibility true again");
     }
 
+    void setPlaybackPosition(float x) { transportSource.setPosition(jmax(0.0, xToTime(x))); }
+
+    float getPlaybackPosition() { transportSource.getCurrentPosition(); }
+
+
     void startPlaying()
     {
         transportSource.start();
@@ -96,8 +117,10 @@ public:
     void stopPlaying()
     {
         transportSource.stop();
-        transportSource.setPosition(0);
+        transportSource.setPosition(0); // TODO?
     }
+
+    bool isPlaying() { return transportSource.isPlaying(); }
 
 private:
 
@@ -111,7 +134,7 @@ private:
 
     AudioThumbnailCache thumbnailCache{ 5 };
 
-    AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);;
+    AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
 
     TimeSliceThread thread{ "audio file preview" };
 };

@@ -21,6 +21,11 @@ public:
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
 
+    void drawMainArea(Graphics& g)
+    {
+        // TODO
+    }
+
     static StringArray getSupportedExtensions()
     {
         // TODO
@@ -95,12 +100,27 @@ public:
         pianoRollEditor.loadSequence(sequence);
     }
 
+    void setPlaybackPosition(float x)
+    {
+        // TODO
+    }
+
+    float getPlaybackPosition()
+    {
+        // TODO
+    }
+
     void startPlaying()
     {
         // TODO
     }
 
     void stopPlaying()
+    {
+        // TODO
+    }
+
+    bool isPlaying()
     {
         // TODO
     }
