@@ -33,18 +33,12 @@ public:
 
         thumbnail.addChangeListener (this);
 
-        //addAndMakeVisible (scrollbar);
-        //scrollbar.setRangeLimits(visibleRange);
-        //scrollbar.setAutoHide(false);
-        //scrollbar.addListener(this);
-
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
     }
 
-    void drawMainArea(Graphics& g)
+    void drawMainArea(Graphics& g, Rectangle<int> a)
     {
-        thumbnail.drawChannels(g, thumbArea.reduced(2),
-                               visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
+        thumbnail.drawChannels(g, a.reduced(2), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
     static StringArray getSupportedExtensions()
@@ -54,8 +48,6 @@ public:
 
     void loadMediaFile(const URL& filePath)
     {
-        setNewTarget(filePath);
-
         // unload the previous file source and delete it..
         transportSource.stop();
         transportSource.setSource(nullptr);
@@ -94,14 +86,9 @@ public:
 
         // ..and plug it into our transport source
         transportSource.setSource (audioFileSource.get(),
-                                   32768,                   // tells it to buffer this many samples ahead
-                                   &thread,                 // this is the background thread to use for reading-ahead
-                                   audioFileSource->getAudioFormatReader()->sampleRate);     // allows for sample rate correction
-
-        //zoomSlider.setValue(0, dontSendNotification);
-        //thumbnail->setURL(getTempFilePath());
-        //thumbnail->setVisible(true);
-        DBG("Set visibility true again");
+                                   32768, // tells it to buffer this many samples ahead
+                                   &thread, // this is the background thread to use for reading-ahead
+                                   audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
     }
 
     void setPlaybackPosition(float x) { transportSource.setPosition(jmax(0.0, xToTime(x))); }
@@ -122,7 +109,20 @@ public:
 
     bool isPlaying() { return transportSource.isPlaying(); }
 
+    double getTotalLengthInSecs()
+    {
+        return thumbnail.getTotalLength();
+    }
+
 private:
+
+    void postLoadMediaActions(const URL& filePath)
+    {
+        if (auto inputSource = std::make_unique<URLInputSource>(filePath)) {
+            thumbnailCache.clear();
+            thumbnail.setSource(inputSource.release());
+        }
+    }
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;

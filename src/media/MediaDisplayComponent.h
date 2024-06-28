@@ -16,41 +16,65 @@ public:
 
     MediaDisplayComponent()
     {
+        addAndMakeVisible(scrollbar);
+        scrollbar.setRangeLimits(visibleRange);
+        scrollbar.setAutoHide(false);
+        scrollbar.addListener(this);
+
+        currentPositionMarker.setFill(Colours::white.withAlpha (0.85f));
+        addAndMakeVisible(currentPositionMarker);
+
         setupDisplay();
     }
 
     void setupDisplay();
 
-    void drawMainArea(Graphics& g);
+    void drawMainArea(Graphics& g, Rectangle<int> a);
 
     void paint(Graphics& g) override
     {
         g.fillAll (Colours::darkgrey);
         g.setColour (Colours::lightblue);
 
-        if (isFileLoaded())
-        {
-            auto area = getLocalBounds();
+        if (isFileLoaded()) {
+            Rectangle<int> a = getLocalBounds();
 
-            //area.removeFromBottom(scrollbar.getHeight() + 4);
-            drawMainArea(g);
-        }
-        else
-        {
+            drawMainArea(g, a);
+        } else {
             g.setFont(14.0f);
             g.drawFittedText ("No audio file selected", getLocalBounds(), Justification::centred, 2);
         }
     }
 
+    void resized() override
+    {
+        scrollbar.setBounds(getLocalBounds().removeFromBottom(14).reduced(2));
+    }
+
     void changeListenerCallback(ChangeBroadcaster*) override
     {
-        // this method is called by the thumbnail when it has changed, so we should repaint it.
+        // this method is called by the media when it has changed, so we should repaint it.
         repaint();
     }
 
     static StringArray getSupportedExtensions();
 
     void loadMediaFile(const URL& filePath);
+
+    void setupMediaFile(const URL& filePath)
+    {
+        setNewTarget(filePath);
+
+        loadMediaFile(filePath);
+
+        postLoadMediaActions(filePath);
+
+        Range<double> range (0.0, getTotalLengthInSecs());
+        scrollbar.setRangeLimits(range);
+        setRange(range);
+
+        startTimerHz (40);
+    }
 
     URL getTargetFilePath() { return targetFilePath; }
 
@@ -120,7 +144,7 @@ public:
 
     ActionType getLastActionType() const noexcept { return lastActionType; }
 
-    bool isInterestedInFileDrag (const StringArray& /*files*/) override { return true; }
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
 
     void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
     {
@@ -137,20 +161,20 @@ public:
 
     float getPlaybackPosition();
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
+    void mouseDown(const MouseEvent& event) override { mouseDrag(event); }
 
-    void mouseDrag (const MouseEvent& e) override
+    void mouseDrag(const MouseEvent& event) override
     {
-        if (canMoveTransport()) {
-            setPlaybackPosition((float) e.x);
+        if (!isPlaying()) {
+            setPlaybackPosition((float) event.x);
             lastActionType = TransportMoved;
         }
     }
 
-    void mouseUp (const MouseEvent&) override
+    void mouseUp(const MouseEvent&) override
     {
         if (lastActionType == TransportMoved) {
-            // transportSource.start();
+            //startPlaying();
             lastActionType = TransportStarted;
             sendChangeMessage();
         }
@@ -163,7 +187,16 @@ public:
 
     bool isPlaying();
 
-    // TODO - zoom functionality
+    double getTotalLengthInSecs();
+
+    void setRange(Range<double> range)
+    {
+        visibleRange = range;
+
+        scrollbar.setCurrentRange(range);
+        updateCursorPosition();
+        repaint();
+    }
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
@@ -176,14 +209,12 @@ protected:
         generateTempFile();
     }
 
-    String mediaHandlerInstructions;
-
-    double xToTime (const float x) const
+    double xToTime(const float x) const
     {
         return (x / (float) getWidth()) * (visibleRange.getLength()) + visibleRange.getStart();
     }
 
-    float timeToX (const double time) const
+    float timeToX(const double time) const
     {
         if (visibleRange.getLength() <= 0) {
             return 0;
@@ -192,23 +223,57 @@ protected:
         return (float) getWidth() * (float) ((time - visibleRange.getStart()) / visibleRange.getLength());
     }
 
+    Range<double> visibleRange;
+
+    String mediaHandlerInstructions;
+
 private:
 
-    bool canMoveTransport() { return !isPlaying(); }
+    void postLoadMediaActions(const URL& filePath);
 
     void updateCursorPosition()
     {
         currentPositionMarker.setVisible(isPlaying() || isMouseButtonDown());
         currentPositionMarker.setRectangle(Rectangle<float>(timeToX(getPlaybackPosition()) - 0.75f, 0, 1.5f,
-        (float) (getHeight() - scrollbar.getHeight())));
+                                                                    (float) (getHeight() - scrollbar.getHeight())));
     }
 
     void timerCallback() override
     {
-        if (canMoveTransport())
+        if (!isPlaying()) {
             updateCursorPosition();
-        else
+        } else {
             setRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0)));
+        }
+    }
+
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double newRangeStart) override
+    {
+        if (scrollBarThatHasMoved == &scrollbar) {
+            if (!isPlaying()) {
+                setRange(visibleRange.movedToStartAt(newRangeStart));
+            }
+        }
+    }
+
+    void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& wheel) override
+    {
+        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
+        if (getTotalLengthInSecs() > 0.0)
+        {
+            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
+                auto start = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
+                start = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - visibleRange.getLength()), start);
+
+                if (!isPlaying()) {
+                    setRange({ start, start + visibleRange.getLength() });
+                }
+            } else {
+                // Do nothing
+            }
+
+            repaint();
+        }
     }
 
     URL targetFilePath;
@@ -216,5 +281,6 @@ private:
 
     ActionType lastActionType;
 
+    ScrollBar scrollbar{ false };
     DrawableRectangle currentPositionMarker;
 };

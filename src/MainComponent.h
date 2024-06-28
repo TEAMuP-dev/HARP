@@ -873,7 +873,7 @@ public:
         addChildComponent(mediaDisplay.get());
         mediaDisplay->addChangeListener(this);
 
-        mediaDisplay->loadMediaFile(URL(mediaFile));
+        mediaDisplay->setupMediaFile(URL(mediaFile));
 
         playStopButton.setEnabled(true);
 
@@ -1210,7 +1210,7 @@ private:
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
             URL tempFilePath = mediaDisplay->getTempFilePath();
-            mediaDisplay->loadMediaFile(tempFilePath);
+            mediaDisplay->setupMediaFile(tempFilePath);
 
             // now, we can enable the process button
             resetProcessingButtons();
