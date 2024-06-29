@@ -11,6 +11,10 @@
 
 #include <fstream>
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+  #include <windows.h>
+#endif
+
 
 #include "Model.h"
 
@@ -76,6 +80,95 @@ namespace{
 
 class WebWave2Wave : public Model {
 public:
+
+  void LogAndDBG(const juce::String& message) const {
+    DBG(message);
+
+    if (m_logger) {
+      m_logger->logMessage(message);
+    }
+  }
+
+  #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+      int syscall(std::string command, std::string log_file) const {
+        STARTUPINFO si;
+        PROCESS_INFORMATION pi;
+
+        SECURITY_ATTRIBUTES sa;
+        sa.nLength = sizeof(sa);
+        sa.lpSecurityDescriptor = NULL;
+        sa.bInheritHandle = TRUE;       
+
+        HANDLE h = CreateFile(_strdup(log_file.c_str()),
+            GENERIC_WRITE,
+            FILE_SHARE_WRITE | FILE_SHARE_READ,
+            &sa,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL );
+
+        ZeroMemory(&si, sizeof(si));
+        ZeroMemory(&pi, sizeof(pi));
+        si.cb = sizeof(si);
+        si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+        si.hStdError = h;
+        si.hStdOutput = h;
+        si.dwFlags |= STARTF_USESTDHANDLES;
+        
+        LPSTR cmd_lpstr = _strdup( command.c_str());
+
+        LogAndDBG( "Trying to make process running " + (std::string)cmd_lpstr);
+
+        // Start the child process. 
+        if( !CreateProcess( NULL,   // No module name (use command line)
+            cmd_lpstr,      // Command line
+            NULL,           // Process handle not inheritable
+            NULL,           // Thread handle not inheritable
+            TRUE,           // Set handle inheritance to TRUE
+            0,              // No creation flags
+            NULL,           // Use parent's environment block
+            NULL,           // Use parent's starting directory 
+            &si,            // Pointer to STARTUPINFO structure
+            &pi )           // Pointer to PROCESS_INFORMATION structure
+        ) 
+        {
+            LogAndDBG( "CreateProcess failed " + std::to_string((int)GetLastError()) );
+            return -1;
+        }
+
+        LogAndDBG( "Process created running " + (std::string)cmd_lpstr);
+
+        // Wait until child process exits.
+        WaitForSingleObject( pi.hProcess, INFINITE );
+
+        LogAndDBG( "Process exited!");
+
+        DWORD ec;
+
+        GetExitCodeProcess(pi.hProcess, &ec);
+
+        LogAndDBG( "Process exit code is " + std::to_string((int)ec));
+
+        // Close process and thread handles. 
+        CloseHandle( pi.hProcess );
+        CloseHandle( pi.hThread );
+        
+        return ec;
+    }
+    #elif __APPLE__
+      int syscall(std::string command, std::string log_file) {
+        //TODO: Modify call for log file
+        return std::system(command.c_str());
+      }
+    #elif __linux__
+      int syscall(std::string command, std::string log_file) {
+        //TODO: Modify call for log file
+        return std::system(command.c_str());
+      }
+    #else
+      #error "gradiojuce_client has not been implemented for this platform"
+    #endif
+
   WebWave2Wave() { // TODO: should be a singleton
 
     // create our logger
@@ -85,11 +178,12 @@ public:
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+
       scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
       ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
 
-      prefix_cmd = "start /B cmd /c set PYTHONIOENCODING=UTF-8 && ";
+      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
     #elif __APPLE__
       scriptPath = juce::File::getSpecialLocation(
           juce::File::currentApplicationFile
@@ -109,14 +203,6 @@ public:
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
-  }
-
-  void LogAndDBG(const juce::String& message) const {
-    DBG(message);
-
-    if (m_logger) {
-      m_logger->logMessage(message);
-    }
   }
 
 
@@ -155,13 +241,13 @@ public:
       + " --mode get_ctrls"
       + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
-      + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-      + " 2>&1"   // redirect stderr to the same file as stdout
+      // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      // + " 2>&1"   // redirect stderr to the same file as stdout
     );
 
+
     LogAndDBG("Running command: " + command);
-    // TODO: urgently need to find a better alternative to system
-    int result = std::system(command.c_str());
+    int result = syscall(command, tempLogFile.getFullPathName().toStdString());
 
     juce::String logContent = tempLogFile.loadFileAsString();
     LogAndDBG(logContent);
@@ -387,12 +473,12 @@ public:
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
         + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
         + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
-        + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-        + " 2>&1"   // redirect stderr to the same file as stdout
+        // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        // + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
     // TODO: log commmand output to a file
-    int result = std::system(command.c_str());
+    int result = syscall(command, tempLogFile.getFullPathName().toStdString());
 
     juce::String logContent = tempLogFile.loadFileAsString();
     LogAndDBG(logContent);
