@@ -26,7 +26,7 @@ public:
 
         formatManager.registerBasicFormats();
 
-        deviceManager.initialise (0, 2, nullptr, true, {}, nullptr);
+        deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
         deviceManager.addAudioCallback(&sourcePlayer);
 
         sourcePlayer.setSource(&transportSource);
@@ -36,14 +36,24 @@ public:
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
     }
 
-    void drawMainArea(Graphics& g, Rectangle<int> a)
+    void drawMainArea(Graphics& g, Rectangle<int>& a)
     {
         thumbnail.drawChannels(g, a.reduced(2), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
     static StringArray getSupportedExtensions()
     {
-        // TODO
+        StringArray extensions;
+
+        extensions.add(".wav");
+        extensions.add(".bwf");
+        extensions.add(".aiff");
+        extensions.add(".aif");
+        extensions.add(".flac");
+        extensions.add(".ogg");
+        extensions.add(".mp3");
+
+        return extensions;
     }
 
     void loadMediaFile(const URL& filePath)

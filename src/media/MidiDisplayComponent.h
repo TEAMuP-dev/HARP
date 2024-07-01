@@ -21,14 +21,19 @@ public:
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
 
-    void drawMainArea(Graphics& g, Rectangle<int> a)
+    void drawMainArea(Graphics& g, Rectangle<int>& a)
     {
         // TODO
     }
 
     static StringArray getSupportedExtensions()
     {
-        // TODO
+        StringArray extensions;
+
+        extensions.add(".mid");
+        extensions.add(".midi");
+
+        return extensions;
     }
 
     void loadMediaFile(const URL& filePath)

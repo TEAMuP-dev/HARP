@@ -882,10 +882,15 @@ public:
 
     void openFileChooser()
     {
+        StringArray allExtensions = StringArray(audioExtensions);
+        allExtensions.mergeArray(midiExtensions);
+
+        String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
+
         fileBrowser = std::make_unique<FileChooser>(
             "Select a media file...", 
             File(), 
-            allExtensions);
+            filePatternsAllowed);
 
         fileBrowser->launchAsync(
             FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
@@ -1046,6 +1051,9 @@ public:
     {
         instructionsArea.clearStatusMessage();
     }
+
+    MediaDisplayComponent* getMediaDisplay() const { return mediaDisplay.get(); }
+
 private:
     // HARP UI 
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
@@ -1112,12 +1120,8 @@ private:
 
     std::unique_ptr<HoverHandler> mediaDisplayHandler;
 
-    StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
-
-    StringArray allExtensions;
-    // TODO - uncomment after fixing getExtension functions
-    //StringArray allExtensions = StringArray(midiExtensions).mergeArray(audioExtensions);
+    StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
 
     // These flags are very simplistic as they assume
     // that we only have audio2audio or midi2midi models

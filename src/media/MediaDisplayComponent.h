@@ -27,9 +27,9 @@ public:
         setupDisplay();
     }
 
-    void setupDisplay();
+    virtual void setupDisplay() {}
 
-    void drawMainArea(Graphics& g, Rectangle<int> a);
+    virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
 
     void paint(Graphics& g) override
     {
@@ -57,9 +57,9 @@ public:
         repaint();
     }
 
-    static StringArray getSupportedExtensions();
+    static StringArray getSupportedExtensions() { return StringArray(); }
 
-    void loadMediaFile(const URL& filePath);
+    void loadMediaFile(const URL& filePath) {}
 
     void setupMediaFile(const URL& filePath)
     {
@@ -157,9 +157,9 @@ public:
         generateTempFile();
     }
 
-    void setPlaybackPosition(float x);
+    virtual void setPlaybackPosition(float x) = 0;
 
-    float getPlaybackPosition();
+    virtual float getPlaybackPosition() = 0;
 
     void mouseDown(const MouseEvent& event) override { mouseDrag(event); }
 
@@ -181,13 +181,13 @@ public:
         
     }
 
-    void startPlaying();
+    virtual void startPlaying() = 0;
 
-    void stopPlaying();
+    virtual void stopPlaying() = 0;
 
-    bool isPlaying();
+    virtual bool isPlaying() = 0;
 
-    double getTotalLengthInSecs();
+    virtual double getTotalLengthInSecs() = 0;
 
     void setRange(Range<double> range)
     {
@@ -229,7 +229,7 @@ protected:
 
 private:
 
-    void postLoadMediaActions(const URL& filePath);
+    virtual void postLoadMediaActions(const URL& filePath) = 0;
 
     void updateCursorPosition()
     {

@@ -67,7 +67,10 @@ target_sources(${PROJECT_NAME}
         src/gui/StatusComponent.cpp
         src/gui/HoverHandler.cpp
 
-        # PianoRoll files
+        src/media/MediaDisplayComponent.h
+        src/media/AudioDisplayComponent.h
+        src/media/MidiDisplayComponent.h
+
         src/pianoRoll/KeyboardComponent.cpp
         src/pianoRoll/NoteGridComponent.cpp
         src/pianoRoll/NoteGridControlPanel.cpp
