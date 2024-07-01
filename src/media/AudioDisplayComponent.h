@@ -20,7 +20,7 @@ public:
         //scrollbar.removeListener(this);
     }
 
-    void setupDisplay()
+    void setupMediaDisplay() override
     {
         thread.startThread (Thread::Priority::normal);
 
@@ -36,7 +36,7 @@ public:
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
     }
 
-    void drawMainArea(Graphics& g, Rectangle<int>& a)
+    void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
         thumbnail.drawChannels(g, a.reduced(2), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
@@ -56,7 +56,7 @@ public:
         return extensions;
     }
 
-    void loadMediaFile(const URL& filePath)
+    void loadMediaFile(const URL& filePath) override
     {
         // unload the previous file source and delete it..
         transportSource.stop();
@@ -101,32 +101,32 @@ public:
                                    audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
     }
 
-    void setPlaybackPosition(float x) { transportSource.setPosition(jmax(0.0, xToTime(x))); }
+    void setPlaybackPosition(float x) override { transportSource.setPosition(jmax(0.0, xToTime(x))); }
 
-    float getPlaybackPosition() { transportSource.getCurrentPosition(); }
+    float getPlaybackPosition() override { transportSource.getCurrentPosition(); }
 
 
-    void startPlaying()
+    void startPlaying() override
     {
         transportSource.start();
     }
 
-    void stopPlaying()
+    void stopPlaying() override
     {
         transportSource.stop();
         transportSource.setPosition(0); // TODO?
     }
 
-    bool isPlaying() { return transportSource.isPlaying(); }
+    bool isPlaying() override { return transportSource.isPlaying(); }
 
-    double getTotalLengthInSecs()
+    double getTotalLengthInSecs() override
     {
         return thumbnail.getTotalLength();
     }
 
 private:
 
-    void postLoadMediaActions(const URL& filePath)
+    void postLoadMediaActions(const URL& filePath) override
     {
         if (auto inputSource = std::make_unique<URLInputSource>(filePath)) {
             thumbnailCache.clear();

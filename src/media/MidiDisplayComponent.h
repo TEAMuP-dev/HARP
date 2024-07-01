@@ -13,7 +13,7 @@ public:
         // TODO
     }
 
-    void setupDisplay()
+    void setupMediaDisplay() override
     {
         //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
         pianoRollEditor.setup(10, 400, 10);
@@ -21,7 +21,7 @@ public:
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
 
-    void drawMainArea(Graphics& g, Rectangle<int>& a)
+    void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
         // TODO
     }
@@ -36,10 +36,8 @@ public:
         return extensions;
     }
 
-    void loadMediaFile(const URL& filePath)
+    void loadMediaFile(const URL& filePath) override
     {
-        MediaDisplayComponent::loadMediaFile(filePath);
-
         // Create the local file this URL points to
         File file = filePath.getLocalFile();
 
@@ -96,39 +94,39 @@ public:
         pianoRollEditor.loadSequence(sequence);
     }
 
-    void setPlaybackPosition(float x)
+    void setPlaybackPosition(float x) override
     {
         // TODO
     }
 
-    float getPlaybackPosition()
+    float getPlaybackPosition() override
     {
         // TODO
     }
 
-    void startPlaying()
+    void startPlaying() override
     {
         // TODO
     }
 
-    void stopPlaying()
+    void stopPlaying() override
     {
         // TODO
     }
 
-    bool isPlaying()
+    bool isPlaying() override
     {
         // TODO
     }
 
-    double getTotalLengthInSecs()
+    double getTotalLengthInSecs() override
     {
         // TODO
     }
 
 private:
 
-    void postLoadMediaActions(const URL& filePath)
+    void postLoadMediaActions(const URL& filePath) override
     {
         // TODO
     }

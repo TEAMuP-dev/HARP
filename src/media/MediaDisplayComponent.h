@@ -24,10 +24,10 @@ public:
         currentPositionMarker.setFill(Colours::white.withAlpha (0.85f));
         addAndMakeVisible(currentPositionMarker);
 
-        setupDisplay();
+        setupMediaDisplay();
     }
 
-    virtual void setupDisplay() {}
+    virtual void setupMediaDisplay() {}
 
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
 
@@ -57,9 +57,9 @@ public:
         repaint();
     }
 
-    static StringArray getSupportedExtensions() { return StringArray(); }
+    static StringArray getSupportedExtensions();
 
-    void loadMediaFile(const URL& filePath) {}
+    virtual void loadMediaFile(const URL& filePath) = 0;
 
     void setupMediaFile(const URL& filePath)
     {
