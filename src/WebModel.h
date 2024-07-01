@@ -182,6 +182,7 @@ public:
 
     juce::String logContent = cmd_result.first;
     juce::uint32 result = cmd_result.second;
+    LogAndDBG(logContent);
 
     if (result != 0) {
         // read the text from the temp log file.
@@ -407,6 +408,7 @@ public:
 
     juce::String logContent = cmd_result.first;
     juce::uint32 result = cmd_result.second;
+    LogAndDBG(logContent);
 
     if (result != 0) {
         // read the text from the temp log file.
