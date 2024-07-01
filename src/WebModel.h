@@ -89,85 +89,24 @@ public:
     }
   }
 
-  #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-      int syscall(std::string command, std::string log_file) const {
-        STARTUPINFO si;
-        PROCESS_INFORMATION pi;
+  std::pair<juce::String, juce::uint32> run_command(std::string command) const {
+    juce::ChildProcess process;
+    bool status;
 
-        SECURITY_ATTRIBUTES sa;
-        sa.nLength = sizeof(sa);
-        sa.lpSecurityDescriptor = NULL;
-        sa.bInheritHandle = TRUE;       
+    status = process.start(command);
 
-        HANDLE h = CreateFile(_strdup(log_file.c_str()),
-            GENERIC_WRITE,
-            FILE_SHARE_WRITE | FILE_SHARE_READ,
-            &sa,
-            CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL );
-
-        ZeroMemory(&si, sizeof(si));
-        ZeroMemory(&pi, sizeof(pi));
-        si.cb = sizeof(si);
-        si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
-        si.hStdError = h;
-        si.hStdOutput = h;
-        si.dwFlags |= STARTF_USESTDHANDLES;
-        
-        LPSTR cmd_lpstr = _strdup( command.c_str());
-
-        LogAndDBG( "Trying to make process running " + (std::string)cmd_lpstr);
-
-        // Start the child process. 
-        if( !CreateProcess( NULL,   // No module name (use command line)
-            cmd_lpstr,      // Command line
-            NULL,           // Process handle not inheritable
-            NULL,           // Thread handle not inheritable
-            TRUE,           // Set handle inheritance to TRUE
-            0,              // No creation flags
-            NULL,           // Use parent's environment block
-            NULL,           // Use parent's starting directory 
-            &si,            // Pointer to STARTUPINFO structure
-            &pi )           // Pointer to PROCESS_INFORMATION structure
-        ) 
-        {
-            LogAndDBG( "CreateProcess failed " + std::to_string((int)GetLastError()) );
-            return -1;
-        }
-
-        LogAndDBG( "Process created running " + (std::string)cmd_lpstr);
-
-        // Wait until child process exits.
-        WaitForSingleObject( pi.hProcess, INFINITE );
-
-        LogAndDBG( "Process exited!");
-
-        DWORD ec;
-
-        GetExitCodeProcess(pi.hProcess, &ec);
-
-        LogAndDBG( "Process exit code is " + std::to_string((int)ec));
-
-        // Close process and thread handles. 
-        CloseHandle( pi.hProcess );
-        CloseHandle( pi.hThread );
-        
-        return ec;
+    if (!status) {
+      LogAndDBG("Process failed!");
     }
-    #elif __APPLE__
-      int syscall(std::string command, std::string log_file) {
-        //TODO: Modify call for log file
-        return std::system(command.c_str());
-      }
-    #elif __linux__
-      int syscall(std::string command, std::string log_file) {
-        //TODO: Modify call for log file
-        return std::system(command.c_str());
-      }
-    #else
-      #error "gradiojuce_client has not been implemented for this platform"
-    #endif
+
+    juce::String output = process.readAllProcessOutput();
+    juce::uint32 exit_code = process.getExitCode();
+
+    // LogAndDBG("Process output: " + output);
+    // LogAndDBG("Exit code: " + juce::String(exit_code));
+
+    return std::make_pair(output, exit_code);
+  }
 
   WebWave2Wave() { // TODO: should be a singleton
 
@@ -230,10 +169,10 @@ public:
             .getChildFile("control_spec.json");
     outputPath.deleteFile();
 
-    juce::File tempLogFile =
-    juce::File::getSpecialLocation(juce::File::tempDirectory)
-        .getChildFile("system_get_ctrls_log.txt");
-    tempLogFile.deleteFile();  // ensure the file doesn't already exist
+    // juce::File tempLogFile =
+    // juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //     .getChildFile("system_get_ctrls_log.txt");
+    // tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
       prefix_cmd
@@ -247,11 +186,10 @@ public:
 
 
     LogAndDBG("Running command: " + command);
-    int result = syscall(command, tempLogFile.getFullPathName().toStdString());
+    std::pair<juce::String, juce::uint32> cmd_result = run_command(command);
 
-    juce::String logContent = tempLogFile.loadFileAsString();
-    LogAndDBG(logContent);
-    tempLogFile.deleteFile();  // delete the temporary log file
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
 
     if (result != 0) {
         // read the text from the temp log file.
@@ -459,10 +397,10 @@ public:
       throw std::runtime_error("Failed to save controls to file.");
     }
 
-    juce::File tempLogFile =
-        juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("system_log" + randomString + ".txt");
-    tempLogFile.deleteFile();  // ensure the file doesn't already exist
+    // juce::File tempLogFile =
+    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //         .getChildFile("system_log" + randomString + ".txt");
+    // tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
         prefix_cmd
@@ -477,11 +415,10 @@ public:
         // + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
-    // TODO: log commmand output to a file
-    int result = syscall(command, tempLogFile.getFullPathName().toStdString());
+    std::pair<juce::String, int> cmd_result = run_command(command);
 
-    juce::String logContent = tempLogFile.loadFileAsString();
-    LogAndDBG(logContent);
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
 
     if (result != 0) {
         // read the text from the temp log file.
@@ -506,7 +443,7 @@ public:
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
 
-    tempLogFile.deleteFile();  // delete the temporary log file
+    // tempLogFile.deleteFile();  // delete the temporary log file
 
     // move the temp output file to the original input file
     tempOutputFile.moveFileTo(filetoProcess);
