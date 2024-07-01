@@ -169,10 +169,6 @@ public:
             .getChildFile("control_spec.json");
     outputPath.deleteFile();
 
-    // juce::File tempLogFile =
-    // juce::File::getSpecialLocation(juce::File::tempDirectory)
-    //     .getChildFile("system_get_ctrls_log.txt");
-    // tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
       prefix_cmd
@@ -397,10 +393,6 @@ public:
       throw std::runtime_error("Failed to save controls to file.");
     }
 
-    // juce::File tempLogFile =
-    //     juce::File::getSpecialLocation(juce::File::tempDirectory)
-    //         .getChildFile("system_log" + randomString + ".txt");
-    // tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
         prefix_cmd
@@ -442,8 +434,6 @@ public:
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
-
-    // tempLogFile.deleteFile();  // delete the temporary log file
 
     // move the temp output file to the original input file
     tempOutputFile.moveFileTo(filetoProcess);
