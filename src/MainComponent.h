@@ -343,6 +343,7 @@ public:
         save = 0x2001,
         saveAs = 0x2002,
         about = 0x2003,
+        undo = 0x2005
         // settings = 0x2004,
     };
 
@@ -368,6 +369,7 @@ public:
             menu.addCommandItem (&commandManager, CommandIDs::open);
             menu.addCommandItem (&commandManager, CommandIDs::save);
             menu.addCommandItem (&commandManager, CommandIDs::saveAs);
+            menu.addCommandItem (&commandManager, CommandIDs::undo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
@@ -390,6 +392,7 @@ public:
             CommandIDs::open,
             CommandIDs::save, 
             CommandIDs::saveAs,
+            CommandIDs::undo,
             CommandIDs::about,
             };
         commands.addArray(ids, numElementsInArray(ids));
@@ -412,6 +415,10 @@ public:
                 result.setInfo("Save As...", "Saves the current document with a new name", "File", 0);
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
+            case CommandIDs::undo:
+                result.setInfo("Undo", "Undoes the most recent operation", "File", 0);
+                result.addDefaultKeypress('z', ModifierKeys::commandModifier);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -432,6 +439,10 @@ public:
             case CommandIDs::open:
                 DBG("Open command invoked");
                 openFileChooser();
+                break;
+            case CommandIDs::undo:
+                DBG("Undo command invoked");
+                undoCallback();
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -582,6 +593,25 @@ public:
         } else {
             setStatus("Nothing to save. Please load an audio file first.");
         }
+    }
+
+    void undoCallback() {
+        DBG("Undoing file");
+
+        // check if the audio file is loaded
+        if (!currentAudioFile.isLocalFile()) {
+            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
+            //ShowMEssageBoxAsync
+            //Fail quietly, we should just ignore this if it doesn't make sense
+            DBG("nvm nothing to undo lol");
+            return;
+        }
+
+        model->undo_process(currentAudioFile.getLocalFile());
+        DBG("Undo call complete");
+        // load the audio file again
+        processBroadcaster.sendChangeMessage();
+
     }
 
     void loadModelCallback() {

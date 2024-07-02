@@ -103,12 +103,20 @@ public:
     #else
       #error "gradiojuce_client has not been implemented for this platform"
     #endif
+
+
   }
 
   ~WebWave2Wave() {
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
+
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
+    }
+
   }
 
   void LogAndDBG(const juce::String& message) const {
@@ -332,7 +340,7 @@ public:
     return m_ctrls;
   }
 
-  void process(juce::File filetoProcess) const {
+  void process(juce::File filetoProcess) {
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
@@ -355,6 +363,11 @@ public:
     tempFile.deleteFile();
     // copy the file to a temp file
     filetoProcess.copyFileTo(tempFile);
+    file_log.push_back(tempFile);
+
+    for (juce::File file: file_log) {
+      LogAndDBG(file.getFileName());
+    }
 
     // a tarrget output file
     juce::File tempOutputFile =
@@ -425,8 +438,8 @@ public:
     // move the temp output file to the original input file
     tempOutputFile.moveFileTo(filetoProcess);
 
-    // delete the temp input file
-    tempFile.deleteFile();
+    // don't delete the temp input file so we have it in the log
+    // tempFile.deleteFile();
     tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
     LogAndDBG("WebWave2Wave::process done");
@@ -434,6 +447,22 @@ public:
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
     return;
+  }
+
+  void undo_process(juce::File file_to_replace) {
+    if (file_log.size() == 0) {
+      LogAndDBG("Nothing to undo!");
+      return;
+    }
+    //Replace file with old file
+    juce::File old_file = file_log.back();
+    old_file.copyFileTo(file_to_replace);
+
+    file_log.pop_back();
+    
+    LogAndDBG("WebWave2Wave::undo_process done");
+    return;
+    
   }
 
   // sets a cancel flag file that the client can check to see if the process
@@ -547,6 +576,8 @@ private:
   string m_url;
   string prefix_cmd;
   juce::File scriptPath;
+
+  std::vector<juce::File> file_log;
 };
 
 
