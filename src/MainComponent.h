@@ -524,7 +524,7 @@ public:
         // Initialize the GUI with an audio thumbnail display
         mediaDisplay = std::make_unique<AudioDisplayComponent>();
 
-        addChildComponent(mediaDisplay.get());
+        addAndMakeVisible(mediaDisplay.get());
         mediaDisplay->addChangeListener(this);
 
         // TODO - may have to do this for every new display loaded
@@ -853,6 +853,8 @@ public:
         removeChildComponent(mediaDisplay.get());
         mediaDisplay->removeChangeListener(this);
 
+        // TODO - only reinitialize display if mismatch
+
         if (midiExtensions.contains(extension))
         {
             isAudio = false;
@@ -870,7 +872,7 @@ public:
             // TODO - not supported
         }
 
-        addChildComponent(mediaDisplay.get());
+        addAndMakeVisible(mediaDisplay.get());
         mediaDisplay->addChangeListener(this);
 
         mediaDisplay->setupMediaFile(URL(mediaFile));

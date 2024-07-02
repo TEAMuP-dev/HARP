@@ -23,18 +23,19 @@ public:
 
         currentPositionMarker.setFill(Colours::white.withAlpha (0.85f));
         addAndMakeVisible(currentPositionMarker);
-
-        setupMediaDisplay();
     }
 
-    virtual void setupMediaDisplay() {}
+    ~MediaDisplayComponent()
+    {
+        scrollbar.removeListener(this);
+    }
 
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
 
     void paint(Graphics& g) override
     {
-        g.fillAll (Colours::darkgrey);
-        g.setColour (Colours::lightblue);
+        g.fillAll(Colours::darkgrey);
+        g.setColour(Colours::lightblue);
 
         if (isFileLoaded()) {
             Rectangle<int> a = getLocalBounds();
@@ -42,7 +43,7 @@ public:
             drawMainArea(g, a);
         } else {
             g.setFont(14.0f);
-            g.drawFittedText ("No audio file selected", getLocalBounds(), Justification::centred, 2);
+            g.drawFittedText ("No media file selected...", getLocalBounds(), Justification::centred, 2);
         }
     }
 
@@ -73,7 +74,7 @@ public:
         scrollbar.setRangeLimits(range);
         setRange(range);
 
-        startTimerHz (40);
+        startTimerHz(40);
     }
 
     URL getTargetFilePath() { return targetFilePath; }

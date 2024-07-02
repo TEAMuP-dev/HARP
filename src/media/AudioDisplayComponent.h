@@ -9,18 +9,7 @@ class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
 
-    ~AudioDisplayComponent()
-    {
-        deviceManager.removeAudioCallback(&sourcePlayer);
-
-        transportSource.setSource(nullptr);
-        sourcePlayer.setSource(nullptr);
-
-        thumbnail.removeChangeListener(this);
-        //scrollbar.removeListener(this);
-    }
-
-    void setupMediaDisplay() override
+    AudioDisplayComponent()
     {
         thread.startThread (Thread::Priority::normal);
 
@@ -34,6 +23,16 @@ public:
         thumbnail.addChangeListener (this);
 
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
+    }
+
+    ~AudioDisplayComponent()
+    {
+        deviceManager.removeAudioCallback(&sourcePlayer);
+
+        transportSource.setSource(nullptr);
+        sourcePlayer.setSource(nullptr);
+
+        thumbnail.removeChangeListener(this);
     }
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override
