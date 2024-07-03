@@ -758,9 +758,10 @@ public:
     {
         if (!mediaDisplay->isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
         {
+            // TODO - I think some of this logic would be more apprrpriate within the MediaDisplayComponent
+            mediaDisplay->stopPlaying();
             playStopButton.setMode(playButtonInfo.label);
             stopTimer();
-            //mediaDisplay->stopPlaying();
         }
         
     }
@@ -1152,16 +1153,17 @@ private:
 
     //==============================================================================
 
-    void play() {
+    void play()
+    {
         if (!mediaDisplay->isPlaying()) {
-            // transportSource.setPosition (0);
             mediaDisplay->startPlaying();
             playStopButton.setMode(stopButtonInfo.label);
             startTimerHz(10);
         }
     }
 
-    void stop()    {
+    void stop()
+    {
         if (mediaDisplay->isPlaying()) {
             mediaDisplay->stopPlaying();
             playStopButton.setMode(playButtonInfo.label);
@@ -1169,12 +1171,8 @@ private:
         }
     }
 
-    // void updateFollowTransportState()
-    // {
-    //     thumbnail->setFollowsTransport (followTransportButton.getToggleState());
-    // }
-
-    void resetProcessingButtons() {
+    void resetProcessingButtons()
+    {
         processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(true);
         saveEnabled = true;

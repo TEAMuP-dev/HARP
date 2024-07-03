@@ -11,7 +11,7 @@ public:
 
     AudioDisplayComponent()
     {
-        thread.startThread (Thread::Priority::normal);
+        thread.startThread(Thread::Priority::normal);
 
         formatManager.registerBasicFormats();
 
@@ -20,7 +20,7 @@ public:
 
         sourcePlayer.setSource(&transportSource);
 
-        thumbnail.addChangeListener (this);
+        thumbnail.addChangeListener(this);
 
         mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
     }
@@ -58,6 +58,7 @@ public:
     void loadMediaFile(const URL& filePath) override
     {
         // unload the previous file source and delete it..
+        // TODO - might want to make this a separate function
         transportSource.stop();
         transportSource.setSource(nullptr);
         audioFileSource.reset();
@@ -94,15 +95,15 @@ public:
         audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
 
         // ..and plug it into our transport source
-        transportSource.setSource (audioFileSource.get(),
-                                   32768, // tells it to buffer this many samples ahead
-                                   &thread, // this is the background thread to use for reading-ahead
-                                   audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
+        transportSource.setSource(audioFileSource.get(),
+                                  32768, // tells it to buffer this many samples ahead
+                                  &thread, // this is the background thread to use for reading-ahead
+                                  audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
     }
 
-    void setPlaybackPosition(float x) override { transportSource.setPosition(jmax(0.0, xToTime(x))); }
+    void setPlaybackPosition(double t) override { transportSource.setPosition(t); }
 
-    float getPlaybackPosition() override { transportSource.getCurrentPosition(); }
+    double getPlaybackPosition() override { transportSource.getCurrentPosition(); }
 
 
     void startPlaying() override
@@ -113,7 +114,7 @@ public:
     void stopPlaying() override
     {
         transportSource.stop();
-        transportSource.setPosition(0); // TODO?
+        transportSource.setPosition(0);
     }
 
     bool isPlaying() override { return transportSource.isPlaying(); }

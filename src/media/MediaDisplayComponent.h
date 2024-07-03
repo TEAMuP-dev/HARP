@@ -17,11 +17,10 @@ public:
     MediaDisplayComponent()
     {
         addAndMakeVisible(scrollbar);
-        scrollbar.setRangeLimits(visibleRange);
         scrollbar.setAutoHide(false);
         scrollbar.addListener(this);
 
-        currentPositionMarker.setFill(Colours::white.withAlpha (0.85f));
+        currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
         addAndMakeVisible(currentPositionMarker);
     }
 
@@ -54,7 +53,7 @@ public:
 
     void changeListenerCallback(ChangeBroadcaster*) override
     {
-        // this method is called by the media when it has changed, so we should repaint it.
+        // Repaint whenever media has changed
         repaint();
     }
 
@@ -71,8 +70,9 @@ public:
         postLoadMediaActions(filePath);
 
         Range<double> range (0.0, getTotalLengthInSecs());
+
         scrollbar.setRangeLimits(range);
-        setRange(range);
+        updateVisibleRange(range);
 
         startTimerHz(40);
     }
@@ -154,20 +154,19 @@ public:
         lastActionType = FileDropped;
         sendChangeMessage();
 
-        loadMediaFile(firstFilePath);
-        generateTempFile();
+        setupMediaFile(firstFilePath);
     }
 
-    virtual void setPlaybackPosition(float x) = 0;
+    virtual void setPlaybackPosition(double t) = 0;
 
-    virtual float getPlaybackPosition() = 0;
+    virtual double getPlaybackPosition() = 0;
 
-    void mouseDown(const MouseEvent& event) override { mouseDrag(event); }
+    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
 
-    void mouseDrag(const MouseEvent& event) override
+    void mouseDrag(const MouseEvent& e) override
     {
         if (!isPlaying()) {
-            setPlaybackPosition((float) event.x);
+            setPlaybackPosition(xToTime((float) e.x));
             lastActionType = TransportMoved;
         }
     }
@@ -175,9 +174,9 @@ public:
     void mouseUp(const MouseEvent&) override
     {
         if (lastActionType == TransportMoved) {
-            //startPlaying();
             lastActionType = TransportStarted;
             sendChangeMessage();
+            //startPlaying();
         }
         
     }
@@ -190,11 +189,11 @@ public:
 
     virtual double getTotalLengthInSecs() = 0;
 
-    void setRange(Range<double> range)
+    void updateVisibleRange(Range<double> newRange)
     {
-        visibleRange = range;
+        visibleRange = newRange;
 
-        scrollbar.setCurrentRange(range);
+        scrollbar.setCurrentRange(visibleRange);
         updateCursorPosition();
         repaint();
     }
@@ -206,22 +205,37 @@ protected:
     void setNewTarget(URL filePath)
     {
         targetFilePath = filePath;
-        //tempFilePath = URL();
         generateTempFile();
     }
 
     double xToTime(const float x) const
     {
-        return (x / (float) getWidth()) * (visibleRange.getLength()) + visibleRange.getStart();
+        auto totalWidth = getWidth();
+        auto totalLength = visibleRange.getLength();
+        auto visibleStart = visibleRange.getStart();
+
+        double t = (x / totalWidth) * totalLength + visibleStart;
+
+        return t;
     }
 
-    float timeToX(const double time) const
+    float timeToX(const double t) const
     {
-        if (visibleRange.getLength() <= 0) {
-            return 0;
+        float x;
+
+        auto totalLength = visibleRange.getLength();
+
+        if (totalLength <= 0) {
+            x = 0;
+        } else {
+            auto totalWidth = (float) getWidth();
+            auto visibleStart = visibleRange.getStart();
+            auto visibleOffset = (float) t - visibleStart;
+
+            x = totalWidth * visibleOffset / totalLength;
         }
 
-        return (float) getWidth() * (float) ((time - visibleRange.getStart()) / visibleRange.getLength());
+        return x;
     }
 
     Range<double> visibleRange;
@@ -234,25 +248,32 @@ private:
 
     void updateCursorPosition()
     {
-        currentPositionMarker.setVisible(isPlaying() || isMouseButtonDown());
-        currentPositionMarker.setRectangle(Rectangle<float>(timeToX(getPlaybackPosition()) - 0.75f, 0, 1.5f,
-                                                                    (float) (getHeight() - scrollbar.getHeight())));
+        bool displayCursor = isPlaying() || isMouseButtonDown();
+
+        currentPositionMarker.setVisible(displayCursor);
+
+        float cursorHeight = (float) (getHeight() - scrollbar.getHeight());
+        float cursorPosition = timeToX(getPlaybackPosition()) - (cursorWidth / 2.0f);
+
+        currentPositionMarker.setRectangle(Rectangle<float>(cursorPosition, 0, cursorWidth, cursorHeight));
     }
 
     void timerCallback() override
     {
+        // TODO - I don't think this needs to run continuously
+        // TODO - clear audio buffer upon start
         if (!isPlaying()) {
             updateCursorPosition();
         } else {
-            setRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0)));
+            updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
         }
     }
 
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double newRangeStart) override
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override
     {
         if (scrollBarThatHasMoved == &scrollbar) {
             if (!isPlaying()) {
-                setRange(visibleRange.movedToStartAt(newRangeStart));
+                updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
             }
         }
     }
@@ -267,7 +288,7 @@ private:
                 start = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - visibleRange.getLength()), start);
 
                 if (!isPlaying()) {
-                    setRange({ start, start + visibleRange.getLength() });
+                    updateVisibleRange({ start, start + visibleRange.getLength() });
                 }
             } else {
                 // Do nothing
@@ -277,11 +298,12 @@ private:
         }
     }
 
-    URL targetFilePath;
-    URL tempFilePath;
+    URL targetFilePath = URL();
+    URL tempFilePath = URL();
 
     ActionType lastActionType;
 
-    ScrollBar scrollbar{ false };
+    const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker;
+    ScrollBar scrollbar{ false };
 };

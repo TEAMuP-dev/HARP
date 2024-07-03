@@ -94,14 +94,15 @@ public:
         pianoRollEditor.loadSequence(sequence);
     }
 
-    void setPlaybackPosition(float x) override
+    void setPlaybackPosition(double t) override
     {
         // TODO
     }
 
-    float getPlaybackPosition() override
+    double getPlaybackPosition() override
     {
         // TODO
+        return 0.0f;
     }
 
     void startPlaying() override
@@ -117,6 +118,7 @@ public:
     bool isPlaying() override
     {
         // TODO
+        return false;
     }
 
     double getTotalLengthInSecs() override
