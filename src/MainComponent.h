@@ -1232,7 +1232,7 @@ public:
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
-        auto row5 = mainArea.removeFromTop(175);  // the remaining area is for row 4
+        auto row5 = mainArea.removeFromTop(195);  // the remaining area is for row 4
         ctrlComponent.setBounds(row5.reduced(margin));
 
         // An empty space of 20px between the ctrl component and the process button
@@ -1255,7 +1255,7 @@ public:
         thumbnail->setBounds(row7);
 
         // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(70);  // adjust height as needed
+        auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
         playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
         chooseFileButton.setBounds(row8.reduced(margin));
 

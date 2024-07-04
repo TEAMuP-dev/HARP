@@ -31,6 +31,7 @@ public:
         auto topArea = area.removeFromTop((int)(area.getHeight() * 0.3));
         titleLabel.setBounds(topArea);
         textBox.setBounds(area);
+        textBox.setMultiLine(true, true);
         addAndMakeVisible(titleLabel);
         addAndMakeVisible(textBox);
     }
