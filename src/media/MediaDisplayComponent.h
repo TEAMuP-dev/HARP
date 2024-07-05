@@ -74,7 +74,7 @@ public:
         scrollbar.setVisible(false);
     }
 
-    void setupMediaFile(const URL& filePath)
+    void setupDisplay(const URL& filePath)
     {
         resetMedia();
 
@@ -157,7 +157,7 @@ public:
     {
         URL firstFilePath = URL(File(files[0]));
 
-        setupMediaFile(firstFilePath);
+        setupDisplay(firstFilePath);
         sendChangeMessage();
     }
 

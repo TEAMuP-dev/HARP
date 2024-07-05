@@ -519,24 +519,13 @@ public:
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
 
-        // Initialize the GUI with an audio thumbnail display
-        mediaDisplay = std::make_unique<AudioDisplayComponent>();
+        // Initialize default media display
+        initializeMediaDisplay();
 
-        addAndMakeVisible(getMediaDisplay());
-        mediaDisplay->addChangeListener(this);
-
-        // TODO - may have to do this for every new display loaded
-        mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-        mediaDisplayHandler->onMouseEnter = [this]() { 
-            setInstructions(mediaDisplay->getMediaHandlerInstructions()); 
-        };
-        mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
-        mediaDisplayHandler->attach();
-
-        // Load the initial file
         if (initialFilePath.isLocalFile())
         {
-            loadDisplay(initialFilePath.getLocalFile());
+            // Load initial file into matching media display
+            loadMediaDisplay(initialFilePath.getLocalFile());
         }
 
         // addAndMakeVisible (startStopButton);
@@ -831,37 +820,57 @@ public:
         jobProcessorThread.signalTask();
     }
 
-    void loadDisplay(File mediaFile)
+    void initializeMediaDisplay(int mediaType = 0)
     {
-        // Check the file extension to determine type
-        String extension = mediaFile.getFileExtension();
-
-        removeChildComponent(getMediaDisplay());
-        mediaDisplay->removeChangeListener(this);
-
-        // TODO - only reinitialize display if mismatch
-
-        if (midiExtensions.contains(extension))
-        {
+        if (mediaType == 1) {
             isAudio = false;
 
             mediaDisplay = std::make_unique<MidiDisplayComponent>();
-        }
-        else if (audioExtensions.contains(extension))
-        {
+        } else {
             isAudio = true;
 
+            // Default to audio display
             mediaDisplay = std::make_unique<AudioDisplayComponent>();
-        }
-        else
-        {
-            // TODO - not supported - error message?
         }
 
         addAndMakeVisible(getMediaDisplay());
         mediaDisplay->addChangeListener(this);
 
-        mediaDisplay->setupMediaFile(URL(mediaFile));
+        mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
+        mediaDisplayHandler->onMouseEnter = [this]() { 
+            setInstructions(mediaDisplay->getMediaHandlerInstructions()); 
+        };
+        mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
+        mediaDisplayHandler->attach();
+    }
+
+    void loadMediaDisplay(File mediaFile)
+    {
+        // Check the file extension to determine type
+        String extension = mediaFile.getFileExtension();
+
+        if (!mediaDisplay->getSupportedExtensions().contains(extension)) {
+            // Remove the existing media display
+            removeChildComponent(getMediaDisplay());
+            mediaDisplay->removeChangeListener(this);
+            mediaDisplayHandler->detach();
+
+            int mediaType = 0;
+
+            if (audioExtensions.contains(extension)) { }
+            else if (midiExtensions.contains(extension)) {
+                mediaType = 1;
+            } else {
+                DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension << "\'.");
+
+                AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
+            }
+
+            // Initialize a matching display
+            initializeMediaDisplay(mediaType);
+        }
+
+        mediaDisplay->setupDisplay(URL(mediaFile));
 
         playStopButton.setEnabled(true);
 
@@ -886,7 +895,7 @@ public:
             {
                 File chosenFile = browser.getResult();
                 if (chosenFile != File{}) {
-                    loadDisplay(chosenFile);
+                    loadMediaDisplay(chosenFile);
                 }
             });
     }
@@ -1201,7 +1210,7 @@ private:
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
             URL tempFilePath = mediaDisplay->getTempFilePath();
-            mediaDisplay->setupMediaFile(tempFilePath);
+            mediaDisplay->setupDisplay(tempFilePath);
 
             // now, we can enable the process button
             resetProcessingButtons();
