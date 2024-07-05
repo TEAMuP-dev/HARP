@@ -94,9 +94,7 @@ class MainComponent  : public Component,
                           #endif
                            private ChangeListener,
                            public MenuBarModel,
-                           public ApplicationCommandTarget,
-                           public Timer
-                                     
+                           public ApplicationCommandTarget                                     
 {
 public:
 
@@ -524,7 +522,7 @@ public:
         // Initialize the GUI with an audio thumbnail display
         mediaDisplay = std::make_unique<AudioDisplayComponent>();
 
-        addAndMakeVisible(mediaDisplay.get());
+        addAndMakeVisible(getMediaDisplay());
         mediaDisplay->addChangeListener(this);
 
         // TODO - may have to do this for every new display loaded
@@ -723,7 +721,6 @@ public:
 
         jobProcessorThread.startThread();
 
-        startTimerHz(10);
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque (true);
@@ -752,18 +749,6 @@ public:
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
         // commandManager.setFirstCommandTarget (nullptr);
-    }
-
-    void timerCallback() override
-    {
-        if (!mediaDisplay->isPlaying() && playStopButton.getModeName() == stopButtonInfo.label)
-        {
-            // TODO - I think some of this logic would be more apprrpriate within the MediaDisplayComponent
-            mediaDisplay->stopPlaying();
-            playStopButton.setMode(playButtonInfo.label);
-            stopTimer();
-        }
-        
     }
 
     void cancelCallback()
@@ -851,7 +836,7 @@ public:
         // Check the file extension to determine type
         String extension = mediaFile.getFileExtension();
 
-        removeChildComponent(mediaDisplay.get());
+        removeChildComponent(getMediaDisplay());
         mediaDisplay->removeChangeListener(this);
 
         // TODO - only reinitialize display if mismatch
@@ -870,10 +855,10 @@ public:
         }
         else
         {
-            // TODO - not supported
+            // TODO - not supported - error message?
         }
 
-        addAndMakeVisible(mediaDisplay.get());
+        addAndMakeVisible(getMediaDisplay());
         mediaDisplay->addChangeListener(this);
 
         mediaDisplay->setupMediaFile(URL(mediaFile));
@@ -1156,18 +1141,16 @@ private:
     void play()
     {
         if (!mediaDisplay->isPlaying()) {
-            mediaDisplay->startPlaying();
+            mediaDisplay->start();
             playStopButton.setMode(stopButtonInfo.label);
-            startTimerHz(10);
         }
     }
 
     void stop()
     {
         if (mediaDisplay->isPlaying()) {
-            mediaDisplay->stopPlaying();
+            mediaDisplay->stop();
             playStopButton.setMode(playButtonInfo.label);
-            stopTimer();
         }
     }
 
@@ -1182,11 +1165,14 @@ private:
 
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
-        if (source == mediaDisplay.get()) {
-            if (mediaDisplay->getLastActionType() == MediaDisplayComponent::ActionType::FileDropped) {
-                play(); // TODO - is this really necessary?
-            } else if (mediaDisplay->getLastActionType() == MediaDisplayComponent::ActionType::TransportStarted) {
-                stop(); // TODO - is this really necessary?
+        if (source == getMediaDisplay()) {
+            if (mediaDisplay->isFileLoaded() && !mediaDisplay->isPlaying()) {
+                playStopButton.setMode(playButtonInfo.label);
+                playStopButton.setEnabled(true);
+            } else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying()) {
+                playStopButton.setMode(stopButtonInfo.label);
+            } else {
+                playStopButton.setEnabled(false);
             }
         }
         else if (source == &loadBroadcaster) {

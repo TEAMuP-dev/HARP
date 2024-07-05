@@ -73,8 +73,6 @@ public:
 
         scrollbar.setRangeLimits(range);
         updateVisibleRange(range);
-
-        startTimerHz(40);
     }
 
     URL getTargetFilePath() { return targetFilePath; }
@@ -137,24 +135,14 @@ public:
         generateTempFile();
     }
 
-    enum ActionType {
-        FileDropped,
-        TransportMoved,
-        TransportStarted
-    };
-
-    ActionType getLastActionType() const noexcept { return lastActionType; }
-
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
 
     void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
     {
         URL firstFilePath = URL(File(files[0]));
 
-        lastActionType = FileDropped;
-        sendChangeMessage();
-
         setupMediaFile(firstFilePath);
+        sendChangeMessage();
     }
 
     virtual void setPlaybackPosition(double t) = 0;
@@ -167,23 +155,32 @@ public:
     {
         if (!isPlaying()) {
             setPlaybackPosition(xToTime((float) e.x));
-            lastActionType = TransportMoved;
         }
     }
 
     void mouseUp(const MouseEvent&) override
     {
-        if (lastActionType == TransportMoved) {
-            lastActionType = TransportStarted;
-            sendChangeMessage();
-            //startPlaying();
-        }
-        
+        start();
+        sendChangeMessage();
     }
 
     virtual void startPlaying() = 0;
 
+    void start()
+    {
+        startPlaying();
+
+        startTimerHz(40);
+    }
+
     virtual void stopPlaying() = 0;
+
+    void stop()
+    {
+        stopPlaying();
+
+        stopTimer();
+    }
 
     virtual bool isPlaying() = 0;
 
@@ -260,12 +257,11 @@ private:
 
     void timerCallback() override
     {
-        // TODO - I don't think this needs to run continuously
-        // TODO - clear audio buffer upon start
-        if (!isPlaying()) {
-            updateCursorPosition();
-        } else {
+        if (isPlaying()) {
             updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
+        } else {
+            stop();
+            sendChangeMessage();
         }
     }
 
@@ -278,17 +274,30 @@ private:
         }
     }
 
-    void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& wheel) override
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override
     {
-        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
+        DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
+
         if (getTotalLengthInSecs() > 0.0)
         {
+            auto totalLength = visibleRange.getLength();
+            auto visibleStart = visibleRange.getStart();
+
             if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
-                auto start = visibleRange.getStart() - wheel.deltaX * (visibleRange.getLength()) / 10.0;
-                start = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - visibleRange.getLength()), start);
+                auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
+                newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
 
                 if (!isPlaying()) {
-                    updateVisibleRange({ start, start + visibleRange.getLength() });
+                    updateVisibleRange({ newStart, newStart + totalLength });
+                }
+            } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
+                if (wheel.deltaY != 0) {
+                    currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
+
+                    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
+                    auto timeAtCenter = xToTime((float) getWidth() / 2.0f);
+
+                    updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
                 }
             } else {
                 // Do nothing
@@ -301,9 +310,9 @@ private:
     URL targetFilePath = URL();
     URL tempFilePath = URL();
 
-    ActionType lastActionType;
-
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker;
+
+    double currentHorizontalZoomFactor = 1.0f;
     ScrollBar scrollbar{ false };
 };

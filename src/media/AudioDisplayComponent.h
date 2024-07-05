@@ -58,7 +58,7 @@ public:
     void loadMediaFile(const URL& filePath) override
     {
         // unload the previous file source and delete it..
-        // TODO - might want to make this a separate function
+        // TODO - might want to make a separate function for previous file cleanup
         transportSource.stop();
         transportSource.setSource(nullptr);
         audioFileSource.reset();
@@ -108,6 +108,7 @@ public:
 
     void startPlaying() override
     {
+        // TODO - clear displayed audio buffer upon start here?
         transportSource.start();
     }
 
