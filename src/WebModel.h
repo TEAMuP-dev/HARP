@@ -479,10 +479,12 @@ public:
   bool undo_redo_process(juce::File file_to_replace, bool undo) {
     if (file_log_loc <= 0 && undo) {
       LogAndDBG("Nothing to undo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
       return false;
     }
     if (file_log_loc == file_log.size() - 1 && !undo) {
       LogAndDBG("Nothing to redo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
       return false;
     }
     if (undo) {

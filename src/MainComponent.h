@@ -617,13 +617,15 @@ public:
         if (!currentAudioFile.isLocalFile()) {
             // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
             //ShowMEssageBoxAsync
-            //Fail quietly, we should just ignore this if it doesn't make sense
+            //Fail with beep, we should just ignore this if it doesn't make sense
             DBG("No file loaded to perform operation on");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
             return;
         }
 
         if (isProcessing) {
             DBG("Can't undo/redo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
             return;
         }
 
