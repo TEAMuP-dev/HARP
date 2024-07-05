@@ -622,6 +622,11 @@ public:
             return;
         }
 
+        if (isProcessing) {
+            DBG("Can't undo/redo while processing occurring!");
+            return;
+        }
+
         model->undo_redo_process(currentAudioFile.getLocalFile(), undo);
         DBG("Undo call complete");
         // load the audio file again
