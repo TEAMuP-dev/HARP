@@ -476,14 +476,14 @@ public:
     return;
   }
 
-  void undo_redo_process(juce::File file_to_replace, bool undo) {
+  bool undo_redo_process(juce::File file_to_replace, bool undo) {
     if (file_log_loc <= 0 && undo) {
       LogAndDBG("Nothing to undo!");
-      return;
+      return false;
     }
     if (file_log_loc == file_log.size() - 1 && !undo) {
       LogAndDBG("Nothing to redo!");
-      return;
+      return false;
     }
     if (undo) {
       file_log_loc--;
@@ -500,8 +500,19 @@ public:
     old_file.copyFileTo(file_to_replace);
     
     LogAndDBG("WebWave2Wave::undo_redo_process done");
-    return;
+    return true;
     
+  }
+
+  // Should be run whenever input file changes or on app close
+  void clear_file_log() {
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
+    }
+    file_log.clear();
+    file_log_loc = -1;
+    LogAndDBG("File log cleared!");
   }
 
   // sets a cancel flag file that the client can check to see if the process

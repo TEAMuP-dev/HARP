@@ -627,10 +627,12 @@ public:
             return;
         }
 
-        model->undo_redo_process(currentAudioFile.getLocalFile(), undo);
+        bool success = model->undo_redo_process(currentAudioFile.getLocalFile(), undo);
         DBG("Undo call complete");
-        // load the audio file again
-        processBroadcaster.sendChangeMessage();
+        // load the audio file again, but only if something happened
+        if (success) {
+            processBroadcaster.sendChangeMessage();
+        }
 
     }
 
@@ -1079,6 +1081,8 @@ public:
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
 
+        model->clear_file_log();
+
         #if JUCE_MAC
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
@@ -1488,6 +1492,8 @@ private:
             AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
         }
         DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+
+        model->clear_file_log();
 
         playStopButton.setEnabled(true);
         showAudioResource(currentAudioFile);
