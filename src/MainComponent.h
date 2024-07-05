@@ -780,14 +780,17 @@ public:
             return;
         }
 
+        bool matchingModel = true;
+
+        if (dynamic_cast<AudioDisplayComponent*>(getMediaDisplay())) {
+            matchingModel = !model->card().midi_in && !model->card().midi_out;
+        } else {
+            matchingModel = model->card().midi_in && model->card().midi_out;
+        }
         // Check if the model's type (Audio or MIDI) matches the input file's type
         // If not, show an error message and ask the user to either use another model
         // or another appropriate file
-        if (isAudio && isAudioModel) {
-            DBG("Processing audio file");
-        } else if (!isAudio && !isAudioModel) {
-            DBG("Processing MIDI file");
-        } else {
+        if (!matchingModel) {
             DBG("Model and file type mismatch");
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
@@ -823,12 +826,8 @@ public:
     void initializeMediaDisplay(int mediaType = 0)
     {
         if (mediaType == 1) {
-            isAudio = false;
-
             mediaDisplay = std::make_unique<MidiDisplayComponent>();
         } else {
-            isAudio = true;
-
             // Default to audio display
             mediaDisplay = std::make_unique<AudioDisplayComponent>();
         }
@@ -849,7 +848,15 @@ public:
         // Check the file extension to determine type
         String extension = mediaFile.getFileExtension();
 
-        if (!mediaDisplay->getSupportedExtensions().contains(extension)) {
+        bool matchingDisplay = true;
+
+        if (dynamic_cast<AudioDisplayComponent*>(getMediaDisplay())) {
+            matchingDisplay = audioExtensions.contains(extension);
+        } else {
+            matchingDisplay = midiExtensions.contains(extension);
+        }
+
+        if (!matchingDisplay) {
             // Remove the existing media display
             removeChildComponent(getMediaDisplay());
             mediaDisplay->removeChangeListener(this);
@@ -927,10 +934,6 @@ public:
         auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
-        // auto row425 = mainArea.removeFromTop(20);  // adjust height as needed
-        // audioOrMidiLabel.setBounds(row3a.removeFromLeft(row3a.getWidth() / 5).reduced(margin));
-        
-
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
  
         auto row2b = mainArea.removeFromTop(30);
@@ -1017,12 +1020,10 @@ public:
             authorLabel.setText("", dontSendNotification) :
             authorLabel.setText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
-        if (card.midi_in == "1" && card.midi_out == "1") {
-            audioOrMidiLabel.setText("MIDI", dontSendNotification); // TODO: setting the text doesn't work for some reason
-            isAudioModel = false;
-        } else if (card.midi_in == "0" && card.midi_in == "0"){
-            audioOrMidiLabel.setText("Audio", dontSendNotification);
-            isAudioModel = true;
+        if (card.midi_in && card.midi_out && !card.author.empty()) {
+            audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
+        } else if (card.midi_in && card.midi_in && !card.author.empty()) {
+            audioOrMidiLabel.setText("Audio-to-Audio", dontSendNotification);
         } else {
             audioOrMidiLabel.setText("", dontSendNotification);
         }
@@ -1119,14 +1120,6 @@ private:
 
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
-
-    // These flags are very simplistic as they assume
-    // that we only have audio2audio or midi2midi models
-    // We can expand these in the future to support more types
-    // Flag to indicate audio vs midi (for input file)
-    bool isAudio;
-    // Flag to indicate audio vs midi (for type of model)
-    bool isAudioModel;
 
     /// CustomThreadPoolJob
     // This one is used for Loading the models

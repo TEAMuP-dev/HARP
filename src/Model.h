@@ -32,12 +32,8 @@ struct ModelCard {
   std::string description;
   std::string author;
   std::vector<std::string> tags;
-  // bool midi_in;
-  // bool midi_out;
-  std::string midi_in;
-  std::string midi_out;
-  std::string audio_in;
-  std::string audio_out;
+  bool midi_in;
+  bool midi_out;
 };
 
 

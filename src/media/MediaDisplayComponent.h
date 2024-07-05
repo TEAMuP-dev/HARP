@@ -59,8 +59,6 @@ public:
         repaint();
     }
 
-    static StringArray getSupportedExtensions();
-
     virtual void loadMediaFile(const URL& filePath) = 0;
 
     void resetMedia()
