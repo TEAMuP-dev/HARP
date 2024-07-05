@@ -1172,6 +1172,7 @@ private:
             } else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying()) {
                 playStopButton.setMode(stopButtonInfo.label);
             } else {
+                playStopButton.setMode(playButtonInfo.label);
                 playStopButton.setEnabled(false);
             }
         }

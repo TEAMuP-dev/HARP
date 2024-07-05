@@ -57,12 +57,6 @@ public:
 
     void loadMediaFile(const URL& filePath) override
     {
-        // unload the previous file source and delete it..
-        // TODO - might want to make a separate function for previous file cleanup
-        transportSource.stop();
-        transportSource.setSource(nullptr);
-        audioFileSource.reset();
-
         const auto source = std::make_unique<URLInputSource>(filePath);
 
         File audioFile = filePath.getLocalFile();
@@ -115,7 +109,6 @@ public:
     void stopPlaying() override
     {
         transportSource.stop();
-        transportSource.setPosition(0);
     }
 
     bool isPlaying() override { return transportSource.isPlaying(); }
@@ -127,7 +120,17 @@ public:
 
 private:
 
-    void postLoadMediaActions(const URL& filePath) override
+    void resetDisplay() override
+    {
+        transportSource.stop();
+        transportSource.setSource(nullptr);
+
+        audioFileSource.reset();
+
+        thumbnail.clear();
+    }
+
+    void postLoadActions(const URL& filePath) override
     {
         if (auto inputSource = std::make_unique<URLInputSource>(filePath)) {
             thumbnailCache.clear();

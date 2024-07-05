@@ -128,7 +128,15 @@ public:
 
 private:
 
-    void postLoadMediaActions(const URL& filePath) override {}
+    void resetDisplay() override
+    {
+        // TODO
+    }
+
+    void postLoadActions(const URL& filePath) override
+    {
+        // TODO
+    }
 
     PianoRollEditorComponent pianoRollEditor;
 };

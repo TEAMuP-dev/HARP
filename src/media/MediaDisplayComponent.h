@@ -16,7 +16,9 @@ public:
 
     MediaDisplayComponent()
     {
-        addAndMakeVisible(scrollbar);
+        resetPaths();
+
+        addChildComponent(scrollbar);
         scrollbar.setAutoHide(false);
         scrollbar.addListener(this);
 
@@ -61,17 +63,31 @@ public:
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
+    void resetMedia()
+    {
+        resetPaths();
+        resetDisplay();
+        sendChangeMessage();
+
+        currentHorizontalZoomFactor = 1.0;
+        scrollbar.setRangeLimits({0.0, 1.0});
+        scrollbar.setVisible(false);
+    }
+
     void setupMediaFile(const URL& filePath)
     {
+        resetMedia();
+
         setNewTarget(filePath);
 
         loadMediaFile(filePath);
 
-        postLoadMediaActions(filePath);
+        postLoadActions(filePath);
 
         Range<double> range (0.0, getTotalLengthInSecs());
 
         scrollbar.setRangeLimits(range);
+        scrollbar.setVisible(true);
         updateVisibleRange(range);
     }
 
@@ -155,6 +171,7 @@ public:
     {
         if (!isPlaying()) {
             setPlaybackPosition(xToTime((float) e.x));
+            updateCursorPosition();
         }
     }
 
@@ -180,6 +197,9 @@ public:
         stopPlaying();
 
         stopTimer();
+
+        currentPositionMarker.setVisible(false);
+        setPlaybackPosition(0.0);
     }
 
     virtual bool isPlaying() = 0;
@@ -241,7 +261,15 @@ protected:
 
 private:
 
-    virtual void postLoadMediaActions(const URL& filePath) = 0;
+    void resetPaths()
+    {
+        targetFilePath = URL();
+        tempFilePath = URL();
+    }
+
+    virtual void resetDisplay() = 0;
+
+    virtual void postLoadActions(const URL& filePath) = 0;
 
     void updateCursorPosition()
     {
@@ -276,7 +304,7 @@ private:
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override
     {
-        DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
+        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
 
         if (getTotalLengthInSecs() > 0.0)
         {
@@ -307,12 +335,12 @@ private:
         }
     }
 
-    URL targetFilePath = URL();
-    URL tempFilePath = URL();
+    URL targetFilePath;
+    URL tempFilePath;
 
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker;
 
-    double currentHorizontalZoomFactor = 1.0f;
+    double currentHorizontalZoomFactor;
     ScrollBar scrollbar{ false };
 };
