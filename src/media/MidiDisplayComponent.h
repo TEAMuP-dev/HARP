@@ -10,7 +10,8 @@ public:
 
     MidiDisplayComponent()
     {
-        //default 10 bars/measures, with 900 pixels per bar (width) and 20 pixels per step (each note height)
+        // 10 measures, 400 pixels per measure (width), and 20 pixels per note (height)
+        // TODO - call again when new file is loaded?
         pianoRollEditor.setup(10, 400, 10);
 
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
@@ -55,34 +56,38 @@ public:
 
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
             const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
+
             if (constTrack != nullptr) {
                 juce::MidiMessageSequence track(*constTrack);
                 track.updateMatchedPairs();
 
-
                 DBG("Track " << trackIdx << " has " << track.getNumEvents() << " events.");
 
-                // Example processing: iterating over messages in the sequence
                 for (int eventIdx = 0; eventIdx < track.getNumEvents(); ++eventIdx) {
                     const auto midiEvent = track.getEventPointer(eventIdx);
                     const auto& midiMessage = midiEvent->message;
 
-                    DBG("Event " << eventIdx << ": " << midiMessage.getDescription());
+                    double startTime = midiEvent->message.getTimeStamp() * tickLength;
+
+                    DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+
                     if (midiMessage.isNoteOn()) {
                         int noteNumber = midiMessage.getNoteNumber();
                         int velocity = midiMessage.getVelocity();
-                        double startTime = midiEvent->message.getTimeStamp() * tickLength;
 
-                        // Find the matching note off event
                         double noteLength = 0;
+
                         for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx) {
                             const auto offEvent = track.getEventPointer(offIdx);
+
+                            // Find the matching note off event
                             if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber) {
                                 noteLength = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp()) * tickLength;
                                 break;
                             }
                         }
-                        // Create a NoteModel for each midiEvent
+
+                        // Create a NoteModel for each event
                         NoteModel::Flags flags;
                         NoteModel noteModel(noteNumber, velocity, static_cast<st_int>(startTime), static_cast<st_int>(noteLength), flags);
                         sequence.events.push_back(noteModel);
@@ -92,6 +97,11 @@ public:
         }
 
         pianoRollEditor.loadSequence(sequence);
+
+        midiFile.convertTimestampTicksToSeconds();
+        totalLengthInSecs = midiFile.getLastTimestamp();
+
+        DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
     }
 
     void setPlaybackPosition(double t) override
@@ -123,7 +133,7 @@ public:
 
     double getTotalLengthInSecs() override
     {
-        // TODO
+        return totalLengthInSecs;
     }
 
 private:
@@ -139,4 +149,6 @@ private:
     }
 
     PianoRollEditorComponent pianoRollEditor;
+
+    double totalLengthInSecs;
 };
