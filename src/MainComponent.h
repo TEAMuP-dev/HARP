@@ -1190,22 +1190,22 @@ public:
         menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
                                                     .getDefaultMenuBarHeight()));
         #endif
-        auto margin = 10;  // Adjusted margin value for top and bottom spacing
+        auto margin = 5;  // Adjusted margin value for top and bottom spacing
         auto docViewHeight = 1;
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
         // Row 1: Model Path TextBox and Load Model Button
-        auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
+        auto row1 = mainArea.removeFromTop(30);  // adjust height as needed
         modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
         // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
+        auto row2a = mainArea.removeFromTop(35);  // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
  
-        auto row2b = mainArea.removeFromTop(30);
+        auto row2b = mainArea.removeFromTop(20);
         authorLabel.setBounds(row2b.reduced(margin));
         authorLabel.setFont(Font(10.0f));
 
@@ -1227,19 +1227,19 @@ public:
         descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
+        auto row4 = mainArea.removeFromTop(22);  // adjust height as needed
         spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
-        auto row5 = mainArea.removeFromTop(150);  // the remaining area is for row 4
+        auto row5 = mainArea.removeFromTop(195);  // the remaining area is for row 4
         ctrlComponent.setBounds(row5.reduced(margin));
 
-        // An empty space of 30px between the ctrl component and the process button
-        mainArea.removeFromTop(30);
+        // An empty space of 20px between the ctrl component and the process button
+        mainArea.removeFromTop(10);
 
         // Row 6: Process Button (taken out in advance to preserve its height)
-        auto row6Height = 25;  // adjust height as needed
+        auto row6Height = 20;  // adjust height as needed
         auto row6 = mainArea.removeFromTop(row6Height);
 
         // Assign bounds to processButton
@@ -1255,7 +1255,7 @@ public:
         thumbnail->setBounds(row7);
 
         // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(70);  // adjust height as needed
+        auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
         playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
         chooseFileButton.setBounds(row8.reduced(margin));
 
