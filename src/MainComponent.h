@@ -524,6 +524,7 @@ public:
 
         if (initialFilePath.isLocalFile())
         {
+            // TODO - it seems command line args are handled through Main.cpp and this is never hit
             // Load initial file into matching media display
             loadMediaDisplay(initialFilePath.getLocalFile());
         }
@@ -782,7 +783,7 @@ public:
 
         bool matchingModel = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(getMediaDisplay())) {
+        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get())) {
             matchingModel = !model->card().midi_in && !model->card().midi_out;
         } else {
             matchingModel = model->card().midi_in && model->card().midi_out;
@@ -832,7 +833,7 @@ public:
             mediaDisplay = std::make_unique<AudioDisplayComponent>();
         }
 
-        addAndMakeVisible(getMediaDisplay());
+        addAndMakeVisible(mediaDisplay.get());
         mediaDisplay->addChangeListener(this);
 
         mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
@@ -850,7 +851,7 @@ public:
 
         bool matchingDisplay = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(getMediaDisplay())) {
+        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get())) {
             matchingDisplay = audioExtensions.contains(extension);
         } else {
             matchingDisplay = midiExtensions.contains(extension);
@@ -858,7 +859,7 @@ public:
 
         if (!matchingDisplay) {
             // Remove the existing media display
-            removeChildComponent(getMediaDisplay());
+            removeChildComponent(mediaDisplay.get());
             mediaDisplay->removeChangeListener(this);
             mediaDisplayHandler->detach();
 
@@ -1050,8 +1051,6 @@ public:
         instructionsArea.clearStatusMessage();
     }
 
-    MediaDisplayComponent* getMediaDisplay() const { return mediaDisplay.get(); }
-
 private:
     // HARP UI 
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
@@ -1167,7 +1166,7 @@ private:
 
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
-        if (source == getMediaDisplay()) {
+        if (source == mediaDisplay.get()) {
             if (mediaDisplay->isFileDropped()) {
                 URL droppedFilePath = mediaDisplay->getDroppedFilePath();
 

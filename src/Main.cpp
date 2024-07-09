@@ -53,8 +53,7 @@ public:
         if (inputMediaFile.existsAsFile()) {
             URL inputMediaURL = URL(inputMediaFile);
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
-                MediaDisplayComponent* mediaDisplay = mainComp->getMediaDisplay();
-                mediaDisplay->setupDisplay(inputMediaURL);
+                mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
             }
         }
     }
