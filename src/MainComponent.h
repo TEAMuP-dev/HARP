@@ -1168,7 +1168,14 @@ private:
     void changeListenerCallback (ChangeBroadcaster* source) override
     {
         if (source == getMediaDisplay()) {
-            if (mediaDisplay->isFileLoaded() && !mediaDisplay->isPlaying()) {
+            if (mediaDisplay->isFileDropped()) {
+                URL droppedFilePath = mediaDisplay->getDroppedFilePath();
+
+                mediaDisplay->clearDroppedFile();
+
+                // Reload an appropriate display for dropped file
+                loadMediaDisplay(droppedFilePath.getLocalFile());
+            } else if (mediaDisplay->isFileLoaded() && !mediaDisplay->isPlaying()) {
                 playStopButton.setMode(playButtonInfo.label);
                 playStopButton.setEnabled(true);
             } else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying()) {

@@ -151,12 +151,21 @@ public:
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
 
-    void filesDropped (const StringArray& files, int /*x*/, int /*y*/) override
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
-        URL firstFilePath = URL(File(files[0]));
+        // TODO - warning or handling for additional files
 
-        setupDisplay(firstFilePath);
+        droppedFilePath = URL(File(files[0]));
         sendChangeMessage();
+    }
+
+    URL getDroppedFilePath() { return droppedFilePath; }
+
+    bool isFileDropped() { return !droppedFilePath.isEmpty(); }
+
+    void clearDroppedFile()
+    {
+        droppedFilePath = URL();
     }
 
     virtual void setPlaybackPosition(double t) = 0;
@@ -261,6 +270,8 @@ private:
 
     void resetPaths()
     {
+        clearDroppedFile();
+
         targetFilePath = URL();
         tempFilePath = URL();
     }
@@ -318,6 +329,8 @@ private:
                 }
             } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
                 if (wheel.deltaY != 0) {
+                    // TODO - make zoom consistent across different audio lengths?
+
                     currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
 
                     auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
@@ -335,6 +348,7 @@ private:
 
     URL targetFilePath;
     URL tempFilePath;
+    URL droppedFilePath;
 
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker;
