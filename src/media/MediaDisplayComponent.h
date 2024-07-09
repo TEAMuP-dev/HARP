@@ -232,7 +232,7 @@ protected:
         generateTempFile();
     }
 
-    double xToTime(const float x) const
+    virtual double xToTime(const float x) const
     {
         auto totalWidth = getWidth();
         auto totalLength = visibleRange.getLength();
@@ -243,7 +243,7 @@ protected:
         return t;
     }
 
-    float timeToX(const double t) const
+    virtual float timeToX(const double t) const
     {
         float x;
 
