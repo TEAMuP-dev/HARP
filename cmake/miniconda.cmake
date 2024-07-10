@@ -15,7 +15,7 @@ function(install_miniconda)
         return()
     endif()
 
-    set(MINICONDA_VERSION "py39_23.5.2-0")
+    set(MINICONDA_VERSION "latest")
 
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
@@ -66,6 +66,14 @@ function(install_miniconda)
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         )
     else()
+        message(STATUS "Running: ${MINICONDA_INSTALL_SCRIPT}")
+        # Set the correct permissions for the file using chmod +x
+        execute_process(
+            COMMAND chmod +x "${CMAKE_SOURCE_DIR}/${MINICONDA_INSTALLER}"
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE error
+        )
         execute_process(
             COMMAND bash -c "${MINICONDA_INSTALL_SCRIPT}"
             RESULT_VARIABLE result
