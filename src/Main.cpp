@@ -1,5 +1,7 @@
 #include "MainComponent.h"
 
+#include "media/MediaDisplayComponent.h"
+
 
 //==============================================================================
 class GuiAppApplication  : public juce::JUCEApplication
@@ -51,7 +53,7 @@ public:
         if (inputMediaFile.existsAsFile()) {
             URL inputMediaURL = URL(inputMediaFile);
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
-                mainComp->loadMediaFile(inputMediaURL);
+                mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
             }
         }
     }

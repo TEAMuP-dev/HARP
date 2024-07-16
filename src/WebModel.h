@@ -241,10 +241,8 @@ public:
     m_card.name = jsonCard->getProperty("name").toString().toStdString();
     m_card.description = jsonCard->getProperty("description").toString().toStdString();
     m_card.author = jsonCard->getProperty("author").toString().toStdString();
-    m_card.midi_in = jsonCard->getProperty("midi_in").toString().toStdString();
-    m_card.midi_out = jsonCard->getProperty("midi_out").toString().toStdString();
-    // m_card.audio_in = jsonCard->getProperty("audio_in").toString().toStdString();
-    // m_card.audio_out = jsonCard->getProperty("audio_out").toString().toStdString();
+    m_card.midi_in = (bool) jsonCard->getProperty("midi_in");
+    m_card.midi_out = (bool) jsonCard->getProperty("midi_out");
 
     // tags is a list of str
     juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
