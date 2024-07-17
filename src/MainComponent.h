@@ -556,7 +556,7 @@ public:
                 DBG("failed to copy the file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
             }
             
-            addNewAudioFile(currentAudioFileTarget);
+            addNewAudioFile(currentAudioFileTarget, false);
             // saveButton.setEnabled(false);
             saveEnabled = false;
             setStatus("File saved successfully");
@@ -885,7 +885,7 @@ public:
         // Load the initial file
         if (initialFileURL.isLocalFile())
         {
-            addNewAudioFile (initialFileURL);
+            addNewAudioFile (initialFileURL, false);
         }
 
         // initialize HARP UI
@@ -1227,7 +1227,7 @@ public:
                 if (file != File{})
                 {
                     URL fileURL = URL(file);
-                    addNewAudioFile(fileURL);
+                    addNewAudioFile(fileURL, true);
                 }
             });
     }
@@ -1343,7 +1343,7 @@ public:
     }
 
     void loadAudioFile(const URL& audioURL) {
-        addNewAudioFile(audioURL);
+        addNewAudioFile(audioURL, false);
     }
 
     void setStatus(const juce::String& message)
@@ -1477,7 +1477,7 @@ private:
         thumbnail->setURL (resource);
     }
 
-    void addNewAudioFile (URL resource) 
+    void addNewAudioFile (URL resource, bool clear_log) 
     {
         currentAudioFileTarget = resource;
         
@@ -1495,7 +1495,9 @@ private:
         }
         DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
 
-        model->clear_file_log();
+        if (clear_log) {
+            model->clear_file_log();
+        }
 
         playStopButton.setEnabled(true);
         showAudioResource(currentAudioFile);
@@ -1569,7 +1571,7 @@ private:
             // }
             if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::FileDropped) {
                 stop();
-                addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+                addNewAudioFile (URL (thumbnail->getLastDroppedFile()), true);
             } else if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::TransportStarted) {
                 play();
 
