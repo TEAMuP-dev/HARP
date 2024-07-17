@@ -1,7 +1,5 @@
 #include "MainComponent.h"
 
-#include "media/MediaDisplayComponent.h"
-
 
 //==============================================================================
 class GuiAppApplication  : public juce::JUCEApplication

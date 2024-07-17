@@ -1023,8 +1023,8 @@ public:
         // It is assumed we only support wav2wav or midi2midi models for now
         if (card.midi_in && card.midi_out && !card.author.empty()) {
             audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
-        } else if (card.midi_in && card.midi_in && !card.author.empty()) {
-            audioOrMidiLabel.setText("Audio-to-Audio", dontSendNotification);
+        } else if (!card.midi_in && !card.midi_out && !card.author.empty()) {
+            audioOrMidiLabel.setText("Wav-to-Wav", dontSendNotification);
         } else {
             audioOrMidiLabel.setText("", dontSendNotification);
         }
