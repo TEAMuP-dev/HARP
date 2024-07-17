@@ -15,6 +15,7 @@ def handler_stop_signals(signum, frame):
     print("Stopping client...")
     if client is not None:
         # send a cancel request to the server
+        # TODO - better api naming scheme (i.e. cancel)
         client.submit(api_name="/wav2wav-cancel")
         print(f"Sent cancel request to {client.url}. Exiting...")
     else:
@@ -40,11 +41,9 @@ def main(
     if mode == "get_ctrls":
         print(f"Getting controls for {url}...")
         # ctrls will be a dict, instead of a path now
-        # ctrls = client.predict(api_name="/wav2wav-ctrls")
-        print(f"calling predict ")
-        # ctrls = client.predict(api_name="/wav2wav-ctrls")
 
-        job = client.submit(api_name="/controls")
+        # TODO - better api naming scheme (i.e. controls)
+        job = client.submit(api_name="/wav2wav-ctrls")
         canceled = False
         t0 = time.time()
         while not job.done():
@@ -52,6 +51,7 @@ def main(
             if time.time() - t0 > ctrls_timeout:
                 print(f"Timeout of {ctrls_timeout} seconds reached. Cancelling...")
                 print(f"HARP.TimedOut")
+                # TODO - better api naming scheme (i.e. cancel)
                 client.submit(api_name="/wav2wav-cancel")
                 canceled = True
                 Path(status_flag_path).write_text("Status.CANCELED")
@@ -78,7 +78,8 @@ def main(
             assert isinstance(ctrls, list), "Controls must be a list of parameter values."
             print(f"loaded ctrls: {ctrls}")
         print(f"Predicting audio for {url}...")
-        job = client.submit(*ctrls, api_name="/process")
+        # TODO - better api naming scheme (i.e. process)
+        job = client.submit(*ctrls, api_name="/wav2wav")
 
         canceled = False
         while not job.done():
@@ -87,7 +88,8 @@ def main(
             if cancel_flag_path is not None:
                 if Path(cancel_flag_path).exists():
                     print("Cancel flag detected. Cancelling...")
-                    client.submit(api_name="/cancel")
+                    # TODO - better api naming scheme (i.e. cancel)
+                    client.submit(api_name="/wav2wav-cancel")
                     canceled = True
                     Path(status_flag_path).write_text("Status.CANCELED")
                     break
