@@ -109,6 +109,9 @@ public:
     // create our logger
     m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
 
+    // initialize file_log_loc to -1 (no files yet)
+    file_log_loc = -1;
+
 
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
@@ -132,12 +135,20 @@ public:
     #else
       #error "gradiojuce_client has not been implemented for this platform"
     #endif
+
+
   }
 
   ~WebWave2Wave() {
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
+
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
+    }
+
   }
 
 
@@ -349,7 +360,7 @@ public:
     return m_ctrls;
   }
 
-  void process(juce::File filetoProcess) const {
+  void process(juce::File filetoProcess) {
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
@@ -372,6 +383,15 @@ public:
     tempFile.deleteFile();
     // copy the file to a temp file
     filetoProcess.copyFileTo(tempFile);
+
+    //if file_log_loc == -1, then this is the original provided file, save that to position 0
+    //position 1 will be then be the processed file (in general, after output append the outputted file)
+    bool keep_input = false;
+    if (file_log_loc == -1) {
+      file_log.push_back(tempFile);
+      file_log_loc = 0;
+      keep_input = true;
+    }
 
     // a tarrget output file
     juce::File tempOutputFile =
@@ -434,17 +454,78 @@ public:
     }
 
     // move the temp output file to the original input file
-    tempOutputFile.moveFileTo(filetoProcess);
+    tempOutputFile.copyFileTo(filetoProcess);
 
-    // delete the temp input file
-    tempFile.deleteFile();
-    tempOutputFile.deleteFile();
+    // Clear file log up to current point then add current file
+    if (file_log_loc < file_log.size() - 1) {
+      for (int i = file_log_loc + 1; i < file_log.size(); i++) {
+        file_log[i].deleteFile();
+      }
+      file_log.erase(file_log.begin() + file_log_loc + 1, file_log.end());
+    }
+    file_log_loc++;
+    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
+    file_log.push_back(tempOutputFile);
+
+
+    LogAndDBG("File log is now: ");
+    for (juce::File file: file_log) {
+      LogAndDBG(file.getFileName());
+    }
+
+    // only delete the temp input file if we don't need it in the log
+    if (!keep_input) {
+      tempFile.deleteFile();
+    }
+    // outputs are in the log
+    // tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
     LogAndDBG("WebWave2Wave::process done");
 
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
     return;
+  }
+
+  bool undo_redo_process(juce::File file_to_replace, bool undo) {
+    if (file_log_loc <= 0 && undo) {
+      LogAndDBG("Nothing to undo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+      return false;
+    }
+    if (file_log_loc == file_log.size() - 1 && !undo) {
+      LogAndDBG("Nothing to redo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+      return false;
+    }
+    if (undo) {
+      file_log_loc--;
+    } else {
+      file_log_loc++;
+    }
+    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
+    LogAndDBG("File log is now: ");
+    for (juce::File file: file_log) {
+      LogAndDBG(file.getFileName());
+    }
+    //Replace file with old file
+    juce::File old_file = file_log[file_log_loc];
+    old_file.copyFileTo(file_to_replace);
+    
+    LogAndDBG("WebWave2Wave::undo_redo_process done");
+    return true;
+    
+  }
+
+  // Should be run whenever input file changes or on app close
+  void clear_file_log() {
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
+    }
+    file_log.clear();
+    file_log_loc = -1;
+    LogAndDBG("File log cleared!");
   }
 
   // sets a cancel flag file that the client can check to see if the process
@@ -558,6 +639,9 @@ private:
   string m_url;
   string prefix_cmd;
   juce::File scriptPath;
+
+  std::vector<juce::File> file_log;
+  int file_log_loc;
 };
 
 

@@ -343,6 +343,8 @@ public:
         save = 0x2001,
         saveAs = 0x2002,
         about = 0x2003,
+        undo = 0x2005,
+        redo = 0x2006
         // settings = 0x2004,
     };
 
@@ -368,6 +370,8 @@ public:
             menu.addCommandItem (&commandManager, CommandIDs::open);
             menu.addCommandItem (&commandManager, CommandIDs::save);
             menu.addCommandItem (&commandManager, CommandIDs::saveAs);
+            menu.addCommandItem (&commandManager, CommandIDs::undo);
+            menu.addCommandItem (&commandManager, CommandIDs::redo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
@@ -390,6 +394,8 @@ public:
             CommandIDs::open,
             CommandIDs::save, 
             CommandIDs::saveAs,
+            CommandIDs::undo,
+            CommandIDs::redo,
             CommandIDs::about,
             };
         commands.addArray(ids, numElementsInArray(ids));
@@ -412,6 +418,14 @@ public:
                 result.setInfo("Save As...", "Saves the current document with a new name", "File", 0);
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
+            case CommandIDs::undo:
+                result.setInfo("Undo", "Undoes the most recent operation", "File", 0);
+                result.addDefaultKeypress('z', ModifierKeys::commandModifier);
+                break;
+            case CommandIDs::redo:
+                result.setInfo("Redo", "Redoes the most recent operation", "File", 0);
+                result.addDefaultKeypress('z',  ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -432,6 +446,14 @@ public:
             case CommandIDs::open:
                 DBG("Open command invoked");
                 openFileChooser();
+                break;
+            case CommandIDs::undo:
+                DBG("Undo command invoked");
+                undoRedoCallback(true);
+                break;
+            case CommandIDs::redo:
+                DBG("Redo command invoked");
+                undoRedoCallback(false);
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -534,7 +556,7 @@ public:
                 DBG("failed to copy the file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
             }
             
-            addNewAudioFile(currentAudioFileTarget);
+            addNewAudioFile(currentAudioFileTarget, false);
             // saveButton.setEnabled(false);
             saveEnabled = false;
             setStatus("File saved successfully");
@@ -582,6 +604,38 @@ public:
         } else {
             setStatus("Nothing to save. Please load an audio file first.");
         }
+    }
+
+    void undoRedoCallback(bool undo) {
+        if (undo) {
+            DBG("Undoing last edit");
+        } else {
+            DBG("Redoing last edit");
+        }
+
+        // check if the audio file is loaded
+        if (!currentAudioFile.isLocalFile()) {
+            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
+            //ShowMEssageBoxAsync
+            //Fail with beep, we should just ignore this if it doesn't make sense
+            DBG("No file loaded to perform operation on");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        if (isProcessing) {
+            DBG("Can't undo/redo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        bool success = model->undo_redo_process(currentAudioFile.getLocalFile(), undo);
+        DBG("Undo call complete");
+        // load the audio file again, but only if something happened
+        if (success) {
+            processBroadcaster.sendChangeMessage();
+        }
+
     }
 
     void loadModelCallback() {
@@ -831,7 +885,7 @@ public:
         // Load the initial file
         if (initialFileURL.isLocalFile())
         {
-            addNewAudioFile (initialFileURL);
+            addNewAudioFile (initialFileURL, false);
         }
 
         // initialize HARP UI
@@ -1029,6 +1083,8 @@ public:
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
 
+        model->clear_file_log();
+
         #if JUCE_MAC
             MenuBarModel::setMacMainMenu (nullptr);
         #endif
@@ -1171,7 +1227,7 @@ public:
                 if (file != File{})
                 {
                     URL fileURL = URL(file);
-                    addNewAudioFile(fileURL);
+                    addNewAudioFile(fileURL, true);
                 }
             });
     }
@@ -1287,7 +1343,7 @@ public:
     }
 
     void loadAudioFile(const URL& audioURL) {
-        addNewAudioFile(audioURL);
+        addNewAudioFile(audioURL, false);
     }
 
     void setStatus(const juce::String& message)
@@ -1421,7 +1477,7 @@ private:
         thumbnail->setURL (resource);
     }
 
-    void addNewAudioFile (URL resource) 
+    void addNewAudioFile (URL resource, bool clear_log) 
     {
         currentAudioFileTarget = resource;
         
@@ -1438,6 +1494,10 @@ private:
             AlertWindow("Error", "Failed to make a copy of the input file for processing!! are you out of space?", AlertWindow::WarningIcon);
         }
         DBG("MainComponent::addNewAudioFile: copied file to " << currentAudioFileTarget.getLocalFile().getFullPathName());
+
+        if (clear_log) {
+            model->clear_file_log();
+        }
 
         playStopButton.setEnabled(true);
         showAudioResource(currentAudioFile);
@@ -1511,7 +1571,7 @@ private:
             // }
             if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::FileDropped) {
                 stop();
-                addNewAudioFile (URL (thumbnail->getLastDroppedFile()));
+                addNewAudioFile (URL (thumbnail->getLastDroppedFile()), true);
             } else if (thumbnail->getLastActionType() == ThumbnailComp::ActionType::TransportStarted) {
                 play();
 
