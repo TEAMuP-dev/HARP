@@ -77,9 +77,9 @@ namespace{
 
 }
 
-class WebWave2Wave : public Model {
+class WebModel : public Model {
 public:
-  WebWave2Wave() { // TODO: should be a singleton
+  WebModel() { // TODO: should be a singleton
 
     // create our logger
     m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
@@ -108,7 +108,7 @@ public:
     #endif
   }
 
-  ~WebWave2Wave() {
+  ~WebModel() {
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
@@ -149,13 +149,13 @@ public:
 
     juce::File tempLogFile =
     juce::File::getSpecialLocation(juce::File::tempDirectory)
-        .getChildFile("system_get_ctrls_log.txt");
+        .getChildFile("system_controls_log.txt");
     tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
       prefix_cmd
       + scriptPath.getFullPathName().toStdString()
-      + " --mode get_ctrls"
+      + " --mode controls"
       + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
       + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
@@ -173,7 +173,7 @@ public:
     if (result != 0) {
         // read the text from the temp log file.
         // check for a JSONDecodeError in the log content
-        // if so, let the user know that there there was an error parsing the get_ctrls response, 
+        // if so, let the user know that there there was an error parsing the controls response, 
         // which means the space is likely broken or does not exist. 
         // if we catch a 404, say that the space does not exist.
 
@@ -198,13 +198,12 @@ public:
                     break;
                 }
             }
-            // message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
         }
         else if (logContent.contains("argument --url: expected one argument")) {
             message = "The model url is missing. Please provide a url to the model.";
         }
         else {
-            message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+            message = "An error occurred while calling the gradiojuce helper with mode \'controls\'. ";
         }
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
@@ -352,7 +351,7 @@ public:
     m_cancel_flag_file.deleteFile();
 
     // make sure we're loaded
-    LogAndDBG("WebWave2Wave::process");
+    LogAndDBG("WebModel::process");
     if (!m_loaded) {
       throw std::runtime_error("Model not loaded");
     }
@@ -396,7 +395,7 @@ public:
     std::string command = (
         prefix_cmd
         + scriptPath.getFullPathName().toStdString()
-        + " --mode predict"
+        + " --mode process"
         + " --url " + m_url
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
@@ -429,7 +428,7 @@ public:
             }
         }
         else {
-            message = "An error occurred while calling the gradiojuce helper with mode predict. ";
+            message = "An error occurred while calling the gradiojuce helper with mode \'process\'. ";
         }
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
@@ -444,7 +443,7 @@ public:
     tempFile.deleteFile();
     tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
-    LogAndDBG("WebWave2Wave::process done");
+    LogAndDBG("WebModel::process done");
 
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
@@ -554,10 +553,10 @@ private:
   }
 
   juce::File m_cancel_flag_file {
-    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_CANCEL")
   };
   juce::File m_status_flag_file {
-    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_STATUS")
   };
   CtrlList m_ctrls;
   std::unique_ptr<juce::FileLogger> m_logger {nullptr};
@@ -572,7 +571,7 @@ private:
 class ModelStatusTimer : public juce::Timer,
                          public juce::ChangeBroadcaster {
 public:
-  ModelStatusTimer(std::shared_ptr<WebWave2Wave> model) : m_model(model) {
+  ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model) {
   }
 
   void timerCallback() override {
@@ -587,6 +586,6 @@ public:
   }
 
 private:
-  std::shared_ptr<WebWave2Wave> m_model;
+  std::shared_ptr<WebModel> m_model;
   std::string m_last_status;
 };

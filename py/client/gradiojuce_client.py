@@ -38,7 +38,7 @@ def main(
     global client
     client = Client(url)
     
-    if mode == "get_ctrls":
+    if mode == "controls":
         print(f"Getting controls for {url}...")
         # ctrls will be a dict, instead of a path now
 
@@ -71,7 +71,7 @@ def main(
             with open(output_path, "w") as f:
                 json.dump(ctrls, f)
 
-    elif mode == "predict":
+    elif mode == "process":
         assert ctrls_path is not None, "Please specify a ctrls path."
         with open(ctrls_path) as f:
             ctrls = json.load(f)
@@ -115,7 +115,7 @@ def main(
             pass
 
     else:
-        raise ValueError("Invalid mode. Choose either 'get_ctrls' or 'predict'.")
+        raise ValueError("Invalid mode. Choose either 'controls' or 'process'.")
 
     print("gradiojuce_client done! :)")
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some arguments.')
     parser.add_argument('--url', required=True, help='The URL to connect to.')
     parser.add_argument('--output_path', required=True, help='The output path to save the file.')
-    parser.add_argument('--mode', required=True, choices=['get_ctrls', 'predict'], help='The mode of operation.')
+    parser.add_argument('--mode', required=True, choices=['controls', 'process'], help='The mode of operation.')
     parser.add_argument('--ctrls_path', help='The path to the controls file.')
     parser.add_argument('--cancel_flag_path', help='The path to the cancel flag file.')
     parser.add_argument('--status_flag_path', help='The path to the status flag file.')

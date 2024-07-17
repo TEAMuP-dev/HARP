@@ -369,7 +369,7 @@ public:
                     MessageManager::callAsync([this] {
                         resetModelPathComboBox();
                     });
-                    model.reset(new WebWave2Wave());
+                    model.reset(new WebModel());
                     loadBroadcaster.sendChangeMessage();
                     // saveButton.setEnabled(false);
                     saveEnabled = false;
@@ -446,7 +446,7 @@ public:
                 
                 AlertWindow::showAsync(msgOpts,alertCallback);
 
-                model.reset(new WebWave2Wave());
+                model.reset(new WebModel());
                 loadBroadcaster.sendChangeMessage();
                 // saveButton.setEnabled(false);
                 saveEnabled = false;
@@ -1109,7 +1109,7 @@ private:
     StatusComponent instructionsArea {13.0f, juce::Justification::centredLeft};
 
     // the model itself
-    std::shared_ptr<WebWave2Wave> model {new WebWave2Wave()};
+    std::shared_ptr<WebModel> model {new WebModel()};
 
     std::unique_ptr<FileChooser> fileBrowser;
 

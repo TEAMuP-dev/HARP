@@ -41,7 +41,7 @@ public:
 
   CtrlComponent() {}
 
-  void setModel(std::shared_ptr<WebWave2Wave> model) {
+  void setModel(std::shared_ptr<WebModel> model) {
     mModel = model;
   }
 
@@ -287,7 +287,7 @@ public:
 
 private:
   // ToolbarSliderStyle toolbarSliderStyle;
-  std::shared_ptr<WebWave2Wave> mModel {nullptr};
+  std::shared_ptr<WebModel> mModel {nullptr};
 
   juce::Label headerLabel;
   // HARPLookAndFeel mHARPLookAndFeel;
