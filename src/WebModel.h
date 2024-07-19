@@ -79,20 +79,52 @@ namespace{
 
 class WebModel : public Model {
 public:
+
+  void LogAndDBG(const juce::String& message) const {
+    DBG(message);
+
+    if (m_logger) {
+      m_logger->logMessage(message);
+    }
+  }
+
+  std::pair<juce::String, juce::uint32> run_command(std::string command) const {
+    juce::ChildProcess process;
+    bool status;
+
+    status = process.start(command);
+
+    if (!status) {
+      LogAndDBG("Process failed!");
+    }
+
+    juce::String output = process.readAllProcessOutput();
+    juce::uint32 exit_code = process.getExitCode();
+
+    // LogAndDBG("Process output: " + output);
+    // LogAndDBG("Exit code: " + juce::String(exit_code));
+
+    return std::make_pair(output, exit_code);
+  }
+
   WebModel() { // TODO: should be a singleton
 
     // create our logger
     m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
 
+    // initialize file_log_loc to -1 (no files yet)
+    file_log_loc = -1;
+
 
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+
       scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
       ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
 
-      prefix_cmd = "start /B cmd /c set PYTHONIOENCODING=UTF-8 && ";
+      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
     #elif __APPLE__
       scriptPath = juce::File::getSpecialLocation(
           juce::File::currentApplicationFile
@@ -106,20 +138,20 @@ public:
     #else
       #error "gradiojuce_client has not been implemented for this platform"
     #endif
+
+
   }
 
   ~WebModel() {
     // clean up flag files
     m_cancel_flag_file.deleteFile();
     m_status_flag_file.deleteFile();
-  }
 
-  void LogAndDBG(const juce::String& message) const {
-    DBG(message);
-
-    if (m_logger) {
-      m_logger->logMessage(message);
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
     }
+
   }
 
 
@@ -158,17 +190,17 @@ public:
       + " --mode controls"
       + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
-      + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-      + " 2>&1"   // redirect stderr to the same file as stdout
+      // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      // + " 2>&1"   // redirect stderr to the same file as stdout
     );
 
-    LogAndDBG("Running command: " + command);
-    // TODO: urgently need to find a better alternative to system
-    int result = std::system(command.c_str());
 
-    juce::String logContent = tempLogFile.loadFileAsString();
+    LogAndDBG("Running command: " + command);
+    std::pair<juce::String, juce::uint32> cmd_result = run_command(command);
+
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
     LogAndDBG(logContent);
-    tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
         // read the text from the temp log file.
@@ -346,7 +378,7 @@ public:
     return m_ctrls;
   }
 
-  void process(juce::File filetoProcess) const {
+  void process(juce::File filetoProcess) {
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
@@ -370,6 +402,15 @@ public:
     // copy the file to a temp file
     filetoProcess.copyFileTo(tempFile);
 
+    //if file_log_loc == -1, then this is the original provided file, save that to position 0
+    //position 1 will be then be the processed file (in general, after output append the outputted file)
+    bool keep_input = false;
+    if (file_log_loc == -1) {
+      file_log.push_back(tempFile);
+      file_log_loc = 0;
+      keep_input = true;
+    }
+
     // a tarrget output file
     juce::File tempOutputFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
@@ -387,10 +428,6 @@ public:
       throw std::runtime_error("Failed to save controls to file.");
     }
 
-    juce::File tempLogFile =
-        juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("system_log" + randomString + ".txt");
-    tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
         prefix_cmd
@@ -401,14 +438,14 @@ public:
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
         + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
         + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
-        + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-        + " 2>&1"   // redirect stderr to the same file as stdout
+        // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        // + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
-    // TODO: log commmand output to a file
-    int result = std::system(command.c_str());
+    std::pair<juce::String, int> cmd_result = run_command(command);
 
-    juce::String logContent = tempLogFile.loadFileAsString();
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
     LogAndDBG(logContent);
 
     if (result != 0) {
@@ -434,20 +471,79 @@ public:
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
 
-    tempLogFile.deleteFile();  // delete the temporary log file
-
     // move the temp output file to the original input file
-    tempOutputFile.moveFileTo(filetoProcess);
+    tempOutputFile.copyFileTo(filetoProcess);
 
-    // delete the temp input file
-    tempFile.deleteFile();
-    tempOutputFile.deleteFile();
+    // Clear file log up to current point then add current file
+    if (file_log_loc < file_log.size() - 1) {
+      for (int i = file_log_loc + 1; i < file_log.size(); i++) {
+        file_log[i].deleteFile();
+      }
+      file_log.erase(file_log.begin() + file_log_loc + 1, file_log.end());
+    }
+    file_log_loc++;
+    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
+    file_log.push_back(tempOutputFile);
+
+
+    LogAndDBG("File log is now: ");
+    for (juce::File file: file_log) {
+      LogAndDBG(file.getFileName());
+    }
+
+    // only delete the temp input file if we don't need it in the log
+    if (!keep_input) {
+      tempFile.deleteFile();
+    }
+    // outputs are in the log
+    // tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
     LogAndDBG("WebModel::process done");
 
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
     return;
+  }
+
+  bool undo_redo_process(juce::File file_to_replace, bool undo) {
+    if (file_log_loc <= 0 && undo) {
+      LogAndDBG("Nothing to undo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+      return false;
+    }
+    if (file_log_loc == file_log.size() - 1 && !undo) {
+      LogAndDBG("Nothing to redo!");
+      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+      return false;
+    }
+    if (undo) {
+      file_log_loc--;
+    } else {
+      file_log_loc++;
+    }
+    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
+    LogAndDBG("File log is now: ");
+    for (juce::File file: file_log) {
+      LogAndDBG(file.getFileName());
+    }
+    //Replace file with old file
+    juce::File old_file = file_log[file_log_loc];
+    old_file.copyFileTo(file_to_replace);
+    
+    LogAndDBG("WebWave2Wave::undo_redo_process done");
+    return true;
+    
+  }
+
+  // Should be run whenever input file changes or on app close
+  void clearFileLog() {
+    // wipe the input file log
+    for (juce::File file : file_log) {
+      file.deleteFile();
+    }
+    file_log.clear();
+    file_log_loc = -1;
+    LogAndDBG("File log cleared!");
   }
 
   // sets a cancel flag file that the client can check to see if the process
@@ -564,6 +660,9 @@ private:
   string m_url;
   string prefix_cmd;
   juce::File scriptPath;
+
+  std::vector<juce::File> file_log;
+  int file_log_loc;
 };
 
 

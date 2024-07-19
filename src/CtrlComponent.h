@@ -6,7 +6,7 @@ class SliderWithLabel : public juce::Component
 {
 public:
     SliderWithLabel(const juce::String& labelText, juce::Slider::SliderStyle style)
-        : slider(style, juce::Slider::NoTextBox)
+        : slider(style, juce::Slider::TextBoxBelow)
     {
         label.setText(labelText, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
@@ -17,8 +17,9 @@ public:
     void resized() override
     {
         auto bounds = getLocalBounds();
-        label.setBounds(bounds.removeFromTop(bounds.getHeight() / 8));
+        label.setBounds(bounds.removeFromTop(bounds.getHeight() / 6));
         slider.setBounds(bounds);
+        DBG("Slider bounds now considered " + getBounds().toString());
     }
 
     juce::Slider& getSlider() { return slider; }
@@ -158,12 +159,14 @@ public:
       juce::FlexBox mainBox;
       mainBox.flexDirection = juce::FlexBox::Direction::column;  // Set the main flex direction to column
 
+      juce::FlexItem::Margin margin(2);
+
       // Sliders
       juce::FlexBox sliderBox;
       sliderBox.flexDirection = juce::FlexBox::Direction::row;
       for (auto& sliderWithLabel : sliders) {
           DBG("Adding slider with name: " + sliderWithLabel->getSlider().getName() + " to sliderBox");
-          sliderBox.items.add(juce::FlexItem(*sliderWithLabel).withFlex(1).withMinHeight(80).withMinWidth(100));  // Adjusted min height
+          sliderBox.items.add(juce::FlexItem(*sliderWithLabel).withFlex(1).withMinWidth(100).withMargin(margin));  // Adjusted min height
       }
 
       // Toggles
@@ -171,7 +174,7 @@ public:
       toggleBox.flexDirection = juce::FlexBox::Direction::row;
       for (auto& toggle : toggles) {
           DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
-          toggleBox.items.add(juce::FlexItem(*toggle).withFlex(1).withMinHeight(30).withMinWidth(80));
+          toggleBox.items.add(juce::FlexItem(*toggle).withFlex(1).withMinWidth(80).withMargin(margin));
       }
 
       // Option Controls
@@ -179,7 +182,7 @@ public:
       optionBox.flexDirection = juce::FlexBox::Direction::row;
       for (auto& optionCtrl : optionCtrls) {
           DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
-          optionBox.items.add(juce::FlexItem(*optionCtrl).withFlex(1).withMinHeight(30).withMinWidth(80));
+          optionBox.items.add(juce::FlexItem(*optionCtrl).withFlex(1).withMinWidth(80).withMargin(margin));
       }
 
       // Text Controls
@@ -187,21 +190,21 @@ public:
       textBox.flexDirection = juce::FlexBox::Direction::row;
       for (auto& textCtrl : textCtrls) {
           DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
-          textBox.items.add(juce::FlexItem(*textCtrl).withFlex(0.5).withMinHeight(30).withMinWidth(80));
+          textBox.items.add(juce::FlexItem(*textCtrl).withFlex(0.5).withMinWidth(80).withMargin(margin));
       }
 
       // Add each FlexBox to the main FlexBox
       if (sliders.size() > 0) {
-          mainBox.items.add(juce::FlexItem(sliderBox).withFlex(1));
+          mainBox.items.add(juce::FlexItem(sliderBox).withFlex(1).withMinHeight(90));
       }
       if (toggles.size() > 0) {
-          mainBox.items.add(juce::FlexItem(toggleBox).withFlex(1));
+          mainBox.items.add(juce::FlexItem(toggleBox).withFlex(1).withMinHeight(30));
       }
       if (optionCtrls.size() > 0) {
-          mainBox.items.add(juce::FlexItem(optionBox).withFlex(1));
+          mainBox.items.add(juce::FlexItem(optionBox).withFlex(1).withMinHeight(30));
       }
       if (textCtrls.size() > 0) {
-          mainBox.items.add(juce::FlexItem(textBox).withFlex(1));
+          mainBox.items.add(juce::FlexItem(textBox).withFlex(1).withMinHeight(30));
       }
 
       // Perform Layout

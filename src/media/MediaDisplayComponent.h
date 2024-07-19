@@ -91,6 +91,8 @@ public:
 
     URL getTargetFilePath() { return targetFilePath; }
 
+    File getTargetFile() { return targetFilePath.getLocalFile(); }
+
     bool isFileLoaded() { return !targetFilePath.isEmpty(); }
 
     void generateTempFile()

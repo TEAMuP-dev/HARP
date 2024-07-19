@@ -33,7 +33,7 @@ endif()
 set(PYINSTALLER_COMMANDS 
     "${PYTHON_EXECUTABLE} -m ensurepip --upgrade"
     "${PYTHON_EXECUTABLE} -m pip install -r ${CMAKE_SOURCE_DIR}/py/client/requirements.txt"
-    "${PYINSTALLER_EXECUTABLE} -y gradiojuce_client.py --collect-all gradio_client"
+    "${PYINSTALLER_EXECUTABLE} --hide-console hide-early -y gradiojuce_client.py --collect-all gradio_client"
 )
 
 # Execute each command individually, and check the result of each
