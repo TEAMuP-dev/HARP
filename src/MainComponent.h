@@ -643,6 +643,7 @@ public:
         "hugggof/nesquik",
         "hugggof/pitch_shifter",
         "hugggof/harmonic_percussive",
+        "xribene/midi_pitch_shifter"
         };
 
 
