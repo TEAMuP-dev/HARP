@@ -15,7 +15,7 @@ function(install_miniconda)
         return()
     endif()
 
-    set(MINICONDA_VERSION "latest")
+    set(MINICONDA_VERSION "py312_24.5.0-0")
 
     if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         set(MINICONDA_INSTALLER "Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe")
