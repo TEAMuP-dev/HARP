@@ -840,6 +840,12 @@ public:
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
 
+        addAndMakeVisible(saveFileButton);
+        saveFileButton.onClick = [this] { saveCallback(); };
+        saveFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to save results to original audio file"); };
+        saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+        saveFileButtonHandler.attach();
+
         addAndMakeVisible (zoomSlider);
         zoomSlider.setRange (0, 1, 0);
         zoomSlider.onValueChange = [this] { thumbnail->setZoomFactor (zoomSlider.getValue()); };
@@ -1312,8 +1318,9 @@ public:
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
-        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
-        chooseFileButton.setBounds(row8.reduced(margin));
+        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 3).reduced(margin));
+        chooseFileButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
+        saveFileButton.setBounds(row8.reduced(margin));
 
         // Status area
         auto row9 = mainArea.removeFromBottom(80);
@@ -1374,6 +1381,9 @@ private:
 
     TextButton chooseFileButton {"Open File"};
     HoverHandler chooseFileButtonHandler {chooseFileButton};
+
+    TextButton saveFileButton {"Save File"};
+    HoverHandler saveFileButtonHandler {saveFileButton};
 
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
