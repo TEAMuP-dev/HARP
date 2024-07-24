@@ -295,8 +295,7 @@ public:
         if (saveEnabled) {
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             mediaDisplay->overwriteTarget();
-            
-            // saveButton.setEnabled(false);
+
             saveEnabled = false;
             setStatus("File saved successfully");
         } else {
@@ -370,6 +369,7 @@ public:
             DBG("Nothing to undo!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
         } else {
+            saveEnabled = true;
             DBG("Undo callback completed successfully");
         }
     }
@@ -396,6 +396,7 @@ public:
             DBG("Nothing to redo!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
         } else {
+            saveEnabled = true;
             DBG("Redo callback completed successfully");
         }
     }
@@ -592,6 +593,12 @@ public:
         chooseFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to choose an audio file"); };
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
+
+        addAndMakeVisible(saveFileButton);
+        saveFileButton.onClick = [this] { saveCallback(); };
+        saveFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to save results to original audio file"); };
+        saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+        saveFileButtonHandler.attach();
 
         // Initialize default media display
         initializeMediaDisplay();
@@ -1070,8 +1077,9 @@ public:
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
-        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
-        chooseFileButton.setBounds(row8.reduced(margin));
+        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 3).reduced(margin));
+        chooseFileButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
+        saveFileButton.setBounds(row8.reduced(margin));
 
         // Status area
         auto row9 = mainArea.removeFromBottom(80);
@@ -1137,6 +1145,9 @@ private:
 
     TextButton chooseFileButton {"Open File"};
     HoverHandler chooseFileButtonHandler {chooseFileButton};
+
+    TextButton saveFileButton {"Save File"};
+    HoverHandler saveFileButtonHandler {saveFileButton};
 
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
