@@ -103,6 +103,8 @@ public:
         save = 0x2001,
         saveAs = 0x2002,
         about = 0x2003,
+        undo = 0x2005,
+        redo = 0x2006
         // settings = 0x2004,
     };
 
@@ -128,6 +130,8 @@ public:
             menu.addCommandItem (&commandManager, CommandIDs::open);
             menu.addCommandItem (&commandManager, CommandIDs::save);
             menu.addCommandItem (&commandManager, CommandIDs::saveAs);
+            menu.addCommandItem (&commandManager, CommandIDs::undo);
+            menu.addCommandItem (&commandManager, CommandIDs::redo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
@@ -150,6 +154,8 @@ public:
             CommandIDs::open,
             CommandIDs::save, 
             CommandIDs::saveAs,
+            CommandIDs::undo,
+            CommandIDs::redo,
             CommandIDs::about,
             };
         commands.addArray(ids, numElementsInArray(ids));
@@ -172,6 +178,14 @@ public:
                 result.setInfo("Save As...", "Saves the current document with a new name", "File", 0);
                 result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
+            case CommandIDs::undo:
+                result.setInfo("Undo", "Undoes the most recent operation", "File", 0);
+                result.addDefaultKeypress('z', ModifierKeys::commandModifier);
+                break;
+            case CommandIDs::redo:
+                result.setInfo("Redo", "Redoes the most recent operation", "File", 0);
+                result.addDefaultKeypress('z',  ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -192,6 +206,14 @@ public:
             case CommandIDs::open:
                 DBG("Open command invoked");
                 openFileChooser();
+                break;
+            case CommandIDs::undo:
+                DBG("Undo command invoked");
+                undoCallback();
+                break;
+            case CommandIDs::redo:
+                DBG("Redo command invoked");
+                redoCallback();
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -323,6 +345,58 @@ public:
                 });
         } else {
             setStatus("Nothing to save. Please load an audio file first.");
+        }
+    }
+
+    void undoCallback() {
+        DBG("Undoing last edit");
+
+        // check if the audio file is loaded
+        if (!mediaDisplay->isFileLoaded()) {
+            // TODO - gray out undo option in this case?
+            // Fail with beep, we should just ignore this if it doesn't make sense
+            DBG("No file loaded to perform operation on");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        if (isProcessing) {
+            DBG("Can't undo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        if (!mediaDisplay->iteratePreviousTempFile()) {
+            DBG("Nothing to undo!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        } else {
+            DBG("Undo callback completed successfully");
+        }
+    }
+
+    void redoCallback() {
+        DBG("Redoing last edit");
+
+        // check if the audio file is loaded
+        if (!mediaDisplay->isFileLoaded()) {
+            // TODO - gray out undo option in this case?
+            // Fail with beep, we should just ignore this if it doesn't make sense
+            DBG("No file loaded to perform operation on");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        if (isProcessing) {
+            DBG("Can't redo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
+
+        if (!mediaDisplay->iterateNextTempFile()) {
+            DBG("Nothing to redo!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        } else {
+            DBG("Redo callback completed successfully");
         }
     }
 
@@ -754,7 +828,7 @@ public:
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
         // check if the audio file is loaded
-        if (!mediaDisplay->getTempFilePath().isLocalFile()) {
+        if (!mediaDisplay->isFileLoaded()) {
             // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
             //ShowMEssageBoxAsync
             AlertWindow::showMessageBoxAsync(
@@ -764,7 +838,6 @@ public:
             );
             return;
         }
-
 
         processCancelButton.setEnabled(true);
         processCancelButton.setMode(cancelButtonInfo.label);
@@ -803,6 +876,9 @@ public:
             resetProcessingButtons();
             return;
         }
+
+        mediaDisplay->addNewTempFile();
+
         // print how many jobs are currently in the threadpool
         DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
 
@@ -923,22 +999,22 @@ public:
         menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
                                                     .getDefaultMenuBarHeight()));
         #endif
-        auto margin = 10;  // Adjusted margin value for top and bottom spacing
+        auto margin = 5;  // Adjusted margin value for top and bottom spacing
         auto docViewHeight = 1;
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
         auto documentViewArea = area;  // what remains is the 15% area for documentView
         // Row 1: Model Path TextBox and Load Model Button
-        auto row1 = mainArea.removeFromTop(40);  // adjust height as needed
+        auto row1 = mainArea.removeFromTop(30);  // adjust height as needed
         modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
         // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(40);  // adjust height as needed
+        auto row2a = mainArea.removeFromTop(35);  // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
  
-        auto row2b = mainArea.removeFromTop(30);
+        auto row2b = mainArea.removeFromTop(20);
         authorLabel.setBounds(row2b.reduced(margin));
         authorLabel.setFont(Font(10.0f));
 
@@ -965,19 +1041,19 @@ public:
         descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(30);  // adjust height as needed
+        auto row4 = mainArea.removeFromTop(22);  // adjust height as needed
         spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
-        auto row5 = mainArea.removeFromTop(150);  // the remaining area is for row 4
+        auto row5 = mainArea.removeFromTop(195);  // the remaining area is for row 4
         ctrlComponent.setBounds(row5.reduced(margin));
 
-        // An empty space of 30px between the ctrl component and the process button
-        mainArea.removeFromTop(30);
+        // An empty space of 20px between the ctrl component and the process button
+        mainArea.removeFromTop(10);
 
         // Row 6: Process Button (taken out in advance to preserve its height)
-        auto row6Height = 25;  // adjust height as needed
+        auto row6Height = 20;  // adjust height as needed
         auto row6 = mainArea.removeFromTop(row6Height);
 
         // Assign bounds to processButton
@@ -993,7 +1069,7 @@ public:
         mediaDisplay->setBounds(row7);
 
         // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(70);  // adjust height as needed
+        auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
         playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
         chooseFileButton.setBounds(row8.reduced(margin));
 
@@ -1210,7 +1286,7 @@ private:
         else if (source == &processBroadcaster) {
             // refresh the display for the new updated file
             URL tempFilePath = mediaDisplay->getTempFilePath();
-            mediaDisplay->setupDisplay(tempFilePath);
+            mediaDisplay->updateDisplay(tempFilePath);
 
             // now, we can enable the process button
             resetProcessingButtons();

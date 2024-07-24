@@ -5,7 +5,7 @@
 [submodule "py/pyharp"]
     path = py/pyharp
     url = https://github.com/TEAMuP-dev/pyharp
-    branch = midi_support
+    branch = main
 [submodule "py/pyinstaller"]
     path = py/pyinstaller
     url = https://github.com/hugofloresgarcia/pyinstaller

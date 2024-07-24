@@ -77,34 +77,52 @@ public:
         resetMedia();
 
         setNewTarget(filePath);
+        updateDisplay(filePath);
 
-        loadMediaFile(filePath);
+        Range<double> range(0.0, getTotalLengthInSecs());
 
-        postLoadActions(filePath);
-
-        Range<double> range (0.0, getTotalLengthInSecs());
-
-        scrollbar.setRangeLimits(range);
         scrollbar.setVisible(true);
         updateVisibleRange(range);
     }
 
+    void updateDisplay(const URL& filePath)
+    {
+        resetDisplay();
+
+        loadMediaFile(filePath);
+        postLoadActions(filePath);
+
+        Range<double> range(0.0, getTotalLengthInSecs());
+
+        scrollbar.setRangeLimits(range);
+    }
+
     URL getTargetFilePath() { return targetFilePath; }
 
-    bool isFileLoaded() { return !targetFilePath.isEmpty(); }
+    bool isFileLoaded() { return !tempFilePaths.isEmpty(); }
 
-    void generateTempFile()
+    void addNewTempFile()
     {
-        // TODO - should support temp files for intermediate steps with .n extensions
+        clearFutureTempFiles();
+
+        int numTempFiles = tempFilePaths.size();
+
+        File originalFile = targetFilePath.getLocalFile();
+
+        File targetFile;
+
+        if (!numTempFiles) {
+            targetFile = originalFile;
+        } else {
+            targetFile = getTempFilePath().getLocalFile();
+        }
 
         String docsDirectory = File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName();
 
-        File targetFile = targetFilePath.getLocalFile();
+        String targetFileName = originalFile.getFileNameWithoutExtension();
+        String targetFileExtension = originalFile.getFileExtension();
 
-        String targetFileName = targetFile.getFileNameWithoutExtension();
-        String targetFileExtension = targetFile.getFileExtension();
-
-        tempFilePath = URL(File(docsDirectory + "/HARP/" + targetFileName + "_harp" + targetFileExtension));
+        URL tempFilePath = URL(File(docsDirectory + "/HARP/" + targetFileName + "_" + String(numTempFiles) + targetFileExtension));
 
         File tempFile = tempFilePath.getLocalFile();
 
@@ -117,16 +135,48 @@ public:
         } else {
             DBG("MediaDisplayComponent::generateTempFile: Copied file " << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
         }
+
+        tempFilePaths.add(tempFilePath);
+        currentTempFileIdx++;
     }
 
-    URL getTempFilePath() { return tempFilePath; }
+    URL getTempFilePath()
+    {
+        return tempFilePaths.getReference(currentTempFileIdx);
+    }
+
+    bool iteratePreviousTempFile()
+    {
+        if (currentTempFileIdx > 0) {
+            currentTempFileIdx--;
+
+            updateDisplay(getTempFilePath());
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool iterateNextTempFile()
+    {
+        if (currentTempFileIdx + 1 < tempFilePaths.size()) {
+            currentTempFileIdx++;
+
+            updateDisplay(getTempFilePath());
+
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     void overwriteTarget()
     {
-        // TODO - should support backup files for intermediate steps with .n extensions
+        // Overwrite the original file - necessary for seamless sample editing integration
 
         File targetFile = targetFilePath.getLocalFile();
-        File tempFile = tempFilePath.getLocalFile();
+        File tempFile = getTempFilePath().getLocalFile();
 
         String parentDirectory = targetFile.getParentDirectory().getFullPathName();
         String targetFileName = targetFile.getFileNameWithoutExtension();
@@ -145,8 +195,6 @@ public:
         } else {
             DBG("MediaDisplayComponent::overwriteTarget: Failed to overwrite file " << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
         }
-
-        generateTempFile();
     }
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
@@ -229,7 +277,8 @@ protected:
     void setNewTarget(URL filePath)
     {
         targetFilePath = filePath;
-        generateTempFile();
+
+        addNewTempFile();
     }
 
     virtual double xToTime(const float x) const
@@ -273,12 +322,21 @@ private:
         clearDroppedFile();
 
         targetFilePath = URL();
-        tempFilePath = URL();
+
+        tempFilePaths.clear();
+        currentTempFileIdx = -1;
     }
 
     virtual void resetDisplay() = 0;
 
     virtual void postLoadActions(const URL& filePath) = 0;
+
+    void clearFutureTempFiles()
+    {
+        int n = tempFilePaths.size() - (currentTempFileIdx + 1);
+
+        tempFilePaths.removeLast(n);
+    }
 
     void updateCursorPosition()
     {
@@ -347,8 +405,10 @@ private:
     }
 
     URL targetFilePath;
-    URL tempFilePath;
     URL droppedFilePath;
+
+    int currentTempFileIdx;
+    Array<URL> tempFilePaths;
 
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker;

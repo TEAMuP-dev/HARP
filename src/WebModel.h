@@ -79,20 +79,21 @@ namespace{
 
 class WebModel : public Model {
 public:
+
   WebModel() { // TODO: should be a singleton
 
     // create our logger
     m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
 
-
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
 
     #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+
       scriptPath = juce::File::getSpecialLocation(
         juce::File::currentApplicationFile
       ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
 
-      prefix_cmd = "start /B cmd /c set PYTHONIOENCODING=UTF-8 && ";
+      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
     #elif __APPLE__
       scriptPath = juce::File::getSpecialLocation(
           juce::File::currentApplicationFile
@@ -106,6 +107,7 @@ public:
     #else
       #error "gradiojuce_client has not been implemented for this platform"
     #endif
+
   }
 
   ~WebModel() {
@@ -122,6 +124,24 @@ public:
     }
   }
 
+  std::pair<juce::String, juce::uint32> run_command(std::string command) const {
+    juce::ChildProcess process;
+    bool status;
+
+    status = process.start(command);
+
+    if (!status) {
+      LogAndDBG("Process failed!");
+    }
+
+    juce::String output = process.readAllProcessOutput();
+    juce::uint32 exit_code = process.getExitCode();
+
+    // LogAndDBG("Process output: " + output);
+    // LogAndDBG("Exit code: " + juce::String(exit_code));
+
+    return std::make_pair(output, exit_code);
+  }
 
   bool ready() const override { return m_loaded; }
   std::string space_url() const { return m_url; }
@@ -147,10 +167,6 @@ public:
             .getChildFile("control_spec.json");
     outputPath.deleteFile();
 
-    juce::File tempLogFile =
-    juce::File::getSpecialLocation(juce::File::tempDirectory)
-        .getChildFile("system_controls_log.txt");
-    tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
       prefix_cmd
@@ -158,17 +174,17 @@ public:
       + " --mode controls"
       + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
-      + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-      + " 2>&1"   // redirect stderr to the same file as stdout
+      // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+      // + " 2>&1"   // redirect stderr to the same file as stdout
     );
 
-    LogAndDBG("Running command: " + command);
-    // TODO: urgently need to find a better alternative to system
-    int result = std::system(command.c_str());
 
-    juce::String logContent = tempLogFile.loadFileAsString();
+    LogAndDBG("Running command: " + command);
+    std::pair<juce::String, juce::uint32> cmd_result = run_command(command);
+
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
     LogAndDBG(logContent);
-    tempLogFile.deleteFile();  // delete the temporary log file
 
     if (result != 0) {
         // read the text from the temp log file.
@@ -387,10 +403,6 @@ public:
       throw std::runtime_error("Failed to save controls to file.");
     }
 
-    juce::File tempLogFile =
-        juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("system_log" + randomString + ".txt");
-    tempLogFile.deleteFile();  // ensure the file doesn't already exist
 
     std::string command = (
         prefix_cmd
@@ -401,14 +413,14 @@ public:
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
         + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
         + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
-        + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-        + " 2>&1"   // redirect stderr to the same file as stdout
+        // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+        // + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
-    // TODO: log commmand output to a file
-    int result = std::system(command.c_str());
+    std::pair<juce::String, int> cmd_result = run_command(command);
 
-    juce::String logContent = tempLogFile.loadFileAsString();
+    juce::String logContent = cmd_result.first;
+    juce::uint32 result = cmd_result.second;
     LogAndDBG(logContent);
 
     if (result != 0) {
@@ -433,8 +445,6 @@ public:
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
-
-    tempLogFile.deleteFile();  // delete the temporary log file
 
     // move the temp output file to the original input file
     tempOutputFile.moveFileTo(filetoProcess);
