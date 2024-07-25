@@ -20,10 +20,6 @@ PianoRollEditorComponent::PianoRollEditorComponent() : noteGrid(styleSheet), con
     viewportGrid.setScrollBarThickness(10);
  
     
-    //--- timeline
-    viewportTimeline.setViewedComponent(&timelineComp, false);
-    viewportTimeline.setScrollBarsShown(false, false);
-    addAndMakeVisible(viewportTimeline);
     
     //--- keyboard
     viewportPiano.setViewedComponent(&keyboardComp, false);
@@ -33,7 +29,6 @@ PianoRollEditorComponent::PianoRollEditorComponent() : noteGrid(styleSheet), con
     //once the piano roll component is scrolled then it updates the others manually
     viewportGrid.positionMoved = [this](int x, int y)
     {
-        viewportTimeline.setViewPosition(x, y);
         viewportPiano.setViewPosition(x, y);
     };
     
@@ -80,14 +75,11 @@ void PianoRollEditorComponent::paintOverChildren (Graphics& g)
 }
 void PianoRollEditorComponent::resized()
 {
-    viewportGrid.setBounds(80, 50, getWidth()-90, controlPannel.isVisible() ? getHeight()-180 : getHeight() - 55);
-    viewportTimeline.setBounds(viewportGrid.getX(), 5, viewportGrid.getWidth()-10, viewportGrid.getY() - 5);
+    viewportGrid.setBounds(80, 5, getWidth()-90, controlPannel.isVisible() ? getHeight() - 130 : getHeight() - 5);
     viewportPiano.setBounds(5, viewportGrid.getY(), 70, viewportGrid.getHeight()- 10);
     
     noteGrid.setBounds(0,0,4000, 20*127);
     noteGrid.setupGrid(900, 20, 10);
-    timelineComp.setBounds(0, 0, 100, viewportTimeline.getHeight());
-    timelineComp.setup(10, 900);
     keyboardComp.setBounds(0, 0, viewportPiano.getWidth(), noteGrid.getHeight());
     
     controlPannel.setBounds(5, viewportGrid.getBottom() + 5, getWidth() - 10, 140);
@@ -109,7 +101,6 @@ void PianoRollEditorComponent::setup (const int bars, const int pixelsPerBar, co
     if (bars > 1 && bars < 1000) { // sensible limits..
 
         noteGrid.setupGrid(pixelsPerBar, noteHeight, bars);
-        timelineComp.setup(bars, pixelsPerBar);
         keyboardComp.setSize(viewportPiano.getWidth(), noteGrid.getHeight());
     }
     else {
@@ -125,7 +116,6 @@ void PianoRollEditorComponent::updateBars (const int newNumberOfBars)
         const float nH = noteGrid.getNoteCompHeight();
         
         noteGrid.setupGrid(pPb, nH, newNumberOfBars);
-        timelineComp.setup(newNumberOfBars, pPb);
         keyboardComp.setSize(viewportPiano.getWidth(), noteGrid.getHeight());
     }
     else {

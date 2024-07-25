@@ -10,7 +10,6 @@
 
 #include "PConstants.h"
 #include "NoteGridControlPanel.hpp"
-#include "TimelineComponent.hpp"
 #include "KeyboardComponent.hpp"
 
 /*
@@ -33,8 +32,6 @@ public:
 
 /*
  
- |      |   timeline component
- |______|__________________________________________
  |      |
  |      |
  |keys  |   main viewport and note grid component
@@ -134,7 +131,6 @@ private:
      Each is stored in a customViewport instance, that are coupled to move in unison
      */
     NoteGridComponent       noteGrid; //the actual piano roll
-    TimelineComponent       timelineComp; // the timeline marker at the top
     KeyboardComponent       keyboardComp; // the keyboard visualiser to the left
     
     CustomViewport          viewportGrid, viewportPiano, viewportTimeline;
