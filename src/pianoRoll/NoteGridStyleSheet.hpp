@@ -15,10 +15,6 @@
  */
 class NoteGridStyleSheet {
 public:
-    /*
-     We use a friend class to ensure a one-way only relationship. The control pannel can set member varialbes easily. Saves adding loads of getters/setters
-     */
-    friend class NoteGridControlPanel;
     
     NoteGridStyleSheet ();
     
