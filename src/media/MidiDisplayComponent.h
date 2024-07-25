@@ -13,7 +13,6 @@ public:
         // 10 measures, 400 pixels per measure (width), and 10 pixels per note (height)
         // TODO - call again when new file is loaded?
         pianoRollEditor.setup(10, 400, 10);
-        pianoRollEditor.disableEditing(true);
         pianoRollEditor.setPlaybackMarkerPosition(0, false);
         addAndMakeVisible(pianoRollEditor);
 

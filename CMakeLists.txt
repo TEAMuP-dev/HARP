@@ -73,7 +73,6 @@ target_sources(${PROJECT_NAME}
 
         src/pianoRoll/KeyboardComponent.cpp
         src/pianoRoll/NoteGridComponent.cpp
-        src/pianoRoll/NoteGridStyleSheet.cpp
         src/pianoRoll/NoteModel.cpp
         src/pianoRoll/PConstants.h
         src/pianoRoll/PianoRollEditorComponent.cpp

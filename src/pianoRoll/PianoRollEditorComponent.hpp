@@ -93,31 +93,8 @@ public:
     void setPlaybackMarkerPosition (const st_int ticks, bool isVisable = true); 
     void setZoomFactor (float factor);
 
-    /*
-     If you just want to view the editor then disable the grid.
-     */
-    void disableEditing (bool value);
-
-    /*
-     Returns any notes that are selected used in IGME
-     */
-    ExternalModelEditor getSelectedNoteModels ();
-
-    /*
-     This is called when the grid is edited.
-     */
-    std::function<void()> onEdit;
-
-    /*
-     You can use this to implement simple MIDI synthesis when notes are being edited,
-     when notes are edited this function will be called
-     */
-    std::function<void(int note,int velocity)> sendChange;
-
 private:
     //==============================================================================
-
-    NoteGridStyleSheet      styleSheet;
 
     /*
      These 2 essential components make up the piano roll editor.

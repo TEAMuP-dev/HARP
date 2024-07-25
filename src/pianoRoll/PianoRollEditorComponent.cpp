@@ -9,7 +9,7 @@
 
 
 //==============================================================================
-PianoRollEditorComponent::PianoRollEditorComponent() : noteGrid(styleSheet)
+PianoRollEditorComponent::PianoRollEditorComponent()
 {
     //--- grid
     addAndMakeVisible(viewportGrid);
@@ -29,18 +29,6 @@ PianoRollEditorComponent::PianoRollEditorComponent() : noteGrid(styleSheet)
         viewportPiano.setViewPosition(x, y);
     };
 
-    noteGrid.onEdit = [this]() //pass up the chain.
-    {
-        if (this->onEdit != nullptr) {
-            this->onEdit();
-        }
-    };
-    noteGrid.sendChange = [this](int note, int vel)
-    {
-        if (this->sendChange != nullptr) {
-            this->sendChange(note, vel);
-        }
-    };
     showPlaybackMarker = false;
     playbackTicks = 0;
 }
@@ -71,11 +59,6 @@ void PianoRollEditorComponent::resized()
     noteGrid.setupGrid(900, 20, 10);
     keyboardComp.setBounds(0, 0, viewportPiano.getWidth(), noteGrid.getHeight());
 }
-
-//void PianoRollEditorComponent::setStyleSheet (NoteGridStyleSheet style)
-//{
-//
-//}
 
 void PianoRollEditorComponent::setup (const int bars, const int pixelsPerBar, const int noteHeight)
 {
@@ -139,22 +122,4 @@ void PianoRollEditorComponent::setZoomFactor (float factor)
 {
     auto kk = factor * 1000 + 2;
     setup(10, (int)kk, 10);
-}
-
-void PianoRollEditorComponent::disableEditing (bool value)
-{
-    styleSheet.disableEditing = value;
-    noteGrid.repaint();
-}
-
-PianoRollEditorComponent::ExternalModelEditor PianoRollEditorComponent::getSelectedNoteModels ()
-{
-    ExternalModelEditor mEdit;
-    mEdit.update = [this]()
-    {
-        noteGrid.resized();
-        noteGrid.repaint();
-    };
-    mEdit.models = noteGrid.getSelectedModels();
-    return mEdit;
 }
