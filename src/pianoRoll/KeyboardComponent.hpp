@@ -8,7 +8,8 @@
 using namespace juce;
 
 
-class KeyboardComponent : public Component {
+class KeyboardComponent : public Component
+{
 public:
     
     KeyboardComponent();

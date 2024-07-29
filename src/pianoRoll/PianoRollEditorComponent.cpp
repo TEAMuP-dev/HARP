@@ -3,10 +3,8 @@
 #include "PianoRollEditorComponent.hpp"
 
 
-//==============================================================================
 PianoRollEditorComponent::PianoRollEditorComponent()
 {
-
     viewportPiano.setViewedComponent(&keyboardComp, false);
     viewportPiano.setScrollBarsShown(false, false);
     addAndMakeVisible(viewportPiano);
@@ -21,25 +19,13 @@ PianoRollEditorComponent::PianoRollEditorComponent()
         // Keep keys in sync with pianoroll
         viewportPiano.setViewPosition(x, y);
     };
-
-    playbackTicks = 0;
 }
 
 PianoRollEditorComponent::~PianoRollEditorComponent() {}
 
-//==============================================================================
 void PianoRollEditorComponent::paint(Graphics& g)
 {
     g.fillAll(Colours::darkgrey.darker());
-}
-
-void PianoRollEditorComponent::paintOverChildren(Graphics& g)
-{
-    const int x = noteGrid.getPixelsPerBar() * (playbackTicks / (4.0 * PRE::defaultResolution));
-    const int xAbsolute = viewportGrid.getViewPosition().getX();
-
-    g.setColour(Colours::greenyellow);
-    g.drawLine(x - xAbsolute, 0, x - xAbsolute, getHeight(), 5.0);
 }
 
 void PianoRollEditorComponent::resized()
@@ -84,18 +70,6 @@ void PianoRollEditorComponent::loadSequence(PRESequence sequence)
 //    const int middleNote = ((sequence.highNote - sequence.lowNote) * 0.5) + sequence.lowNote;
 //    const float scrollRatio = middleNote / 127.0;
 //    setScroll(0.0, scrollRatio);
-}
-
-// void PianoRollEditorComponent::clearSequence()
-// {
-//     // noteGrid.loadSequence can be used to clear the grid by passing an empty PRESequence
-//     PRESequence emptySequence;
-//     noteGrid.loadSequence(emptySequence);
-// }
-
-PRESequence PianoRollEditorComponent::getSequence()
-{
-    return noteGrid.getSequence();
 }
 
 void PianoRollEditorComponent::setScroll(double x, double y)

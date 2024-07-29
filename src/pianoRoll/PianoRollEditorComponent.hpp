@@ -59,8 +59,6 @@ public:
     void updateBars(const int newNumberOfBars);
 
     void paint(Graphics&) override;
-    void paintOverChildren(Graphics&) override;
-
     void resized() override;
 
     /*
@@ -71,10 +69,6 @@ public:
      Although this approach is probably inefficent, its unlikely to cause realtime performance issues...
      */
     void loadSequence(PRESequence sequence);
-
-    // void clearSequence();
-
-    PRESequence getSequence();
 
     void setScroll(double x, double y);
     void setZoomFactor(float factor);
@@ -87,10 +81,7 @@ private:
     NoteGridComponent noteGrid;
     KeyboardComponent keyboardComp;
 
-    st_int playbackTicks; // TODO - necessary?
-
     JUCE_DECLARE_NON_COPYABLE(PianoRollEditorComponent)
 };
-
 
 #endif /* PianoRollEditorComponent_hpp */

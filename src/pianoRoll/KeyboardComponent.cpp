@@ -19,8 +19,7 @@ void KeyboardComponent::paint(Graphics& g)
     for (int i = 127; i >= 0; i--) {
         const int pitch = i % 12;
 
-        g.setColour(blackPitches.contains(pitch) ? (Colours::darkgrey) : Colours::lightgrey.darker());
-
+        g.setColour(blackPitches.contains(pitch) ? Colours::darkgrey : Colours::lightgrey.darker());
         g.fillRect(0, (int) line, getWidth(), (int) noteCompHeight);
 
         g.setColour(Colours::white);
