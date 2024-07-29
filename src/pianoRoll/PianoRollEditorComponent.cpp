@@ -1,9 +1,4 @@
-//
-//  PianoRollEditorComponent.cpp
-//  PianoRollEditor - App
-//
-//  Created by Samuel Hunt on 05/02/2020.
-//
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
 
 #include "PianoRollEditorComponent.hpp"
 
@@ -11,37 +6,34 @@
 //==============================================================================
 PianoRollEditorComponent::PianoRollEditorComponent()
 {
-    //--- grid
-    addAndMakeVisible(viewportGrid);
 
-    viewportGrid.setViewedComponent(&noteGrid, false);
-    viewportGrid.setScrollBarsShown(true, true);
-    viewportGrid.setScrollBarThickness(10);
-
-    //--- keyboard
     viewportPiano.setViewedComponent(&keyboardComp, false);
     viewportPiano.setScrollBarsShown(false, false);
     addAndMakeVisible(viewportPiano);
 
-    //once the piano roll component is scrolled then it updates the others manually
+    viewportGrid.setViewedComponent(&noteGrid, false);
+    viewportGrid.setScrollBarsShown(true, true);
+    viewportGrid.setScrollBarThickness(10);
+    addAndMakeVisible(viewportGrid);
+
     viewportGrid.positionMoved = [this](int x, int y)
     {
+        // Keep keys in sync with pianoroll
         viewportPiano.setViewPosition(x, y);
     };
 
-    showPlaybackMarker = false;
     playbackTicks = 0;
 }
 
 PianoRollEditorComponent::~PianoRollEditorComponent() {}
 
 //==============================================================================
-void PianoRollEditorComponent::paint (Graphics& g)
+void PianoRollEditorComponent::paint(Graphics& g)
 {
     g.fillAll(Colours::darkgrey.darker());
 }
 
-void PianoRollEditorComponent::paintOverChildren (Graphics& g)
+void PianoRollEditorComponent::paintOverChildren(Graphics& g)
 {
     const int x = noteGrid.getPixelsPerBar() * (playbackTicks / (4.0 * PRE::defaultResolution));
     const int xAbsolute = viewportGrid.getViewPosition().getX();
@@ -60,7 +52,7 @@ void PianoRollEditorComponent::resized()
     keyboardComp.setBounds(0, 0, viewportPiano.getWidth(), noteGrid.getHeight());
 }
 
-void PianoRollEditorComponent::setup (const int bars, const int pixelsPerBar, const int noteHeight)
+void PianoRollEditorComponent::setup(const int bars, const int pixelsPerBar, const int noteHeight)
 {
     if (bars > 1 && bars < 1000) { // sensible limits..
         noteGrid.setupGrid(pixelsPerBar, noteHeight, bars);
@@ -71,7 +63,7 @@ void PianoRollEditorComponent::setup (const int bars, const int pixelsPerBar, co
     }
 }
 
-void PianoRollEditorComponent::updateBars (const int newNumberOfBars)
+void PianoRollEditorComponent::updateBars(const int newNumberOfBars)
 {
     if (newNumberOfBars > 1 && newNumberOfBars < 1000) { // sensible limits..
         const float pPb = noteGrid.getPixelsPerBar();
@@ -84,7 +76,7 @@ void PianoRollEditorComponent::updateBars (const int newNumberOfBars)
     }
 }
 
-void PianoRollEditorComponent::loadSequence (PRESequence sequence)
+void PianoRollEditorComponent::loadSequence(PRESequence sequence)
 {
     noteGrid.loadSequence(sequence);
 
@@ -101,24 +93,17 @@ void PianoRollEditorComponent::loadSequence (PRESequence sequence)
 //     noteGrid.loadSequence(emptySequence);
 // }
 
-PRESequence PianoRollEditorComponent::getSequence ()
+PRESequence PianoRollEditorComponent::getSequence()
 {
     return noteGrid.getSequence();
 }
 
-void PianoRollEditorComponent::setScroll (double x, double y)
+void PianoRollEditorComponent::setScroll(double x, double y)
 {
     viewportGrid.setViewPositionProportionately(x, y);
 }
 
-void PianoRollEditorComponent::setPlaybackMarkerPosition (const st_int ticks, bool isVisable)
-{
-    showPlaybackMarker = isVisable;
-    playbackTicks = ticks;
-    repaint();
-}
-
-void PianoRollEditorComponent::setZoomFactor (float factor)
+void PianoRollEditorComponent::setZoomFactor(float factor)
 {
     auto kk = factor * 1000 + 2;
     setup(10, (int)kk, 10);

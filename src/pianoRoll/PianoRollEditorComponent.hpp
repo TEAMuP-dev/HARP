@@ -1,9 +1,4 @@
-//
-//  PianoRollEditorComponent.hpp
-//  PianoRollEditor - App
-//
-//  Created by Samuel Hunt on 05/02/2020.
-//
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
 
 #ifndef PianoRollEditorComponent_hpp
 #define PianoRollEditorComponent_hpp
@@ -12,8 +7,10 @@
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
+
 /*
- This custom viewport is used so that when the main piano roll is moved the others can be moved also, see diagram below
+ This custom viewport is used so that when the main
+ piano roll is moved the others can also be moved.
  */
 class CustomViewport : public Viewport
 {
@@ -31,18 +28,13 @@ public:
 
 
 /*
- |      |
- |      |
- |keys  |   main viewport and note grid component
- |      |
- |      |
- |      |
- |      |
- |      |
- |      |
- |      |
- |      |
- |      |
+ ----------------------------------------------
+ |      |                                     |
+ |      |                                     |
+ | keys | main viewport / note grid component |
+ |      |                                     |
+ |      |                                     |
+ ----------------------------------------------
  */
 
 class PianoRollEditorComponent : public Component
@@ -50,31 +42,26 @@ class PianoRollEditorComponent : public Component
 public:
 
     struct ExternalModelEditor {
-        std::vector<NoteModel *> models; //const event pointers but mutable elements
-        std::function<void()> update; //once you have made the edits then call this
+        std::vector<NoteModel*> models; // const event pointers but mutable elements
+        std::function<void()> update; // once you have made the edits then call this
     };
 
-    //==============================================================================
     PianoRollEditorComponent();
+
     ~PianoRollEditorComponent();
-    //==============================================================================
 
     /*
      This needs to be called after the constructor and determines the size of the grid.
-
      Once setup the number of bars can be dynamically altered through @updateBars(..
-
      Todo: automatically resize the number of bars
      */
-    void setup (const int bars, const int pixelsPerBar, const int noteHeight);
-    void updateBars (const int newNumberOfBars);
+    void setup(const int bars, const int pixelsPerBar, const int noteHeight);
+    void updateBars(const int newNumberOfBars);
 
-    void paint (Graphics&) override;
-    void paintOverChildren (Graphics&) override;
+    void paint(Graphics&) override;
+    void paintOverChildren(Graphics&) override;
 
     void resized() override;
-
-//    void setStyleSheet (NoteGridStyleSheet style);
 
     /*
      PRE Sequence is essentially the input and output to the grid, i.e. the data model abstracted away from the GUI
@@ -83,33 +70,26 @@ public:
 
      Although this approach is probably inefficent, its unlikely to cause realtime performance issues...
      */
-    void loadSequence (PRESequence sequence);
+    void loadSequence(PRESequence sequence);
 
     // void clearSequence();
 
-    PRESequence getSequence ();
+    PRESequence getSequence();
 
-    void setScroll (double x, double y);
-    void setPlaybackMarkerPosition (const st_int ticks, bool isVisable = true); 
-    void setZoomFactor (float factor);
+    void setScroll(double x, double y);
+    void setZoomFactor(float factor);
 
 private:
-    //==============================================================================
 
-    /*
-     These 2 essential components make up the piano roll editor.
-     Each is stored in a customViewport instance, that are coupled to move in unison
-     */
-    NoteGridComponent       noteGrid; //the actual piano roll
-    KeyboardComponent       keyboardComp; // the keyboard visualiser to the left
+    CustomViewport viewportGrid;
+    CustomViewport viewportPiano;
 
-    CustomViewport          viewportGrid, viewportPiano;
+    NoteGridComponent noteGrid;
+    KeyboardComponent keyboardComp;
 
-    st_int  playbackTicks;
-    bool    showPlaybackMarker;
+    st_int playbackTicks; // TODO - necessary?
 
     JUCE_DECLARE_NON_COPYABLE(PianoRollEditorComponent)
-//    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
 
 

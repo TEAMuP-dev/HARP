@@ -13,7 +13,6 @@ public:
         // 10 measures, 400 pixels per measure (width), and 10 pixels per note (height)
         // TODO - call again when new file is loaded?
         pianoRollEditor.setup(10, 400, 10);
-        pianoRollEditor.setPlaybackMarkerPosition(0, false);
         addAndMakeVisible(pianoRollEditor);
 
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
@@ -120,6 +119,11 @@ public:
     void startPlaying() override
     {
         // TODO
+        AlertWindow::showMessageBoxAsync(
+            AlertWindow::WarningIcon,
+            "NotImplementedError",
+            "MIDI playback has not yet been implemented."
+        );
     }
 
     void stopPlaying() override
