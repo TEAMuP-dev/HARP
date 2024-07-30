@@ -97,7 +97,7 @@ public:
 
     void setPlaybackPosition(double t) override { transportSource.setPosition(t); }
 
-    double getPlaybackPosition() override { transportSource.getCurrentPosition(); }
+    double getPlaybackPosition() override { return transportSource.getCurrentPosition(); }
 
 
     void startPlaying() override
