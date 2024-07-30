@@ -185,7 +185,7 @@ jobs:
         /usr/local/bin/python3 -m pip install packaging 
         chmod +x ./packaging/package.sh
         ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
-        
+
     - name: Upload Zip (Windows)
       if: ${{ matrix.name == 'Windows' }}
       uses: actions/upload-artifact@v4

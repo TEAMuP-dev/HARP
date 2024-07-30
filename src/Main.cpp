@@ -50,11 +50,12 @@ public:
 
     void resetWindow(const juce::String& commandLine)
     {
-        File audioFile(commandLine.unquoted().trim());
-        if (audioFile.existsAsFile()) {
-            URL audioURL = URL(audioFile);
+        File inputMediaFile(commandLine.unquoted().trim());
+
+        if (inputMediaFile.existsAsFile()) {
+            URL inputMediaURL = URL(inputMediaFile);
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
-                mainComp->loadAudioFile(audioURL);
+                mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
             }
         }
     }

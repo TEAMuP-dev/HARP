@@ -39,6 +39,9 @@ struct AudioInCtrl : public Ctrl {
   std::string value;
 };
 
+struct MidiInCtrl : public Ctrl {
+  std::string value;
+};
 
 struct NumberBoxCtrl : public Ctrl {
   double min;
@@ -74,8 +77,44 @@ namespace{
 
 }
 
-class WebWave2Wave : public Model {
+class WebModel : public Model {
 public:
+
+  WebModel() { // TODO: should be a singleton
+
+    // create our logger
+    m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
+
+    m_status_flag_file.replaceWithText("Status.INITIALIZED");
+
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+
+      scriptPath = juce::File::getSpecialLocation(
+        juce::File::currentApplicationFile
+      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
+
+      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
+    #elif __APPLE__
+      scriptPath = juce::File::getSpecialLocation(
+          juce::File::currentApplicationFile
+      ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
+      prefix_cmd = "";
+    #elif __linux__
+      scriptPath = juce::File::getSpecialLocation(
+          juce::File::currentApplicationFile
+      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client");
+      prefix_cmd = "";
+    #else
+      #error "gradiojuce_client has not been implemented for this platform"
+    #endif
+
+  }
+
+  ~WebModel() {
+    // clean up flag files
+    m_cancel_flag_file.deleteFile();
+    m_status_flag_file.deleteFile();
+  }
 
   void LogAndDBG(const juce::String& message) const {
     DBG(message);
@@ -103,54 +142,6 @@ public:
 
     return std::make_pair(output, exit_code);
   }
-
-  WebWave2Wave() { // TODO: should be a singleton
-
-    // create our logger
-    m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
-
-    // initialize file_log_loc to -1 (no files yet)
-    file_log_loc = -1;
-
-
-    m_status_flag_file.replaceWithText("Status.INITIALIZED");
-
-    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-
-      scriptPath = juce::File::getSpecialLocation(
-        juce::File::currentApplicationFile
-      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
-
-      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
-    #elif __APPLE__
-      scriptPath = juce::File::getSpecialLocation(
-          juce::File::currentApplicationFile
-      ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
-      prefix_cmd = "";
-    #elif __linux__
-      scriptPath = juce::File::getSpecialLocation(
-          juce::File::currentApplicationFile
-      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client");
-      prefix_cmd = "";
-    #else
-      #error "gradiojuce_client has not been implemented for this platform"
-    #endif
-
-
-  }
-
-  ~WebWave2Wave() {
-    // clean up flag files
-    m_cancel_flag_file.deleteFile();
-    m_status_flag_file.deleteFile();
-
-    // wipe the input file log
-    for (juce::File file : file_log) {
-      file.deleteFile();
-    }
-
-  }
-
 
   bool ready() const override { return m_loaded; }
   std::string space_url() const { return m_url; }
@@ -180,7 +171,7 @@ public:
     std::string command = (
       prefix_cmd
       + scriptPath.getFullPathName().toStdString()
-      + " --mode get_ctrls"
+      + " --mode controls"
       + " --url " + m_url
       + " --output_path " + outputPath.getFullPathName().toStdString()
       // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
@@ -198,7 +189,7 @@ public:
     if (result != 0) {
         // read the text from the temp log file.
         // check for a JSONDecodeError in the log content
-        // if so, let the user know that there there was an error parsing the get_ctrls response, 
+        // if so, let the user know that there there was an error parsing the controls response, 
         // which means the space is likely broken or does not exist. 
         // if we catch a 404, say that the space does not exist.
 
@@ -223,13 +214,12 @@ public:
                     break;
                 }
             }
-            // message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
         }
         else if (logContent.contains("argument --url: expected one argument")) {
             message = "The model url is missing. Please provide a url to the model.";
         }
         else {
-            message = "An error occurred while calling the gradiojuce helper with mode get_ctrls. ";
+            message = "An error occurred while calling the gradiojuce helper with mode \'controls\'. ";
         }
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
@@ -266,6 +256,8 @@ public:
     m_card.name = jsonCard->getProperty("name").toString().toStdString();
     m_card.description = jsonCard->getProperty("description").toString().toStdString();
     m_card.author = jsonCard->getProperty("author").toString().toStdString();
+    m_card.midi_in = (bool) jsonCard->getProperty("midi_in");
+    m_card.midi_out = (bool) jsonCard->getProperty("midi_out");
 
     // tags is a list of str
     juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
@@ -301,8 +293,25 @@ public:
           // get the ctrl type
           juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
 
-          // create the ctrl
-          if (ctrl_type == "slider") {
+          // For the first two, we are abusing the term control.
+          // They are actually the main inputs to the model (audio or midi) 
+          if (ctrl_type == "audio_in") {
+            auto audio_in = std::make_shared<AudioInCtrl>();
+            audio_in->label = ctrl["label"].toString().toStdString();
+
+            m_ctrls.push_back({audio_in->id, audio_in});
+            LogAndDBG("Audio In: " + audio_in->label + " added");
+          }
+          else if (ctrl_type == "midi_in") {
+            auto midi_in = std::make_shared<MidiInCtrl>();
+            midi_in->label = ctrl["label"].toString().toStdString();
+
+            m_ctrls.push_back({midi_in->id, midi_in});
+            LogAndDBG("MIDI In: " + midi_in->label + " added");
+          }
+          // The rest are the actual controls that map to hyperparameters
+          // of the model
+          else if (ctrl_type == "slider") {
             auto slider = std::make_shared<SliderCtrl>();
             slider->id = juce::Uuid();
             slider->label = ctrl["label"].toString().toStdString();
@@ -322,13 +331,6 @@ public:
 
             m_ctrls.push_back({text->id, text});
             LogAndDBG("Text: " + text->label + " added");
-          }
-          else if (ctrl_type == "audio_in") {
-            auto audio_in = std::make_shared<AudioInCtrl>();
-            audio_in->label = ctrl["label"].toString().toStdString();
-
-            m_ctrls.push_back({audio_in->id, audio_in});
-            LogAndDBG("Audio In: " + audio_in->label + " added");
           }
           else if (ctrl_type == "number_box") {
             auto number_box = std::make_shared<NumberBoxCtrl>();
@@ -360,17 +362,17 @@ public:
     return m_ctrls;
   }
 
-  void process(juce::File filetoProcess) {
+  void process(juce::File filetoProcess) const {
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
 
     // make sure we're loaded
-    LogAndDBG("WebWave2Wave::process");
+    LogAndDBG("WebModel::process");
     if (!m_loaded) {
       throw std::runtime_error("Model not loaded");
     }
 
-    // a random string to append to the input/output.wav files
+    // a random string to append to the input/output.mid files
     // This is necessary because more than 1 playback regions
     // are processed at the same time.
     std::string randomString = juce::Uuid().toString().toStdString();
@@ -379,24 +381,15 @@ public:
     LogAndDBG("Saving buffer to file");
     juce::File tempFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("input_" + randomString + ".wav");
+            .getChildFile("input_" + randomString + ".mid");
     tempFile.deleteFile();
     // copy the file to a temp file
     filetoProcess.copyFileTo(tempFile);
 
-    //if file_log_loc == -1, then this is the original provided file, save that to position 0
-    //position 1 will be then be the processed file (in general, after output append the outputted file)
-    bool keep_input = false;
-    if (file_log_loc == -1) {
-      file_log.push_back(tempFile);
-      file_log_loc = 0;
-      keep_input = true;
-    }
-
     // a tarrget output file
     juce::File tempOutputFile =
         juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("output_" + randomString + ".wav");
+            .getChildFile("output_" + randomString + ".mid");
     tempOutputFile.deleteFile();
 
     // a ctrls file
@@ -414,7 +407,7 @@ public:
     std::string command = (
         prefix_cmd
         + scriptPath.getFullPathName().toStdString()
-        + " --mode predict"
+        + " --mode process"
         + " --url " + m_url
         + " --output_path " + tempOutputFile.getFullPathName().toStdString()
         + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
@@ -447,85 +440,24 @@ public:
             }
         }
         else {
-            message = "An error occurred while calling the gradiojuce helper with mode predict. ";
+            message = "An error occurred while calling the gradiojuce helper with mode \'process\'. ";
         }
 
         message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
     }
 
     // move the temp output file to the original input file
-    tempOutputFile.copyFileTo(filetoProcess);
+    tempOutputFile.moveFileTo(filetoProcess);
 
-    // Clear file log up to current point then add current file
-    if (file_log_loc < file_log.size() - 1) {
-      for (int i = file_log_loc + 1; i < file_log.size(); i++) {
-        file_log[i].deleteFile();
-      }
-      file_log.erase(file_log.begin() + file_log_loc + 1, file_log.end());
-    }
-    file_log_loc++;
-    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
-    file_log.push_back(tempOutputFile);
-
-
-    LogAndDBG("File log is now: ");
-    for (juce::File file: file_log) {
-      LogAndDBG(file.getFileName());
-    }
-
-    // only delete the temp input file if we don't need it in the log
-    if (!keep_input) {
-      tempFile.deleteFile();
-    }
-    // outputs are in the log
-    // tempOutputFile.deleteFile();
+    // delete the temp input file
+    tempFile.deleteFile();
+    tempOutputFile.deleteFile();
     tempCtrlsFile.deleteFile();
-    LogAndDBG("WebWave2Wave::process done");
+    LogAndDBG("WebModel::process done");
 
     // clear the cancel flag file
     m_cancel_flag_file.deleteFile();
     return;
-  }
-
-  bool undo_redo_process(juce::File file_to_replace, bool undo) {
-    if (file_log_loc <= 0 && undo) {
-      LogAndDBG("Nothing to undo!");
-      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-      return false;
-    }
-    if (file_log_loc == file_log.size() - 1 && !undo) {
-      LogAndDBG("Nothing to redo!");
-      juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-      return false;
-    }
-    if (undo) {
-      file_log_loc--;
-    } else {
-      file_log_loc++;
-    }
-    LogAndDBG("file_log_loc is now " + std::to_string(file_log_loc));
-    LogAndDBG("File log is now: ");
-    for (juce::File file: file_log) {
-      LogAndDBG(file.getFileName());
-    }
-    //Replace file with old file
-    juce::File old_file = file_log[file_log_loc];
-    old_file.copyFileTo(file_to_replace);
-    
-    LogAndDBG("WebWave2Wave::undo_redo_process done");
-    return true;
-    
-  }
-
-  // Should be run whenever input file changes or on app close
-  void clear_file_log() {
-    // wipe the input file log
-    for (juce::File file : file_log) {
-      file.deleteFile();
-    }
-    file_log.clear();
-    file_log_loc = -1;
-    LogAndDBG("File log cleared!");
   }
 
   // sets a cancel flag file that the client can check to see if the process
@@ -608,6 +540,9 @@ private:
             // Audio in control, use audioInCtrl->value
             audioInCtrl->value = audioInputPath;
             jsonCtrlsArray.add(juce::var(audioInCtrl->value));
+        } else if (auto midiInCtrl = dynamic_cast<MidiInCtrl*>(ctrl.get())) {
+            midiInCtrl->value = audioInputPath;
+            jsonCtrlsArray.add(juce::var(midiInCtrl->value));
         } else {
             // Unsupported control type or missing implementation
             LogAndDBG("Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString());
@@ -628,10 +563,10 @@ private:
   }
 
   juce::File m_cancel_flag_file {
-    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_CANCEL")
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_CANCEL")
   };
   juce::File m_status_flag_file {
-    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("webwave2wave_STATUS")
+    juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_STATUS")
   };
   CtrlList m_ctrls;
   std::unique_ptr<juce::FileLogger> m_logger {nullptr};
@@ -639,9 +574,6 @@ private:
   string m_url;
   string prefix_cmd;
   juce::File scriptPath;
-
-  std::vector<juce::File> file_log;
-  int file_log_loc;
 };
 
 
@@ -649,7 +581,7 @@ private:
 class ModelStatusTimer : public juce::Timer,
                          public juce::ChangeBroadcaster {
 public:
-  ModelStatusTimer(std::shared_ptr<WebWave2Wave> model) : m_model(model) {
+  ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model) {
   }
 
   void timerCallback() override {
@@ -664,6 +596,6 @@ public:
   }
 
 private:
-  std::shared_ptr<WebWave2Wave> m_model;
+  std::shared_ptr<WebModel> m_model;
   std::string m_last_status;
 };

@@ -3,8 +3,9 @@
     url = https://github.com/juce-framework/JUCE.git
     branch = develop
 [submodule "py/pyharp"]
-	path = py/pyharp
-	url = https://github.com/TEAMuP-dev/pyharp
+    path = py/pyharp
+    url = https://github.com/TEAMuP-dev/pyharp
+    branch = main
 [submodule "py/pyinstaller"]
-	path = py/pyinstaller
-	url = https://github.com/hugofloresgarcia/pyinstaller
+    path = py/pyinstaller
+    url = https://github.com/hugofloresgarcia/pyinstaller
