@@ -329,6 +329,7 @@ public:
                             // Update any necessary internal state
                             // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
                             DBG("File successfully saved as " << newFile.getFullPathName());
+                            loadMediaDisplay(newFile);
                         } else {
                             // Inform the user of failure
                             AlertWindow::showMessageBoxAsync(
