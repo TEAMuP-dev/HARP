@@ -33,6 +33,8 @@ public:
 
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
 
+    virtual StringArray getInstanceExtensions() = 0;
+
     void paint(Graphics& g) override
     {
         g.fillAll(Colours::darkgrey);
