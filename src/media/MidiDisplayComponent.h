@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../pianoRoll/PianoRollEditorComponent.hpp"
+#include "../pianoroll/PianoRollComponent.hpp"
 #include "MediaDisplayComponent.h"
 
 
@@ -10,10 +10,7 @@ public:
 
     MidiDisplayComponent()
     {
-        // 10 measures, 400 pixels per measure (width), and 10 pixels per note (height)
-        // TODO - call again when new file is loaded?
-        pianoRollEditor.setup(10, 400, 10);
-        addAndMakeVisible(pianoRollEditor);
+        addAndMakeVisible(pianoRoll);
 
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
@@ -25,7 +22,7 @@ public:
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
-        pianoRollEditor.setBounds(a);
+        pianoRoll.setBounds(a);
     }
 
     static StringArray getSupportedExtensions()
@@ -47,13 +44,14 @@ public:
 
         // Read the MIDI file from the File object
         MidiFile midiFile;
-        PRESequence sequence;
 
         if (!midiFile.readFrom(*fileStream)) {
             DBG("Failed to read MIDI data from file.");
         }
 
-        double tickLength = midiFile.getTimeFormat() / 960.0; // based on MIDI PPQ
+        midiFile.convertTimestampTicksToSeconds();
+
+        Array<MidiNoteComponent*> midiNotes;
 
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
             const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
@@ -68,7 +66,7 @@ public:
                     const auto midiEvent = track.getEventPointer(eventIdx);
                     const auto& midiMessage = midiEvent->message;
 
-                    double startTime = midiEvent->message.getTimeStamp() * tickLength;
+                    double startTime = midiEvent->message.getTimeStamp();
 
                     DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
 
@@ -76,33 +74,32 @@ public:
                         int noteNumber = midiMessage.getNoteNumber();
                         int velocity = midiMessage.getVelocity();
 
-                        double noteLength = 0;
+                        double duration = 0;
 
                         for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx) {
                             const auto offEvent = track.getEventPointer(offIdx);
 
                             // Find the matching note off event
                             if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber) {
-                                noteLength = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp()) * tickLength;
+                                duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
                                 break;
                             }
                         }
 
-                        // Create a NoteModel for each event
-                        NoteModel::Flags flags;
-                        NoteModel noteModel(noteNumber, velocity, static_cast<st_int>(startTime), static_cast<st_int>(noteLength), flags);
-                        sequence.events.push_back(noteModel);
+                        // Create a component for each for each note
+                        MidiNoteComponent* note = new MidiNoteComponent(noteNumber, velocity, startTime, duration);
+                        midiNotes.add(note);
                     }
                 }
             }
         }
 
-        pianoRollEditor.loadSequence(sequence);
-
-        midiFile.convertTimestampTicksToSeconds();
         totalLengthInSecs = midiFile.getLastTimestamp();
 
         DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+
+        pianoRoll.setup(totalLengthInSecs);
+        pianoRoll.insertNotes(midiNotes);
     }
 
     void setPlaybackPosition(double t) override
@@ -166,7 +163,7 @@ private:
         // TODO
     }
 
-    PianoRollEditorComponent pianoRollEditor;
+    PianoRollComponent pianoRoll;
 
     double totalLengthInSecs;
 };
