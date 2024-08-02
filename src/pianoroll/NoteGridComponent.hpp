@@ -70,21 +70,23 @@ public:
 
     ~NoteGridComponent();
 
-    void updateLength(double l);
-
     void setResolution(float pps);
 
+    void updateLength(double l);
+
+    void updateSize();
     void resized() override;
 
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
-    double getLengthInSeconds() { return lengthInSecs; }
+    int getPixelsPerSecond() { return pixelsPerSecond; }
+    double getLengthInSeconds() { return lengthInSeconds; }
 
 private:
 
     Array<MidiNoteComponent*> midiNotes;
 
-    float pixelsPerSecond;
-    double lengthInSecs;
+    int pixelsPerSecond;
+    double lengthInSeconds;
 };

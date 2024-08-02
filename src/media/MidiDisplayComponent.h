@@ -55,7 +55,7 @@ public:
 
         DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
-        pianoRoll.setup(totalLengthInSecs);
+        pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
             const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);

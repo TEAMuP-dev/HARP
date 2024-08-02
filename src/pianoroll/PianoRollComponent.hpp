@@ -41,7 +41,8 @@ public:
 
     ~PianoRollComponent();
 
-    void setup(double lengthInSecs);
+    void resizeNoteGrid(double lengthInSecs);
+    void resizeKeyboard();
 
     void setKeyHeight(int pixelsPerKey);
     void setResolution(int pixelsPerSecond);

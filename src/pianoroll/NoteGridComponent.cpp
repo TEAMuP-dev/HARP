@@ -7,11 +7,8 @@ NoteGridComponent::NoteGridComponent()
 {
     includeNoteNames = false;
 
-    lengthInSecs = 0;
-
-    // Defaults to 100 pixels per second
-    // TODO - resolution should be a function of zoom
-    setResolution(100);
+    pixelsPerSecond = 0;
+    lengthInSeconds = 0.0;
 }
 
 NoteGridComponent::~NoteGridComponent()
@@ -19,16 +16,23 @@ NoteGridComponent::~NoteGridComponent()
     resetNotes();
 }
 
-void NoteGridComponent::updateLength(double l)
-{
-    lengthInSecs = l;
-
-    setSize(pixelsPerSecond * lengthInSecs, getHeight());
-}
-
 void NoteGridComponent::setResolution(float pps)
 {
     pixelsPerSecond = pps;
+
+    updateSize();
+}
+
+void NoteGridComponent::updateLength(double l)
+{
+    lengthInSeconds = l;
+
+    updateSize();
+}
+
+void NoteGridComponent::updateSize()
+{
+    setSize(pixelsPerSecond * lengthInSeconds, getHeight());
 }
 
 void NoteGridComponent::resized()

@@ -20,8 +20,10 @@ PianoRollComponent::PianoRollComponent()
         viewportKeys.setViewPosition(x, y);
     };
 
-    setup(0);
     setKeyHeight(20);
+
+    resizeKeyboard();
+    resizeNoteGrid(0.0);
 }
 
 PianoRollComponent::~PianoRollComponent() {}
@@ -33,16 +35,34 @@ void PianoRollComponent::paint(Graphics& g)
 
 void PianoRollComponent::resized()
 {
-    viewportGrid.setBounds(80, 5, getWidth() - 85, getHeight() - 5);
+    viewportGrid.setBounds(80, 5, getWidth() - 85, getHeight() - 10);
     viewportKeys.setBounds(5, viewportGrid.getY(), 70, viewportGrid.getHeight() - 10);
 
-    noteGrid.setBounds(0, 0, viewportGrid.getWidth(), 127 * keyHeight);
+    double totalLength = noteGrid.getLengthInSeconds();
+
+    int pianoRollWidth = totalLength * noteGrid.getPixelsPerSecond();
+
+    resizeNoteGrid(totalLength);
+
+    // TODO - don't reset scroll
+
+    noteGrid.setBounds(0, 0, pianoRollWidth, 127 * keyHeight);
     keyboard.setBounds(0, 0, viewportKeys.getWidth(), noteGrid.getHeight());
 }
 
-void PianoRollComponent::setup(double lengthInSecs)
+void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
     noteGrid.updateLength(lengthInSecs);
+
+    if (lengthInSecs) {
+        noteGrid.setResolution(viewportGrid.getWidth() / lengthInSecs);
+    } else {
+        noteGrid.setResolution(0);
+    }
+}
+
+void PianoRollComponent::resizeKeyboard()
+{
     keyboard.setSize(viewportKeys.getWidth(), noteGrid.getHeight());
 }
 
