@@ -35,6 +35,9 @@ void PianoRollComponent::paint(Graphics& g)
 
 void PianoRollComponent::resized()
 {
+    int currViewPositionX = viewportGrid.getViewPositionX();
+    int currViewPositionY = viewportGrid.getViewPositionY();
+
     viewportGrid.setBounds(80, 5, getWidth() - 85, getHeight() - 10);
     viewportKeys.setBounds(5, viewportGrid.getY(), 70, viewportGrid.getHeight() - 10);
 
@@ -44,10 +47,10 @@ void PianoRollComponent::resized()
 
     resizeNoteGrid(totalLength);
 
-    // TODO - don't reset scroll
-
     noteGrid.setBounds(0, 0, pianoRollWidth, 127 * keyHeight);
     keyboard.setBounds(0, 0, viewportKeys.getWidth(), noteGrid.getHeight());
+
+    viewportGrid.setViewPosition(currViewPositionX, currViewPositionY);
 }
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
