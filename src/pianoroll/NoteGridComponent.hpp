@@ -1,3 +1,5 @@
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
+
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -74,7 +76,7 @@ public:
 
     void resized() override;
 
-    void insertNotes(Array<MidiNoteComponent*> notes);
+    void insertNote(MidiNoteComponent n);
     void resetNotes();
 
     double getLengthInSeconds() { return lengthInSecs; }

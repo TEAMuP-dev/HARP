@@ -1,3 +1,5 @@
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
+
 #include "KeyboardComponent.hpp"
 
 
@@ -53,7 +55,7 @@ void KeyboardComponent::paint(Graphics& g)
             String noteName = String(i) + " (" + pitchNames[pitch] + String(octave) + ")";
 
             g.setColour(Colours::white);
-            g.drawText(noteName, 0, (int) cumHeight, getWidth(), (int) keyHeight, Justification::left);
+            g.drawText(noteName, 5, (int) cumHeight, getWidth(), (int) keyHeight, Justification::left);
         }
 
         cumHeight += keyHeight;

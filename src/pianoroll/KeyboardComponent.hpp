@@ -1,3 +1,5 @@
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
+
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"

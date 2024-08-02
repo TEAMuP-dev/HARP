@@ -51,7 +51,11 @@ public:
 
         midiFile.convertTimestampTicksToSeconds();
 
-        Array<MidiNoteComponent*> midiNotes;
+        totalLengthInSecs = midiFile.getLastTimestamp();
+
+        DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+
+        pianoRoll.setup(totalLengthInSecs);
 
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
             const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
@@ -87,19 +91,12 @@ public:
                         }
 
                         // Create a component for each for each note
-                        MidiNoteComponent* note = new MidiNoteComponent(noteNumber, velocity, startTime, duration);
-                        midiNotes.add(note);
+                        MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
+                        pianoRoll.insertNote(n);
                     }
                 }
             }
         }
-
-        totalLengthInSecs = midiFile.getLastTimestamp();
-
-        DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
-
-        pianoRoll.setup(totalLengthInSecs);
-        pianoRoll.insertNotes(midiNotes);
     }
 
     void setPlaybackPosition(double t) override

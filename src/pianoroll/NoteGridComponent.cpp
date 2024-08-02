@@ -1,3 +1,5 @@
+// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
+
 #include "NoteGridComponent.hpp"
 
 
@@ -43,12 +45,12 @@ void NoteGridComponent::resized()
     }
 }
 
-void NoteGridComponent::insertNotes(Array<MidiNoteComponent*> notes)
+void NoteGridComponent::insertNote(MidiNoteComponent n)
 {
-    for (auto n : notes) {
-        midiNotes.add(n);
-        addAndMakeVisible(n);
-    }
+    MidiNoteComponent* note = new MidiNoteComponent(n);
+    midiNotes.add(note);
+
+    addAndMakeVisible(note);
 
     resized();
     repaint();
@@ -56,9 +58,11 @@ void NoteGridComponent::insertNotes(Array<MidiNoteComponent*> notes)
 
 void NoteGridComponent::resetNotes()
 {
-    for (int i = midiNotes.size() - 1; i >=0; i++) {
-        removeChildComponent(midiNotes.getReference(i));
-        delete midiNotes.getReference(i);
+    for (int i = 0; i < midiNotes.size(); i++) {
+        MidiNoteComponent* note = midiNotes.getReference(i);
+        removeChildComponent(note);
+
+        delete note;
     }
 
     midiNotes.clear();

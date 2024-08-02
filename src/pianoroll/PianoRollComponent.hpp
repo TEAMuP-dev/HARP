@@ -51,7 +51,7 @@ public:
     void paint(Graphics&) override;
     void resized() override;
 
-    void insertNotes(Array<MidiNoteComponent*> notes);
+    void insertNote(MidiNoteComponent n);
     void resetNotes();
 
 private:

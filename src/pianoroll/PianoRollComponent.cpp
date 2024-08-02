@@ -70,9 +70,9 @@ void PianoRollComponent::setResolution(int pixelsPerSecond)
 //}
 
 
-void PianoRollComponent::insertNotes(Array<MidiNoteComponent*> notes)
+void PianoRollComponent::insertNote(MidiNoteComponent n)
 {
-    noteGrid.insertNotes(notes);
+    noteGrid.insertNote(n);
 }
 
 void PianoRollComponent::resetNotes()
