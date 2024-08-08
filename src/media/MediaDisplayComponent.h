@@ -18,9 +18,9 @@ public:
     {
         resetPaths();
 
-        addChildComponent(scrollbar);
-        scrollbar.setAutoHide(false);
-        scrollbar.addListener(this);
+        addChildComponent(horizontalScrollBar);
+        horizontalScrollBar.setAutoHide(false);
+        horizontalScrollBar.addListener(this);
 
         currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
         addAndMakeVisible(currentPositionMarker);
@@ -28,7 +28,7 @@ public:
 
     ~MediaDisplayComponent()
     {
-        scrollbar.removeListener(this);
+        horizontalScrollBar.removeListener(this);
     }
 
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
@@ -39,7 +39,7 @@ public:
         g.setColour(Colours::lightblue);
 
         if (isFileLoaded()) {
-            Rectangle<int> a = getLocalBounds();
+            Rectangle<int> a = getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * scrollBarSpacing)).reduced(scrollBarSpacing);
 
             drawMainArea(g, a);
         } else {
@@ -48,9 +48,9 @@ public:
         }
     }
 
-    void resized() override
+    virtual void resized() override
     {
-        scrollbar.setBounds(getLocalBounds().removeFromBottom(14).reduced(2));
+        horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing).reduced(scrollBarSpacing));
     }
 
     void changeListenerCallback(ChangeBroadcaster*) override
@@ -68,8 +68,8 @@ public:
         sendChangeMessage();
 
         currentHorizontalZoomFactor = 1.0;
-        scrollbar.setRangeLimits({0.0, 1.0});
-        scrollbar.setVisible(false);
+        horizontalScrollBar.setRangeLimits({0.0, 1.0});
+        horizontalScrollBar.setVisible(false);
     }
 
     void setupDisplay(const URL& filePath)
@@ -79,10 +79,8 @@ public:
         setNewTarget(filePath);
         updateDisplay(filePath);
 
-        Range<double> range(0.0, getTotalLengthInSecs());
-
-        scrollbar.setVisible(true);
-        updateVisibleRange(range);
+        horizontalScrollBar.setVisible(true);
+        updateVisibleRange({0.0, getTotalLengthInSecs()});
     }
 
     void updateDisplay(const URL& filePath)
@@ -94,7 +92,7 @@ public:
 
         Range<double> range(0.0, getTotalLengthInSecs());
 
-        scrollbar.setRangeLimits(range);
+        horizontalScrollBar.setRangeLimits(range);
     }
 
     URL getTargetFilePath() { return targetFilePath; }
@@ -261,11 +259,11 @@ public:
 
     virtual double getTotalLengthInSecs() = 0;
 
-    void updateVisibleRange(Range<double> newRange)
+    virtual void updateVisibleRange(Range<double> newRange)
     {
         visibleRange = newRange;
 
-        scrollbar.setCurrentRange(visibleRange);
+        horizontalScrollBar.setCurrentRange(visibleRange);
         updateCursorPosition();
         repaint();
     }
@@ -313,6 +311,11 @@ protected:
 
     Range<double> visibleRange;
 
+    ScrollBar horizontalScrollBar{ false };
+
+    int scrollBarSize = 10;
+    int scrollBarSpacing = 2;
+
     String mediaHandlerInstructions;
 
 private:
@@ -344,7 +347,7 @@ private:
 
         currentPositionMarker.setVisible(displayCursor);
 
-        float cursorHeight = (float) (getHeight() - scrollbar.getHeight());
+        float cursorHeight = (float) (getHeight() - scrollBarSize + 2 * scrollBarSpacing);
         float cursorPosition = timeToX(getPlaybackPosition()) - (cursorWidth / 2.0f);
 
         currentPositionMarker.setRectangle(Rectangle<float>(cursorPosition, 0, cursorWidth, cursorHeight));
@@ -362,7 +365,7 @@ private:
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override
     {
-        if (scrollBarThatHasMoved == &scrollbar) {
+        if (scrollBarThatHasMoved == &horizontalScrollBar) {
             if (!isPlaying()) {
                 updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
             }
@@ -389,10 +392,21 @@ private:
                 if (wheel.deltaY != 0) {
                     // TODO - make zoom consistent across different audio lengths?
 
+                    //currentHorizontalZoomFactor = jlimit(0.0, 1.0, currentHorizontalZoomFactor + wheel.deltaY);
+
+                    //double mediaVisible = getTotalLengthInSecs() / (1 + 10 * currentHorizontalZoomFactor);
+
+                    //double visibilityRadius = mediaVisible / 2.0;
+                    //double visibilityCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
+
+                    //Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
+
+                    //updateVisibleRange(horizontalScrollBar.getRangeLimit().constrainRange(newRange));
+
                     currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
 
                     auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-                    auto timeAtCenter = xToTime((float) getWidth() / 2.0f);
+                    auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
 
                     updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
                 }
@@ -414,5 +428,4 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
-    ScrollBar scrollbar{ false };
 };

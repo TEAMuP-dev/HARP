@@ -5,8 +5,6 @@
 
 NoteGridComponent::NoteGridComponent()
 {
-    includeNoteNames = false;
-
     pixelsPerSecond = 0;
     lengthInSeconds = 0.0;
 }

@@ -37,7 +37,7 @@ public:
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
-        thumbnail.drawChannels(g, a.reduced(2), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
+        thumbnail.drawChannels(g, a, visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
     static StringArray getSupportedExtensions()
@@ -138,6 +138,8 @@ private:
         }
     }
 
+    TimeSliceThread thread{ "audio file preview" };
+    
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
 
@@ -149,6 +151,4 @@ private:
     AudioThumbnailCache thumbnailCache{ 5 };
 
     AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
-
-    TimeSliceThread thread{ "audio file preview" };
 };

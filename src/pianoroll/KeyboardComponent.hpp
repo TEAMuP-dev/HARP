@@ -21,6 +21,5 @@ public:
     static const char* pitchNames[];
     static const Array<int> blackPitches;
 
-protected:
-    bool includeNoteNames;
+    virtual bool isKeyboardComponent() { return true; }
 };

@@ -83,6 +83,8 @@ public:
     int getPixelsPerSecond() { return pixelsPerSecond; }
     double getLengthInSeconds() { return lengthInSeconds; }
 
+    bool isKeyboardComponent() override { return false; }
+
 private:
 
     Array<MidiNoteComponent*> midiNotes;

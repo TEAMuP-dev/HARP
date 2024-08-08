@@ -15,14 +15,20 @@ public:
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
     }
 
-    ~MidiDisplayComponent()
-    {
-        // TODO
-    }
+    ~MidiDisplayComponent() {}
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
         pianoRoll.setBounds(a);
+    }
+
+    void resized() override
+    {
+        Rectangle<int> scrollBarArea = getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing);
+        scrollBarArea = scrollBarArea.removeFromRight(scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - 5);
+        scrollBarArea = scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize() - 4 * pianoRoll.getScrollBarSpacing());
+
+        horizontalScrollBar.setBounds(scrollBarArea.reduced(scrollBarSpacing));
     }
 
     static StringArray getSupportedExtensions()
@@ -136,6 +142,13 @@ public:
         return totalLengthInSecs;
     }
 
+    void updateVisibleRange(Range<double> newRange) override
+    {
+        MediaDisplayComponent::updateVisibleRange(newRange);
+
+        pianoRoll.updateVisibleMediaRange(newRange);
+    }
+
 private:
 
     double xToTime(const float x) const override
@@ -160,7 +173,7 @@ private:
         // TODO
     }
 
-    PianoRollComponent pianoRoll;
+    PianoRollComponent pianoRoll{70, scrollBarSize, scrollBarSpacing};
 
     double totalLengthInSecs;
 };

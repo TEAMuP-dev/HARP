@@ -5,25 +5,6 @@
 
 
 /*
- This custom viewport is used so that when the main
- piano roll is moved the others can also be moved.
- */
-class CustomViewport : public Viewport
-{
-public:
-    void visibleAreaChanged (const Rectangle<int>& newVisibleArea)
-    {
-        Viewport::visibleAreaChanged(newVisibleArea);
-        if (positionMoved) {
-            positionMoved(getViewPositionX(), getViewPositionY());
-        }
-    }
-
-    std::function<void(int,int)> positionMoved;
-};
-
-
-/*
  ----------------------------------------------
  |      |                                     |
  |      |                                     |
@@ -33,37 +14,59 @@ public:
  ----------------------------------------------
  */
 
-class PianoRollComponent : public Component
+class PianoRollComponent : public Component,
+                           private ScrollBar::Listener
 {
 public:
 
-    PianoRollComponent();
+    PianoRollComponent(int _keyboardWidth=70, int _scrollBarSize=10, int _scrollBarSpacing=2);
 
     ~PianoRollComponent();
 
-    void resizeNoteGrid(double lengthInSecs);
-    void resizeKeyboard();
+    int getPianoRollWidth();
 
-    void setKeyHeight(int pixelsPerKey);
     void setResolution(int pixelsPerSecond);
-    //void setScroll(double x, double y);
-    //void setZoomFactor(float factor);
 
-    void paint(Graphics&) override;
+    void resizeNoteGrid(double lengthInSecs);
+
+    void paint(Graphics& g) override;
     void resized() override;
+
+    void updateVisibleKeyRange(Range<double> newRange);
+    void updateVisibleMediaRange(Range<double> newRange);
+
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
+
+    void visibleKeyRangeZoom(double amount);
 
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
+    int getKeyboardWidth() { return keyboardWidth; }
+    int getScrollBarSize() { return scrollBarSize; }
+    int getScrollBarSpacing() { return scrollBarSpacing; }
+
 private:
 
-    int keyHeight;
+    double zoomToKeysVisible(double zoomFactor);
 
-    CustomViewport viewportGrid;
-    CustomViewport viewportKeys;
+    int keyboardWidth;
+    int pianoRollWidth;
+    int scrollBarSize;
+    int scrollBarSpacing;
 
-    NoteGridComponent noteGrid;
     KeyboardComponent keyboard;
+    NoteGridComponent noteGrid;
 
-    JUCE_DECLARE_NON_COPYABLE(PianoRollComponent)
+    Range<double> fullKeyRange = {0.0, 128.0};
+
+    int minKeysVisible = 5;
+    int maxKeysVisible = 12;
+    Range<double> visibleKeyRange;
+
+    Range<double> visibleMediaRange;
+
+    ScrollBar verticalScrollBar{ true };
+
+    Slider verticalZoomSlider{ Slider::LinearVertical, Slider::NoTextBox };
 };
