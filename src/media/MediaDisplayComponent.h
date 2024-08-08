@@ -44,7 +44,7 @@ public:
             drawMainArea(g, a);
         } else {
             g.setFont(14.0f);
-            g.drawFittedText ("No media file selected...", getLocalBounds(), Justification::centred, 2);
+            g.drawFittedText("No media file selected...", getLocalBounds(), Justification::centred, 2);
         }
     }
 

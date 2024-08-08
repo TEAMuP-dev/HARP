@@ -5,7 +5,7 @@
 
 NoteGridComponent::NoteGridComponent()
 {
-    pixelsPerSecond = 0;
+    pixelsPerSecond = 0.0;
     lengthInSeconds = 0.0;
 }
 
@@ -14,7 +14,7 @@ NoteGridComponent::~NoteGridComponent()
     resetNotes();
 }
 
-void NoteGridComponent::setResolution(float pps)
+void NoteGridComponent::setResolution(double pps)
 {
     pixelsPerSecond = pps;
 

@@ -166,6 +166,7 @@ private:
     void resetDisplay() override
     {
         pianoRoll.resetNotes();
+        pianoRoll.resizeNoteGrid(0.0);
     }
 
     void postLoadActions(const URL& filePath) override {}
