@@ -18,7 +18,7 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
     verticalScrollBar.addListener(this);
 
     verticalScrollBar.setRangeLimits(fullKeyRange);
-    updateVisibleKeyRange({0.0, minKeysVisible});
+    updateVisibleKeyRange({0.0, (double) minKeysVisible});
 
     addAndMakeVisible(verticalZoomSlider);
     verticalZoomSlider.setRange(0.0, 1.0, 0.0);
