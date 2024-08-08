@@ -57,6 +57,7 @@ private:
 
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;
+    Component noteGridContainer;
 
     Range<double> fullKeyRange = {0.0, 128.0};
 

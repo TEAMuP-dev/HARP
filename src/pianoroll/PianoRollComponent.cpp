@@ -10,7 +10,8 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
     scrollBarSpacing = _scrollBarSpacing;
 
     addAndMakeVisible(keyboard);
-    addAndMakeVisible(noteGrid);
+    addAndMakeVisible(noteGridContainer);
+    noteGridContainer.addAndMakeVisible(noteGrid);
 
     addAndMakeVisible(verticalScrollBar);
     verticalScrollBar.setAutoHide(false);
@@ -51,19 +52,19 @@ void PianoRollComponent::paint(Graphics& g)
         pixelsPerSecond = 0;
     }
 
-    noteGrid.setResolution(pixelsPerSecond); // TODO - changes width
+    noteGrid.setResolution(pixelsPerSecond);
 
     double currYPosition = -visibleKeyRange.getStart() * keyHeight;
     double currXPosition = -visibleMediaRange.getStart() * pixelsPerSecond;
 
     keyboard.setTopLeftPosition(0, currYPosition);
-    noteGrid.setTopLeftPosition(keyboardWidth + 5 + currXPosition, currYPosition); // TODO - changes position
+    noteGrid.setTopLeftPosition(currXPosition, currYPosition);
 }
 
 void PianoRollComponent::resized()
 {
     keyboard.setBounds(0, 0, keyboardWidth, getHeight());
-    noteGrid.setBounds(keyboardWidth + 5, 0, getPianoRollWidth(), getHeight());
+    noteGridContainer.setBounds(keyboardWidth + 5, 0, getPianoRollWidth(), getHeight());
 
     Rectangle<int> controlsArea = getLocalBounds().removeFromRight(2 * scrollBarSize + 4 * scrollBarSpacing);
 
