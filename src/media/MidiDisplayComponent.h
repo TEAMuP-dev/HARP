@@ -165,13 +165,10 @@ private:
 
     void resetDisplay() override
     {
-        // TODO
+        pianoRoll.resetNotes();
     }
 
-    void postLoadActions(const URL& filePath) override
-    {
-        // TODO
-    }
+    void postLoadActions(const URL& filePath) override {}
 
     PianoRollComponent pianoRoll{70, scrollBarSize, scrollBarSpacing};
 
