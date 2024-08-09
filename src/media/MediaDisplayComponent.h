@@ -33,6 +33,8 @@ public:
 
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
 
+    virtual StringArray getInstanceExtensions() = 0;
+
     void paint(Graphics& g) override
     {
         g.fillAll(Colours::darkgrey);
@@ -356,7 +358,8 @@ private:
     void timerCallback() override
     {
         if (isPlaying()) {
-            updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
+            //updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
+            updateVisibleRange(visibleRange);
         } else {
             stop();
             sendChangeMessage();

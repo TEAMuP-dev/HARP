@@ -307,36 +307,56 @@ public:
     
     void saveAsCallback() {
         if (mediaDisplay->isFileLoaded()) {
+            StringArray validExtensions = mediaDisplay->getInstanceExtensions();
+            String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
+            saveFileBrowser = std::make_unique<FileChooser>(
+                "Select a media file...", 
+                File(), 
+                filePatternsAllowed);
             // Launch the file chooser dialog asynchronously
-            fileBrowser->launchAsync(
+            saveFileBrowser->launchAsync(
                 FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
                 [this](const FileChooser& browser)
                 {
+                    StringArray validExtensions = mediaDisplay->getInstanceExtensions();
                     File newFile = browser.getResult();
                     if (newFile != File{}) {
-                        URL tempFilePath = mediaDisplay->getTempFilePath();
+                        if (newFile.getFileExtension().compare("") == 0) {
+                            newFile = newFile.withFileExtension(validExtensions[0]);
+                        }
+                        if (validExtensions.contains(newFile.getFileExtension())) {
+                            URL tempFilePath = mediaDisplay->getTempFilePath();
 
-                        // Attempt to save the file to the new location
-                        bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
-                        if (saveSuccessful) {
-                            // Inform the user of success
-                            AlertWindow::showMessageBoxAsync(
-                                AlertWindow::InfoIcon,
-                                "Save As",
-                                "File successfully saved as:\n" + newFile.getFullPathName(),
-                                "OK");
+                            // Attempt to save the file to the new location
+                            bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
+                            if (saveSuccessful) {
+                                // Inform the user of success
+                                AlertWindow::showMessageBoxAsync(
+                                    AlertWindow::InfoIcon,
+                                    "Save As",
+                                    "File successfully saved as:\n" + newFile.getFullPathName(),
+                                    "OK");
 
-                            // Update any necessary internal state
-                            // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
-                            DBG("File successfully saved as " << newFile.getFullPathName());
+                                // Update any necessary internal state
+                                // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
+                                DBG("File successfully saved as " << newFile.getFullPathName());
+                                loadMediaDisplay(newFile);
+                            } else {
+                                // Inform the user of failure
+                                AlertWindow::showMessageBoxAsync(
+                                    AlertWindow::WarningIcon,
+                                    "Save As Failed",
+                                    "Failed to save file as:\n" + newFile.getFullPathName(),
+                                    "OK");
+                                DBG("Failed to save file as " << newFile.getFullPathName());
+                            }
                         } else {
                             // Inform the user of failure
                             AlertWindow::showMessageBoxAsync(
                                 AlertWindow::WarningIcon,
                                 "Save As Failed",
-                                "Failed to save file as:\n" + newFile.getFullPathName(),
+                                "Can't save file with extension " + newFile.getFileExtension() + " \n Valid extensions are: " + validExtensions.joinIntoString(";"),
                                 "OK");
-                            DBG("Failed to save file as " << newFile.getFullPathName());
                         }
                     } else {
                         DBG("Save As operation was cancelled by the user.");
@@ -976,12 +996,12 @@ public:
 
         String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
 
-        fileBrowser = std::make_unique<FileChooser>(
+        openFileBrowser = std::make_unique<FileChooser>(
             "Select a media file...", 
             File(), 
             filePatternsAllowed);
 
-        fileBrowser->launchAsync(
+        openFileBrowser->launchAsync(
             FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
             [this](const FileChooser& browser)
             {
@@ -1199,7 +1219,8 @@ private:
     // the model itself
     std::shared_ptr<WebModel> model {new WebModel()};
 
-    std::unique_ptr<FileChooser> fileBrowser;
+    std::unique_ptr<FileChooser> openFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
 
     std::unique_ptr<MediaDisplayComponent> mediaDisplay;
 

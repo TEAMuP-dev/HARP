@@ -1,5 +1,5 @@
 import argparse
-from gradio_client import Client
+from gradio_client import Client, handle_file
 from pathlib import Path
 import json
 import signal
@@ -77,6 +77,17 @@ def main(
             ctrls = json.load(f)
             assert isinstance(ctrls, list), "Controls must be a list of parameter values."
             print(f"loaded ctrls: {ctrls}")
+        # we need to figure out which of the controls correspond to a path
+        # newer versions of gradio expect path strings to be wrapped using the handle_file function
+        inp_params = client._info['named_endpoints']['/wav2wav']['parameters']
+        assert len(inp_params) == len(ctrls), "Number of controls must match the number of input parameters."
+        for i, (param, ctrl) in enumerate(zip(inp_params, ctrls)):
+            # NOTE: this check might is not an official way to check if a parameter is a filepath
+            # and it might break in the future if they decide to change the structure
+            # of the parameter object
+            if param['python_type']['type'] == 'filepath':
+                ctrls[i] = handle_file(ctrl)
+        print(f"ctrls after handle_file: {ctrls}")
         print(f"Predicting audio for {url}...")
         # TODO - better api naming scheme (i.e. process)
         job = client.submit(*ctrls, api_name="/wav2wav")
