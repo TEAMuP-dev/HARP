@@ -55,6 +55,11 @@ public:
         return extensions;
     }
 
+    StringArray getInstanceExtensions()
+    {
+        return AudioDisplayComponent::getSupportedExtensions();
+    }
+
     void loadMediaFile(const URL& filePath) override
     {
         const auto source = std::make_unique<URLInputSource>(filePath);

@@ -40,6 +40,11 @@ public:
         return extensions;
     }
 
+    StringArray getInstanceExtensions()
+    {
+        return MidiDisplayComponent::getSupportedExtensions();
+    }
+
     void loadMediaFile(const URL& filePath) override
     {
         // Create the local file this URL points to
