@@ -353,7 +353,8 @@ private:
     void timerCallback() override
     {
         if (isPlaying()) {
-            updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
+            //updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
+            updateVisibleRange(visibleRange);
         } else {
             stop();
             sendChangeMessage();
