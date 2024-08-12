@@ -604,6 +604,34 @@ public:
         }
     }
 
+    void focusCallback() {
+        if (mediaDisplay->isFileLoaded()) {
+            Time lastModTime = mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
+            if (lastModTime > lastLoadTime) {
+                // Create an AlertWindow
+                auto* reloadCheckWindow = new AlertWindow("File has been modified",
+                                                          "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
+                                                          AlertWindow::QuestionIcon);
+
+                reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
+                reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
+
+                // Show the window and handle the result asynchronously
+                reloadCheckWindow->enterModalState(true, new CustomPathAlertCallback([this, reloadCheckWindow](int result) {
+                    if (result == 1) { // Yes was clicked
+                        DBG("Reloading file");
+                        loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
+
+                    } else { // No was clicked or the window was closed
+                        DBG("Not reloading file");
+                        lastLoadTime = Time::getCurrentTime(); //Reset time so we stop asking
+                    }
+                    delete reloadCheckWindow;
+                }), true);
+            }
+        }
+    }
+
     explicit MainComponent(const URL& initialFilePath = URL()): jobsFinished(0), totalJobs(0),
         jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
@@ -984,6 +1012,8 @@ public:
 
         mediaDisplay->setupDisplay(URL(mediaFile));
 
+        lastLoadTime = Time::getCurrentTime();
+
         playStopButton.setEnabled(true);
 
         resized();
@@ -1215,6 +1245,8 @@ private:
 
     StatusComponent statusArea {15.0f, juce::Justification::centred};
     StatusComponent instructionsArea {13.0f, juce::Justification::centredLeft};
+
+    Time lastLoadTime;
 
     // the model itself
     std::shared_ptr<WebModel> model {new WebModel()};
