@@ -875,6 +875,9 @@ public:
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
         model->cancel();
+        // We already added a temp file, so we need to undo that
+        mediaDisplay->iteratePreviousTempFile();
+        mediaDisplay->clearFutureTempFiles();
         processCancelButton.setEnabled(false);
     }
     

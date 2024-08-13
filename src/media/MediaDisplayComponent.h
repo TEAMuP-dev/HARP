@@ -171,6 +171,13 @@ public:
         }
     }
 
+    void clearFutureTempFiles()
+    {
+        int n = tempFilePaths.size() - (currentTempFileIdx + 1);
+
+        tempFilePaths.removeLast(n);
+    }
+
     void overwriteTarget()
     {
         // Overwrite the original file - necessary for seamless sample editing integration
@@ -335,13 +342,6 @@ private:
     virtual void resetDisplay() = 0;
 
     virtual void postLoadActions(const URL& filePath) = 0;
-
-    void clearFutureTempFiles()
-    {
-        int n = tempFilePaths.size() - (currentTempFileIdx + 1);
-
-        tempFilePaths.removeLast(n);
-    }
 
     void updateCursorPosition()
     {
