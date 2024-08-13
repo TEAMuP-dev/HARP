@@ -119,6 +119,17 @@ public:
            subclass also calls the superclass's method.
         */
 
+       void activeWindowStatusChanged() override 
+       {
+            //Check if an open file is still up to date when window comes back into focus
+            if (isActiveWindow()) {
+                if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent())) {
+                    mainComp->focusCallback();
+                }
+            }
+            DocumentWindow::activeWindowStatusChanged();
+       }
+
     private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
