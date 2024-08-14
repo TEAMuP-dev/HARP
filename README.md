@@ -183,7 +183,8 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
-| 1.3.0 | 0.1.0 |
+| 1.3.0 | 0.1.1 |
+| 1.2.0 | 0.1.0 |
 
 ## Adding Models with PyHARP
 [![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
