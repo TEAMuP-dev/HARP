@@ -811,7 +811,7 @@ public:
 
                     } else { // Cancel was clicked or the window was closed
                         DBG("Custom path entry was canceled.");
-                        resetModelPathComboBox();
+                        // resetModelPathComboBox();
                     }
                     delete customPathWindow;
                 }), true);
