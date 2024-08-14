@@ -116,7 +116,19 @@ TODO
 TODO
 -->
 
+## [Acoustica Mixcraft](https://acoustica.com/products/mixcraft)
+To set up HARP for use from within Mixcraft, do the following.
 
+### Setting Up HARP
+* Set `HARP.exe` as an external wave editor following "Configuring an External Wave Editor" on [this manual page](https://acoustica.com/mixcraft-10-manual/audio-clips).
+
+### Opening HARP
+
+* Right click the audio for the track you want to process and select _Edit In External Editor..._, or via _Sound > Edit In External Editor..._.
+
+* On the dialog that appears, choose _Edit A Copy Of The Sound_, and click _Edit_ to open HARP.
+
+* After editing, close HARP and select _Done_ in the Mixcraft dialog box to update the track.
 
 # Usage
 HARP can be used to apply deep learning models to your audio either as a stand-alone or within any DAW (e.g. Logic Pro) that supports external sample editors.
