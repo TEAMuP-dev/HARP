@@ -27,7 +27,7 @@ add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory
 # (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set
 # up by default. This function accepts many optional arguments. Check the readme at
 # `docs/CMake API.md` in the JUCE repo for the full list.
-include(cmake/gradio_client.cmake)
+# include(cmake/gradio_client.cmake)
 
 juce_add_gui_app(${PROJECT_NAME}
     # VERSION ...                       # Set this if the app version is different to the project version
@@ -191,19 +191,19 @@ if (WIN32)
         $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 endif()
 # copy the pyinstaller tools to the  bundle
-if (APPLE)
-    add_custom_command(TARGET ${PROJECT_NAME}
-                    POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${CMAKE_SOURCE_DIR}/py/client/dist/
-                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources")
-else()
-    add_custom_command(TARGET ${PROJECT_NAME}
-                    POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${CMAKE_SOURCE_DIR}/py/client/dist/
-                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
-endif()
+# if (APPLE)
+#     add_custom_command(TARGET ${PROJECT_NAME}
+#                     POST_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#                     ${CMAKE_SOURCE_DIR}/py/client/dist/
+#                     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources")
+# else()
+#     add_custom_command(TARGET ${PROJECT_NAME}
+#                     POST_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#                     ${CMAKE_SOURCE_DIR}/py/client/dist/
+#                     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
+# endif()
 
 # this fixes the RPATH to be relative to the executable
 # in MacOS. Now, all we need to do is copy the 
