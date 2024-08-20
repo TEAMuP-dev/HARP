@@ -44,11 +44,11 @@ mkdir -p packaging/dmg
 cp -r "${ARTIFACTS_PATH}/${PROJECT_NAME}.app" packaging/dmg
 
 # Make sign.sh executable and run it
-chmod +x ./py/client/sign.sh
-./py/client/sign.sh "$DEV_ID_APPLICATION" "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/"
+# chmod +x ./py/client/sign.sh
+# ./py/client/sign.sh "$DEV_ID_APPLICATION" "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/"
 
 # Sign the application
-codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/gradiojuce_client"
+# codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/Resources/gradiojuce_client/gradiojuce_client"
 codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options=runtime --force "packaging/dmg/${PROJECT_NAME}.app/Contents/MacOS/HARP"
 codesign -s "$DEV_ID_APPLICATION" --timestamp -i com.HARP.HARP --options=runtime --force "packaging/dmg/${PROJECT_NAME}.app"
 

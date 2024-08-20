@@ -86,28 +86,6 @@ public:
     m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
 
     m_status_flag_file.replaceWithText("Status.INITIALIZED");
-
-    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-
-      scriptPath = juce::File::getSpecialLocation(
-        juce::File::currentApplicationFile
-      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client.exe");
-
-      std::system("start /B cmd /c set PYTHONIOENCODING=UTF-8");
-    #elif __APPLE__
-      scriptPath = juce::File::getSpecialLocation(
-          juce::File::currentApplicationFile
-      ).getChildFile("Contents/Resources/gradiojuce_client/gradiojuce_client");
-      prefix_cmd = "";
-    #elif __linux__
-      scriptPath = juce::File::getSpecialLocation(
-          juce::File::currentApplicationFile
-      ).getParentDirectory().getChildFile("Resources/gradiojuce_client/gradiojuce_client");
-      prefix_cmd = "";
-    #else
-      #error "gradiojuce_client has not been implemented for this platform"
-    #endif
-
   }
 
   ~WebModel() {
