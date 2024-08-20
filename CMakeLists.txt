@@ -62,6 +62,7 @@ target_sources(${PROJECT_NAME}
         
         src/Model.h 
         src/WebModel.h
+        src/GradioAPI.h
 
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp

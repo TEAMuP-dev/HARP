@@ -1,52 +1,54 @@
 /**
  * @file
- * @brief This file is part of the JUCE examples.
  * @brief Base class for any models that utilize a web api to process
  * information. Currently we provide an implmentation of a wave 2 wave web based
  * model. We use the gradio python client to communicate with a gradio server.
- * @author hugo flores garcia, aldo aguilar
+ * @author hugo flores garcia, aldo aguilar, xribene
  */
 
 #pragma once
 
 #include <fstream>
-
-
 #include "Model.h"
-
+#include "GradioAPI.h"
 #include "juce_core/juce_core.h"
-// #include "juce_data_structres/juce_data_structures.h"
 
 
-struct Ctrl {
-  juce::Uuid id {""};
-  std::string label {""};
-  virtual ~Ctrl() = default; // virtual destructor
+struct Ctrl 
+{
+    juce::Uuid id {""};
+    std::string label {""};
+    virtual ~Ctrl() = default; // virtual destructor
 };
 
-struct SliderCtrl : public Ctrl {
-  double minimum;
-  double maximum;
-  double step;
-  double value;
+struct SliderCtrl : public Ctrl
+{
+    double minimum;
+    double maximum;
+    double step;
+    double value;
 };
 
-struct TextBoxCtrl : public Ctrl {
-  std::string value;
+struct TextBoxCtrl : public Ctrl 
+{
+    std::string value;
 };
 
-struct AudioInCtrl : public Ctrl {
-  std::string value;
+struct AudioInCtrl : public Ctrl 
+{
+    std::string value;
 };
 
-struct MidiInCtrl : public Ctrl {
-  std::string value;
+struct MidiInCtrl : public Ctrl 
+{
+    std::string value;
 };
 
-struct NumberBoxCtrl : public Ctrl {
-  double min;
-  double max;
-  double value;
+struct NumberBoxCtrl : public Ctrl 
+{
+    double min;
+    double max;
+    double value;
 };
 
 struct ToggleCtrl : public Ctrl {
@@ -73,8 +75,6 @@ juce::String resolveSpaceUrl(juce::String urlOrName) {
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 namespace{
-
-
 }
 
 class WebModel : public Model {
@@ -124,26 +124,8 @@ public:
     }
   }
 
-  std::pair<juce::String, juce::uint32> run_command(std::string command) const {
-    juce::ChildProcess process;
-    bool status;
-
-    status = process.start(command);
-
-    if (!status) {
-      LogAndDBG("Process failed!");
-    }
-
-    juce::String output = process.readAllProcessOutput();
-    juce::uint32 exit_code = process.getExitCode();
-
-    // LogAndDBG("Process output: " + output);
-    // LogAndDBG("Exit code: " + juce::String(exit_code));
-
-    return std::make_pair(output, exit_code);
-  }
-
   bool ready() const override { return m_loaded; }
+
   std::string space_url() const { return m_url; }
 
   juce::File getLogFile() const {
@@ -163,104 +145,46 @@ public:
     m_url = url; // Store the URL for future use
     LogAndDBG("url: " + m_url);
 
-    juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
-            .getChildFile("control_spec.json");
-    outputPath.deleteFile();
+    // juce::File outputPath = juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //         .getChildFile("control_spec.json");
+    // outputPath.deleteFile();
 
 
-    std::string command = (
-      prefix_cmd
-      + scriptPath.getFullPathName().toStdString()
-      + " --mode controls"
-      + " --url " + m_url
-      + " --output_path " + outputPath.getFullPathName().toStdString()
-      // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-      // + " 2>&1"   // redirect stderr to the same file as stdout
-    );
+    // std::string command = (
+    //   prefix_cmd
+    //   + scriptPath.getFullPathName().toStdString()
+    //   + " --mode controls"
+    //   + " --url " + m_url
+    //   + " --output_path " + outputPath.getFullPathName().toStdString()
+    //   // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
+    //   // + " 2>&1"   // redirect stderr to the same file as stdout
+    // );
+    // LogAndDBG("Running command: " + command);
 
+    juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 
-    LogAndDBG("Running command: " + command);
-    std::pair<juce::String, juce::uint32> cmd_result = run_command(command);
-
-    juce::String logContent = cmd_result.first;
-    juce::uint32 result = cmd_result.second;
-    LogAndDBG(logContent);
-
-    if (result != 0) {
-        // read the text from the temp log file.
-        // check for a JSONDecodeError in the log content
-        // if so, let the user know that there there was an error parsing the controls response, 
-        // which means the space is likely broken or does not exist. 
-        // if we catch a 404, say that the space does not exist.
-
-        std::string message;
-        if (logContent.contains("JSONDecodeError")) {
-            message = "An error occurred while requesting controls from " +  m_url + ". The response from the space was not valid JSON. " ;
-        }
-        else if (logContent.contains("requests.exceptions.HTTPError")) {
-            message = "The web request to " + m_url + " returned a 404 error. The space does not exist."; 
-        }
-        else if (logContent.contains("httpx.ReadTimeout")) {
-            message = "The web request to " + m_url + " timed out. The model is probably 'sleeping'. Make sure the gradio server is running and try again!";
-        }
-        // try to catch a generic Error:
-        else if (logContent.contains("Error:")) {
-            // get the error message
-            juce::StringArray lines;
-            lines.addLines(logContent);
-            for (auto line : lines) {
-                if (line.contains("Error:")) {
-                    message = line.toStdString();
-                    break;
-                }
-            }
-        }
-        else if (logContent.contains("argument --url: expected one argument")) {
-            message = "The model url is missing. Please provide a url to the model.";
-        }
-        else {
-            message = "An error occurred while calling the gradiojuce helper with mode \'controls\'. ";
-        }
-
-        message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
-        throw std::runtime_error(message);
-
-    }
-
-
-    // Load the output JSON and parse controls if needed (This step might need more detail based on your requirements)
-    juce::var controls = loadJsonFromFile(outputPath);
-    if (controls.isVoid()) {
-        throw std::runtime_error("Failed to load controls from JSON. juce::var was void.");
-    }
-
-    juce::DynamicObject *ctrlDict = controls.getDynamicObject();
-    if (ctrlDict == nullptr) {
-        throw std::runtime_error("Failed to load control dict from JSON. ctrlDict is null.");
-    }
-
-    // the "ctrls" key should be a list of dicts
-    // the "card" key should be the modelcard
-
-    // BEGIN  MODELCARD
-    if (!ctrlDict->hasProperty("card")) {
-        throw std::runtime_error("Failed to load model card from JSON. card key not found.");
-    }
-    juce::DynamicObject *jsonCard = ctrlDict->getProperty("card").getDynamicObject();
-    if (jsonCard == nullptr) {
-        throw std::runtime_error("Failed to load model card from JSON.");
+    juce::Array<juce::var> ctrlList;
+    juce::DynamicObject cardDict;
+    juce::String error;
+    getControls(endpoint, ctrlList, cardDict, error);
+    
+    if (!error.isEmpty())
+    {
+        DBG("Error: " << error);
+        error += "\n Check the logs " + m_logger->getLogFile().getFullPathName() + " for more details.";
+        throw std::runtime_error(error.toStdString());
     }
 
     // TODO: probably need to check if these properties exist and if they're the right types.
     m_card = ModelCard();
-    m_card.name = jsonCard->getProperty("name").toString().toStdString();
-    m_card.description = jsonCard->getProperty("description").toString().toStdString();
-    m_card.author = jsonCard->getProperty("author").toString().toStdString();
-    m_card.midi_in = (bool) jsonCard->getProperty("midi_in");
-    m_card.midi_out = (bool) jsonCard->getProperty("midi_out");
+    m_card.name = cardDict.getProperty("name").toString().toStdString();
+    m_card.description = cardDict.getProperty("description").toString().toStdString();
+    m_card.author = cardDict.getProperty("author").toString().toStdString();
+    m_card.midi_in = (bool) cardDict.getProperty("midi_in");
+    m_card.midi_out = (bool) cardDict.getProperty("midi_out");
 
     // tags is a list of str
-    juce::Array<juce::var> *tags = jsonCard->getProperty("tags").getArray();
+    juce::Array<juce::var> *tags = cardDict.getProperty("tags").getArray();
     if (tags == nullptr) {
         throw std::runtime_error("Failed to load tags from JSON. tags is null.");
     }
@@ -269,22 +193,13 @@ public:
     }
     // END MODELCARD
 
-    if (!ctrlDict->hasProperty("ctrls")) {
-        throw std::runtime_error("Failed to load controls from JSON. ctrls key not found.");
-    }
-    // else, it should be a list of dicts
-    juce::Array<juce::var> *ctrlList = ctrlDict->getProperty("ctrls").getArray();
-    if (ctrlList == nullptr) {
-        throw std::runtime_error("Failed to load controls from JSON. ctrlList is null.");
-    }
-
     // clear the m_ctrls vector
     m_ctrls.clear();
 
     // iterate through the list of controls
     // and add them to the m_ctrls vector
-    for (int i = 0; i < ctrlList->size(); i++) {
-      juce::var ctrl = ctrlList->getReference(i);
+    for (int i = 0; i < ctrlList.size(); i++) {
+      juce::var ctrl = ctrlList.getReference(i);
       if (!ctrl.isObject()) {
           throw std::runtime_error("Failed to load controls from JSON. ctrl is not an object.");
       }
@@ -351,7 +266,7 @@ public:
         }
       }
 
-    outputPath.deleteFile();
+    // outputPath.deleteFile();
     m_loaded = true;
 
     // set the status to LOADED
@@ -417,7 +332,7 @@ public:
         // + " 2>&1"   // redirect stderr to the same file as stdout
     );
     LogAndDBG("Running command: " + command);
-    std::pair<juce::String, int> cmd_result = run_command(command);
+    std::pair<juce::String, int> cmd_result = std::pair<juce::String, int>("", 0);
 
     juce::String logContent = cmd_result.first;
     juce::uint32 result = cmd_result.second;
