@@ -56,17 +56,18 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
         src/MainComponent.h
-
-        src/TitledTextBox.h
         src/CtrlComponent.h
-        
         src/Model.h 
         src/WebModel.h
-        src/GradioAPI.h
+
+        src/gradio/GradioAPI.h
+        src/gradio/utils.h
 
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp
         src/gui/HoverHandler.cpp
+        src/gui/TitledTextBox.h
+        src/gui/SliderWithLabel.h
 
         src/media/MediaDisplayComponent.h
         src/media/AudioDisplayComponent.h

@@ -10,74 +10,8 @@
 
 #include <fstream>
 #include "Model.h"
-#include "GradioAPI.h"
+#include "gradio/GradioAPI.h"
 #include "juce_core/juce_core.h"
-
-
-struct Ctrl 
-{
-    juce::Uuid id {""};
-    std::string label {""};
-    virtual ~Ctrl() = default; // virtual destructor
-};
-
-struct SliderCtrl : public Ctrl
-{
-    double minimum;
-    double maximum;
-    double step;
-    double value;
-};
-
-struct TextBoxCtrl : public Ctrl 
-{
-    std::string value;
-};
-
-struct AudioInCtrl : public Ctrl 
-{
-    std::string value;
-};
-
-struct MidiInCtrl : public Ctrl 
-{
-    std::string value;
-};
-
-struct NumberBoxCtrl : public Ctrl 
-{
-    double min;
-    double max;
-    double value;
-};
-
-struct ToggleCtrl : public Ctrl
-{
-    bool value;
-};
-
-struct ComboBoxCtrl : public Ctrl
-{
-    std::vector<std::string> options;
-    std::string value;
-};
-
-
-juce::String resolveSpaceUrl(juce::String urlOrName) {
-    if (urlOrName.contains("localhost") || urlOrName.contains("huggingface.co") || urlOrName.contains("http")) {
-        // do nothing! the url is already valid
-    }
-    else {
-        DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
-        urlOrName = "https://huggingface.co/spaces/" + urlOrName;
-    }
-    return urlOrName;
-}
-
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
-
-namespace{
-}
 
 class WebModel : public Model
 {

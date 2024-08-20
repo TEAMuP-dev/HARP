@@ -14,12 +14,12 @@
 
 #include "WebModel.h"
 #include "CtrlComponent.h"
-#include "TitledTextBox.h"
 #include "ThreadPoolJob.h"
 
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/HoverHandler.h"
+#include "gui/TitledTextBox.h"
 
 #include "media/MediaDisplayComponent.h"
 #include "media/AudioDisplayComponent.h"

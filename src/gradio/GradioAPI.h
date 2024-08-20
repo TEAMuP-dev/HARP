@@ -8,6 +8,20 @@
 
 #include <fstream>
 #include "juce_core/juce_core.h"
+#include "utils.h"
+
+static juce::String resolveSpaceUrl(juce::String urlOrName) {
+    if (urlOrName.contains("localhost") || urlOrName.contains("huggingface.co") || urlOrName.contains("http")){
+        // do nothing! the url is already valid
+    }
+    else {
+        DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
+        urlOrName = "https://huggingface.co/spaces/" + urlOrName;
+    }
+    return urlOrName;
+}
+
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 void getControls(
                 juce::URL endpoint, 
