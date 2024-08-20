@@ -10,7 +10,7 @@
 
 #include <fstream>
 #include "Model.h"
-#include "gradio/GradioAPI.h"
+#include "gradio/GradioClient.h"
 #include "juce_core/juce_core.h"
 
 class WebModel : public Model
@@ -21,7 +21,6 @@ public:
     { 
         // create our logger
         m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
-
         m_status_flag_file.replaceWithText("Status.INITIALIZED");
     }
 
@@ -63,13 +62,14 @@ public:
         std::string url = std::any_cast<std::string>(params.at("url"));
         m_url = url; // Store the URL for future use
         LogAndDBG("url: " + m_url);
+        gradioClient.setBaseUrl(m_url);
 
-        juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
+        // juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 
         juce::Array<juce::var> ctrlList;
         juce::DynamicObject cardDict;
         juce::String error;
-        getControls(endpoint, ctrlList, cardDict, error);
+        gradioClient.getControls(ctrlList, cardDict, error);
         
         if (!error.isEmpty())
         {
@@ -408,6 +408,7 @@ private:
     string m_url;
     string prefix_cmd;
     juce::File scriptPath;
+    GradioClient gradioClient;
 };
 
 

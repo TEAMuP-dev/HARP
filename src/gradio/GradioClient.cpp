@@ -1,30 +1,27 @@
-/**
- * @file
- * @brief A collection of functions to interact with the Gradio API
- * @author  xribene
- */
+#include "GradioClient.h"
 
-#pragma once
-
-#include <fstream>
-#include "juce_core/juce_core.h"
-#include "utils.h"
-
-static juce::String resolveSpaceUrl(juce::String urlOrName) {
-    if (urlOrName.contains("localhost") || urlOrName.contains("huggingface.co") || urlOrName.contains("http")){
+juce::String GradioClient::resolveSpaceUrl(juce::String urlOrName)
+{
+    if (urlOrName.contains("localhost") || urlOrName.contains("huggingface.co") || urlOrName.contains("http"))
+    {
         // do nothing! the url is already valid
     }
-    else {
+    else
+    {
         DBG("HARPProcessorEditor::buttonClicked: spaceUrl is not a valid url");
         urlOrName = "https://huggingface.co/spaces/" + urlOrName;
     }
     return urlOrName;
 }
 
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
-
-void getControls(
-                juce::URL endpoint, 
+void GradioClient::setBaseUrl(const juce::String& spaceUrl) 
+{
+    juce::String resolvedUrl = resolveSpaceUrl(spaceUrl);
+    endpoint = juce::URL(resolvedUrl);
+    // endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
+}
+void GradioClient::getControls(
+                // juce::URL endpoint, 
                 juce::Array<juce::var>& ctrlList, 
                 juce::DynamicObject& cardDict,
                 juce::String& error

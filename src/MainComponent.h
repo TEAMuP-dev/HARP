@@ -21,6 +21,8 @@
 #include "gui/HoverHandler.h"
 #include "gui/TitledTextBox.h"
 
+#include "gradio/GradioClient.h"
+
 #include "media/MediaDisplayComponent.h"
 #include "media/AudioDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
@@ -530,7 +532,7 @@ public:
                     if (chosen == "Open HARP Logs") {
                         model->getLogFile().revealToUser();
                     } else if (chosen == "Open Space URL") {
-                        URL spaceUrl = resolveSpaceUrl(modelPathComboBox.getText().toStdString());
+                        URL spaceUrl = GradioClient::resolveSpaceUrl(modelPathComboBox.getText().toStdString());
                         bool success = spaceUrl.launchInDefaultBrowser();
                     }
                     MessageManager::callAsync([this] {
@@ -572,7 +574,7 @@ public:
         // we might have to append a "https://huggingface.co/spaces" to the url
         // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
         // and (has only one slash in it)
-        String spaceUrl = resolveSpaceUrl(url);
+        String spaceUrl = GradioClient::resolveSpaceUrl(url);
         spaceUrlButton.setButtonText("open " + url + " in browser");
         spaceUrlButton.setURL(URL(spaceUrl));
         // set the font size 

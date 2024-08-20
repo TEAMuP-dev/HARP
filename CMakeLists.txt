@@ -60,7 +60,7 @@ target_sources(${PROJECT_NAME}
         src/Model.h 
         src/WebModel.h
 
-        src/gradio/GradioAPI.h
+        src/gradio/GradioClient.cpp
         src/gradio/utils.h
 
         src/gui/MultiButton.cpp
