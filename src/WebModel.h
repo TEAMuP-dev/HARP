@@ -62,7 +62,7 @@ public:
         std::string url = std::any_cast<std::string>(params.at("url"));
         m_url = url; // Store the URL for future use
         LogAndDBG("url: " + m_url);
-        gradioClient.setBaseUrl(m_url);
+        gradioClient.setSpaceInfo(m_url);
 
         // juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 

@@ -13,6 +13,7 @@
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
 class GradioClient
+
 {
 public:
     // GradioClient(const juce::String& spaceUrl);
@@ -20,10 +21,35 @@ public:
 
     // Example method to get controls from the Gradio API
     void getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict, juce::String& error);
-    void setBaseUrl(const juce::String& url);
-    static juce::String resolveSpaceUrl(juce::String urlOrName);
-private:
+    void setSpaceInfo(const juce::String url);
     
-    juce::String baseUrl;
-    juce::URL endpoint;
+    // A static counter 
+    
+private:
+    static SpaceInfo parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
+    // The space address as provided by the user
+    // juce::String spaceAddress;
+    // juce::URL endpoint;
+    
+    /***
+    We parse the space address given by the user
+    which can take 4 forms: 
+        "http://localhost:7860", (gradio app)
+        "https://xribene-midi-pitch-shifter.hf.space/", (gradio app)
+        "https://huggingface.co/spaces/xribene/midi_pitch_shifter", (hf repo)
+        "xribene/midi_pitch_shifter",
+    
+    and we store the parsed information in a SpaceInfo object
+    e.g
+    {
+        "huggingface": "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
+        "gradio": "https://xribene-midi-pitch-shifter.hf.space/",
+        "userInput": "xribene/midi_pitch_shifter",
+        "modelName": "midi_pitch_shifter",
+        "userName": "xribene"
+    }
+    ***/    
+    SpaceInfo spaceInfo;
+    static int staticCounter;
+    
 };

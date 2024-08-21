@@ -499,7 +499,8 @@ public:
                 // to let the timeout callback do its thing
                 //Thread::sleep(10000);
                 //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
-            } catch (const std::runtime_error& e) {
+            } catch (const std::runtime_error& e) 
+            {
                 DBG("Caught exception: " << e.what());
                 
                 auto msgOpts = MessageBoxOptions().withTitle("Loading Error")
@@ -509,8 +510,10 @@ public:
                 if (!String(e.what()).contains("404")) {
                     msgOpts = msgOpts.withButton("Open Space URL");
                 }
-                    msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
-                auto alertCallback = [this, msgOpts](int result) {
+
+                msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
+                auto alertCallback = [this, msgOpts](int result) 
+                {
                     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                     // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
                     // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
@@ -532,7 +535,8 @@ public:
                     if (chosen == "Open HARP Logs") {
                         model->getLogFile().revealToUser();
                     } else if (chosen == "Open Space URL") {
-                        URL spaceUrl = GradioClient::resolveSpaceUrl(modelPathComboBox.getText().toStdString());
+                        URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
+                        URL spaceUrl = model->gradioClient->getSpaceUrl();
                         bool success = spaceUrl.launchInDefaultBrowser();
                     }
                     MessageManager::callAsync([this] {
@@ -574,7 +578,7 @@ public:
         // we might have to append a "https://huggingface.co/spaces" to the url
         // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
         // and (has only one slash in it)
-        String spaceUrl = GradioClient::resolveSpaceUrl(url);
+        String spaceUrl = GradioClient::parseSpaceAddress(url).huggingface;
         spaceUrlButton.setButtonText("open " + url + " in browser");
         spaceUrlButton.setURL(URL(spaceUrl));
         // set the font size 
@@ -761,20 +765,24 @@ public:
        // model path textbox
        std::vector<std::string> modelPaths = {
         "custom path...",
-        "hugggof/vampnet-music",
-        "cwitkowitz/timbre-trap",
-        "hugggof/vampnet-percussion",
-        "hugggof/vampnet-n64",
-        "hugggof/vampnet-choir",
-        "hugggof/vampnet-opera",
-        "hugggof/vampnet-machines",
-        "hugggof/vampnet-birds",
-        "descript/vampnet",
-        "pharoAIsanders420/micro-musicgen-jungle",
-        "hugggof/nesquik",
-        "hugggof/pitch_shifter",
-        "hugggof/harmonic_percussive",
-        "xribene/midi_pitch_shifter"
+        // "hugggof/vampnet-music",
+        // "cwitkowitz/timbre-trap",
+        // "hugggof/vampnet-percussion",
+        // "hugggof/vampnet-n64",
+        // "hugggof/vampnet-choir",
+        // "hugggof/vampnet-opera",
+        // "hugggof/vampnet-machines",
+        // "hugggof/vampnet-birds",
+        // "descript/vampnet",
+        // "pharoAIsanders420/micro-musicgen-jungle",
+        // "hugggof/nesquik",
+        // "hugggof/pitch_shifter",
+        // "hugggof/harmonic_percussive",
+        "xribene/pitch_shifter",
+        "http://localhost:7860",
+        "https://xribene-midi-pitch-shifter.hf.space/",
+        "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
+        "xribene/midi_pitch_shifter",
         };
 
 

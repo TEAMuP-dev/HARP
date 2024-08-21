@@ -49,3 +49,13 @@ struct ComboBoxCtrl : public Ctrl
     std::vector<std::string> options;
     std::string value;
 };
+
+struct SpaceInfo
+{
+    juce::String huggingface;
+    juce::String gradio;
+    juce::String userInput;
+    juce::String modelName;
+    juce::String userName;
+    juce::String error;
+};
