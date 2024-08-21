@@ -34,9 +34,9 @@ public:
     void LogAndDBG(const juce::String& message) const
     {
         DBG(message);
-        if (m_logger) {
-        m_logger->logMessage(message);
-        }
+        if (m_logger)
+            m_logger->logMessage(message);
+
     }
 
     bool ready() const override { return m_loaded; }
@@ -59,17 +59,17 @@ public:
             throw std::runtime_error("url not found in params");
         }
 
-        std::string url = std::any_cast<std::string>(params.at("url"));
-        m_url = url; // Store the URL for future use
-        LogAndDBG("url: " + m_url);
+        std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
 
-        gradioClient.setSpaceInfo(m_url);
+        gradioClient.setSpaceInfo(userSpaceAddress);
         if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
         {
+            // LogAndDBG("Error: " + gradioClient.getSpaceInfo().error);
+            LogAndDBG(gradioClient.getSpaceInfo().toString());
             throw std::runtime_error(gradioClient.getSpaceInfo().error.toStdString());
         }
 
-        // juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
+        LogAndDBG(gradioClient.getSpaceInfo().toString());
 
         juce::Array<juce::var> ctrlList;
         juce::DynamicObject cardDict;
@@ -78,8 +78,7 @@ public:
         
         if (!error.isEmpty())
         {
-            DBG("Error: " << error);
-            error += "\n Check the logs " + m_logger->getLogFile().getFullPathName() + " for more details.";
+            LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
         }
 

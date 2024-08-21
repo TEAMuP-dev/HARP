@@ -47,6 +47,5 @@ private:
     }
     ***/    
     SpaceInfo spaceInfo;
-    static int staticCounter;
     
 };

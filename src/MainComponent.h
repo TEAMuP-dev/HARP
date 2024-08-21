@@ -431,17 +431,19 @@ public:
         const std::string hf_url = "https://huggingface.co/spaces/";
 
         std::string path_url;
-        if (modelPathComboBox.getSelectedItemIndex() == 0) {
-            if (customPath.find(hf_url) != std::string::npos) {
-                customPath.replace(customPath.find(hf_url), hf_url.length(), "");
-            }
+        if (modelPathComboBox.getSelectedItemIndex() == 0) 
+        {
+            // if (customPath.find(hf_url) != std::string::npos) {
+            //     customPath.replace(customPath.find(hf_url), hf_url.length(), "");
+            // }
             path_url = customPath;
-        }else{
+        } else
+        {
             path_url = modelPathComboBox.getText().toStdString();
         }
 
         std::map<std::string, std::any> params = {
-        {"url", path_url},
+            {"url", path_url},
         };
         resetUI();
         // loading happens asynchronously.
@@ -452,7 +454,6 @@ public:
             try {
                 // timeout after 10 seconds
                 // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                // cb: this timedCallback doesn't seem to run
                 std::atomic<bool> success = false;
                 TimedCallback timedCallback([this, &success] {
                     if (success)

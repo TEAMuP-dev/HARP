@@ -1,14 +1,7 @@
 #include "GradioClient.h"
 
-int GradioClient::staticCounter = 0;
-
 void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
-    DBG("Static Counter: " << GradioClient::staticCounter);
-    DBG("Space Address: " << spaceAddress);
-    // Increment the static counter
-    GradioClient::staticCounter++;
-
     spaceInfo.userInput = spaceAddress;
     // Check if the URL is of Type 4 (localhost or gradio.live)
     if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live"))

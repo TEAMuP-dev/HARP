@@ -70,15 +70,28 @@ struct SpaceInfo
     SpaceInfo() : status(Status::EMPTY) {}
 
     juce::String getStatusString() const
-{
-    switch (status)
     {
-        case GRADIO: return "Gradio";
-        case HUGGINGFACE: return "HuggingFace";
-        case LOCALHOST: return "Localhost";
-        case ERROR: return "Error";
-        case EMPTY: return "Empty";
-        default: return "Unknown";
+        switch (status)
+        {
+            case GRADIO: return "Gradio";
+            case HUGGINGFACE: return "HuggingFace";
+            case LOCALHOST: return "Localhost";
+            case ERROR: return "Error";
+            case EMPTY: return "Empty";
+            default: return "Unknown";
+        }
     }
-}
+    juce::String toString()
+    {
+        juce::String str = "SpaceInfo: \n";
+        str += "Huggingface: " + huggingface + "\n";
+        str += "Gradio: " + gradio + "\n";
+        str += "UserInput: " + userInput + "\n";
+        str += "ModelName: " + modelName + "\n";
+        str += "UserName: " + userName + "\n";
+        str += "Status: " + getStatusString() + "\n";
+        str += "Error: " + error + "\n";
+        return str;
+    }
+    
 };
