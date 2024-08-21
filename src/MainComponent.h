@@ -535,8 +535,9 @@ public:
                     if (chosen == "Open HARP Logs") {
                         model->getLogFile().revealToUser();
                     } else if (chosen == "Open Space URL") {
-                        URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
-                        URL spaceUrl = model->gradioClient->getSpaceUrl();
+                        // URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
+                        // URL spaceUrl = model->gradioClient->getSpaceUrl()
+                        URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
                         bool success = spaceUrl.launchInDefaultBrowser();
                     }
                     MessageManager::callAsync([this] {
@@ -578,13 +579,13 @@ public:
         // we might have to append a "https://huggingface.co/spaces" to the url
         // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
         // and (has only one slash in it)
-        String spaceUrl = GradioClient::parseSpaceAddress(url).huggingface;
-        spaceUrlButton.setButtonText("open " + url + " in browser");
-        spaceUrlButton.setURL(URL(spaceUrl));
-        // set the font size 
-        // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+        // String spaceUrl = GradioClient::parseSpaceAddress(url).huggingface;
+        // spaceUrlButton.setButtonText("open " + url + " in browser");
+        // spaceUrlButton.setURL(URL(spaceUrl));
+        // // set the font size 
+        // // spaceUrlButton.setFont(Font(15.00f, Font::plain));
 
-        addAndMakeVisible(spaceUrlButton);
+        // addAndMakeVisible(spaceUrlButton);
     }
 
     void resetModelPathComboBox()
@@ -1343,6 +1344,21 @@ private:
             setModelCard(model->card());
             ctrlComponent.setModel(model);
             ctrlComponent.populateGui();
+
+            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+            // if we are here, the status can't be ERROR or EMPTY
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST) 
+            {
+                spaceUrlButton.setButtonText("open localhost in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+            } else 
+            {
+                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/" + spaceInfo.modelName + " in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+            }
+            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+            addAndMakeVisible(spaceUrlButton);
+
             repaint();
 
             // now, we can enable the buttons

@@ -62,7 +62,12 @@ public:
         std::string url = std::any_cast<std::string>(params.at("url"));
         m_url = url; // Store the URL for future use
         LogAndDBG("url: " + m_url);
+
         gradioClient.setSpaceInfo(m_url);
+        if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
+        {
+            throw std::runtime_error(gradioClient.getSpaceInfo().error.toStdString());
+        }
 
         // juce::URL endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 
@@ -318,6 +323,10 @@ public:
         );
     }
 
+    GradioClient& getGradioClient() 
+    {
+        return gradioClient;
+    }
 private:
     juce::var loadJsonFromFile(const juce::File& file) const {
         juce::var result;

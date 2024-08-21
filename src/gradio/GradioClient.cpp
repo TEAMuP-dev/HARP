@@ -2,7 +2,7 @@
 
 int GradioClient::staticCounter = 0;
 
-SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
+void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
     DBG("Static Counter: " << GradioClient::staticCounter);
     DBG("Space Address: " << spaceAddress);
@@ -15,6 +15,7 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
     {
         spaceInfo.gradio = spaceAddress;
         spaceInfo.huggingface = spaceAddress;
+        spaceInfo.status = SpaceInfo::Status::LOCALHOST;
         return;
     }
     juce::String user;
@@ -33,11 +34,13 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
         {
             user = parts[0];
             model = parts[1];
+            spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
         }
         else
         {
             // result.huggingface = spaceAddress;
             spaceInfo.error = "Detected huggingface.co URL but could not parse user and model. Too few parts in " + spaceAddress;
+            spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
         }
@@ -56,6 +59,7 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
         {
             user = subdomain.substring(0, firstHyphenIndex);
             model = subdomain.substring(firstHyphenIndex + 1);
+            spaceInfo.status = SpaceInfo::Status::GRADIO;
         }
         else
         {
@@ -64,6 +68,7 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
             // because result.huggingface is used for the  "Open Space URL" button in the error dialog box
             // result.huggingface = spaceAddress;
             spaceInfo.error = "Detected hf.space URL but could not parse user and model. No hyphen found in the subdomain: " + subdomain;
+            spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
         }
@@ -77,12 +82,14 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
         {
             user = parts[0];
             model = parts[1];
+            spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
         }
         else
         {
             // DBG("Invalid URL: " << spaceAddress);
             // result.huggingface = spaceAddress;
             spaceInfo.error = "Detected user/model URL but could not parse user and model. Too many/few slashes in " + spaceAddress;
+            spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
         }
@@ -90,6 +97,7 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
     else
     {
         spaceInfo.error = "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
+        spaceInfo.status = SpaceInfo::Status::ERROR;
         DBG(spaceInfo.error);
         return;
     }
@@ -107,6 +115,7 @@ SpaceInfo GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& 
     else
     {
         spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
+        spaceInfo.status = SpaceInfo::Status::ERROR;
         DBG(spaceInfo.error);
         return;
     }
@@ -124,6 +133,11 @@ void GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
     // endpoint = juce::URL(resolvedUrl);
     // endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 }
+
+SpaceInfo GradioClient::getSpaceInfo() const
+{
+    return spaceInfo;
+}
 void GradioClient::getControls(
                 // juce::URL endpoint, 
                 juce::Array<juce::var>& ctrlList, 
@@ -132,14 +146,9 @@ void GradioClient::getControls(
                 )
 {
     // setSpaceInfo has been called before this method
-    // we need to make sure the parsing of the userProvidedSpaceAddress was successful
-    // if not, return with an error message
-    if (spaceInfo.error.isNotEmpty())
-    {
-        error = spaceInfo.error;
-        return;
-    }
-    juce::URL controlsEndpoint = endpoint.getChildURL("call/wav2wav-ctrls");
+
+    juce::URL gradioEndpoint = spaceInfo.gradio;
+    juce::URL controlsEndpoint = gradioEndpoint.getChildURL("call/wav2wav-ctrls");
     // First make a POST request to get an event ID
     // The body of the POST request is an empty JSON array
     juce::String jsonBody = R"({"data": []})";

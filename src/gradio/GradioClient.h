@@ -22,15 +22,12 @@ public:
     // Example method to get controls from the Gradio API
     void getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict, juce::String& error);
     void setSpaceInfo(const juce::String url);
+    SpaceInfo getSpaceInfo() const;
     
     // A static counter 
     
 private:
-    static SpaceInfo parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
-    // The space address as provided by the user
-    // juce::String spaceAddress;
-    // juce::URL endpoint;
-    
+    static void parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***
     We parse the space address given by the user
     which can take 4 forms: 

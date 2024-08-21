@@ -49,13 +49,36 @@ struct ComboBoxCtrl : public Ctrl
     std::vector<std::string> options;
     std::string value;
 };
-
 struct SpaceInfo
 {
+    enum Status
+    {
+        GRADIO,
+        HUGGINGFACE,
+        LOCALHOST,
+        ERROR,
+        EMPTY
+    };
     juce::String huggingface;
     juce::String gradio;
     juce::String userInput;
     juce::String modelName;
     juce::String userName;
     juce::String error;
+    Status status;
+
+    SpaceInfo() : status(Status::EMPTY) {}
+
+    juce::String getStatusString() const
+{
+    switch (status)
+    {
+        case GRADIO: return "Gradio";
+        case HUGGINGFACE: return "HuggingFace";
+        case LOCALHOST: return "Localhost";
+        case ERROR: return "Error";
+        case EMPTY: return "Empty";
+        default: return "Unknown";
+    }
+}
 };
