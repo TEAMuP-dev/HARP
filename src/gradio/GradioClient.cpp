@@ -123,8 +123,6 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
 void GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress) 
 {
     parseSpaceAddress(userProvidedSpaceAddress, spaceInfo);
-    // endpoint = juce::URL(resolvedUrl);
-    // endpoint = juce::URL ("http://127.0.0.1:7860/call/wav2wav-ctrls");
 }
 
 SpaceInfo GradioClient::getSpaceInfo() const
@@ -132,14 +130,12 @@ SpaceInfo GradioClient::getSpaceInfo() const
     return spaceInfo;
 }
 void GradioClient::getControls(
-                // juce::URL endpoint, 
                 juce::Array<juce::var>& ctrlList, 
                 juce::DynamicObject& cardDict,
                 juce::String& error
                 )
 {
     // setSpaceInfo has been called before this method
-
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL controlsEndpoint = gradioEndpoint.getChildURL("call/wav2wav-ctrls");
     // First make a POST request to get an event ID
@@ -162,8 +158,6 @@ void GradioClient::getControls(
     if (stream != nullptr)
     {
         juce::String response = stream->readEntireStreamAsString();
-        // DBG("Response: " << response);
-        // DBG("Status Code: " << status_code);
 
         // Check the status code to ensure the request was successful
         if (statusCode == 200)
@@ -173,13 +167,6 @@ void GradioClient::getControls(
             {   
                 juce::DynamicObject* obj = parsedResponse.getDynamicObject();
                 eventID = obj->getProperty("event_id");
-                // if (eventID.isString())
-                //     eventID = eventID.toString();                    
-                // else
-                // {
-                //     error = "event_id not found in the response.";
-                //     DBG(error);
-                // }
             }
             else
             {
@@ -220,7 +207,6 @@ void GradioClient::getControls(
     {
         // Read the entire response from the stream
         juce::String getResponse = getStream->readEntireStreamAsString();
-        // DBG("Response: " << getResponse);
 
         // From the gradio app we receive a JSON string 
         // ( see core.py in pyharp --> gr.Text(label="Controls"))

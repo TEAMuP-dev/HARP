@@ -432,15 +432,9 @@ public:
 
         std::string path_url;
         if (modelPathComboBox.getSelectedItemIndex() == 0) 
-        {
-            // if (customPath.find(hf_url) != std::string::npos) {
-            //     customPath.replace(customPath.find(hf_url), hf_url.length(), "");
-            // }
             path_url = customPath;
-        } else
-        {
+        else
             path_url = modelPathComboBox.getText().toStdString();
-        }
 
         std::map<std::string, std::any> params = {
             {"url", path_url},
@@ -572,21 +566,6 @@ public:
         String url = String(std::any_cast<std::string>(params.at("url")));
         descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , dontSendNotification);
 
-        // TODO: here, we should also reset the highlighting of the playback regions 
-
-
-        // add a hyperlink to the hf space for the model
-        // TODO: make this less hacky? 
-        // we might have to append a "https://huggingface.co/spaces" to the url
-        // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
-        // and (has only one slash in it)
-        // String spaceUrl = GradioClient::parseSpaceAddress(url).huggingface;
-        // spaceUrlButton.setButtonText("open " + url + " in browser");
-        // spaceUrlButton.setURL(URL(spaceUrl));
-        // // set the font size 
-        // // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-
-        // addAndMakeVisible(spaceUrlButton);
     }
 
     void resetModelPathComboBox()

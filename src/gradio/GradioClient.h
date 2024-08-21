@@ -19,13 +19,10 @@ public:
     // GradioClient(const juce::String& spaceUrl);
     GradioClient() = default;
 
-    // Example method to get controls from the Gradio API
     void getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict, juce::String& error);
     void setSpaceInfo(const juce::String url);
     SpaceInfo getSpaceInfo() const;
-    
-    // A static counter 
-    
+        
 private:
     static void parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***
