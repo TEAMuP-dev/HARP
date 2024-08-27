@@ -1,2 +1,0 @@
--e git+https://github.com/TEAMuP-dev/pyharp.git#egg=pyharp
-librosa

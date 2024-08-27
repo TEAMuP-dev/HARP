@@ -3,6 +3,5 @@
     url = https://github.com/juce-framework/JUCE.git
     branch = develop
 [submodule "pyharp"]
-    path = pyharp
-    url = https://github.com/TEAMuP-dev/pyharp
-    branch = main
+	path = pyharp
+	url = https://github.com/TEAMuP-dev/pyharp.git
