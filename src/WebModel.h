@@ -198,8 +198,37 @@ public:
         if (!error.isEmpty())
         {
             LogAndDBG(error);
-            // throw std::runtime_error(error.toStdString());
+            throw std::runtime_error(error.toStdString());
         }
+
+        // Using the 
+        juce::String eventId;
+        juce::String endpoint = "process";
+        juce::String jsonBody = R"(
+            {
+                "data": [
+                            {
+                                "path": ")" + uploadedFilePath + R"("
+                            },
+                            -24
+                        ]
+            }
+            )";
+        gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            throw std::runtime_error(error.toStdString());
+        }
+
+        juce::String response;
+        gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            throw std::runtime_error(error.toStdString());
+        }
+
     }
 
     void process2(juce::File filetoProcess) const {

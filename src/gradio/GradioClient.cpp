@@ -220,15 +220,16 @@ void GradioClient::uploadFileRequest(
 void GradioClient::makePostRequestForEventID(
                     const juce::String endpoint, 
                     juce::String& eventID,
-                    juce::String& error
-                    )
+                    juce::String& error,
+                    const juce::String jsonBody
+                    ) const
 {
     // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
 
     // Prepare the POST request
-    juce::String jsonBody = R"({"data": []})";
+    // juce::String jsonBody = R"({"data": []})";
     juce::URL postEndpoint = requestEndpoint.withPOSTData(jsonBody);
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
@@ -286,6 +287,44 @@ void GradioClient::makePostRequestForEventID(
     }
 }
 
+// void GradioClient::getProcessResponse()
+// {
+
+// }
+
+void GradioClient::getResponseFromEventID(
+                const juce::String callID, 
+                const juce::String eventID,
+                juce::String& response,
+                juce::String& error
+                ) const
+{
+    // Now we make a GET request to the endpoint with the event ID appended
+    // The endpoint for the get request is the same as the post request with /{eventID} appended
+    juce::URL gradioEndpoint = spaceInfo.gradio;
+    juce::URL getEndpoint = gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
+    juce::StringPairArray responseHeaders;
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
+	                //    .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
+	                   .withConnectionTimeoutMs (10000)
+	                   .withResponseHeaders (&responseHeaders)
+	                   .withStatusCode (&statusCode)
+	                   .withNumRedirectsToFollow (5);
+	                  //  .withHttpRequestCmd ("POST");
+    std::unique_ptr<juce::InputStream> stream(getEndpoint.createInputStream(options));
+    
+    if (stream == nullptr)
+    {
+        error = "Failed to create input stream for GET request.";
+        DBG(error);
+        return;
+    }
+
+    // Read the entire response from the stream
+    response = stream->readEntireStreamAsString();
+}
+
 void GradioClient::getControls(
                 juce::Array<juce::var>& ctrlList, 
                 juce::DynamicObject& cardDict,
@@ -300,36 +339,20 @@ void GradioClient::getControls(
         DBG(error);
         return;
     }
-    // Now we make a GET request to the endpoint with the event ID appended
-    // The endpoint for the get request is the same as the post request with /{eventID} appended
-    juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL getEndpoint = gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
-    juce::StringPairArray get_response_headers;
-    int getStatusCode = 0;
-    auto getOptions = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
-	                //    .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
-	                   .withConnectionTimeoutMs (10000)
-	                   .withResponseHeaders (&get_response_headers)
-	                   .withStatusCode (&getStatusCode)
-	                   .withNumRedirectsToFollow (5);
-	                  //  .withHttpRequestCmd ("POST");
-    std::unique_ptr<juce::InputStream> getStream(getEndpoint.createInputStream(getOptions));
-    
-    if (getStream == nullptr)
+
+    juce::String response;
+    getResponseFromEventID(callID, eventID, response, error);
+    if (!error.isEmpty())
     {
-        error = "Failed to create input stream for GET request.";
         DBG(error);
         return;
     }
-
-    // Read the entire response from the stream
-    juce::String getResponse = getStream->readEntireStreamAsString();
 
     // From the gradio app, we receive a JSON string
     // (see core.py in pyharp --> gr.Text(label="Controls"))
     // Extract the data portion from the response
     juce::String dataKey = "data: ";
-    int dataIndex = getResponse.indexOf(dataKey);
+    int dataIndex = response.indexOf(dataKey);
 
     if (dataIndex == -1)
     {
@@ -339,7 +362,7 @@ void GradioClient::getControls(
     }
 
     // Extract the portion after "data: "
-    juce::String dataPortion = getResponse.substring(dataIndex + dataKey.length()).trim();
+    juce::String dataPortion = response.substring(dataIndex + dataKey.length()).trim();
 
     // // The data is wrapped in quotes and brackets, so remove them
     // if (dataPortion.startsWith("[\"") && dataPortion.endsWith("\"]"))
@@ -413,5 +436,4 @@ void GradioClient::getControls(
         return;
     }
     ctrlList = *ctrlArray;
-
 }

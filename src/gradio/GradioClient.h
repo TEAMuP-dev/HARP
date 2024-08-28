@@ -19,10 +19,33 @@ public:
     // GradioClient(const juce::String& spaceUrl);
     GradioClient() = default;
 
-    void uploadFileRequest(const juce::File& fileToUpload, juce::String& uploadedFilePath, juce::String& error) const;
-    void makePostRequestForEventID(const juce::String endpoint, juce::String& eventId, juce::String& error);
-    void getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict, juce::String& error);
+    void uploadFileRequest(
+        const juce::File& fileToUpload, 
+        juce::String& uploadedFilePath, 
+        juce::String& error
+    ) const;
+
+    void makePostRequestForEventID(
+        const juce::String endpoint, 
+        juce::String& eventId, 
+        juce::String& error,
+        const juce::String jsonBody = R"({"data": []})"
+    ) const;
+
+    void getResponseFromEventID(
+        const juce::String callID, 
+        const juce::String eventID,
+        juce::String& response,
+        juce::String& error
+    ) const;
+
+    void getControls(
+        juce::Array<juce::var>& ctrlList, 
+        juce::DynamicObject& cardDict, 
+        juce::String& error);
+
     void setSpaceInfo(const juce::String url);
+
     SpaceInfo getSpaceInfo() const;
         
 private:
