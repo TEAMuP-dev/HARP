@@ -67,9 +67,9 @@ target_sources(${PROJECT_NAME}
         src/gui/StatusComponent.cpp
         src/gui/HoverHandler.cpp
 
-        src/media/MediaDisplayComponent.h
-        src/media/AudioDisplayComponent.h
-        src/media/MidiDisplayComponent.h
+        src/media/MediaDisplayComponent.cpp
+        src/media/AudioDisplayComponent.cpp
+        src/media/MidiDisplayComponent.cpp
 
         src/pianoroll/KeyboardComponent.cpp
         src/pianoroll/NoteGridComponent.cpp
