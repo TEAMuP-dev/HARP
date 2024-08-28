@@ -62,6 +62,7 @@ public:
         std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
 
         gradioClient.setSpaceInfo(userSpaceAddress);
+        
         if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
         {
             // LogAndDBG("Error: " + gradioClient.getSpaceInfo().error);

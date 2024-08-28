@@ -263,7 +263,7 @@ void GradioClient::makePostRequestForEventID(
         return;
     }
 
-    juce::String eventID = obj->getProperty("event_id");
+    eventID = obj->getProperty("event_id");
     if (eventID.isEmpty())
     {
         error = "event_id not found in the response from " + endpoint;
@@ -327,17 +327,17 @@ void GradioClient::getControls(
     // Extract the portion after "data: "
     juce::String dataPortion = getResponse.substring(dataIndex + dataKey.length()).trim();
 
-    // The data is wrapped in quotes and brackets, so remove them
-    if (dataPortion.startsWith("[\"") && dataPortion.endsWith("\"]"))
-    {
-        dataPortion = dataPortion.substring(2, dataPortion.length() - 2);
-    }
+    // // The data is wrapped in quotes and brackets, so remove them
+    // if (dataPortion.startsWith("[\"") && dataPortion.endsWith("\"]"))
+    // {
+    //     dataPortion = dataPortion.substring(2, dataPortion.length() - 2);
+    // }
 
-    // Replace single quotes with double quotes to make it valid JSON
-    dataPortion = dataPortion.replace("'", "\"");
+    // // Replace single quotes with double quotes to make it valid JSON
+    // dataPortion = dataPortion.replace("'", "\"");
 
-    // Replace Python booleans (True/False) with JSON booleans (true/false)
-    dataPortion = dataPortion.replace("False", "false").replace("True", "true");
+    // // Replace Python booleans (True/False) with JSON booleans (true/false)
+    // dataPortion = dataPortion.replace("False", "false").replace("True", "true");
 
     // Parse the extracted JSON string
     juce::var parsedData;
@@ -349,24 +349,47 @@ void GradioClient::getControls(
         DBG(error);
         return;
     }
-
-    juce::DynamicObject* obj = parsedData.getDynamicObject();
+    
+    if (!parsedData.isArray())
+    {
+        error = "Parsed JSON is not an array.";
+        DBG(error);
+        return;
+    }
+    juce::Array<juce::var>* dataArray = parsedData.getArray();
+    if (dataArray == nullptr)
+    {
+        error = "Parsed JSON is not an array 2.";
+        DBG(error);
+        return;
+    }
+    // Check if the first element in the array is a dict
+    juce::DynamicObject* obj = dataArray->getFirst().getDynamicObject();
     if (obj == nullptr)
     {
-        error = "Parsed JSON is not a dynamic object.";
+        error = "First element in the array is not a dict.";
         DBG(error);
         return;
     }
 
     // Get the card and controls objects from the parsed data
     juce::DynamicObject* cardObj = obj->getProperty("card").getDynamicObject();
+    
     if (cardObj == nullptr)
     {
         error = "Couldn't load the modelCard dict from the controls response.";
         DBG(error);
         return;
     }
-    cardDict = *cardObj;
+
+    // Clear the existing properties in cardDict
+    cardDict.clear();
+
+    // Copy all properties from cardObj to cardDict
+    for (auto& key : cardObj->getProperties())
+    {
+        cardDict.setProperty(key.name, key.value);
+    }
 
     juce::Array<juce::var>* ctrlArray = obj->getProperty("ctrls").getArray();
     if (ctrlArray == nullptr)
