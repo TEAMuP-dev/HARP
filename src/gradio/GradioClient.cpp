@@ -134,25 +134,39 @@ void GradioClient::uploadFileRequest(
                 const juce::File& fileToUpload, 
                 juce::String& uploadedFilePath,
                 juce::String& error
-                )
+                ) const
 {
-    // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("call/upload");
+    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("upload");
 
-    // Prepare the POST request with the file data
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
+    juce::String mimeType = "audio/midi";  // "application/octet-stream"
+
+    /*
+    I'm trying to replicate the following curl command
+
+    curl --location 'http://localhost:7860/upload' \
+        --form 'files=@"/Users/xribene/Projects/HARP/test.mid"'
+
+    We could use std::system (or the JUCE equivalent) to directly
+    call curl, however this assumes that the user's machine has curl installed
+    which might not be true
+    
+    juce::URL has the withFileToUpload method which is supposed to be the --form 
+    equivalent of curl, but I'm getting 500 error. 
+     */
 
     // Use withFileToUpload to handle the multipart/form-data construction
-    auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, "application/octet-stream");
+    auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
     
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       .withConnectionTimeoutMs(10000)
-                       .withResponseHeaders(&responseHeaders)
-                       .withStatusCode(&statusCode)
-                       .withNumRedirectsToFollow(5)
-                       .withHttpRequestCmd("POST");
+                        // .withExtraHeaders("Accept: */*")
+                        .withConnectionTimeoutMs(10000)
+                        .withResponseHeaders(&responseHeaders)
+                        .withStatusCode(&statusCode)
+                        .withNumRedirectsToFollow(5)
+                        .withHttpRequestCmd("POST");
 
     // Create the input stream for the POST request
     std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
@@ -293,7 +307,7 @@ void GradioClient::getControls(
     juce::StringPairArray get_response_headers;
     int getStatusCode = 0;
     auto getOptions = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
-	                   .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
+	                //    .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
 	                   .withConnectionTimeoutMs (10000)
 	                   .withResponseHeaders (&get_response_headers)
 	                   .withStatusCode (&getStatusCode)
@@ -349,7 +363,7 @@ void GradioClient::getControls(
         DBG(error);
         return;
     }
-    
+
     if (!parsedData.isArray())
     {
         error = "Parsed JSON is not an array.";

@@ -62,7 +62,7 @@ public:
         std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
 
         gradioClient.setSpaceInfo(userSpaceAddress);
-        
+
         if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
         {
             // LogAndDBG("Error: " + gradioClient.getSpaceInfo().error);
@@ -190,7 +190,19 @@ public:
 
     CtrlList& controls() { return m_ctrls; }
 
-    void process(juce::File filetoProcess) const {
+    void process(juce::File filetoProcess) const
+    {
+        juce::String error;
+        juce::String uploadedFilePath;
+        gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath, error);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+        }
+    }
+
+    void process2(juce::File filetoProcess) const {
         // clear the cancel flag file
         m_cancel_flag_file.deleteFile();
 
@@ -199,9 +211,9 @@ public:
         if (!m_loaded)
             throw std::runtime_error("Model not loaded");
 
-        // a random string to append to the input/output.mid files
-        // This is necessary because more than 1 playback regions
-        // are processed at the same time.
+        // Not sure if we need this. 
+        // THis is from the ARA era.
+        // Doesn't hurt to have it though.
         std::string randomString = juce::Uuid().toString().toStdString();
 
         // save the buffer to file
