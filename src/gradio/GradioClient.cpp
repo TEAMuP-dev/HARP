@@ -130,23 +130,24 @@ SpaceInfo GradioClient::getSpaceInfo() const
     return spaceInfo;
 }
 
-void GradioClient::getControls(
-                juce::Array<juce::var>& ctrlList, 
-                juce::DynamicObject& cardDict,
+void GradioClient::uploadFileRequest(
+                const juce::File& fileToUpload, 
+                juce::String& uploadedFilePath,
                 juce::String& error
                 )
 {
-    // setSpaceInfo has been called before this method
+    // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL controlsEndpoint = gradioEndpoint.getChildURL("call/wav2wav-ctrls");
+    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("call/upload");
 
-    // Prepare the POST request
-    juce::String jsonBody = R"({"data": []})";
-    juce::URL postEndpoint = controlsEndpoint.withPOSTData(jsonBody);
+    // Prepare the POST request with the file data
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
+
+    // Use withFileToUpload to handle the multipart/form-data construction
+    auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, "application/octet-stream");
+    
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
                        .withConnectionTimeoutMs(10000)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -158,7 +159,7 @@ void GradioClient::getControls(
 
     if (stream == nullptr)
     {
-        error = "Failed to create input stream for POST request.";
+        error = "Failed to create input stream for file upload request.";
         DBG(error);
         return;
     }
@@ -182,10 +183,82 @@ void GradioClient::getControls(
         return;
     }
 
+    juce::Array<juce::var>* responseArray = parsedResponse.getArray();
+    if (responseArray == nullptr || responseArray->isEmpty())
+    {
+        error = "Parsed JSON does not contain the expected file path.";
+        DBG(error);
+        return;
+    }
+
+    // Get the first element in the array, which is the file path
+    uploadedFilePath = responseArray->getFirst().toString();
+    if (uploadedFilePath.isEmpty())
+    {
+        error = "File path not found in the response.";
+        DBG(error);
+        return;
+    }
+
+    DBG("File uploaded successfully, path: " + uploadedFilePath);
+}
+
+void GradioClient::makePostRequestForEventID(
+                    const juce::String endpoint, 
+                    juce::String& eventID,
+                    juce::String& error
+                    )
+{
+    // Ensure that setSpaceInfo has been called before this method
+    juce::URL gradioEndpoint = spaceInfo.gradio;
+    juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
+
+    // Prepare the POST request
+    juce::String jsonBody = R"({"data": []})";
+    juce::URL postEndpoint = requestEndpoint.withPOSTData(jsonBody);
+    juce::StringPairArray responseHeaders;
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                       .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
+                       .withConnectionTimeoutMs(10000)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5)
+                       .withHttpRequestCmd("POST");
+
+    // Create the input stream for the POST request
+    std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
+
+    if (stream == nullptr)
+    {
+        error = "Failed to create input stream for POST request to " + endpoint;
+        DBG(error);
+        return;
+    }
+
+    juce::String response = stream->readEntireStreamAsString();
+
+    // Check the status code to ensure the request was successful
+    if (statusCode != 200)
+    {
+        error = "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
+        DBG(error);
+        return;
+    }
+
+    // Parse the response
+    juce::var parsedResponse = juce::JSON::parse(response);
+    if (!parsedResponse.isObject())
+    {
+        error = "Failed to parse JSON response from " + endpoint;
+        DBG(error);
+        return;
+    }
+
     juce::DynamicObject* obj = parsedResponse.getDynamicObject();
     if (obj == nullptr)
     {
-        error = "Parsed JSON is not an object.";
+        error = "Parsed JSON is not an object from " + endpoint;
         DBG(error);
         return;
     }
@@ -193,14 +266,30 @@ void GradioClient::getControls(
     juce::String eventID = obj->getProperty("event_id");
     if (eventID.isEmpty())
     {
-        error = "event_id not found in the response.";
+        error = "event_id not found in the response from " + endpoint;
         DBG(error);
         return;
     }
+}
 
+void GradioClient::getControls(
+                juce::Array<juce::var>& ctrlList, 
+                juce::DynamicObject& cardDict,
+                juce::String& error
+                )
+{
+    juce::String callID = "controls";
+    juce::String eventID;
+    makePostRequestForEventID(callID, eventID, error);
+    if (!error.isEmpty())
+    {
+        DBG(error);
+        return;
+    }
     // Now we make a GET request to the endpoint with the event ID appended
     // The endpoint for the get request is the same as the post request with /{eventID} appended
-    juce::URL getEndpoint = controlsEndpoint.getChildURL(eventID);
+    juce::URL gradioEndpoint = spaceInfo.gradio;
+    juce::URL getEndpoint = gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
     juce::StringPairArray get_response_headers;
     int getStatusCode = 0;
     auto getOptions = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
