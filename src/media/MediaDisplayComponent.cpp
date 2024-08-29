@@ -42,6 +42,7 @@ void MediaDisplayComponent::resetMedia()
 {
     resetPaths();
     resetDisplay();
+    clearLabels();
     sendChangeMessage();
 
     currentHorizontalZoomFactor = 1.0;
@@ -216,6 +217,25 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> newRange)
     horizontalScrollBar.setCurrentRange(visibleRange);
     updateCursorPosition();
     repaint();
+}
+
+void MediaDisplayComponent::addLabel(LabelOverlayComponent l)
+{
+    // TODO
+
+    labels.add(l);
+}
+
+void MediaDisplayComponent::removeLabel(LabelOverlayComponent* l)
+{
+    // TODO
+}
+
+void MediaDisplayComponent::clearLabels()
+{
+    // TODO
+
+    labels.clear();
 }
 
 void MediaDisplayComponent::setNewTarget(URL filePath)

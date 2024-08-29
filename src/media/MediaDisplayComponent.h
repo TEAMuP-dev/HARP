@@ -3,6 +3,8 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
 
+#include "LabelOverlayComponent.h"
+
 using namespace juce;
 
 
@@ -78,6 +80,10 @@ public:
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
+    void addLabel(LabelOverlayComponent l);
+    void removeLabel(LabelOverlayComponent* l);
+    void clearLabels();
+
 protected:
 
     void setNewTarget(URL filePath);
@@ -120,4 +126,6 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
+
+    Array<LabelOverlayComponent*> labels;
 };
