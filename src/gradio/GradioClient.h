@@ -12,12 +12,18 @@
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 
+
 class GradioClient
 
 {
 public:
     // GradioClient(const juce::String& spaceUrl);
     GradioClient() = default;
+
+    void extractKeyFromResponse(const juce::String& response, 
+                            juce::String& responseKey,
+                            const juce::String& key, 
+                            juce::String& error) const;
 
     void uploadFileRequest(
         const juce::File& fileToUpload, 

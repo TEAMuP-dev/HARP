@@ -229,7 +229,83 @@ public:
             throw std::runtime_error(error.toStdString());
         }
 
+        juce::String responseData;
+        juce::String key = "data: ";
+        gradioClient.extractKeyFromResponse(response, responseData, key, error);
+        if (!error.isEmpty())
+        {
+            DBG(error);
+            return;
+        }
+
+        juce::var parsedData;
+        juce::Result parseResult = juce::JSON::parse(responseData, parsedData);
+        if (!parsedData.isObject())
+        {
+            error = "Failed to parse the data portion of the received controls JSON.";
+            DBG(error);
+            return;
+        }
+        if (!parsedData.isArray())
+        {
+            error = "Parsed data field should be an array.";
+            DBG(error);
+            return;
+        }
+        juce::Array<juce::var>* dataArray = parsedData.getArray();
+        if (dataArray == nullptr)
+        {
+            error = "The data array is empty.";
+            DBG(error);
+            return;
+        }
+
+        // Iterate through the array elements
+        for (int i = 0; i < dataArray->size(); i++)
+        {
+            juce::var procObj = dataArray->getReference(i);
+            if (!procObj.isObject())
+            {
+                error = "The " + juce::String(i) + "th element of the array of processed outputs is not an object.";
+                DBG(error);
+                return;
+            }
+            // Make sure the object has a "meta" key
+            // Gradio output compoenents like File and Audio store metadata in the "meta" key
+            // so we can use that to identify what kind of output it is
+            juce::var meta = procObj.getDynamicObject()->getProperty("meta");
+            // meta should be an object
+            if (!meta.isObject())
+            {
+                error = "The " + juce::String(i) + "th element of the array of processed outputs does not have a meta object.";
+                DBG(error);
+                return;
+            }
+            juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
+
+            // procObjType could be "gradio.FileData" for file/midi
+            // "gradio.AudioData" for audio
+            // and "pyharp.LabelList" for labels
+            if (procObjType == "gradio.FileData")
+            {
+                juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
+                juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
+            }
+            else if (procObjType == "pyharp.LabelList")
+            {
+                // DBG(procObjType);
+                DBG("what");
+            }
+            else {
+                error = "Unknown output type: " + procObjType;
+                DBG(error);
+                return;
+            }
+        }    
     }
+        
+
+    
 
     void process2(juce::File filetoProcess) const {
         // clear the cancel flag file

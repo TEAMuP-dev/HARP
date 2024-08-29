@@ -1,5 +1,24 @@
 #include "GradioClient.h"
 
+void GradioClient::extractKeyFromResponse(const juce::String& response, 
+                            juce::String& responseKey,
+                            const juce::String& key, 
+                            juce::String& error) const
+{
+    // juce::String dataKey = "data: ";
+    int dataIndex = response.indexOf(key);
+
+    if (dataIndex == -1)
+    {
+        error = "Key " + key + " not found in response";
+        DBG(error);
+        return;
+    }
+
+    // Extract the portion after "key: "
+    responseKey = response.substring(dataIndex + key.length()).trim();
+}
+
 void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
     spaceInfo.userInput = spaceAddress;
@@ -351,18 +370,13 @@ void GradioClient::getControls(
     // From the gradio app, we receive a JSON string
     // (see core.py in pyharp --> gr.Text(label="Controls"))
     // Extract the data portion from the response
-    juce::String dataKey = "data: ";
-    int dataIndex = response.indexOf(dataKey);
-
-    if (dataIndex == -1)
+    juce::String responseData;
+    extractKeyFromResponse(response, responseData, "data: ", error);
+    if (!error.isEmpty())
     {
-        error = "Data key not found in the controls response.";
         DBG(error);
         return;
     }
-
-    // Extract the portion after "data: "
-    juce::String dataPortion = response.substring(dataIndex + dataKey.length()).trim();
 
     // // The data is wrapped in quotes and brackets, so remove them
     // if (dataPortion.startsWith("[\"") && dataPortion.endsWith("\"]"))
@@ -378,7 +392,7 @@ void GradioClient::getControls(
 
     // Parse the extracted JSON string
     juce::var parsedData;
-    juce::Result parseResult = juce::JSON::parse(dataPortion, parsedData);
+    juce::Result parseResult = juce::JSON::parse(responseData, parsedData);
 
     if (!parsedData.isObject())
     {
