@@ -204,16 +204,23 @@ public:
         // Using the 
         juce::String eventId;
         juce::String endpoint = "process";
+        // the  jsonBody is created by ctrlsToJson
+        juce::String ctrlJson;
+        ctrlsToJson(ctrlJson, uploadedFilePath.toStdString(), error);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            throw std::runtime_error(error.toStdString());
+        }
+        // TODO: The jsonBody should be created using DynamicObject and var
+        // TODO: make a utility function that wraps this into an object with a "data" key
+        // TODO: or maybe make this a part of ctrlsToJson
         juce::String jsonBody = R"(
             {
-                "data": [
-                            {
-                                "path": ")" + uploadedFilePath + R"("
-                            },
-                            -24
-                        ]
+                "data": )" + ctrlJson + R"(
             }
             )";
+
         gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
         if (!error.isEmpty())
         {
@@ -466,6 +473,66 @@ private:
         }
 
         return result;
+    }
+
+    void ctrlsToJson(
+                juce::String& ctrlJson, 
+                std::string mediaInputPath,
+                juce::String& error) const 
+        {
+        // Create a JSON array to hold each control's value
+        juce::Array<juce::var> jsonCtrlsArray;
+
+        // Iterate through each control in m_ctrls
+        for (const auto& ctrlPair : m_ctrls)
+        {
+            auto ctrl = ctrlPair.second;
+            // Check the type of ctrl and extract its value
+            if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get())){
+                // Slider control, use sliderCtrl->value
+                jsonCtrlsArray.add(juce::var(sliderCtrl->value));
+            } else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
+                // Text box control, use textBoxCtrl->value
+                jsonCtrlsArray.add(juce::var(textBoxCtrl->value));
+            } else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get())) {
+                // Number box control, use numberBoxCtrl->value
+                jsonCtrlsArray.add(juce::var(numberBoxCtrl->value));
+            } else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get())) {
+                // Toggle control, use toggleCtrl->value
+                jsonCtrlsArray.add(juce::var(toggleCtrl->value));
+            } else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get())) {
+                // Combo box control, use comboBoxCtrl->value
+                jsonCtrlsArray.add(juce::var(comboBoxCtrl->value));
+            } else if (auto audioInCtrl = dynamic_cast<AudioInCtrl*>(ctrl.get())) {
+                // Audio in control, use audioInCtrl->value
+                audioInCtrl->value = mediaInputPath;
+                // Due to the way gradio http api works, we need to add the mediaInputPath
+                // into another object first, like this:
+                // {
+                //     "path": "path/to/audio/file"
+                // }
+                // juce::DynamicObject obj;
+                juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+                obj->setProperty("path", juce::var(audioInCtrl->value));
+                // Then we add the object to the array
+                jsonCtrlsArray.add(juce::var(obj));
+
+            } else if (auto midiInCtrl = dynamic_cast<MidiInCtrl*>(ctrl.get())) {
+                midiInCtrl->value = mediaInputPath;
+                // same as audioInCtrl
+                juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+                obj->setProperty("path", juce::var(midiInCtrl->value));
+                jsonCtrlsArray.add(juce::var(obj));
+            } else {
+                // Unsupported control type or missing implementation
+                error = "Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString();
+                LogAndDBG(error);
+                return;
+            }
+        }
+
+        // Convert the array to a JSON string
+        ctrlJson = juce::JSON::toString(jsonCtrlsArray, true);  // true for human-readable
     }
 
     bool saveCtrls(juce::File savePath, std::string audioInputPath) const {
