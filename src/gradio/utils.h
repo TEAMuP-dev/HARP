@@ -2,10 +2,10 @@
 
 #include "juce_core/juce_core.h"
 
-struct Ctrl 
+struct Ctrl
 {
-    juce::Uuid id {""};
-    std::string label {""};
+    juce::Uuid id { "" };
+    std::string label { "" };
     virtual ~Ctrl() = default; // virtual destructor
 };
 
@@ -17,22 +17,22 @@ struct SliderCtrl : public Ctrl
     double value;
 };
 
-struct TextBoxCtrl : public Ctrl 
+struct TextBoxCtrl : public Ctrl
 {
     std::string value;
 };
 
-struct AudioInCtrl : public Ctrl 
+struct AudioInCtrl : public Ctrl
 {
     std::string value;
 };
 
-struct MidiInCtrl : public Ctrl 
+struct MidiInCtrl : public Ctrl
 {
     std::string value;
 };
 
-struct NumberBoxCtrl : public Ctrl 
+struct NumberBoxCtrl : public Ctrl
 {
     double min;
     double max;
@@ -73,12 +73,18 @@ struct SpaceInfo
     {
         switch (status)
         {
-            case GRADIO: return "Gradio";
-            case HUGGINGFACE: return "HuggingFace";
-            case LOCALHOST: return "Localhost";
-            case ERROR: return "Error";
-            case EMPTY: return "Empty";
-            default: return "Unknown";
+            case GRADIO:
+                return "Gradio";
+            case HUGGINGFACE:
+                return "HuggingFace";
+            case LOCALHOST:
+                return "Localhost";
+            case ERROR:
+                return "Error";
+            case EMPTY:
+                return "Empty";
+            default:
+                return "Unknown";
         }
     }
     juce::String toString()
@@ -93,5 +99,4 @@ struct SpaceInfo
         str += "Error: " + error + "\n";
         return str;
     }
-    
 };

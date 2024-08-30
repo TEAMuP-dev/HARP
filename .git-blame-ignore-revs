@@ -1,0 +1,3 @@
+# Commits that should be ignored by git blame
+# Used for commits where the formating was changed
+# either by clang-format or manually
