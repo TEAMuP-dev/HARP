@@ -48,6 +48,8 @@ public:
         return m_logger->getLogFile();
     }
 
+    CtrlList& controls() { return m_ctrls; }
+
     void load(const map<string, any> &params) override
     {
         m_ctrls.clear();
@@ -187,8 +189,6 @@ public:
         // set the status to LOADED
         m_status_flag_file.replaceWithText("Status.LOADED");
     }
-
-    CtrlList& controls() { return m_ctrls; }
 
     void process(juce::File filetoProcess) const
     {
@@ -451,29 +451,8 @@ public:
     {
         return gradioClient;
     }
+
 private:
-    juce::var loadJsonFromFile(const juce::File& file) const {
-        juce::var result;
-
-        LogAndDBG("Loading JSON from file: " + file.getFullPathName());
-        if (!file.existsAsFile())
-        {
-            LogAndDBG("File does not exist: " + file.getFullPathName());
-            return result;
-        }
-
-        juce::String fileContent = file.loadFileAsString();
-
-        juce::Result parseResult = juce::JSON::parse(fileContent, result);
-
-        if (parseResult.failed())
-        {
-            LogAndDBG("Failed to parse JSON: " + parseResult.getErrorMessage());
-            return juce::var();  // Return an empty var
-        }
-
-        return result;
-    }
 
     void ctrlsToJson(
                 juce::String& ctrlJson, 
@@ -535,57 +514,6 @@ private:
         ctrlJson = juce::JSON::toString(jsonCtrlsArray, true);  // true for human-readable
     }
 
-    bool saveCtrls(juce::File savePath, std::string audioInputPath) const {
-        // Create a JSON array to hold each control's value
-        juce::Array<juce::var> jsonCtrlsArray;
-
-        // Iterate through each control in m_ctrls
-        for (const auto& ctrlPair : m_ctrls)
-        {
-            auto ctrl = ctrlPair.second;
-            // Check the type of ctrl and extract its value
-            if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get())){
-                // Slider control, use sliderCtrl->value
-                jsonCtrlsArray.add(juce::var(sliderCtrl->value));
-            } else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
-                // Text box control, use textBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(textBoxCtrl->value));
-            } else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get())) {
-                // Number box control, use numberBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(numberBoxCtrl->value));
-            } else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get())) {
-                // Toggle control, use toggleCtrl->value
-                jsonCtrlsArray.add(juce::var(toggleCtrl->value));
-            } else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get())) {
-                // Combo box control, use comboBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(comboBoxCtrl->value));
-            } else if (auto audioInCtrl = dynamic_cast<AudioInCtrl*>(ctrl.get())) {
-                // Audio in control, use audioInCtrl->value
-                audioInCtrl->value = audioInputPath;
-                jsonCtrlsArray.add(juce::var(audioInCtrl->value));
-            } else if (auto midiInCtrl = dynamic_cast<MidiInCtrl*>(ctrl.get())) {
-                midiInCtrl->value = audioInputPath;
-                jsonCtrlsArray.add(juce::var(midiInCtrl->value));
-            } else {
-                // Unsupported control type or missing implementation
-                LogAndDBG("Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString());
-                return false;
-            }
-        }
-
-        // Convert the array to a JSON string
-        juce::String jsonText = juce::JSON::toString(jsonCtrlsArray, true);  // true for human-readable
-
-        // Write the JSON string to the specified file path
-        if (!savePath.replaceWithText(jsonText))
-        {
-            LogAndDBG("Failed to save controls to file: " + savePath.getFullPathName());
-            return false;
-        }
-
-        return true;
-    }
-
     juce::File m_cancel_flag_file
     {
         juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_CANCEL")
@@ -598,9 +526,9 @@ private:
     CtrlList m_ctrls;
     std::unique_ptr<juce::FileLogger> m_logger {nullptr};
 
-    string m_url;
-    string prefix_cmd;
-    juce::File scriptPath;
+    // string m_url;
+    // string prefix_cmd;
+    // juce::File scriptPath;
     GradioClient gradioClient;
 };
 
