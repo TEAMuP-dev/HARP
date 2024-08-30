@@ -72,9 +72,4 @@ SpacesBeforeTrailingComments: 1
 TabWidth: 4
 UseTab: Never
 ---
-Language: JSON
-BasedOnStyle: Google
-IndentWidth: 4
-UseTab: Never
----
 

@@ -8,17 +8,16 @@
 
 #pragma once
 
-#include <fstream>
 #include "Model.h"
 #include "gradio/GradioClient.h"
 #include "juce_core/juce_core.h"
+#include <fstream>
 
 class WebModel : public Model
 {
 public:
-
     WebModel() // TODO: should be a singleton
-    { 
+    {
         // create our logger
         m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
         m_status_flag_file.replaceWithText("Status.INITIALIZED");
@@ -36,12 +35,9 @@ public:
         DBG(message);
         if (m_logger)
             m_logger->logMessage(message);
-
     }
 
     bool ready() const override { return m_loaded; }
-
-    std::string space_url() const { return m_url; }
 
     juce::File getLogFile() const
     {
@@ -50,13 +46,13 @@ public:
 
     CtrlList& controls() { return m_ctrls; }
 
-    void load(const map<string, any> &params) override
+    void load(const map<string, any>& params) override
     {
         m_ctrls.clear();
         m_loaded = false;
 
         // get the name of the huggingface repo we're going to use
-        if (!modelparams::contains(params, "url"))
+        if (! modelparams::contains(params, "url"))
         {
             throw std::runtime_error("url not found in params");
         }
@@ -78,8 +74,8 @@ public:
         juce::DynamicObject cardDict;
         juce::String error;
         gradioClient.getControls(ctrlList, cardDict, error);
-        
-        if (!error.isEmpty())
+
+        if (! error.isEmpty())
         {
             LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
@@ -94,11 +90,12 @@ public:
         m_card.midi_out = (bool) cardDict.getProperty("midi_out");
 
         // tags is a list of str
-        juce::Array<juce::var> *tags = cardDict.getProperty("tags").getArray();
-        if (tags == nullptr) {
+        juce::Array<juce::var>* tags = cardDict.getProperty("tags").getArray();
+        if (tags == nullptr)
+        {
             throw std::runtime_error("Failed to load tags from JSON. tags is null.");
         }
-        
+
         for (int i = 0; i < tags->size(); i++)
         {
             m_card.tags.push_back(tags->getReference(i).toString().toStdString());
@@ -110,10 +107,11 @@ public:
 
         // iterate through the list of controls
         // and add them to the m_ctrls vector
-        for (int i = 0; i < ctrlList.size(); i++) 
+        for (int i = 0; i < ctrlList.size(); i++)
         {
             juce::var ctrl = ctrlList.getReference(i);
-            if (!ctrl.isObject()) {
+            if (! ctrl.isObject())
+            {
                 throw std::runtime_error("Failed to load controls from JSON. ctrl is not an object.");
             }
 
@@ -123,21 +121,21 @@ public:
                 juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
 
                 // For the first two, we are abusing the term control.
-                // They are actually the main inputs to the model (audio or midi) 
+                // They are actually the main inputs to the model (audio or midi)
                 if (ctrl_type == "audio_in")
                 {
                     auto audio_in = std::make_shared<AudioInCtrl>();
                     audio_in->label = ctrl["label"].toString().toStdString();
 
-                    m_ctrls.push_back({audio_in->id, audio_in});
+                    m_ctrls.push_back({ audio_in->id, audio_in });
                     LogAndDBG("Audio In: " + audio_in->label + " added");
                 }
-                else if (ctrl_type == "midi_in") 
+                else if (ctrl_type == "midi_in")
                 {
                     auto midi_in = std::make_shared<MidiInCtrl>();
                     midi_in->label = ctrl["label"].toString().toStdString();
 
-                    m_ctrls.push_back({midi_in->id, midi_in});
+                    m_ctrls.push_back({ midi_in->id, midi_in });
                     LogAndDBG("MIDI In: " + midi_in->label + " added");
                 }
                 // The rest are the actual controls that map to hyperparameters
@@ -152,7 +150,7 @@ public:
                     slider->step = ctrl["step"].toString().getFloatValue();
                     slider->value = ctrl["value"].toString().getFloatValue();
 
-                    m_ctrls.push_back({slider->id, slider});
+                    m_ctrls.push_back({ slider->id, slider });
                     LogAndDBG("Slider: " + slider->label + " added");
                 }
                 else if (ctrl_type == "text")
@@ -162,7 +160,7 @@ public:
                     text->label = ctrl["label"].toString().toStdString();
                     text->value = ctrl["value"].toString().toStdString();
 
-                    m_ctrls.push_back({text->id, text});
+                    m_ctrls.push_back({ text->id, text });
                     LogAndDBG("Text: " + text->label + " added");
                 }
                 else if (ctrl_type == "number_box")
@@ -173,13 +171,13 @@ public:
                     number_box->max = ctrl["max"].toString().getFloatValue();
                     number_box->value = ctrl["value"].toString().getFloatValue();
 
-                    m_ctrls.push_back({number_box->id, number_box});
+                    m_ctrls.push_back({ number_box->id, number_box });
                     LogAndDBG("Number Box: " + number_box->label + " added");
                 }
-                else 
+                else
                     LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
             }
-            catch (const char* e) 
+            catch (const char* e)
             {
                 throw std::runtime_error("Failed to load controls from JSON. " + std::string(e));
             }
@@ -195,19 +193,19 @@ public:
         juce::String error;
         juce::String uploadedFilePath;
         gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath, error);
-        if (!error.isEmpty())
+        if (! error.isEmpty())
         {
             LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
         }
 
-        // Using the 
+        // Using the
         juce::String eventId;
         juce::String endpoint = "process";
         // the  jsonBody is created by ctrlsToJson
         juce::String ctrlJson;
         ctrlsToJson(ctrlJson, uploadedFilePath.toStdString(), error);
-        if (!error.isEmpty())
+        if (! error.isEmpty())
         {
             LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
@@ -217,12 +215,13 @@ public:
         // TODO: or maybe make this a part of ctrlsToJson
         juce::String jsonBody = R"(
             {
-                "data": )" + ctrlJson + R"(
+                "data": )" + ctrlJson
+                                + R"(
             }
             )";
 
         gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
-        if (!error.isEmpty())
+        if (! error.isEmpty())
         {
             LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
@@ -230,7 +229,7 @@ public:
 
         juce::String response;
         gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
-        if (!error.isEmpty())
+        if (! error.isEmpty())
         {
             LogAndDBG(error);
             throw std::runtime_error(error.toStdString());
@@ -239,7 +238,7 @@ public:
         juce::String responseData;
         juce::String key = "data: ";
         gradioClient.extractKeyFromResponse(response, responseData, key, error);
-        if (!error.isEmpty())
+        if (! error.isEmpty())
         {
             DBG(error);
             return;
@@ -247,13 +246,13 @@ public:
 
         juce::var parsedData;
         juce::Result parseResult = juce::JSON::parse(responseData, parsedData);
-        if (!parsedData.isObject())
+        if (! parsedData.isObject())
         {
             error = "Failed to parse the data portion of the received controls JSON.";
             DBG(error);
             return;
         }
-        if (!parsedData.isArray())
+        if (! parsedData.isArray())
         {
             error = "Parsed data field should be an array.";
             DBG(error);
@@ -271,7 +270,7 @@ public:
         for (int i = 0; i < dataArray->size(); i++)
         {
             juce::var procObj = dataArray->getReference(i);
-            if (!procObj.isObject())
+            if (! procObj.isObject())
             {
                 error = "The " + juce::String(i) + "th element of the array of processed outputs is not an object.";
                 DBG(error);
@@ -282,7 +281,7 @@ public:
             // so we can use that to identify what kind of output it is
             juce::var meta = procObj.getDynamicObject()->getProperty("meta");
             // meta should be an object
-            if (!meta.isObject())
+            if (! meta.isObject())
             {
                 error = "The " + juce::String(i) + "th element of the array of processed outputs does not have a meta object.";
                 DBG(error);
@@ -303,27 +302,26 @@ public:
                 // DBG(procObjType);
                 DBG("what");
             }
-            else {
+            else
+            {
                 error = "Unknown output type: " + procObjType;
                 DBG(error);
                 return;
             }
-        }    
+        }
     }
-        
 
-    
-
-    void process2(juce::File filetoProcess) const {
+    void process2(juce::File filetoProcess) const
+    {
         // clear the cancel flag file
         m_cancel_flag_file.deleteFile();
 
         // make sure we're loaded
         LogAndDBG("WebModel::process");
-        if (!m_loaded)
+        if (! m_loaded)
             throw std::runtime_error("Model not loaded");
 
-        // Not sure if we need this. 
+        // Not sure if we need this.
         // THis is from the ARA era.
         // Doesn't hurt to have it though.
         std::string randomString = juce::Uuid().toString().toStdString();
@@ -350,23 +348,9 @@ public:
         tempCtrlsFile.deleteFile();
 
         LogAndDBG("saving controls...");
-        if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString()))
-            throw std::runtime_error("Failed to save controls to file.");
+        // if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString()))
+        //     throw std::runtime_error("Failed to save controls to file.");
 
-
-        std::string command = (
-            prefix_cmd
-            + scriptPath.getFullPathName().toStdString()
-            + " --mode process"
-            + " --url " + m_url
-            + " --output_path " + tempOutputFile.getFullPathName().toStdString()
-            + " --ctrls_path " + tempCtrlsFile.getFullPathName().toStdString()
-            + " --cancel_flag_path " + m_cancel_flag_file.getFullPathName().toStdString()
-            + " --status_flag_path " + m_status_flag_file.getFullPathName().toStdString()
-            // + " >> " + tempLogFile.getFullPathName().toStdString()   // redirect stdout to the temp log file
-            // + " 2>&1"   // redirect stderr to the same file as stdout
-        );
-        LogAndDBG("Running command: " + command);
         std::pair<juce::String, int> cmd_result = std::pair<juce::String, int>("", 0);
 
         juce::String logContent = cmd_result.first;
@@ -425,7 +409,7 @@ public:
     std::string getStatus()
     {
         // if the status file doesn't exist, return Status.INACTIVE
-        if (!m_status_flag_file.exists())
+        if (! m_status_flag_file.exists())
             return "Status.INACTIVE";
 
         // read the status file and return its text
@@ -440,25 +424,21 @@ public:
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
-        return std::find_if(m_ctrls.begin(), m_ctrls.end(),
-            [&uuid](const CtrlList::value_type& pair) {
-                return pair.first == uuid;
-            }
-        );
+        return std::find_if(m_ctrls.begin(), m_ctrls.end(), [&uuid](const CtrlList::value_type& pair)
+                            { return pair.first == uuid; });
     }
 
-    GradioClient& getGradioClient() 
+    GradioClient& getGradioClient()
     {
         return gradioClient;
     }
 
 private:
-
     void ctrlsToJson(
-                juce::String& ctrlJson, 
-                std::string mediaInputPath,
-                juce::String& error) const 
-        {
+        juce::String& ctrlJson,
+        std::string mediaInputPath,
+        juce::String& error) const
+    {
         // Create a JSON array to hold each control's value
         juce::Array<juce::var> jsonCtrlsArray;
 
@@ -467,22 +447,33 @@ private:
         {
             auto ctrl = ctrlPair.second;
             // Check the type of ctrl and extract its value
-            if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get())){
+            if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrl.get()))
+            {
                 // Slider control, use sliderCtrl->value
                 jsonCtrlsArray.add(juce::var(sliderCtrl->value));
-            } else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get())) {
+            }
+            else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrl.get()))
+            {
                 // Text box control, use textBoxCtrl->value
                 jsonCtrlsArray.add(juce::var(textBoxCtrl->value));
-            } else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get())) {
+            }
+            else if (auto numberBoxCtrl = dynamic_cast<NumberBoxCtrl*>(ctrl.get()))
+            {
                 // Number box control, use numberBoxCtrl->value
                 jsonCtrlsArray.add(juce::var(numberBoxCtrl->value));
-            } else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get())) {
+            }
+            else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrl.get()))
+            {
                 // Toggle control, use toggleCtrl->value
                 jsonCtrlsArray.add(juce::var(toggleCtrl->value));
-            } else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get())) {
+            }
+            else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrl.get()))
+            {
                 // Combo box control, use comboBoxCtrl->value
                 jsonCtrlsArray.add(juce::var(comboBoxCtrl->value));
-            } else if (auto audioInCtrl = dynamic_cast<AudioInCtrl*>(ctrl.get())) {
+            }
+            else if (auto audioInCtrl = dynamic_cast<AudioInCtrl*>(ctrl.get()))
+            {
                 // Audio in control, use audioInCtrl->value
                 audioInCtrl->value = mediaInputPath;
                 // Due to the way gradio http api works, we need to add the mediaInputPath
@@ -495,14 +486,17 @@ private:
                 obj->setProperty("path", juce::var(audioInCtrl->value));
                 // Then we add the object to the array
                 jsonCtrlsArray.add(juce::var(obj));
-
-            } else if (auto midiInCtrl = dynamic_cast<MidiInCtrl*>(ctrl.get())) {
+            }
+            else if (auto midiInCtrl = dynamic_cast<MidiInCtrl*>(ctrl.get()))
+            {
                 midiInCtrl->value = mediaInputPath;
                 // same as audioInCtrl
                 juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                 obj->setProperty("path", juce::var(midiInCtrl->value));
                 jsonCtrlsArray.add(juce::var(obj));
-            } else {
+            }
+            else
+            {
                 // Unsupported control type or missing implementation
                 error = "Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString();
                 LogAndDBG(error);
@@ -511,27 +505,24 @@ private:
         }
 
         // Convert the array to a JSON string
-        ctrlJson = juce::JSON::toString(jsonCtrlsArray, true);  // true for human-readable
+        ctrlJson = juce::JSON::toString(jsonCtrlsArray, true); // true for human-readable
     }
 
-    juce::File m_cancel_flag_file
-    {
+    juce::File m_cancel_flag_file {
         juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_CANCEL")
     };
-    juce::File m_status_flag_file
-    {
+    juce::File m_status_flag_file {
         juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_STATUS")
     };
 
     CtrlList m_ctrls;
-    std::unique_ptr<juce::FileLogger> m_logger {nullptr};
+    std::unique_ptr<juce::FileLogger> m_logger { nullptr };
 
     // string m_url;
     // string prefix_cmd;
     // juce::File scriptPath;
     GradioClient gradioClient;
 };
-
 
 // a timer that checks the status of the model and broadcasts a change if if there is one
 class ModelStatusTimer : public juce::Timer,
