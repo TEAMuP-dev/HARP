@@ -295,11 +295,14 @@ public:
             if (procObjType == "gradio.FileData")
             {
                 juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
-                juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
+                // Make a juce::File from the path
+                juce::File processedFile(path);
+                // Replace the input file with the processed file
+                processedFile.moveFileTo(filetoProcess);
             }
             else if (procObjType == "pyharp.LabelList")
             {
-                // DBG(procObjType);
+                
                 DBG("what");
             }
             else
@@ -309,93 +312,6 @@ public:
                 return;
             }
         }
-    }
-
-    void process2(juce::File filetoProcess) const
-    {
-        // clear the cancel flag file
-        m_cancel_flag_file.deleteFile();
-
-        // make sure we're loaded
-        LogAndDBG("WebModel::process");
-        if (! m_loaded)
-            throw std::runtime_error("Model not loaded");
-
-        // Not sure if we need this.
-        // THis is from the ARA era.
-        // Doesn't hurt to have it though.
-        std::string randomString = juce::Uuid().toString().toStdString();
-
-        // save the buffer to file
-        LogAndDBG("Saving buffer to file");
-        juce::File tempFile =
-            juce::File::getSpecialLocation(juce::File::tempDirectory)
-                .getChildFile("input_" + randomString + ".mid");
-        tempFile.deleteFile();
-        // copy the file to a temp file
-        filetoProcess.copyFileTo(tempFile);
-
-        // a tarrget output file
-        juce::File tempOutputFile =
-            juce::File::getSpecialLocation(juce::File::tempDirectory)
-                .getChildFile("output_" + randomString + ".mid");
-        tempOutputFile.deleteFile();
-
-        // a ctrls file
-        juce::File tempCtrlsFile =
-            juce::File::getSpecialLocation(juce::File::tempDirectory)
-                .getChildFile("ctrls_" + randomString + ".json");
-        tempCtrlsFile.deleteFile();
-
-        LogAndDBG("saving controls...");
-        // if (!saveCtrls(tempCtrlsFile, tempFile.getFullPathName().toStdString()))
-        //     throw std::runtime_error("Failed to save controls to file.");
-
-        std::pair<juce::String, int> cmd_result = std::pair<juce::String, int>("", 0);
-
-        juce::String logContent = cmd_result.first;
-        juce::uint32 result = cmd_result.second;
-        LogAndDBG(logContent);
-
-        if (result != 0)
-        {
-            // read the text from the temp log file.
-            std::string message;
-            // check for a generic Error: in the log content
-            if (logContent.contains("Error:"))
-            {
-                // get the error message
-                juce::StringArray lines;
-                lines.addLines(logContent);
-                for (auto line : lines)
-                {
-                    if (line.contains("Error:"))
-                    {
-                        message = line.toStdString();
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                message = "An error occurred while calling the gradiojuce helper with mode \'process\'. ";
-            }
-
-            message += "\n Check the logs " + m_logger->getLogFile().getFullPathName().toStdString() + " for more details.";
-        }
-
-        // move the temp output file to the original input file
-        tempOutputFile.moveFileTo(filetoProcess);
-
-        // delete the temp input file
-        tempFile.deleteFile();
-        tempOutputFile.deleteFile();
-        tempCtrlsFile.deleteFile();
-        LogAndDBG("WebModel::process done");
-
-        // clear the cancel flag file
-        m_cancel_flag_file.deleteFile();
-        return;
     }
 
     // sets a cancel flag file that the client can check to see if the process
