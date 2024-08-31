@@ -1157,13 +1157,13 @@ public:
         // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
         auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
         auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
-        int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+        float textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
 
         if (textHeight < 80)
         {
             textHeight = 80;
         }
-        auto row3 = mainArea.removeFromTop(textHeight).reduced(margin);
+        auto row3 = mainArea.removeFromTop((int)textHeight).reduced(margin);
         descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
@@ -1458,6 +1458,9 @@ private:
             // refresh the display for the new updated file
             URL tempFilePath = mediaDisplay->getTempFilePath();
             mediaDisplay->updateDisplay(tempFilePath);
+
+            // TODO: update Label display
+            // mediaDisplay->updateLabels(model->getLabels());
 
             // now, we can enable the process button
             resetProcessingButtons();

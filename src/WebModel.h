@@ -14,7 +14,8 @@
 #include <fstream>
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
-using LabelList = std::vector<OutputLabel>;
+using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
+
 class WebModel : public Model
 {
 public:
@@ -187,7 +188,7 @@ public:
         status = "Status.LOADED";
     }
 
-    void process(juce::File filetoProcess) const
+    void process(juce::File filetoProcess)
     {
         juce::String error;
         juce::String uploadedFilePath;
@@ -288,8 +289,7 @@ public:
             }
             juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
 
-            // procObjType could be "gradio.FileData" for file/midi
-            // "gradio.AudioData" for audio
+            // procObjType could be "gradio.FileData" for file/midi/audio
             // and "pyharp.LabelList" for labels
             if (procObjType == "gradio.FileData")
             {
@@ -298,12 +298,14 @@ public:
                 juce::File processedFile(path);
                 // Replace the input file with the processed file
                 processedFile.moveFileTo(filetoProcess);
+                
             }
             else if (procObjType == "pyharp.LabelList")
             {
                 // LabelList labels;
                 juce::Array<juce::var>* labelsPyharp = procObj.getDynamicObject()->getProperty("labels").getArray();
-                std::vector<std::unique_ptr<OutputLabel>> labels;
+                // LabelList labels;
+                labels.clear();
                 for (int j = 0; j < labelsPyharp->size(); j++)
                 {
                     juce::DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
@@ -424,6 +426,11 @@ public:
         return gradioClient;
     }
 
+    LabelList& getLabels()
+    {
+        return labels;
+    }
+
 private:
     void ctrlsToJson(
         juce::String& ctrlJson,
@@ -503,6 +510,8 @@ private:
     std::unique_ptr<juce::FileLogger> m_logger { nullptr };
     GradioClient gradioClient;
     juce::String status;
+    // A variable to store the latest labelList received during processing
+    LabelList labels;
 };
 
 // a timer that checks the status of the model and broadcasts a change if if there is one
