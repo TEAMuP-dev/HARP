@@ -309,7 +309,7 @@ public:
                 std::vector<std::unique_ptr<OutputLabel>> labels;
                 for (int j = 0; j < labelsPyharp->size(); j++)
                 {
-                    juce::DynamicObject* labelPyharp = labelsPyharp->getReference(i).getDynamicObject();
+                    juce::DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
                     juce::String labelType = labelPyharp->getProperty("label_type").toString();
                     std::unique_ptr<OutputLabel> label;
 
@@ -320,7 +320,7 @@ public:
                         {
                             if (labelPyharp->getProperty("amplitude").isDouble())
                             {
-                                audioLabel->amplitude = static_cast<double>(labelPyharp->getProperty("amplitude"));
+                                audioLabel->amplitude = static_cast<float>(labelPyharp->getProperty("amplitude"));
                             }
                         }
                         label = std::move(audioLabel);
@@ -331,7 +331,7 @@ public:
                         {
                             if (labelPyharp->getProperty("frequency").isDouble())
                             {
-                                spectrogramLabel->frequency = static_cast<double>(labelPyharp->getProperty("frequency"));
+                                spectrogramLabel->frequency = static_cast<float>(labelPyharp->getProperty("frequency"));
                             }
                         }
                         label = std::move(spectrogramLabel);
@@ -342,7 +342,7 @@ public:
                         {
                             if (labelPyharp->getProperty("pitch").isDouble())
                             {
-                                midiLabel->pitch = static_cast<double>(labelPyharp->getProperty("pitch"));
+                                midiLabel->pitch = static_cast<float>(labelPyharp->getProperty("pitch"));
                             }
                         }
                         label = std::move(midiLabel);
@@ -365,7 +365,7 @@ public:
                         // now check if it's a float
                         if (labelPyharp->getProperty("t").isDouble())
                         {
-                            label->t = static_cast<double>(labelPyharp->getProperty("t"));
+                            label->t = static_cast<float>(labelPyharp->getProperty("t"));
                         }
                     }
                     if (labelPyharp->hasProperty("label"))
@@ -381,7 +381,7 @@ public:
                         // now check if it's a float
                         if (labelPyharp->getProperty("duration").isDouble())
                         {
-                            label->duration = static_cast<double>(labelPyharp->getProperty("duration"));
+                            label->duration = static_cast<float>(labelPyharp->getProperty("duration"));
                         }
                     }
                     if (labelPyharp->hasProperty("description"))
@@ -393,7 +393,6 @@ public:
                         }
                     }
                     labels.push_back(std::move(label));
-                    
                 }
             }
             else
