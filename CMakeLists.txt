@@ -70,6 +70,7 @@ target_sources(${PROJECT_NAME}
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
+        src/media/LabelOverlayComponent.cpp
 
         src/pianoroll/KeyboardComponent.cpp
         src/pianoroll/NoteGridComponent.cpp

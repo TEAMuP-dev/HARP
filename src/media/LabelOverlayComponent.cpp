@@ -5,21 +5,23 @@ LabelOverlayComponent::LabelOverlayComponent(String lab, String desc, float y, d
 {
     label = lab;
     description = desc;
-    offsetY = y;
+    relativeY = y;
     startTime = t;
     duration = dur;
 }
 
-LabelOverlayComponent::LabelOverlayComponent(const MidiNoteComponent& other)
+LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 {
     label = other.label;
     description = other.description;
-    offsetY = other.offsetY;
+    relativeY = other.relativeY;
     startTime = other.startTime;
     duration = other.duration;
+
+    setText(label, dontSendNotification);
 }
 
 void LabelOverlayComponent::paint(Graphics& g)
 {
-    // TODO
+    g.fillAll(Colours::purple);
 }

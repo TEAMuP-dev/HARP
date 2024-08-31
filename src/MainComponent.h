@@ -24,6 +24,7 @@
 #include "media/MediaDisplayComponent.h"
 #include "media/AudioDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
+#include "media/LabelOverlayComponent.h"
 
 using namespace juce;
 
@@ -1014,6 +1015,11 @@ public:
         }
 
         mediaDisplay->setupDisplay(URL(mediaFile));
+
+        LabelOverlayComponent l1 = LabelOverlayComponent("short", "long", 0.5, 1, 1.5);
+        LabelOverlayComponent l2 = LabelOverlayComponent("test", "", 0.75, 2, 3);
+        mediaDisplay->addLabel(l1);
+        mediaDisplay->addLabel(l2);
 
         lastLoadTime = Time::getCurrentTime();
 

@@ -5,7 +5,7 @@
 using namespace juce;
 
 
-class LabelOverlayComponent : public Component
+class LabelOverlayComponent : public Label
 {
 public:
 
@@ -17,16 +17,16 @@ public:
     String getLabel() { return label; }
     String getDescription() { return description; }
 
-    float getOffsetY() { return offsetY; }
+    float getRelativeY() { return relativeY; }
     double getStartTime() { return startTime; }
-    double getNoteLength() { return duration; }
+    double getDuration() { return duration; }
 
 private:
 
     String label;
     String description;
 
-    float offsetY;
+    float relativeY;
     double startTime;
     double duration;
 };
