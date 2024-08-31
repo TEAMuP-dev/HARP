@@ -11,8 +11,6 @@
 #include "juce_core/juce_core.h"
 #include "utils.h"
 
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
-
 class GradioClient
 
 {

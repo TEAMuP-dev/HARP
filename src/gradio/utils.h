@@ -103,24 +103,24 @@ struct SpaceInfo
 
 struct OutputLabel
 {
-    std::string label { "" };
-    std::string description { "" };
-    float t { 0.0 };
-    float duration { 0.0 };
+    juce::String label;
+    juce::String description;
+    float t;
+    float duration;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 
 struct AudioLabel : public OutputLabel
 {
-    float amplitude { 0.0 };
+    float amplitude;
 };
 
 struct SpectrogramLabel : public OutputLabel
 {
-    float frequency { 0.0 };
+    float frequency;
 };
 
 struct MidiLabel : public OutputLabel
 {
-    float pitch { 0.0 };
+    float pitch;
 };

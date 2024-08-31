@@ -13,6 +13,8 @@
 #include "juce_core/juce_core.h"
 #include <fstream>
 
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using LabelList = std::vector<OutputLabel>;
 class WebModel : public Model
 {
 public:
@@ -302,8 +304,97 @@ public:
             }
             else if (procObjType == "pyharp.LabelList")
             {
-                
-                DBG("what");
+                // LabelList labels;
+                juce::Array<juce::var>* labelsPyharp = procObj.getDynamicObject()->getProperty("labels").getArray();
+                std::vector<std::unique_ptr<OutputLabel>> labels;
+                for (int j = 0; j < labelsPyharp->size(); j++)
+                {
+                    juce::DynamicObject* labelPyharp = labelsPyharp->getReference(i).getDynamicObject();
+                    juce::String labelType = labelPyharp->getProperty("label_type").toString();
+                    std::unique_ptr<OutputLabel> label;
+
+                    if (labelType == "AudioLabel")
+                    {
+                        auto audioLabel = std::make_unique<AudioLabel>();
+                        if (labelPyharp->hasProperty("amplitude"))
+                        {
+                            if (labelPyharp->getProperty("amplitude").isDouble())
+                            {
+                                audioLabel->amplitude = static_cast<double>(labelPyharp->getProperty("amplitude"));
+                            }
+                        }
+                        label = std::move(audioLabel);
+                    } else if (labelType == "SpectrogramLabel")
+                    {
+                        auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
+                        if (labelPyharp->hasProperty("frequency"))
+                        {
+                            if (labelPyharp->getProperty("frequency").isDouble())
+                            {
+                                spectrogramLabel->frequency = static_cast<double>(labelPyharp->getProperty("frequency"));
+                            }
+                        }
+                        label = std::move(spectrogramLabel);
+                    } else if (labelType == "MidiLabel")
+                    {
+                        auto midiLabel = std::make_unique<MidiLabel>();
+                        if (labelPyharp->hasProperty("pitch"))
+                        {
+                            if (labelPyharp->getProperty("pitch").isDouble())
+                            {
+                                midiLabel->pitch = static_cast<double>(labelPyharp->getProperty("pitch"));
+                            }
+                        }
+                        label = std::move(midiLabel);
+                    } else
+                    {
+                        error = "Unknown label type: " + labelType;
+                        DBG(error);
+                        return;
+                    }
+                    // All the labels, no matter theyr type, have some common properties
+                    // t: float
+                    // label: str
+                    // duration: float = 0.0
+                    // description: str = None
+                    // first we'll check which of those exist and are not void or null
+                    // for those that exist, we fill the struct properties
+                    // the rest will be ignored
+                    if (labelPyharp->hasProperty("t"))
+                    {
+                        // now check if it's a float
+                        if (labelPyharp->getProperty("t").isDouble())
+                        {
+                            label->t = static_cast<double>(labelPyharp->getProperty("t"));
+                        }
+                    }
+                    if (labelPyharp->hasProperty("label"))
+                    {
+                        // now check if it's a string
+                        if (labelPyharp->getProperty("label").isString())
+                        {
+                            label->label = labelPyharp->getProperty("label").toString();
+                        }
+                    }
+                    if (labelPyharp->hasProperty("duration"))
+                    {
+                        // now check if it's a float
+                        if (labelPyharp->getProperty("duration").isDouble())
+                        {
+                            label->duration = static_cast<double>(labelPyharp->getProperty("duration"));
+                        }
+                    }
+                    if (labelPyharp->hasProperty("description"))
+                    {
+                        // now check if it's a string
+                        if (labelPyharp->getProperty("description").isString())
+                        {
+                            label->description = labelPyharp->getProperty("description").toString();
+                        }
+                    }
+                    labels.push_back(std::move(label));
+                    
+                }
             }
             else
             {
