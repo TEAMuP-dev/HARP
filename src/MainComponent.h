@@ -128,7 +128,7 @@ public:
         return menu;
     }
 
-    PopupMenu getMenuForIndex(int menuIndex, const String& menuName) override
+    PopupMenu getMenuForIndex([[maybe_unused]] int menuIndex, const String& menuName) override
     {
         PopupMenu menu;
 
@@ -574,7 +574,7 @@ public:
                         // URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
                         // URL spaceUrl = model->gradioClient->getSpaceUrl()
                         URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
-                        bool success = spaceUrl.launchInDefaultBrowser();
+                        spaceUrl.launchInDefaultBrowser();
                     }
                     MessageManager::callAsync([this] {
                         resetModelPathComboBox();
@@ -624,9 +624,9 @@ public:
         modelPathComboBox.clear();
 
         modelPathComboBox.setTextWhenNothingSelected("choose a model");
-        for (int i = 0; i < options.size(); ++i)
+        for (auto i = 0u; i < options.size(); ++i)
         {
-            modelPathComboBox.addItem(options[i], i + 1);
+            modelPathComboBox.addItem(options[i], static_cast<int>(i) + 1);
         }
     }
 
@@ -779,7 +779,7 @@ public:
 
         loadBroadcaster.addChangeListener(this);
 
-        std::string currentStatus = model->getStatus();
+        juce::String currentStatus = model->getStatus();
         if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED")
         {
             processCancelButton.setEnabled(true);
@@ -822,9 +822,9 @@ public:
         };
 
         modelPathComboBox.setTextWhenNothingSelected("choose a model");
-        for (int i = 0; i < modelPaths.size(); ++i)
+        for (auto i = 0u; i < modelPaths.size(); ++i)
         {
-            modelPathComboBox.addItem(modelPaths[i], i + 1);
+            modelPathComboBox.addItem(modelPaths[i], static_cast<int>(i) + 1);
         }
         modelPathComboBoxHandler.onMouseEnter = [this]()
         {
@@ -1127,10 +1127,10 @@ public:
         auto margin = 5; // Adjusted margin value for top and bottom spacing
         auto docViewHeight = 1;
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
-        auto documentViewArea = area; // what remains is the 15% area for documentView
+        // auto documentViewArea = area; // what remains is the 15% area for documentView
         // Row 1: Model Path TextBox and Load Model Button
         auto row1 = mainArea.removeFromTop(30); // adjust height as needed
-        modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
+        modelPathComboBox.setBounds(row1.removeFromLeft(static_cast<int>(row1.getWidth() * 0.8f)).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
         // Row 2: Name and Author Labels

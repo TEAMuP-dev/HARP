@@ -22,14 +22,11 @@ public:
     {
         // create our logger
         m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
-        m_status_flag_file.replaceWithText("Status.INITIALIZED");
+        status = "Status.INITIALIZED";
     }
 
     ~WebModel()
     {
-        // clean up flag files
-        m_cancel_flag_file.deleteFile();
-        m_status_flag_file.deleteFile();
     }
 
     void LogAndDBG(const juce::String& message) const
@@ -187,7 +184,7 @@ public:
         // outputPath.deleteFile();
         m_loaded = true;
         // set the status to LOADED
-        m_status_flag_file.replaceWithText("Status.LOADED");
+        status = "Status.LOADED";
     }
 
     void process(juce::File filetoProcess) const
@@ -411,20 +408,9 @@ public:
         // TODO
     }
 
-    std::string getStatus()
+    juce::String getStatus()
     {
-        // if the status file doesn't exist, return Status.INACTIVE
-        if (! m_status_flag_file.exists())
-            return "Status.INACTIVE";
-
-        // read the status file and return its text
-        juce::String status = m_status_flag_file.loadFileAsString();
-        return status.toStdString();
-    }
-
-    juce::File getCancelFlagFile() const
-    {
-        return m_cancel_flag_file;
+        return status;
     }
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
@@ -513,20 +499,10 @@ private:
         ctrlJson = juce::JSON::toString(jsonCtrlsArray, true); // true for human-readable
     }
 
-    juce::File m_cancel_flag_file {
-        juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_CANCEL")
-    };
-    juce::File m_status_flag_file {
-        juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("WebModel_STATUS")
-    };
-
     CtrlList m_ctrls;
     std::unique_ptr<juce::FileLogger> m_logger { nullptr };
-
-    // string m_url;
-    // string prefix_cmd;
-    // juce::File scriptPath;
     GradioClient gradioClient;
+    juce::String status;
 };
 
 // a timer that checks the status of the model and broadcasts a change if if there is one
@@ -541,7 +517,7 @@ public:
     void timerCallback() override
     {
         // get the status of the model
-        std::string status = m_model->getStatus();
+        juce::String status = m_model->getStatus();
 
         // if the status has changed, broadcast a change
         if (status != m_last_status)
@@ -553,5 +529,5 @@ public:
 
 private:
     std::shared_ptr<WebModel> m_model;
-    std::string m_last_status;
+    juce::String m_last_status;
 };
