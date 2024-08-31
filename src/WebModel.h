@@ -408,8 +408,7 @@ public:
     // should be cancelled
     void cancel()
     {
-        m_cancel_flag_file.deleteFile();
-        m_cancel_flag_file.create();
+        // TODO
     }
 
     std::string getStatus()

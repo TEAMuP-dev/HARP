@@ -103,24 +103,29 @@ struct SpaceInfo
 
 struct OutputLabel
 {
-    juce::String label;
-    juce::String description;
+    // required on pyharp side
     float t;
-    float duration;
+    juce::String label { "" };
+    // optional on pyharp side
+    juce::String description { "" };
+    std::optional<float> duration;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 
 struct AudioLabel : public OutputLabel
 {
-    float amplitude;
+    // Optional on pyharp side
+    std::optional<float> amplitude;
 };
 
 struct SpectrogramLabel : public OutputLabel
 {
-    float frequency;
+    // Optional on pyharp side
+    std::optional<float> frequency;
 };
 
 struct MidiLabel : public OutputLabel
 {
-    float pitch;
+    // Optional on pyharp side
+    std::optional<float> pitch;
 };
