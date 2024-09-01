@@ -19,12 +19,12 @@ void GradioClient::extractKeyFromResponse(const juce::String& response,
     responseKey = response.substring(dataIndex + key.length()).trim();
 }
 
-void GradioClient::parseSpaceAddress(juce::String spaceAddress,
-                                     SpaceInfo& spaceInfo)
+void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
     spaceInfo.userInput = spaceAddress;
     // Check if the URL is of Type 4 (localhost or gradio.live)
-    if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live"))
+    if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live")
+        || spaceAddress.matchesWildcard("*.*.*.*:*", true))
     {
         spaceInfo.gradio = spaceAddress;
         spaceInfo.huggingface = spaceAddress;
@@ -38,9 +38,7 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
     if (spaceAddress.contains(huggingFaceBaseUrl))
     {
         // Remove the base URL part
-        auto spacePath = spaceAddress.fromFirstOccurrenceOf(huggingFaceBaseUrl,
-                                                            false,
-                                                            false);
+        auto spacePath = spaceAddress.fromFirstOccurrenceOf(huggingFaceBaseUrl, false, false);
 
         // Split the path into user and model using '/'
         auto parts = juce::StringArray::fromTokens(spacePath, "/", "");
@@ -54,10 +52,9 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
         else
         {
             // result.huggingface = spaceAddress;
-            spaceInfo.error =
-                "Detected huggingface.co URL but could not parse user and "
-                "model. Too few parts in "
-                + spaceAddress;
+            spaceInfo.error = "Detected huggingface.co URL but could not parse user and "
+                              "model. Too few parts in "
+                              + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
@@ -66,12 +63,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
     else if (spaceAddress.contains("hf.space"))
     {
         // Remove the protocol part (e.g., "https://")
-        auto withoutProtocol =
-            spaceAddress.fromFirstOccurrenceOf("://", false, false);
+        auto withoutProtocol = spaceAddress.fromFirstOccurrenceOf("://", false, false);
 
         // Extract the subdomain part before ".hf.space/"
-        auto subdomain =
-            withoutProtocol.upToFirstOccurrenceOf(".hf.space", false, false);
+        auto subdomain = withoutProtocol.upToFirstOccurrenceOf(".hf.space", false, false);
 
         // Split the subdomain at the first hyphen
         auto firstHyphenIndex = subdomain.indexOfChar('-');
@@ -88,10 +83,9 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
             // return it as the huggingface URL because result.huggingface is
             // used for the  "Open Space URL" button in the error dialog box
             // result.huggingface = spaceAddress;
-            spaceInfo.error =
-                "Detected hf.space URL but could not parse user and model. No "
-                "hyphen found in the subdomain: "
-                + subdomain;
+            spaceInfo.error = "Detected hf.space URL but could not parse user and model. No "
+                              "hyphen found in the subdomain: "
+                              + subdomain;
             spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
@@ -112,10 +106,9 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
         {
             // DBG("Invalid URL: " << spaceAddress);
             // result.huggingface = spaceAddress;
-            spaceInfo.error =
-                "Detected user/model URL but could not parse user and model. "
-                "Too many/few slashes in "
-                + spaceAddress;
+            spaceInfo.error = "Detected user/model URL but could not parse user and model. "
+                              "Too many/few slashes in "
+                              + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
             DBG(spaceInfo.error);
             return;
@@ -123,7 +116,8 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
     }
     else
     {
-        spaceInfo.error = "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
+        spaceInfo.error =
+            "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
         spaceInfo.status = SpaceInfo::Status::ERROR;
         DBG(spaceInfo.error);
         return;
@@ -133,8 +127,7 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
     if (! user.isEmpty() && ! model.isEmpty())
     {
         model = model.replace("-", "_");
-        spaceInfo.huggingface =
-            "https://huggingface.co/spaces/" + user + "/" + model;
+        spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
         model = model.replace("_", "-");
         spaceInfo.gradio = "https://" + user + "-" + model + ".hf.space";
         spaceInfo.userName = user;
@@ -142,8 +135,7 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress,
     }
     else
     {
-        spaceInfo.error =
-            "Unkown error while parsing the space address: " + spaceAddress;
+        spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
         spaceInfo.status = SpaceInfo::Status::ERROR;
         DBG(spaceInfo.error);
         return;
@@ -188,21 +180,18 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
      */
 
     // Use withFileToUpload to handle the multipart/form-data construction
-    auto postEndpoint =
-        uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
+    auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
 
-    auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-            // .withExtraHeaders("Accept: */*")
-            .withConnectionTimeoutMs(10000)
-            .withResponseHeaders(&responseHeaders)
-            .withStatusCode(&statusCode)
-            .withNumRedirectsToFollow(5)
-            .withHttpRequestCmd("POST");
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                       // .withExtraHeaders("Accept: */*")
+                       .withConnectionTimeoutMs(10000)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5)
+                       .withHttpRequestCmd("POST");
 
     // Create the input stream for the POST request
-    std::unique_ptr<juce::InputStream> stream(
-        postEndpoint.createInputStream(options));
+    std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -250,34 +239,30 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     DBG("File uploaded successfully, path: " + uploadedFilePath);
 }
 
-void GradioClient::makePostRequestForEventID(
-    const juce::String endpoint,
-    juce::String& eventID,
-    juce::String& error,
-    const juce::String jsonBody) const
+void GradioClient::makePostRequestForEventID(const juce::String endpoint,
+                                             juce::String& eventID,
+                                             juce::String& error,
+                                             const juce::String jsonBody) const
 {
     // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL requestEndpoint =
-        gradioEndpoint.getChildURL("call").getChildURL(endpoint);
+    juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
 
     // Prepare the POST request
     // juce::String jsonBody = R"({"data": []})";
     juce::URL postEndpoint = requestEndpoint.withPOSTData(jsonBody);
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
-    auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-            .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
-            .withConnectionTimeoutMs(10000)
-            .withResponseHeaders(&responseHeaders)
-            .withStatusCode(&statusCode)
-            .withNumRedirectsToFollow(5)
-            .withHttpRequestCmd("POST");
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                       .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
+                       .withConnectionTimeoutMs(10000)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5)
+                       .withHttpRequestCmd("POST");
 
     // Create the input stream for the POST request
-    std::unique_ptr<juce::InputStream> stream(
-        postEndpoint.createInputStream(options));
+    std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -337,21 +322,18 @@ void GradioClient::getResponseFromEventID(const juce::String callID,
     // /{eventID} appended
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL getEndpoint =
-        gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(
-            eventID);
+        gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
-    auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-            //    .withExtraHeaders("Content-Type: application/json\r\nAccept:
-            //    */*")
-            .withConnectionTimeoutMs(10000)
-            .withResponseHeaders(&responseHeaders)
-            .withStatusCode(&statusCode)
-            .withNumRedirectsToFollow(5);
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       //    .withExtraHeaders("Content-Type: application/json\r\nAccept:
+                       //    */*")
+                       .withConnectionTimeoutMs(10000)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5);
     //  .withHttpRequestCmd ("POST");
-    std::unique_ptr<juce::InputStream> stream(
-        getEndpoint.createInputStream(options));
+    std::unique_ptr<juce::InputStream> stream(getEndpoint.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -415,8 +397,7 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
 
     if (! parsedData.isObject())
     {
-        error =
-            "Failed to parse the data portion of the received controls JSON.";
+        error = "Failed to parse the data portion of the received controls JSON.";
         DBG(error);
         return;
     }
@@ -465,8 +446,7 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     juce::Array<juce::var>* ctrlArray = obj->getProperty("ctrls").getArray();
     if (ctrlArray == nullptr)
     {
-        error =
-            "Couldn't load the controls array/list from the controls response.";
+        error = "Couldn't load the controls array/list from the controls response.";
         DBG(error);
         return;
     }
