@@ -101,31 +101,54 @@ struct SpaceInfo
     }
 };
 
-struct OutputLabel
+class OutputLabel
 {
+public:
+    virtual ~OutputLabel() = default; // virtual destructor
+    // TODO: maybe to_y() needs a input parameter to calculate the y value
+    virtual std::optional<float> to_y() = 0;
+
     // required on pyharp side
     float t;
     juce::String label { "" };
     // optional on pyharp side
     juce::String description { "" };
     std::optional<float> duration;
-    virtual ~OutputLabel() = default; // virtual destructor
 };
 
-struct AudioLabel : public OutputLabel
+class AudioLabel : public OutputLabel
 {
+public:
+    std::optional<float> to_y() override
+    {
+        // TODO: Implement this
+        // You can check if the amplitude has been set
+        // by checking if the optional has a value
+        // if (amplitude.has_value())
+        return amplitude;
+    }
     // Optional on pyharp side
     std::optional<float> amplitude;
 };
 
-struct SpectrogramLabel : public OutputLabel
+class SpectrogramLabel : public OutputLabel
 {
+public:
+    std::optional<float> to_y() override
+    {
+        return frequency;
+    }
     // Optional on pyharp side
     std::optional<float> frequency;
 };
 
-struct MidiLabel : public OutputLabel
+class MidiLabel : public OutputLabel
 {
+public:
+    std::optional<float> to_y() override
+    {
+        return pitch;
+    }
     // Optional on pyharp side
     std::optional<float> pitch;
 };
