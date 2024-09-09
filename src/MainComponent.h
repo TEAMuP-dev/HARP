@@ -26,7 +26,6 @@
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
-#include "media/LabelOverlayComponent.h"
 
 using namespace juce;
 
@@ -1081,11 +1080,6 @@ public:
 
         mediaDisplay->setupDisplay(URL(mediaFile));
 
-        LabelOverlayComponent l1 = LabelOverlayComponent("short", "long", 0.5, 1, 1.5);
-        LabelOverlayComponent l2 = LabelOverlayComponent("test", "", 0.75, 2, 3);
-        mediaDisplay->addLabel(l1);
-        mediaDisplay->addLabel(l2);
-
         lastLoadTime = Time::getCurrentTime();
 
         playStopButton.setEnabled(true);
@@ -1465,8 +1459,19 @@ private:
             URL tempFilePath = mediaDisplay->getTempFilePath();
             mediaDisplay->updateDisplay(tempFilePath);
 
-            // TODO: update Label display
-            // mediaDisplay->updateLabels(model->getLabels());
+            LabelList& labels = model->getLabels();
+
+            for (const auto& l : labels) {
+                if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get())) {
+                    std::cout << "Audio label";
+                } else if (auto specLabel = dynamic_cast<SpectrogramLabel*>(l.get())) {
+                    std::cout << "Audio label";
+                } else if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
+                    std::cout << "Midi label";
+                } else {
+                    std::cout << "Output label";
+                }
+            }
 
             // now, we can enable the process button
             resetProcessingButtons();

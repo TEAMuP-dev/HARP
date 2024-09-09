@@ -38,7 +38,7 @@ void MediaDisplayComponent::resized()
     horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing).reduced(scrollBarSpacing));
 
     for (auto l : labels) {
-        const float xPos = timeToX(l->getStartTime());
+        const float xPos = timeToX(l->getTime());
         const float width = ((float) l->getDuration()) * (getWidth() / getTotalLengthInSecs());
 
         const float yPos = l->getRelativeY() * getHeight();

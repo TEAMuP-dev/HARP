@@ -317,7 +317,7 @@ public:
                         auto audioLabel = std::make_unique<AudioLabel>();
                         if (labelPyharp->hasProperty("amplitude"))
                         {
-                            if (labelPyharp->getProperty("amplitude").isDouble())
+                            if (labelPyharp->getProperty("amplitude").isDouble() || labelPyharp->getProperty("amplitude").isInt())
                             {
                                 audioLabel->amplitude = static_cast<float>(labelPyharp->getProperty("amplitude"));
                             }
@@ -328,7 +328,7 @@ public:
                         auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
                         if (labelPyharp->hasProperty("frequency"))
                         {
-                            if (labelPyharp->getProperty("frequency").isDouble())
+                            if (labelPyharp->getProperty("frequency").isDouble() || labelPyharp->getProperty("frequency").isInt())
                             {
                                 spectrogramLabel->frequency = static_cast<float>(labelPyharp->getProperty("frequency"));
                             }
@@ -339,7 +339,7 @@ public:
                         auto midiLabel = std::make_unique<MidiLabel>();
                         if (labelPyharp->hasProperty("pitch"))
                         {
-                            if (labelPyharp->getProperty("pitch").isDouble())
+                            if (labelPyharp->getProperty("pitch").isDouble() || labelPyharp->getProperty("pitch").isInt())
                             {
                                 midiLabel->pitch = static_cast<float>(labelPyharp->getProperty("pitch"));
                             }
@@ -362,7 +362,7 @@ public:
                     if (labelPyharp->hasProperty("t"))
                     {
                         // now check if it's a float
-                        if (labelPyharp->getProperty("t").isDouble())
+                        if (labelPyharp->getProperty("t").isDouble() || labelPyharp->getProperty("t").isInt())
                         {
                             label->t = static_cast<float>(labelPyharp->getProperty("t"));
                         }
@@ -378,7 +378,7 @@ public:
                     if (labelPyharp->hasProperty("duration"))
                     {
                         // now check if it's a float
-                        if (labelPyharp->getProperty("duration").isDouble())
+                        if (labelPyharp->getProperty("duration").isDouble() || labelPyharp->getProperty("duration").isInt())
                         {
                             label->duration = static_cast<float>(labelPyharp->getProperty("duration"));
                         }
