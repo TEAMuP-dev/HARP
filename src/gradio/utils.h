@@ -129,3 +129,6 @@ struct MidiLabel : public OutputLabel
     // Optional on pyharp side
     std::optional<float> pitch;
 };
+
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using LabelList = std::vector<std::unique_ptr<OutputLabel>>;

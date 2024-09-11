@@ -3,6 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 #include "MediaDisplayComponent.h"
+#include "../gradio/utils.h"
 
 
 class AudioDisplayComponent : public MediaDisplayComponent
@@ -27,6 +28,8 @@ public:
     void stopPlaying() override { transportSource.stop(); }
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
+
+    void addLabels(LabelList& labels) override;
 
 private:
 

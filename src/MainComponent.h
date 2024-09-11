@@ -1459,19 +1459,11 @@ private:
             URL tempFilePath = mediaDisplay->getTempFilePath();
             mediaDisplay->updateDisplay(tempFilePath);
 
+            // extract generated labels from the model
             LabelList& labels = model->getLabels();
 
-            for (const auto& l : labels) {
-                if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get())) {
-                    std::cout << "Audio label";
-                } else if (auto specLabel = dynamic_cast<SpectrogramLabel*>(l.get())) {
-                    std::cout << "Audio label";
-                } else if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
-                    std::cout << "Midi label";
-                } else {
-                    std::cout << "Output label";
-                }
-            }
+            // add the labels to the display component
+            mediaDisplay->addLabels(labels);
 
             // now, we can enable the process button
             resetProcessingButtons();

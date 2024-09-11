@@ -9,8 +9,8 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl)
 
 LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, double dur, String dsc)
 {
-    LabelOverlayComponent(t, lbl);
-
+    setTime(t);
+    setLabel(lbl);
     setDuration(dur);
     setDescription(dsc);
 }
@@ -40,11 +40,16 @@ AudioOverlayComponent::AudioOverlayComponent(double t, String lbl, double dur, S
 {
     setTime(t);
     setLabel(lbl);
-
     setDuration(dur);
     setDescription(dsc);
-
     setAmplitude(a);
+}
+
+void AudioOverlayComponent::setAmplitude(float a)
+{
+    amplitude = a;
+
+    setRelativeY((amplitude + 1) / 2);
 }
 
 SpectrogramOverlayComponent::SpectrogramOverlayComponent(const LabelOverlayComponent& other)
@@ -59,11 +64,16 @@ SpectrogramOverlayComponent::SpectrogramOverlayComponent(double t, String lbl, d
 {
     setTime(t);
     setLabel(lbl);
-
     setDuration(dur);
     setDescription(dsc);
-
     setFrequency(f);
+}
+
+void SpectrogramOverlayComponent::setFrequency(float f)
+{
+    frequency = f;
+
+    //setRelativeY(TODO);
 }
 
 MidiOverlayComponent::MidiOverlayComponent(const LabelOverlayComponent& other)
@@ -78,9 +88,15 @@ MidiOverlayComponent::MidiOverlayComponent(double t, String lbl, double dur, Str
 {
     setTime(t);
     setLabel(lbl);
-
     setDuration(dur);
     setDescription(dsc);
 
     setPitch(p);
+}
+
+void MidiOverlayComponent::setPitch(float p)
+{
+    pitch = p;
+
+    setRelativeY(pitch / 128);
 }

@@ -228,7 +228,7 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> newRange)
     repaint();
 }
 
-void MediaDisplayComponent::addLabel(LabelOverlayComponent l)
+void MediaDisplayComponent::addOverlayLabel(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
     labels.add(label);
@@ -237,6 +237,11 @@ void MediaDisplayComponent::addLabel(LabelOverlayComponent l)
 
     resized();
     repaint();
+}
+
+void MediaDisplayComponent::addOverheadLabel(LabelOverlayComponent l)
+{
+    // TODO
 }
 
 void MediaDisplayComponent::removeLabel(LabelOverlayComponent* l)

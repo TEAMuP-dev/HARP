@@ -27,10 +27,13 @@ public:
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
+
     double getDuration() const { return duration; }
     String getDescription() const { return description; }
 
 protected:
+
+    void setRelativeY(float y) { relativeY = y; }
 
     float relativeY;
 
@@ -51,8 +54,7 @@ public:
     AudioOverlayComponent(const LabelOverlayComponent& other);
     AudioOverlayComponent(double t, String lbl, double dur, String dsc, float a);
 
-    void setAmplitude(float a) { amplitude = a; }
-
+    void setAmplitude(float a);
     float getAmplitude() const { return amplitude; }
 
 private:
@@ -70,8 +72,7 @@ public:
     SpectrogramOverlayComponent(const LabelOverlayComponent& other);
     SpectrogramOverlayComponent(double t, String lbl, double dur, String dsc, float f);
 
-    void setFrequency(float f) { frequency = f; }
-
+    void setFrequency(float f);
     float getFrequency() const { return frequency; }
 
 private:
@@ -89,8 +90,7 @@ public:
     MidiOverlayComponent(const LabelOverlayComponent& other);
     MidiOverlayComponent(double t, String lbl, double dur, String dsc, float p);
 
-    void setPitch(float p) { pitch = p; }
-
+    void setPitch(float p);
     float getPitch() const { return pitch; }
 
 private:

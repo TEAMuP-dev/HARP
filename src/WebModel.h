@@ -13,8 +13,6 @@
 #include "juce_core/juce_core.h"
 #include <fstream>
 
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
-using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
 
 class WebModel : public Model
 {

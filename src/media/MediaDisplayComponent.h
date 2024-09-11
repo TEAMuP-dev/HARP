@@ -4,6 +4,7 @@
 #include "juce_core/juce_core.h"
 
 #include "LabelOverlayComponent.h"
+#include "../gradio/utils.h"
 
 using namespace juce;
 
@@ -80,7 +81,11 @@ public:
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
-    void addLabel(LabelOverlayComponent l);
+    virtual void addLabels(LabelList& labels) = 0;
+
+    void addOverlayLabel(LabelOverlayComponent l);
+    void addOverheadLabel(LabelOverlayComponent l);
+
     void removeLabel(LabelOverlayComponent* l);
     void clearLabels();
 
