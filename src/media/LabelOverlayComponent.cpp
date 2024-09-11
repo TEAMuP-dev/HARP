@@ -1,16 +1,28 @@
 #include "LabelOverlayComponent.h"
 
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
 {
     setTime(t);
     setLabel(lbl);
+    setRelativeY(y);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, double dur, String dsc)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur)
 {
-    setTime(t);
-    setLabel(lbl);
+    LabelOverlayComponent(t, lbl, y);
+    setDuration(dur);
+}
+
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc)
+{
+    LabelOverlayComponent(t, lbl, y);
+    setDescription(dsc);
+}
+
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc)
+{
+    LabelOverlayComponent(t, lbl, y);
     setDuration(dur);
     setDescription(dsc);
 }
@@ -19,6 +31,7 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 {
     setTime(other.getTime());
     setLabel(other.getLabel());
+    setRelativeY(other.getRelativeY());
     setDuration(other.getDuration());
     setDescription(other.getDescription());
 }
@@ -28,75 +41,17 @@ void LabelOverlayComponent::paint(Graphics& g)
     g.fillAll(Colours::purple);
 }
 
-AudioOverlayComponent::AudioOverlayComponent(const LabelOverlayComponent& other)
+float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
-    setTime(other.getTime());
-    setLabel(other.getLabel());
-    setDuration(other.getDuration());
-    setDescription(other.getDescription());
+    return (amplitude + 1) / 2;
 }
 
-AudioOverlayComponent::AudioOverlayComponent(double t, String lbl, double dur, String dsc, float a)
+float LabelOverlayComponent::frequencyToRelativeY(float frequency)
 {
-    setTime(t);
-    setLabel(lbl);
-    setDuration(dur);
-    setDescription(dsc);
-    setAmplitude(a);
+    return 0.0f; // TODO
 }
 
-void AudioOverlayComponent::setAmplitude(float a)
+float LabelOverlayComponent::pitchToRelativeY(float pitch)
 {
-    amplitude = a;
-
-    setRelativeY((amplitude + 1) / 2);
-}
-
-SpectrogramOverlayComponent::SpectrogramOverlayComponent(const LabelOverlayComponent& other)
-{
-    setTime(other.getTime());
-    setLabel(other.getLabel());
-    setDuration(other.getDuration());
-    setDescription(other.getDescription());
-}
-
-SpectrogramOverlayComponent::SpectrogramOverlayComponent(double t, String lbl, double dur, String dsc, float f)
-{
-    setTime(t);
-    setLabel(lbl);
-    setDuration(dur);
-    setDescription(dsc);
-    setFrequency(f);
-}
-
-void SpectrogramOverlayComponent::setFrequency(float f)
-{
-    frequency = f;
-
-    //setRelativeY(TODO);
-}
-
-MidiOverlayComponent::MidiOverlayComponent(const LabelOverlayComponent& other)
-{
-    setTime(other.getTime());
-    setLabel(other.getLabel());
-    setDuration(other.getDuration());
-    setDescription(other.getDescription());
-}
-
-MidiOverlayComponent::MidiOverlayComponent(double t, String lbl, double dur, String dsc, float p)
-{
-    setTime(t);
-    setLabel(lbl);
-    setDuration(dur);
-    setDescription(dsc);
-
-    setPitch(p);
-}
-
-void MidiOverlayComponent::setPitch(float p)
-{
-    pitch = p;
-
-    setRelativeY(pitch / 128);
+    return pitch / 128;
 }

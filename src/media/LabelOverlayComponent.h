@@ -5,96 +5,59 @@
 using namespace juce;
 
 
-class LabelOverlayComponent : public Label
+class OutputLabelComponent : public Label
+{
+    // TODO - base class for labels
+};
+
+
+class OverheadLabelComponent : public OutputLabelComponent
+{
+    // TODO - labels without specified height (display above media)
+};
+
+
+class LabelOverlayComponent : public OutputLabelComponent
 {
 public:
 
-    LabelOverlayComponent() {}
-    LabelOverlayComponent(double t, String lbl);
-    LabelOverlayComponent(double t, String lbl, double dur, String dsc);
+    LabelOverlayComponent(double t, String lbl, float y);
+    LabelOverlayComponent(double t, String lbl, float y, double dur);
+    LabelOverlayComponent(double t, String lbl, float y, String dsc);
+    LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc);
     LabelOverlayComponent(const LabelOverlayComponent& other);
-    virtual ~LabelOverlayComponent() = default;
+    ~LabelOverlayComponent();
 
     void paint(Graphics& g);
+
+    static float amplitudeToRelativeY(float amplitude);
+    static float frequencyToRelativeY(float frequency);
+    static float pitchToRelativeY(float pitch);
 
     void setTime(double t) { time = t; }
     void setLabel(String lbl) { label = lbl; }
 
+    void setRelativeY(float y) { relativeY = y; }
+
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
 
-    float getRelativeY() const { return relativeY; }
-
     double getTime() const { return time; }
     String getLabel() const { return label; }
+
+    float getRelativeY() const { return relativeY; }
 
     double getDuration() const { return duration; }
     String getDescription() const { return description; }
 
 protected:
 
-    void setRelativeY(float y) { relativeY = y; }
+    double time;
+    String label;
 
     float relativeY;
 
-    double time = 0.0;
-    String label { "" };
-
     // Optional
-    double duration;
-    String description;
-};
-
-class AudioOverlayComponent : public LabelOverlayComponent
-{
-public:
-
-    AudioOverlayComponent() {}
-    AudioOverlayComponent(double t, String lbl);
-    AudioOverlayComponent(const LabelOverlayComponent& other);
-    AudioOverlayComponent(double t, String lbl, double dur, String dsc, float a);
-
-    void setAmplitude(float a);
-    float getAmplitude() const { return amplitude; }
-
-private:
-
-    // Optional
-    float amplitude;
-};
-
-class SpectrogramOverlayComponent : public LabelOverlayComponent
-{
-public:
-
-    SpectrogramOverlayComponent() {}
-    SpectrogramOverlayComponent(double t, String lbl);
-    SpectrogramOverlayComponent(const LabelOverlayComponent& other);
-    SpectrogramOverlayComponent(double t, String lbl, double dur, String dsc, float f);
-
-    void setFrequency(float f);
-    float getFrequency() const { return frequency; }
-
-private:
-
-    // Optional
-    float frequency;
-};
-
-class MidiOverlayComponent : public LabelOverlayComponent
-{
-public:
-
-    MidiOverlayComponent();
-    MidiOverlayComponent(double t, String lbl);
-    MidiOverlayComponent(const LabelOverlayComponent& other);
-    MidiOverlayComponent(double t, String lbl, double dur, String dsc, float p);
-
-    void setPitch(float p);
-    float getPitch() const { return pitch; }
-
-private:
-
-    // Optional
-    float pitch;
+    double duration = 0.0;
+    String description { "" };
 };
