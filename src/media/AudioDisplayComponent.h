@@ -28,6 +28,8 @@ public:
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
 
+    void addLabels(LabelList& labels) override;
+
 private:
 
     void resetDisplay() override;

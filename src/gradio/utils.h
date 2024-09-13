@@ -105,7 +105,7 @@ struct OutputLabel
 {
     // required on pyharp side
     float t;
-    juce::String label { "" };
+    juce::String label;
     // optional on pyharp side
     juce::String description { "" };
     std::optional<float> duration;

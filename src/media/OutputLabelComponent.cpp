@@ -1,4 +1,4 @@
-#include "LabelOverlayComponent.h"
+#include "OutputLabelComponent.h"
 
 
 LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
@@ -8,21 +8,18 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
     setRelativeY(y);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur) : LabelOverlayComponent(t, lbl, y)
 {
-    LabelOverlayComponent(t, lbl, y);
     setDuration(dur);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc) : LabelOverlayComponent(t, lbl, y)
 {
-    LabelOverlayComponent(t, lbl, y);
     setDescription(dsc);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc) : LabelOverlayComponent(t, lbl, y)
 {
-    LabelOverlayComponent(t, lbl, y);
     setDuration(dur);
     setDescription(dsc);
 }
@@ -36,6 +33,8 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
     setDescription(other.getDescription());
 }
 
+LabelOverlayComponent::~LabelOverlayComponent() {}
+
 void LabelOverlayComponent::paint(Graphics& g)
 {
     g.fillAll(Colours::purple);
@@ -43,7 +42,7 @@ void LabelOverlayComponent::paint(Graphics& g)
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
-    return (amplitude + 1) / 2;
+    return 1 - (amplitude + 1) / 2;
 }
 
 float LabelOverlayComponent::frequencyToRelativeY(float frequency)

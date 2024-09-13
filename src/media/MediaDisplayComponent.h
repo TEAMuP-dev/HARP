@@ -3,7 +3,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
 
-#include "LabelOverlayComponent.h"
+#include "OutputLabelComponent.h"
 #include "../gradio/utils.h"
 
 using namespace juce;
@@ -81,12 +81,12 @@ public:
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
-    virtual void addLabels(LabelList& labels) = 0;
+    virtual void addLabels(LabelList& labels);
 
-    void addOverlayLabel(LabelOverlayComponent l);
-    void addOverheadLabel(LabelOverlayComponent l);
+    void addLabelOverlay(LabelOverlayComponent l);
+    void addOverheadLabel(OverheadLabelComponent l);
 
-    void removeLabel(LabelOverlayComponent* l);
+    void removeOutputLabel(OutputLabelComponent* l);
     void clearLabels();
 
 protected:
@@ -97,6 +97,7 @@ protected:
     virtual float timeToX(const double t) const;
 
     int scrollBarSize = 10;
+    // TODO - more generic name
     int scrollBarSpacing = 2;
 
     Range<double> visibleRange;
@@ -132,5 +133,6 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    Array<LabelOverlayComponent*> labels;
+    Array<LabelOverlayComponent*> labelOverlays;
+    Array<OverheadLabelComponent*> oveheadLabels;
 };

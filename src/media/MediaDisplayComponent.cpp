@@ -16,6 +16,8 @@ MediaDisplayComponent::MediaDisplayComponent()
 MediaDisplayComponent::~MediaDisplayComponent()
 {
     horizontalScrollBar.removeListener(this);
+
+    clearLabels();
 }
 
 void MediaDisplayComponent::paint(Graphics& g)
@@ -37,13 +39,16 @@ void MediaDisplayComponent::resized()
 {
     horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing).reduced(scrollBarSpacing));
 
-    for (auto l : labels) {
+    // for (auto l : oveheadLabels) {}
+
+    for (auto l : labelOverlays) { // TODO - virtual resize_labels function
         const float xPos = timeToX(l->getTime());
-        const float width = ((float) l->getDuration()) * (getWidth() / getTotalLengthInSecs());
+        const float yPos = l->getRelativeY() * (getHeight() - (scrollBarSize + 2 * scrollBarSpacing));
 
-        const float yPos = l->getRelativeY() * getHeight();
+        // TODO - needs to be called upon updateVisibleRange()
+        l->setBounds(xPos, yPos, 1.0f, 1.0f);
 
-        l->setBounds(xPos, yPos, width, 10.0f);
+        //const float width = ((float) l->getDuration()) * (getWidth() / getTotalLengthInSecs());
     }
 }
 
@@ -228,10 +233,37 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> newRange)
     repaint();
 }
 
-void MediaDisplayComponent::addOverlayLabel(LabelOverlayComponent l)
+void MediaDisplayComponent::addLabels(LabelList& labels)
+{
+    clearLabels();
+
+    for (const auto& l : labels) {
+        String lbl = l->label;
+        String dsc = l->description;
+
+        if (dsc.isEmpty()) {
+            dsc = lbl;
+        }
+
+        float dur = 0.0f;
+
+        if ((l->duration).has_value()) {
+            dur = (l->duration).value();
+        }
+
+        if (!dynamic_cast<AudioLabel*>(l.get()) &&
+            !dynamic_cast<SpectrogramLabel*>(l.get()) &&
+            !dynamic_cast<MidiLabel*>(l.get())) {
+            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+        }
+    }
+}
+
+void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    labels.add(label);
+    label->setText(label->getLabel(), dontSendNotification);
+    labelOverlays.add(label);
 
     addAndMakeVisible(label);
 
@@ -239,21 +271,38 @@ void MediaDisplayComponent::addOverlayLabel(LabelOverlayComponent l)
     repaint();
 }
 
-void MediaDisplayComponent::addOverheadLabel(LabelOverlayComponent l)
+void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
 {
     // TODO
 }
 
-void MediaDisplayComponent::removeLabel(LabelOverlayComponent* l)
+void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
 {
     // TODO
 }
 
 void MediaDisplayComponent::clearLabels()
 {
-    // TODO
+    for (int i = 0; i < labelOverlays.size(); i++) {
+        LabelOverlayComponent* l = labelOverlays.getReference(i);
+        removeChildComponent(l);
 
-    labels.clear();
+        delete l;
+    }
+
+    labelOverlays.clear();
+
+    /*for (int i = 0; i < oveheadLabels.size(); i++) {
+        OverheadLabelComponent* l = oveheadLabels.getReference(i);
+        removeChildComponent(l);
+
+        delete l;
+    }*/
+
+    oveheadLabels.clear();
+
+    resized();
+    repaint();
 }
 
 void MediaDisplayComponent::setNewTarget(URL filePath)
@@ -287,7 +336,7 @@ float MediaDisplayComponent::timeToX(const double t) const
         auto visibleStart = visibleRange.getStart();
         auto visibleOffset = (float) t - visibleStart;
 
-        x = totalWidth * visibleOffset / totalLength;
+        x = scrollBarSpacing + (totalWidth - 2 * scrollBarSpacing) * visibleOffset / totalLength;
     }
 
     return x;
