@@ -6,6 +6,8 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
     setTime(t);
     setLabel(lbl);
     setRelativeY(y);
+
+    setDefaultAttributes();
 }
 
 LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur) : LabelOverlayComponent(t, lbl, y)
@@ -31,13 +33,18 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
     setRelativeY(other.getRelativeY());
     setDuration(other.getDuration());
     setDescription(other.getDescription());
+
+    setDefaultAttributes();
 }
 
 LabelOverlayComponent::~LabelOverlayComponent() {}
 
-void LabelOverlayComponent::paint(Graphics& g)
+void LabelOverlayComponent::setDefaultAttributes()
 {
-    g.fillAll(Colours::purple);
+    setText(getLabel(), dontSendNotification);
+    setColour(Label::textColourId, Colours::white);
+    setColour(Label::backgroundColourId, Colours::purple.withAlpha(0.5f));
+    // TODO - don't prevent clicking on transport
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)

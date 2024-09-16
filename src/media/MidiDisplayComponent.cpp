@@ -27,11 +27,11 @@ void MidiDisplayComponent::drawMainArea(Graphics& g, Rectangle<int>& a)
 
 void MidiDisplayComponent::resized()
 {
-    Rectangle<int> scrollBarArea = getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing);
+    Rectangle<int> scrollBarArea = getLocalBounds().removeFromBottom(scrollBarSize + 2 * spacing);
     scrollBarArea = scrollBarArea.removeFromRight(scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - 5);
     scrollBarArea = scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize() - 4 * pianoRoll.getScrollBarSpacing());
 
-    horizontalScrollBar.setBounds(scrollBarArea.reduced(scrollBarSpacing));
+    horizontalScrollBar.setBounds(scrollBarArea.reduced(spacing));
 }
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)

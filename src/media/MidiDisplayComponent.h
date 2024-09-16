@@ -43,5 +43,5 @@ private:
 
     double totalLengthInSecs;
 
-    PianoRollComponent pianoRoll{70, scrollBarSize, scrollBarSpacing};
+    PianoRollComponent pianoRoll{70, scrollBarSize, spacing};
 };

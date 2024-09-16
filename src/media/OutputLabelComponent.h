@@ -28,7 +28,7 @@ public:
     LabelOverlayComponent(const LabelOverlayComponent& other);
     ~LabelOverlayComponent();
 
-    void paint(Graphics& g);
+    void setDefaultAttributes();
 
     static float amplitudeToRelativeY(float amplitude);
     static float frequencyToRelativeY(float frequency);

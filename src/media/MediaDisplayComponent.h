@@ -26,6 +26,7 @@ public:
     void paint(Graphics& g) override;
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
+    virtual void repositionLabels();
 
     void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
@@ -97,8 +98,8 @@ protected:
     virtual float timeToX(const double t) const;
 
     int scrollBarSize = 10;
-    // TODO - more generic name
-    int scrollBarSpacing = 2;
+    int labelHeight = 20;
+    int spacing = 2;
 
     Range<double> visibleRange;
 

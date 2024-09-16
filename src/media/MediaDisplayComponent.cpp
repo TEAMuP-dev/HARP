@@ -26,7 +26,7 @@ void MediaDisplayComponent::paint(Graphics& g)
     g.setColour(Colours::lightblue);
 
     if (isFileLoaded()) {
-        Rectangle<int> a = getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * scrollBarSpacing)).reduced(scrollBarSpacing);
+        Rectangle<int> a = getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * spacing)).reduced(spacing);
 
         drawMainArea(g, a);
     } else {
@@ -37,18 +37,28 @@ void MediaDisplayComponent::paint(Graphics& g)
 
 void MediaDisplayComponent::resized()
 {
-    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing).reduced(scrollBarSpacing));
+    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * spacing).reduced(spacing));
 
+    repositionLabels();
+}
+
+void MediaDisplayComponent::repositionLabels()
+{
     // for (auto l : oveheadLabels) {}
 
-    for (auto l : labelOverlays) { // TODO - virtual resize_labels function
-        const float xPos = timeToX(l->getTime());
-        const float yPos = l->getRelativeY() * (getHeight() - (scrollBarSize + 2 * scrollBarSpacing));
+    for (auto l : labelOverlays) {
+        float width = jmax(0.05f, (float) l->getDuration()) * (getWidth() / visibleRange.getLength());
+        width = jmin(width, l->getFont().getStringWidthFloat(l->getText()) + 2 * spacing);
 
-        // TODO - needs to be called upon updateVisibleRange()
-        l->setBounds(xPos, yPos, 1.0f, 1.0f);
+        float xPos = timeToX(l->getTime());
+        float yPos = l->getRelativeY() * (getHeight() - (scrollBarSize + 2 * spacing));
 
-        //const float width = ((float) l->getDuration()) * (getWidth() / getTotalLengthInSecs());
+        xPos -= width / 2.0f;
+        yPos -= labelHeight / 2.0f;
+
+        // TODO - clip xPos and yPos to visible range
+
+        l->setBounds(xPos, yPos, width, labelHeight);
     }
 }
 
@@ -230,6 +240,7 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> newRange)
 
     horizontalScrollBar.setCurrentRange(visibleRange);
     updateCursorPosition();
+    repositionLabels();
     repaint();
 }
 
@@ -262,7 +273,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setText(label->getLabel(), dontSendNotification);
+    label->setFont(Font(labelHeight - 2 * spacing));
     labelOverlays.add(label);
 
     addAndMakeVisible(label);
@@ -336,7 +347,7 @@ float MediaDisplayComponent::timeToX(const double t) const
         auto visibleStart = visibleRange.getStart();
         auto visibleOffset = (float) t - visibleStart;
 
-        x = scrollBarSpacing + (totalWidth - 2 * scrollBarSpacing) * visibleOffset / totalLength;
+        x = spacing + (totalWidth - 2 * spacing) * visibleOffset / totalLength;
     }
 
     return x;
@@ -358,7 +369,7 @@ void MediaDisplayComponent::updateCursorPosition()
 
     currentPositionMarker.setVisible(displayCursor);
 
-    float cursorHeight = (float) (getHeight() - scrollBarSize + 2 * scrollBarSpacing);
+    float cursorHeight = (float) (getHeight() - scrollBarSize + 2 * spacing);
     float cursorPosition = timeToX(getPlaybackPosition()) - (cursorWidth / 2.0f);
 
     currentPositionMarker.setRectangle(Rectangle<float>(cursorPosition, 0, cursorWidth, cursorHeight));
