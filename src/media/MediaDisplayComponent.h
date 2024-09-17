@@ -26,7 +26,9 @@ public:
     void paint(Graphics& g) override;
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
-    virtual void repositionLabels();
+
+    virtual void repositionOverheadLabels();
+    virtual void repositionLabelOverlays();
 
     void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
@@ -78,7 +80,7 @@ public:
 
     virtual double getTotalLengthInSecs() = 0;
 
-    virtual void updateVisibleRange(Range<double> newRange);
+    virtual void updateVisibleRange(Range<double> r);
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
@@ -94,8 +96,8 @@ protected:
 
     void setNewTarget(URL filePath);
 
-    virtual double xToTime(const float x) const;
-    virtual float timeToX(const double t) const;
+    virtual double xToTime(const float x);
+    virtual float timeToX(const double t);
 
     int scrollBarSize = 10;
     int labelHeight = 20;

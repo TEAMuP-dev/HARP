@@ -137,13 +137,13 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
     pianoRoll.updateVisibleMediaRange(newRange);
 }
 
-double MidiDisplayComponent::xToTime(const float x) const
+double MidiDisplayComponent::xToTime(const float x)
 {
     // TODO
     return 0.0;
 }
 
-float MidiDisplayComponent::timeToX(const double t) const
+float MidiDisplayComponent::timeToX(const double t)
 {
     // TODO
     return 0.0f;

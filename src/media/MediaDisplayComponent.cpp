@@ -39,18 +39,22 @@ void MediaDisplayComponent::resized()
 {
     horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * spacing).reduced(spacing));
 
-    repositionLabels();
+    repositionLabelOverlays();
 }
 
-void MediaDisplayComponent::repositionLabels()
+void MediaDisplayComponent::repositionOverheadLabels()
 {
     // for (auto l : oveheadLabels) {}
+}
 
+void MediaDisplayComponent::repositionLabelOverlays()
+{
     for (auto l : labelOverlays) {
+        // TODO - enforce minimum and maximum label widths
         float width = jmax(0.05f, (float) l->getDuration()) * (getWidth() / visibleRange.getLength());
         width = jmin(width, l->getFont().getStringWidthFloat(l->getText()) + 2 * spacing);
 
-        float xPos = timeToX(l->getTime());
+        float xPos = timeToX(l->getTime()) - (float) (l->getDuration() / 2);
         float yPos = l->getRelativeY() * (getHeight() - (scrollBarSize + 2 * spacing));
 
         xPos -= width / 2.0f;
@@ -234,13 +238,13 @@ void MediaDisplayComponent::stop()
     setPlaybackPosition(0.0);
 }
 
-void MediaDisplayComponent::updateVisibleRange(Range<double> newRange)
+void MediaDisplayComponent::updateVisibleRange(Range<double> r)
 {
-    visibleRange = newRange;
+    visibleRange = r;
 
     horizontalScrollBar.setCurrentRange(visibleRange);
     updateCursorPosition();
-    repositionLabels();
+    repositionLabelOverlays();
     repaint();
 }
 
@@ -323,31 +327,36 @@ void MediaDisplayComponent::setNewTarget(URL filePath)
     addNewTempFile();
 }
 
-double MediaDisplayComponent::xToTime(const float x) const
+double MediaDisplayComponent::xToTime(const float x)
 {
-    auto totalWidth = getWidth();
-    auto totalLength = visibleRange.getLength();
-    auto visibleStart = visibleRange.getStart();
+    float totalWidth = getWidth() - 2 * spacing;
+    double totalLength = visibleRange.getLength();
+    double visibleStart = visibleRange.getStart();
 
-    double t = (x / totalWidth) * totalLength + visibleStart;
+    float x_ = jmin(jmax(0.0f, x - spacing), totalWidth);
+
+    double t = (x_ / totalWidth) * totalLength + visibleStart;
 
     return t;
 }
 
-float MediaDisplayComponent::timeToX(const double t) const
+float MediaDisplayComponent::timeToX(const double t)
 {
+
+    double totalLength = visibleRange.getLength();
+
+    double t_ = jmin(jmax(0.0, t), getTotalLengthInSecs());
+
     float x;
-
-    auto totalLength = visibleRange.getLength();
-
+    
     if (totalLength <= 0) {
         x = 0;
     } else {
-        auto totalWidth = (float) getWidth();
-        auto visibleStart = visibleRange.getStart();
-        auto visibleOffset = (float) t - visibleStart;
+        float totalWidth = getWidth() - 2 * spacing;
+        double visibleStart = visibleRange.getStart();
+        double visibleOffset = t_ - visibleStart;
 
-        x = spacing + (totalWidth - 2 * spacing) * visibleOffset / totalLength;
+        x = spacing + totalWidth * visibleOffset / totalLength;
     }
 
     return x;

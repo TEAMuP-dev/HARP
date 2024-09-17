@@ -34,8 +34,8 @@ public:
 
 private:
 
-    double xToTime(const float x) const override;
-    float timeToX(const double t) const override;
+    double xToTime(const float x) override;
+    float timeToX(const double t) override;
 
     void resetDisplay() override;
 

@@ -44,7 +44,9 @@ void LabelOverlayComponent::setDefaultAttributes()
     setText(getLabel(), dontSendNotification);
     setColour(Label::textColourId, Colours::white);
     setColour(Label::backgroundColourId, Colours::purple.withAlpha(0.5f));
-    // TODO - don't prevent clicking on transport
+    // TODO - set setMinimumHorizontalScale to something sensible
+
+    setInterceptsMouseClicks(false, false);
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
