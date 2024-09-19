@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../pianoroll/PianoRollComponent.hpp"
+#include "../synthesizer/SynthAudioSource.h"
 #include "MediaDisplayComponent.h"
 
 
@@ -10,12 +11,32 @@ public:
 
     MidiDisplayComponent()
     {
+
+        thread.startThread(Thread::Priority::normal);
+
+        formatManager.registerBasicFormats();
+
+        deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
+        deviceManager.addAudioCallback(&sourcePlayer);
+
+        sourcePlayer.setSource(&transportSource);
+
         addAndMakeVisible(pianoRoll);
 
         mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
+
+        // transportSource.setSource(&synthAudioSource,
+        //                           32768, // tells it to buffer this many samples ahead
+        //                           &thread); // this is the background thread to use for reading-ahead
+        transportSource.setSource(&synthAudioSource);
     }
 
-    ~MidiDisplayComponent() {}
+    ~MidiDisplayComponent() {
+        deviceManager.removeAudioCallback(&sourcePlayer);
+
+        transportSource.setSource(nullptr);
+        sourcePlayer.setSource(nullptr);
+    }
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override
     {
@@ -68,78 +89,80 @@ public:
 
         pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
+        juce::MidiMessageSequence allTracks;
+
         for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
             const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
 
             if (constTrack != nullptr) {
-                juce::MidiMessageSequence track(*constTrack);
-                track.updateMatchedPairs();
-
-                DBG("Track " << trackIdx << " has " << track.getNumEvents() << " events.");
-
-                for (int eventIdx = 0; eventIdx < track.getNumEvents(); ++eventIdx) {
-                    const auto midiEvent = track.getEventPointer(eventIdx);
-                    const auto& midiMessage = midiEvent->message;
-
-                    double startTime = midiEvent->message.getTimeStamp();
-
-                    DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
-
-                    if (midiMessage.isNoteOn()) {
-                        int noteNumber = midiMessage.getNoteNumber();
-                        int velocity = midiMessage.getVelocity();
-
-                        double duration = 0;
-
-                        for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx) {
-                            const auto offEvent = track.getEventPointer(offIdx);
-
-                            // Find the matching note off event
-                            if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber) {
-                                duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
-                                break;
-                            }
-                        }
-
-                        // Create a component for each for each note
-                        MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
-                        pianoRoll.insertNote(n);
-                    }
-                }
+                allTracks.addSequence(*constTrack, 0.0);
+                allTracks.updateMatchedPairs();
             }
         }
+
+        for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx) {
+            const auto midiEvent = allTracks.getEventPointer(eventIdx);
+            const auto& midiMessage = midiEvent->message;
+
+            double startTime = midiEvent->message.getTimeStamp();
+
+            DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+
+            if (midiMessage.isNoteOn()) {
+                int noteNumber = midiMessage.getNoteNumber();
+                int velocity = midiMessage.getVelocity();
+                int noteChannel = midiMessage.getChannel();
+
+                double duration = 0;
+
+                for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx) {
+                    const auto offEvent = allTracks.getEventPointer(offIdx);
+
+                    // Find the matching note off event
+                    if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber && offEvent->message.getChannel() == noteChannel) {
+                        duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
+                        break;
+                    }
+                }
+
+                // Create a component for each for each note
+                MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
+                pianoRoll.insertNote(n);
+            }
+        }
+
+        synthAudioSource.useSequence(allTracks);
     }
 
     void setPlaybackPosition(double t) override
     {
-        // TODO
+        transportSource.setPosition(t);
     }
 
     double getPlaybackPosition() override
     {
-        // TODO
-        return 0.0;
+        return transportSource.getCurrentPosition();
     }
 
     void startPlaying() override
     {
         // TODO
-        AlertWindow::showMessageBoxAsync(
-            AlertWindow::WarningIcon,
-            "NotImplementedError",
-            "MIDI playback has not yet been implemented."
-        );
+        // AlertWindow::showMessageBoxAsync(
+        //     AlertWindow::WarningIcon,
+        //     "NotImplementedError",
+        //     "MIDI playback has not yet been implemented."
+        // );
+        transportSource.start();
     }
 
     void stopPlaying() override
     {
-        // TODO
+        transportSource.stop();
     }
 
     bool isPlaying() override
     {
-        // TODO
-        return false;
+        return transportSource.isPlaying();
     }
 
     double getTotalLengthInSecs() override
@@ -177,6 +200,15 @@ private:
     void postLoadActions(const URL& filePath) override {}
 
     PianoRollComponent pianoRoll{70, scrollBarSize, scrollBarSpacing};
+
+    TimeSliceThread thread{ "midi file preview" };
+    
+    AudioFormatManager formatManager;
+    AudioDeviceManager deviceManager;
+
+    AudioSourcePlayer sourcePlayer;
+    AudioTransportSource transportSource;
+    SynthAudioSource synthAudioSource;
 
     double totalLengthInSecs;
 };
