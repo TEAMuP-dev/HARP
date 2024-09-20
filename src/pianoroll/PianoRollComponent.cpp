@@ -31,7 +31,7 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
 
 PianoRollComponent::~PianoRollComponent() {}
 
-int PianoRollComponent::getPianoRollWidth()
+int PianoRollComponent::getPianoRollWidth() const
 {
     return getWidth() - keyboardWidth - 5 - (2 * scrollBarSize + 4 * scrollBarSpacing);
 }

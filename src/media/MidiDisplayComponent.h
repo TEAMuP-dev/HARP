@@ -181,14 +181,34 @@ private:
 
     double xToTime(const float x) const override
     {
-        // TODO
-        return 0.0;
+        auto totalWidth = pianoRoll.getPianoRollWidth();
+        auto totalLength = visibleRange.getLength();
+        auto visibleStart = visibleRange.getStart();
+        auto keyboardWidth = pianoRoll.getKeyboardWidth();
+
+        double t = ((x - keyboardWidth) / totalWidth) * totalLength + visibleStart;
+
+        return t;
     }
 
     float timeToX(const double t) const override
     {
-        // TODO
-        return 0.0f;
+        float x;
+
+        auto totalLength = visibleRange.getLength();
+
+        if (totalLength <= 0) {
+            x = 0;
+        } else {
+            auto totalWidth = (float) pianoRoll.getPianoRollWidth();
+            auto visibleStart = visibleRange.getStart();
+            auto visibleOffset = (float) t - visibleStart;
+            auto keyboardWidth = pianoRoll.getKeyboardWidth();
+
+            x = totalWidth * visibleOffset / totalLength + keyboardWidth;
+        }
+
+        return x;
     }
 
     void resetDisplay() override
