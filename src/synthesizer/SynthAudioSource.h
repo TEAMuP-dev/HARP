@@ -184,7 +184,6 @@ public:
     }
 
     void setNextReadPosition(int64 newPosition) override {
-        DBG("Read position set to " << newPosition);
         readPosition = newPosition;
     }
 

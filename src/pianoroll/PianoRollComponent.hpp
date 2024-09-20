@@ -46,6 +46,8 @@ public:
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
 
+    bool hitTest(int x, int y) override;
+
 private:
 
     double zoomToKeysVisible(double zoomFactor);
