@@ -49,20 +49,29 @@ void MediaDisplayComponent::repositionOverheadLabels()
 
 void MediaDisplayComponent::repositionLabelOverlays()
 {
+    float mediaHeight = getHeight() - (scrollBarSize + 2 * spacing);
+    float pixelsPerSecond = getMediaWidth() / visibleRange.getLength();
+
+    float minLabelWidth = 0.0015 * pixelsPerSecond;
+    float maxLabelWidth = 0.10 * pixelsPerSecond;
+
     for (auto l : labelOverlays) {
-        // TODO - enforce minimum and maximum label widths
-        float width = jmax(0.05f, (float) l->getDuration()) * (getWidth() / visibleRange.getLength());
-        width = jmin(width, l->getFont().getStringWidthFloat(l->getText()) + 2 * spacing);
+        float textWidth = l->getFont().getStringWidthFloat(l->getText());
+        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * spacing));
+
+        // TODO - l->getDuration() unused
 
         float xPos = timeToX(l->getTime()) - (float) (l->getDuration() / 2);
-        float yPos = l->getRelativeY() * (getHeight() - (scrollBarSize + 2 * spacing));
+        float yPos = l->getRelativeY() * mediaHeight;
 
-        xPos -= width / 2.0f;
+        xPos -= labelWidth / 2.0f;
         yPos -= labelHeight / 2.0f;
 
-        // TODO - clip xPos and yPos to visible range
+        xPos = jmax(timeToX(0.0), xPos);
+        xPos = jmin(timeToX(getTotalLengthInSecs()) - labelWidth, xPos);
+        yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
 
-        l->setBounds(xPos, yPos, width, labelHeight);
+        l->setBounds(xPos, yPos, labelWidth, labelHeight);
     }
 }
 
@@ -333,7 +342,7 @@ double MediaDisplayComponent::xToTime(const float x)
     double totalLength = visibleRange.getLength();
     double visibleStart = visibleRange.getStart();
 
-    float x_ = jmin(jmax(0.0f, x - spacing), totalWidth);
+    float x_ = jmin(totalWidth, jmax(0.0f, x - spacing));
 
     double t = (x_ / totalWidth) * totalLength + visibleStart;
 
@@ -342,10 +351,9 @@ double MediaDisplayComponent::xToTime(const float x)
 
 float MediaDisplayComponent::timeToX(const double t)
 {
-
     double totalLength = visibleRange.getLength();
 
-    double t_ = jmin(jmax(0.0, t), getTotalLengthInSecs());
+    double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
     float x;
     

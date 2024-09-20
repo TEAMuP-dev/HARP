@@ -27,8 +27,10 @@ public:
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
 
-    virtual void repositionOverheadLabels();
-    virtual void repositionLabelOverlays();
+    virtual float getMediaWidth() = 0;
+
+    void repositionOverheadLabels();
+    void repositionLabelOverlays();
 
     void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 

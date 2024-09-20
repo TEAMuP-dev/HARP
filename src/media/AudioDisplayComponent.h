@@ -17,6 +17,8 @@ public:
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override;
 
+    float getMediaWidth() override { return getWidth(); }
+
     void loadMediaFile(const URL& filePath) override;
 
     void setPlaybackPosition(double t) override { transportSource.setPosition(t); }

@@ -42,16 +42,17 @@ LabelOverlayComponent::~LabelOverlayComponent() {}
 void LabelOverlayComponent::setDefaultAttributes()
 {
     setText(getLabel(), dontSendNotification);
+    setJustificationType(Justification::centred);
     setColour(Label::textColourId, Colours::white);
     setColour(Label::backgroundColourId, Colours::purple.withAlpha(0.5f));
-    // TODO - set setMinimumHorizontalScale to something sensible
 
+    setMinimumHorizontalScale(0.0f);
     setInterceptsMouseClicks(false, false);
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
-    return 1 - (amplitude + 1) / 2;
+    return jmin(1.0f, jmax(0.0f, 1 - (amplitude + 1) / 2));
 }
 
 float LabelOverlayComponent::frequencyToRelativeY(float frequency)
@@ -61,5 +62,5 @@ float LabelOverlayComponent::frequencyToRelativeY(float frequency)
 
 float LabelOverlayComponent::pitchToRelativeY(float pitch)
 {
-    return pitch / 128;
+    return jmin(1.0f, jmax(0.0f, 1 - pitch / 128));
 }
