@@ -206,6 +206,10 @@ public:
         // TODO
     }
 
+    void resetNotes() {
+        synth.allNotesOff(0, false);
+    }
+
 private:
     juce::Synthesiser synth;
     juce::MidiMessageSequence sequence;

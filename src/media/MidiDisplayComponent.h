@@ -146,12 +146,7 @@ public:
 
     void startPlaying() override
     {
-        // TODO
-        // AlertWindow::showMessageBoxAsync(
-        //     AlertWindow::WarningIcon,
-        //     "NotImplementedError",
-        //     "MIDI playback has not yet been implemented."
-        // );
+        synthAudioSource.resetNotes();
         transportSource.start();
     }
 
