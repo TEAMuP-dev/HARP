@@ -27,11 +27,10 @@ public:
                            juce::String& uploadedFilePath,
                            juce::String& error) const;
 
-    void makePostRequestForEventID(
-        const juce::String endpoint,
-        juce::String& eventId,
-        juce::String& error,
-        const juce::String jsonBody = R"({"data": []})") const;
+    void makePostRequestForEventID(const juce::String endpoint,
+                                   juce::String& eventId,
+                                   juce::String& error,
+                                   const juce::String jsonBody = R"({"data": []})") const;
 
     void getResponseFromEventID(const juce::String callID,
                                 const juce::String eventID,
@@ -46,9 +45,12 @@ public:
 
     SpaceInfo getSpaceInfo() const;
 
+    void downloadFileFromURL(const juce::URL& fileURL,
+                             juce::String& downloadedFilePath,
+                             juce::String& error) const;
+
 private:
-    static void parseSpaceAddress(juce::String spaceAddress,
-                                  SpaceInfo& spaceInfo);
+    static void parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***
     We parse the space address given by the user
     which can take 4 forms:

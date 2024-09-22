@@ -452,3 +452,55 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     }
     ctrlList = *ctrlArray;
 }
+
+void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& downloadedFilePath, juce::String& error) const
+{
+    // Determine the local temporary directory for storing the downloaded file
+    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+    juce::String fileName = fileURL.getFileName();
+    juce::File downloadedFile = tempDir.getChildFile(fileName);
+
+    // Create input stream to download the file
+    juce::StringPairArray responseHeaders;
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       .withConnectionTimeoutMs(10000)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5);
+
+    std::unique_ptr<juce::InputStream> stream(fileURL.createInputStream(options));
+
+    if (stream == nullptr)
+    {
+        error = "Failed to create input stream for file download request.";
+        DBG(error);
+        return;
+    }
+
+    // Check if the request was successful
+    if (statusCode != 200)
+    {
+        error = "Request failed with status code: " + juce::String(statusCode);
+        DBG(error);
+        return;
+    }
+
+    // Create output stream to save the file locally
+    std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());
+
+    if (fileOutput == nullptr || !fileOutput->openedOk())
+    {
+        error = "Failed to create output stream for file: " + downloadedFile.getFullPathName();
+        DBG(error);
+        return;
+    }
+
+    // Copy data from the input stream to the output stream
+    fileOutput->writeFromInputStream(*stream, stream->getTotalLength());
+
+    // Store the file path where the file was downloaded
+    downloadedFilePath = downloadedFile.getFullPathName();
+
+    DBG("File downloaded successfully, path: " + downloadedFilePath);
+}

@@ -22,13 +22,12 @@ public:
     WebModel() // TODO: should be a singleton
     {
         // create our logger
-        m_logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
+        m_logger.reset(
+            juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
         status = "Status.INITIALIZED";
     }
 
-    ~WebModel()
-    {
-    }
+    ~WebModel() {}
 
     void LogAndDBG(const juce::String& message) const
     {
@@ -39,10 +38,7 @@ public:
 
     bool ready() const override { return m_loaded; }
 
-    juce::File getLogFile() const
-    {
-        return m_logger->getLogFile();
-    }
+    juce::File getLogFile() const { return m_logger->getLogFile(); }
 
     CtrlList& controls() { return m_ctrls; }
 
@@ -112,7 +108,8 @@ public:
             juce::var ctrl = ctrlList.getReference(i);
             if (! ctrl.isObject())
             {
-                throw std::runtime_error("Failed to load controls from JSON. ctrl is not an object.");
+                throw std::runtime_error(
+                    "Failed to load controls from JSON. ctrl is not an object.");
             }
 
             try
@@ -272,7 +269,8 @@ public:
             juce::var procObj = dataArray->getReference(i);
             if (! procObj.isObject())
             {
-                error = "The " + juce::String(i) + "th element of the array of processed outputs is not an object.";
+                error = "The " + juce::String(i)
+                        + "th element of the array of processed outputs is not an object.";
                 DBG(error);
                 return;
             }
@@ -283,7 +281,9 @@ public:
             // meta should be an object
             if (! meta.isObject())
             {
-                error = "The " + juce::String(i) + "th element of the array of processed outputs does not have a meta object.";
+                error =
+                    "The " + juce::String(i)
+                    + "th element of the array of processed outputs does not have a meta object.";
                 DBG(error);
                 return;
             }
@@ -293,22 +293,48 @@ public:
             // and "pyharp.LabelList" for labels
             if (procObjType == "gradio.FileData")
             {
-                juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
+                // juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
+                juce::String outputFilePath;
+                juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
+                // First check if the gradio app is a localmodel or not
+                // if it is, we leave the url/path as is
+                // if not, we'll use the url, after we remove the substring
+                // "/c/file=" with "/file="
+                // Check if the url contains "space/c/file="
+                if (url.contains("/c/file="))
+                {
+                    // Replace "space/c/file=" with "space/file="
+                    url = url.replace("/c/file=", "/file=");
+                }
+                else
+                {
+                    error =
+                        "The url does not contain the expected substring '/c/file='. Check if https://github.com/gradio-app/gradio/issues/9049 has been fixed";
+                    DBG(error);
+                    return;
+                }
+                gradioClient.downloadFileFromURL(url, outputFilePath, error);
+                if (! error.isEmpty())
+                {
+                    DBG(error);
+                    return;
+                }
                 // Make a juce::File from the path
-                juce::File processedFile(path);
+                juce::File processedFile(outputFilePath);
                 // Replace the input file with the processed file
                 processedFile.moveFileTo(filetoProcess);
-                
             }
             else if (procObjType == "pyharp.LabelList")
             {
                 // LabelList labels;
-                juce::Array<juce::var>* labelsPyharp = procObj.getDynamicObject()->getProperty("labels").getArray();
+                juce::Array<juce::var>* labelsPyharp =
+                    procObj.getDynamicObject()->getProperty("labels").getArray();
                 // LabelList labels;
                 labels.clear();
                 for (int j = 0; j < labelsPyharp->size(); j++)
                 {
-                    juce::DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
+                    juce::DynamicObject* labelPyharp =
+                        labelsPyharp->getReference(j).getDynamicObject();
                     juce::String labelType = labelPyharp->getProperty("label_type").toString();
                     std::unique_ptr<OutputLabel> label;
 
@@ -319,33 +345,39 @@ public:
                         {
                             if (labelPyharp->getProperty("amplitude").isDouble())
                             {
-                                audioLabel->amplitude = static_cast<float>(labelPyharp->getProperty("amplitude"));
+                                audioLabel->amplitude =
+                                    static_cast<float>(labelPyharp->getProperty("amplitude"));
                             }
                         }
                         label = std::move(audioLabel);
-                    } else if (labelType == "SpectrogramLabel")
+                    }
+                    else if (labelType == "SpectrogramLabel")
                     {
                         auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
                         if (labelPyharp->hasProperty("frequency"))
                         {
                             if (labelPyharp->getProperty("frequency").isDouble())
                             {
-                                spectrogramLabel->frequency = static_cast<float>(labelPyharp->getProperty("frequency"));
+                                spectrogramLabel->frequency =
+                                    static_cast<float>(labelPyharp->getProperty("frequency"));
                             }
                         }
                         label = std::move(spectrogramLabel);
-                    } else if (labelType == "MidiLabel")
+                    }
+                    else if (labelType == "MidiLabel")
                     {
                         auto midiLabel = std::make_unique<MidiLabel>();
                         if (labelPyharp->hasProperty("pitch"))
                         {
                             if (labelPyharp->getProperty("pitch").isDouble())
                             {
-                                midiLabel->pitch = static_cast<float>(labelPyharp->getProperty("pitch"));
+                                midiLabel->pitch =
+                                    static_cast<float>(labelPyharp->getProperty("pitch"));
                             }
                         }
                         label = std::move(midiLabel);
-                    } else
+                    }
+                    else
                     {
                         error = "Unknown label type: " + labelType;
                         DBG(error);
@@ -380,7 +412,8 @@ public:
                         // now check if it's a float
                         if (labelPyharp->getProperty("duration").isDouble())
                         {
-                            label->duration = static_cast<float>(labelPyharp->getProperty("duration"));
+                            label->duration =
+                                static_cast<float>(labelPyharp->getProperty("duration"));
                         }
                     }
                     if (labelPyharp->hasProperty("description"))
@@ -410,32 +443,22 @@ public:
         // TODO
     }
 
-    juce::String getStatus()
-    {
-        return status;
-    }
+    juce::String getStatus() { return status; }
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
-        return std::find_if(m_ctrls.begin(), m_ctrls.end(), [&uuid](const CtrlList::value_type& pair)
+        return std::find_if(m_ctrls.begin(),
+                            m_ctrls.end(),
+                            [&uuid](const CtrlList::value_type& pair)
                             { return pair.first == uuid; });
     }
 
-    GradioClient& getGradioClient()
-    {
-        return gradioClient;
-    }
+    GradioClient& getGradioClient() { return gradioClient; }
 
-    LabelList& getLabels()
-    {
-        return labels;
-    }
+    LabelList& getLabels() { return labels; }
 
 private:
-    void ctrlsToJson(
-        juce::String& ctrlJson,
-        std::string mediaInputPath,
-        juce::String& error) const
+    void ctrlsToJson(juce::String& ctrlJson, std::string mediaInputPath, juce::String& error) const
     {
         // Create a JSON array to hold each control's value
         juce::Array<juce::var> jsonCtrlsArray;
@@ -496,7 +519,8 @@ private:
             else
             {
                 // Unsupported control type or missing implementation
-                error = "Unsupported control type or missing implementation for control with ID: " + ctrl->id.toString();
+                error = "Unsupported control type or missing implementation for control with ID: "
+                        + ctrl->id.toString();
                 LogAndDBG(error);
                 return;
             }
@@ -515,13 +539,10 @@ private:
 };
 
 // a timer that checks the status of the model and broadcasts a change if if there is one
-class ModelStatusTimer : public juce::Timer,
-                         public juce::ChangeBroadcaster
+class ModelStatusTimer : public juce::Timer, public juce::ChangeBroadcaster
 {
 public:
-    ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model)
-    {
-    }
+    ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model) {}
 
     void timerCallback() override
     {
