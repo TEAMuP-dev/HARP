@@ -438,9 +438,35 @@ public:
 
     // sets a cancel flag file that the client can check to see if the process
     // should be cancelled
+    // void cancel(juce::String& error) const
     void cancel()
     {
-        // TODO
+        juce::String error;
+        juce::String eventId;
+        juce::String endpoint = "cancel";
+
+        // Perform a POST request to the cancel endpoint to get the event ID
+        juce::String jsonBody = R"({"data": []})"; // The body is empty in this case
+
+        gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            throw std::runtime_error(error.toStdString());
+        }
+
+        // Use the event ID to make a GET request for the cancel response
+        juce::String response;
+        gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
+        if (!error.isEmpty())
+        {
+            LogAndDBG(error);
+            throw std::runtime_error(error.toStdString());
+        }
+
+        // Optionally log or process the response
+        LogAndDBG("Cancel request completed. Response: " + response);
+        status = "Status.CANCELLED";
     }
 
     juce::String getStatus() { return status; }
