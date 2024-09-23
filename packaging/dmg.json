@@ -1,18 +1,28 @@
 {
-    "title": "HARP",
-    "window": {
-      "position": {
-        "x": 100,
-        "y": 100
-      },
-      "size": {
-        "width": 730,
-        "height": 520
-      }
+  "title": "HARP",
+  "window": {
+    "position": {
+      "x": 100,
+      "y": 100
     },
-    "format": "UDZO",
-    "contents": [
-      { "x": 250, "y": 405, "type": "file", "path": "dmg/HARP.app" },
-      { "x": 480, "y": 405, "type": "link", "path": "/Applications" }
-    ]
+    "size": {
+      "width": 730,
+      "height": 520
+    }
+  },
+  "format": "UDZO",
+  "contents": [
+    {
+      "x": 250,
+      "y": 405,
+      "type": "file",
+      "path": "dmg/HARP.app"
+    },
+    {
+      "x": 480,
+      "y": 405,
+      "type": "link",
+      "path": "/Applications"
+    }
+  ]
 }
