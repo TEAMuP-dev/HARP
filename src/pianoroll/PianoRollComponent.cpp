@@ -31,7 +31,7 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
 
 PianoRollComponent::~PianoRollComponent() {}
 
-int PianoRollComponent::getPianoRollWidth()
+int PianoRollComponent::getPianoRollWidth() const
 {
     return getWidth() - keyboardWidth - 5 - (2 * scrollBarSize + 4 * scrollBarSpacing);
 }
@@ -135,4 +135,10 @@ void PianoRollComponent::resetNotes()
 double PianoRollComponent::zoomToKeysVisible(double zoomFactor)
 {
     return minKeysVisible + (1.0 - zoomFactor) * (maxKeysVisible - minKeysVisible);
+}
+
+bool PianoRollComponent::hitTest(int x, int y)
+{
+    //Only clickable on the scroll bars, otherwise passes through
+    return (x > getWidth() - (2 * scrollBarSize + 4 * scrollBarSpacing));
 }

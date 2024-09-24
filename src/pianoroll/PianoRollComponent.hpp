@@ -23,7 +23,7 @@ public:
 
     ~PianoRollComponent();
 
-    int getPianoRollWidth();
+    int getPianoRollWidth() const;
 
     void setResolution(int pixelsPerSecond);
 
@@ -42,9 +42,11 @@ public:
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
-    int getKeyboardWidth() { return keyboardWidth; }
+    int getKeyboardWidth() const { return keyboardWidth; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
+
+    bool hitTest(int x, int y) override;
 
 private:
 
