@@ -1,10 +1,7 @@
 #pragma once
 
-// #include <JuceHeader.h> // Include JUCE headers
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 
 #include "gradio/GradioClient.h"
 
@@ -14,9 +11,8 @@ class HarpLogger : private DeletedAtShutdown
 {
 public:
     // singleton instance of Logger
-    // static HarpLogger& getInstance();
     JUCE_DECLARE_SINGLETON (HarpLogger, false)
-    // destructor
+    
     ~HarpLogger();
 
     // Disable copy constructor and assignment operator
@@ -36,5 +32,6 @@ private:
     std::unique_ptr<juce::FileLogger> logger { nullptr };
 };
 
-// Free-standing function for easier access to logging
+// Function for easier access to logging
+// without having to write HarpLogger::getInstance()->LogAndDBG(message) every time
 inline void LogAndDBG(const juce::String& message) { HarpLogger::getInstance()->LogAndDBG(message); }

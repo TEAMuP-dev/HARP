@@ -5,13 +5,11 @@ void GradioClient::extractKeyFromResponse(const juce::String& response,
                                           const juce::String& key,
                                           juce::String& error) const
 {
-    // juce::String dataKey = "data: ";
     int dataIndex = response.indexOf(key);
 
     if (dataIndex == -1)
     {
         error = "Key " + key + " not found in response";
-        DBG(error);
         return;
     }
 
@@ -140,10 +138,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
         DBG(spaceInfo.error);
         return;
     }
-    DBG("User: " << user);
-    DBG("Model: " << model);
-    DBG("Gradio URL: " << spaceInfo.gradio);
-    DBG("Huggingface URL: " << spaceInfo.huggingface);
+    LogAndDBG("User: " + user);
+    LogAndDBG("Model: " + model);
+    LogAndDBG("Gradio URL: " + spaceInfo.gradio);
+    LogAndDBG("Huggingface URL: " + spaceInfo.huggingface);
     return;
 }
 
@@ -163,21 +161,7 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
-    juce::String mimeType = "audio/midi"; // "application/octet-stream"
-
-    /*
-    I'm trying to replicate the following curl command
-
-    curl --location 'http://localhost:7860/upload' \
-        --form 'files=@"/Users/xribene/Projects/HARP/test.mid"'
-
-    We could use std::system (or the JUCE equivalent) to directly
-    call curl, however this assumes that the user's machine has curl installed
-    which might not be true
-
-    juce::URL has the withFileToUpload method which is supposed to be the --form
-    equivalent of curl, but I'm getting 500 error.
-     */
+    juce::String mimeType = "audio/midi";
 
     // Use withFileToUpload to handle the multipart/form-data construction
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
@@ -196,7 +180,6 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     if (stream == nullptr)
     {
         error = "Failed to create input stream for file upload request.";
-        DBG(error);
         return;
     }
 
@@ -206,7 +189,6 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     if (statusCode != 200)
     {
         error = "Request failed with status code: " + juce::String(statusCode);
-        DBG(error);
         return;
     }
 
@@ -215,7 +197,6 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     if (! parsedResponse.isObject())
     {
         error = "Failed to parse JSON response.";
-        DBG(error);
         return;
     }
 
@@ -223,7 +204,6 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     if (responseArray == nullptr || responseArray->isEmpty())
     {
         error = "Parsed JSON does not contain the expected file path.";
-        DBG(error);
         return;
     }
 
@@ -232,7 +212,6 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     if (uploadedFilePath.isEmpty())
     {
         error = "File path not found in the response.";
-        DBG(error);
         return;
     }
 
@@ -267,7 +246,6 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     if (stream == nullptr)
     {
         error = "Failed to create input stream for POST request to " + endpoint;
-        DBG(error);
         return;
     }
 
@@ -277,7 +255,6 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     if (statusCode != 200)
     {
         error = "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
-        DBG(error);
         return;
     }
 
@@ -286,7 +263,6 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     if (! parsedResponse.isObject())
     {
         error = "Failed to parse JSON response from " + endpoint;
-        DBG(error);
         return;
     }
 
@@ -294,7 +270,6 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     if (obj == nullptr)
     {
         error = "Parsed JSON is not an object from " + endpoint;
-        DBG(error);
         return;
     }
 
@@ -302,15 +277,9 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     if (eventID.isEmpty())
     {
         error = "event_id not found in the response from " + endpoint;
-        DBG(error);
         return;
     }
 }
-
-// void GradioClient::getProcessResponse()
-// {
-
-// }
 
 void GradioClient::getResponseFromEventID(const juce::String callID,
                                           const juce::String eventID,
@@ -338,7 +307,6 @@ void GradioClient::getResponseFromEventID(const juce::String callID,
     if (stream == nullptr)
     {
         error = "Failed to create input stream for GET request.";
-        DBG(error);
         return;
     }
 
@@ -355,7 +323,6 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     makePostRequestForEventID(callID, eventID, error);
     if (! error.isEmpty())
     {
-        DBG(error);
         return;
     }
 
@@ -363,7 +330,6 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     getResponseFromEventID(callID, eventID, response, error);
     if (! error.isEmpty())
     {
-        DBG(error);
         return;
     }
 
@@ -374,22 +340,8 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     extractKeyFromResponse(response, responseData, "data: ", error);
     if (! error.isEmpty())
     {
-        DBG(error);
         return;
     }
-
-    // // The data is wrapped in quotes and brackets, so remove them
-    // if (dataPortion.startsWith("[\"") && dataPortion.endsWith("\"]"))
-    // {
-    //     dataPortion = dataPortion.substring(2, dataPortion.length() - 2);
-    // }
-
-    // // Replace single quotes with double quotes to make it valid JSON
-    // dataPortion = dataPortion.replace("'", "\"");
-
-    // // Replace Python booleans (True/False) with JSON booleans (true/false)
-    // dataPortion = dataPortion.replace("False", "false").replace("True",
-    // "true");
 
     // Parse the extracted JSON string
     juce::var parsedData;
@@ -398,21 +350,18 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     if (! parsedData.isObject())
     {
         error = "Failed to parse the data portion of the received controls JSON.";
-        DBG(error);
         return;
     }
 
     if (! parsedData.isArray())
     {
         error = "Parsed JSON is not an array.";
-        DBG(error);
         return;
     }
     juce::Array<juce::var>* dataArray = parsedData.getArray();
     if (dataArray == nullptr)
     {
         error = "Parsed JSON is not an array 2.";
-        DBG(error);
         return;
     }
     // Check if the first element in the array is a dict
@@ -420,7 +369,6 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     if (obj == nullptr)
     {
         error = "First element in the array is not a dict.";
-        DBG(error);
         return;
     }
 
@@ -430,7 +378,6 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     if (cardObj == nullptr)
     {
         error = "Couldn't load the modelCard dict from the controls response.";
-        DBG(error);
         return;
     }
 
@@ -447,7 +394,6 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     if (ctrlArray == nullptr)
     {
         error = "Couldn't load the controls array/list from the controls response.";
-        DBG(error);
         return;
     }
     ctrlList = *ctrlArray;
@@ -474,7 +420,6 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
     if (stream == nullptr)
     {
         error = "Failed to create input stream for file download request.";
-        DBG(error);
         return;
     }
 
@@ -482,7 +427,6 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
     if (statusCode != 200)
     {
         error = "Request failed with status code: " + juce::String(statusCode);
-        DBG(error);
         return;
     }
 
@@ -492,7 +436,6 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
     if (fileOutput == nullptr || !fileOutput->openedOk())
     {
         error = "Failed to create output stream for file: " + downloadedFile.getFullPathName();
-        DBG(error);
         return;
     }
 
@@ -502,5 +445,4 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
     // Store the file path where the file was downloaded
     downloadedFilePath = downloadedFile.getFullPathName();
 
-    DBG("File downloaded successfully, path: " + downloadedFilePath);
 }

@@ -10,6 +10,7 @@
 
 #include "juce_core/juce_core.h"
 #include "utils.h"
+#include "../HarpLogger.h"
 
 class GradioClient
 
