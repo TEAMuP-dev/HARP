@@ -26,6 +26,7 @@
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
+#include "HarpLogger.h"
 
 using namespace juce;
 
@@ -583,7 +584,8 @@ public:
                         // auto chosen = msgOpts.getButtonText();
                         if (chosen == "Open HARP Logs")
                         {
-                            logger->getLogFile().revealToUser();
+                            // logger->getLogFile().revealToUser();
+                            HarpLogger::getInstance().getLogFile().revealToUser();
                         }
                         else if (chosen == "Open Space URL")
                         {
@@ -692,8 +694,8 @@ public:
           totalJobs(0),
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
-         logger.reset(
-            juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+        // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+        HarpLogger::getInstance().initializeLogger();
 
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
@@ -1043,10 +1045,10 @@ public:
             if (! processingError.isEmpty())
             {
                 LogAndDBG(processingError.toStdString());
-                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                 "Processing Error",
-                                                 "An error occurred while processing the audio file: \n"
-                                                     + processingError);
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Processing Error",
+                    "An error occurred while processing the audio file: \n" + processingError);
                 resetProcessingButtons();
                 return;
             }
@@ -1391,15 +1393,15 @@ private:
     std::unique_ptr<MenuBarComponent> menuBar;
     // MenuBarPosition menuBarPosition = MenuBarPosition::window;
 
-    std::unique_ptr<juce::FileLogger> logger { nullptr };
+    // std::unique_ptr<juce::FileLogger> logger { nullptr };
     //==============================================================================
 
-    void LogAndDBG(const juce::String& message) const
-    {
-        DBG(message);
-        if (logger)
-            logger->logMessage(message);
-    }
+    // void LogAndDBG(const juce::String& message) const
+    // {
+    //     DBG(message);
+    //     if (logger)
+    //         logger->logMessage(message);
+    // }
 
     void play()
     {

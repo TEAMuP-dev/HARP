@@ -12,6 +12,7 @@
 #include "gradio/GradioClient.h"
 #include "juce_core/juce_core.h"
 #include <fstream>
+#include "HarpLogger.h"
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
