@@ -587,7 +587,7 @@ public:
                         if (chosen == "Open HARP Logs")
                         {
                             // logger->getLogFile().revealToUser();
-                            HarpLogger::getInstance().getLogFile().revealToUser();
+                            HarpLogger::getInstance()->getLogFile().revealToUser();
                         }
                         else if (chosen == "Open Space URL")
                         {
@@ -700,7 +700,7 @@ public:
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
-        HarpLogger::getInstance().initializeLogger();
+        HarpLogger::getInstance()->initializeLogger();
 
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };

@@ -10,12 +10,12 @@
 
 using namespace juce;
 
-class HarpLogger
+class HarpLogger : private DeletedAtShutdown
 {
 public:
     // singleton instance of Logger
-    static HarpLogger& getInstance();
-
+    // static HarpLogger& getInstance();
+    JUCE_DECLARE_SINGLETON (HarpLogger, false)
     // destructor
     ~HarpLogger();
 
@@ -37,4 +37,4 @@ private:
 };
 
 // Free-standing function for easier access to logging
-inline void LogAndDBG(const juce::String& message) { HarpLogger::getInstance().LogAndDBG(message); }
+inline void LogAndDBG(const juce::String& message) { HarpLogger::getInstance()->LogAndDBG(message); }
