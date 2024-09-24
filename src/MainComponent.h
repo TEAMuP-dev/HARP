@@ -500,8 +500,13 @@ public:
                             saveEnabled = false;
                         },
                         10000);
-
-                    model->load(params);
+                    juce::String loadingError;
+                    model->load(params, loadingError);
+                    if (! loadingError.isEmpty())
+                    {
+                        LogAndDBG("Error: " + loadingError);
+                        throw std::runtime_error(loadingError.toStdString());
+                    }
                     success = true;
                     MessageManager::callAsync(
                         [this]
@@ -578,7 +583,7 @@ public:
                         // auto chosen = msgOpts.getButtonText();
                         if (chosen == "Open HARP Logs")
                         {
-                            model->getLogFile().revealToUser();
+                            logger->getLogFile().revealToUser();
                         }
                         else if (chosen == "Open Space URL")
                         {
@@ -687,6 +692,9 @@ public:
           totalJobs(0),
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
+         logger.reset(
+            juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
         chooseFileButtonHandler.onMouseEnter = [this]()
@@ -943,7 +951,20 @@ public:
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-        model->cancel();
+        juce::String cancelError;
+        model->cancel(cancelError);
+        if (! cancelError.isEmpty())
+        {
+            LogAndDBG(cancelError.toStdString());
+            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                             "Cancel Error",
+                                             "An error occurred while cancelling the processing: \n"
+                                                 + cancelError);
+            // processCancelButton.setEnabled(true);
+            // processCancelButton.setMode(processButtonInfo.label);
+            resetProcessingButtons();
+            return;
+        }
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
@@ -972,12 +993,8 @@ public:
         saveEnabled = false;
         isProcessing = true;
 
-        // TODO: get the current audio file and process it
-        // if we don't have one, let the user know
-        // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
         if (model == nullptr)
         {
-            DBG("unhandled exception: model is null. we should probably open an error window here.");
             AlertWindow("Error",
                         "Model is not loaded. Please load a model first.",
                         AlertWindow::WarningIcon);
@@ -1000,7 +1017,7 @@ public:
         // or another appropriate file
         if (! matchingModel)
         {
-            DBG("Model and file type mismatch");
+            LogAndDBG("Model and file type mismatch");
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
                 "Processing Error",
@@ -1013,7 +1030,7 @@ public:
         mediaDisplay->addNewTempFile();
 
         // print how many jobs are currently in the threadpool
-        DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+        LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
         // empty customJobs
         customJobs.clear();
@@ -1021,8 +1038,18 @@ public:
         customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
             // Individual job code for each iteration
             // copy the audio file, with the same filename except for an added _harp to the stem
-            model->process(mediaDisplay->getTempFilePath().getLocalFile());
-            DBG("Processing finished");
+            juce::String processingError;
+            model->process(mediaDisplay->getTempFilePath().getLocalFile(), processingError);
+            if (! processingError.isEmpty())
+            {
+                LogAndDBG(processingError.toStdString());
+                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                 "Processing Error",
+                                                 "An error occurred while processing the audio file: \n"
+                                                     + processingError);
+                resetProcessingButtons();
+                return;
+            }
             // load the audio file again
             processBroadcaster.sendChangeMessage();
 
@@ -1364,7 +1391,15 @@ private:
     std::unique_ptr<MenuBarComponent> menuBar;
     // MenuBarPosition menuBarPosition = MenuBarPosition::window;
 
+    std::unique_ptr<juce::FileLogger> logger { nullptr };
     //==============================================================================
+
+    void LogAndDBG(const juce::String& message) const
+    {
+        DBG(message);
+        if (logger)
+            logger->logMessage(message);
+    }
 
     void play()
     {

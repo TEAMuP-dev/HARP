@@ -22,35 +22,32 @@ public:
     WebModel() // TODO: should be a singleton
     {
         // create our logger
-        m_logger.reset(
-            juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
+        // m_logger.reset(
+        //     juce::FileLogger::createDefaultAppLogger("HARP", "webmodel.log", "hello, harp!"));
         status = "Status.INITIALIZED";
     }
 
     ~WebModel() {}
 
-    void LogAndDBG(const juce::String& message) const
-    {
-        DBG(message);
-        if (m_logger)
-            m_logger->logMessage(message);
-    }
-
     bool ready() const override { return m_loaded; }
 
-    juce::File getLogFile() const { return m_logger->getLogFile(); }
+    // juce::File getLogFile() const { return m_logger->getLogFile(); }
 
     CtrlList& controls() { return m_ctrls; }
 
-    void load(const map<string, any>& params) override
+    void load(const map<string, any>& params, juce::String& error) override
     {
         m_ctrls.clear();
         m_loaded = false;
+        // status = "Status.FAILED_TO_LOAD";
 
         // get the name of the huggingface repo we're going to use
         if (! modelparams::contains(params, "url"))
         {
-            throw std::runtime_error("url not found in params");
+            // throw std::runtime_error("url not found in params");
+            error = "url not found in params";
+            // LogAndDBG(error);
+            return;
         }
 
         std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
@@ -60,21 +57,25 @@ public:
         if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
         {
             // LogAndDBG("Error: " + gradioClient.getSpaceInfo().error);
-            LogAndDBG(gradioClient.getSpaceInfo().toString());
-            throw std::runtime_error(gradioClient.getSpaceInfo().error.toStdString());
+            // LogAndDBG(gradioClient.getSpaceInfo().toString());
+            // throw std::runtime_error(gradioClient.getSpaceInfo().error.toStdString());
+            error = gradioClient.getSpaceInfo().error;
+            // LogAndDBG(error);
+            return;
         }
 
-        LogAndDBG(gradioClient.getSpaceInfo().toString());
+        // LogAndDBG(gradioClient.getSpaceInfo().toString());
 
         juce::Array<juce::var> ctrlList;
         juce::DynamicObject cardDict;
-        juce::String error;
+        // juce::String error;
         gradioClient.getControls(ctrlList, cardDict, error);
 
         if (! error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         // TODO: probably need to check if these properties exist and if they're the right types.
@@ -89,7 +90,10 @@ public:
         juce::Array<juce::var>* tags = cardDict.getProperty("tags").getArray();
         if (tags == nullptr)
         {
-            throw std::runtime_error("Failed to load tags from JSON. tags is null.");
+            // throw std::runtime_error("Failed to load tags from JSON. tags is null.");
+            error = "Failed to load tags from JSON. tags is null.";
+            // LogAndDBG(error);
+            return;
         }
 
         for (int i = 0; i < tags->size(); i++)
@@ -108,8 +112,11 @@ public:
             juce::var ctrl = ctrlList.getReference(i);
             if (! ctrl.isObject())
             {
-                throw std::runtime_error(
-                    "Failed to load controls from JSON. ctrl is not an object.");
+                // throw std::runtime_error(
+                //     "Failed to load controls from JSON. ctrl is not an object.");
+                error = "Failed to load controls from JSON. ctrl is not an object.";
+                // LogAndDBG(error);
+                return;
             }
 
             try
@@ -176,7 +183,10 @@ public:
             }
             catch (const char* e)
             {
-                throw std::runtime_error("Failed to load controls from JSON. " + std::string(e));
+                // throw std::runtime_error("Failed to load controls from JSON. " + std::string(e));
+                error = "Failed to load controls from JSON. " + std::string(e);
+                // LogAndDBG(error);
+                return;
             }
         }
         // outputPath.deleteFile();
@@ -185,15 +195,16 @@ public:
         status = "Status.LOADED";
     }
 
-    void process(juce::File filetoProcess)
+    void process(juce::File filetoProcess, juce::String& error)
     {
-        juce::String error;
+        // juce::String error;
         juce::String uploadedFilePath;
         gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath, error);
         if (! error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         // Using the
@@ -204,8 +215,9 @@ public:
         ctrlsToJson(ctrlJson, uploadedFilePath.toStdString(), error);
         if (! error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
         // TODO: The jsonBody should be created using DynamicObject and var
         // TODO: make a utility function that wraps this into an object with a "data" key
@@ -220,16 +232,18 @@ public:
         gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
         if (! error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         juce::String response;
         gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
         if (! error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         juce::String responseData;
@@ -237,7 +251,7 @@ public:
         gradioClient.extractKeyFromResponse(response, responseData, key, error);
         if (! error.isEmpty())
         {
-            DBG(error);
+            // DBG(error);
             return;
         }
 
@@ -246,20 +260,20 @@ public:
         if (! parsedData.isObject())
         {
             error = "Failed to parse the data portion of the received controls JSON.";
-            DBG(error);
+            // DBG(error);
             return;
         }
         if (! parsedData.isArray())
         {
             error = "Parsed data field should be an array.";
-            DBG(error);
+            // DBG(error);
             return;
         }
         juce::Array<juce::var>* dataArray = parsedData.getArray();
         if (dataArray == nullptr)
         {
             error = "The data array is empty.";
-            DBG(error);
+            // DBG(error);
             return;
         }
 
@@ -271,7 +285,7 @@ public:
             {
                 error = "The " + juce::String(i)
                         + "th element of the array of processed outputs is not an object.";
-                DBG(error);
+                // DBG(error);
                 return;
             }
             // Make sure the object has a "meta" key
@@ -284,7 +298,7 @@ public:
                 error =
                     "The " + juce::String(i)
                     + "th element of the array of processed outputs does not have a meta object.";
-                DBG(error);
+                // DBG(error);
                 return;
             }
             juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
@@ -310,13 +324,13 @@ public:
                 {
                     error =
                         "The url does not contain the expected substring '/c/file='. Check if https://github.com/gradio-app/gradio/issues/9049 has been fixed";
-                    DBG(error);
+                    // DBG(error);
                     return;
                 }
                 gradioClient.downloadFileFromURL(url, outputFilePath, error);
                 if (! error.isEmpty())
                 {
-                    DBG(error);
+                    // DBG(error);
                     return;
                 }
                 // Make a juce::File from the path
@@ -380,7 +394,7 @@ public:
                     else
                     {
                         error = "Unknown label type: " + labelType;
-                        DBG(error);
+                        // DBG(error);
                         return;
                     }
                     // All the labels, no matter theyr type, have some common properties
@@ -430,7 +444,7 @@ public:
             else
             {
                 error = "Unknown output type: " + procObjType;
-                DBG(error);
+                // DBG(error);
                 return;
             }
         }
@@ -439,9 +453,9 @@ public:
     // sets a cancel flag file that the client can check to see if the process
     // should be cancelled
     // void cancel(juce::String& error) const
-    void cancel()
+    void cancel(juce::String& error)
     {
-        juce::String error;
+        // juce::String error;
         juce::String eventId;
         juce::String endpoint = "cancel";
 
@@ -451,8 +465,9 @@ public:
         gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
         if (!error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         // Use the event ID to make a GET request for the cancel response
@@ -460,12 +475,13 @@ public:
         gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
         if (!error.isEmpty())
         {
-            LogAndDBG(error);
-            throw std::runtime_error(error.toStdString());
+            // LogAndDBG(error);
+            // throw std::runtime_error(error.toStdString());
+            return;
         }
 
         // Optionally log or process the response
-        LogAndDBG("Cancel request completed. Response: " + response);
+        // LogAndDBG("Cancel request completed. Response: " + response);
         status = "Status.CANCELLED";
     }
 
@@ -547,7 +563,7 @@ private:
                 // Unsupported control type or missing implementation
                 error = "Unsupported control type or missing implementation for control with ID: "
                         + ctrl->id.toString();
-                LogAndDBG(error);
+                // LogAndDBG(error);
                 return;
             }
         }
@@ -557,9 +573,8 @@ private:
     }
 
     CtrlList m_ctrls;
-    std::unique_ptr<juce::FileLogger> m_logger { nullptr };
+    // std::unique_ptr<juce::FileLogger> m_logger { nullptr };
     GradioClient gradioClient;
-    juce::String status;
     // A variable to store the latest labelList received during processing
     LabelList labels;
 };

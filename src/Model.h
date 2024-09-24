@@ -49,9 +49,10 @@ public:
     /**
    * @brief Load the model parameters.
    * @param params A map of parameters for the model.
+   * @param error A string reference to store any error messages.
    * @return void. will throw a std::runtime_error if loading fails. 
    */
-    virtual void load(const map<string, any>& params) = 0;
+    virtual void load(const map<string, any>& params, juce::String& error) = 0;
 
     /**
    * @brief Checks if the model is ready.
@@ -66,4 +67,5 @@ public:
 protected:
     ModelCard m_card;
     bool m_loaded { false };
+    juce::String status;
 };
