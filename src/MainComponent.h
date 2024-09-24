@@ -23,10 +23,10 @@
 
 #include "gradio/GradioClient.h"
 
+#include "HarpLogger.h"
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
-#include "HarpLogger.h"
 
 using namespace juce;
 
@@ -484,23 +484,23 @@ public:
                     // timeout after 10 seconds
                     // TODO: this callback needs to be cleaned up in the destructor in case we quit
                     std::atomic<bool> success = false;
-                    TimedCallback timedCallback(
-                        [this, &success]
-                        {
-                            if (success)
-                                return;
-                            DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
-                            AlertWindow::showMessageBoxAsync(
-                                AlertWindow::WarningIcon,
-                                "Loading Error",
-                                "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake.");
-                            MessageManager::callAsync([this] { resetModelPathComboBox(); });
-                            model.reset(new WebModel());
-                            loadBroadcaster.sendChangeMessage();
-                            // saveButton.setEnabled(false);
-                            saveEnabled = false;
-                        },
-                        10000);
+                    // TimedCallback timedCallback(
+                    //     [this, &success]
+                    //     {
+                    //         if (success)
+                    //             return;
+                    //         DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
+                    //         AlertWindow::showMessageBoxAsync(
+                    //             AlertWindow::WarningIcon,
+                    //             "Loading Error",
+                    //             "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake.");
+                    //         MessageManager::callAsync([this] { resetModelPathComboBox(); });
+                    //         model.reset(new WebModel());
+                    //         loadBroadcaster.sendChangeMessage();
+                    //         // saveButton.setEnabled(false);
+                    //         saveEnabled = false;
+                    //     },
+                    //     10000);
                     juce::String loadingError;
                     model->load(params, loadingError);
                     if (! loadingError.isEmpty())
@@ -552,7 +552,8 @@ public:
                             .withTitle("Error")
                             .withMessage("An error occurred while loading the WebModel: \n"
                                          + String(e.what()));
-                    if (! String(e.what()).contains("404"))
+                    if (! String(e.what()).contains("404")
+                        && ! String(e.what()).contains("Invalid URL"))
                     {
                         msgOpts = msgOpts.withButton("Open Space URL");
                     }
@@ -566,8 +567,9 @@ public:
                         // auto chosen = msgOpts.getButtonText(result);
                         // they're not the same as the order of the buttons in the alert
                         // this is the order that I actually observed them to be.
+                        // UPDATE (xribene): This should be fixed in Juce v8
+                        // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
                         std::map<int, std::string> observedButtonIndicesMap = {};
                         if (msgOpts.getNumButtons() == 3)
                         {
@@ -591,17 +593,20 @@ public:
                         {
                             // URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
                             // URL spaceUrl = model->gradioClient->getSpaceUrl()
-                            URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
+                            // URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
+                            URL spaceUrl = this->model->getGradioClient().getSpaceInfo().huggingface;
                             spaceUrl.launchInDefaultBrowser();
                         }
-                        MessageManager::callAsync([this] { resetModelPathComboBox(); });
+                        MessageManager::callAsync([this] 
+                        { 
+                            resetModelPathComboBox(); 
+                            model.reset(new WebModel());
+                            loadBroadcaster.sendChangeMessage();
+                            // saveButton.setEnabled(false);
+                        });
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
-
-                    model.reset(new WebModel());
-                    loadBroadcaster.sendChangeMessage();
-                    // saveButton.setEnabled(false);
                     saveEnabled = false;
                 }
             });
@@ -921,6 +926,7 @@ public:
 
         jobProcessorThread.startThread();
 
+        
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque(true);

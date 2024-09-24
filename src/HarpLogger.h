@@ -8,7 +8,6 @@
 
 #include "gradio/GradioClient.h"
 
-
 using namespace juce;
 
 class HarpLogger
@@ -16,6 +15,9 @@ class HarpLogger
 public:
     // singleton instance of Logger
     static HarpLogger& getInstance();
+
+    // destructor
+    ~HarpLogger();
 
     // Disable copy constructor and assignment operator
     HarpLogger(const HarpLogger&) = delete;
@@ -35,7 +37,4 @@ private:
 };
 
 // Free-standing function for easier access to logging
-inline void LogAndDBG(const juce::String& message)
-{
-    HarpLogger::getInstance().LogAndDBG(message);
-}
+inline void LogAndDBG(const juce::String& message) { HarpLogger::getInstance().LogAndDBG(message); }
