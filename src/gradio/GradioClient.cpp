@@ -1,23 +1,33 @@
 #include "GradioClient.h"
+#include "../errors.h"
 
-void GradioClient::extractKeyFromResponse(const juce::String& response,
-                                          juce::String& responseKey,
-                                          const juce::String& key,
-                                          juce::String& error) const
+OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
+                                              juce::String& responseKey,
+                                              const juce::String& key) const
+//   OpResult& result) const
+//   juce::String& error) const
+
 {
     int dataIndex = response.indexOf(key);
 
     if (dataIndex == -1)
     {
-        error = "Key " + key + " not found in response";
-        return;
+        // error = "Key " + key + " not found in response";
+        // result.getError().type = ErrorType::MissingJsonKey;
+        // result.getError().devMessage = "Key " + key + " not found in response";
+        // result.fail();
+        Error error;
+        error.type = ErrorType::MissingJsonKey;
+        error.devMessage = "Key " + key + " not found in response";
+        error.userMessage = error.devMessage;
+        return OpResult::fail(error);
     }
 
     // Extract the portion after "key: "
     responseKey = response.substring(dataIndex + key.length()).trim();
 }
 
-void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
+OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
     spaceInfo.userInput = spaceAddress;
     // Check if the URL is of Type 4 (localhost or gradio.live)
@@ -27,7 +37,7 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
         spaceInfo.gradio = spaceAddress;
         spaceInfo.huggingface = spaceAddress;
         spaceInfo.status = SpaceInfo::Status::LOCALHOST;
-        return;
+        return OpResult::ok();
     }
     juce::String user;
     juce::String model;
@@ -54,8 +64,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
                               "model. Too few parts in "
                               + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            DBG(spaceInfo.error);
-            return;
+            Error error;
+            error.type = ErrorType::InvalidURL;
+            error.devMessage = spaceInfo.error;
+            return OpResult::fail(error);
         }
     }
     else if (spaceAddress.contains("hf.space"))
@@ -85,8 +97,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
                               "hyphen found in the subdomain: "
                               + subdomain;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            DBG(spaceInfo.error);
-            return;
+            Error error;
+            error.type = ErrorType::InvalidURL;
+            error.devMessage = spaceInfo.error;
+            return OpResult::fail(error);
         }
     }
     // else if address is of the form user/model and doesn't contain http
@@ -108,8 +122,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
                               "Too many/few slashes in "
                               + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            DBG(spaceInfo.error);
-            return;
+            Error error;
+            error.type = ErrorType::InvalidURL;
+            error.devMessage = spaceInfo.error;
+            return OpResult::fail(error);
         }
     }
     else
@@ -117,8 +133,10 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
         spaceInfo.error =
             "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
         spaceInfo.status = SpaceInfo::Status::ERROR;
-        DBG(spaceInfo.error);
-        return;
+        Error error;
+        error.type = ErrorType::InvalidURL;
+        error.devMessage = spaceInfo.error;
+        return OpResult::fail(error);
     }
 
     // Construct the gradio and HF URLs
@@ -135,14 +153,13 @@ void GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& space
     {
         spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
         spaceInfo.status = SpaceInfo::Status::ERROR;
-        DBG(spaceInfo.error);
-        return;
+        Error error;
+        error.type = ErrorType::InvalidURL;
+        error.devMessage = spaceInfo.error;
+        return OpResult::fail(error);
     }
-    LogAndDBG("User: " + user);
-    LogAndDBG("Model: " + model);
-    LogAndDBG("Gradio URL: " + spaceInfo.gradio);
-    LogAndDBG("Huggingface URL: " + spaceInfo.huggingface);
-    return;
+    LogAndDBG(spaceInfo.toString());
+    return OpResult::ok();
 }
 
 void GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
@@ -152,9 +169,8 @@ void GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
 
 SpaceInfo GradioClient::getSpaceInfo() const { return spaceInfo; }
 
-void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
-                                     juce::String& uploadedFilePath,
-                                     juce::String& error) const
+OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
+                                         juce::String& uploadedFilePath) const
 {
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL uploadEndpoint = gradioEndpoint.getChildURL("upload");
@@ -162,6 +178,11 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     juce::String mimeType = "audio/midi";
+
+    // Create the error here, in case we need it
+    // All the errors of this function are of type FileUploadError
+    Error error;
+    error.type = ErrorType::FileUploadError;
 
     // Use withFileToUpload to handle the multipart/form-data construction
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
@@ -179,8 +200,8 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
     if (stream == nullptr)
     {
-        error = "Failed to create input stream for file upload request.";
-        return;
+        error.devMessage = "Failed to create input stream for file upload request.";
+        return OpResult::fail(error);
     }
 
     juce::String response = stream->readEntireStreamAsString();
@@ -188,41 +209,46 @@ void GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
-        error = "Request failed with status code: " + juce::String(statusCode);
-        return;
+        error.devMessage = "Request failed with status code: " + juce::String(statusCode);
+        return OpResult::fail(error);
     }
 
     // Parse the response
     juce::var parsedResponse = juce::JSON::parse(response);
     if (! parsedResponse.isObject())
     {
-        error = "Failed to parse JSON response.";
-        return;
+        error.devMessage = "Failed to parse JSON response.";
+        return OpResult::fail(error);
     }
 
     juce::Array<juce::var>* responseArray = parsedResponse.getArray();
     if (responseArray == nullptr || responseArray->isEmpty())
     {
-        error = "Parsed JSON does not contain the expected file path.";
-        return;
+        error.devMessage = "Parsed JSON does not contain the expected array.";
+        return OpResult::fail(error);
     }
 
     // Get the first element in the array, which is the file path
     uploadedFilePath = responseArray->getFirst().toString();
     if (uploadedFilePath.isEmpty())
     {
-        error = "File path not found in the response.";
-        return;
+        error.devMessage = "File path is empty in the response.";
+        return OpResult::fail(error);
     }
 
-    DBG("File uploaded successfully, path: " + uploadedFilePath);
+    // DBG("File uploaded successfully, path: " + uploadedFilePath);
+    return OpResult::ok();
 }
 
-void GradioClient::makePostRequestForEventID(const juce::String endpoint,
-                                             juce::String& eventID,
-                                             juce::String& error,
-                                             const juce::String jsonBody) const
+OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
+                                                 juce::String& eventID,
+                                                 const juce::String jsonBody) const
 {
+    // Create the error here, in case we need it
+    // All the errors of this function are of type FileUploadError
+    Error error;
+    error.type = ErrorType::HttpRequestError;
+
     // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
@@ -245,8 +271,8 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
     if (stream == nullptr)
     {
-        error = "Failed to create input stream for POST request to " + endpoint;
-        return;
+        error.devMessage = "Failed to create input stream for POST request to " + endpoint;
+        return OpResult::fail(error);
     }
 
     juce::String response = stream->readEntireStreamAsString();
@@ -254,38 +280,45 @@ void GradioClient::makePostRequestForEventID(const juce::String endpoint,
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
-        error = "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
-        return;
+        error.devMessage =
+            "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
+        return OpResult::fail(error);
     }
 
     // Parse the response
     juce::var parsedResponse = juce::JSON::parse(response);
     if (! parsedResponse.isObject())
     {
-        error = "Failed to parse JSON response from " + endpoint;
-        return;
+        error.devMessage = "Failed to parse JSON response from " + endpoint;
+        return OpResult::fail(error);
     }
 
     juce::DynamicObject* obj = parsedResponse.getDynamicObject();
     if (obj == nullptr)
     {
-        error = "Parsed JSON is not an object from " + endpoint;
-        return;
+        error.devMessage = "Parsed JSON is not an object from " + endpoint;
+        return OpResult::fail(error);
     }
 
     eventID = obj->getProperty("event_id");
     if (eventID.isEmpty())
     {
-        error = "event_id not found in the response from " + endpoint;
-        return;
+        error.type = ErrorType::MissingJsonKey;
+        error.devMessage = "event_id not found in the response from " + endpoint;
+        return OpResult::fail(error);
     }
+
+    return OpResult::ok();
 }
 
-void GradioClient::getResponseFromEventID(const juce::String callID,
-                                          const juce::String eventID,
-                                          juce::String& response,
-                                          juce::String& error) const
+OpResult GradioClient::getResponseFromEventID(const juce::String callID,
+                                              const juce::String eventID,
+                                              juce::String& response) const
 {
+    // Create the error here, in case we need it
+    Error error;
+    error.type = ErrorType::HttpRequestError;
+
     // Now we make a GET request to the endpoint with the event ID appended
     // The endpoint for the get request is the same as the post request with
     // /{eventID} appended
@@ -306,70 +339,79 @@ void GradioClient::getResponseFromEventID(const juce::String callID,
 
     if (stream == nullptr)
     {
-        error = "Failed to create input stream for GET request.";
-        return;
+        error.devMessage =
+            "Failed to create input stream for GET request to " + callID + "/" + eventID;
+        return OpResult::fail(error);
     }
 
     // Read the entire response from the stream
     response = stream->readEntireStreamAsString();
+
+    return OpResult::ok();
 }
 
-void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
-                               juce::DynamicObject& cardDict,
-                               juce::String& error)
+OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList,
+                               juce::DynamicObject& cardDict)
 {
     juce::String callID = "controls";
     juce::String eventID;
-    makePostRequestForEventID(callID, eventID, error);
-    if (! error.isEmpty())
+
+    // Initialize a positive result
+    OpResult result = OpResult::ok();
+
+    result = makePostRequestForEventID(callID, eventID);
+    if (result.failed())
     {
-        return;
+        return result;
     }
 
     juce::String response;
-    getResponseFromEventID(callID, eventID, response, error);
-    if (! error.isEmpty())
+    result = getResponseFromEventID(callID, eventID, response);
+    if (result.failed())
     {
-        return;
+        return result;
     }
 
     // From the gradio app, we receive a JSON string
     // (see core.py in pyharp --> gr.Text(label="Controls"))
     // Extract the data portion from the response
     juce::String responseData;
-    extractKeyFromResponse(response, responseData, "data: ", error);
-    if (! error.isEmpty())
+    result = extractKeyFromResponse(response, responseData, "data: ");
+    if (result.failed())
     {
-        return;
+        return result;
     }
 
+    // Create an Error object in case we need it for the next steps
+    Error error;
+    error.type = ErrorType::JsonParseError;
     // Parse the extracted JSON string
     juce::var parsedData;
-    juce::Result parseResult = juce::JSON::parse(responseData, parsedData);
+    juce::JSON::parse(responseData, parsedData);
 
     if (! parsedData.isObject())
     {
-        error = "Failed to parse the data portion of the received controls JSON.";
-        return;
+        error.devMessage = "Failed to parse the data portion of the received controls JSON.";
+        return OpResult::fail(error);
     }
 
     if (! parsedData.isArray())
     {
-        error = "Parsed JSON is not an array.";
-        return;
+        error.devMessage = "Parsed JSON is not an array.";
+        return OpResult::fail(error);
     }
     juce::Array<juce::var>* dataArray = parsedData.getArray();
     if (dataArray == nullptr)
     {
-        error = "Parsed JSON is not an array 2.";
-        return;
+        error.devMessage = "Parsed JSON is not an array 2.";
+        return OpResult::fail(error);
     }
     // Check if the first element in the array is a dict
     juce::DynamicObject* obj = dataArray->getFirst().getDynamicObject();
     if (obj == nullptr)
     {
-        error = "First element in the array is not a dict.";
-        return;
+        error.devMessage = "First element in the array is not a dict.";
+        return OpResult::fail(error);
     }
 
     // Get the card and controls objects from the parsed data
@@ -377,8 +419,8 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
 
     if (cardObj == nullptr)
     {
-        error = "Couldn't load the modelCard dict from the controls response.";
-        return;
+        error.devMessage = "Couldn't load the modelCard dict from the controls response.";
+        return OpResult::fail(error);
     }
 
     // Clear the existing properties in cardDict
@@ -393,14 +435,21 @@ void GradioClient::getControls(juce::Array<juce::var>& ctrlList,
     juce::Array<juce::var>* ctrlArray = obj->getProperty("ctrls").getArray();
     if (ctrlArray == nullptr)
     {
-        error = "Couldn't load the controls array/list from the controls response.";
-        return;
+        error.devMessage = "Couldn't load the controls array/list from the controls response.";
+        return OpResult::fail(error);
     }
     ctrlList = *ctrlArray;
+
+    return result;
 }
 
-void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& downloadedFilePath, juce::String& error) const
+OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
+                                       juce::String& downloadedFilePath) const
 {
+    // Create the error here, in case we need it
+    Error error;
+    error.type = ErrorType::FileDownloadError;
+    
     // Determine the local temporary directory for storing the downloaded file
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::String fileName = fileURL.getFileName();
@@ -419,24 +468,24 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
 
     if (stream == nullptr)
     {
-        error = "Failed to create input stream for file download request.";
-        return;
+        error.devMessage = "Failed to create input stream for file download request.";
+        return OpResult::fail(error);
     }
 
     // Check if the request was successful
     if (statusCode != 200)
     {
-        error = "Request failed with status code: " + juce::String(statusCode);
-        return;
+        error.devMessage = "Request failed with status code: " + juce::String(statusCode);
+        return OpResult::fail(error);
     }
 
     // Create output stream to save the file locally
     std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());
 
-    if (fileOutput == nullptr || !fileOutput->openedOk())
+    if (fileOutput == nullptr || ! fileOutput->openedOk())
     {
-        error = "Failed to create output stream for file: " + downloadedFile.getFullPathName();
-        return;
+        error.devMessage = "Failed to create output stream for file: " + downloadedFile.getFullPathName();
+        return OpResult::fail(error);
     }
 
     // Copy data from the input stream to the output stream
@@ -445,4 +494,5 @@ void GradioClient::downloadFileFromURL(const juce::URL& fileURL, juce::String& d
     // Store the file path where the file was downloaded
     downloadedFilePath = downloadedFile.getFullPathName();
 
+    return OpResult::ok();
 }

@@ -456,10 +456,7 @@ public:
 
     void loadModelCallback()
     {
-        DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
-
         // collect input parameters for the model.
-
         const std::string hf_url = "https://huggingface.co/spaces/";
 
         std::string path_url;
@@ -472,9 +469,9 @@ public:
             { "url", path_url },
         };
         resetUI();
+
         // loading happens asynchronously.
         // the document controller trigger a change listener callback, which will update the UI
-
         threadPool.addJob(
             [this, params]
             {
@@ -505,7 +502,7 @@ public:
                     model->load(params, loadingError);
                     if (! loadingError.isEmpty())
                     {
-                        LogAndDBG("Error: " + loadingError);
+                        LogAndDBG("Error in Model Loading:\n" + loadingError);
                         throw std::runtime_error(loadingError.toStdString());
                     }
                     success = true;
