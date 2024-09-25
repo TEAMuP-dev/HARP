@@ -23,10 +23,11 @@
 
 #include "gradio/GradioClient.h"
 
+#include "HarpLogger.h"
+#include "external/magic_enum.hpp"
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
-
 using namespace juce;
 
 // this only calls the callback ONCE
@@ -455,10 +456,7 @@ public:
 
     void loadModelCallback()
     {
-        DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
-
         // collect input parameters for the model.
-
         const std::string hf_url = "https://huggingface.co/spaces/";
 
         std::string path_url;
@@ -471,38 +469,22 @@ public:
             { "url", path_url },
         };
         resetUI();
+
         // loading happens asynchronously.
         // the document controller trigger a change listener callback, which will update the UI
-
         threadPool.addJob(
             [this, params]
             {
                 DBG("executeLoad!!");
                 try
                 {
-                    // timeout after 10 seconds
-                    // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                    std::atomic<bool> success = false;
-                    TimedCallback timedCallback(
-                        [this, &success]
-                        {
-                            if (success)
-                                return;
-                            DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
-                            AlertWindow::showMessageBoxAsync(
-                                AlertWindow::WarningIcon,
-                                "Loading Error",
-                                "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake.");
-                            MessageManager::callAsync([this] { resetModelPathComboBox(); });
-                            model.reset(new WebModel());
-                            loadBroadcaster.sendChangeMessage();
-                            // saveButton.setEnabled(false);
-                            saveEnabled = false;
-                        },
-                        10000);
-
-                    model->load(params);
-                    success = true;
+                    juce::String loadingError;
+                    OpResult loadingResult = model->load(params);
+                    if (loadingResult.failed())
+                    {
+                        // throw std::runtime_error(loadingResult.getError().devMessage.toStdString());
+                        throw loadingResult.getError();
+                    }
                     MessageManager::callAsync(
                         [this]
                         {
@@ -529,24 +511,22 @@ public:
                         });
                     DBG("executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
-                    // since we're on a helper thread,
-                    // it's ok to sleep for 10s
-                    // to let the timeout callback do its thing
-                    //Thread::sleep(10000);
-                    //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
                 }
-                catch (const std::runtime_error& e)
+                catch (Error& loadingError)
                 {
-                    DBG("Caught exception: " << e.what());
-
+                    Error::fillUserMessage(loadingError);
+                    LogAndDBG("Error in Model Loading:\n"
+                                  + loadingError.devMessage);
                     auto msgOpts =
                         MessageBoxOptions()
                             .withTitle("Loading Error")
                             .withIconType(AlertWindow::WarningIcon)
                             .withTitle("Error")
                             .withMessage("An error occurred while loading the WebModel: \n"
-                                         + String(e.what()));
-                    if (! String(e.what()).contains("404"))
+                                         + loadingError.userMessage);
+                    // if (! String(e.what()).contains("404")
+                    //     && ! String(e.what()).contains("Invalid URL"))
+                    if (loadingError.type != ErrorType::InvalidURL)
                     {
                         msgOpts = msgOpts.withButton("Open Space URL");
                     }
@@ -560,8 +540,9 @@ public:
                         // auto chosen = msgOpts.getButtonText(result);
                         // they're not the same as the order of the buttons in the alert
                         // this is the order that I actually observed them to be.
+                        // UPDATE (xribene): This should be fixed in Juce v8
+                        // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
                         std::map<int, std::string> observedButtonIndicesMap = {};
                         if (msgOpts.getNumButtons() == 3)
                         {
@@ -578,24 +559,41 @@ public:
                         // auto chosen = msgOpts.getButtonText();
                         if (chosen == "Open HARP Logs")
                         {
-                            model->getLogFile().revealToUser();
+                            // logger->getLogFile().revealToUser();
+                            HarpLogger::getInstance()->getLogFile().revealToUser();
                         }
                         else if (chosen == "Open Space URL")
                         {
                             // URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
                             // URL spaceUrl = model->gradioClient->getSpaceUrl()
-                            URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
+                            // URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
+                            URL spaceUrl =
+                                this->model->getGradioClient().getSpaceInfo().huggingface;
                             spaceUrl.launchInDefaultBrowser();
                         }
-                        MessageManager::callAsync([this] { resetModelPathComboBox(); });
+                        MessageManager::callAsync(
+                            [this]
+                            {
+                                resetModelPathComboBox();
+                                model.reset(new WebModel());
+                                loadBroadcaster.sendChangeMessage();
+                                // saveButton.setEnabled(false);
+                            });
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
-
-                    model.reset(new WebModel());
-                    loadBroadcaster.sendChangeMessage();
-                    // saveButton.setEnabled(false);
                     saveEnabled = false;
+                }
+                catch (const std::exception& e)
+                {
+                    // Catch any other standard exceptions (like std::runtime_error)
+                    DBG("Caught std::exception: " << e.what());
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred: " + juce::String(e.what()));
+                }
+                catch (...) // Catch any other exceptions
+                {
+                    DBG("Caught unknown exception");
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
                 }
             });
 
@@ -687,6 +685,9 @@ public:
           totalJobs(0),
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
+        // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+        HarpLogger::getInstance()->initializeLogger();
+
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
         chooseFileButtonHandler.onMouseEnter = [this]()
@@ -790,14 +791,14 @@ public:
 
         loadBroadcaster.addChangeListener(this);
 
-        juce::String currentStatus = model->getStatus();
-        if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED")
+        ModelStatus currentStatus = model->getStatus();
+        if (currentStatus == ModelStatus::LOADED || currentStatus == ModelStatus::FINISHED)
         {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(processButtonInfo.label);
         }
-        else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING"
-                 || currentStatus == "Status.SENDING")
+        else if (currentStatus == ModelStatus::PROCESSING || currentStatus == ModelStatus::STARTING
+                 || currentStatus == ModelStatus::SENDING)
         {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(cancelButtonInfo.label);
@@ -808,7 +809,7 @@ public:
         // add a status timer to update the status label periodically
         mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
         mModelStatusTimer->addChangeListener(this);
-        mModelStatusTimer->startTimer(100); // 100 ms interval
+        mModelStatusTimer->startTimer(50); // 100 ms interval
 
         // model path textbox
         std::vector<std::string> modelPaths = {
@@ -943,7 +944,19 @@ public:
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-        model->cancel();
+        OpResult cancelResult = model->cancel();
+        if (cancelResult.failed())
+        {
+            LogAndDBG(cancelResult.getError().devMessage.toStdString());
+            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                             "Cancel Error",
+                                             "An error occurred while cancelling the processing: \n"
+                                                 + cancelResult.getError().devMessage);
+            // processCancelButton.setEnabled(true);
+            // processCancelButton.setMode(processButtonInfo.label);
+            resetProcessingButtons();
+            return;
+        }
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
@@ -972,12 +985,8 @@ public:
         saveEnabled = false;
         isProcessing = true;
 
-        // TODO: get the current audio file and process it
-        // if we don't have one, let the user know
-        // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
         if (model == nullptr)
         {
-            DBG("unhandled exception: model is null. we should probably open an error window here.");
             AlertWindow("Error",
                         "Model is not loaded. Please load a model first.",
                         AlertWindow::WarningIcon);
@@ -1000,7 +1009,7 @@ public:
         // or another appropriate file
         if (! matchingModel)
         {
-            DBG("Model and file type mismatch");
+            LogAndDBG("Model and file type mismatch");
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
                 "Processing Error",
@@ -1013,7 +1022,7 @@ public:
         mediaDisplay->addNewTempFile();
 
         // print how many jobs are currently in the threadpool
-        DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+        LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
         // empty customJobs
         customJobs.clear();
@@ -1021,8 +1030,20 @@ public:
         customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
             // Individual job code for each iteration
             // copy the audio file, with the same filename except for an added _harp to the stem
-            model->process(mediaDisplay->getTempFilePath().getLocalFile());
-            DBG("Processing finished");
+            juce::String processingError;
+            OpResult processingResult =
+                model->process(mediaDisplay->getTempFilePath().getLocalFile());
+            if (processingResult.failed())
+            {
+                LogAndDBG(processingResult.getError().devMessage.toStdString());
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Processing Error",
+                    "An error occurred while processing the audio file: \n"
+                        + processingResult.getError().devMessage);
+                resetProcessingButtons();
+                return;
+            }
             // load the audio file again
             processBroadcaster.sendChangeMessage();
 
@@ -1263,6 +1284,12 @@ public:
         }
     }
 
+    void setStatus(const ModelStatus& status)
+    {
+        juce::String statusName = std::string(magic_enum::enum_name(status)).c_str();
+        statusArea.setStatusMessage("ModelStatus::" + statusName);
+    }
+
     void setStatus(const juce::String& message) { statusArea.setStatusMessage(message); }
 
     void clearStatus() { statusArea.clearStatusMessage(); }
@@ -1364,7 +1391,15 @@ private:
     std::unique_ptr<MenuBarComponent> menuBar;
     // MenuBarPosition menuBarPosition = MenuBarPosition::window;
 
+    // std::unique_ptr<juce::FileLogger> logger { nullptr };
     //==============================================================================
+
+    // void LogAndDBG(const juce::String& message) const
+    // {
+    //     DBG(message);
+    //     if (logger)
+    //         logger->logMessage(message);
+    // }
 
     void play()
     {

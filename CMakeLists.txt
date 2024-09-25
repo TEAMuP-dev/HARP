@@ -59,10 +59,14 @@ target_sources(${PROJECT_NAME}
         src/CtrlComponent.h
         src/Model.h 
         src/WebModel.h
+        src/HarpLogger.h
+        src/HarpLogger.cpp
+        src/errors.h
+        src/utils.h
 
         src/gradio/GradioClient.cpp
-        src/gradio/utils.h
-
+        src/external/magic_enum.hpp
+        
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp
         src/gui/HoverHandler.cpp
