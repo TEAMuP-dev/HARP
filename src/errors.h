@@ -8,6 +8,8 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+// #include <string>
+// #include <vector>
 // #include <juce_core/misc/juce_Result.h>
 
 enum class ErrorType
@@ -39,11 +41,39 @@ struct Error
         error.userMessage = error.devMessage;
         if (error.devMessage.contains("503"))
         {
-            error.userMessage = "The gradio app is currently paused by the developer. Please try again later.";
+            error.userMessage =
+                "The gradio app is currently paused by the developer. Please try again later.";
+        }
+        else if (error.type == ErrorType::HttpRequestError)
+        {
+            // if (error.devMessage.contains("POST request to controls"))
+            if (containsAllSubstrings(error.devMessage, { "POST", "controls", "input stream" }))
+            {
+                error.userMessage = "TIMEOUT: The gradio app is SLEEPING. Please try again later.";
+            }
+        }
+        else if (error.type == ErrorType::FileUploadError)
+        {
+            error.userMessage =
+                "Failed to upload the file to the gradio app. Please check you internet connection.";
         }
     }
-};
 
+    // Function to check if all substrings are contained in the given string
+    static bool containsAllSubstrings(const juce::String& str,
+                                      const std::vector<std::string>& substrings)
+    {
+        for (const auto& substring : substrings)
+        {
+            if (! str.contains(substring))
+            {
+                return false;
+            }
+        }
+        return true; // All substrings are found
+    }
+};
+// type: HttpRequestError - Failed to create input stream for POST request to controls
 /*
 * Wrapper class for operation results
 * This class wraps JUCE's Result class and adds an Error object
@@ -73,7 +103,7 @@ public:
     operator bool() const noexcept
     {
         // True if operation was successful (not failed)
-        return ! failed(); 
+        return ! failed();
     }
 
 private:
@@ -85,7 +115,7 @@ private:
 };
 
 // /*
-// * In this function, we parse the detailed developer message 
+// * In this function, we parse the detailed developer message
 // * of an Error object, and fill the user message accordingly.
 // * by default, we set the user message to the developer message.
 // */

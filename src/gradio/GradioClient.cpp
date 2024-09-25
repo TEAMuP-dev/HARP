@@ -252,7 +252,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
                        .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
-                       .withConnectionTimeoutMs(10000)
+                       .withConnectionTimeoutMs(3000)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5)
