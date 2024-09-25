@@ -1,5 +1,5 @@
 
-/*
+/**
  * @file
  * @brief classes and functions for handling errors in the application
  * @author xribene
@@ -8,7 +8,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_core/misc/juce_Result.h>
+// #include <juce_core/misc/juce_Result.h>
 
 enum class ErrorType
 {
@@ -19,6 +19,8 @@ enum class ErrorType
     FileDownloadError,
     HttpRequestError,
     UnknownError,
+    UnsupportedControlType,
+    UnknownLabelType,
 };
 
 struct Error
@@ -68,30 +70,30 @@ private:
     OpResult(const juce::Result& res, const Error& err) noexcept : result(res), error(err) {}
 };
 
-void mapErrorToUserMessage(Error& error)
-{
-    switch (error.type)
-    {
-        case ErrorType::InvalidURL:
-            error.userMessage =
-                "The URL you entered seems to be invalid. Please check the format and try again.";
-            break;
+// void mapErrorToUserMessage(Error& error)
+// {
+//     switch (error.type)
+//     {
+//         case ErrorType::InvalidURL:
+//             error.userMessage =
+//                 "The URL you entered seems to be invalid. Please check the format and try again.";
+//             break;
 
-        case ErrorType::MissingParts:
-        case ErrorType::UserModelError:
-            error.userMessage =
-                "The URL is incomplete. Please enter the full address and try again.";
-            break;
+//         case ErrorType::MissingParts:
+//         case ErrorType::UserModelError:
+//             error.userMessage =
+//                 "The URL is incomplete. Please enter the full address and try again.";
+//             break;
 
-        case ErrorType::NoHyphen:
-            error.userMessage =
-                "There seems to be an issue with the URL. Please verify it and try again.";
-            break;
+//         case ErrorType::NoHyphen:
+//             error.userMessage =
+//                 "There seems to be an issue with the URL. Please verify it and try again.";
+//             break;
 
-        case ErrorType::UnknownError:
-        default:
-            error.userMessage =
-                "An unknown error occurred while processing the URL. Please verify it and try again.";
-            break;
-    }
-}
+//         case ErrorType::UnknownError:
+//         default:
+//             error.userMessage =
+//                 "An unknown error occurred while processing the URL. Please verify it and try again.";
+//             break;
+//     }
+// }

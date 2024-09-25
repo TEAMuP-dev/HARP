@@ -36,7 +36,7 @@ public:
 
     OpResult getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict);
 
-    void setSpaceInfo(const juce::String url);
+    OpResult setSpaceInfo(const juce::String url);
 
     SpaceInfo getSpaceInfo() const;
 

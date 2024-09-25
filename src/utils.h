@@ -1,14 +1,28 @@
+/**
+ * @file
+ * @brief Utility structs and enums used in the application
+ * @author xribene
+ */
+
 #pragma once
 
 #include "juce_core/juce_core.h"
 
-enum Status
+enum ModelStatus
 {
     INITIALIZED,
+
+    LOADING,
+    GETTING_CONTROLS,
     LOADED,
+    
+    STARTING,
+    SENDING,
     PROCESSING,
     FINISHED,
     CANCELLED,
+    CANCELLING,
+    
     ERROR
 };
 

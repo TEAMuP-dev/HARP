@@ -2,17 +2,18 @@
  * @file
  * @brief Base class for any models that utilize a web api to process
  * information. Currently we provide an implmentation of a wave 2 wave web based
- * model. We use the gradio python client to communicate with a gradio server.
+ * model. We use the GradioClient class to communicate with a gradio server.
  * @author hugo flores garcia, aldo aguilar, xribene
  */
 
 #pragma once
 
+#include "HarpLogger.h"
 #include "Model.h"
 #include "gradio/GradioClient.h"
 #include "juce_core/juce_core.h"
+#include "utils.h"
 #include <fstream>
-#include "HarpLogger.h"
 
 using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
@@ -22,7 +23,7 @@ class WebModel : public Model
 public:
     WebModel()
     {
-        status = "Status.INITIALIZED";
+        status2 = ModelStatus::INITIALIZED;
     }
 
     ~WebModel() {}
@@ -31,37 +32,46 @@ public:
 
     CtrlList& controls() { return m_ctrls; }
 
-    void load(const map<string, any>& params, juce::String& error) override
+    OpResult load(const map<string, any>& params) override
     {
+        // Create an Error object in case we need it
+        // and a successful result
+        Error error;
+        error.type = ErrorType::JsonParseError;
+        OpResult result = OpResult::ok();
+
         m_ctrls.clear();
         m_loaded = false;
+        status2 = ModelStatus::LOADING;
 
         // get the name of the huggingface repo we're going to use
-        if (! modelparams::contains(params, "url"))
-        {
-            error = "url not found in params";
-            return;
-        }
+        // if (! modelparams::contains(params, "url"))
+        // {
+        //     error.devMessage = "url key was not found in params while loading the model.";
+        //     return OpResult::fail(error);
+        // }
 
         std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
 
-        gradioClient.setSpaceInfo(userSpaceAddress);
+        result = gradioClient.setSpaceInfo(userSpaceAddress);
 
-        if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
+        // if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
+        if (result.failed())
         {
-            error = gradioClient.getSpaceInfo().error;
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         LogAndDBG(gradioClient.getSpaceInfo().toString());
 
         juce::Array<juce::var> ctrlList;
         juce::DynamicObject cardDict;
-        gradioClient.getControls(ctrlList, cardDict, error);
-
-        if (! error.isEmpty())
+        status2 = ModelStatus::GETTING_CONTROLS;
+        result = gradioClient.getControls(ctrlList, cardDict);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         // TODO: probably need to check if these properties exist and if they're the right types.
@@ -76,8 +86,8 @@ public:
         juce::Array<juce::var>* tags = cardDict.getProperty("tags").getArray();
         if (tags == nullptr)
         {
-            error = "Failed to load tags from JSON. tags is null.";
-            return;
+            error.devMessage = "Failed to load the tags array from JSON. tags is null.";
+            return OpResult::fail(error);
         }
 
         for (int i = 0; i < tags->size(); i++)
@@ -95,8 +105,8 @@ public:
             juce::var ctrl = ctrlList.getReference(i);
             if (! ctrl.isObject())
             {
-                error = "Failed to load controls from JSON. ctrl is not an object.";
-                return;
+                error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+                return OpResult::fail(error);
             }
 
             try
@@ -163,32 +173,42 @@ public:
             }
             catch (const char* e)
             {
-                error = "Failed to load controls from JSON. " + std::string(e);
-                return;
+                error.devMessage = "Failed to load controls from JSON. " + std::string(e);
+                return OpResult::fail(error);
             }
         }
         m_loaded = true;
-        status = "Status.LOADED";
+        status2 = ModelStatus::LOADED;
+        return OpResult::ok();
     }
 
-    void process(juce::File filetoProcess, juce::String& error)
+    OpResult process(juce::File filetoProcess)
     {
+        status2 = ModelStatus::STARTING;
+        // Create an Error object in case we need it
+        // and a successful result
+        Error error;
+        error.type = ErrorType::JsonParseError;
+        OpResult result = OpResult::ok();
+
+        status2 = ModelStatus::SENDING;
         juce::String uploadedFilePath;
-        gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath, error);
-        if (! error.isEmpty())
+        result = gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
-        // Using the
         juce::String eventId;
         juce::String endpoint = "process";
         // the  jsonBody is created by ctrlsToJson
         juce::String ctrlJson;
-        ctrlsToJson(ctrlJson, uploadedFilePath.toStdString(), error);
-        if (! error.isEmpty())
+        result = ctrlsToJson(ctrlJson, uploadedFilePath.toStdString());
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
         // TODO: The jsonBody should be created using DynamicObject and var
         // TODO: make a utility function that wraps this into an object with a "data" key
@@ -200,44 +220,51 @@ public:
             }
             )";
 
-        gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
-        if (! error.isEmpty())
+        status2 = ModelStatus::PROCESSING;
+        result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         juce::String response;
-        gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
-        if (! error.isEmpty())
+        result = gradioClient.getResponseFromEventID(endpoint, eventId, response);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         juce::String responseData;
         juce::String key = "data: ";
-        gradioClient.extractKeyFromResponse(response, responseData, key, error);
-        if (! error.isEmpty())
+        result = gradioClient.extractKeyFromResponse(response, responseData, key);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         juce::var parsedData;
-        juce::Result parseResult = juce::JSON::parse(responseData, parsedData);
+        juce::JSON::parse(responseData, parsedData);
         if (! parsedData.isObject())
         {
-            error = "Failed to parse the data portion of the received controls JSON.";
-            return;
+            error.devMessage = "Failed to parse the data portion of the received controls JSON.";
+            status2 = ModelStatus::ERROR;
+            return OpResult::fail(error);
         }
         if (! parsedData.isArray())
         {
-            error = "Parsed data field should be an array.";
-            return;
+            error.devMessage = "Parsed data field should be an array.";
+            status2 = ModelStatus::ERROR;
+            return OpResult::fail(error);
         }
         juce::Array<juce::var>* dataArray = parsedData.getArray();
         if (dataArray == nullptr)
         {
-            error = "The data array is empty.";
-            return;
+            error.devMessage = "The data array is empty.";
+            status2 = ModelStatus::ERROR;
+            return OpResult::fail(error);
         }
 
         // Iterate through the array elements
@@ -246,9 +273,11 @@ public:
             juce::var procObj = dataArray->getReference(i);
             if (! procObj.isObject())
             {
-                error = "The " + juce::String(i)
-                        + "th element of the array of processed outputs is not an object.";
-                return;
+                status2 = ModelStatus::ERROR;
+                error.devMessage =
+                    "The " + juce::String(i)
+                    + "th element of the array of processed outputs we received from the gradio app is not an object.";
+                return OpResult::fail(error);
             }
             // Make sure the object has a "meta" key
             // Gradio output compoenents like File and Audio store metadata in the "meta" key
@@ -257,10 +286,12 @@ public:
             // meta should be an object
             if (! meta.isObject())
             {
-                error =
+                status2 = ModelStatus::ERROR;
+                error.type = ErrorType::MissingJsonKey;
+                error.devMessage =
                     "The " + juce::String(i)
                     + "th element of the array of processed outputs does not have a meta object.";
-                return;
+                return OpResult::fail(error);
             }
             juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
 
@@ -283,14 +314,17 @@ public:
                 }
                 else
                 {
-                    error =
+                    status2 = ModelStatus::ERROR;
+                    error.type = ErrorType::FileDownloadError;
+                    error.devMessage =
                         "The url does not contain the expected substring '/c/file='. Check if https://github.com/gradio-app/gradio/issues/9049 has been fixed";
-                    return;
+                    return OpResult::fail(error);
                 }
-                gradioClient.downloadFileFromURL(url, outputFilePath, error);
-                if (! error.isEmpty())
+                result = gradioClient.downloadFileFromURL(url, outputFilePath);
+                if (result.failed())
                 {
-                    return;
+                    status2 = ModelStatus::ERROR;
+                    return result;
                 }
                 // Make a juce::File from the path
                 juce::File processedFile(outputFilePath);
@@ -350,8 +384,9 @@ public:
                     }
                     else
                     {
-                        error = "Unknown label type: " + labelType;
-                        return;
+                        error.type = ErrorType::UnknownLabelType;
+                        error.devMessage = "Unknown label type: " + labelType;
+                        return OpResult::fail(error);
                     }
                     // All the labels, no matter theyr type, have some common properties
                     // t: float
@@ -399,41 +434,50 @@ public:
             }
             else
             {
-                error = "Unknown output type: " + procObjType;
-                return;
+                LogAndDBG("The pyharp Gradio app returned a " + procObjType
+                          + " object, that we don't yet support in HARP.");
             }
         }
+        status2 = ModelStatus::FINISHED;
+        return result;
     }
 
     // sets a cancel flag file that the client can check to see if the process
     // should be cancelled
     // void cancel(juce::String& error) const
-    void cancel(juce::String& error)
+    OpResult cancel()
     {
+        // Create a successful result.
+        // we'll update it to a failure result if something goes wrong
+        OpResult result = OpResult::ok();
+
         juce::String eventId;
         juce::String endpoint = "cancel";
 
         // Perform a POST request to the cancel endpoint to get the event ID
         juce::String jsonBody = R"({"data": []})"; // The body is empty in this case
 
-        gradioClient.makePostRequestForEventID(endpoint, eventId, error, jsonBody);
-        if (!error.isEmpty())
+        status2 = ModelStatus::CANCELLING;
+        result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
 
         // Use the event ID to make a GET request for the cancel response
         juce::String response;
-        gradioClient.getResponseFromEventID(endpoint, eventId, response, error);
-        if (!error.isEmpty())
+        result = gradioClient.getResponseFromEventID(endpoint, eventId, response);
+        if (result.failed())
         {
-            return;
+            status2 = ModelStatus::ERROR;
+            return result;
         }
-
-        status = "Status.CANCELLED";
+        status2 = ModelStatus::CANCELLED;
+        return result;
     }
 
-    juce::String getStatus() { return status; }
+    ModelStatus getStatus() { return status2; }
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
@@ -448,7 +492,7 @@ public:
     LabelList& getLabels() { return labels; }
 
 private:
-    void ctrlsToJson(juce::String& ctrlJson, std::string mediaInputPath, juce::String& error) const
+    OpResult ctrlsToJson(juce::String& ctrlJson, std::string mediaInputPath) const
     {
         // Create a JSON array to hold each control's value
         juce::Array<juce::var> jsonCtrlsArray;
@@ -508,15 +552,19 @@ private:
             }
             else
             {
+                Error error;
+                error.type = ErrorType::UnsupportedControlType;
                 // Unsupported control type or missing implementation
-                error = "Unsupported control type or missing implementation for control with ID: "
-                        + ctrl->id.toString();
-                return;
+                error.devMessage =
+                    "Unsupported control type or missing implementation for control with ID: "
+                    + ctrl->id.toString();
+                return OpResult::fail(error);
             }
         }
 
         // Convert the array to a JSON string
         ctrlJson = juce::JSON::toString(jsonCtrlsArray, true); // true for human-readable
+        return OpResult::ok();
     }
 
     CtrlList m_ctrls;
@@ -529,22 +577,22 @@ private:
 class ModelStatusTimer : public juce::Timer, public juce::ChangeBroadcaster
 {
 public:
-    ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model) {}
+    ModelStatusTimer(std::shared_ptr<WebModel> model) : model(model) {}
 
     void timerCallback() override
     {
         // get the status of the model
-        juce::String status = m_model->getStatus();
+        ModelStatus status = model->getStatus();
 
         // if the status has changed, broadcast a change
-        if (status != m_last_status)
+        if (status != lastStatus)
         {
-            m_last_status = status;
+            lastStatus = status;
             sendChangeMessage();
         }
     }
 
 private:
-    std::shared_ptr<WebModel> m_model;
-    juce::String m_last_status;
+    std::shared_ptr<WebModel> model;
+    ModelStatus lastStatus;
 };

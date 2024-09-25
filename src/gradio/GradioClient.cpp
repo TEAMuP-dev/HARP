@@ -21,6 +21,7 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
 
     // Extract the portion after "key: "
     responseKey = response.substring(dataIndex + key.length()).trim();
+    return OpResult::ok();
 }
 
 OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
@@ -153,9 +154,9 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     return OpResult::ok();
 }
 
-void GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
+OpResult GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
 {
-    parseSpaceAddress(userProvidedSpaceAddress, spaceInfo);
+    return parseSpaceAddress(userProvidedSpaceAddress, spaceInfo);
 }
 
 SpaceInfo GradioClient::getSpaceInfo() const { return spaceInfo; }
