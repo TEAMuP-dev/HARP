@@ -21,10 +21,7 @@ using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
 class WebModel : public Model
 {
 public:
-    WebModel()
-    {
-        status2 = ModelStatus::INITIALIZED;
-    }
+    WebModel() { status2 = ModelStatus::INITIALIZED; }
 
     ~WebModel() {}
 
@@ -86,6 +83,7 @@ public:
         juce::Array<juce::var>* tags = cardDict.getProperty("tags").getArray();
         if (tags == nullptr)
         {
+            status2 = ModelStatus::ERROR;
             error.devMessage = "Failed to load the tags array from JSON. tags is null.";
             return OpResult::fail(error);
         }
@@ -105,6 +103,7 @@ public:
             juce::var ctrl = ctrlList.getReference(i);
             if (! ctrl.isObject())
             {
+                status2 = ModelStatus::ERROR;
                 error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
                 return OpResult::fail(error);
             }
@@ -173,6 +172,7 @@ public:
             }
             catch (const char* e)
             {
+                status2 = ModelStatus::ERROR;
                 error.devMessage = "Failed to load controls from JSON. " + std::string(e);
                 return OpResult::fail(error);
             }
@@ -577,12 +577,14 @@ private:
 class ModelStatusTimer : public juce::Timer, public juce::ChangeBroadcaster
 {
 public:
-    ModelStatusTimer(std::shared_ptr<WebModel> model) : model(model) {}
+    ModelStatusTimer(std::shared_ptr<WebModel> model) : m_model(model) {}
 
     void timerCallback() override
     {
         // get the status of the model
-        ModelStatus status = model->getStatus();
+        ModelStatus status = m_model->getStatus();
+        DBG("ModelStatusTimer::timerCallback status: " + std::to_string(status)
+            + " lastStatus: " + std::to_string(lastStatus));
 
         // if the status has changed, broadcast a change
         if (status != lastStatus)
@@ -592,7 +594,9 @@ public:
         }
     }
 
+    void setModel(std::shared_ptr<WebModel> model) { m_model = model; }
+
 private:
-    std::shared_ptr<WebModel> model;
+    std::shared_ptr<WebModel> m_model;
     ModelStatus lastStatus;
 };

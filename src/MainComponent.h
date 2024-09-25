@@ -809,7 +809,7 @@ public:
         // add a status timer to update the status label periodically
         mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
         mModelStatusTimer->addChangeListener(this);
-        mModelStatusTimer->startTimer(50); // 100 ms interval
+        mModelStatusTimer->startTimer(500); // 100 ms interval
 
         // model path textbox
         std::vector<std::string> modelPaths = {
@@ -1466,6 +1466,7 @@ private:
             DBG("Setting up model card, CtrlComponent, resizing.");
             setModelCard(model->card());
             ctrlComponent.setModel(model);
+            mModelStatusTimer->setModel(model);
             ctrlComponent.populateGui();
 
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
