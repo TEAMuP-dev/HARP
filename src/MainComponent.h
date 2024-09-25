@@ -478,36 +478,13 @@ public:
                 DBG("executeLoad!!");
                 try
                 {
-                    // timeout after 10 seconds
-                    // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                    std::atomic<bool> success = false;
-                    // TimedCallback timedCallback(
-                    //     [this, &success]
-                    //     {
-                    //         if (success)
-                    //             return;
-                    //         DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
-                    //         AlertWindow::showMessageBoxAsync(
-                    //             AlertWindow::WarningIcon,
-                    //             "Loading Error",
-                    //             "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake.");
-                    //         MessageManager::callAsync([this] { resetModelPathComboBox(); });
-                    //         model.reset(new WebModel());
-                    //         loadBroadcaster.sendChangeMessage();
-                    //         // saveButton.setEnabled(false);
-                    //         saveEnabled = false;
-                    //     },
-                    //     10000);
                     juce::String loadingError;
                     OpResult loadingResult = model->load(params);
                     if (loadingResult.failed())
                     {
-                        LogAndDBG("Error in Model Loading:\n"
-                                  + loadingResult.getError().devMessage);
-                        // TODO: cb/ refactor this so that the Error object is passed to the catch block
-                        throw std::runtime_error(loadingResult.getError().devMessage.toStdString());
+                        // throw std::runtime_error(loadingResult.getError().devMessage.toStdString());
+                        throw loadingResult.getError();
                     }
-                    success = true;
                     MessageManager::callAsync(
                         [this]
                         {
@@ -534,25 +511,22 @@ public:
                         });
                     DBG("executeLoad done!!");
                     loadBroadcaster.sendChangeMessage();
-                    // since we're on a helper thread,
-                    // it's ok to sleep for 10s
-                    // to let the timeout callback do its thing
-                    //Thread::sleep(10000);
-                    //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
                 }
-                catch (const std::runtime_error& e)
+                catch (Error& loadingError)
                 {
-                    DBG("Caught exception: " << e.what());
-
+                    Error::fillUserMessage(loadingError);
+                    LogAndDBG("Error in Model Loading:\n"
+                                  + loadingError.devMessage);
                     auto msgOpts =
                         MessageBoxOptions()
                             .withTitle("Loading Error")
                             .withIconType(AlertWindow::WarningIcon)
                             .withTitle("Error")
                             .withMessage("An error occurred while loading the WebModel: \n"
-                                         + String(e.what()));
-                    if (! String(e.what()).contains("404")
-                        && ! String(e.what()).contains("Invalid URL"))
+                                         + loadingError.userMessage);
+                    // if (! String(e.what()).contains("404")
+                    //     && ! String(e.what()).contains("Invalid URL"))
+                    if (loadingError.type != ErrorType::InvalidURL)
                     {
                         msgOpts = msgOpts.withButton("Open Space URL");
                     }
@@ -609,6 +583,17 @@ public:
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
                     saveEnabled = false;
+                }
+                catch (const std::exception& e)
+                {
+                    // Catch any other standard exceptions (like std::runtime_error)
+                    DBG("Caught std::exception: " << e.what());
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred: " + juce::String(e.what()));
+                }
+                catch (...) // Catch any other exceptions
+                {
+                    DBG("Caught unknown exception");
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
                 }
             });
 

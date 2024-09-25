@@ -28,6 +28,20 @@ struct Error
     ErrorType type;
     juce::String devMessage;
     juce::String userMessage;
+
+    /*
+    * In this function, we parse the detailed developer message 
+    * of an Error object, and fill the user message accordingly.
+    * by default, we set the user message to the developer message.
+    */
+    static void fillUserMessage(Error& error)
+    {
+        error.userMessage = error.devMessage;
+        if (error.devMessage.contains("503"))
+        {
+            error.userMessage = "The gradio app is currently paused by the developer. Please try again later.";
+        }
+    }
 };
 
 /*
@@ -70,6 +84,19 @@ private:
     OpResult(const juce::Result& res, const Error& err) noexcept : result(res), error(err) {}
 };
 
+// /*
+// * In this function, we parse the detailed developer message 
+// * of an Error object, and fill the user message accordingly.
+// * by default, we set the user message to the developer message.
+// */
+// void fillUserMessage(Error& error)
+// {
+//     error.userMessage = error.devMessage;
+//     if (error.devMessage.contains("503"))
+//     {
+//         error.userMessage = "The gradio app is currently paused by the developer. Please try again later.";
+//     }
+// }
 // void mapErrorToUserMessage(Error& error)
 // {
 //     switch (error.type)
