@@ -1030,18 +1030,23 @@ public:
         customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
             // Individual job code for each iteration
             // copy the audio file, with the same filename except for an added _harp to the stem
-            juce::String processingError;
             OpResult processingResult =
                 model->process(mediaDisplay->getTempFilePath().getLocalFile());
             if (processingResult.failed())
             {
-                LogAndDBG(processingResult.getError().devMessage.toStdString());
+                Error processingError = processingResult.getError();
+                Error::fillUserMessage(processingError);
+                LogAndDBG("Error in Processing:\n"
+                                  + processingError.devMessage.toStdString());
                 AlertWindow::showMessageBoxAsync(
                     AlertWindow::WarningIcon,
                     "Processing Error",
                     "An error occurred while processing the audio file: \n"
-                        + processingResult.getError().devMessage);
-                resetProcessingButtons();
+                        + processingError.userMessage);
+                // cb: I commented this out, and it doesn't seem to change anything
+                // it was also causing a crash. If we need it, it needs to run on 
+                // the message thread using MessageManager::callAsync
+                // resetProcessingButtons();
                 return;
             }
             // load the audio file again
