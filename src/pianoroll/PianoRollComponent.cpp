@@ -3,9 +3,10 @@
 #include "PianoRollComponent.hpp"
 
 
-PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, int _scrollBarSpacing)
+PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _pianoRollSpacing, int _scrollBarSize, int _scrollBarSpacing)
 {
     keyboardWidth = _keyboardWidth;
+    pianoRollSpacing = _pianoRollSpacing;
     scrollBarSize = _scrollBarSize;
     scrollBarSpacing = _scrollBarSpacing;
 
@@ -30,11 +31,6 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
 }
 
 PianoRollComponent::~PianoRollComponent() {}
-
-int PianoRollComponent::getPianoRollWidth()
-{
-    return getWidth() - keyboardWidth - 5 - (2 * scrollBarSize + 4 * scrollBarSpacing);
-}
 
 void PianoRollComponent::paint(Graphics& g)
 {
@@ -64,7 +60,7 @@ void PianoRollComponent::paint(Graphics& g)
 void PianoRollComponent::resized()
 {
     keyboard.setBounds(0, 0, keyboardWidth, getHeight());
-    noteGridContainer.setBounds(keyboardWidth + 5, 0, getPianoRollWidth(), getHeight());
+    noteGridContainer.setBounds(keyboardWidth + pianoRollSpacing, 0, getPianoRollWidth(), getHeight());
 
     Rectangle<int> controlsArea = getLocalBounds().removeFromRight(2 * scrollBarSize + 4 * scrollBarSpacing);
 
@@ -130,6 +126,11 @@ void PianoRollComponent::insertNote(MidiNoteComponent n)
 void PianoRollComponent::resetNotes()
 {
     noteGrid.resetNotes();
+}
+
+int PianoRollComponent::getPianoRollWidth()
+{
+    return jmax(0, getWidth() - keyboardWidth - pianoRollSpacing - (2 * scrollBarSize + 4 * scrollBarSpacing));
 }
 
 double PianoRollComponent::zoomToKeysVisible(double zoomFactor)

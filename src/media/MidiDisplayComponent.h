@@ -19,6 +19,9 @@ public:
     void drawMainArea(Graphics& g, Rectangle<int>& a) override;
     void resized() override;
 
+    float getMediaWidth() override { return pianoRoll.getPianoRollWidth(); }
+    float getMediaStartPos() override { return spacing + pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
+
     void loadMediaFile(const URL& filePath) override;
 
     void setPlaybackPosition(double t) override;
@@ -32,10 +35,9 @@ public:
 
     void updateVisibleRange(Range<double> newRange) override;
 
-private:
+    void addLabels(LabelList& labels) override;
 
-    double xToTime(const float x) override;
-    float timeToX(const double t) override;
+private:
 
     void resetDisplay() override;
 
@@ -43,5 +45,5 @@ private:
 
     double totalLengthInSecs;
 
-    PianoRollComponent pianoRoll{70, scrollBarSize, spacing};
+    PianoRollComponent pianoRoll{70, 5, scrollBarSize, spacing};
 };

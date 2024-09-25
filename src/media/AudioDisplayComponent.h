@@ -17,7 +17,8 @@ public:
 
     void drawMainArea(Graphics& g, Rectangle<int>& a) override;
 
-    float getMediaWidth() override { return getWidth(); }
+    float getMediaStartPos() override { return spacing; }
+    float getMediaWidth() override { return getWidth() - 2 * spacing; }
 
     void loadMediaFile(const URL& filePath) override;
 

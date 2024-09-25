@@ -27,7 +27,8 @@ public:
     virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
 
-    virtual float getMediaWidth() = 0;
+    virtual float getMediaStartPos() { return 0.0f; }
+    virtual float getMediaWidth() { return 0.0f; }
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
@@ -71,7 +72,7 @@ public:
 
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
-    void mouseUp(const MouseEvent&) override;
+    void mouseUp(const MouseEvent& e) override;
 
     virtual bool isPlaying() = 0;
     virtual void startPlaying() = 0;
@@ -98,8 +99,9 @@ protected:
 
     void setNewTarget(URL filePath);
 
-    virtual double xToTime(const float x);
-    virtual float timeToX(const double t);
+    double xToTime(const float x);
+    float timeToX(const double t);
+    bool withinMediaBounds(const float x) { return x >= getMediaStartPos() && x <= getMediaStartPos() + getMediaWidth(); }
 
     int scrollBarSize = 10;
     int labelHeight = 20;

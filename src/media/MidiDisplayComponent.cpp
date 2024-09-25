@@ -3,12 +3,16 @@
 
 MidiDisplayComponent::MidiDisplayComponent()
 {
+    pianoRoll.addMouseListener(this, true);
     addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
 }
 
-MidiDisplayComponent::~MidiDisplayComponent() {}
+MidiDisplayComponent::~MidiDisplayComponent()
+{
+    pianoRoll.removeMouseListener(this);
+}
 
 StringArray MidiDisplayComponent::getSupportedExtensions()
 {
@@ -32,6 +36,8 @@ void MidiDisplayComponent::resized()
     scrollBarArea = scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize() - 4 * pianoRoll.getScrollBarSpacing());
 
     horizontalScrollBar.setBounds(scrollBarArea.reduced(spacing));
+
+    repositionLabelOverlays();
 }
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
@@ -137,16 +143,36 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
     pianoRoll.updateVisibleMediaRange(newRange);
 }
 
-double MidiDisplayComponent::xToTime(const float x)
+void MidiDisplayComponent::addLabels(LabelList& labels)
 {
-    // TODO
-    return 0.0;
-}
+    MediaDisplayComponent::addLabels(labels);
 
-float MidiDisplayComponent::timeToX(const double t)
-{
-    // TODO
-    return 0.0f;
+    for (const auto& l : labels) {
+        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
+            String lbl = l->label;
+            String dsc = l->description;
+
+            if (dsc.isEmpty()) {
+                dsc = lbl;
+            }
+
+            float dur = 0.0f;
+
+            if ((l->duration).has_value()) {
+                dur = (l->duration).value();
+            }
+
+            if ((midiLabel->pitch).has_value()) {
+                float p = (midiLabel->pitch).value();
+
+                float y = LabelOverlayComponent::pitchToRelativeY(p);
+
+                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc));
+            } else {
+                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+            }
+        }
+    }
 }
 
 void MidiDisplayComponent::resetDisplay()

@@ -49,6 +49,10 @@ void MediaDisplayComponent::repositionOverheadLabels()
 
 void MediaDisplayComponent::repositionLabelOverlays()
 {
+    if (!visibleRange.getLength()) {
+        return;
+    }
+
     float mediaHeight = getHeight() - (scrollBarSize + 2 * spacing);
     float pixelsPerSecond = getMediaWidth() / visibleRange.getLength();
 
@@ -218,16 +222,21 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (!isPlaying()) {
-        setPlaybackPosition(xToTime((float) e.x));
-        updateCursorPosition();
+    if (isFileLoaded() && !isPlaying()) {
+        if (withinMediaBounds(e.x)) {
+            setPlaybackPosition(xToTime((float) e.x));
+            updateCursorPosition();
+        }
     }
 }
 
-void MediaDisplayComponent::mouseUp(const MouseEvent&)
+void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
-    start();
-    sendChangeMessage();
+    if (isFileLoaded() && withinMediaBounds(e.x)) {
+        // TODO - pianoroll zoom bug
+        start();
+        sendChangeMessage();
+    }
 }
 
 void MediaDisplayComponent::start()
@@ -338,11 +347,11 @@ void MediaDisplayComponent::setNewTarget(URL filePath)
 
 double MediaDisplayComponent::xToTime(const float x)
 {
-    float totalWidth = getWidth() - 2 * spacing;
+    float totalWidth = getMediaWidth();
     double totalLength = visibleRange.getLength();
     double visibleStart = visibleRange.getStart();
 
-    float x_ = jmin(totalWidth, jmax(0.0f, x - spacing));
+    float x_ = jmin(totalWidth, jmax(0.0f, x - getMediaStartPos()));
 
     double t = (x_ / totalWidth) * totalLength + visibleStart;
 
@@ -360,11 +369,10 @@ float MediaDisplayComponent::timeToX(const double t)
     if (totalLength <= 0) {
         x = 0;
     } else {
-        float totalWidth = getWidth() - 2 * spacing;
         double visibleStart = visibleRange.getStart();
         double visibleOffset = t_ - visibleStart;
 
-        x = spacing + totalWidth * visibleOffset / totalLength;
+        x = getMediaStartPos() + getMediaWidth() * visibleOffset / totalLength;
     }
 
     return x;
