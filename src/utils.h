@@ -2,6 +2,16 @@
 
 #include "juce_core/juce_core.h"
 
+enum Status
+{
+    INITIALIZED,
+    LOADED,
+    PROCESSING,
+    FINISHED,
+    CANCELLED,
+    ERROR
+};
+
 struct Ctrl
 {
     juce::Uuid id { "" };

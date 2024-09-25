@@ -11,7 +11,7 @@
 #include "../HarpLogger.h"
 #include "../errors.h"
 #include "juce_core/juce_core.h"
-#include "utils.h"
+#include "../utils.h"
 class GradioClient
 
 {

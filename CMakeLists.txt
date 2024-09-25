@@ -61,9 +61,11 @@ target_sources(${PROJECT_NAME}
         src/WebModel.h
         src/HarpLogger.h
         src/HarpLogger.cpp
-
+        src/errors.h
+        src/utils.h
+        
         src/gradio/GradioClient.cpp
-        src/gradio/utils.h
+        
 
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp

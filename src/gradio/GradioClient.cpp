@@ -12,10 +12,6 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
 
     if (dataIndex == -1)
     {
-        // error = "Key " + key + " not found in response";
-        // result.getError().type = ErrorType::MissingJsonKey;
-        // result.getError().devMessage = "Key " + key + " not found in response";
-        // result.fail();
         Error error;
         error.type = ErrorType::MissingJsonKey;
         error.devMessage = "Key " + key + " not found in response";
@@ -29,6 +25,11 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
 
 OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo)
 {
+    // Create an Error object in case we need it
+    Error error;
+    // All errors in this function are of type InvalidURL
+    error.type = ErrorType::InvalidURL;
+
     spaceInfo.userInput = spaceAddress;
     // Check if the URL is of Type 4 (localhost or gradio.live)
     if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live")
@@ -64,8 +65,6 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
                               "model. Too few parts in "
                               + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            Error error;
-            error.type = ErrorType::InvalidURL;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -97,8 +96,6 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
                               "hyphen found in the subdomain: "
                               + subdomain;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            Error error;
-            error.type = ErrorType::InvalidURL;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -122,8 +119,6 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
                               "Too many/few slashes in "
                               + spaceAddress;
             spaceInfo.status = SpaceInfo::Status::ERROR;
-            Error error;
-            error.type = ErrorType::InvalidURL;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -133,8 +128,6 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
         spaceInfo.error =
             "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
         spaceInfo.status = SpaceInfo::Status::ERROR;
-        Error error;
-        error.type = ErrorType::InvalidURL;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }
@@ -153,8 +146,6 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     {
         spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
         spaceInfo.status = SpaceInfo::Status::ERROR;
-        Error error;
-        error.type = ErrorType::InvalidURL;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }
@@ -350,8 +341,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     return OpResult::ok();
 }
 
-OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList,
-                               juce::DynamicObject& cardDict)
+OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict)
 {
     juce::String callID = "controls";
     juce::String eventID;
@@ -444,12 +434,12 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList,
 }
 
 OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
-                                       juce::String& downloadedFilePath) const
+                                           juce::String& downloadedFilePath) const
 {
     // Create the error here, in case we need it
     Error error;
     error.type = ErrorType::FileDownloadError;
-    
+
     // Determine the local temporary directory for storing the downloaded file
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::String fileName = fileURL.getFileName();
@@ -484,7 +474,8 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
 
     if (fileOutput == nullptr || ! fileOutput->openedOk())
     {
-        error.devMessage = "Failed to create output stream for file: " + downloadedFile.getFullPathName();
+        error.devMessage =
+            "Failed to create output stream for file: " + downloadedFile.getFullPathName();
         return OpResult::fail(error);
     }
 
