@@ -1,3 +1,10 @@
+## 1.4.0.alpha.0
+### Features
+- Improved error handling
+- A c++ gradio client using http api
+- UI improvements
+- Basic label support
+
 ## 1.3.0
 
 ### Features
