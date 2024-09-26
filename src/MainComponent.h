@@ -1528,37 +1528,42 @@ private:
             URL tempFilePath = mediaDisplay->getTempFilePath();
             mediaDisplay->updateDisplay(tempFilePath);
 
-            // TODO: update Label display
-            // Here is how to access the labels
-            LabelList& label_list = model->getLabels();
-            for (auto& label : label_list)
-            {
-                // Check if the label is of type AudioLabel
-                if (auto* audioLabel = dynamic_cast<AudioLabel*>(label.get()))
-                {
-                    // Access fields specific to AudioLabel
-                    // amplitude is an optional value for audioLabels
-                    // check if it has a value before accessing it
-                    if (audioLabel->amplitude.has_value())
-                        std::cout << "Amplitude: " << audioLabel->amplitude.value() << std::endl;
-                    // Or you can use the to_y() method to get y.
-                    std::optional<float> y = audioLabel->to_y();
-                    if (y.has_value())
-                        std::cout << "Y: " << y.value() << std::endl;
-                }
-                else if (auto* spectrogramLabel = dynamic_cast<SpectrogramLabel*>(label.get()))
-                {
-                    // similar
-                }
-                else if (auto* midiLabel = dynamic_cast<MidiLabel*>(label.get()))
-                {
-                    // similar
-                }
-                else
-                {
-                    // similar
-                }
-            }
+            // // TODO: update Label display
+            // // Here is how to access the labels
+            // LabelList& label_list = model->getLabels();
+            // for (auto& label : label_list)
+            // {
+            //     // Check if the label is of type AudioLabel
+            //     if (auto* audioLabel = dynamic_cast<AudioLabel*>(label.get()))
+            //     {
+            //         // Access fields specific to AudioLabel
+            //         // amplitude is an optional value for audioLabels
+            //         // check if it has a value before accessing it
+            //         if (audioLabel->amplitude.has_value())
+            //             std::cout << "Amplitude: " << audioLabel->amplitude.value() << std::endl;
+            //         // Or you can use the to_y() method to get y.
+            //         std::optional<float> y = audioLabel->to_y();
+            //         if (y.has_value())
+            //             std::cout << "Y: " << y.value() << std::endl;
+            //     }
+            //     else if (auto* spectrogramLabel = dynamic_cast<SpectrogramLabel*>(label.get()))
+            //     {
+            //         // similar
+            //     }
+            //     else if (auto* midiLabel = dynamic_cast<MidiLabel*>(label.get()))
+            //     {
+            //         // similar
+            //     }
+            //     else
+            //     {
+            //         // similar
+            //     }
+            // }
+            // extract generated labels from the model
+            LabelList& labels = model->getLabels();
+
+            // add the labels to the display component
+            mediaDisplay->addLabels(labels);
 
             // now, we can enable the process button
             resetProcessingButtons();

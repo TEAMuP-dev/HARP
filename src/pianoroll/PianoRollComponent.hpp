@@ -19,11 +19,9 @@ class PianoRollComponent : public Component,
 {
 public:
 
-    PianoRollComponent(int _keyboardWidth=70, int _scrollBarSize=10, int _scrollBarSpacing=2);
+    PianoRollComponent(int _keyboardWidth=70, int _pianoRollSpacing=5, int _scrollBarSize=10, int _scrollBarSpacing=2);
 
     ~PianoRollComponent();
-
-    int getPianoRollWidth();
 
     void setResolution(int pixelsPerSecond);
 
@@ -43,6 +41,8 @@ public:
     void resetNotes();
 
     int getKeyboardWidth() { return keyboardWidth; }
+    int getPianoRollWidth();
+    int getPianoRollSpacing() { return pianoRollSpacing; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
 
@@ -52,6 +52,7 @@ private:
 
     int keyboardWidth;
     int pianoRollWidth;
+    int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
 

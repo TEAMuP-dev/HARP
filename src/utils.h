@@ -134,7 +134,7 @@ public:
 
     // required on pyharp side
     float t;
-    juce::String label { "" };
+    juce::String label;
     // optional on pyharp side
     juce::String description { "" };
     std::optional<float> duration;
@@ -176,3 +176,6 @@ public:
     // Optional on pyharp side
     std::optional<float> pitch;
 };
+
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
