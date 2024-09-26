@@ -10,8 +10,8 @@
 
 #include "../HarpLogger.h"
 #include "../errors.h"
-#include "juce_core/juce_core.h"
 #include "../utils.h"
+#include "juce_core/juce_core.h"
 class GradioClient
 
 {
@@ -24,15 +24,18 @@ public:
                                     const juce::String& key) const;
 
     OpResult uploadFileRequest(const juce::File& fileToUpload,
-                               juce::String& uploadedFilePath) const;
+                               juce::String& uploadedFilePath,
+                               const int timeoutMs = 10000) const;
 
     OpResult makePostRequestForEventID(const juce::String endpoint,
                                        juce::String& eventId,
-                                       const juce::String jsonBody = R"({"data": []})") const;
+                                       const juce::String jsonBody = R"({"data": []})",
+                                       const int timeoutMs = 10000) const;
 
     OpResult getResponseFromEventID(const juce::String callID,
                                     const juce::String eventID,
-                                    juce::String& response) const;
+                                    juce::String& response,
+                                    const int timeoutMs = 10000) const;
 
     OpResult getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict);
 
@@ -40,7 +43,9 @@ public:
 
     SpaceInfo getSpaceInfo() const;
 
-    OpResult downloadFileFromURL(const juce::URL& fileURL, juce::String& downloadedFilePath) const;
+    OpResult downloadFileFromURL(const juce::URL& fileURL,
+                                 juce::String& downloadedFilePath,
+                                 const int timeoutMs = 10000) const;
 
 private:
     static OpResult parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);

@@ -455,36 +455,74 @@ public:
 
     void loadModelCallback()
     {
-        // collect input parameters for the model.
-        std::string path_url;
+        // Get the URL/path the user provided in the comboBox
+        std::string pathURL;
         if (modelPathComboBox.getSelectedItemIndex() == 0)
-            path_url = customPath;
+            pathURL = customPath;
         else
-            path_url = modelPathComboBox.getText().toStdString();
+            pathURL = modelPathComboBox.getText().toStdString();
 
         std::map<std::string, std::any> params = {
-            { "url", path_url },
+            { "url", pathURL },
         };
-        resetUI();
+        // resetUI();
+
+        // disable the load button until the model is loaded
+        loadModelButton.setEnabled(false);
+        modelPathComboBox.setEnabled(false);
+        loadModelButton.setButtonText("loading...");
+
+        // disable the process button until the model is loaded
+        processCancelButton.setEnabled(false);
+
+        // set the descriptionLabel to "loading {url}..."
+        // TODO: we need to get rid of the params map, and just pass the url around instead
+        // since it looks like we're sticking to webmodels.
+        // String url = String(std::any_cast<std::string>(params.at("url")));
+        // setStatus("loading " + url + "...");
+        // descriptionLabel.setText(
+        //     "loading " + url
+        //         + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again.",
+        //     dontSendNotification);
 
         // loading happens asynchronously.
-        // the document controller trigger a change listener callback, which will update the UI
         threadPool.addJob(
             [this, params]
             {
-                DBG("executeLoad!!");
+                
                 try
                 {
                     juce::String loadingError;
+                    /*
+                        // cb: This is an idea, that might be useful for the future
+                        // Whenever trying to load a new gradio app, we could create a new WebModel
+                        // if loading is successful, we could replace the old model with the new one
+                        // This prevents the confussion of having ModelStatuses in the same class that
+                        // correspond to different Gradio Apps. 
+                        // For example, in the scenario the new model fails to load, we want to go back to 
+                        // the one we had before. However we got a 
+                        // ModelStatus::ERROR, but the old model is still loaded, so the status should change
+                        // to ModelStatus::LOADED (or whatever it was before the failed attempt). 
+                        // This is what we do now, and it is VERY-VERY confusing.
+
+                        std::shared_ptr<WebModel> newModel = std::make_shared<WebModel>();
+                        mModelStatusTimer->setModel(newModel);
+                    */
+
                     OpResult loadingResult = model->load(params);
                     if (loadingResult.failed())
                     {
-                        // throw std::runtime_error(loadingResult.getError().devMessage.toStdString());
                         throw loadingResult.getError();
                     }
+                    
+                    // loading succeeded
+                    // Do some UI stuff to add the new model to the comboBox
+                    // if it's not already there
+                    // and update the lastSelectedItemIndex and lastLoadedModelItemIndex
                     MessageManager::callAsync(
                         [this]
                         {
+                            resetUI();
                             if (modelPathComboBox.getSelectedItemIndex() == 0)
                             {
                                 bool alreadyInComboBox = false;
@@ -514,7 +552,8 @@ public:
                                 lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
                             }
                         });
-                    DBG("executeLoad done!!");
+                    // Call the callback to update the UI
+                    // TODO: maybe the stuff in callAsync above should be in this callback
                     loadBroadcaster.sendChangeMessage();
                 }
                 catch (Error& loadingError)
@@ -537,7 +576,7 @@ public:
                     }
 
                     msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
-                    auto alertCallback = [this, msgOpts](int result)
+                    auto alertCallback = [this, msgOpts, loadingError](int result)
                     {
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
@@ -576,16 +615,62 @@ public:
                                 this->model->getGradioClient().getSpaceInfo().huggingface;
                             spaceUrl.launchInDefaultBrowser();
                         }
+
+                        
                         if (lastLoadedModelItemIndex == -1)
                         {
+                            // If before the failed attempt to load a new model, we HAD NO model loaded
+                            // TODO: these two functions we call here might be an overkill for this case
+                            // we need to simplify
+                            MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    resetModelPathComboBox();
+                                    model->setStatus(ModelStatus::INITIALIZED);
+                                    // loadBroadcaster.sendChangeMessage();
+                                    myMalakia(OpResult::fail(loadingError));
+                                });
+                        }
+                        else 
+                        {
+                            // If before the failed attempt to load a new model, we HAD a model loaded
                             MessageManager::callAsync(
                                 [this]
                                 {
-                                    resetModelPathComboBox();
-                                    // model.reset(new WebModel());
-                                    loadBroadcaster.sendChangeMessage();
-                                    // saveButton.setEnabled(false);
+                                    // We should set the status to 
+                                    // the status of the model before the failed attempt
+                                    // but we don't store it anywhere,
+                                    // so we just set it to "loaded"
+                                    model->setStatus(ModelStatus::LOADED);
+                                    
+                                    processCancelButton.setEnabled(true);
+                                    processCancelButton.setMode(processButtonInfo.label);
+
+                                    loadModelButton.setEnabled(true);
+                                    modelPathComboBox.setEnabled(true);
+                                    loadModelButton.setButtonText("load");
+
+                                    // Set the focus to the process button
+                                    // so that the user can press SPACE to trigger the playback
+                                    processCancelButton.grabKeyboardFocus();
+                                    resized();
                                 });
+                        }
+
+                        // This if/elseif/else block is responsible for setting the selected item
+                        // in the modelPathComboBox to the correct item (i.e the model/path/app that
+                        // was selected before the failed attempt to load a new model)
+                        if (lastLoadedModelItemIndex != -1)
+                        {
+                            modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+                        }
+                        else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+                        {
+                            modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+                        }
+                        else
+                        {
+                            resetModelPathComboBox();
                         }
                     };
 
@@ -597,30 +682,18 @@ public:
                     // Catch any other standard exceptions (like std::runtime_error)
                     DBG("Caught std::exception: " << e.what());
                     AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred: " + juce::String(e.what()));
+                    // TODO: maybe we need to reset something here (like in the above catch block)
+                    // haven't tested yet.
                 }
                 catch (...) // Catch any other exceptions
                 {
                     DBG("Caught unknown exception");
                     AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
+                    // TODO: maybe we need to reset something here (like in the above catch block)
+                    // haven't tested yet.
                 }
             });
 
-        // disable the load button until the model is loaded
-        loadModelButton.setEnabled(false);
-        modelPathComboBox.setEnabled(false);
-        loadModelButton.setButtonText("loading...");
-
-        // disable the process button until the model is loaded
-        processCancelButton.setEnabled(false);
-
-        // set the descriptionLabel to "loading {url}..."
-        // TODO: we need to get rid of the params map, and just pass the url around instead
-        // since it looks like we're sticking to webmodels.
-        String url = String(std::any_cast<std::string>(params.at("url")));
-        descriptionLabel.setText(
-            "loading " + url
-                + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again.",
-            dontSendNotification);
     }
 
     void resetModelPathComboBox()
@@ -818,7 +891,7 @@ public:
         // add a status timer to update the status label periodically
         mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
         mModelStatusTimer->addChangeListener(this);
-        mModelStatusTimer->startTimer(500); // 100 ms interval
+        mModelStatusTimer->startTimer(50); // 100 ms interval
 
         // model path textbox
         std::vector<std::string> modelPaths = {
@@ -952,6 +1025,8 @@ public:
         OpResult cancelResult = model->cancel();
         if (cancelResult.failed())
         {
+            // This "if" block hasn't been tested
+
             LogAndDBG(cancelResult.getError().devMessage.toStdString());
             AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                              "Cancel Error",
@@ -1565,6 +1640,52 @@ private:
         {
             DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
         }
+    }
+
+    void myMalakia(OpResult result)
+    {
+        DBG("Setting up model card, CtrlComponent, resizing.");
+        setModelCard(model->card());
+        ctrlComponent.setModel(model);
+        mModelStatusTimer->setModel(model);
+        ctrlComponent.populateGui();
+
+        SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+        if (result.wasOk())
+        {
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+            {
+                spaceUrlButton.setButtonText("open localhost in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+            }
+            else
+            {
+                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+                                            + spaceInfo.modelName + " in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+            }
+        }
+        
+        // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+        addAndMakeVisible(spaceUrlButton);
+
+        repaint();
+
+        // now, we can enable the buttons
+        if (model->ready())
+        {
+            processCancelButton.setEnabled(true);
+            processCancelButton.setMode(processButtonInfo.label);
+        }
+
+        loadModelButton.setEnabled(true);
+        modelPathComboBox.setEnabled(true);
+        loadModelButton.setButtonText("load");
+
+        // Set the focus to the process button
+        // so that the user can press SPACE to trigger the playback
+        processCancelButton.grabKeyboardFocus();
+        resized();
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

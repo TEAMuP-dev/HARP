@@ -162,7 +162,8 @@ OpResult GradioClient::setSpaceInfo(const juce::String userProvidedSpaceAddress)
 SpaceInfo GradioClient::getSpaceInfo() const { return spaceInfo; }
 
 OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
-                                         juce::String& uploadedFilePath) const
+                                         juce::String& uploadedFilePath,
+                                         const int timeoutMs) const
 {
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL uploadEndpoint = gradioEndpoint.getChildURL("upload");
@@ -181,7 +182,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
                        // .withExtraHeaders("Accept: */*")
-                       .withConnectionTimeoutMs(10000)
+                       .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5)
@@ -234,7 +235,8 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
 OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
                                                  juce::String& eventID,
-                                                 const juce::String jsonBody) const
+                                                 const juce::String jsonBody,
+                                                 const int timeoutMs) const
 {
     // Create the error here, in case we need it
     // All the errors of this function are of type FileUploadError
@@ -252,7 +254,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
                        .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
-                       .withConnectionTimeoutMs(3000)
+                       .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5)
@@ -305,7 +307,8 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
 OpResult GradioClient::getResponseFromEventID(const juce::String callID,
                                               const juce::String eventID,
-                                              juce::String& response) const
+                                              juce::String& response,
+                                              const int timeoutMs) const
 {
     // Create the error here, in case we need it
     Error error;
@@ -322,7 +325,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                        //    .withExtraHeaders("Content-Type: application/json\r\nAccept:
                        //    */*")
-                       .withConnectionTimeoutMs(10000)
+                       .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5);
@@ -435,7 +438,8 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::Dynam
 }
 
 OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
-                                           juce::String& downloadedFilePath) const
+                                           juce::String& downloadedFilePath,
+                                           const int timeoutMs) const
 {
     // Create the error here, in case we need it
     Error error;
@@ -450,7 +454,7 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                       .withConnectionTimeoutMs(10000)
+                       .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5);

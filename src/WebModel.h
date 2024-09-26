@@ -25,7 +25,7 @@ public:
 
     ~WebModel() {}
 
-    bool ready() const override { return m_loaded; }
+    bool ready() const override { return status2 == ModelStatus::LOADED; }
 
     CtrlList& controls() { return m_ctrls; }
 
@@ -38,7 +38,6 @@ public:
         OpResult result = OpResult::ok();
 
         m_ctrls.clear();
-        m_loaded = false;
         status2 = ModelStatus::LOADING;
 
         // get the name of the huggingface repo we're going to use
@@ -177,7 +176,6 @@ public:
                 return OpResult::fail(error);
             }
         }
-        m_loaded = true;
         status2 = ModelStatus::LOADED;
         return OpResult::ok();
     }
@@ -442,9 +440,6 @@ public:
         return result;
     }
 
-    // sets a cancel flag file that the client can check to see if the process
-    // should be cancelled
-    // void cancel(juce::String& error) const
     OpResult cancel()
     {
         // Create a successful result.
@@ -478,6 +473,8 @@ public:
     }
 
     ModelStatus getStatus() { return status2; }
+
+    void setStatus(ModelStatus status) { status2 = status; }
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
@@ -583,8 +580,8 @@ public:
     {
         // get the status of the model
         ModelStatus status = m_model->getStatus();
-        DBG("ModelStatusTimer::timerCallback status: " + std::to_string(status)
-            + " lastStatus: " + std::to_string(lastStatus));
+        // DBG("ModelStatusTimer::timerCallback status: " + std::to_string(status)
+        //     + " lastStatus: " + std::to_string(lastStatus));
 
         // if the status has changed, broadcast a change
         if (status != lastStatus)
@@ -594,7 +591,13 @@ public:
         }
     }
 
-    void setModel(std::shared_ptr<WebModel> model) { m_model = model; }
+    void setModel(std::shared_ptr<WebModel> model)
+    {
+        // stopTimer();
+        m_model = model;
+        // lastStatus = ModelStatus::INITIALIZED;
+        // startTimer(50);
+    }
 
 private:
     std::shared_ptr<WebModel> m_model;
