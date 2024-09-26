@@ -54,15 +54,6 @@ private:
     int mInterval;
 };
 
-// inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
-//                                      Colour fallback = Colour(0xff4d4d4d)) noexcept
-// {
-//     if (auto* v4 = dynamic_cast<LookAndFeel_V4*>(&LookAndFeel::getDefaultLookAndFeel()))
-//         return v4->getCurrentColourScheme().getUIColour(uiColour);
-
-//     return fallback;
-// }
-
 inline std::unique_ptr<OutputStream> makeOutputStream(const URL& url)
 {
     if (const auto doc = AndroidDocument::fromDocument(url))
@@ -553,10 +544,6 @@ public:
                             }
                             processLoadingResult(loadingResult);
                         });
-                    // Call the callback to update the UI
-                    // TODO: maybe the stuff in callAsync above should be in this callback
-                    // loadBroadcaster.sendChangeMessage();
-                    // processLoadingResult(loadingResult);
                 }
                 catch (Error& loadingError)
                 {
@@ -602,17 +589,12 @@ public:
 
                         auto chosen = observedButtonIndicesMap[result];
 
-                        // auto chosen = msgOpts.getButtonText();
                         if (chosen == "Open HARP Logs")
                         {
-                            // logger->getLogFile().revealToUser();
                             HarpLogger::getInstance()->getLogFile().revealToUser();
                         }
                         else if (chosen == "Open Space URL")
                         {
-                            // URL spaceUrl = GradioClient::parseSpaceAddress(modelPathComboBox.getText().toStdString()).huggingface;
-                            // URL spaceUrl = model->gradioClient->getSpaceUrl()
-                            // URL spaceUrl = model->getGradioClient().getSpaceInfo().huggingface;
                             URL spaceUrl =
                                 this->model->getGradioClient().getSpaceInfo().huggingface;
                             spaceUrl.launchInDefaultBrowser();
@@ -629,7 +611,6 @@ public:
                                 {
                                     resetModelPathComboBox();
                                     model->setStatus(ModelStatus::INITIALIZED);
-                                    // loadBroadcaster.sendChangeMessage();
                                     processLoadingResult(OpResult::fail(loadingError));
                                 });
                         }
@@ -644,20 +625,8 @@ public:
                                     // but we don't store it anywhere,
                                     // so we just set it to "loaded"
                                     model->setStatus(ModelStatus::LOADED);
-
                                     processLoadingResult(OpResult::fail(loadingError));
                                     
-                                    // processCancelButton.setEnabled(true);
-                                    // processCancelButton.setMode(processButtonInfo.label);
-
-                                    // loadModelButton.setEnabled(true);
-                                    // modelPathComboBox.setEnabled(true);
-                                    // loadModelButton.setButtonText("load");
-
-                                    // // Set the focus to the process button
-                                    // // so that the user can press SPACE to trigger the playback
-                                    // processCancelButton.grabKeyboardFocus();
-                                    // resized();
                                 });
                         }
 
@@ -1054,8 +1023,6 @@ public:
         // check if the audio file is loaded
         if (! mediaDisplay->isFileLoaded())
         {
-            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
-            //ShowMEssageBoxAsync
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
                 "Error",
@@ -1484,17 +1451,6 @@ private:
     ApplicationCommandManager commandManager;
     // MenuBar
     std::unique_ptr<MenuBarComponent> menuBar;
-    // MenuBarPosition menuBarPosition = MenuBarPosition::window;
-
-    // std::unique_ptr<juce::FileLogger> logger { nullptr };
-    //==============================================================================
-
-    // void LogAndDBG(const juce::String& message) const
-    // {
-    //     DBG(message);
-    //     if (logger)
-    //         logger->logMessage(message);
-    // }
 
     void play()
     {
@@ -1565,50 +1521,7 @@ private:
         */
 
         // else if (source == &loadBroadcaster)
-        // {
-        //     DBG("Setting up model card, CtrlComponent, resizing.");
-        //     setModelCard(model->card());
-        //     ctrlComponent.setModel(model);
-        //     mModelStatusTimer->setModel(model);
-        //     ctrlComponent.populateGui();
-
-        //     SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-        //     if (spaceInfo.status != SpaceInfo::Status::ERROR)
-        //     {
-        //         if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-        //         {
-        //             spaceUrlButton.setButtonText("open localhost in browser");
-        //             spaceUrlButton.setURL(URL(spaceInfo.gradio));
-        //         }
-        //         else
-        //         {
-        //             spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-        //                                         + spaceInfo.modelName + " in browser");
-        //             spaceUrlButton.setURL(URL(spaceInfo.huggingface));
-        //         }
-        //     }
-            
-        //     // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-        //     addAndMakeVisible(spaceUrlButton);
-
-        //     repaint();
-
-        //     // now, we can enable the buttons
-        //     if (model->ready())
-        //     {
-        //         processCancelButton.setEnabled(true);
-        //         processCancelButton.setMode(processButtonInfo.label);
-        //     }
-
-        //     loadModelButton.setEnabled(true);
-        //     modelPathComboBox.setEnabled(true);
-        //     loadModelButton.setButtonText("load");
-
-        //     // Set the focus to the process button
-        //     // so that the user can press SPACE to trigger the playback
-        //     processCancelButton.grabKeyboardFocus();
-        //     resized();
-        // }
+        
 
         // The processBroadcaster should be also replaced in a similar way
         // as the loadBroadcaster
