@@ -520,7 +520,7 @@ public:
                     // if it's not already there
                     // and update the lastSelectedItemIndex and lastLoadedModelItemIndex
                     MessageManager::callAsync(
-                        [this]
+                        [this, loadingResult]
                         {
                             resetUI();
                             if (modelPathComboBox.getSelectedItemIndex() == 0)
@@ -551,10 +551,12 @@ public:
                             {
                                 lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
                             }
+                            processLoadingResult(loadingResult);
                         });
                     // Call the callback to update the UI
                     // TODO: maybe the stuff in callAsync above should be in this callback
-                    loadBroadcaster.sendChangeMessage();
+                    // loadBroadcaster.sendChangeMessage();
+                    // processLoadingResult(loadingResult);
                 }
                 catch (Error& loadingError)
                 {
@@ -628,32 +630,34 @@ public:
                                     resetModelPathComboBox();
                                     model->setStatus(ModelStatus::INITIALIZED);
                                     // loadBroadcaster.sendChangeMessage();
-                                    myMalakia(OpResult::fail(loadingError));
+                                    processLoadingResult(OpResult::fail(loadingError));
                                 });
                         }
                         else 
                         {
                             // If before the failed attempt to load a new model, we HAD a model loaded
                             MessageManager::callAsync(
-                                [this]
+                                [this, loadingError]
                                 {
                                     // We should set the status to 
                                     // the status of the model before the failed attempt
                                     // but we don't store it anywhere,
                                     // so we just set it to "loaded"
                                     model->setStatus(ModelStatus::LOADED);
+
+                                    processLoadingResult(OpResult::fail(loadingError));
                                     
-                                    processCancelButton.setEnabled(true);
-                                    processCancelButton.setMode(processButtonInfo.label);
+                                    // processCancelButton.setEnabled(true);
+                                    // processCancelButton.setMode(processButtonInfo.label);
 
-                                    loadModelButton.setEnabled(true);
-                                    modelPathComboBox.setEnabled(true);
-                                    loadModelButton.setButtonText("load");
+                                    // loadModelButton.setEnabled(true);
+                                    // modelPathComboBox.setEnabled(true);
+                                    // loadModelButton.setButtonText("load");
 
-                                    // Set the focus to the process button
-                                    // so that the user can press SPACE to trigger the playback
-                                    processCancelButton.grabKeyboardFocus();
-                                    resized();
+                                    // // Set the focus to the process button
+                                    // // so that the user can press SPACE to trigger the playback
+                                    // processCancelButton.grabKeyboardFocus();
+                                    // resized();
                                 });
                         }
 
@@ -1391,6 +1395,10 @@ private:
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer { nullptr };
 
     ComboBox modelPathComboBox;
+    // Two usefull variables to keep track of the selected item in the modelPathComboBox
+    // and the item index of the last loaded model
+    // These are used to restore the selected item in the modelPathComboBox
+    // after a failed attempt to load a new model
     int lastSelectedItemIndex = -1;
     int lastLoadedModelItemIndex = -1;
     HoverHandler modelPathComboBoxHandler { modelPathComboBox };
@@ -1543,51 +1551,67 @@ private:
                 playStopButton.setEnabled(false);
             }
         }
-        else if (source == &loadBroadcaster)
-        {
-            DBG("Setting up model card, CtrlComponent, resizing.");
-            setModelCard(model->card());
-            ctrlComponent.setModel(model);
-            mModelStatusTimer->setModel(model);
-            ctrlComponent.populateGui();
+        /*
+        // The loadBroadcaster isn't used anymore. 
+        // It's replaced by processLoadingResult
+        // it's more usefull because I can pass the result of the loading
+        // as argument to the callback
+        // it'll be used like this:
+        MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    processLoadingResult(OpResult::fail(loadingError));
+                                });
+        */
 
-            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-            if (spaceInfo.status != SpaceInfo::Status::ERROR)
-            {
-                if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-                {
-                    spaceUrlButton.setButtonText("open localhost in browser");
-                    spaceUrlButton.setURL(URL(spaceInfo.gradio));
-                }
-                else
-                {
-                    spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-                                                + spaceInfo.modelName + " in browser");
-                    spaceUrlButton.setURL(URL(spaceInfo.huggingface));
-                }
-            }
+        // else if (source == &loadBroadcaster)
+        // {
+        //     DBG("Setting up model card, CtrlComponent, resizing.");
+        //     setModelCard(model->card());
+        //     ctrlComponent.setModel(model);
+        //     mModelStatusTimer->setModel(model);
+        //     ctrlComponent.populateGui();
+
+        //     SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+        //     if (spaceInfo.status != SpaceInfo::Status::ERROR)
+        //     {
+        //         if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+        //         {
+        //             spaceUrlButton.setButtonText("open localhost in browser");
+        //             spaceUrlButton.setURL(URL(spaceInfo.gradio));
+        //         }
+        //         else
+        //         {
+        //             spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+        //                                         + spaceInfo.modelName + " in browser");
+        //             spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+        //         }
+        //     }
             
-            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-            addAndMakeVisible(spaceUrlButton);
+        //     // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+        //     addAndMakeVisible(spaceUrlButton);
 
-            repaint();
+        //     repaint();
 
-            // now, we can enable the buttons
-            if (model->ready())
-            {
-                processCancelButton.setEnabled(true);
-                processCancelButton.setMode(processButtonInfo.label);
-            }
+        //     // now, we can enable the buttons
+        //     if (model->ready())
+        //     {
+        //         processCancelButton.setEnabled(true);
+        //         processCancelButton.setMode(processButtonInfo.label);
+        //     }
 
-            loadModelButton.setEnabled(true);
-            modelPathComboBox.setEnabled(true);
-            loadModelButton.setButtonText("load");
+        //     loadModelButton.setEnabled(true);
+        //     modelPathComboBox.setEnabled(true);
+        //     loadModelButton.setButtonText("load");
 
-            // Set the focus to the process button
-            // so that the user can press SPACE to trigger the playback
-            processCancelButton.grabKeyboardFocus();
-            resized();
-        }
+        //     // Set the focus to the process button
+        //     // so that the user can press SPACE to trigger the playback
+        //     processCancelButton.grabKeyboardFocus();
+        //     resized();
+        // }
+
+        // The processBroadcaster should be also replaced in a similar way
+        // as the loadBroadcaster
         else if (source == &processBroadcaster)
         {
             // refresh the display for the new updated file
@@ -1642,17 +1666,16 @@ private:
         }
     }
 
-    void myMalakia(OpResult result)
+    void processLoadingResult(OpResult result)
     {
-        DBG("Setting up model card, CtrlComponent, resizing.");
-        setModelCard(model->card());
-        ctrlComponent.setModel(model);
-        mModelStatusTimer->setModel(model);
-        ctrlComponent.populateGui();
-
-        SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+        
         if (result.wasOk())
         {
+            setModelCard(model->card());
+            ctrlComponent.setModel(model);
+            mModelStatusTimer->setModel(model);
+            ctrlComponent.populateGui();
+            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
             {
                 spaceUrlButton.setButtonText("open localhost in browser");
@@ -1664,12 +1687,9 @@ private:
                                             + spaceInfo.modelName + " in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.huggingface));
             }
+            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+            addAndMakeVisible(spaceUrlButton);
         }
-        
-        // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-        addAndMakeVisible(spaceUrlButton);
-
-        repaint();
 
         // now, we can enable the buttons
         if (model->ready())
@@ -1686,7 +1706,13 @@ private:
         // so that the user can press SPACE to trigger the playback
         processCancelButton.grabKeyboardFocus();
         resized();
+        repaint();
     }
+
+    // void processProcessingResult(OpResult result)
+    // {
+
+    // }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
