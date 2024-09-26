@@ -16,11 +16,11 @@
 #include "ThreadPoolJob.h"
 #include "WebModel.h"
 
+#include "gui/CustomPathDialog.h"
 #include "gui/HoverHandler.h"
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
-#include "gui/CustomPathDialog.h"
 
 #include "gradio/GradioClient.h"
 
@@ -480,7 +480,6 @@ public:
         threadPool.addJob(
             [this, params]
             {
-                
                 try
                 {
                     juce::String loadingError;
@@ -505,7 +504,7 @@ public:
                     {
                         throw loadingResult.getError();
                     }
-                    
+
                     // loading succeeded
                     // Do some UI stuff to add the new model to the comboBox
                     // if it's not already there
@@ -548,8 +547,7 @@ public:
                 catch (Error& loadingError)
                 {
                     Error::fillUserMessage(loadingError);
-                    LogAndDBG("Error in Model Loading:\n"
-                                  + loadingError.devMessage);
+                    LogAndDBG("Error in Model Loading:\n" + loadingError.devMessage);
                     auto msgOpts =
                         MessageBoxOptions()
                             .withTitle("Loading Error")
@@ -600,7 +598,6 @@ public:
                             spaceUrl.launchInDefaultBrowser();
                         }
 
-                        
                         if (lastLoadedModelItemIndex == -1)
                         {
                             // If before the failed attempt to load a new model, we HAD NO model loaded
@@ -614,19 +611,18 @@ public:
                                     processLoadingResult(OpResult::fail(loadingError));
                                 });
                         }
-                        else 
+                        else
                         {
                             // If before the failed attempt to load a new model, we HAD a model loaded
                             MessageManager::callAsync(
                                 [this, loadingError]
                                 {
-                                    // We should set the status to 
+                                    // We should set the status to
                                     // the status of the model before the failed attempt
                                     // but we don't store it anywhere,
                                     // so we just set it to "loaded"
                                     model->setStatus(ModelStatus::LOADED);
                                     processLoadingResult(OpResult::fail(loadingError));
-                                    
                                 });
                         }
 
@@ -654,19 +650,22 @@ public:
                 {
                     // Catch any other standard exceptions (like std::runtime_error)
                     DBG("Caught std::exception: " << e.what());
-                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred: " + juce::String(e.what()));
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                     "Error",
+                                                     "An unexpected error occurred: "
+                                                         + juce::String(e.what()));
                     // TODO: maybe we need to reset something here (like in the above catch block)
                     // haven't tested yet.
                 }
                 catch (...) // Catch any other exceptions
                 {
                     DBG("Caught unknown exception");
-                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
                     // TODO: maybe we need to reset something here (like in the above catch block)
                     // haven't tested yet.
                 }
             });
-
     }
 
     void resetModelPathComboBox()
@@ -908,9 +907,9 @@ public:
             // Check if the 'custom path...' option is selected
             if (modelPathComboBox.getSelectedItemIndex() == 0)
             {
-
                 // Create and show the custom path dialog with a callback
-                std::function<void(const juce::String&)> loadCallback = [this](const juce::String& customPath)
+                std::function<void(const juce::String&)> loadCallback =
+                    [this](const juce::String& customPath)
                 {
                     DBG("Custom path entered: " + customPath);
                     this->customPath = customPath.toStdString(); // Store the custom path
@@ -932,7 +931,7 @@ public:
                         resetModelPathComboBox();
                     }
                 };
-                CustomPathDialog::showDialogWindow( loadCallback, cancelCallback);
+                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
             }
             else
             {
@@ -1087,15 +1086,14 @@ public:
             {
                 Error processingError = processingResult.getError();
                 Error::fillUserMessage(processingError);
-                LogAndDBG("Error in Processing:\n"
-                                  + processingError.devMessage.toStdString());
+                LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
                 AlertWindow::showMessageBoxAsync(
                     AlertWindow::WarningIcon,
                     "Processing Error",
                     "An error occurred while processing the audio file: \n"
                         + processingError.userMessage);
                 // cb: I commented this out, and it doesn't seem to change anything
-                // it was also causing a crash. If we need it, it needs to run on 
+                // it was also causing a crash. If we need it, it needs to run on
                 // the message thread using MessageManager::callAsync
                 // resetProcessingButtons();
                 return;
@@ -1521,7 +1519,6 @@ private:
         */
 
         // else if (source == &loadBroadcaster)
-        
 
         // The processBroadcaster should be also replaced in a similar way
         // as the loadBroadcaster
@@ -1581,7 +1578,6 @@ private:
 
     void processLoadingResult(OpResult result)
     {
-        
         if (result.wasOk())
         {
             setModelCard(model->card());
@@ -1597,7 +1593,7 @@ private:
             else
             {
                 spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-                                            + spaceInfo.modelName + " in browser");
+                                             + spaceInfo.modelName + " in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.huggingface));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
