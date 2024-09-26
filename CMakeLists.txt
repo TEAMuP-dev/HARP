@@ -72,6 +72,7 @@ target_sources(${PROJECT_NAME}
         src/gui/HoverHandler.cpp
         src/gui/TitledTextBox.h
         src/gui/SliderWithLabel.h
+        src/gui/CustomPathDialog.h
 
         src/media/MediaDisplayComponent.h
         src/media/AudioDisplayComponent.h

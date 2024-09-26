@@ -20,6 +20,7 @@
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
+#include "gui/CustomPathDialog.h"
 
 #include "gradio/GradioClient.h"
 
@@ -53,14 +54,14 @@ private:
     int mInterval;
 };
 
-inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
-                                     Colour fallback = Colour(0xff4d4d4d)) noexcept
-{
-    if (auto* v4 = dynamic_cast<LookAndFeel_V4*>(&LookAndFeel::getDefaultLookAndFeel()))
-        return v4->getCurrentColourScheme().getUIColour(uiColour);
+// inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
+//                                      Colour fallback = Colour(0xff4d4d4d)) noexcept
+// {
+//     if (auto* v4 = dynamic_cast<LookAndFeel_V4*>(&LookAndFeel::getDefaultLookAndFeel()))
+//         return v4->getCurrentColourScheme().getUIColour(uiColour);
 
-    return fallback;
-}
+//     return fallback;
+// }
 
 inline std::unique_ptr<OutputStream> makeOutputStream(const URL& url)
 {
@@ -225,8 +226,6 @@ public:
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
-                // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
-                // URL("https://github.com/TEAMuP-dev/harp").launchInDefaultBrowser();
                 break;
             default:
                 return false;
@@ -457,8 +456,6 @@ public:
     void loadModelCallback()
     {
         // collect input parameters for the model.
-        const std::string hf_url = "https://huggingface.co/spaces/";
-
         std::string path_url;
         if (modelPathComboBox.getSelectedItemIndex() == 0)
             path_url = customPath;
@@ -498,6 +495,8 @@ public:
                                     {
                                         alreadyInComboBox = true;
                                         modelPathComboBox.setSelectedId(i + 1);
+                                        lastSelectedItemIndex = i + 1;
+                                        lastLoadedModelItemIndex = i + 1;
                                     }
                                 }
 
@@ -506,7 +505,13 @@ public:
                                     int new_id = modelPathComboBox.getNumItems() + 1;
                                     modelPathComboBox.addItem(customPath, new_id);
                                     modelPathComboBox.setSelectedId(new_id);
+                                    lastSelectedItemIndex = new_id;
+                                    lastLoadedModelItemIndex = new_id;
                                 }
+                            }
+                            else
+                            {
+                                lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
                             }
                         });
                     DBG("executeLoad done!!");
@@ -571,14 +576,17 @@ public:
                                 this->model->getGradioClient().getSpaceInfo().huggingface;
                             spaceUrl.launchInDefaultBrowser();
                         }
-                        MessageManager::callAsync(
-                            [this]
-                            {
-                                resetModelPathComboBox();
-                                model.reset(new WebModel());
-                                loadBroadcaster.sendChangeMessage();
-                                // saveButton.setEnabled(false);
-                            });
+                        if (lastLoadedModelItemIndex == -1)
+                        {
+                            MessageManager::callAsync(
+                                [this]
+                                {
+                                    resetModelPathComboBox();
+                                    // model.reset(new WebModel());
+                                    loadBroadcaster.sendChangeMessage();
+                                    // saveButton.setEnabled(false);
+                                });
+                        }
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
@@ -637,6 +645,7 @@ public:
         {
             modelPathComboBox.addItem(options[i], static_cast<int>(i) + 1);
         }
+        lastSelectedItemIndex = -1;
     }
 
     void focusCallback()
@@ -783,7 +792,7 @@ public:
 
         loadModelButton.addMode(loadButtonInfo);
         loadModelButton.setMode(loadButtonInfo.label);
-        // loadModelButton.setButtonText("load");
+        loadModelButton.setEnabled(false);
         addAndMakeVisible(loadModelButton);
         loadModelButton.onMouseEnter = [this]
         { setInstructions("Loads the model and populates the UI with the model's parameters"); };
@@ -853,41 +862,37 @@ public:
             // Check if the 'custom path...' option is selected
             if (modelPathComboBox.getSelectedItemIndex() == 0)
             {
-                // Create an AlertWindow
-                auto* customPathWindow =
-                    new AlertWindow("Enter Custom Path",
-                                    "Please enter the path to the gradio endpoint:",
-                                    AlertWindow::NoIcon);
 
-                customPathWindow->addTextEditor("customPath", "", "Path:");
-                customPathWindow->addButton("Load", 1, KeyPress(KeyPress::returnKey));
-                customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
-
-                // Show the window and handle the result asynchronously
-                customPathWindow->enterModalState(
-                    true,
-                    new CustomPathAlertCallback(
-                        [this, customPathWindow](int result)
-                        {
-                            if (result == 1)
-                            { // OK was clicked
-                                // Retrieve the entered path
-                                customPath = customPathWindow->getTextEditor("customPath")
-                                                 ->getText()
-                                                 .toStdString();
-                                // Use the custom path as needed
-                                DBG("Custom path entered: " + customPath);
-                                loadModelButton.triggerClick();
-                            }
-                            else
-                            { // Cancel was clicked or the window was closed
-                                DBG("Custom path entry was canceled.");
-                                resetModelPathComboBox();
-                            }
-                            delete customPathWindow;
-                        }),
-                    true);
+                // Create and show the custom path dialog with a callback
+                std::function<void(const juce::String&)> loadCallback = [this](const juce::String& customPath)
+                {
+                    DBG("Custom path entered: " + customPath);
+                    this->customPath = customPath.toStdString(); // Store the custom path
+                    loadModelButton.triggerClick(); // Trigger the load model button click
+                };
+                std::function<void()> cancelCallback = [this]()
+                {
+                    // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
+                    if (lastLoadedModelItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+                    }
+                    else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+                    }
+                    else
+                    {
+                        resetModelPathComboBox();
+                    }
+                };
+                CustomPathDialog::showDialogWindow( loadCallback, cancelCallback);
             }
+            else
+            {
+                lastSelectedItemIndex = modelPathComboBox.getSelectedItemIndex();
+            }
+            loadModelButton.setEnabled(true);
         };
 
         addAndMakeVisible(modelPathComboBox);
@@ -1311,6 +1316,8 @@ private:
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer { nullptr };
 
     ComboBox modelPathComboBox;
+    int lastSelectedItemIndex = -1;
+    int lastLoadedModelItemIndex = -1;
     HoverHandler modelPathComboBoxHandler { modelPathComboBox };
 
     TextButton chooseFileButton { "Open File" };
@@ -1470,18 +1477,21 @@ private:
             ctrlComponent.populateGui();
 
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-            // if we are here, the status can't be ERROR or EMPTY
-            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+            if (spaceInfo.status != SpaceInfo::Status::ERROR)
             {
-                spaceUrlButton.setButtonText("open localhost in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                {
+                    spaceUrlButton.setButtonText("open localhost in browser");
+                    spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                }
+                else
+                {
+                    spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+                                                + spaceInfo.modelName + " in browser");
+                    spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+                }
             }
-            else
-            {
-                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-                                             + spaceInfo.modelName + " in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
-            }
+            
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(spaceUrlButton);
 
