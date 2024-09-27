@@ -69,6 +69,9 @@
 Read the comments in https://github.com/TEAMuP-dev/HARP/issues/219
 
 #### Conclusion
+
+Right now, the "cancel" button is useless. It gives the user the impression that the processing will stop immediately, but it doesn't.
+
 Try to not demo the "cancel" button in ISMIR. 
 if you click "cancel", we still have to way for the remaining timeout of the "processing" request to expire.
 How much you have to wait after clicking "cancel" depends on what part of the timeout passed between clicking "processing" and "cancel" 
