@@ -66,7 +66,7 @@
 
 
 ## "Cancel" in Gradio
-https://github.com/TEAMuP-dev/HARP/issues/219
+Read the comments in https://github.com/TEAMuP-dev/HARP/issues/219
 
 #### Conclusion
 Try to not demo the "cancel" button in ISMIR. 
