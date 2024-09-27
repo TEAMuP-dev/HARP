@@ -225,7 +225,9 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v4
       with:
-        name: ${{ env.PRODUCT_NAME }}
+        # name: ${{ env.PRODUCT_NAME }}
+        name: ${{ github.event.repository.name }}-${{ github.ref_name }}
+
         path: ./artifacts
     
 
