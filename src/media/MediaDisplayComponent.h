@@ -4,7 +4,7 @@
 #include "juce_core/juce_core.h"
 
 #include "OutputLabelComponent.h"
-#include "../gradio/utils.h"
+#include "../utils.h"
 
 using namespace juce;
 

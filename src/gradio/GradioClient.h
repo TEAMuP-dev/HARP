@@ -8,9 +8,10 @@
 
 #include <fstream>
 
+#include "../HarpLogger.h"
+#include "../errors.h"
+#include "../utils.h"
 #include "juce_core/juce_core.h"
-#include "utils.h"
-
 class GradioClient
 
 {
@@ -18,37 +19,36 @@ public:
     // GradioClient(const juce::String& spaceUrl);
     GradioClient() = default;
 
-    void extractKeyFromResponse(const juce::String& response,
-                                juce::String& responseKey,
-                                const juce::String& key,
-                                juce::String& error) const;
+    OpResult extractKeyFromResponse(const juce::String& response,
+                                    juce::String& responseKey,
+                                    const juce::String& key) const;
 
-    void uploadFileRequest(const juce::File& fileToUpload,
-                           juce::String& uploadedFilePath,
-                           juce::String& error) const;
+    OpResult uploadFileRequest(const juce::File& fileToUpload,
+                               juce::String& uploadedFilePath,
+                               const int timeoutMs = 10000) const;
 
-    void makePostRequestForEventID(
-        const juce::String endpoint,
-        juce::String& eventId,
-        juce::String& error,
-        const juce::String jsonBody = R"({"data": []})") const;
+    OpResult makePostRequestForEventID(const juce::String endpoint,
+                                       juce::String& eventId,
+                                       const juce::String jsonBody = R"({"data": []})",
+                                       const int timeoutMs = 10000) const;
 
-    void getResponseFromEventID(const juce::String callID,
-                                const juce::String eventID,
-                                juce::String& response,
-                                juce::String& error) const;
+    OpResult getResponseFromEventID(const juce::String callID,
+                                    const juce::String eventID,
+                                    juce::String& response,
+                                    const int timeoutMs = 10000) const;
 
-    void getControls(juce::Array<juce::var>& ctrlList,
-                     juce::DynamicObject& cardDict,
-                     juce::String& error);
+    OpResult getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict);
 
-    void setSpaceInfo(const juce::String url);
+    OpResult setSpaceInfo(const juce::String url);
 
     SpaceInfo getSpaceInfo() const;
 
+    OpResult downloadFileFromURL(const juce::URL& fileURL,
+                                 juce::String& downloadedFilePath,
+                                 const int timeoutMs = 10000) const;
+
 private:
-    static void parseSpaceAddress(juce::String spaceAddress,
-                                  SpaceInfo& spaceInfo);
+    static OpResult parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***
     We parse the space address given by the user
     which can take 4 forms:

@@ -1,7 +1,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "gui/TitledTextBox.h"
 #include "gui/SliderWithLabel.h"
-#include "gradio/utils.h"
+#include "utils.h"
 #include "WebModel.h"
 
 class CtrlComponent: public juce::Component, 
