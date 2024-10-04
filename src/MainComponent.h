@@ -1032,7 +1032,8 @@ public:
         };
         mediaDisplayHandler->onMouseExit = [this]()
         { clearInstructions(); };
-        mediaDisplayHandler->attach();
+        // TODO: Make this take less priority than the label handler so that it can stay up
+        // mediaDisplayHandler->attach();
     }
 
     void loadMediaDisplay(File mediaFile)
@@ -1336,6 +1337,9 @@ private:
 
     std::unique_ptr<HoverHandler> mediaDisplayHandler;
 
+    Array<std::unique_ptr<HoverHandler>> labelHoverHandlers;
+    Array<LabelOverlayComponent*> labelObjs;
+
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
 
@@ -1383,6 +1387,25 @@ private:
         saveEnabled = true;
         isProcessing = false;
         repaint();
+    }
+
+    void updateLabelHovers()
+    {
+        DBG("Starting update label hovers function");
+        labelHoverHandlers.clear();
+
+        for (LabelOverlayComponent* label : labelObjs) {
+            std::unique_ptr<HoverHandler> labelHandler = std::make_unique<HoverHandler>(*label);
+            String labelDesc = label->getDescription();
+            labelHandler->onMouseEnter = [this, labelDesc]()
+            {
+                setInstructions(labelDesc);
+            };
+            labelHandler->onMouseExit = [this]()
+            { clearInstructions(); };
+            labelHandler->attach();
+            labelHoverHandlers.add(std::move(labelHandler));
+        }
     }
 
     void changeListenerCallback(ChangeBroadcaster* source) override
@@ -1464,6 +1487,10 @@ private:
 
             // add the labels to the display component
             mediaDisplay->addLabels(labels);
+
+            labelObjs = mediaDisplay->getLabels();
+
+            updateLabelHovers();
 
             // now, we can enable the process button
             resetProcessingButtons();

@@ -52,7 +52,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
     float mediaHeight = getHeight() - (scrollBarSize + 2 * spacing);
     float pixelsPerSecond = getMediaWidth() / visibleRange.getLength();
 
-    float minLabelWidth = 0.0015 * pixelsPerSecond;
+    float minLabelWidth = 0.1 * getWidth();
     float maxLabelWidth = 0.10 * pixelsPerSecond;
 
     for (auto l : labelOverlays) {
@@ -273,6 +273,12 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
         if ((l->duration).has_value()) {
             dur = (l->duration).value();
+        }
+
+        Colour color = Colours::purple.withAlpha(0.8f);
+
+        if ((l->color).has_value()) {
+            color = Colour((l->color).value());
         }
 
         if (!dynamic_cast<AudioLabel*>(l.get()) &&

@@ -88,6 +88,8 @@ public:
 
     virtual void addLabels(LabelList& labels);
 
+    Array<LabelOverlayComponent*> getLabels() { return labelOverlays; }
+
     void addLabelOverlay(LabelOverlayComponent l);
     void addOverheadLabel(OverheadLabelComponent l);
 

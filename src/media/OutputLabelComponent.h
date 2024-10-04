@@ -2,6 +2,8 @@
 
 #include "juce_gui_basics/juce_gui_basics.h"
 
+#include "../gui/HoverHandler.h"
+
 using namespace juce;
 
 
@@ -25,6 +27,7 @@ public:
     LabelOverlayComponent(double t, String lbl, float y, double dur);
     LabelOverlayComponent(double t, String lbl, float y, String dsc);
     LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc);
+    LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour color);
     LabelOverlayComponent(const LabelOverlayComponent& other);
     ~LabelOverlayComponent();
 
@@ -36,6 +39,7 @@ public:
 
     void setTime(double t) { time = t; }
     void setLabel(String lbl) { label = lbl; }
+    void setColor(Colour clr) {color = clr; }
 
     void setRelativeY(float y) { relativeY = y; }
 
@@ -44,6 +48,7 @@ public:
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
+    Colour getColor() const { return color; }
 
     float getRelativeY() const { return relativeY; }
 
@@ -60,4 +65,5 @@ protected:
     // Optional
     double duration = 0.0;
     String description { "" };
+    Colour color;
 };

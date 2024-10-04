@@ -34,6 +34,10 @@ void MidiDisplayComponent::resized()
     horizontalScrollBar.setBounds(scrollBarArea.reduced(spacing));
 }
 
+float MidiDisplayComponent::getMediaWidth() {
+    return 0.0;
+}
+
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
     // Create the local file this URL points to
@@ -156,3 +160,5 @@ void MidiDisplayComponent::resetDisplay()
 }
 
 void MidiDisplayComponent::postLoadActions(const URL& filePath) {}
+
+void MidiDisplayComponent::addLabels(LabelList& labels) {}

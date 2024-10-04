@@ -26,6 +26,15 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, doub
     setDescription(dsc);
 }
 
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour clr) : LabelOverlayComponent(t, lbl, y)
+{
+    setDuration(dur);
+    setDescription(dsc);
+    setColor(clr);
+    setColour(Label::backgroundColourId, clr);
+    repaint();
+}
+
 LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 {
     setTime(other.getTime());
@@ -33,8 +42,11 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
     setRelativeY(other.getRelativeY());
     setDuration(other.getDuration());
     setDescription(other.getDescription());
-
     setDefaultAttributes();
+    setColor(other.getColor());
+    setColour(Label::backgroundColourId, other.getColor());
+
+    
 }
 
 LabelOverlayComponent::~LabelOverlayComponent() {}
@@ -44,10 +56,10 @@ void LabelOverlayComponent::setDefaultAttributes()
     setText(getLabel(), dontSendNotification);
     setJustificationType(Justification::centred);
     setColour(Label::textColourId, Colours::white);
-    setColour(Label::backgroundColourId, Colours::purple.withAlpha(0.5f));
+    setColour(Label::backgroundColourId, Colours::purple.withAlpha(0.8f));
 
     setMinimumHorizontalScale(0.0f);
-    setInterceptsMouseClicks(false, false);
+    //setInterceptsMouseClicks(false, false);
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)

@@ -19,6 +19,8 @@ public:
     void drawMainArea(Graphics& g, Rectangle<int>& a) override;
     void resized() override;
 
+    float getMediaWidth() override;
+
     void loadMediaFile(const URL& filePath) override;
 
     void setPlaybackPosition(double t) override;
@@ -31,6 +33,8 @@ public:
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
 
     void updateVisibleRange(Range<double> newRange) override;
+
+    void addLabels(LabelList& labels) override;
 
 private:
 
