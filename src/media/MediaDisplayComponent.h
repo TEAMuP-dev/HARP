@@ -24,11 +24,15 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
-    virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
+    virtual void paintMedia(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
 
-    virtual float getMediaStartPos() { return 0.0f; }
-    virtual float getMediaWidth() { return 0.0f; }
+    virtual void repositionScrollBar();
+
+    virtual Component* getMediaComponent() { return this; }
+    //virtual float getMediaStartXPos() { return 0.0f; }
+    float getMediaHeight() { return getMediaComponent()->getHeight(); }
+    float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
@@ -99,9 +103,8 @@ protected:
 
     void setNewTarget(URL filePath);
 
-    double xToTime(const float x);
-    float timeToX(const double t);
-    bool withinMediaBounds(const float x) { return x >= getMediaStartPos() && x <= getMediaStartPos() + getMediaWidth(); }
+    double mediaXToTime(const float x);
+    float timeToMediaX(const double t);
 
     int scrollBarSize = 10;
     int labelHeight = 20;

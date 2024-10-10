@@ -90,13 +90,11 @@ void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
     visibleKeyRange = newRange;
 
     verticalScrollBar.setCurrentRange(newRange);
-    //repaint();
 }
 
 void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
 {
     visibleMediaRange = newRange;
-    //repaint();
 }
 
 void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart)

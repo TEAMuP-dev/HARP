@@ -5,6 +5,26 @@
 #include "MediaDisplayComponent.h"
 
 
+class AudioThumbnailWrapper : public Component
+{
+public:
+
+    AudioThumbnailWrapper(juce::AudioThumbnail& t) : thumbnail(t) {}
+
+    void paintThumbnail(juce::Graphics& g, Range<double> visibleRange)
+    {
+        if (thumbnail.getTotalLength() > 0.0)
+        {
+            thumbnail.drawChannels(g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
+        }
+    }
+
+private:
+
+    AudioThumbnail& thumbnail;
+};
+
+
 class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
@@ -15,10 +35,9 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
 
-    void drawMainArea(Graphics& g, Rectangle<int>& a) override;
+    void paintMedia(Graphics& g, Rectangle<int>& a) override;
 
-    float getMediaStartPos() override { return spacing; }
-    float getMediaWidth() override { return getWidth() - 2 * spacing; }
+    Component* getMediaComponent() { return &thumbnailComponent; }
 
     void loadMediaFile(const URL& filePath) override;
 
@@ -50,6 +69,7 @@ private:
     AudioTransportSource transportSource;
 
     AudioThumbnailCache thumbnailCache{ 5 };
-
     AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
+
+    AudioThumbnailWrapper thumbnailComponent{ thumbnail };
 };

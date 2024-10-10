@@ -23,12 +23,14 @@ public:
 
     ~PianoRollComponent();
 
+    void paint(Graphics& g) override;
+    void resized() override;
+
+    NoteGridComponent* getNoteGrid() { return &noteGrid; }
+
     void setResolution(int pixelsPerSecond);
 
     void resizeNoteGrid(double lengthInSecs);
-
-    void paint(Graphics& g) override;
-    void resized() override;
 
     void updateVisibleKeyRange(Range<double> newRange);
     void updateVisibleMediaRange(Range<double> newRange);
@@ -45,6 +47,7 @@ public:
     int getPianoRollSpacing() { return pianoRollSpacing; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
+    int getResolution() { return noteGrid.getPixelsPerSecond(); }
 
 private:
 

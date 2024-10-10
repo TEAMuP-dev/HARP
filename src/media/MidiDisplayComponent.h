@@ -16,11 +16,13 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
-    void drawMainArea(Graphics& g, Rectangle<int>& a) override;
-    void resized() override;
+    void paintMedia(Graphics& g, Rectangle<int>& a) override;
 
-    float getMediaWidth() override { return pianoRoll.getPianoRollWidth(); }
-    float getMediaStartPos() override { return spacing + pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
+    void repositionScrollBar() override;
+
+    Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
+
+    //float getMediaStartXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
 
     void loadMediaFile(const URL& filePath) override;
 
