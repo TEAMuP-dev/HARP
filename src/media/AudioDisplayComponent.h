@@ -5,145 +5,60 @@
 #include "MediaDisplayComponent.h"
 
 
-class AudioDisplayComponent : public MediaDisplayComponent
+class AudioThumbnailWrapper : public Component
 {
 public:
 
-    AudioDisplayComponent()
+    AudioThumbnailWrapper(juce::AudioThumbnail& t) : thumbnail(t) {}
+
+    void paintThumbnail(juce::Graphics& g, Range<double> visibleRange)
     {
-        thread.startThread(Thread::Priority::normal);
-
-        formatManager.registerBasicFormats();
-
-        deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-        deviceManager.addAudioCallback(&sourcePlayer);
-
-        sourcePlayer.setSource(&transportSource);
-
-        thumbnail.addChangeListener(this);
-
-        mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
-    }
-
-    ~AudioDisplayComponent()
-    {
-        deviceManager.removeAudioCallback(&sourcePlayer);
-
-        transportSource.setSource(nullptr);
-        sourcePlayer.setSource(nullptr);
-
-        thumbnail.removeChangeListener(this);
-    }
-
-    void drawMainArea(Graphics& g, Rectangle<int>& a) override
-    {
-        thumbnail.drawChannels(g, a, visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
-    }
-
-    static StringArray getSupportedExtensions()
-    {
-        StringArray extensions;
-
-        extensions.add(".wav");
-        extensions.add(".bwf");
-        extensions.add(".aiff");
-        extensions.add(".aif");
-        extensions.add(".flac");
-        extensions.add(".ogg");
-        extensions.add(".mp3");
-
-        return extensions;
-    }
-
-    StringArray getInstanceExtensions()
-    {
-        return AudioDisplayComponent::getSupportedExtensions();
-    }
-
-    void loadMediaFile(const URL& filePath) override
-    {
-        const auto source = std::make_unique<URLInputSource>(filePath);
-
-        File audioFile = filePath.getLocalFile();
-
-        if (source == nullptr) {
-            DBG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName() << " does not exist.");
-            // TODO - better error handing
-            jassertfalse;
-            return;
+        if (thumbnail.getTotalLength() > 0.0)
+        {
+            thumbnail.drawChannels(g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
         }
-
-        auto stream = rawToUniquePtr(source->createInputStream());
-
-        if (stream == nullptr) {
-            DBG("AudioDisplayComponent::loadMediaFile: Failed to load file " << audioFile.getFullPathName() << ".");
-            // TODO - better error handing
-            jassertfalse;
-            return;
-        }
-
-        auto reader = rawToUniquePtr(formatManager.createReaderFor(std::move(stream)));
-
-        if (reader == nullptr) {
-            DBG("AudioDisplayComponent::loadMediaFile: Failed to read file " << audioFile.getFullPathName() << ".");
-            // TODO - better error handing
-            jassertfalse;
-            return;
-        }
-
-        audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
-
-        // ..and plug it into our transport source
-        transportSource.setSource(audioFileSource.get(),
-                                  32768, // tells it to buffer this many samples ahead
-                                  &thread, // this is the background thread to use for reading-ahead
-                                  audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
-    }
-
-    void setPlaybackPosition(double t) override { transportSource.setPosition(t); }
-
-    double getPlaybackPosition() override { return transportSource.getCurrentPosition(); }
-
-
-    void startPlaying() override
-    {
-        // TODO - clear displayed audio buffer upon start here?
-        transportSource.start();
-    }
-
-    void stopPlaying() override
-    {
-        transportSource.stop();
-    }
-
-    bool isPlaying() override { return transportSource.isPlaying(); }
-
-    double getTotalLengthInSecs() override
-    {
-        return thumbnail.getTotalLength();
     }
 
 private:
 
-    void resetDisplay() override
-    {
-        transportSource.stop();
-        transportSource.setSource(nullptr);
+    AudioThumbnail& thumbnail;
+};
 
-        audioFileSource.reset();
 
-        thumbnail.clear();
-    }
+class AudioDisplayComponent : public MediaDisplayComponent
+{
+public:
 
-    void postLoadActions(const URL& filePath) override
-    {
-        if (auto inputSource = std::make_unique<URLInputSource>(filePath)) {
-            thumbnailCache.clear();
-            thumbnail.setSource(inputSource.release());
-        }
-    }
+    AudioDisplayComponent();
+    ~AudioDisplayComponent();
 
-    TimeSliceThread thread{ "audio file preview" };
+    static StringArray getSupportedExtensions();
+    StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
+
+    void paintMedia(Graphics& g, Rectangle<int>& a) override;
+
+    Component* getMediaComponent() { return &thumbnailComponent; }
+
+    void loadMediaFile(const URL& filePath) override;
+
+    void setPlaybackPosition(double t) override { transportSource.setPosition(t); }
+    double getPlaybackPosition() override { return transportSource.getCurrentPosition(); }
+
+    bool isPlaying() override { return transportSource.isPlaying(); }
+    void startPlaying() override { transportSource.start(); }
+    void stopPlaying() override { transportSource.stop(); }
+
+    double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
+
+    void addLabels(LabelList& labels) override;
+
+private:
+
+    void resetDisplay() override;
+
+    void postLoadActions(const URL& filePath) override;
+
+    TimeSliceThread thread{ "Audio File Thread" };
     
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -154,6 +69,7 @@ private:
     AudioTransportSource transportSource;
 
     AudioThumbnailCache thumbnailCache{ 5 };
-
     AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
+
+    AudioThumbnailWrapper thumbnailComponent{ thumbnail };
 };

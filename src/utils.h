@@ -125,54 +125,34 @@ struct SpaceInfo
     }
 };
 
-class OutputLabel
+struct OutputLabel
 {
-public:
-    virtual ~OutputLabel() = default; // virtual destructor
-    // TODO: maybe to_y() needs a input parameter to calculate the y value
-    virtual std::optional<float> to_y() = 0;
-
     // required on pyharp side
     float t;
-    juce::String label { "" };
+    juce::String label;
     // optional on pyharp side
     juce::String description { "" };
     std::optional<float> duration;
+    virtual ~OutputLabel() = default; // virtual destructor
 };
 
-class AudioLabel : public OutputLabel
+struct AudioLabel : public OutputLabel
 {
-public:
-    std::optional<float> to_y() override
-    {
-        // TODO: Implement this
-        // You can check if the amplitude has been set
-        // by checking if the optional has a value
-        // if (amplitude.has_value())
-        return amplitude;
-    }
     // Optional on pyharp side
     std::optional<float> amplitude;
 };
 
-class SpectrogramLabel : public OutputLabel
+struct SpectrogramLabel : public OutputLabel
 {
-public:
-    std::optional<float> to_y() override
-    {
-        return frequency;
-    }
     // Optional on pyharp side
     std::optional<float> frequency;
 };
 
-class MidiLabel : public OutputLabel
+struct MidiLabel : public OutputLabel
 {
-public:
-    std::optional<float> to_y() override
-    {
-        return pitch;
-    }
     // Optional on pyharp side
     std::optional<float> pitch;
 };
+
+using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
