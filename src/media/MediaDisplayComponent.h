@@ -375,16 +375,19 @@ private:
         }
     }
 
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override
+    void mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel) override
     {
-        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
+	// DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
 
         if (getTotalLengthInSecs() > 0.0)
-        {
+	{
             auto totalLength = visibleRange.getLength();
             auto visibleStart = visibleRange.getStart();
+	    auto scrollTime = xToTime(evt.position.getX());
+	    // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
 
             if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
+		// What's the point of this case?
                 auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
                 newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
 
@@ -409,9 +412,11 @@ private:
                     currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
 
                     auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-                    auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
 
-                    updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
+		    auto newStart = scrollTime - newScale * (scrollTime - visibleStart) / totalLength;
+		    auto newEnd = scrollTime + newScale * (visibleStart + totalLength - scrollTime) / totalLength;
+		    
+		    updateVisibleRange({newStart, newEnd});
                 }
             } else {
                 // Do nothing
