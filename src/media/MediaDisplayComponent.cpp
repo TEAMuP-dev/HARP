@@ -425,14 +425,20 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved, dou
     }
 }
 
-void MediaDisplayComponent::mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel)
+void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
+	// DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
+
     if (getTotalLengthInSecs() > 0.0)
-    {
+	{
         auto totalLength = visibleRange.getLength();
         auto visibleStart = visibleRange.getStart();
+	    auto scrollTime = mediaXToTime(evt.position.getX());
+	    // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
 
-        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
+        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) 
+        {
+            // What's the point of this case?
             auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
             newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
 
@@ -441,12 +447,27 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent&, const MouseWheelDe
             }
         } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
             if (wheel.deltaY != 0) {
+                // TODO - make zoom consistent across different audio lengths?
+
+                //currentHorizontalZoomFactor = jlimit(0.0, 1.0, currentHorizontalZoomFactor + wheel.deltaY);
+
+                //double mediaVisible = getTotalLengthInSecs() / (1 + 10 * currentHorizontalZoomFactor);
+
+                //double visibilityRadius = mediaVisible / 2.0;
+                //double visibilityCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
+
+                //Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
+
+                //updateVisibleRange(horizontalScrollBar.getRangeLimit().constrainRange(newRange));
+
                 currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
 
                 auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-                auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
 
-                updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
+                auto newStart = scrollTime - newScale * (scrollTime - visibleStart) / totalLength;
+                auto newEnd = scrollTime + newScale * (visibleStart + totalLength - scrollTime) / totalLength;
+                
+                updateVisibleRange({newStart, newEnd});
             }
         } else {
             // Do nothing
@@ -455,3 +476,32 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent&, const MouseWheelDe
         repaint();
     }
 }
+// {
+//     if (getTotalLengthInSecs() > 0.0)
+//     {
+//         auto totalLength = visibleRange.getLength();
+//         auto visibleStart = visibleRange.getStart();
+
+//         if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
+//             auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
+//             newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
+
+//             if (!isPlaying()) {
+//                 updateVisibleRange({ newStart, newStart + totalLength });
+//             }
+//         } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
+//             if (wheel.deltaY != 0) {
+//                 currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
+
+//                 auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
+//                 auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
+
+//                 updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
+//             }
+//         } else {
+//             // Do nothing
+//         }
+
+//         repaint();
+//     }
+// }
