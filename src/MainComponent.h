@@ -499,6 +499,11 @@ public:
                         mModelStatusTimer->setModel(newModel);
                     */
 
+                    // set the last status to the current status
+                    // If loading of the new model fails,
+                    // we want to go back to the status we had before the failed attempt
+                    model->setLastStatus(model->getStatus());
+
                     OpResult loadingResult = model->load(params);
                     if (loadingResult.failed())
                     {
@@ -517,14 +522,14 @@ public:
                             {
                                 bool alreadyInComboBox = false;
 
-                                for (int i = 1; i <= modelPathComboBox.getNumItems(); ++i)
+                                for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
                                 {
-                                    if (modelPathComboBox.getItemText(i) == (String) customPath)
+                                    if (modelPathComboBox.getItemText(i) == (juce::String) customPath)
                                     {
                                         alreadyInComboBox = true;
                                         modelPathComboBox.setSelectedId(i + 1);
-                                        lastSelectedItemIndex = i + 1;
-                                        lastLoadedModelItemIndex = i + 1;
+                                        lastSelectedItemIndex = i;
+                                        lastLoadedModelItemIndex = i;
                                     }
                                 }
 
@@ -533,8 +538,8 @@ public:
                                     int new_id = modelPathComboBox.getNumItems() + 1;
                                     modelPathComboBox.addItem(customPath, new_id);
                                     modelPathComboBox.setSelectedId(new_id);
-                                    lastSelectedItemIndex = new_id;
-                                    lastLoadedModelItemIndex = new_id;
+                                    lastSelectedItemIndex = new_id - 1;
+                                    lastLoadedModelItemIndex = new_id - 1;
                                 }
                             }
                             else
@@ -617,11 +622,9 @@ public:
                             MessageManager::callAsync(
                                 [this, loadingError]
                                 {
-                                    // We should set the status to
+                                    // We set the status to
                                     // the status of the model before the failed attempt
-                                    // but we don't store it anywhere,
-                                    // so we just set it to "loaded"
-                                    model->setStatus(ModelStatus::LOADED);
+                                    model->setStatus(model->getLastStatus());
                                     processLoadingResult(OpResult::fail(loadingError));
                                 });
                         }
@@ -629,6 +632,8 @@ public:
                         // This if/elseif/else block is responsible for setting the selected item
                         // in the modelPathComboBox to the correct item (i.e the model/path/app that
                         // was selected before the failed attempt to load a new model)
+                        // cb: sometimes setSelectedId it doesn't work and I dont know why. 
+                        // I've tried nesting it in MessageManage::callAsync, but still nothing.
                         if (lastLoadedModelItemIndex != -1)
                         {
                             modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
@@ -640,6 +645,11 @@ public:
                         else
                         {
                             resetModelPathComboBox();
+                            MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    loadModelButton.setEnabled(false);
+                                });
                         }
                     };
 
@@ -670,17 +680,18 @@ public:
 
     void resetModelPathComboBox()
     {
+        // cb: why do we resetUI inside a function named resetModelPathComboBox ?
         resetUI();
         //should I clear this?
         spaceUrlButton.setButtonText("");
         int numItems = modelPathComboBox.getNumItems();
         std::vector<std::string> options;
 
-        for (int i = 1; i <= numItems; ++i) // item indexes are 1-based in JUCE
+        for (int i = 0; i < numItems; ++i) // item indexes are 1-based in JUCE
         {
-            String itemText = modelPathComboBox.getItemText(i - 1);
+            String itemText = modelPathComboBox.getItemText(i);
             options.push_back(itemText.toStdString());
-            DBG("Item " << i << ": " << itemText);
+            DBG("Item index" << i << ": " << itemText);
         }
 
         modelPathComboBox.clear();
@@ -881,11 +892,12 @@ public:
             // "hugggof/nesquik",
             // "hugggof/pitch_shifter",
             // "hugggof/harmonic_percussive",
-            "xribene/pitch_shifter",
+            // "xribene/pitch_shifter",
             "http://localhost:7860",
             "https://xribene-midi-pitch-shifter.hf.space/",
             "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             "xribene/midi_pitch_shifter",
+            "https://huggingface.co/spaces/xribene/pitch_shifter",
         };
 
         modelPathComboBox.setTextWhenNothingSelected("choose a model");
@@ -929,6 +941,11 @@ public:
                     else
                     {
                         resetModelPathComboBox();
+                        MessageManager::callAsync(
+                            [this]
+                            {
+                                loadModelButton.setEnabled(false);
+                            });
                     }
                 };
                 CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);

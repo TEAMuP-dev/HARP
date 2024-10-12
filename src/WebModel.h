@@ -474,6 +474,9 @@ public:
 
     void setStatus(ModelStatus status) { status2 = status; }
 
+    ModelStatus getLastStatus() { return lastStatus; }
+    void setLastStatus(ModelStatus status) { lastStatus = status; }
+
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
         return std::find_if(m_ctrls.begin(),
@@ -564,6 +567,12 @@ private:
 
     CtrlList m_ctrls;
     GradioClient gradioClient;
+    
+    // A helper variable to store the status of the model
+    // before loading a new model. If the new model fails to load,
+    // we want to go back to the status we had before the failed attempt
+    ModelStatus lastStatus;
+
     // A variable to store the latest labelList received during processing
     LabelList labels;
 };
