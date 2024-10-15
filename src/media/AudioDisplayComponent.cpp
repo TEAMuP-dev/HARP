@@ -12,6 +12,7 @@ AudioDisplayComponent::AudioDisplayComponent()
 
     sourcePlayer.setSource(&transportSource);
 
+    thumbnailComponent.addMouseListener(this, true);
     addAndMakeVisible(thumbnailComponent);
 
     mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";

@@ -236,6 +236,8 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
 void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
+    mouseDrag(e); // make sure playback position has been updated
+
     if (e.eventComponent == getMediaComponent()) {
         start();
         sendChangeMessage();
@@ -396,7 +398,7 @@ void MediaDisplayComponent::resetPaths()
 
 void MediaDisplayComponent::updateCursorPosition()
 {
-    bool displayCursor = isPlaying() || isMouseButtonDown();
+    bool displayCursor = isPlaying() || isMouseButtonDown(true);
 
     currentPositionMarker.setVisible(displayCursor);
 
