@@ -88,8 +88,8 @@ void MediaDisplayComponent::repositionLabelOverlays()
 void MediaDisplayComponent::resetMedia()
 {
     resetPaths();
-    resetDisplay();
     clearLabels();
+    resetDisplay();
     sendChangeMessage();
 
     currentHorizontalZoomFactor = 1.0;
