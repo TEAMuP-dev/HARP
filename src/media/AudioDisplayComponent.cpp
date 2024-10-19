@@ -41,10 +41,9 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::paintMedia(Graphics& g, Rectangle<int>& a)
+void AudioDisplayComponent::repositionContent()
 {
-    thumbnailComponent.paintThumbnail(g, visibleRange);
-    thumbnailComponent.setBounds(a);
+    thumbnailComponent.setBounds(getContentBounds());
 }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)

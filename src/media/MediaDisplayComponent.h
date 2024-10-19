@@ -23,15 +23,15 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
-    virtual void paintMedia(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
-
+    virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
     virtual Component* getMediaComponent() { return this; }
-    //virtual float getMediaStartXPos() { return 0.0f; }
+    virtual float getMediaXPos() { return 0.0f; }
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
+    Rectangle<int> getContentBounds();
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
@@ -103,9 +103,8 @@ protected:
     double mediaXToTime(const float x);
     float timeToMediaX(const double t);
 
-    int scrollBarSize = 10;
-    int labelHeight = 20;
-    int spacing = 2;
+    const int controlSpacing = 2;
+    const int scrollBarSize = 10;
 
     Range<double> visibleRange;
 
@@ -139,6 +138,9 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
+
+    const int textSpacing = 2;
+    const int labelHeight = 20;
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> oveheadLabels;

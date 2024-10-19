@@ -16,13 +16,12 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
-    void paintMedia(Graphics& g, Rectangle<int>& a) override;
-
+    void repositionContent() override;
     void repositionScrollBar() override;
 
     Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
 
-    //float getMediaStartXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
+    float getMediaXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
 
     void loadMediaFile(const URL& filePath) override;
 
@@ -47,5 +46,5 @@ private:
 
     double totalLengthInSecs;
 
-    PianoRollComponent pianoRoll{70, 5, scrollBarSize, spacing};
+    PianoRollComponent pianoRoll{70, 5, scrollBarSize, controlSpacing};
 };

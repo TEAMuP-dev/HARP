@@ -25,11 +25,7 @@ void MediaDisplayComponent::paint(Graphics& g)
     g.fillAll(Colours::darkgrey);
     g.setColour(Colours::lightblue);
 
-    if (isFileLoaded()) {
-        Rectangle<int> a = getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * spacing)).reduced(spacing);
-
-        paintMedia(g, a);
-    } else {
+    if (!isFileLoaded()) {
         g.setFont(14.0f);
         g.drawFittedText("No media file selected...", getLocalBounds(), Justification::centred, 2);
     }
@@ -37,13 +33,19 @@ void MediaDisplayComponent::paint(Graphics& g)
 
 void MediaDisplayComponent::resized()
 {
+    repositionContent();
     repositionScrollBar();
     repositionLabelOverlays();
 }
 
 void MediaDisplayComponent::repositionScrollBar()
 {
-    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * spacing).reduced(spacing));
+    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing).reduced(controlSpacing));
+}
+
+Rectangle<int> MediaDisplayComponent::getContentBounds()
+{
+    return getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing)).reduced(controlSpacing);
 }
 
 void MediaDisplayComponent::repositionOverheadLabels()
@@ -67,7 +69,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
 
     for (auto l : labelOverlays) {
         float textWidth = l->getFont().getStringWidthFloat(l->getText());
-        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * spacing));
+        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * textSpacing));
 
         // TODO - l->getDuration() unused
 
@@ -301,7 +303,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setFont(Font(labelHeight - 2 * spacing));
+    label->setFont(Font(labelHeight - 2 * textSpacing));
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
@@ -396,18 +398,22 @@ void MediaDisplayComponent::resetPaths()
     currentTempFileIdx = -1;
 }
 
+// TODO - embedding cursor into mediaComponent might be cleaner
 void MediaDisplayComponent::updateCursorPosition()
 {
-    bool displayCursor = isPlaying() || isMouseButtonDown(true);
+    bool displayCursor = isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
 
-    currentPositionMarker.setVisible(displayCursor);
+    float cursorPositionX = controlSpacing + getMediaXPos() + timeToMediaX(getPlaybackPosition()) - (cursorWidth / 2.0f);
 
-    float cursorHeight = (float) (getHeight() - scrollBarSize + 2 * spacing);
-    // TODO - for now, I believe this will scroll across the keys for the pianoroll display
-    //        the cursor should probably be embedded in the media component
-    float cursorPosition = timeToMediaX(getPlaybackPosition()) - (cursorWidth / 2.0f);
+    Rectangle<int> mediaBounds = getContentBounds();
 
-    currentPositionMarker.setRectangle(Rectangle<float>(cursorPosition, 0, cursorWidth, cursorHeight));
+    currentPositionMarker.setRectangle(Rectangle<float>(cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));
+
+    if (cursorPositionX >= mediaBounds.getX() && cursorPositionX <= (mediaBounds.getX() + mediaBounds.getWidth())) {
+        currentPositionMarker.setVisible(displayCursor);
+    } else {
+        currentPositionMarker.setVisible(false);
+    }
 }
 
 void MediaDisplayComponent::timerCallback()

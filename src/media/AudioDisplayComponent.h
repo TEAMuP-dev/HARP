@@ -9,19 +9,19 @@ class AudioThumbnailWrapper : public Component
 {
 public:
 
-    AudioThumbnailWrapper(juce::AudioThumbnail& t) : thumbnail(t) {}
+    AudioThumbnailWrapper(AudioThumbnail& t, Range<double>& v) : thumbnail(t), visibleRange(v) {}
 
-    void paintThumbnail(juce::Graphics& g, Range<double> visibleRange)
+    void paint(Graphics& g) override
     {
-        if (thumbnail.getTotalLength() > 0.0)
-        {
-            thumbnail.drawChannels(g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
-        }
+        g.setColour(Colours::lightblue);
+
+        thumbnail.drawChannels(g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
 private:
 
     AudioThumbnail& thumbnail;
+    Range<double>& visibleRange;
 };
 
 
@@ -35,7 +35,7 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
 
-    void paintMedia(Graphics& g, Rectangle<int>& a) override;
+    void repositionContent() override;
 
     Component* getMediaComponent() { return &thumbnailComponent; }
 
@@ -71,5 +71,5 @@ private:
     AudioThumbnailCache thumbnailCache{ 5 };
     AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
 
-    AudioThumbnailWrapper thumbnailComponent{ thumbnail };
+    AudioThumbnailWrapper thumbnailComponent{ thumbnail, visibleRange };
 };
