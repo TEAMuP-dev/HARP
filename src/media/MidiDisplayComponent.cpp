@@ -136,9 +136,8 @@ void MidiDisplayComponent::stopPlaying()
 
 void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
 {
-    MediaDisplayComponent::updateVisibleRange(newRange);
-
     pianoRoll.updateVisibleMediaRange(newRange);
+    MediaDisplayComponent::updateVisibleRange(newRange);
 }
 
 void MidiDisplayComponent::addLabels(LabelList& labels)

@@ -35,6 +35,7 @@ public:
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
+    void repositionLabels();
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
@@ -83,6 +84,8 @@ public:
     void stop();
 
     virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return 0.0; }
+    virtual float getPixelsPerSecond();
 
     virtual void updateVisibleRange(Range<double> r);
 

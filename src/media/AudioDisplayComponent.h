@@ -49,6 +49,7 @@ public:
     void stopPlaying() override { transportSource.stop(); }
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
+    double getTimeAtOrigin() override { visibleRange.getStart(); }
 
     void addLabels(LabelList& labels) override;
 

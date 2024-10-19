@@ -35,7 +35,7 @@ void MediaDisplayComponent::resized()
 {
     repositionContent();
     repositionScrollBar();
-    repositionLabelOverlays();
+    repositionLabels();
 }
 
 Rectangle<int> MediaDisplayComponent::getContentBounds()
@@ -67,9 +67,12 @@ void MediaDisplayComponent::repositionLabelOverlays()
     float minLabelWidth = 0.0015 * pixelsPerSecond;
     float maxLabelWidth = 0.10 * pixelsPerSecond;
 
-    float minVisibleWidth = getContentBounds().getWidth() / 200.0f;
+    float contentWidth = getContentBounds().getWidth();
+    float minVisibilityWidth = contentWidth / 200.0f;
+    float maxVisibilityWidth = contentWidth / 3.0f;
 
-    maxLabelWidth = jmax(maxLabelWidth, minVisibleWidth);
+    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
+    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
 
     for (auto l : labelOverlays) {
         float textWidth = l->getFont().getStringWidthFloat(l->getText());
@@ -89,6 +92,12 @@ void MediaDisplayComponent::repositionLabelOverlays()
 
         l->setBounds(xPos, yPos, labelWidth, labelHeight);
     }
+}
+
+void MediaDisplayComponent::repositionLabels()
+{
+    repositionOverheadLabels();
+    repositionLabelOverlays();
 }
 
 void MediaDisplayComponent::resetMedia()
@@ -124,6 +133,8 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     Range<double> range(0.0, getTotalLengthInSecs());
 
     horizontalScrollBar.setRangeLimits(range);
+
+    repaint();
 }
 
 void MediaDisplayComponent::addNewTempFile()
@@ -267,14 +278,18 @@ void MediaDisplayComponent::stop()
     setPlaybackPosition(0.0);
 }
 
+float MediaDisplayComponent::getPixelsPerSecond()
+{
+    return getMediaWidth() / visibleRange.getLength();
+}
+
 void MediaDisplayComponent::updateVisibleRange(Range<double> r)
 {
     visibleRange = r;
 
     horizontalScrollBar.setCurrentRange(visibleRange);
     updateCursorPosition();
-    // TODO - necessary?
-    repositionLabelOverlays();
+    repositionLabels();
     repaint();
 }
 
@@ -307,7 +322,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setFont(Font(jmin(minFontSize, labelHeight - 2 * textSpacing)));
+    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
@@ -374,19 +389,14 @@ double MediaDisplayComponent::mediaXToTime(const float x)
 
 float MediaDisplayComponent::timeToMediaX(const double t)
 {
-    double totalLength = visibleRange.getLength();
-
-    double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
-
     float x;
-    
-    if (totalLength <= 0) {
+
+    if (visibleRange.getLength() <= 0) {
         x = 0;
     } else {
-        double visibleStart = visibleRange.getStart();
-        double visibleOffset = t_ - visibleStart;
+        double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
-        x = getMediaWidth() * visibleOffset / totalLength;
+        x = ((float) t_ - getTimeAtOrigin()) * getPixelsPerSecond();
     }
 
     return x;

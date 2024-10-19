@@ -33,6 +33,7 @@ public:
     void stopPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
+    float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
 
     void updateVisibleRange(Range<double> newRange) override;
 
