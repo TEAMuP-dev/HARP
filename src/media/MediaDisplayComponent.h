@@ -24,6 +24,7 @@ public:
 
     void paint(Graphics& g) override;
     virtual void resized() override;
+    Rectangle<int> getContentBounds();
     virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
@@ -31,7 +32,6 @@ public:
     virtual float getMediaXPos() { return 0.0f; }
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
-    Rectangle<int> getContentBounds();
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
@@ -140,6 +140,7 @@ private:
     double currentHorizontalZoomFactor;
 
     const int textSpacing = 2;
+    const int minFontSize = 10;
     const int labelHeight = 20;
 
     Array<LabelOverlayComponent*> labelOverlays;

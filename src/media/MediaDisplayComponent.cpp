@@ -38,14 +38,14 @@ void MediaDisplayComponent::resized()
     repositionLabelOverlays();
 }
 
-void MediaDisplayComponent::repositionScrollBar()
-{
-    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing).reduced(controlSpacing));
-}
-
 Rectangle<int> MediaDisplayComponent::getContentBounds()
 {
     return getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing)).reduced(controlSpacing);
+}
+
+void MediaDisplayComponent::repositionScrollBar()
+{
+    horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing).reduced(controlSpacing));
 }
 
 void MediaDisplayComponent::repositionOverheadLabels()
@@ -66,6 +66,10 @@ void MediaDisplayComponent::repositionLabelOverlays()
 
     float minLabelWidth = 0.0015 * pixelsPerSecond;
     float maxLabelWidth = 0.10 * pixelsPerSecond;
+
+    float minVisibleWidth = getContentBounds().getWidth() / 200.0f;
+
+    maxLabelWidth = jmax(maxLabelWidth, minVisibleWidth);
 
     for (auto l : labelOverlays) {
         float textWidth = l->getFont().getStringWidthFloat(l->getText());
@@ -303,7 +307,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setFont(Font(labelHeight - 2 * textSpacing));
+    label->setFont(Font(jmin(minFontSize, labelHeight - 2 * textSpacing)));
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
@@ -398,22 +402,23 @@ void MediaDisplayComponent::resetPaths()
     currentTempFileIdx = -1;
 }
 
-// TODO - embedding cursor into mediaComponent might be cleaner
 void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor = isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
 
-    float cursorPositionX = controlSpacing + getMediaXPos() + timeToMediaX(getPlaybackPosition()) - (cursorWidth / 2.0f);
+    float cursorPositionX = controlSpacing + getMediaXPos() + timeToMediaX(getPlaybackPosition());
 
     Rectangle<int> mediaBounds = getContentBounds();
-
-    currentPositionMarker.setRectangle(Rectangle<float>(cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));
 
     if (cursorPositionX >= mediaBounds.getX() && cursorPositionX <= (mediaBounds.getX() + mediaBounds.getWidth())) {
         currentPositionMarker.setVisible(displayCursor);
     } else {
         currentPositionMarker.setVisible(false);
     }
+
+    cursorPositionX -= cursorWidth / 2.0f;
+
+    currentPositionMarker.setRectangle(Rectangle<float>(cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));
 }
 
 void MediaDisplayComponent::timerCallback()
