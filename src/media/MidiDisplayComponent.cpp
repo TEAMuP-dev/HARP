@@ -13,6 +13,7 @@ MidiDisplayComponent::MidiDisplayComponent()
 MidiDisplayComponent::~MidiDisplayComponent()
 {
     pianoRoll.removeMouseListener(this);
+    pianoRoll.removeChangeListener(this);
 }
 
 StringArray MidiDisplayComponent::getSupportedExtensions()

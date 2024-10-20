@@ -100,6 +100,12 @@ void MediaDisplayComponent::repositionLabels()
     repositionLabelOverlays();
 }
 
+void MediaDisplayComponent::changeListenerCallback(ChangeBroadcaster*)
+{
+    repaint();
+    resized();
+}
+
 void MediaDisplayComponent::resetMedia()
 {
     resetPaths();
@@ -133,8 +139,6 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     Range<double> range(0.0, getTotalLengthInSecs());
 
     horizontalScrollBar.setRangeLimits(range);
-
-    repaint();
 }
 
 void MediaDisplayComponent::addNewTempFile()

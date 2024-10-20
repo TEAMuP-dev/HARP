@@ -38,7 +38,7 @@ public:
     void repositionLabelOverlays();
     void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
+    void changeListenerCallback(ChangeBroadcaster*) override;
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
