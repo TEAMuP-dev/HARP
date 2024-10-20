@@ -10,6 +10,7 @@ using namespace juce;
 
 
 class MediaDisplayComponent : public Component,
+                              public ChangeListener,
                               public ChangeBroadcaster,
                               public FileDragAndDropTarget,
                               private Timer,
@@ -36,6 +37,8 @@ public:
     void repositionOverheadLabels();
     void repositionLabelOverlays();
     void repositionLabels();
+
+    void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 

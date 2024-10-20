@@ -58,6 +58,8 @@ void PianoRollComponent::paint(Graphics& g)
 
     keyboard.setTopLeftPosition(0, currYPosition);
     noteGrid.setTopLeftPosition(currXPosition, currYPosition);
+
+    sendChangeMessage();
 }
 
 void PianoRollComponent::resized()
