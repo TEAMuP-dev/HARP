@@ -12,8 +12,10 @@ AudioDisplayComponent::AudioDisplayComponent()
 
     sourcePlayer.setSource(&transportSource);
 
-    thumbnail.addChangeListener(this);
+    thumbnailComponent.addMouseListener(this, true);
     addAndMakeVisible(thumbnailComponent);
+
+    thumbnail.addChangeListener(this);
 
     mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 }
@@ -43,10 +45,9 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::paintMedia(Graphics& g, Rectangle<int>& a)
+void AudioDisplayComponent::repositionContent()
 {
-    thumbnailComponent.paintThumbnail(g, visibleRange);
-    thumbnailComponent.setBounds(a);
+    thumbnailComponent.setBounds(getContentBounds());
 }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)

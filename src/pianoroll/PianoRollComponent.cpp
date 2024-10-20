@@ -30,7 +30,10 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _pianoRollSpacing
     resizeNoteGrid(0.0);
 }
 
-PianoRollComponent::~PianoRollComponent() {}
+PianoRollComponent::~PianoRollComponent()
+{
+    resetNotes();
+}
 
 void PianoRollComponent::paint(Graphics& g)
 {
@@ -55,6 +58,8 @@ void PianoRollComponent::paint(Graphics& g)
 
     keyboard.setTopLeftPosition(0, currYPosition);
     noteGrid.setTopLeftPosition(currXPosition, currYPosition);
+
+    sendChangeMessage();
 }
 
 void PianoRollComponent::resized()
@@ -75,7 +80,6 @@ void PianoRollComponent::setResolution(int pixelsPerSecond)
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
-    updateVisibleMediaRange({0.0, lengthInSecs});
     noteGrid.updateLength(lengthInSecs);
 
     if (lengthInSecs) {
