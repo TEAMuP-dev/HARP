@@ -380,13 +380,9 @@ void MediaDisplayComponent::setNewTarget(URL filePath)
 
 double MediaDisplayComponent::mediaXToTime(const float x)
 {
-    float mediaWidth = getMediaWidth();
-    double totalLength = visibleRange.getLength();
-    double visibleStart = visibleRange.getStart();
+    float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
 
-    float x_ = jmin(mediaWidth, jmax(0.0f, x));
-
-    double t = (x_ / mediaWidth) * totalLength + visibleStart;
+    double t = (double (x_ / getPixelsPerSecond())) + getTimeAtOrigin();
 
     return t;
 }
@@ -406,6 +402,16 @@ float MediaDisplayComponent::timeToMediaX(const double t)
     return x;
 }
 
+float MediaDisplayComponent::mediaXToDisplayX(const float mX)
+{
+    float visibleStartX = visibleRange.getStart() * getPixelsPerSecond();
+    float offsetX = getTimeAtOrigin() * getPixelsPerSecond();
+
+    float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
+
+    return dX;
+}
+
 void MediaDisplayComponent::resetPaths()
 {
     clearDroppedFile();
@@ -420,7 +426,7 @@ void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor = isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
 
-    float cursorPositionX = controlSpacing + getMediaXPos() + timeToMediaX(getPlaybackPosition());
+    float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
     Rectangle<int> mediaBounds = getContentBounds();
 

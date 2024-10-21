@@ -108,6 +108,7 @@ protected:
 
     double mediaXToTime(const float x);
     float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
 
     const int controlSpacing = 2;
     const int scrollBarSize = 10;
