@@ -50,8 +50,6 @@ public:
     int getScrollBarSpacing() { return scrollBarSpacing; }
     int getResolution() { return noteGrid.getPixelsPerSecond(); }
 
-    bool hitTest(int x, int y) override;
-
 private:
 
     double zoomToKeysVisible(double zoomFactor);

@@ -11,7 +11,6 @@ MidiDisplayComponent::MidiDisplayComponent()
     deviceManager.addAudioCallback(&sourcePlayer);
 
     sourcePlayer.setSource(&transportSource);
-    transportSource.setSource(&synthAudioSource);
 
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
@@ -120,6 +119,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
     }
 
     synthAudioSource.useSequence(allTracks);
+    transportSource.setSource(&synthAudioSource);
 }
 
 void MidiDisplayComponent::startPlaying()
