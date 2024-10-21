@@ -12,93 +12,91 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#include "WebModel.h"
 #include "CtrlComponent.h"
-#include "TitledTextBox.h"
 #include "ThreadPoolJob.h"
+#include "WebModel.h"
 
+#include "gui/CustomPathDialog.h"
+#include "gui/HoverHandler.h"
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
-#include "gui/HoverHandler.h"
+#include "gui/TitledTextBox.h"
 
-#include "media/MediaDisplayComponent.h"
+#include "gradio/GradioClient.h"
+
+#include "HarpLogger.h"
+#include "external/magic_enum.hpp"
 #include "media/AudioDisplayComponent.h"
+#include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
-
 using namespace juce;
-
 
 // this only calls the callback ONCE
 class TimedCallback : public Timer
 {
 public:
-    TimedCallback(std::function<void()> callback, int interval) : mCallback(callback), mInterval(interval) {
+    TimedCallback(std::function<void()> callback, int interval)
+        : mCallback(callback), mInterval(interval)
+    {
         startTimer(mInterval);
     }
 
-    ~TimedCallback() override {
-        stopTimer();
-    }
+    ~TimedCallback() override { stopTimer(); }
 
-    void timerCallback() override {
+    void timerCallback() override
+    {
         mCallback();
         stopTimer();
     }
+
 private:
     std::function<void()> mCallback;
     int mInterval;
 };
 
-inline Colour getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour uiColour, Colour fallback = Colour (0xff4d4d4d)) noexcept
+inline std::unique_ptr<OutputStream> makeOutputStream(const URL& url)
 {
-    if (auto* v4 = dynamic_cast<LookAndFeel_V4*> (&LookAndFeel::getDefaultLookAndFeel()))
-        return v4->getCurrentColourScheme().getUIColour (uiColour);
-
-    return fallback;
-}
-
-inline std::unique_ptr<OutputStream> makeOutputStream (const URL& url)
-{
-    if (const auto doc = AndroidDocument::fromDocument (url))
+    if (const auto doc = AndroidDocument::fromDocument(url))
         return doc.createOutputStream();
 
-   #if ! JUCE_IOS
+#if ! JUCE_IOS
     if (url.isLocalFile())
         return url.getLocalFile().createOutputStream();
-   #endif
+#endif
 
     return url.createOutputStream();
 }
 
-
 //this is the callback for the add new path popup alert
-class CustomPathAlertCallback : public juce::ModalComponentManager::Callback {
+class CustomPathAlertCallback : public juce::ModalComponentManager::Callback
+{
 public:
     CustomPathAlertCallback(std::function<void(int)> const& callback) : userCallback(callback) {}
 
-    void modalStateFinished(int result) override {
-        if(userCallback != nullptr) {
+    void modalStateFinished(int result) override
+    {
+        if (userCallback != nullptr)
+        {
             userCallback(result);
         }
     }
+
 private:
     std::function<void(int)> userCallback;
 };
 
-
-
 //==============================================================================
-class MainComponent  : public Component,
-                          #if (JUCE_ANDROID || JUCE_IOS)
-                           private Button::Listener,
-                          #endif
-                           private ChangeListener,
-                           public MenuBarModel,
-                           public ApplicationCommandTarget                                     
+class MainComponent : public Component,
+#if (JUCE_ANDROID || JUCE_IOS)
+                      private Button::Listener,
+#endif
+                      private ChangeListener,
+                      public MenuBarModel,
+                      public ApplicationCommandTarget
 {
 public:
-
-    enum CommandIDs {
+    enum CommandIDs
+    {
         open = 0x2000,
         save = 0x2001,
         saveAs = 0x2002,
@@ -108,62 +106,58 @@ public:
         // settings = 0x2004,
     };
 
-    StringArray getMenuBarNames() override
-    {
-        return {"File"};
-    }
+    StringArray getMenuBarNames() override { return { "File" }; }
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
     // For now, this is not used, as the extra commands appear grayed out
-    std::unique_ptr<PopupMenu> getMacExtraMenu() {
+    std::unique_ptr<PopupMenu> getMacExtraMenu()
+    {
         auto menu = std::make_unique<PopupMenu>();
-        menu->addCommandItem (&commandManager, CommandIDs::about);
+        menu->addCommandItem(&commandManager, CommandIDs::about);
         return menu;
     }
 
-    PopupMenu getMenuForIndex (int menuIndex, const String& menuName) override
+    PopupMenu getMenuForIndex([[maybe_unused]] int menuIndex, const String& menuName) override
     {
         PopupMenu menu;
 
         if (menuName == "File")
-        {   
-            menu.addCommandItem (&commandManager, CommandIDs::open);
-            menu.addCommandItem (&commandManager, CommandIDs::save);
-            menu.addCommandItem (&commandManager, CommandIDs::saveAs);
-            menu.addCommandItem (&commandManager, CommandIDs::undo);
-            menu.addCommandItem (&commandManager, CommandIDs::redo);
+        {
+            menu.addCommandItem(&commandManager, CommandIDs::open);
+            menu.addCommandItem(&commandManager, CommandIDs::save);
+            menu.addCommandItem(&commandManager, CommandIDs::saveAs);
+            menu.addCommandItem(&commandManager, CommandIDs::undo);
+            menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
-            menu.addCommandItem (&commandManager, CommandIDs::about);
-        } 
+            menu.addCommandItem(&commandManager, CommandIDs::about);
+        }
         return menu;
     }
-    void menuItemSelected (int menuItemID, int topLevelMenuIndex) override {
+    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override
+    {
         DBG("menuItemSelected: " << menuItemID);
         DBG("topLevelMenuIndex: " << topLevelMenuIndex);
     }
 
-    ApplicationCommandTarget* getNextCommandTarget() override {
-        return nullptr;
-    }
+    ApplicationCommandTarget* getNextCommandTarget() override { return nullptr; }
 
     // Fills the commands array with the commands that this component/target supports
-    void getAllCommands(Array<CommandID>& commands) override {
-        const CommandID ids[] = { 
-            CommandIDs::open,
-            CommandIDs::save, 
-            CommandIDs::saveAs,
-            CommandIDs::undo,
-            CommandIDs::redo,
-            CommandIDs::about,
-            };
+    void getAllCommands(Array<CommandID>& commands) override
+    {
+        const CommandID ids[] = {
+            CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
+            CommandIDs::undo, CommandIDs::redo, CommandIDs::about,
+        };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
     // Gets the information about a specific command
-    void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override {
-        switch (commandID) {
+    void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override
+    {
+        switch (commandID)
+        {
             case CommandIDs::open:
                 // The third argument here doesn't indicate the command position in the menu
                 // it rather serves as a tag to categorize the command
@@ -175,8 +169,10 @@ public:
                 result.addDefaultKeypress('s', ModifierKeys::commandModifier);
                 break;
             case CommandIDs::saveAs:
-                result.setInfo("Save As...", "Saves the current document with a new name", "File", 0);
-                result.addDefaultKeypress('s', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                result.setInfo(
+                    "Save As...", "Saves the current document with a new name", "File", 0);
+                result.addDefaultKeypress(
+                    's', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::undo:
                 result.setInfo("Undo", "Undoes the most recent operation", "File", 0);
@@ -184,7 +180,8 @@ public:
                 break;
             case CommandIDs::redo:
                 result.setInfo("Redo", "Redoes the most recent operation", "File", 0);
-                result.addDefaultKeypress('z',  ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
+                result.addDefaultKeypress(
+                    'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
@@ -193,8 +190,10 @@ public:
     }
 
     // Callback for the save and saveAs commands
-    bool perform(const InvocationInfo& info) override {
-        switch (info.commandID) {
+    bool perform(const InvocationInfo& info) override
+    {
+        switch (info.commandID)
+        {
             case CommandIDs::save:
                 DBG("Save command invoked");
                 saveCallback();
@@ -218,8 +217,6 @@ public:
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
-                // URL("https://harp-plugin.netlify.app/").launchInDefaultBrowser();
-                // URL("https://github.com/TEAMuP-dev/harp").launchInDefaultBrowser();
                 break;
             default:
                 return false;
@@ -235,31 +232,30 @@ public:
 
         // label for the about text
         auto* aboutText = new Label();
-        aboutText->setText(
-            String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
-            dontSendNotification);
+        aboutText->setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
+                           dontSendNotification);
         aboutText->setJustificationType(Justification::centred);
-        aboutText->setSize(380, 100); 
+        aboutText->setSize(380, 100);
 
         // hyperlink buttons
-        auto* modelGlossaryButton = new HyperlinkButton("Model Glossary",
-            URL("https://github.com/TEAMuP-dev/HARP#available-models"));
-        modelGlossaryButton->setSize(380, 24); 
-        modelGlossaryButton->setTopLeftPosition(10, 110); 
+        auto* modelGlossaryButton = new HyperlinkButton(
+            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#available-models"));
+        modelGlossaryButton->setSize(380, 24);
+        modelGlossaryButton->setTopLeftPosition(10, 110);
         modelGlossaryButton->setJustificationType(Justification::centred);
         modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
-        auto* visitWebpageButton = new HyperlinkButton("Visit HARP webpage",
-            URL("https://harp-plugin.netlify.app/"));
-        visitWebpageButton->setSize(380, 24); 
-        visitWebpageButton->setTopLeftPosition(10, 140); 
+        auto* visitWebpageButton =
+            new HyperlinkButton("Visit HARP webpage", URL("https://harp-plugin.netlify.app/"));
+        visitWebpageButton->setSize(380, 24);
+        visitWebpageButton->setTopLeftPosition(10, 140);
         visitWebpageButton->setJustificationType(Justification::centred);
         visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
-        auto* reportIssueButton = new HyperlinkButton("Report an issue",
-            URL("https://github.com/TEAMuP-dev/harp/issues"));
-        reportIssueButton->setSize(380, 24); 
-        reportIssueButton->setTopLeftPosition(10, 170);  
+        auto* reportIssueButton = new HyperlinkButton(
+            "Report an issue", URL("https://github.com/TEAMuP-dev/harp/issues"));
+        reportIssueButton->setSize(380, 24);
+        reportIssueButton->setTopLeftPosition(10, 170);
         reportIssueButton->setJustificationType(Justification::centred);
         reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
 
@@ -267,9 +263,8 @@ public:
         auto* copyrightLabel = new Label();
         copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
         copyrightLabel->setJustificationType(Justification::centred);
-        copyrightLabel->setSize(380, 100); 
-        copyrightLabel->setTopLeftPosition(10, 200); 
-        
+        copyrightLabel->setSize(380, 100);
+        copyrightLabel->setTopLeftPosition(10, 200);
 
         // Add components to the main component
         aboutComponent->addAndMakeVisible(aboutText);
@@ -289,30 +284,32 @@ public:
 
         dialog.launchAsync();
     }
-    
 
-    void saveCallback(){
-        if (saveEnabled) {
+    void saveCallback()
+    {
+        if (saveEnabled)
+        {
             DBG("HARPProcessorEditor::buttonClicked save button listener activated");
             mediaDisplay->overwriteTarget();
 
             saveEnabled = false;
             setStatus("File saved successfully");
-        } else {
+        }
+        else
+        {
             DBG("save button is disabled");
             setStatus("Nothing to save");
         }
     }
 
-    
-    void saveAsCallback() {
-        if (mediaDisplay->isFileLoaded()) {
+    void saveAsCallback()
+    {
+        if (mediaDisplay->isFileLoaded())
+        {
             StringArray validExtensions = mediaDisplay->getInstanceExtensions();
             String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
             saveFileBrowser = std::make_unique<FileChooser>(
-                "Select a media file...", 
-                File(), 
-                filePatternsAllowed);
+                "Select a media file...", File(), filePatternsAllowed);
             // Launch the file chooser dialog asynchronously
             saveFileBrowser->launchAsync(
                 FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
@@ -320,58 +317,74 @@ public:
                 {
                     StringArray validExtensions = mediaDisplay->getInstanceExtensions();
                     File newFile = browser.getResult();
-                    if (newFile != File{}) {
-                        if (newFile.getFileExtension().compare("") == 0) {
+                    if (newFile != File {})
+                    {
+                        if (newFile.getFileExtension().compare("") == 0)
+                        {
                             newFile = newFile.withFileExtension(validExtensions[0]);
                         }
-                        if (validExtensions.contains(newFile.getFileExtension())) {
+                        if (validExtensions.contains(newFile.getFileExtension()))
+                        {
                             URL tempFilePath = mediaDisplay->getTempFilePath();
 
                             // Attempt to save the file to the new location
                             bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
-                            if (saveSuccessful) {
+                            if (saveSuccessful)
+                            {
                                 // Inform the user of success
-                                AlertWindow::showMessageBoxAsync(
-                                    AlertWindow::InfoIcon,
-                                    "Save As",
-                                    "File successfully saved as:\n" + newFile.getFullPathName(),
-                                    "OK");
+                                AlertWindow::showMessageBoxAsync(AlertWindow::InfoIcon,
+                                                                 "Save As",
+                                                                 "File successfully saved as:\n"
+                                                                     + newFile.getFullPathName(),
+                                                                 "OK");
 
                                 // Update any necessary internal state
                                 // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
                                 DBG("File successfully saved as " << newFile.getFullPathName());
                                 loadMediaDisplay(newFile);
-                            } else {
+                            }
+                            else
+                            {
                                 // Inform the user of failure
-                                AlertWindow::showMessageBoxAsync(
-                                    AlertWindow::WarningIcon,
-                                    "Save As Failed",
-                                    "Failed to save file as:\n" + newFile.getFullPathName(),
-                                    "OK");
+                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                                 "Save As Failed",
+                                                                 "Failed to save file as:\n"
+                                                                     + newFile.getFullPathName(),
+                                                                 "OK");
                                 DBG("Failed to save file as " << newFile.getFullPathName());
                             }
-                        } else {
+                        }
+                        else
+                        {
                             // Inform the user of failure
                             AlertWindow::showMessageBoxAsync(
                                 AlertWindow::WarningIcon,
                                 "Save As Failed",
-                                "Can't save file with extension " + newFile.getFileExtension() + " \n Valid extensions are: " + validExtensions.joinIntoString(";"),
+                                "Can't save file with extension " + newFile.getFileExtension()
+                                    + " \n Valid extensions are: "
+                                    + validExtensions.joinIntoString(";"),
                                 "OK");
                         }
-                    } else {
+                    }
+                    else
+                    {
                         DBG("Save As operation was cancelled by the user.");
                     }
                 });
-        } else {
+        }
+        else
+        {
             setStatus("Nothing to save. Please load an audio file first.");
         }
     }
 
-    void undoCallback() {
+    void undoCallback()
+    {
         DBG("Undoing last edit");
 
         // check if the audio file is loaded
-        if (!mediaDisplay->isFileLoaded()) {
+        if (! mediaDisplay->isFileLoaded())
+        {
             // TODO - gray out undo option in this case?
             // Fail with beep, we should just ignore this if it doesn't make sense
             DBG("No file loaded to perform operation on");
@@ -379,26 +392,32 @@ public:
             return;
         }
 
-        if (isProcessing) {
+        if (isProcessing)
+        {
             DBG("Can't undo while processing occurring!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
             return;
         }
 
-        if (!mediaDisplay->iteratePreviousTempFile()) {
+        if (! mediaDisplay->iteratePreviousTempFile())
+        {
             DBG("Nothing to undo!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        } else {
+        }
+        else
+        {
             saveEnabled = true;
             DBG("Undo callback completed successfully");
         }
     }
 
-    void redoCallback() {
+    void redoCallback()
+    {
         DBG("Redoing last edit");
 
         // check if the audio file is loaded
-        if (!mediaDisplay->isFileLoaded()) {
+        if (! mediaDisplay->isFileLoaded())
+        {
             // TODO - gray out undo option in this case?
             // Fail with beep, we should just ignore this if it doesn't make sense
             DBG("No file loaded to perform operation on");
@@ -406,154 +425,43 @@ public:
             return;
         }
 
-        if (isProcessing) {
+        if (isProcessing)
+        {
             DBG("Can't redo while processing occurring!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
             return;
         }
 
-        if (!mediaDisplay->iterateNextTempFile()) {
+        if (! mediaDisplay->iterateNextTempFile())
+        {
             DBG("Nothing to redo!");
             juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        } else {
+        }
+        else
+        {
             saveEnabled = true;
             DBG("Redo callback completed successfully");
         }
     }
 
-    void loadModelCallback() {
-        DBG("HARPProcessorEditor::buttonClicked load model button listener activated");
-
-        // collect input parameters for the model.
-                    
-        const std::string hf_url = "https://huggingface.co/spaces/";
-
-        std::string path_url;
-        if (modelPathComboBox.getSelectedItemIndex() == 0) {
-            if (customPath.find(hf_url) != std::string::npos) {
-                customPath.replace(customPath.find(hf_url), hf_url.length(), "");
-            }
-            path_url = customPath;
-        }else{
-            path_url = modelPathComboBox.getText().toStdString();
-        }
+    void loadModelCallback()
+    {
+        // Get the URL/path the user provided in the comboBox
+        std::string pathURL;
+        if (modelPathComboBox.getSelectedItemIndex() == 0)
+            pathURL = customPath;
+        else
+            pathURL = modelPathComboBox.getText().toStdString();
 
         std::map<std::string, std::any> params = {
-        {"url", path_url},
+            { "url", pathURL },
         };
-        resetUI();
-        // loading happens asynchronously.
-        // the document controller trigger a change listener callback, which will update the UI
-
-        threadPool.addJob([this, params] {
-            DBG("executeLoad!!");
-            try {
-                // timeout after 10 seconds
-                // TODO: this callback needs to be cleaned up in the destructor in case we quit
-                // cb: this timedCallback doesn't seem to run
-                std::atomic<bool> success = false;
-                TimedCallback timedCallback([this, &success] {
-                    if (success)
-                        return;
-                    DBG("TIMED-CALLBACK: buttonClicked timedCallback listener activated");
-                    AlertWindow::showMessageBoxAsync(
-                        AlertWindow::WarningIcon,
-                        "Loading Error",
-                        "An error occurred while loading the WebModel: TIMED OUT! Please check that the space is awake."
-                    );
-                    MessageManager::callAsync([this] {
-                        resetModelPathComboBox();
-                    });
-                    model.reset(new WebModel());
-                    loadBroadcaster.sendChangeMessage();
-                    // saveButton.setEnabled(false);
-                    saveEnabled = false;
-                }, 10000);
-
-                model->load(params);
-                success = true;
-                MessageManager::callAsync([this] {
-                    if (modelPathComboBox.getSelectedItemIndex() == 0) {
-                        bool alreadyInComboBox = false;
-
-                        for (int i = 1; i <= modelPathComboBox.getNumItems(); ++i) {
-                            if (modelPathComboBox.getItemText(i) == (String) customPath) {
-                                alreadyInComboBox = true;
-                                modelPathComboBox.setSelectedId(i + 1);
-                            }
-                        }
-
-                        if (!alreadyInComboBox) {
-                            int new_id = modelPathComboBox.getNumItems() + 1;
-                            modelPathComboBox.addItem(customPath, new_id);
-                            modelPathComboBox.setSelectedId(new_id);
-                        }
-                    }
-                });
-                DBG("executeLoad done!!");
-                loadBroadcaster.sendChangeMessage();
-                // since we're on a helper thread, 
-                // it's ok to sleep for 10s 
-                // to let the timeout callback do its thing
-                //Thread::sleep(10000);
-                //Ryan: I commented this out because when the model succesfully loads but you close within 10 seconds it throws a error
-            } catch (const std::runtime_error& e) {
-                DBG("Caught exception: " << e.what());
-                
-                auto msgOpts = MessageBoxOptions().withTitle("Loading Error")
-                    .withIconType(AlertWindow::WarningIcon)
-                    .withTitle("Error")
-                    .withMessage("An error occurred while loading the WebModel: \n" + String(e.what()));
-                if (!String(e.what()).contains("404")) {
-                    msgOpts = msgOpts.withButton("Open Space URL");
-                }
-                    msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
-                auto alertCallback = [this, msgOpts](int result) {
-                    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                    // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
-                    // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
-                    // auto chosen = msgOpts.getButtonText(result);
-                    // they're not the same as the order of the buttons in the alert
-                    // this is the order that I actually observed them to be. 
-                    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-                    std::map<int, std::string> observedButtonIndicesMap = {};
-                    if (msgOpts.getNumButtons() == 3) {
-                        observedButtonIndicesMap.insert({1, "Open Space URL"});// should actually be 0 right? 
-                    }
-                    observedButtonIndicesMap.insert({msgOpts.getNumButtons() - 1, "Open HARP Logs"});// should actually be 1
-                    observedButtonIndicesMap.insert({0, "Ok"});// should be 2
-
-                    auto chosen = observedButtonIndicesMap[result];
-
-                    // auto chosen = msgOpts.getButtonText();
-                    if (chosen == "Open HARP Logs") {
-                        model->getLogFile().revealToUser();
-                    } else if (chosen == "Open Space URL") {
-                        URL spaceUrl = resolveSpaceUrl(modelPathComboBox.getText().toStdString());
-                        bool success = spaceUrl.launchInDefaultBrowser();
-                    }
-                    MessageManager::callAsync([this] {
-                        resetModelPathComboBox();
-                    });
-                };
-                
-                
-                AlertWindow::showAsync(msgOpts,alertCallback);
-
-                model.reset(new WebModel());
-                loadBroadcaster.sendChangeMessage();
-                // saveButton.setEnabled(false);
-                saveEnabled = false;
-                
-            }
-        });
+        // resetUI();
 
         // disable the load button until the model is loaded
         loadModelButton.setEnabled(false);
         modelPathComboBox.setEnabled(false);
         loadModelButton.setButtonText("loading...");
-
 
         // disable the process button until the model is loaded
         processCancelButton.setEnabled(false);
@@ -561,24 +469,203 @@ public:
         // set the descriptionLabel to "loading {url}..."
         // TODO: we need to get rid of the params map, and just pass the url around instead
         // since it looks like we're sticking to webmodels.
-        String url = String(std::any_cast<std::string>(params.at("url")));
-        descriptionLabel.setText("loading " + url + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again." , dontSendNotification);
+        // String url = String(std::any_cast<std::string>(params.at("url")));
+        // setStatus("loading " + url + "...");
+        // descriptionLabel.setText(
+        //     "loading " + url
+        //         + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again.",
+        //     dontSendNotification);
 
-        // TODO: here, we should also reset the highlighting of the playback regions 
+        // loading happens asynchronously.
+        threadPool.addJob(
+            [this, params]
+            {
+                try
+                {
+                    juce::String loadingError;
+                    /*
+                        // cb: This is an idea, that might be useful for the future
+                        // Whenever trying to load a new gradio app, we could create a new WebModel
+                        // if loading is successful, we could replace the old model with the new one
+                        // This prevents the confussion of having ModelStatuses in the same class that
+                        // correspond to different Gradio Apps. 
+                        // For example, in the scenario the new model fails to load, we want to go back to 
+                        // the one we had before. However we got a 
+                        // ModelStatus::ERROR, but the old model is still loaded, so the status should change
+                        // to ModelStatus::LOADED (or whatever it was before the failed attempt). 
+                        // This is what we do now, and it is VERY-VERY confusing.
 
+                        std::shared_ptr<WebModel> newModel = std::make_shared<WebModel>();
+                        mModelStatusTimer->setModel(newModel);
+                    */
 
-        // add a hyperlink to the hf space for the model
-        // TODO: make this less hacky? 
-        // we might have to append a "https://huggingface.co/spaces" to the url
-        // IF the url (doesn't have localhost) and (doesn't have huggingface.co) and (doesn't have http) in it 
-        // and (has only one slash in it)
-        String spaceUrl = resolveSpaceUrl(url);
-        spaceUrlButton.setButtonText("open " + url + " in browser");
-        spaceUrlButton.setURL(URL(spaceUrl));
-        // set the font size 
-        // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+                    OpResult loadingResult = model->load(params);
+                    if (loadingResult.failed())
+                    {
+                        throw loadingResult.getError();
+                    }
 
-        addAndMakeVisible(spaceUrlButton);
+                    // loading succeeded
+                    // Do some UI stuff to add the new model to the comboBox
+                    // if it's not already there
+                    // and update the lastSelectedItemIndex and lastLoadedModelItemIndex
+                    MessageManager::callAsync(
+                        [this, loadingResult]
+                        {
+                            resetUI();
+                            if (modelPathComboBox.getSelectedItemIndex() == 0)
+                            {
+                                bool alreadyInComboBox = false;
+
+                                for (int i = 1; i <= modelPathComboBox.getNumItems(); ++i)
+                                {
+                                    if (modelPathComboBox.getItemText(i) == (String) customPath)
+                                    {
+                                        alreadyInComboBox = true;
+                                        modelPathComboBox.setSelectedId(i + 1);
+                                        lastSelectedItemIndex = i + 1;
+                                        lastLoadedModelItemIndex = i + 1;
+                                    }
+                                }
+
+                                if (! alreadyInComboBox)
+                                {
+                                    int new_id = modelPathComboBox.getNumItems() + 1;
+                                    modelPathComboBox.addItem(customPath, new_id);
+                                    modelPathComboBox.setSelectedId(new_id);
+                                    lastSelectedItemIndex = new_id;
+                                    lastLoadedModelItemIndex = new_id;
+                                }
+                            }
+                            else
+                            {
+                                lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
+                            }
+                            processLoadingResult(loadingResult);
+                        });
+                }
+                catch (Error& loadingError)
+                {
+                    Error::fillUserMessage(loadingError);
+                    LogAndDBG("Error in Model Loading:\n" + loadingError.devMessage);
+                    auto msgOpts =
+                        MessageBoxOptions()
+                            .withTitle("Loading Error")
+                            .withIconType(AlertWindow::WarningIcon)
+                            .withTitle("Error")
+                            .withMessage("An error occurred while loading the WebModel: \n"
+                                         + loadingError.userMessage);
+                    // if (! String(e.what()).contains("404")
+                    //     && ! String(e.what()).contains("Invalid URL"))
+                    if (loadingError.type != ErrorType::InvalidURL)
+                    {
+                        msgOpts = msgOpts.withButton("Open Space URL");
+                    }
+
+                    msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
+                    auto alertCallback = [this, msgOpts, loadingError](int result)
+                    {
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
+                        // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
+                        // auto chosen = msgOpts.getButtonText(result);
+                        // they're not the same as the order of the buttons in the alert
+                        // this is the order that I actually observed them to be.
+                        // UPDATE (xribene): This should be fixed in Juce v8
+                        // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
+                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                        std::map<int, std::string> observedButtonIndicesMap = {};
+                        if (msgOpts.getNumButtons() == 3)
+                        {
+                            observedButtonIndicesMap.insert(
+                                { 1, "Open Space URL" }); // should actually be 0 right?
+                        }
+                        observedButtonIndicesMap.insert(
+                            { msgOpts.getNumButtons() - 1,
+                              "Open HARP Logs" }); // should actually be 1
+                        observedButtonIndicesMap.insert({ 0, "Ok" }); // should be 2
+
+                        auto chosen = observedButtonIndicesMap[result];
+
+                        if (chosen == "Open HARP Logs")
+                        {
+                            HarpLogger::getInstance()->getLogFile().revealToUser();
+                        }
+                        else if (chosen == "Open Space URL")
+                        {
+                            URL spaceUrl =
+                                this->model->getGradioClient().getSpaceInfo().huggingface;
+                            spaceUrl.launchInDefaultBrowser();
+                        }
+
+                        if (lastLoadedModelItemIndex == -1)
+                        {
+                            // If before the failed attempt to load a new model, we HAD NO model loaded
+                            // TODO: these two functions we call here might be an overkill for this case
+                            // we need to simplify
+                            MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    resetModelPathComboBox();
+                                    model->setStatus(ModelStatus::INITIALIZED);
+                                    processLoadingResult(OpResult::fail(loadingError));
+                                });
+                        }
+                        else
+                        {
+                            // If before the failed attempt to load a new model, we HAD a model loaded
+                            MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    // We should set the status to
+                                    // the status of the model before the failed attempt
+                                    // but we don't store it anywhere,
+                                    // so we just set it to "loaded"
+                                    model->setStatus(ModelStatus::LOADED);
+                                    processLoadingResult(OpResult::fail(loadingError));
+                                });
+                        }
+
+                        // This if/elseif/else block is responsible for setting the selected item
+                        // in the modelPathComboBox to the correct item (i.e the model/path/app that
+                        // was selected before the failed attempt to load a new model)
+                        if (lastLoadedModelItemIndex != -1)
+                        {
+                            modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+                        }
+                        else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+                        {
+                            modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+                        }
+                        else
+                        {
+                            resetModelPathComboBox();
+                        }
+                    };
+
+                    AlertWindow::showAsync(msgOpts, alertCallback);
+                    saveEnabled = false;
+                }
+                catch (const std::exception& e)
+                {
+                    // Catch any other standard exceptions (like std::runtime_error)
+                    DBG("Caught std::exception: " << e.what());
+                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                     "Error",
+                                                     "An unexpected error occurred: "
+                                                         + juce::String(e.what()));
+                    // TODO: maybe we need to reset something here (like in the above catch block)
+                    // haven't tested yet.
+                }
+                catch (...) // Catch any other exceptions
+                {
+                    DBG("Caught unknown exception");
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
+                    // TODO: maybe we need to reset something here (like in the above catch block)
+                    // haven't tested yet.
+                }
+            });
     }
 
     void resetModelPathComboBox()
@@ -598,53 +685,74 @@ public:
 
         modelPathComboBox.clear();
 
-        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
-        for(int i = 0; i < options.size(); ++i) {
-            modelPathComboBox.addItem(options[i], i + 1);
+        modelPathComboBox.setTextWhenNothingSelected("choose a model");
+        for (auto i = 0u; i < options.size(); ++i)
+        {
+            modelPathComboBox.addItem(options[i], static_cast<int>(i) + 1);
         }
+        lastSelectedItemIndex = -1;
     }
 
-    void focusCallback() {
-        if (mediaDisplay->isFileLoaded()) {
-            Time lastModTime = mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
-            if (lastModTime > lastLoadTime) {
+    void focusCallback()
+    {
+        if (mediaDisplay->isFileLoaded())
+        {
+            Time lastModTime =
+                mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
+            if (lastModTime > lastLoadTime)
+            {
                 // Create an AlertWindow
-                auto* reloadCheckWindow = new AlertWindow("File has been modified",
-                                                          "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
-                                                          AlertWindow::QuestionIcon);
+                auto* reloadCheckWindow = new AlertWindow(
+                    "File has been modified",
+                    "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
+                    AlertWindow::QuestionIcon);
 
                 reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
                 reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
 
                 // Show the window and handle the result asynchronously
-                reloadCheckWindow->enterModalState(true, new CustomPathAlertCallback([this, reloadCheckWindow](int result) {
-                    if (result == 1) { // Yes was clicked
-                        DBG("Reloading file");
-                        loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
-
-                    } else { // No was clicked or the window was closed
-                        DBG("Not reloading file");
-                        lastLoadTime = Time::getCurrentTime(); //Reset time so we stop asking
-                    }
-                    delete reloadCheckWindow;
-                }), true);
+                reloadCheckWindow->enterModalState(
+                    true,
+                    new CustomPathAlertCallback(
+                        [this, reloadCheckWindow](int result)
+                        {
+                            if (result == 1)
+                            { // Yes was clicked
+                                DBG("Reloading file");
+                                loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
+                            }
+                            else
+                            { // No was clicked or the window was closed
+                                DBG("Not reloading file");
+                                lastLoadTime =
+                                    Time::getCurrentTime(); //Reset time so we stop asking
+                            }
+                            delete reloadCheckWindow;
+                        }),
+                    true);
             }
         }
     }
 
-    explicit MainComponent(const URL& initialFilePath = URL()): jobsFinished(0), totalJobs(0),
-        jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+    explicit MainComponent(const URL& initialFilePath = URL())
+        : jobsFinished(0),
+          totalJobs(0),
+          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
+        // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+        HarpLogger::getInstance()->initializeLogger();
 
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
-        chooseFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to choose an audio file"); };
+        chooseFileButtonHandler.onMouseEnter = [this]()
+        { setInstructions("Click to choose an audio file"); };
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
 
         addAndMakeVisible(saveFileButton);
         saveFileButton.onClick = [this] { saveCallback(); };
-        saveFileButtonHandler.onMouseEnter = [this]() { setInstructions("Click to save results to original audio file"); };
+        saveFileButtonHandler.onMouseEnter = [this]()
+        { setInstructions("Click to save results to original audio file"); };
         saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         saveFileButtonHandler.attach();
 
@@ -663,20 +771,20 @@ public:
         playStopButton.addMode(stopButtonInfo);
         playStopButton.setMode(playButtonInfo.label);
         playStopButton.setEnabled(false);
-        addAndMakeVisible (playStopButton);
-        playStopButton.onMouseEnter = [this] {
+        addAndMakeVisible(playStopButton);
+        playStopButton.onMouseEnter = [this]
+        {
             if (playStopButton.getModeName() == playButtonInfo.label)
                 setInstructions("Click to start playback");
             else if (playStopButton.getModeName() == stopButtonInfo.label)
                 setInstructions("Click to stop playback");
         };
-        playStopButton.onMouseExit = [this] {
-            clearInstructions();
-        };
+        playStopButton.onMouseExit = [this] { clearInstructions(); };
 
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
-        if (model == nullptr) {
+        if (model == nullptr)
+        {
             DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
             jassertfalse;
             return;
@@ -688,37 +796,38 @@ public:
         setWantsKeyboardFocus(true);
 
         // init the menu bar
-        menuBar.reset (new MenuBarComponent (this));
-        addAndMakeVisible (menuBar.get());
-        setApplicationCommandManagerToWatch (&commandManager);
+        menuBar.reset(new MenuBarComponent(this));
+        addAndMakeVisible(menuBar.get());
+        setApplicationCommandManagerToWatch(&commandManager);
         // Register commands
         commandManager.registerAllCommandsForTarget(this);
         // commandManager.setFirstCommandTarget(this);
-        addKeyListener (commandManager.getKeyMappings());
+        addKeyListener(commandManager.getKeyMappings());
 
-        
-        #if JUCE_MAC
-            // Not used for now
-            // auto extraMenu = getMacExtraMenu();
-            MenuBarModel::setMacMainMenu (this);
-        #endif
+#if JUCE_MAC
+        // Not used for now
+        // auto extraMenu = getMacExtraMenu();
+        MenuBarModel::setMacMainMenu(this);
+#endif
 
-        menuBar->setVisible (true);
+        menuBar->setVisible(true);
         menuItemsChanged();
 
-        // The Process/Cancel button        
+        // The Process/Cancel button
         processCancelButton.addMode(processButtonInfo);
         processCancelButton.addMode(cancelButtonInfo);
         processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(false);
         addAndMakeVisible(processCancelButton);
-        processCancelButton.onMouseEnter = [this] {
+        processCancelButton.onMouseEnter = [this]
+        {
             if (processCancelButton.getModeName() == processButtonInfo.label)
                 setInstructions("Click to send the audio file for processing");
             else if (processCancelButton.getModeName() == cancelButtonInfo.label)
                 setInstructions("Click to cancel the processing");
         };
-        processCancelButton.onMouseExit = [this] {
+        processCancelButton.onMouseExit = [this]
+        {
             // processCancelButton.setColour (TextButton::buttonColourId, getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::buttonOnColour));
             clearInstructions();
         };
@@ -728,96 +837,108 @@ public:
 
         loadModelButton.addMode(loadButtonInfo);
         loadModelButton.setMode(loadButtonInfo.label);
-        // loadModelButton.setButtonText("load");
+        loadModelButton.setEnabled(false);
         addAndMakeVisible(loadModelButton);
-        loadModelButton.onMouseEnter = [this] {
-            setInstructions("Loads the model and populates the UI with the model's parameters");
-        };
-        loadModelButton.onMouseExit = [this] {
-            clearInstructions();
-        };
+        loadModelButton.onMouseEnter = [this]
+        { setInstructions("Loads the model and populates the UI with the model's parameters"); };
+        loadModelButton.onMouseExit = [this] { clearInstructions(); };
 
         loadBroadcaster.addChangeListener(this);
 
-        std::string currentStatus = model->getStatus();
-        if (currentStatus == "Status.LOADED" || currentStatus == "Status.FINISHED") {
+        ModelStatus currentStatus = model->getStatus();
+        if (currentStatus == ModelStatus::LOADED || currentStatus == ModelStatus::FINISHED)
+        {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(processButtonInfo.label);
-        } else if (currentStatus == "Status.PROCESSING" || currentStatus == "Status.STARTING" || currentStatus == "Status.SENDING") {
+        }
+        else if (currentStatus == ModelStatus::PROCESSING || currentStatus == ModelStatus::STARTING
+                 || currentStatus == ModelStatus::SENDING)
+        {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(cancelButtonInfo.label);
         }
-        
 
         setStatus(currentStatus);
 
         // add a status timer to update the status label periodically
         mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
         mModelStatusTimer->addChangeListener(this);
-        mModelStatusTimer->startTimer(100);  // 100 ms interval
+        mModelStatusTimer->startTimer(50); // 100 ms interval
 
-       // model path textbox
-       std::vector<std::string> modelPaths = {
-        "custom path...",
-        "hugggof/vampnet-music",
-        "cwitkowitz/timbre-trap",
-        "hugggof/vampnet-percussion",
-        "hugggof/vampnet-n64",
-        "hugggof/vampnet-choir",
-        "hugggof/vampnet-opera",
-        "hugggof/vampnet-machines",
-        "hugggof/vampnet-birds",
-        "descript/vampnet",
-        "pharoAIsanders420/micro-musicgen-jungle",
-        "hugggof/nesquik",
-        "hugggof/pitch_shifter",
-        "hugggof/harmonic_percussive",
-        "xribene/midi_pitch_shifter"
+        // model path textbox
+        std::vector<std::string> modelPaths = {
+            "custom path...",
+            // "hugggof/vampnet-music",
+            // "cwitkowitz/timbre-trap",
+            // "hugggof/vampnet-percussion",
+            // "hugggof/vampnet-n64",
+            // "hugggof/vampnet-choir",
+            // "hugggof/vampnet-opera",
+            // "hugggof/vampnet-machines",
+            // "hugggof/vampnet-birds",
+            // "descript/vampnet",
+            // "pharoAIsanders420/micro-musicgen-jungle",
+            // "hugggof/nesquik",
+            // "hugggof/pitch_shifter",
+            // "hugggof/harmonic_percussive",
+            "xribene/pitch_shifter",
+            "http://localhost:7860",
+            "https://xribene-midi-pitch-shifter.hf.space/",
+            "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
+            "xribene/midi_pitch_shifter",
         };
 
-
-        modelPathComboBox.setTextWhenNothingSelected("choose a model"); 
-        for(int i = 0; i < modelPaths.size(); ++i) {
-            modelPathComboBox.addItem(modelPaths[i], i + 1);
+        modelPathComboBox.setTextWhenNothingSelected("choose a model");
+        for (auto i = 0u; i < modelPaths.size(); ++i)
+        {
+            modelPathComboBox.addItem(modelPaths[i], static_cast<int>(i) + 1);
         }
-        modelPathComboBoxHandler.onMouseEnter = [this]() { 
-            setInstructions("A drop-down menu with some available models. Any new model you add will automatically be added to the list"); 
+        modelPathComboBoxHandler.onMouseEnter = [this]()
+        {
+            setInstructions(
+                "A drop-down menu with some available models. Any new model you add will automatically be added to the list");
         };
         modelPathComboBoxHandler.onMouseExit = [this]() { clearInstructions(); };
         modelPathComboBoxHandler.attach();
 
-
         // Usage within your existing onChange handler
-        modelPathComboBox.onChange = [this] {
+        modelPathComboBox.onChange = [this]
+        {
             // Check if the 'custom path...' option is selected
-            if (modelPathComboBox.getSelectedItemIndex() == 0) {
-                // Create an AlertWindow
-                auto* customPathWindow = new AlertWindow("Enter Custom Path",
-                                                        "Please enter the path to the gradio endpoint:",
-                                                        AlertWindow::NoIcon);
-
-                customPathWindow->addTextEditor("customPath", "", "Path:");
-                customPathWindow->addButton("Load", 1, KeyPress(KeyPress::returnKey));
-                customPathWindow->addButton("Cancel", 0, KeyPress(KeyPress::escapeKey));
-                
-                // Show the window and handle the result asynchronously
-                customPathWindow->enterModalState(true, new CustomPathAlertCallback([this, customPathWindow](int result) {
-                    if (result == 1) { // OK was clicked
-                        // Retrieve the entered path
-                        customPath = customPathWindow->getTextEditor("customPath")->getText().toStdString();
-                        // Use the custom path as needed
-                        DBG("Custom path entered: " + customPath);
-                        loadModelButton.triggerClick();
-
-                    } else { // Cancel was clicked or the window was closed
-                        DBG("Custom path entry was canceled.");
+            if (modelPathComboBox.getSelectedItemIndex() == 0)
+            {
+                // Create and show the custom path dialog with a callback
+                std::function<void(const juce::String&)> loadCallback =
+                    [this](const juce::String& customPath)
+                {
+                    DBG("Custom path entered: " + customPath);
+                    this->customPath = customPath.toStdString(); // Store the custom path
+                    loadModelButton.triggerClick(); // Trigger the load model button click
+                };
+                std::function<void()> cancelCallback = [this]()
+                {
+                    // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
+                    if (lastLoadedModelItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+                    }
+                    else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+                    }
+                    else
+                    {
                         resetModelPathComboBox();
                     }
-                    delete customPathWindow;
-                }), true);
+                };
+                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
             }
+            else
+            {
+                lastSelectedItemIndex = modelPathComboBox.getSelectedItemIndex();
+            }
+            loadModelButton.setEnabled(true);
         };
-
 
         addAndMakeVisible(modelPathComboBox);
 
@@ -836,18 +957,17 @@ public:
         addAndMakeVisible(instructionsArea);
         // model card component
         // Get the modelCard from the EditorView
-        auto &card = model->card();
+        auto& card = model->card();
         setModelCard(card);
 
         jobProcessorThread.startThread();
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
-        setOpaque (true);
+        setOpaque(true);
         setSize(800, 800);
         resized();
     }
-
 
     ~MainComponent() override
     {
@@ -865,35 +985,47 @@ public:
         jobProcessorThread.signalTask();
         jobProcessorThread.waitForThreadToExit(-1);
 
-        #if JUCE_MAC
-            MenuBarModel::setMacMainMenu (nullptr);
-        #endif
+#if JUCE_MAC
+        MenuBarModel::setMacMainMenu(nullptr);
+#endif
         // commandManager.setFirstCommandTarget (nullptr);
     }
 
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
-        model->cancel();
+        OpResult cancelResult = model->cancel();
+        if (cancelResult.failed())
+        {
+            // This "if" block hasn't been tested
+
+            LogAndDBG(cancelResult.getError().devMessage.toStdString());
+            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                             "Cancel Error",
+                                             "An error occurred while cancelling the processing: \n"
+                                                 + cancelResult.getError().devMessage);
+            // processCancelButton.setEnabled(true);
+            // processCancelButton.setMode(processButtonInfo.label);
+            resetProcessingButtons();
+            return;
+        }
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
         processCancelButton.setEnabled(false);
     }
-    
+
     void processCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
         // check if the audio file is loaded
-        if (!mediaDisplay->isFileLoaded()) {
-            // AlertWindow("Error", "Audio file is not loaded. Please load an audio file first.", AlertWindow::WarningIcon);
-            //ShowMEssageBoxAsync
+        if (! mediaDisplay->isFileLoaded())
+        {
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
                 "Error",
-                "Audio file is not loaded. Please load an audio file first."
-            );
+                "Audio file is not loaded. Please load an audio file first.");
             return;
         }
 
@@ -903,33 +1035,35 @@ public:
         saveEnabled = false;
         isProcessing = true;
 
-        // TODO: get the current audio file and process it
-        // if we don't have one, let the user know
-        // TODO: need to only be able to do this if we don't have any other jobs in the threadpool right?
-        if (model == nullptr){
-            DBG("unhandled exception: model is null. we should probably open an error window here.");
-            AlertWindow("Error", "Model is not loaded. Please load a model first.", AlertWindow::WarningIcon);
+        if (model == nullptr)
+        {
+            AlertWindow("Error",
+                        "Model is not loaded. Please load a model first.",
+                        AlertWindow::WarningIcon);
             isProcessing = false;
             return;
         }
 
         bool matchingModel = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get())) {
-            matchingModel = !model->card().midi_in && !model->card().midi_out;
-        } else {
+        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+        {
+            matchingModel = ! model->card().midi_in && ! model->card().midi_out;
+        }
+        else
+        {
             matchingModel = model->card().midi_in && model->card().midi_out;
         }
         // Check if the model's type (Audio or MIDI) matches the input file's type
         // If not, show an error message and ask the user to either use another model
         // or another appropriate file
-        if (!matchingModel) {
-            DBG("Model and file type mismatch");
+        if (! matchingModel)
+        {
+            LogAndDBG("Model and file type mismatch");
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
                 "Processing Error",
-                "Model and file type mismatch. Please use an appropriate model or file."
-            );
+                "Model and file type mismatch. Please use an appropriate model or file.");
             // processBroadcaster.sendChangeMessage();
             resetProcessingButtons();
             return;
@@ -938,22 +1072,36 @@ public:
         mediaDisplay->addNewTempFile();
 
         // print how many jobs are currently in the threadpool
-        DBG("threadPool.getNumJobs: " << threadPool.getNumJobs());
+        LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
         // empty customJobs
         customJobs.clear();
 
-        customJobs.push_back(new CustomThreadPoolJob(
-            [this] { // &jobsFinished, totalJobs
-                // Individual job code for each iteration
-                // copy the audio file, with the same filename except for an added _harp to the stem
+        customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
+            // Individual job code for each iteration
+            // copy the audio file, with the same filename except for an added _harp to the stem
+            OpResult processingResult =
                 model->process(mediaDisplay->getTempFilePath().getLocalFile());
-                DBG("Processing finished");
-                // load the audio file again
-                processBroadcaster.sendChangeMessage();
-                
+            if (processingResult.failed())
+            {
+                Error processingError = processingResult.getError();
+                Error::fillUserMessage(processingError);
+                LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon,
+                    "Processing Error",
+                    "An error occurred while processing the audio file: \n"
+                        + processingError.userMessage);
+                // cb: I commented this out, and it doesn't seem to change anything
+                // it was also causing a crash. If we need it, it needs to run on
+                // the message thread using MessageManager::callAsync
+                // resetProcessingButtons();
+                return;
             }
-        ));
+            // load the audio file again
+            processBroadcaster.sendChangeMessage();
+
+        }));
 
         // Now the customJobs are ready to be added to be run in the threadPool
         jobProcessorThread.signalTask();
@@ -961,9 +1109,12 @@ public:
 
     void initializeMediaDisplay(int mediaType = 0)
     {
-        if (mediaType == 1) {
+        if (mediaType == 1)
+        {
             mediaDisplay = std::make_unique<MidiDisplayComponent>();
-        } else {
+        }
+        else
+        {
             // Default to audio display
             mediaDisplay = std::make_unique<AudioDisplayComponent>();
         }
@@ -972,9 +1123,8 @@ public:
         mediaDisplay->addChangeListener(this);
 
         mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-        mediaDisplayHandler->onMouseEnter = [this]() { 
-            setInstructions(mediaDisplay->getMediaHandlerInstructions()); 
-        };
+        mediaDisplayHandler->onMouseEnter = [this]()
+        { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
         mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
         mediaDisplayHandler->attach();
     }
@@ -986,13 +1136,17 @@ public:
 
         bool matchingDisplay = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get())) {
+        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+        {
             matchingDisplay = audioExtensions.contains(extension);
-        } else {
+        }
+        else
+        {
             matchingDisplay = midiExtensions.contains(extension);
         }
 
-        if (!matchingDisplay) {
+        if (! matchingDisplay)
+        {
             // Remove the existing media display
             removeChildComponent(mediaDisplay.get());
             mediaDisplay->removeChangeListener(this);
@@ -1000,11 +1154,17 @@ public:
 
             int mediaType = 0;
 
-            if (audioExtensions.contains(extension)) { }
-            else if (midiExtensions.contains(extension)) {
+            if (audioExtensions.contains(extension))
+            {
+            }
+            else if (midiExtensions.contains(extension))
+            {
                 mediaType = 1;
-            } else {
-                DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension << "\'.");
+            }
+            else
+            {
+                DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
+                                                                                << "\'.");
 
                 AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
             }
@@ -1029,51 +1189,50 @@ public:
 
         String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
 
-        openFileBrowser = std::make_unique<FileChooser>(
-            "Select a media file...", 
-            File(), 
-            filePatternsAllowed);
+        openFileBrowser =
+            std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
 
-        openFileBrowser->launchAsync(
-            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
-            [this](const FileChooser& browser)
-            {
-                File chosenFile = browser.getResult();
-                if (chosenFile != File{}) {
-                    loadMediaDisplay(chosenFile);
-                }
-            });
+        openFileBrowser->launchAsync(FileBrowserComponent::openMode
+                                         | FileBrowserComponent::canSelectFiles,
+                                     [this](const FileChooser& browser)
+                                     {
+                                         File chosenFile = browser.getResult();
+                                         if (chosenFile != File {})
+                                         {
+                                             loadMediaDisplay(chosenFile);
+                                         }
+                                     });
     }
 
-
-    void paint (Graphics& g) override
+    void paint(Graphics& g) override
     {
-        g.fillAll (getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
     void resized() override
     {
         auto area = getLocalBounds();
 
-        #if not JUCE_MAC
-        menuBar->setBounds (area.removeFromTop (LookAndFeel::getDefaultLookAndFeel()
-                                                    .getDefaultMenuBarHeight()));
-        #endif
-        auto margin = 5;  // Adjusted margin value for top and bottom spacing
+#if not JUCE_MAC
+        menuBar->setBounds(
+            area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
+#endif
+        auto margin = 5; // Adjusted margin value for top and bottom spacing
         auto docViewHeight = 1;
         auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
-        auto documentViewArea = area;  // what remains is the 15% area for documentView
+        // auto documentViewArea = area; // what remains is the 15% area for documentView
         // Row 1: Model Path TextBox and Load Model Button
-        auto row1 = mainArea.removeFromTop(30);  // adjust height as needed
-        modelPathComboBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
+        auto row1 = mainArea.removeFromTop(30); // adjust height as needed
+        modelPathComboBox.setBounds(
+            row1.removeFromLeft(static_cast<int>(row1.getWidth() * 0.8f)).reduced(margin));
         //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
         loadModelButton.setBounds(row1.reduced(margin));
         // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(35);  // adjust height as needed
+        auto row2a = mainArea.removeFromTop(35); // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
- 
+
         auto row2b = mainArea.removeFromTop(20);
         authorLabel.setBounds(row2b.reduced(margin));
         authorLabel.setFont(Font(10.0f));
@@ -1084,52 +1243,56 @@ public:
         audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
 
         // Row 3: Description Label
-        
+
         // A way to dynamically adjust the height of the description label
         // doesn't work perfectly yet, but it's good for now.
-        auto font = Font(15.0f); 
+        auto font = Font(15.0f);
         descriptionLabel.setFont(font);
         // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
         auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
-        auto numberOfLines = font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
-        int textHeight = (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+        auto numberOfLines =
+            font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
+        float textHeight =
+            (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
 
-        if (textHeight < 80) {
+        if (textHeight < 80)
+        {
             textHeight = 80;
         }
-        auto row3 = mainArea.removeFromTop(textHeight).reduced(margin) ; 
+        auto row3 = mainArea.removeFromTop((int) textHeight).reduced(margin);
         descriptionLabel.setBounds(row3);
 
         // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(22);  // adjust height as needed
+        auto row4 = mainArea.removeFromTop(22); // adjust height as needed
         spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
         // Row 5: CtrlComponent (flexible height)
-        auto row5 = mainArea.removeFromTop(195);  // the remaining area is for row 4
+        auto row5 = mainArea.removeFromTop(195); // the remaining area is for row 4
         ctrlComponent.setBounds(row5.reduced(margin));
 
         // An empty space of 20px between the ctrl component and the process button
         mainArea.removeFromTop(10);
 
         // Row 6: Process Button (taken out in advance to preserve its height)
-        auto row6Height = 20;  // adjust height as needed
+        auto row6Height = 20; // adjust height as needed
         auto row6 = mainArea.removeFromTop(row6Height);
 
         // Assign bounds to processButton
-        processCancelButton.setBounds(row6.withSizeKeepingCentre(100, 20));  // centering the button in the row
+        processCancelButton.setBounds(
+            row6.withSizeKeepingCentre(100, 20)); // centering the button in the row
         // place the status label to the left of the process button (justified left)
         // statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
 
         // An empty space of 30px between the process button and the thumbnail area
         mainArea.removeFromTop(30);
-        
+
         // Row 7: thumbnail area
-        auto row7 = mainArea.removeFromTop(150).reduced(margin / 2);  // adjust height as needed
+        auto row7 = mainArea.removeFromTop(150).reduced(margin / 2); // adjust height as needed
         mediaDisplay->setBounds(row7);
 
         // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(50);  // adjust height as needed
+        auto row8 = mainArea.removeFromTop(50); // adjust height as needed
         playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 3).reduced(margin));
         chooseFileButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
         saveFileButton.setBounds(row8.reduced(margin));
@@ -1143,64 +1306,73 @@ public:
         statusArea.setBounds(row9b.reduced(margin));
     }
 
-    void resetUI(){
+    void resetUI()
+    {
         ctrlComponent.resetUI();
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
     }
 
-    void setModelCard(const ModelCard& card) {
+    void setModelCard(const ModelCard& card)
+    {
         // Set the text for the labels
         nameLabel.setText(String(card.name), dontSendNotification);
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
-        card.author.empty() ?
-            authorLabel.setText("", dontSendNotification) :
-            authorLabel.setText("by " + String(card.author), dontSendNotification);
+        card.author.empty()
+            ? authorLabel.setText("", dontSendNotification)
+            : authorLabel.setText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
-        if (card.midi_in && card.midi_out && !card.author.empty()) {
+        if (card.midi_in && card.midi_out && ! card.author.empty())
+        {
             audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
-        } else if (!card.midi_in && !card.midi_out && !card.author.empty()) {
+        }
+        else if (! card.midi_in && ! card.midi_out && ! card.author.empty())
+        {
             audioOrMidiLabel.setText("Wav-to-Wav", dontSendNotification);
-        } else {
+        }
+        else
+        {
             audioOrMidiLabel.setText("", dontSendNotification);
         }
-        
     }
 
-    void setStatus(const juce::String& message)
+    void setStatus(const ModelStatus& status)
     {
-        statusArea.setStatusMessage(message);
+        juce::String statusName = std::string(magic_enum::enum_name(status)).c_str();
+        statusArea.setStatusMessage("ModelStatus::" + statusName);
     }
 
-    void clearStatus()
-    {
-        statusArea.clearStatusMessage();
-    }
+    void setStatus(const juce::String& message) { statusArea.setStatusMessage(message); }
+
+    void clearStatus() { statusArea.clearStatusMessage(); }
 
     void setInstructions(const juce::String& message)
     {
         instructionsArea.setStatusMessage(message);
     }
 
-    void clearInstructions()
-    {
-        instructionsArea.clearStatusMessage();
-    }
+    void clearInstructions() { instructionsArea.clearStatusMessage(); }
 
 private:
-    // HARP UI 
-    std::unique_ptr<ModelStatusTimer> mModelStatusTimer {nullptr};
+    // HARP UI
+    std::unique_ptr<ModelStatusTimer> mModelStatusTimer { nullptr };
 
     ComboBox modelPathComboBox;
-    HoverHandler modelPathComboBoxHandler {modelPathComboBox};
+    // Two usefull variables to keep track of the selected item in the modelPathComboBox
+    // and the item index of the last loaded model
+    // These are used to restore the selected item in the modelPathComboBox
+    // after a failed attempt to load a new model
+    int lastSelectedItemIndex = -1;
+    int lastLoadedModelItemIndex = -1;
+    HoverHandler modelPathComboBoxHandler { modelPathComboBox };
 
-    TextButton chooseFileButton {"Open File"};
-    HoverHandler chooseFileButtonHandler {chooseFileButton};
+    TextButton chooseFileButton { "Open File" };
+    HoverHandler chooseFileButtonHandler { chooseFileButton };
 
-    TextButton saveFileButton {"Save File"};
-    HoverHandler saveFileButtonHandler {saveFileButton};
+    TextButton saveFileButton { "Save File" };
+    HoverHandler saveFileButtonHandler { saveFileButton };
 
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
@@ -1209,27 +1381,25 @@ private:
     MultiButton loadModelButton;
     MultiButton processCancelButton;
     MultiButton playStopButton;
-    MultiButton::Mode loadButtonInfo{"Load", 
-            [this] { loadModelCallback(); }, 
-            getUIColourIfAvailable(
-                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                Colours::lightgrey)};
-    MultiButton::Mode processButtonInfo{"Process", 
-            [this] { processCallback(); }, 
-            getUIColourIfAvailable(
-                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                Colours::lightgrey)};
-    MultiButton::Mode cancelButtonInfo{"Cancel", 
-            [this] { cancelCallback(); },
-            getUIColourIfAvailable(
-                LookAndFeel_V4::ColourScheme::UIColour::windowBackground, 
-                Colours::lightgrey)};
-    MultiButton::Mode playButtonInfo{"Play", 
-            [this] { play(); }, 
-            Colours::limegreen};
-    MultiButton::Mode stopButtonInfo{"Stop", 
-            [this] { stop(); },
-            Colours::orangered};
+    MultiButton::Mode loadButtonInfo { "Load",
+                                       [this] { loadModelCallback(); },
+                                       getUIColourIfAvailable(
+                                           LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
+                                           Colours::lightgrey) };
+    MultiButton::Mode processButtonInfo {
+        "Process",
+        [this] { processCallback(); },
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
+                               Colours::lightgrey)
+    };
+    MultiButton::Mode cancelButtonInfo {
+        "Cancel",
+        [this] { cancelCallback(); },
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
+                               Colours::lightgrey)
+    };
+    MultiButton::Mode playButtonInfo { "Play", [this] { play(); }, Colours::limegreen };
+    MultiButton::Mode stopButtonInfo { "Stop", [this] { stop(); }, Colours::orangered };
 
     // Label statusLabel;
     // A flag that indicates if the audio file can be saved
@@ -1241,18 +1411,18 @@ private:
 
     // model card
     Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
-    // For now it is assumed that both input and output types 
+    // For now it is assumed that both input and output types
     // of the model are the same (audio or midi)
     Label audioOrMidiLabel;
     HyperlinkButton spaceUrlButton;
 
-    StatusComponent statusArea {15.0f, juce::Justification::centred};
-    StatusComponent instructionsArea {13.0f, juce::Justification::centredLeft};
+    StatusComponent statusArea { 15.0f, juce::Justification::centred };
+    StatusComponent instructionsArea { 13.0f, juce::Justification::centredLeft };
 
     Time lastLoadTime;
 
     // the model itself
-    std::shared_ptr<WebModel> model {new WebModel()};
+    std::shared_ptr<WebModel> model { new WebModel() };
 
     std::unique_ptr<FileChooser> openFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
@@ -1267,25 +1437,23 @@ private:
     /// CustomThreadPoolJob
     // This one is used for Loading the models
     // The thread pull for Processing lives inside the JobProcessorThread
-    ThreadPool threadPool {1};
+    ThreadPool threadPool { 1 };
     int jobsFinished;
     int totalJobs;
     JobProcessorThread jobProcessorThread;
     std::vector<CustomThreadPoolJob*> customJobs;
-    
+
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
 
-    ApplicationCommandManager commandManager;  
+    ApplicationCommandManager commandManager;
     // MenuBar
     std::unique_ptr<MenuBarComponent> menuBar;
-    // MenuBarPosition menuBarPosition = MenuBarPosition::window;
-
-    //==============================================================================
 
     void play()
     {
-        if (!mediaDisplay->isPlaying()) {
+        if (! mediaDisplay->isPlaying())
+        {
             mediaDisplay->start();
             playStopButton.setMode(stopButtonInfo.label);
         }
@@ -1293,7 +1461,8 @@ private:
 
     void stop()
     {
-        if (mediaDisplay->isPlaying()) {
+        if (mediaDisplay->isPlaying())
+        {
             mediaDisplay->stop();
             playStopButton.setMode(playButtonInfo.label);
         }
@@ -1308,66 +1477,125 @@ private:
         repaint();
     }
 
-    void changeListenerCallback (ChangeBroadcaster* source) override
+    void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        if (source == mediaDisplay.get()) {
-            if (mediaDisplay->isFileDropped()) {
+        if (source == mediaDisplay.get())
+        {
+            if (mediaDisplay->isFileDropped())
+            {
                 URL droppedFilePath = mediaDisplay->getDroppedFilePath();
 
                 mediaDisplay->clearDroppedFile();
 
                 // Reload an appropriate display for dropped file
                 loadMediaDisplay(droppedFilePath.getLocalFile());
-            } else if (mediaDisplay->isFileLoaded() && !mediaDisplay->isPlaying()) {
+            }
+            else if (mediaDisplay->isFileLoaded() && ! mediaDisplay->isPlaying())
+            {
                 playStopButton.setMode(playButtonInfo.label);
                 playStopButton.setEnabled(true);
-            } else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying()) {
+            }
+            else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying())
+            {
                 playStopButton.setMode(stopButtonInfo.label);
-            } else {
+            }
+            else
+            {
                 playStopButton.setMode(playButtonInfo.label);
                 playStopButton.setEnabled(false);
             }
         }
-        else if (source == &loadBroadcaster) {
-            DBG("Setting up model card, CtrlComponent, resizing.");
-            setModelCard(model->card());
-            ctrlComponent.setModel(model);
-            ctrlComponent.populateGui();
-            repaint();
+        /*
+        // The loadBroadcaster isn't used anymore. 
+        // It's replaced by processLoadingResult
+        // it's more usefull because I can pass the result of the loading
+        // as argument to the callback
+        // it'll be used like this:
+        MessageManager::callAsync(
+                                [this, loadingError]
+                                {
+                                    processLoadingResult(OpResult::fail(loadingError));
+                                });
+        */
 
-            // now, we can enable the buttons
-            if (model->ready()) {
-                processCancelButton.setEnabled(true);
-                processCancelButton.setMode(processButtonInfo.label);
-            }
+        // else if (source == &loadBroadcaster)
 
-            loadModelButton.setEnabled(true);
-            modelPathComboBox.setEnabled(true);
-            loadModelButton.setButtonText("load");
-
-            // Set the focus to the process button
-            // so that the user can press SPACE to trigger the playback
-            processCancelButton.grabKeyboardFocus();
-            resized();
-        }
-        else if (source == &processBroadcaster) {
+        // The processBroadcaster should be also replaced in a similar way
+        // as the loadBroadcaster
+        else if (source == &processBroadcaster)
+        {
             // refresh the display for the new updated file
             URL tempFilePath = mediaDisplay->getTempFilePath();
             mediaDisplay->updateDisplay(tempFilePath);
 
+            // extract generated labels from the model
+            LabelList& labels = model->getLabels();
+
+            // add the labels to the display component
+            mediaDisplay->addLabels(labels);
+
             // now, we can enable the process button
             resetProcessingButtons();
         }
-        else if (source == mModelStatusTimer.get()) {
+        else if (source == mModelStatusTimer.get())
+        {
             // update the status label
             DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
             // statusLabel.setText(model->getStatus(), dontSendNotification);
             setStatus(model->getStatus());
         }
-        else {
+        else
+        {
             DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
         }
     }
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
+    void processLoadingResult(OpResult result)
+    {
+        if (result.wasOk())
+        {
+            setModelCard(model->card());
+            ctrlComponent.setModel(model);
+            mModelStatusTimer->setModel(model);
+            ctrlComponent.populateGui();
+            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+            {
+                spaceUrlButton.setButtonText("open localhost in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+            }
+            else
+            {
+                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+                                             + spaceInfo.modelName + " in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+            }
+            // spaceUrlButton.setFont(Font(15.00f, Font::plain));
+            addAndMakeVisible(spaceUrlButton);
+        }
+
+        // now, we can enable the buttons
+        if (model->ready())
+        {
+            processCancelButton.setEnabled(true);
+            processCancelButton.setMode(processButtonInfo.label);
+        }
+
+        loadModelButton.setEnabled(true);
+        modelPathComboBox.setEnabled(true);
+        loadModelButton.setButtonText("load");
+
+        // Set the focus to the process button
+        // so that the user can press SPACE to trigger the playback
+        processCancelButton.grabKeyboardFocus();
+        resized();
+        repaint();
+    }
+
+    // void processProcessingResult(OpResult result)
+    // {
+
+    // }
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

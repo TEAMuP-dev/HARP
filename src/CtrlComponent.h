@@ -1,35 +1,8 @@
 #include "juce_gui_basics/juce_gui_basics.h"
-#include "TitledTextBox.h"
-
-// Define the wrapper class
-class SliderWithLabel : public juce::Component
-{
-public:
-    SliderWithLabel(const juce::String& labelText, juce::Slider::SliderStyle style)
-        : slider(style, juce::Slider::TextBoxBelow)
-    {
-        label.setText(labelText, juce::dontSendNotification);
-        label.setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(label);
-        addAndMakeVisible(slider);
-    }
-
-    void resized() override
-    {
-        auto bounds = getLocalBounds();
-        label.setBounds(bounds.removeFromTop(bounds.getHeight() / 6));
-        slider.setBounds(bounds);
-        DBG("Slider bounds now considered " + getBounds().toString());
-    }
-
-    juce::Slider& getSlider() { return slider; }
-    juce::Label& getLabel() { return label; }
-
-private:
-    juce::Label label;
-    juce::Slider slider;
-};
-
+#include "gui/TitledTextBox.h"
+#include "gui/SliderWithLabel.h"
+#include "utils.h"
+#include "WebModel.h"
 
 class CtrlComponent: public juce::Component, 
                      public Button::Listener, 

@@ -1,6 +1,10 @@
 #pragma once
 
+#include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
+
+#include "OutputLabelComponent.h"
+#include "../utils.h"
 
 using namespace juce;
 
@@ -14,412 +18,121 @@ class MediaDisplayComponent : public Component,
 {
 public:
 
-    MediaDisplayComponent()
-    {
-        resetPaths();
-
-        addChildComponent(horizontalScrollBar);
-        horizontalScrollBar.setAutoHide(false);
-        horizontalScrollBar.addListener(this);
-
-        currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
-        addAndMakeVisible(currentPositionMarker);
-    }
-
-    ~MediaDisplayComponent()
-    {
-        horizontalScrollBar.removeListener(this);
-    }
-
-    virtual void drawMainArea(Graphics& g, Rectangle<int>& a) = 0;
+    MediaDisplayComponent();
+    ~MediaDisplayComponent();
 
     virtual StringArray getInstanceExtensions() = 0;
 
-    void paint(Graphics& g) override
-    {
-        g.fillAll(Colours::darkgrey);
-        g.setColour(Colours::lightblue);
+    void paint(Graphics& g) override;
+    virtual void resized() override;
+    Rectangle<int> getContentBounds();
+    virtual void repositionContent() {};
+    virtual void repositionScrollBar();
 
-        if (isFileLoaded()) {
-            Rectangle<int> a = getLocalBounds().removeFromTop(getHeight() - (scrollBarSize + 2 * scrollBarSpacing)).reduced(scrollBarSpacing);
+    virtual Component* getMediaComponent() { return this; }
+    virtual float getMediaXPos() { return 0.0f; }
+    float getMediaHeight() { return getMediaComponent()->getHeight(); }
+    float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
-            drawMainArea(g, a);
-        } else {
-            g.setFont(14.0f);
-            g.drawFittedText("No media file selected...", getLocalBounds(), Justification::centred, 2);
-        }
-    }
+    void repositionOverheadLabels();
+    void repositionLabelOverlays();
+    void repositionLabels();
 
-    virtual void resized() override
-    {
-        horizontalScrollBar.setBounds(getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing).reduced(scrollBarSpacing));
-    }
-
-    void changeListenerCallback(ChangeBroadcaster*) override
-    {
-        // Repaint whenever media has changed
-        repaint();
-    }
+    void changeListenerCallback(ChangeBroadcaster*) override;
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
-    void resetMedia()
-    {
-        resetPaths();
-        resetDisplay();
-        sendChangeMessage();
+    void resetMedia();
 
-        currentHorizontalZoomFactor = 1.0;
-        horizontalScrollBar.setRangeLimits({0.0, 1.0});
-        horizontalScrollBar.setVisible(false);
-    }
-
-    void setupDisplay(const URL& filePath)
-    {
-        resetMedia();
-
-        setNewTarget(filePath);
-        updateDisplay(filePath);
-
-        horizontalScrollBar.setVisible(true);
-        updateVisibleRange({0.0, getTotalLengthInSecs()});
-    }
-
-    void updateDisplay(const URL& filePath)
-    {
-        resetDisplay();
-
-        loadMediaFile(filePath);
-        postLoadActions(filePath);
-
-        Range<double> range(0.0, getTotalLengthInSecs());
-
-        horizontalScrollBar.setRangeLimits(range);
-    }
+    void setupDisplay(const URL& filePath);
+    void updateDisplay(const URL& filePath);
 
     URL getTargetFilePath() { return targetFilePath; }
 
     bool isFileLoaded() { return !tempFilePaths.isEmpty(); }
 
-    void addNewTempFile()
-    {
-        clearFutureTempFiles();
+    void addNewTempFile();
 
-        int numTempFiles = tempFilePaths.size();
+    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
-        File originalFile = targetFilePath.getLocalFile();
+    bool iteratePreviousTempFile();
+    bool iterateNextTempFile();
 
-        File targetFile;
+    void clearFutureTempFiles();
 
-        if (!numTempFiles) {
-            targetFile = originalFile;
-        } else {
-            targetFile = getTempFilePath().getLocalFile();
-        }
-
-        String docsDirectory = File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory).getFullPathName();
-
-        String targetFileName = originalFile.getFileNameWithoutExtension();
-        String targetFileExtension = originalFile.getFileExtension();
-
-        URL tempFilePath = URL(File(docsDirectory + "/HARP/" + targetFileName + "_" + String(numTempFiles) + targetFileExtension));
-
-        File tempFile = tempFilePath.getLocalFile();
-
-        tempFile.getParentDirectory().createDirectory();
-
-        if (!targetFile.copyFileTo(tempFile)) {
-            DBG("MediaDisplayComponent::generateTempFile: Failed to copy file " << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
-
-            AlertWindow("Error", "Failed to create temporary file for processing.", AlertWindow::WarningIcon);
-        } else {
-            DBG("MediaDisplayComponent::generateTempFile: Copied file " << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
-        }
-
-        tempFilePaths.add(tempFilePath);
-        currentTempFileIdx++;
-    }
-
-    URL getTempFilePath()
-    {
-        return tempFilePaths.getReference(currentTempFileIdx);
-    }
-
-    bool iteratePreviousTempFile()
-    {
-        if (currentTempFileIdx > 0) {
-            currentTempFileIdx--;
-
-            updateDisplay(getTempFilePath());
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    bool iterateNextTempFile()
-    {
-        if (currentTempFileIdx + 1 < tempFilePaths.size()) {
-            currentTempFileIdx++;
-
-            updateDisplay(getTempFilePath());
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    void clearFutureTempFiles()
-    {
-        int n = tempFilePaths.size() - (currentTempFileIdx + 1);
-
-        tempFilePaths.removeLast(n);
-    }
-
-    void overwriteTarget()
-    {
-        // Overwrite the original file - necessary for seamless sample editing integration
-
-        File targetFile = targetFilePath.getLocalFile();
-        File tempFile = getTempFilePath().getLocalFile();
-
-        String parentDirectory = targetFile.getParentDirectory().getFullPathName();
-        String targetFileName = targetFile.getFileNameWithoutExtension();
-        String targetFileExtension = targetFile.getFileExtension();
-
-        File backupFile = File(parentDirectory + "/" + targetFileName + "_BACKUP" + targetFileExtension);
-
-        if (targetFile.copyFileTo(backupFile)) {
-            DBG("MediaDisplayComponent::overwriteTarget: Created backup of file" << targetFile.getFullPathName() << " at "  << backupFile.getFullPathName() << ".");
-        } else {
-            DBG("MediaDisplayComponent::overwriteTarget: Failed to create backup of file" << targetFile.getFullPathName() << " at "  << backupFile.getFullPathName() << ".");
-        }
-
-        if (tempFile.copyFileTo(targetFile)) {
-            DBG("MediaDisplayComponent::overwriteTarget: Overwriting file " << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
-        } else {
-            DBG("MediaDisplayComponent::overwriteTarget: Failed to overwrite file " << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
-        }
-    }
+    void overwriteTarget();
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
 
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
-    {
-        // TODO - warning or handling for additional files
-
-        droppedFilePath = URL(File(files[0]));
-        sendChangeMessage();
-    }
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
     URL getDroppedFilePath() { return droppedFilePath; }
 
     bool isFileDropped() { return !droppedFilePath.isEmpty(); }
 
-    void clearDroppedFile()
-    {
-        droppedFilePath = URL();
-    }
+    void clearDroppedFile() { droppedFilePath = URL(); }
 
     virtual void setPlaybackPosition(double t) = 0;
-
     virtual double getPlaybackPosition() = 0;
 
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
-
-    void mouseDrag(const MouseEvent& e) override
-    {
-        if (!isPlaying()) {
-            setPlaybackPosition(xToTime((float) e.x));
-            updateCursorPosition();
-        }
-    }
-
-    void mouseUp(const MouseEvent&) override
-    {
-        start();
-        sendChangeMessage();
-    }
-
-    virtual void startPlaying() = 0;
-
-    void start()
-    {
-        startPlaying();
-
-        startTimerHz(40);
-    }
-
-    virtual void stopPlaying() = 0;
-
-    void stop()
-    {
-        stopPlaying();
-
-        stopTimer();
-
-        currentPositionMarker.setVisible(false);
-        setPlaybackPosition(0.0);
-    }
+    void mouseDrag(const MouseEvent& e) override;
+    void mouseUp(const MouseEvent& e) override;
 
     virtual bool isPlaying() = 0;
+    virtual void startPlaying() = 0;
+    virtual void stopPlaying() = 0;
+
+    void start();
+    void stop();
 
     virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return 0.0; }
+    virtual float getPixelsPerSecond();
 
-    virtual void updateVisibleRange(Range<double> newRange)
-    {
-        visibleRange = newRange;
-
-        horizontalScrollBar.setCurrentRange(visibleRange);
-        updateCursorPosition();
-        repaint();
-    }
+    virtual void updateVisibleRange(Range<double> r);
 
     String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
 
+    virtual void addLabels(LabelList& labels);
+
+    void addLabelOverlay(LabelOverlayComponent l);
+    void addOverheadLabel(OverheadLabelComponent l);
+
+    void removeOutputLabel(OutputLabelComponent* l);
+    void clearLabels();
+
 protected:
 
-    void setNewTarget(URL filePath)
-    {
-        targetFilePath = filePath;
+    void setNewTarget(URL filePath);
 
-        addNewTempFile();
-    }
+    double mediaXToTime(const float x);
+    float timeToMediaX(const double t);
 
-    virtual double xToTime(const float x) const
-    {
-        auto totalWidth = getWidth();
-        auto totalLength = visibleRange.getLength();
-        auto visibleStart = visibleRange.getStart();
-
-        double t = (x / totalWidth) * totalLength + visibleStart;
-
-        return t;
-    }
-
-    virtual float timeToX(const double t) const
-    {
-        float x;
-
-        auto totalLength = visibleRange.getLength();
-
-        if (totalLength <= 0) {
-            x = 0;
-        } else {
-            auto totalWidth = (float) getWidth();
-            auto visibleStart = visibleRange.getStart();
-            auto visibleOffset = (float) t - visibleStart;
-
-            x = totalWidth * visibleOffset / totalLength;
-        }
-
-        return x;
-    }
+    const int controlSpacing = 2;
+    const int scrollBarSize = 10;
 
     Range<double> visibleRange;
 
     ScrollBar horizontalScrollBar{ false };
 
-    int scrollBarSize = 10;
-    int scrollBarSpacing = 2;
-
     String mediaHandlerInstructions;
 
 private:
 
-    void resetPaths()
-    {
-        clearDroppedFile();
-
-        targetFilePath = URL();
-
-        tempFilePaths.clear();
-        currentTempFileIdx = -1;
-    }
+    void resetPaths();
 
     virtual void resetDisplay() = 0;
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
-    void updateCursorPosition()
-    {
-        bool displayCursor = isPlaying() || isMouseButtonDown();
+    void updateCursorPosition();
 
-        currentPositionMarker.setVisible(displayCursor);
+    void timerCallback() override;
 
-        float cursorHeight = (float) (getHeight() - scrollBarSize + 2 * scrollBarSpacing);
-        float cursorPosition = timeToX(getPlaybackPosition()) - (cursorWidth / 2.0f);
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
-        currentPositionMarker.setRectangle(Rectangle<float>(cursorPosition, 0, cursorWidth, cursorHeight));
-    }
-
-    void timerCallback() override
-    {
-        if (isPlaying()) {
-            //updateVisibleRange(visibleRange.movedToStartAt(getPlaybackPosition() - (visibleRange.getLength() / 2.0f)));
-            updateVisibleRange(visibleRange);
-        } else {
-            stop();
-            sendChangeMessage();
-        }
-    }
-
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override
-    {
-        if (scrollBarThatHasMoved == &horizontalScrollBar) {
-            if (!isPlaying()) {
-                updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
-            }
-        }
-    }
-
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override
-    {
-        // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY);
-
-        if (getTotalLengthInSecs() > 0.0)
-        {
-            auto totalLength = visibleRange.getLength();
-            auto visibleStart = visibleRange.getStart();
-
-            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
-                auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
-                newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
-
-                if (!isPlaying()) {
-                    updateVisibleRange({ newStart, newStart + totalLength });
-                }
-            } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
-                if (wheel.deltaY != 0) {
-                    // TODO - make zoom consistent across different audio lengths?
-
-                    //currentHorizontalZoomFactor = jlimit(0.0, 1.0, currentHorizontalZoomFactor + wheel.deltaY);
-
-                    //double mediaVisible = getTotalLengthInSecs() / (1 + 10 * currentHorizontalZoomFactor);
-
-                    //double visibilityRadius = mediaVisible / 2.0;
-                    //double visibilityCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
-
-                    //Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
-
-                    //updateVisibleRange(horizontalScrollBar.getRangeLimit().constrainRange(newRange));
-
-                    currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
-
-                    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-                    auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
-
-                    updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
-                }
-            } else {
-                // Do nothing
-            }
-
-            repaint();
-        }
-    }
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     URL targetFilePath;
     URL droppedFilePath;
@@ -431,4 +144,11 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
+
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
+
+    Array<LabelOverlayComponent*> labelOverlays;
+    Array<OverheadLabelComponent*> oveheadLabels;
 };
