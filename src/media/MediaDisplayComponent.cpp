@@ -136,6 +136,8 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     loadMediaFile(filePath);
     postLoadActions(filePath);
 
+    currentPositionMarker.toFront(true);
+
     Range<double> range(0.0, getTotalLengthInSecs());
 
     horizontalScrollBar.setRangeLimits(range);
@@ -338,9 +340,6 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
-
-    resized();
-    repaint();
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
