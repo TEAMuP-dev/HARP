@@ -250,7 +250,15 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (e.eventComponent == getMediaComponent() && !isPlaying()) {
-        setPlaybackPosition(mediaXToTime((float) e.x));
+        float x_ = (float) e.x;
+
+        double visibleStart = visibleRange.getStart();
+        double visibleStop = visibleStart + visibleRange.getLength();
+
+        x_ = jmax(timeToMediaX(visibleStart), x_);
+        x_ = jmin(timeToMediaX(visibleStop), x_);
+
+        setPlaybackPosition(mediaXToTime(x_));
         updateCursorPosition();
     }
 }
@@ -382,7 +390,7 @@ double MediaDisplayComponent::mediaXToTime(const float x)
 {
     float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
 
-    double t = (double (x_ / getPixelsPerSecond())) + getTimeAtOrigin();
+    double t = ((double) (x_ / getPixelsPerSecond())) + getTimeAtOrigin();
 
     return t;
 }
@@ -396,7 +404,7 @@ float MediaDisplayComponent::timeToMediaX(const double t)
     } else {
         double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
-        x = ((float) t_ - getTimeAtOrigin()) * getPixelsPerSecond();
+        x = ((float) (t_ - getTimeAtOrigin())) * getPixelsPerSecond();
     }
 
     return x;
@@ -405,7 +413,7 @@ float MediaDisplayComponent::timeToMediaX(const double t)
 float MediaDisplayComponent::mediaXToDisplayX(const float mX)
 {
     float visibleStartX = visibleRange.getStart() * getPixelsPerSecond();
-    float offsetX = getTimeAtOrigin() * getPixelsPerSecond();
+    float offsetX = ((float) getTimeAtOrigin()) * getPixelsPerSecond();
 
     float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
 
@@ -422,6 +430,7 @@ void MediaDisplayComponent::resetPaths()
     currentTempFileIdx = -1;
 }
 
+// TODO - may be able to simplify some of this logic by embedding cursor in media component
 void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor = isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
@@ -430,7 +439,11 @@ void MediaDisplayComponent::updateCursorPosition()
 
     Rectangle<int> mediaBounds = getContentBounds();
 
-    if (cursorPositionX >= mediaBounds.getX() && cursorPositionX <= (mediaBounds.getX() + mediaBounds.getWidth())) {
+    float cursorBoundsStartX = mediaBounds.getX() + getMediaXPos();
+    float cursorBoundsWidth = visibleRange.getLength() * getPixelsPerSecond();
+
+    // TODO - due to very small differences, cursor may not be visible at media bounds when zoomed in
+    if (cursorPositionX >= cursorBoundsStartX && cursorPositionX <= (cursorBoundsStartX + cursorBoundsWidth)) {
         currentPositionMarker.setVisible(displayCursor);
     } else {
         currentPositionMarker.setVisible(false);
