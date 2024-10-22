@@ -3,15 +3,6 @@
 
 MidiDisplayComponent::MidiDisplayComponent()
 {
-    thread.startThread(Thread::Priority::normal);
-
-    formatManager.registerBasicFormats();
-
-    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-    deviceManager.addAudioCallback(&sourcePlayer);
-
-    sourcePlayer.setSource(&transportSource);
-
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
     addAndMakeVisible(pianoRoll);
@@ -21,11 +12,8 @@ MidiDisplayComponent::MidiDisplayComponent()
 
 MidiDisplayComponent::~MidiDisplayComponent()
 {
-    deviceManager.removeAudioCallback(&sourcePlayer);
-
-    transportSource.setSource(nullptr);
-    sourcePlayer.setSource(nullptr);
-
+    resetTransport();
+    
     pianoRoll.removeMouseListener(this);
     pianoRoll.removeChangeListener(this);
 }
@@ -168,8 +156,7 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
 
 void MidiDisplayComponent::resetDisplay()
 {
-    transportSource.stop();
-    transportSource.setSource(nullptr);
+    MediaDisplayComponent::resetTransport();
 
     pianoRoll.resetNotes();
     pianoRoll.resizeNoteGrid(0.0);

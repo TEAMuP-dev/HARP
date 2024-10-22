@@ -5,6 +5,13 @@ MediaDisplayComponent::MediaDisplayComponent()
 {
     resetPaths();
 
+    formatManager.registerBasicFormats();
+
+    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
+    deviceManager.addAudioCallback(&sourcePlayer);
+
+    sourcePlayer.setSource(&transportSource);
+
     addChildComponent(horizontalScrollBar);
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
@@ -15,6 +22,10 @@ MediaDisplayComponent::MediaDisplayComponent()
 
 MediaDisplayComponent::~MediaDisplayComponent()
 {
+    deviceManager.removeAudioCallback(&sourcePlayer);
+    
+    sourcePlayer.setSource(nullptr);
+
     horizontalScrollBar.removeListener(this);
 
     clearLabels();
@@ -417,6 +428,12 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
     float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
 
     return dX;
+}
+
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::resetPaths()
