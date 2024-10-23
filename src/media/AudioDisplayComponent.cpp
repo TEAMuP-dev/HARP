@@ -5,12 +5,8 @@ AudioDisplayComponent::AudioDisplayComponent()
 {
     thread.startThread(Thread::Priority::normal);
 
-    formatManager.registerBasicFormats();
-
-    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-    deviceManager.addAudioCallback(&sourcePlayer);
-
-    sourcePlayer.setSource(&transportSource);
+    thumbnailComponent.addMouseListener(this, true);
+    addAndMakeVisible(thumbnailComponent);
 
     thumbnail.addChangeListener(this);
 
@@ -19,10 +15,7 @@ AudioDisplayComponent::AudioDisplayComponent()
 
 AudioDisplayComponent::~AudioDisplayComponent()
 {
-    deviceManager.removeAudioCallback(&sourcePlayer);
-
-    transportSource.setSource(nullptr);
-    sourcePlayer.setSource(nullptr);
+    resetTransport();
 
     thumbnail.removeChangeListener(this);
 }
@@ -42,9 +35,9 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::drawMainArea(Graphics& g, Rectangle<int>& a)
+void AudioDisplayComponent::repositionContent()
 {
-    thumbnail.drawChannels(g, a, visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
+    thumbnailComponent.setBounds(getContentBounds());
 }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
@@ -129,11 +122,9 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
 
 void AudioDisplayComponent::resetDisplay()
 {
-    transportSource.stop();
-    transportSource.setSource(nullptr);
+    MediaDisplayComponent::resetTransport();
 
     audioFileSource.reset();
-
     thumbnail.clear();
 }
 

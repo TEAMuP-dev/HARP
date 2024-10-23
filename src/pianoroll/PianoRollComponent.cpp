@@ -3,9 +3,10 @@
 #include "PianoRollComponent.hpp"
 
 
-PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, int _scrollBarSpacing)
+PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _pianoRollSpacing, int _scrollBarSize, int _scrollBarSpacing)
 {
     keyboardWidth = _keyboardWidth;
+    pianoRollSpacing = _pianoRollSpacing;
     scrollBarSize = _scrollBarSize;
     scrollBarSpacing = _scrollBarSpacing;
 
@@ -29,11 +30,9 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth, int _scrollBarSize, i
     resizeNoteGrid(0.0);
 }
 
-PianoRollComponent::~PianoRollComponent() {}
-
-int PianoRollComponent::getPianoRollWidth()
+PianoRollComponent::~PianoRollComponent()
 {
-    return getWidth() - keyboardWidth - 5 - (2 * scrollBarSize + 4 * scrollBarSpacing);
+    resetNotes();
 }
 
 void PianoRollComponent::paint(Graphics& g)
@@ -59,12 +58,14 @@ void PianoRollComponent::paint(Graphics& g)
 
     keyboard.setTopLeftPosition(0, currYPosition);
     noteGrid.setTopLeftPosition(currXPosition, currYPosition);
+
+    sendChangeMessage();
 }
 
 void PianoRollComponent::resized()
 {
     keyboard.setBounds(0, 0, keyboardWidth, getHeight());
-    noteGridContainer.setBounds(keyboardWidth + 5, 0, getPianoRollWidth(), getHeight());
+    noteGridContainer.setBounds(keyboardWidth + pianoRollSpacing, 0, getPianoRollWidth(), getHeight());
 
     Rectangle<int> controlsArea = getLocalBounds().removeFromRight(2 * scrollBarSize + 4 * scrollBarSpacing);
 
@@ -79,7 +80,6 @@ void PianoRollComponent::setResolution(int pixelsPerSecond)
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
-    updateVisibleMediaRange({0.0, lengthInSecs});
     noteGrid.updateLength(lengthInSecs);
 
     if (lengthInSecs) {
@@ -94,13 +94,11 @@ void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
     visibleKeyRange = newRange;
 
     verticalScrollBar.setCurrentRange(newRange);
-    //repaint();
 }
 
 void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
 {
     visibleMediaRange = newRange;
-    //repaint();
 }
 
 void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart)
@@ -130,6 +128,11 @@ void PianoRollComponent::insertNote(MidiNoteComponent n)
 void PianoRollComponent::resetNotes()
 {
     noteGrid.resetNotes();
+}
+
+int PianoRollComponent::getPianoRollWidth()
+{
+    return jmax(0, getWidth() - keyboardWidth - pianoRollSpacing - (2 * scrollBarSize + 4 * scrollBarSpacing));
 }
 
 double PianoRollComponent::zoomToKeysVisible(double zoomFactor)

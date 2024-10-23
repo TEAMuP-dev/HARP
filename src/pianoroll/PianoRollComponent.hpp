@@ -15,22 +15,23 @@
  */
 
 class PianoRollComponent : public Component,
+                           public ChangeBroadcaster,
                            private ScrollBar::Listener
 {
 public:
 
-    PianoRollComponent(int _keyboardWidth=70, int _scrollBarSize=10, int _scrollBarSpacing=2);
+    PianoRollComponent(int _keyboardWidth=70, int _pianoRollSpacing=5, int _scrollBarSize=10, int _scrollBarSpacing=2);
 
     ~PianoRollComponent();
 
-    int getPianoRollWidth();
+    void paint(Graphics& g) override;
+    void resized() override;
+
+    NoteGridComponent* getNoteGrid() { return &noteGrid; }
 
     void setResolution(int pixelsPerSecond);
 
     void resizeNoteGrid(double lengthInSecs);
-
-    void paint(Graphics& g) override;
-    void resized() override;
 
     void updateVisibleKeyRange(Range<double> newRange);
     void updateVisibleMediaRange(Range<double> newRange);
@@ -43,8 +44,11 @@ public:
     void resetNotes();
 
     int getKeyboardWidth() { return keyboardWidth; }
+    int getPianoRollWidth();
+    int getPianoRollSpacing() { return pianoRollSpacing; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
+    int getResolution() { return noteGrid.getPixelsPerSecond(); }
 
 private:
 
@@ -52,6 +56,7 @@ private:
 
     int keyboardWidth;
     int pianoRollWidth;
+    int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
 

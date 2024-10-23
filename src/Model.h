@@ -3,7 +3,7 @@
  * @brief This is the interface for any kind of deep learning model. this will
  * be the base class for wave 2 wave, wave 2 label, text 2 wave, midi 2 wave,
  * wave 2 midi, etc.
- * @author hugo flores garcia, aldo aguilar
+ * @author hugo flores garcia, aldo aguilar, xribene
  */
 
 #pragma once
@@ -15,6 +15,8 @@
 
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_events/juce_events.h"
+#include "utils.h"
+#include "errors.h"
 
 using std::any;
 using std::map;
@@ -49,9 +51,11 @@ public:
     /**
    * @brief Load the model parameters.
    * @param params A map of parameters for the model.
-   * @return void. will throw a std::runtime_error if loading fails. 
+   * @param error A string reference to store any error messages.
+   * @return OpResult. A result object indicating success or failure.
+   * @see OpResult
    */
-    virtual void load(const map<string, any>& params) = 0;
+    virtual OpResult load(const map<string, any>& params) = 0;
 
     /**
    * @brief Checks if the model is ready.
@@ -66,4 +70,6 @@ public:
 protected:
     ModelCard m_card;
     bool m_loaded { false };
+    ModelStatus status2;
+
 };
