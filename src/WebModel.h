@@ -434,7 +434,7 @@ public:
                             int color_val = static_cast<int>(labelPyharp->getProperty("color"));
 
                             if (color_val != 0) {
-                                label->color = static_cast<int>(labelPyharp->getProperty("color"));
+                                label->color = color_val;
                             }
                         }
                     }

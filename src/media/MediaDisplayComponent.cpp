@@ -318,6 +318,27 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     repaint();
 }
 
+String MediaDisplayComponent::getMediaHandlerInstructions()
+{
+    String toolTipText = mediaHandlerInstructions;
+
+    for (OverheadLabelComponent* label : oveheadLabels)
+    {
+        if (label->isMouseOver()) {
+            toolTipText = label->getDescription();
+        }
+    }
+
+    for (LabelOverlayComponent* label : labelOverlays)
+    {
+        if (label->isMouseOver()) {
+            toolTipText = label->getDescription();
+        }
+    }
+
+    return toolTipText;
+}
+
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     clearLabels();

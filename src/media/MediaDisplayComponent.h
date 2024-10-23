@@ -93,11 +93,9 @@ public:
 
     virtual void updateVisibleRange(Range<double> r);
 
-    String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
+    String getMediaHandlerInstructions();
 
     virtual void addLabels(LabelList& labels);
-
-    Array<LabelOverlayComponent*> getLabels() { return labelOverlays; }
 
     void addLabelOverlay(LabelOverlayComponent l);
     void addOverheadLabel(OverheadLabelComponent l);
