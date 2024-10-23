@@ -22,8 +22,6 @@ public:
 
     float getMediaXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
 
-    float getMediaWidth() override;
-
     void loadMediaFile(const URL& filePath) override;
 
     void startPlaying() override;

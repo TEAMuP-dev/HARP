@@ -75,7 +75,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
 
     float pixelsPerSecond = mediaWidth / visibleRange.getLength();
 
-    float minLabelWidth = 0.1 * getWidth();
+    float minLabelWidth = 0.0015 * getWidth();
     float maxLabelWidth = 0.10 * pixelsPerSecond;
 
     float contentWidth = getContentBounds().getWidth();
