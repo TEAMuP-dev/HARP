@@ -102,7 +102,6 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
             Colour color = Colours::purple.withAlpha(0.8f);
 
             if ((l->color).has_value()) {
-                DBG((l->color).value());
                 color = Colour((l->color).value());
             }
 

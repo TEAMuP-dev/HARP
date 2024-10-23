@@ -2,8 +2,6 @@
 
 #include "juce_gui_basics/juce_gui_basics.h"
 
-#include "../gui/HoverHandler.h"
-
 using namespace juce;
 
 
@@ -39,21 +37,21 @@ public:
 
     void setTime(double t) { time = t; }
     void setLabel(String lbl) { label = lbl; }
-    void setColor(Colour clr) {color = clr; }
 
     void setRelativeY(float y) { relativeY = y; }
 
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
+    void setColor(Colour clr) {color = clr; }
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
-    Colour getColor() const { return color; }
 
     float getRelativeY() const { return relativeY; }
 
     double getDuration() const { return duration; }
     String getDescription() const { return description; }
+    Colour getColor() const { return color; }
 
 protected:
 
@@ -65,5 +63,5 @@ protected:
     // Optional
     double duration = 0.0;
     String description { "" };
-    Colour color;
+    Colour color = Colours::purple.withAlpha(0.8f);
 };

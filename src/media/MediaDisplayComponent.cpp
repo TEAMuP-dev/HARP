@@ -75,7 +75,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
 
     float pixelsPerSecond = mediaWidth / visibleRange.getLength();
 
-    float minLabelWidth = 0.0015 * getWidth();
+    float minLabelWidth = 0.0015 * pixelsPerSecond;
     float maxLabelWidth = 0.10 * pixelsPerSecond;
 
     float contentWidth = getContentBounds().getWidth();
@@ -345,7 +345,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
         if (!dynamic_cast<AudioLabel*>(l.get()) &&
             !dynamic_cast<SpectrogramLabel*>(l.get()) &&
             !dynamic_cast<MidiLabel*>(l.get())) {
-            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, color);
         }
     }
 }
