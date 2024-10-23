@@ -32,7 +32,7 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, doub
     setDescription(dsc);
     setColor(clr);
 
-    setDefaultAttributes();
+    setColour(Label::backgroundColourId, getColor());
 }
 
 LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)

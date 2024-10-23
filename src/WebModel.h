@@ -429,10 +429,10 @@ public:
                     if (labelPyharp->hasProperty("color"))
                     {
                         // now check if it's an int
-                        // TODO: Actually pass this check
                         if ((labelPyharp->getProperty("color").isInt64() || labelPyharp->getProperty("color").isInt()))
                         {   
                             int color_val = static_cast<int>(labelPyharp->getProperty("color"));
+
                             if (color_val != 0) {
                                 label->color = static_cast<int>(labelPyharp->getProperty("color"));
                             }

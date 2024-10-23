@@ -141,14 +141,20 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
                 dur = (l->duration).value();
             }
 
+            Colour clr = Colours::purple.withAlpha(0.8f);
+
+            if ((l->color).has_value()) {
+                clr = Colour((l->color).value());
+            }
+
             if ((midiLabel->pitch).has_value()) {
                 float p = (midiLabel->pitch).value();
 
                 float y = LabelOverlayComponent::pitchToRelativeY(p);
 
-                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc));
+                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr));
             } else {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr);
             }
         }
     }

@@ -99,10 +99,10 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
                 dur = (l->duration).value();
             }
 
-            Colour color = Colours::purple.withAlpha(0.8f);
+            Colour clr = Colours::purple.withAlpha(0.8f);
 
             if ((l->color).has_value()) {
-                color = Colour((l->color).value());
+                clr = Colour((l->color).value());
             }
 
 
@@ -111,9 +111,9 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
 
                 float y = LabelOverlayComponent::amplitudeToRelativeY(amp);
 
-                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, color));
+                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr));
             } else {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr);
             }
         }
     }
