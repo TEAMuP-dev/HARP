@@ -5,13 +5,6 @@ AudioDisplayComponent::AudioDisplayComponent()
 {
     thread.startThread(Thread::Priority::normal);
 
-    formatManager.registerBasicFormats();
-
-    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-    deviceManager.addAudioCallback(&sourcePlayer);
-
-    sourcePlayer.setSource(&transportSource);
-
     thumbnailComponent.addMouseListener(this, true);
     addAndMakeVisible(thumbnailComponent);
 
@@ -22,10 +15,7 @@ AudioDisplayComponent::AudioDisplayComponent()
 
 AudioDisplayComponent::~AudioDisplayComponent()
 {
-    deviceManager.removeAudioCallback(&sourcePlayer);
-
-    transportSource.setSource(nullptr);
-    sourcePlayer.setSource(nullptr);
+    resetTransport();
 
     thumbnail.removeChangeListener(this);
 }
@@ -124,11 +114,9 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
 
 void AudioDisplayComponent::resetDisplay()
 {
-    transportSource.stop();
-    transportSource.setSource(nullptr);
+    MediaDisplayComponent::resetTransport();
 
     audioFileSource.reset();
-
     thumbnail.clear();
 }
 

@@ -5,6 +5,13 @@ MediaDisplayComponent::MediaDisplayComponent()
 {
     resetPaths();
 
+    formatManager.registerBasicFormats();
+
+    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
+    deviceManager.addAudioCallback(&sourcePlayer);
+
+    sourcePlayer.setSource(&transportSource);
+
     addChildComponent(horizontalScrollBar);
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
@@ -15,6 +22,10 @@ MediaDisplayComponent::MediaDisplayComponent()
 
 MediaDisplayComponent::~MediaDisplayComponent()
 {
+    deviceManager.removeAudioCallback(&sourcePlayer);
+    
+    sourcePlayer.setSource(nullptr);
+
     horizontalScrollBar.removeListener(this);
 
     clearLabels();
@@ -136,6 +147,8 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     loadMediaFile(filePath);
     postLoadActions(filePath);
 
+    currentPositionMarker.toFront(true);
+
     Range<double> range(0.0, getTotalLengthInSecs());
 
     horizontalScrollBar.setRangeLimits(range);
@@ -250,7 +263,15 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (e.eventComponent == getMediaComponent() && !isPlaying()) {
-        setPlaybackPosition(mediaXToTime((float) e.x));
+        float x_ = (float) e.x;
+
+        double visibleStart = visibleRange.getStart();
+        double visibleStop = visibleStart + visibleRange.getLength();
+
+        x_ = jmax(timeToMediaX(visibleStart), x_);
+        x_ = jmin(timeToMediaX(visibleStop), x_);
+
+        setPlaybackPosition(mediaXToTime(x_));
         updateCursorPosition();
     }
 }
@@ -330,9 +351,6 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
-
-    resized();
-    repaint();
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
@@ -380,13 +398,9 @@ void MediaDisplayComponent::setNewTarget(URL filePath)
 
 double MediaDisplayComponent::mediaXToTime(const float x)
 {
-    float mediaWidth = getMediaWidth();
-    double totalLength = visibleRange.getLength();
-    double visibleStart = visibleRange.getStart();
+    float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
 
-    float x_ = jmin(mediaWidth, jmax(0.0f, x));
-
-    double t = (x_ / mediaWidth) * totalLength + visibleStart;
+    double t = ((double) (x_ / getPixelsPerSecond())) + getTimeAtOrigin();
 
     return t;
 }
@@ -400,10 +414,26 @@ float MediaDisplayComponent::timeToMediaX(const double t)
     } else {
         double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
-        x = ((float) t_ - getTimeAtOrigin()) * getPixelsPerSecond();
+        x = ((float) (t_ - getTimeAtOrigin())) * getPixelsPerSecond();
     }
 
     return x;
+}
+
+float MediaDisplayComponent::mediaXToDisplayX(const float mX)
+{
+    float visibleStartX = visibleRange.getStart() * getPixelsPerSecond();
+    float offsetX = ((float) getTimeAtOrigin()) * getPixelsPerSecond();
+
+    float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
+
+    return dX;
+}
+
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::resetPaths()
@@ -416,15 +446,20 @@ void MediaDisplayComponent::resetPaths()
     currentTempFileIdx = -1;
 }
 
+// TODO - may be able to simplify some of this logic by embedding cursor in media component
 void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor = isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
 
-    float cursorPositionX = controlSpacing + getMediaXPos() + timeToMediaX(getPlaybackPosition());
+    float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
     Rectangle<int> mediaBounds = getContentBounds();
 
-    if (cursorPositionX >= mediaBounds.getX() && cursorPositionX <= (mediaBounds.getX() + mediaBounds.getWidth())) {
+    float cursorBoundsStartX = mediaBounds.getX() + getMediaXPos();
+    float cursorBoundsWidth = visibleRange.getLength() * getPixelsPerSecond();
+
+    // TODO - due to very small differences, cursor may not be visible at media bounds when zoomed in
+    if (cursorPositionX >= cursorBoundsStartX && cursorPositionX <= (cursorBoundsStartX + cursorBoundsWidth)) {
         currentPositionMarker.setVisible(displayCursor);
     } else {
         currentPositionMarker.setVisible(false);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
 
@@ -72,16 +73,16 @@ public:
 
     void clearDroppedFile() { droppedFilePath = URL(); }
 
-    virtual void setPlaybackPosition(double t) = 0;
-    virtual double getPlaybackPosition() = 0;
+    virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
+    virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
 
-    virtual bool isPlaying() = 0;
-    virtual void startPlaying() = 0;
-    virtual void stopPlaying() = 0;
+    virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
 
     void start();
     void stop();
@@ -108,6 +109,9 @@ protected:
 
     double mediaXToTime(const float x);
     float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
+
+    void resetTransport();
 
     const int controlSpacing = 2;
     const int scrollBarSize = 10;
@@ -117,6 +121,12 @@ protected:
     ScrollBar horizontalScrollBar{ false };
 
     String mediaHandlerInstructions;
+
+    AudioFormatManager formatManager;
+    AudioDeviceManager deviceManager;
+
+    AudioSourcePlayer sourcePlayer;
+    AudioTransportSource transportSource;
 
 private:
 

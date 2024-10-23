@@ -1,8 +1,7 @@
 #pragma once
 
-#include <juce_audio_basics/juce_audio_basics.h>
-
 #include "../pianoroll/PianoRollComponent.hpp"
+#include "../pianoroll/SynthAudioSource.h"
 #include "MediaDisplayComponent.h"
 
 
@@ -25,12 +24,7 @@ public:
 
     void loadMediaFile(const URL& filePath) override;
 
-    void setPlaybackPosition(double t) override;
-    double getPlaybackPosition() override;
-
-    bool isPlaying() override;
     void startPlaying() override;
-    void stopPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
     float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
@@ -46,6 +40,8 @@ private:
     void postLoadActions(const URL& filePath) override;
 
     double totalLengthInSecs;
+
+    SynthAudioSource synthAudioSource;
 
     PianoRollComponent pianoRoll{70, 5, scrollBarSize, controlSpacing};
 };

@@ -12,6 +12,8 @@ MidiDisplayComponent::MidiDisplayComponent()
 
 MidiDisplayComponent::~MidiDisplayComponent()
 {
+    resetTransport();
+    
     pianoRoll.removeMouseListener(this);
     pianoRoll.removeChangeListener(this);
 }
@@ -62,78 +64,56 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
+    juce::MidiMessageSequence allTracks;
+
     for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
         const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
 
         if (constTrack != nullptr) {
-            juce::MidiMessageSequence track(*constTrack);
-            track.updateMatchedPairs();
-
-            DBG("Track " << trackIdx << " has " << track.getNumEvents() << " events.");
-
-            for (int eventIdx = 0; eventIdx < track.getNumEvents(); ++eventIdx) {
-                const auto midiEvent = track.getEventPointer(eventIdx);
-                const auto& midiMessage = midiEvent->message;
-
-                double startTime = midiEvent->message.getTimeStamp();
-
-                DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
-
-                if (midiMessage.isNoteOn()) {
-                    int noteNumber = midiMessage.getNoteNumber();
-                    int velocity = midiMessage.getVelocity();
-
-                    double duration = 0;
-
-                    for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx) {
-                        const auto offEvent = track.getEventPointer(offIdx);
-
-                        // Find the matching note off event
-                        if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber) {
-                            duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
-                            break;
-                        }
-                    }
-
-                    // Create a component for each for each note
-                    MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
-                    pianoRoll.insertNote(n);
-                }
-            }
+            allTracks.addSequence(*constTrack, 0.0);
+            allTracks.updateMatchedPairs();
         }
     }
-}
 
-void MidiDisplayComponent::setPlaybackPosition(double t)
-{
-    // TODO
-}
+    for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx) {
+        const auto midiEvent = allTracks.getEventPointer(eventIdx);
+        const auto& midiMessage = midiEvent->message;
 
-double MidiDisplayComponent::getPlaybackPosition()
-{
-    // TODO
-    return 0.0;
-}
+        double startTime = midiEvent->message.getTimeStamp();
 
-bool MidiDisplayComponent::isPlaying()
-{
-    // TODO
-    return false;
+        DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+
+        if (midiMessage.isNoteOn()) {
+            int noteNumber = midiMessage.getNoteNumber();
+            int velocity = midiMessage.getVelocity();
+            int noteChannel = midiMessage.getChannel();
+
+            double duration = 0;
+
+            for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx) {
+                const auto offEvent = allTracks.getEventPointer(offIdx);
+
+                // Find the matching note off event
+                if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber && offEvent->message.getChannel() == noteChannel) {
+                    duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
+                    break;
+                }
+            }
+
+            // Create a component for each for each note
+            MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
+            pianoRoll.insertNote(n);
+        }
+    }
+
+    synthAudioSource.useSequence(allTracks);
+    transportSource.setSource(&synthAudioSource);
 }
 
 void MidiDisplayComponent::startPlaying()
 {
-    // TODO
-    AlertWindow::showMessageBoxAsync(
-        AlertWindow::WarningIcon,
-        "NotImplementedError",
-        "MIDI playback has not yet been implemented."
-    );
-}
-
-void MidiDisplayComponent::stopPlaying()
-{
-    // TODO
+    synthAudioSource.resetNotes();
+    transportSource.start();
 }
 
 void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
@@ -176,6 +156,8 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
 
 void MidiDisplayComponent::resetDisplay()
 {
+    MediaDisplayComponent::resetTransport();
+
     pianoRoll.resetNotes();
     pianoRoll.resizeNoteGrid(0.0);
 }
