@@ -93,7 +93,7 @@ public:
 
     virtual void updateVisibleRange(Range<double> r);
 
-    String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
+    String getMediaHandlerInstructions();
 
     virtual void addLabels(LabelList& labels);
 

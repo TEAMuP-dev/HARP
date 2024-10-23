@@ -389,6 +389,7 @@ public:
                     // label: str
                     // duration: float = 0.0
                     // description: str = None
+                    // color: int = 0
                     // first we'll check which of those exist and are not void or null
                     // for those that exist, we fill the struct properties
                     // the rest will be ignored
@@ -423,6 +424,18 @@ public:
                         if (labelPyharp->getProperty("description").isString())
                         {
                             label->description = labelPyharp->getProperty("description").toString();
+                        }
+                    }
+                    if (labelPyharp->hasProperty("color"))
+                    {
+                        // now check if it's an int
+                        if ((labelPyharp->getProperty("color").isInt64() || labelPyharp->getProperty("color").isInt()))
+                        {   
+                            int color_val = static_cast<int>(labelPyharp->getProperty("color"));
+
+                            if (color_val != 0) {
+                                label->color = color_val;
+                            }
                         }
                     }
                     labels.push_back(std::move(label));

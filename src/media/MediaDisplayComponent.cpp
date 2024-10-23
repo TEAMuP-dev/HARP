@@ -318,6 +318,27 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     repaint();
 }
 
+String MediaDisplayComponent::getMediaHandlerInstructions()
+{
+    String toolTipText = mediaHandlerInstructions;
+
+    for (OverheadLabelComponent* label : oveheadLabels)
+    {
+        if (label->isMouseOver()) {
+            toolTipText = label->getDescription();
+        }
+    }
+
+    for (LabelOverlayComponent* label : labelOverlays)
+    {
+        if (label->isMouseOver()) {
+            toolTipText = label->getDescription();
+        }
+    }
+
+    return toolTipText;
+}
+
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     clearLabels();
@@ -336,10 +357,16 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
             dur = (l->duration).value();
         }
 
+        Colour color = Colours::purple.withAlpha(0.8f);
+
+        if ((l->color).has_value()) {
+            color = Colour((l->color).value());
+        }
+
         if (!dynamic_cast<AudioLabel*>(l.get()) &&
             !dynamic_cast<SpectrogramLabel*>(l.get()) &&
             !dynamic_cast<MidiLabel*>(l.get())) {
-            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, color);
         }
     }
 }
