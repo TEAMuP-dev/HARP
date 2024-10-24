@@ -25,6 +25,7 @@ public:
     LabelOverlayComponent(double t, String lbl, float y, double dur);
     LabelOverlayComponent(double t, String lbl, float y, String dsc);
     LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc);
+    LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour color);
     LabelOverlayComponent(const LabelOverlayComponent& other);
     ~LabelOverlayComponent();
 
@@ -41,6 +42,7 @@ public:
 
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
+    void setColor(Colour clr) {color = clr; }
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
@@ -49,6 +51,7 @@ public:
 
     double getDuration() const { return duration; }
     String getDescription() const { return description; }
+    Colour getColor() const { return color; }
 
 protected:
 
@@ -60,4 +63,5 @@ protected:
     // Optional
     double duration = 0.0;
     String description { "" };
+    Colour color = Colours::purple.withAlpha(0.8f);
 };

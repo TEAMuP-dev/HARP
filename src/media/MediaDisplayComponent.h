@@ -1,5 +1,6 @@
 #pragma once
 
+#include <juce_audio_utils/juce_audio_utils.h>
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
 
@@ -24,20 +25,21 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
-    virtual void paintMedia(Graphics& g, Rectangle<int>& a) = 0;
     virtual void resized() override;
-
+    Rectangle<int> getContentBounds();
+    virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
     virtual Component* getMediaComponent() { return this; }
-    //virtual float getMediaStartXPos() { return 0.0f; }
+    virtual float getMediaXPos() { return 0.0f; }
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
     void repositionOverheadLabels();
     void repositionLabelOverlays();
+    void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+    void changeListenerCallback(ChangeBroadcaster*) override;
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
@@ -71,25 +73,27 @@ public:
 
     void clearDroppedFile() { droppedFilePath = URL(); }
 
-    virtual void setPlaybackPosition(double t) = 0;
-    virtual double getPlaybackPosition() = 0;
+    virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
+    virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
 
-    virtual bool isPlaying() = 0;
-    virtual void startPlaying() = 0;
-    virtual void stopPlaying() = 0;
+    virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
 
     void start();
     void stop();
 
     virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return 0.0; }
+    virtual float getPixelsPerSecond();
 
     virtual void updateVisibleRange(Range<double> r);
 
-    String getMediaHandlerInstructions() { return mediaHandlerInstructions; }
+    String getMediaHandlerInstructions();
 
     virtual void addLabels(LabelList& labels);
 
@@ -105,16 +109,24 @@ protected:
 
     double mediaXToTime(const float x);
     float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
 
-    int scrollBarSize = 10;
-    int labelHeight = 20;
-    int spacing = 2;
+    void resetTransport();
+
+    const int controlSpacing = 2;
+    const int scrollBarSize = 10;
 
     Range<double> visibleRange;
 
     ScrollBar horizontalScrollBar{ false };
 
     String mediaHandlerInstructions;
+
+    AudioFormatManager formatManager;
+    AudioDeviceManager deviceManager;
+
+    AudioSourcePlayer sourcePlayer;
+    AudioTransportSource transportSource;
 
 private:
 
@@ -142,6 +154,10 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
+
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> oveheadLabels;

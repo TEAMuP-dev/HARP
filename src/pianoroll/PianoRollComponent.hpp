@@ -15,6 +15,7 @@
  */
 
 class PianoRollComponent : public Component,
+                           public ChangeBroadcaster,
                            private ScrollBar::Listener
 {
 public:

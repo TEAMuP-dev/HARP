@@ -5,25 +5,17 @@ AudioDisplayComponent::AudioDisplayComponent()
 {
     thread.startThread(Thread::Priority::normal);
 
-    formatManager.registerBasicFormats();
-
-    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-    deviceManager.addAudioCallback(&sourcePlayer);
-
-    sourcePlayer.setSource(&transportSource);
+    thumbnailComponent.addMouseListener(this, true);
+    addAndMakeVisible(thumbnailComponent);
 
     thumbnail.addChangeListener(this);
-    addAndMakeVisible(thumbnailComponent);
 
     mediaHandlerInstructions = "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 }
 
 AudioDisplayComponent::~AudioDisplayComponent()
 {
-    deviceManager.removeAudioCallback(&sourcePlayer);
-
-    transportSource.setSource(nullptr);
-    sourcePlayer.setSource(nullptr);
+    resetTransport();
 
     thumbnail.removeChangeListener(this);
 }
@@ -43,10 +35,9 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::paintMedia(Graphics& g, Rectangle<int>& a)
+void AudioDisplayComponent::repositionContent()
 {
-    thumbnailComponent.paintThumbnail(g, visibleRange);
-    thumbnailComponent.setBounds(a);
+    thumbnailComponent.setBounds(getContentBounds());
 }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
@@ -108,14 +99,21 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
                 dur = (l->duration).value();
             }
 
+            Colour clr = Colours::purple.withAlpha(0.8f);
+
+            if ((l->color).has_value()) {
+                clr = Colour((l->color).value());
+            }
+
+
             if ((audioLabel->amplitude).has_value()) {
                 float amp = (audioLabel->amplitude).value();
 
                 float y = LabelOverlayComponent::amplitudeToRelativeY(amp);
 
-                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc));
+                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr));
             } else {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc);
+                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr);
             }
         }
     }
@@ -123,11 +121,9 @@ void AudioDisplayComponent::addLabels(LabelList& labels)
 
 void AudioDisplayComponent::resetDisplay()
 {
-    transportSource.stop();
-    transportSource.setSource(nullptr);
+    MediaDisplayComponent::resetTransport();
 
     audioFileSource.reset();
-
     thumbnail.clear();
 }
 

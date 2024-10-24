@@ -1140,8 +1140,8 @@ public:
         mediaDisplay->addChangeListener(this);
 
         mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-        mediaDisplayHandler->onMouseEnter = [this]()
-        { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
+        mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
+        mediaDisplayHandler->onMouseMove = [this]() { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
         mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
         mediaDisplayHandler->attach();
     }

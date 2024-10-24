@@ -16,6 +16,12 @@ void HoverHandler::mouseEnter(const juce::MouseEvent& event) {
     }
 }
 
+void HoverHandler::mouseMove(const juce::MouseEvent& event) {
+    if (onMouseMove) {
+        onMouseMove();
+    }
+}
+
 void HoverHandler::mouseExit(const juce::MouseEvent& event) {
     if (onMouseExit) {
         onMouseExit();
