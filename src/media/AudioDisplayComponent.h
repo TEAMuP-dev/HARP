@@ -42,7 +42,7 @@ public:
     void loadMediaFile(const URL& filePath) override;
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
-    double getTimeAtOrigin() override { visibleRange.getStart(); }
+    double getTimeAtOrigin() override { return visibleRange.getStart(); }
 
     void addLabels(LabelList& labels) override;
 
