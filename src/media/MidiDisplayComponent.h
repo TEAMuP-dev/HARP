@@ -49,5 +49,8 @@ private:
 
     SynthAudioSource synthAudioSource;
 
+    int medianMidi;
+    float stdDevMidi;
+
     PianoRollComponent pianoRoll{70, 5, scrollBarSize, controlSpacing};
 };

@@ -565,12 +565,12 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 	    auto scrollTime = mediaXToTime(evt.position.getX());
 	    DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
 
-        if (std::abs(wheel.deltaX) > 1 * std::abs(wheel.deltaY)) 
+        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) 
         {
             // Horizontal scroll when using 2-finger swipe in macbook trackpad
             horizontalMove(wheel.deltaX);
             
-        } else if (std::abs(wheel.deltaY) > 1 * std::abs(wheel.deltaX)) {
+        } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
             // if (wheel.deltaY != 0) {
             horizontalZoom(wheel.deltaY, scrollTime);
                 

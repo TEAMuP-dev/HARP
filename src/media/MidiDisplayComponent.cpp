@@ -75,6 +75,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
         }
     }
 
+    // A vector to keep all the midi numbers
+    // we'll use that find the median note
+    std::vector<int> midiNumbers;
+
     for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx) {
         const auto midiEvent = allTracks.getEventPointer(eventIdx);
         const auto& midiMessage = midiEvent->message;
@@ -87,7 +91,8 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
             int noteNumber = midiMessage.getNoteNumber();
             int velocity = midiMessage.getVelocity();
             int noteChannel = midiMessage.getChannel();
-
+            
+            midiNumbers.push_back(noteNumber);
             double duration = 0;
 
             for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx) {
@@ -105,6 +110,16 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
             pianoRoll.insertNote(n);
         }
     }
+
+    // Find the median note
+    std::sort(midiNumbers.begin(), midiNumbers.end());
+    medianMidi = midiNumbers[midiNumbers.size() / 2];
+    // Find std
+    int sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0);
+    float mean = sum / midiNumbers.size();
+    float sq_sum = std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0);
+    stdDevMidi = std::sqrt(sq_sum / midiNumbers.size() - mean * mean);
+
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
@@ -168,7 +183,11 @@ void MidiDisplayComponent::resetDisplay()
     pianoRoll.resizeNoteGrid(0.0);
 }
 
-void MidiDisplayComponent::postLoadActions(const URL& filePath) {}
+void MidiDisplayComponent::postLoadActions(const URL& filePath) 
+{
+    // Auto-center the pianoRoll viewbox on the median note
+    pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
+}
 
 void MidiDisplayComponent::verticalMove(float deltaY) 
 {
@@ -204,28 +223,32 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
 	    auto scrollTime = mediaXToTime(evt.position.getX());
 	    DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
 
-        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) 
+        if (zoomMod) 
         {
-            // Horizontal scroll when using 2-finger swipe in macbook trackpad
-            if (zoomMod) 
+            if (std::abs(wheel.deltaX) > 1 * std::abs(wheel.deltaY)) 
             {
+                // Horizontal scroll when using 2-finger swipe in macbook trackpad
                 horizontalZoom(wheel.deltaX, (float)scrollTime);
-            } else {
-                horizontalMove(wheel.deltaX);
-            }
-            
-        } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
-            // Vertical scroll
-            if (zoomMod) 
+            } else if (std::abs(wheel.deltaY) > 1 * std::abs(wheel.deltaX)) 
             {
+                // Vertical scroll
                 verticalZoom(wheel.deltaY, (float)scrollTime);
-            } else {
-                verticalMove(wheel.deltaY);
+            } else 
+            {
+                // Do nothing
             }
-        } else {
-            // Do nothing
         }
-
+        else 
+        {
+            if (std::abs(wheel.deltaX) > 0) 
+            {
+                // Horizontal scroll when using 2-finger swipe in macbook trackpad
+                horizontalMove(wheel.deltaX);
+            } 
+            if (std::abs(wheel.deltaY) > 0) {
+                verticalMove(-wheel.deltaY);
+            } 
+        }
         repaint();
     }
 }

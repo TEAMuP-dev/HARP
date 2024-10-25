@@ -91,9 +91,9 @@ void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 
 void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
 {
-    visibleKeyRange = newRange;
-
-    verticalScrollBar.setCurrentRange(newRange);
+    visibleKeyRange = fullKeyRange.constrainRange(newRange);
+    verticalScrollBar.setCurrentRange(visibleKeyRange);
+    DBG("visibleKeyRange=" << visibleKeyRange.getStart() << ", " << visibleKeyRange.getEnd());
     // verticalScrollBar.
 }
 
@@ -118,7 +118,7 @@ void PianoRollComponent::visibleKeyRangeZoom(double amount)
 
     Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
 
-    updateVisibleKeyRange(fullKeyRange.constrainRange(newRange));
+    updateVisibleKeyRange(newRange);
 }
 
 void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
@@ -126,7 +126,7 @@ void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
     DBG("PianoRollComponent::verticalMouseWheelMoveEvent: deltaY=" << deltaY);
     double newStart = visibleKeyRange.getStart() + deltaY * visibleKeyRange.getLength() / 1.0;
     auto newRange = Range<double>(newStart, newStart + visibleKeyRange.getLength());
-    updateVisibleKeyRange(fullKeyRange.constrainRange(newRange));
+    updateVisibleKeyRange(newRange);
 }
 
 void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY)
@@ -137,6 +137,17 @@ void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float scro
     verticalZoomSlider.setValue(jlimit(0.0, 1.0, currentZoom + deltaZoom), dontSendNotification);
 }
 
+void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
+{
+    // make sure the range is less than pianoRoll.maxKeysVisible
+    // halfRange should be the minimum of stdDevMidi and maxKeysVisible/2
+    double halfRange = jmin(2 * stdDevMidi, (float)maxKeysVisible / 2);
+    double invertedMedian = 127.0 - medianMidi;
+    auto initialKeyRange = Range<double>( invertedMedian - halfRange, invertedMedian + halfRange);
+    updateVisibleKeyRange(initialKeyRange);
+    double zoomAmount = keysVisibleToZoom(halfRange * 2);
+    verticalZoomSlider.setValue(zoomAmount, dontSendNotification);
+}
 void PianoRollComponent::insertNote(MidiNoteComponent n)
 {
     noteGrid.insertNote(n);
@@ -155,4 +166,9 @@ int PianoRollComponent::getPianoRollWidth()
 double PianoRollComponent::zoomToKeysVisible(double zoomFactor)
 {
     return minKeysVisible + (1.0 - zoomFactor) * (maxKeysVisible - minKeysVisible);
+}
+
+double PianoRollComponent::keysVisibleToZoom(double numKeysVisible)
+{
+    return 1.0 - (numKeysVisible - minKeysVisible) / (maxKeysVisible - minKeysVisible);
 }

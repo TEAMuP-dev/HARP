@@ -44,6 +44,8 @@ public:
 
     void verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY);
 
+    void autoCenterViewBox(int medianMidi, float stdDevMidi);
+
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
@@ -53,10 +55,13 @@ public:
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
     int getResolution() { return noteGrid.getPixelsPerSecond(); }
+    int getMaxKeysVisible() { return maxKeysVisible; }
 
 private:
 
     double zoomToKeysVisible(double zoomFactor);
+    double keysVisibleToZoom(double numKeysVisible);
+
 
     int keyboardWidth;
     int pianoRollWidth;
@@ -71,7 +76,7 @@ private:
     Range<double> fullKeyRange = {0.0, 128.0};
 
     int minKeysVisible = 5;
-    int maxKeysVisible = 24;
+    int maxKeysVisible = 16;
     Range<double> visibleKeyRange;
 
     Range<double> visibleMediaRange;
