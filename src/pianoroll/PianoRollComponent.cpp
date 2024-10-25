@@ -94,6 +94,7 @@ void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
     visibleKeyRange = newRange;
 
     verticalScrollBar.setCurrentRange(newRange);
+    // verticalScrollBar.
 }
 
 void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
@@ -118,6 +119,22 @@ void PianoRollComponent::visibleKeyRangeZoom(double amount)
     Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
 
     updateVisibleKeyRange(fullKeyRange.constrainRange(newRange));
+}
+
+void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
+{
+    DBG("PianoRollComponent::verticalMouseWheelMoveEvent: deltaY=" << deltaY);
+    double newStart = visibleKeyRange.getStart() + deltaY * visibleKeyRange.getLength() / 1.0;
+    auto newRange = Range<double>(newStart, newStart + visibleKeyRange.getLength());
+    updateVisibleKeyRange(fullKeyRange.constrainRange(newRange));
+}
+
+void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY)
+{
+    // get the current value of the verticalZoomSlider
+    auto currentZoom = verticalZoomSlider.getValue();
+    // update the value of the verticalZoomSlider by the deltaZoom. jlimit ensures the value stays between 0 and 1
+    verticalZoomSlider.setValue(jlimit(0.0, 1.0, currentZoom + deltaZoom), dontSendNotification);
 }
 
 void PianoRollComponent::insertNote(MidiNoteComponent n)

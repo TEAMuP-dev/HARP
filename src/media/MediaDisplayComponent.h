@@ -113,8 +113,12 @@ protected:
 
     void resetTransport();
 
-    const int controlSpacing = 2;
-    const int scrollBarSize = 10;
+    void horizontalMove(float deltaX);
+
+    void horizontalZoom(float deltaZoom, float scrollPosX);
+
+    const int controlSpacing = 1;
+    const int scrollBarSize = 8;
 
     Range<double> visibleRange;
 

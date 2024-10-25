@@ -40,6 +40,10 @@ public:
 
     void visibleKeyRangeZoom(double amount);
 
+    void verticalMouseWheelMoveEvent(float deltaY);
+
+    void verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY);
+
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
@@ -67,7 +71,7 @@ private:
     Range<double> fullKeyRange = {0.0, 128.0};
 
     int minKeysVisible = 5;
-    int maxKeysVisible = 12;
+    int maxKeysVisible = 24;
     Range<double> visibleKeyRange;
 
     Range<double> visibleMediaRange;

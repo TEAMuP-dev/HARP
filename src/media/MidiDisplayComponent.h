@@ -39,6 +39,12 @@ private:
 
     void postLoadActions(const URL& filePath) override;
 
+    void verticalMove(float deltaY);
+
+    void verticalZoom(float deltaZoom, float scrollPosY);
+
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+
     double totalLengthInSecs;
 
     SynthAudioSource synthAudioSource;

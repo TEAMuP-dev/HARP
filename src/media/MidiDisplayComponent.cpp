@@ -169,3 +169,63 @@ void MidiDisplayComponent::resetDisplay()
 }
 
 void MidiDisplayComponent::postLoadActions(const URL& filePath) {}
+
+void MidiDisplayComponent::verticalMove(float deltaY) 
+{
+    pianoRoll.verticalMouseWheelMoveEvent(deltaY);
+}
+
+void MidiDisplayComponent::verticalZoom(float deltaZoom, float scrollPosY) 
+{
+    pianoRoll.verticalMouseWheelZoomEvent(deltaZoom, scrollPosY);
+}
+
+void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
+{
+	// DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
+
+    if (getTotalLengthInSecs() > 0.0)
+	{
+        bool isCmdPressed = evt.mods.isCommandDown(); // Command key
+        bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        bool zoomMod = false;
+        if (JUCE_MAC)
+        {
+            zoomMod = isCmdPressed;
+        }
+        else
+        {
+            zoomMod = isCtrlPressed;
+        }
+        
+        auto totalLength = visibleRange.getLength();
+        auto visibleStart = visibleRange.getStart();
+	    auto scrollTime = mediaXToTime(evt.position.getX());
+	    DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
+
+        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) 
+        {
+            // Horizontal scroll when using 2-finger swipe in macbook trackpad
+            if (zoomMod) 
+            {
+                horizontalZoom(wheel.deltaX, (float)scrollTime);
+            } else {
+                horizontalMove(wheel.deltaX);
+            }
+            
+        } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
+            // Vertical scroll
+            if (zoomMod) 
+            {
+                verticalZoom(wheel.deltaY, (float)scrollTime);
+            } else {
+                verticalMove(wheel.deltaY);
+            }
+        } else {
+            // Do nothing
+        }
+
+        repaint();
+    }
+}

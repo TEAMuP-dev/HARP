@@ -463,6 +463,36 @@ void MediaDisplayComponent::resetTransport()
     transportSource.setSource(nullptr);
 }
 
+void MediaDisplayComponent::horizontalMove(float deltaX)
+{
+    auto totalLength = visibleRange.getLength();
+    auto visibleStart = visibleRange.getStart();
+    // auto scrollTime = mediaXToTime(evt.position.getX());
+    auto newStart = visibleStart - deltaX * totalLength / 10.0;
+    newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
+
+    if (!isPlaying()) {
+        updateVisibleRange({ newStart, newStart + totalLength });
+    }
+}
+
+
+void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
+{
+    auto totalLength = visibleRange.getLength();
+    auto visibleStart = visibleRange.getStart();
+    // auto scrollTime = mediaXToTime(evt.position.getX());
+    currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + deltaZoom);
+
+    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
+
+    auto newStart = scrollPosX - newScale * (scrollPosX - visibleStart) / totalLength;
+    auto newEnd = scrollPosX + newScale * (visibleStart + totalLength - scrollPosX) / totalLength;
+    
+    updateVisibleRange({newStart, newEnd});
+
+}
+
 void MediaDisplayComponent::resetPaths()
 {
     clearDroppedFile();
@@ -520,44 +550,34 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
     if (getTotalLengthInSecs() > 0.0)
 	{
+        bool isCmdPressed = evt.mods.isCommandDown(); // Command key
+        bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        bool zoomMod = false;
+        if (JUCE_MAC)
+        {
+            zoomMod = isCmdPressed;
+        }
+        else
+        {
+            zoomMod = isCtrlPressed;
+        }
+        
         auto totalLength = visibleRange.getLength();
         auto visibleStart = visibleRange.getStart();
 	    auto scrollTime = mediaXToTime(evt.position.getX());
-	    // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
+	    DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength << ") Scrolled at time: " << scrollTime);
 
-        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) 
+        if (std::abs(wheel.deltaX) > 1 * std::abs(wheel.deltaY)) 
         {
-            // What's the point of this case?
-            auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
-            newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
-
-            if (!isPlaying()) {
-                updateVisibleRange({ newStart, newStart + totalLength });
-            }
-        } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
-            if (wheel.deltaY != 0) {
-                // TODO - make zoom consistent across different audio lengths?
-
-                //currentHorizontalZoomFactor = jlimit(0.0, 1.0, currentHorizontalZoomFactor + wheel.deltaY);
-
-                //double mediaVisible = getTotalLengthInSecs() / (1 + 10 * currentHorizontalZoomFactor);
-
-                //double visibilityRadius = mediaVisible / 2.0;
-                //double visibilityCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
-
-                //Range<double> newRange = {visibilityCenter - visibilityRadius, visibilityCenter + visibilityRadius};
-
-                //updateVisibleRange(horizontalScrollBar.getRangeLimit().constrainRange(newRange));
-
-                currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
-
-                auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-
-                auto newStart = scrollTime - newScale * (scrollTime - visibleStart) / totalLength;
-                auto newEnd = scrollTime + newScale * (visibleStart + totalLength - scrollTime) / totalLength;
+            // Horizontal scroll when using 2-finger swipe in macbook trackpad
+            horizontalMove(wheel.deltaX);
+            
+        } else if (std::abs(wheel.deltaY) > 1 * std::abs(wheel.deltaX)) {
+            // if (wheel.deltaY != 0) {
+            horizontalZoom(wheel.deltaY, scrollTime);
                 
-                updateVisibleRange({newStart, newEnd});
-            }
+            // }
         } else {
             // Do nothing
         }
@@ -565,32 +585,3 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
         repaint();
     }
 }
-// {
-//     if (getTotalLengthInSecs() > 0.0)
-//     {
-//         auto totalLength = visibleRange.getLength();
-//         auto visibleStart = visibleRange.getStart();
-
-//         if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY)) {
-//             auto newStart = visibleStart - wheel.deltaX * totalLength / 10.0;
-//             newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
-
-//             if (!isPlaying()) {
-//                 updateVisibleRange({ newStart, newStart + totalLength });
-//             }
-//         } else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX)) {
-//             if (wheel.deltaY != 0) {
-//                 currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + wheel.deltaY);
-
-//                 auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
-//                 auto timeAtCenter = visibleRange.getStart() + visibleRange.getLength() / 2.0;
-
-//                 updateVisibleRange({ timeAtCenter - newScale * 0.5, timeAtCenter + newScale * 0.5 });
-//             }
-//         } else {
-//             // Do nothing
-//         }
-
-//         repaint();
-//     }
-// }
