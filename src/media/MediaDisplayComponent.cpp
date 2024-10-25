@@ -280,6 +280,32 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
+    for (OverheadLabelComponent* label : oveheadLabels)
+    {
+        if (label->isMouseOver()) {
+            //TODO
+        }
+    }
+
+    for (LabelOverlayComponent* label : labelOverlays)
+    {   
+        DBG("Checking label overlap");
+        if (label->isMouseOver()) {
+            String link = label->getLink();
+            DBG("Attempting to load link " << link);
+            if (link != "") {
+                URL link_url = URL(link);
+                if (!link_url.isWellFormed()) {
+                    DBG("Link appears malformed: " << link);
+                } else {
+                    DBG("Opening link " << link);
+                    link_url.launchInDefaultBrowser();
+                    return;
+                }
+            }
+        }
+    }
+
     if (e.eventComponent == getMediaComponent()) {
         start();
         sendChangeMessage();
