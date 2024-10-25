@@ -208,7 +208,6 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
         bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
-        bool zoomMod = false;
 #if (JUCE_MAC)
         bool zoomMod = isCmdPressed;
 #else
