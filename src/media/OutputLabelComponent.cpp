@@ -1,6 +1,5 @@
 #include "OutputLabelComponent.h"
 
-
 LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
 {
     setTime(t);
@@ -10,23 +9,32 @@ LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
     setDefaultAttributes();
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur) : LabelOverlayComponent(t, lbl, y)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur)
+    : LabelOverlayComponent(t, lbl, y)
 {
     setDuration(dur);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc) : LabelOverlayComponent(t, lbl, y)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc)
+    : LabelOverlayComponent(t, lbl, y)
 {
     setDescription(dsc);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc) : LabelOverlayComponent(t, lbl, y)
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc)
+    : LabelOverlayComponent(t, lbl, y)
 {
     setDuration(dur);
     setDescription(dsc);
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour clr) : LabelOverlayComponent(t, lbl, y)
+LabelOverlayComponent::LabelOverlayComponent(double t,
+                                             String lbl,
+                                             float y,
+                                             double dur,
+                                             String dsc,
+                                             Colour clr)
+    : LabelOverlayComponent(t, lbl, y)
 {
     setDuration(dur);
     setDescription(dsc);

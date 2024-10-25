@@ -3,7 +3,8 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <functional>
 
-class HoverHandler : public juce::MouseListener {
+class HoverHandler : public juce::MouseListener
+{
 public:
     HoverHandler(juce::Component& target);
 

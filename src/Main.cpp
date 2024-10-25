@@ -22,10 +22,16 @@ public:
         // save the command line arguments to a debug file in my home directory
         if (debugFilesOn())
         {
-            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug.txt");
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug.txt");
             debugFile.appendText(commandLine + "\n", true, true);
             debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+            debugFile.appendText(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                    + "\n",
+                true,
+                true);
         }
 
         mainWindow.reset(new MainWindow(getApplicationName()));
@@ -69,10 +75,16 @@ public:
         // save the command line arguments to a debug file in my home directory
         if (debugFilesOn())
         {
-            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug2.txt");
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug2.txt");
             debugFile.appendText(commandLine + "\n", true, true);
             debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+            debugFile.appendText(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                    + "\n",
+                true,
+                true);
         }
 
         resetWindow(commandLine);
@@ -88,7 +100,8 @@ public:
     public:
         explicit MainWindow(juce::String name)
             : DocumentWindow(name,
-                             juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(ResizableWindow::backgroundColourId),
+                             juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
+                                 ResizableWindow::backgroundColourId),
                              DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar(true);

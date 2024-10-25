@@ -4,23 +4,19 @@
 
 using namespace juce;
 
-
 class OutputLabelComponent : public Label
 {
     // TODO - base class for labels
 };
-
 
 class OverheadLabelComponent : public OutputLabelComponent
 {
     // TODO - labels without specified height (display above media)
 };
 
-
 class LabelOverlayComponent : public OutputLabelComponent
 {
 public:
-
     LabelOverlayComponent(double t, String lbl, float y);
     LabelOverlayComponent(double t, String lbl, float y, double dur);
     LabelOverlayComponent(double t, String lbl, float y, String dsc);
@@ -43,9 +39,8 @@ public:
 
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
-    void setColor(Colour clr) {color = clr; }
-    void setLink(String l) {link = l; 
-    DBG("Link set to " << l);}
+    void setColor(Colour clr) { color = clr; }
+    void setLink(String l) {link = l; }
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
@@ -59,7 +54,6 @@ public:
     return link; }
 
 protected:
-
     double time;
     String label;
 

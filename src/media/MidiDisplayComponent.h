@@ -4,11 +4,9 @@
 #include "../pianoroll/SynthAudioSource.h"
 #include "MediaDisplayComponent.h"
 
-
 class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
-
     MidiDisplayComponent();
     ~MidiDisplayComponent();
 
@@ -20,7 +18,10 @@ public:
 
     Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
 
-    float getMediaXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
+    float getMediaXPos() override
+    {
+        return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing();
+    }
 
     void loadMediaFile(const URL& filePath) override;
 
@@ -34,14 +35,22 @@ public:
     void addLabels(LabelList& labels) override;
 
 private:
-
     void resetDisplay() override;
 
     void postLoadActions(const URL& filePath) override;
+
+    void verticalMove(float deltaY);
+
+    void verticalZoom(float deltaZoom, float scrollPosY);
+
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     double totalLengthInSecs;
 
     SynthAudioSource synthAudioSource;
 
-    PianoRollComponent pianoRoll{70, 5, scrollBarSize, controlSpacing};
+    int medianMidi;
+    float stdDevMidi;
+
+    PianoRollComponent pianoRoll { 70, 5, scrollBarSize, controlSpacing };
 };

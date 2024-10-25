@@ -1,14 +1,13 @@
 #pragma once
 
-#include <juce_audio_utils/juce_audio_utils.h>
-#include "juce_gui_basics/juce_gui_basics.h"
 #include "juce_core/juce_core.h"
+#include "juce_gui_basics/juce_gui_basics.h"
+#include <juce_audio_utils/juce_audio_utils.h>
 
-#include "OutputLabelComponent.h"
 #include "../utils.h"
+#include "OutputLabelComponent.h"
 
 using namespace juce;
-
 
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
@@ -18,7 +17,6 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
-
     MediaDisplayComponent();
     ~MediaDisplayComponent();
 
@@ -50,7 +48,7 @@ public:
 
     URL getTargetFilePath() { return targetFilePath; }
 
-    bool isFileLoaded() { return !tempFilePaths.isEmpty(); }
+    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
 
     void addNewTempFile();
 
@@ -69,7 +67,7 @@ public:
 
     URL getDroppedFilePath() { return droppedFilePath; }
 
-    bool isFileDropped() { return !droppedFilePath.isEmpty(); }
+    bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
 
     void clearDroppedFile() { droppedFilePath = URL(); }
 
@@ -104,7 +102,6 @@ public:
     void clearLabels();
 
 protected:
-
     void setNewTarget(URL filePath);
 
     double mediaXToTime(const float x);
@@ -113,12 +110,16 @@ protected:
 
     void resetTransport();
 
-    const int controlSpacing = 2;
-    const int scrollBarSize = 10;
+    void horizontalMove(float deltaX);
+
+    void horizontalZoom(float deltaZoom, float scrollPosX);
+
+    const int controlSpacing = 1;
+    const int scrollBarSize = 8;
 
     Range<double> visibleRange;
 
-    ScrollBar horizontalScrollBar{ false };
+    ScrollBar horizontalScrollBar { false };
 
     String mediaHandlerInstructions;
 
@@ -129,7 +130,6 @@ protected:
     AudioTransportSource transportSource;
 
 private:
-
     void resetPaths();
 
     virtual void resetDisplay() = 0;
