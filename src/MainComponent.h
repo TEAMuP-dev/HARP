@@ -466,16 +466,6 @@ public:
         // disable the process button until the model is loaded
         processCancelButton.setEnabled(false);
 
-        // set the descriptionLabel to "loading {url}..."
-        // TODO: we need to get rid of the params map, and just pass the url around instead
-        // since it looks like we're sticking to webmodels.
-        // String url = String(std::any_cast<std::string>(params.at("url")));
-        // setStatus("loading " + url + "...");
-        // descriptionLabel.setText(
-        //     "loading " + url
-        //         + "...\n if this takes a while, check if the huggingface space is sleeping by visiting the space url below. Once the huggingface space is awake, try again.",
-        //     dontSendNotification);
-
         // loading happens asynchronously.
         threadPool.addJob(
             [this, params]
@@ -484,19 +474,17 @@ public:
                 {
                     juce::String loadingError;
                     /*
-                        // cb: This is an idea, that might be useful for the future
-                        // Whenever trying to load a new gradio app, we could create a new WebModel
-                        // if loading is successful, we could replace the old model with the new one
-                        // This prevents the confussion of having ModelStatuses in the same class that
-                        // correspond to different Gradio Apps. 
-                        // For example, in the scenario the new model fails to load, we want to go back to 
-                        // the one we had before. However we got a 
-                        // ModelStatus::ERROR, but the old model is still loaded, so the status should change
-                        // to ModelStatus::LOADED (or whatever it was before the failed attempt). 
-                        // This is what we do now, and it is VERY-VERY confusing.
-
-                        std::shared_ptr<WebModel> newModel = std::make_shared<WebModel>();
-                        mModelStatusTimer->setModel(newModel);
+                        cb: This is an idea, that might be useful for the future
+                        Whenever trying to load a new gradio app, we could create a new WebModel
+                        if loading is successful, we could replace the old model with the new one
+                        This prevents the confussion of having ModelStatuses in the same class that
+                        correspond to different Gradio Apps. 
+                        For example, in the scenario the new model fails to load, we want to go back to 
+                        the one we had before. However we got a 
+                        ModelStatus::ERROR, but the old model is still loaded, so the status should change
+                        to ModelStatus::LOADED (or whatever it was before the failed attempt). 
+                        For now, we added a lastStatus variable to the WebModel class to keep track of the
+                        status of the model before the attempt to load a new model.
                     */
 
                     // set the last status to the current status
@@ -524,7 +512,8 @@ public:
 
                                 for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
                                 {
-                                    if (modelPathComboBox.getItemText(i) == (juce::String) customPath)
+                                    if (modelPathComboBox.getItemText(i)
+                                        == (juce::String) customPath)
                                     {
                                         alreadyInComboBox = true;
                                         modelPathComboBox.setSelectedId(i + 1);
@@ -576,7 +565,7 @@ public:
                         // auto chosen = msgOpts.getButtonText(result);
                         // they're not the same as the order of the buttons in the alert
                         // this is the order that I actually observed them to be.
-                        // UPDATE (xribene): This should be fixed in Juce v8
+                        // UPDATE/TODO (xribene): This should be fixed in Juce v8
                         // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
                         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         std::map<int, std::string> observedButtonIndicesMap = {};
@@ -632,7 +621,7 @@ public:
                         // This if/elseif/else block is responsible for setting the selected item
                         // in the modelPathComboBox to the correct item (i.e the model/path/app that
                         // was selected before the failed attempt to load a new model)
-                        // cb: sometimes setSelectedId it doesn't work and I dont know why. 
+                        // cb: sometimes setSelectedId it doesn't work and I dont know why.
                         // I've tried nesting it in MessageManage::callAsync, but still nothing.
                         if (lastLoadedModelItemIndex != -1)
                         {
@@ -645,11 +634,8 @@ public:
                         else
                         {
                             resetModelPathComboBox();
-                            MessageManager::callAsync(
-                                [this, loadingError]
-                                {
-                                    loadModelButton.setEnabled(false);
-                                });
+                            MessageManager::callAsync([this, loadingError]
+                                                      { loadModelButton.setEnabled(false); });
                         }
                     };
 
@@ -664,16 +650,12 @@ public:
                                                      "Error",
                                                      "An unexpected error occurred: "
                                                          + juce::String(e.what()));
-                    // TODO: maybe we need to reset something here (like in the above catch block)
-                    // haven't tested yet.
                 }
                 catch (...) // Catch any other exceptions
                 {
                     DBG("Caught unknown exception");
                     AlertWindow::showMessageBoxAsync(
                         AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
-                    // TODO: maybe we need to reset something here (like in the above catch block)
-                    // haven't tested yet.
                 }
             });
     }
@@ -879,25 +861,27 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
-            // "hugggof/vampnet-music",
-            // "cwitkowitz/timbre-trap",
-            // "hugggof/vampnet-percussion",
-            // "hugggof/vampnet-n64",
-            // "hugggof/vampnet-choir",
-            // "hugggof/vampnet-opera",
-            // "hugggof/vampnet-machines",
-            // "hugggof/vampnet-birds",
-            // "descript/vampnet",
-            // "pharoAIsanders420/micro-musicgen-jungle",
-            // "hugggof/nesquik",
-            // "hugggof/pitch_shifter",
-            // "hugggof/harmonic_percussive",
-            // "xribene/pitch_shifter",
-            "http://localhost:7860",
+            "hugggof/vampnet-music",
+            "cwitkowitz/timbre-trap",
+            "hugggof/vampnet-percussion",
+            "hugggof/vampnet-n64",
+            "hugggof/vampnet-choir",
+            "hugggof/vampnet-opera",
+            "hugggof/vampnet-machines",
+            "hugggof/vampnet-birds",
+            "descript/vampnet",
+            "pharoAIsanders420/micro-musicgen-jungle",
+            "hugggof/nesquik",
+            "hugggof/pitch_shifter",
+            "hugggof/harmonic_percussive",
+            "xribene/pitch_shifter",
+            "xribene/pitch_shifter_awake",
+            "xribene/pitch_shifter_slow",
+            // "http://localhost:7860",
             "https://xribene-midi-pitch-shifter.hf.space/",
-            "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
-            "xribene/midi_pitch_shifter",
-            "https://huggingface.co/spaces/xribene/pitch_shifter",
+            // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
+            // "xribene/midi_pitch_shifter",
+            // "https://huggingface.co/spaces/xribene/pitch_shifter",
         };
 
         modelPathComboBox.setTextWhenNothingSelected("choose a model");
@@ -941,11 +925,7 @@ public:
                     else
                     {
                         resetModelPathComboBox();
-                        MessageManager::callAsync(
-                            [this]
-                            {
-                                loadModelButton.setEnabled(false);
-                            });
+                        MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
                     }
                 };
                 CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
@@ -1141,7 +1121,8 @@ public:
 
         mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
         mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-        mediaDisplayHandler->onMouseMove = [this]() { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
+        mediaDisplayHandler->onMouseMove = [this]()
+        { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
         mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
         mediaDisplayHandler->attach();
     }
