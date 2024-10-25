@@ -1,4 +1,0 @@
-argbind
-gradio_client @ git+https://github.com/TEAMuP-dev/gradio.git@main#subdirectory=client/python
-pyinstaller @ git+https://github.com/hugofloresgarcia/pyinstaller.git@develop
-typing-extensions

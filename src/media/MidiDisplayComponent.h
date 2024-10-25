@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../pianoroll/PianoRollComponent.hpp"
+#include "../pianoroll/SynthAudioSource.h"
 #include "MediaDisplayComponent.h"
 
 
@@ -8,175 +9,48 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
 
-    MidiDisplayComponent()
-    {
-        addAndMakeVisible(pianoRoll);
+    MidiDisplayComponent();
+    ~MidiDisplayComponent();
 
-        mediaHandlerInstructions = "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
-    }
+    static StringArray getSupportedExtensions();
+    StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
-    ~MidiDisplayComponent() {}
+    void repositionContent() override;
+    void repositionScrollBar() override;
 
-    void drawMainArea(Graphics& g, Rectangle<int>& a) override
-    {
-        pianoRoll.setBounds(a);
-    }
+    Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
 
-    void resized() override
-    {
-        Rectangle<int> scrollBarArea = getLocalBounds().removeFromBottom(scrollBarSize + 2 * scrollBarSpacing);
-        scrollBarArea = scrollBarArea.removeFromRight(scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - 5);
-        scrollBarArea = scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize() - 4 * pianoRoll.getScrollBarSpacing());
+    float getMediaXPos() override { return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing(); }
 
-        horizontalScrollBar.setBounds(scrollBarArea.reduced(scrollBarSpacing));
-    }
+    void loadMediaFile(const URL& filePath) override;
 
-    static StringArray getSupportedExtensions()
-    {
-        StringArray extensions;
+    void startPlaying() override;
 
-        extensions.add(".mid");
-        extensions.add(".midi");
+    double getTotalLengthInSecs() override { return totalLengthInSecs; }
+    float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
 
-        return extensions;
-    }
+    void updateVisibleRange(Range<double> newRange) override;
 
-    StringArray getInstanceExtensions()
-    {
-        return MidiDisplayComponent::getSupportedExtensions();
-    }
-
-    void loadMediaFile(const URL& filePath) override
-    {
-        // Create the local file this URL points to
-        File file = filePath.getLocalFile();
-
-        std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
-
-        // Read the MIDI file from the File object
-        MidiFile midiFile;
-
-        if (!midiFile.readFrom(*fileStream)) {
-            DBG("Failed to read MIDI data from file.");
-        }
-
-        midiFile.convertTimestampTicksToSeconds();
-
-        totalLengthInSecs = midiFile.getLastTimestamp();
-
-        DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
-
-        pianoRoll.resizeNoteGrid(totalLengthInSecs);
-
-        for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx) {
-            const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
-
-            if (constTrack != nullptr) {
-                juce::MidiMessageSequence track(*constTrack);
-                track.updateMatchedPairs();
-
-                DBG("Track " << trackIdx << " has " << track.getNumEvents() << " events.");
-
-                for (int eventIdx = 0; eventIdx < track.getNumEvents(); ++eventIdx) {
-                    const auto midiEvent = track.getEventPointer(eventIdx);
-                    const auto& midiMessage = midiEvent->message;
-
-                    double startTime = midiEvent->message.getTimeStamp();
-
-                    DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
-
-                    if (midiMessage.isNoteOn()) {
-                        int noteNumber = midiMessage.getNoteNumber();
-                        int velocity = midiMessage.getVelocity();
-
-                        double duration = 0;
-
-                        for (int offIdx = eventIdx + 1; offIdx < track.getNumEvents(); ++offIdx) {
-                            const auto offEvent = track.getEventPointer(offIdx);
-
-                            // Find the matching note off event
-                            if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber) {
-                                duration = (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
-                                break;
-                            }
-                        }
-
-                        // Create a component for each for each note
-                        MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
-                        pianoRoll.insertNote(n);
-                    }
-                }
-            }
-        }
-    }
-
-    void setPlaybackPosition(double t) override
-    {
-        // TODO
-    }
-
-    double getPlaybackPosition() override
-    {
-        // TODO
-        return 0.0;
-    }
-
-    void startPlaying() override
-    {
-        // TODO
-        AlertWindow::showMessageBoxAsync(
-            AlertWindow::WarningIcon,
-            "NotImplementedError",
-            "MIDI playback has not yet been implemented."
-        );
-    }
-
-    void stopPlaying() override
-    {
-        // TODO
-    }
-
-    bool isPlaying() override
-    {
-        // TODO
-        return false;
-    }
-
-    double getTotalLengthInSecs() override
-    {
-        return totalLengthInSecs;
-    }
-
-    void updateVisibleRange(Range<double> newRange) override
-    {
-        MediaDisplayComponent::updateVisibleRange(newRange);
-
-        pianoRoll.updateVisibleMediaRange(newRange);
-    }
+    void addLabels(LabelList& labels) override;
 
 private:
 
-    double xToTime(const float x) const override
-    {
-        // TODO
-        return 0.0;
-    }
+    void resetDisplay() override;
 
-    float timeToX(const double t) const override
-    {
-        // TODO
-        return 0.0f;
-    }
+    void postLoadActions(const URL& filePath) override;
 
-    void resetDisplay() override
-    {
-        pianoRoll.resetNotes();
-        pianoRoll.resizeNoteGrid(0.0);
-    }
+    void verticalMove(float deltaY);
 
-    void postLoadActions(const URL& filePath) override {}
+    void verticalZoom(float deltaZoom, float scrollPosY);
 
-    PianoRollComponent pianoRoll{70, scrollBarSize, scrollBarSpacing};
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     double totalLengthInSecs;
+
+    SynthAudioSource synthAudioSource;
+
+    int medianMidi;
+    float stdDevMidi;
+
+    PianoRollComponent pianoRoll{70, 5, scrollBarSize, controlSpacing};
 };

@@ -15,22 +15,23 @@
  */
 
 class PianoRollComponent : public Component,
+                           public ChangeBroadcaster,
                            private ScrollBar::Listener
 {
 public:
 
-    PianoRollComponent(int _keyboardWidth=70, int _scrollBarSize=10, int _scrollBarSpacing=2);
+    PianoRollComponent(int _keyboardWidth=70, int _pianoRollSpacing=5, int _scrollBarSize=10, int _scrollBarSpacing=2);
 
     ~PianoRollComponent();
 
-    int getPianoRollWidth();
+    void paint(Graphics& g) override;
+    void resized() override;
+
+    NoteGridComponent* getNoteGrid() { return &noteGrid; }
 
     void setResolution(int pixelsPerSecond);
 
     void resizeNoteGrid(double lengthInSecs);
-
-    void paint(Graphics& g) override;
-    void resized() override;
 
     void updateVisibleKeyRange(Range<double> newRange);
     void updateVisibleMediaRange(Range<double> newRange);
@@ -39,19 +40,32 @@ public:
 
     void visibleKeyRangeZoom(double amount);
 
+    void verticalMouseWheelMoveEvent(float deltaY);
+
+    void verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY);
+
+    void autoCenterViewBox(int medianMidi, float stdDevMidi);
+
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
     int getKeyboardWidth() { return keyboardWidth; }
+    int getPianoRollWidth();
+    int getPianoRollSpacing() { return pianoRollSpacing; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
+    int getResolution() { return noteGrid.getPixelsPerSecond(); }
+    int getMaxKeysVisible() { return maxKeysVisible; }
 
 private:
 
     double zoomToKeysVisible(double zoomFactor);
+    double keysVisibleToZoom(double numKeysVisible);
+
 
     int keyboardWidth;
     int pianoRollWidth;
+    int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
 
@@ -62,7 +76,7 @@ private:
     Range<double> fullKeyRange = {0.0, 128.0};
 
     int minKeysVisible = 5;
-    int maxKeysVisible = 12;
+    int maxKeysVisible = 16;
     Range<double> visibleKeyRange;
 
     Range<double> visibleMediaRange;

@@ -27,7 +27,7 @@ add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory
 # (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set
 # up by default. This function accepts many optional arguments. Check the readme at
 # `docs/CMake API.md` in the JUCE repo for the full list.
-include(cmake/gradio_client.cmake)
+# include(cmake/gradio_client.cmake)
 
 juce_add_gui_app(${PROJECT_NAME}
     # VERSION ...                       # Set this if the app version is different to the project version
@@ -56,20 +56,28 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
         src/MainComponent.h
-
-        src/TitledTextBox.h
         src/CtrlComponent.h
-        
         src/Model.h 
         src/WebModel.h
+        src/HarpLogger.h
+        src/HarpLogger.cpp
+        src/errors.h
+        src/utils.h
 
+        src/gradio/GradioClient.cpp
+        src/external/magic_enum.hpp
+        
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp
         src/gui/HoverHandler.cpp
+        src/gui/TitledTextBox.h
+        src/gui/SliderWithLabel.h
+        src/gui/CustomPathDialog.h
 
-        src/media/MediaDisplayComponent.h
-        src/media/AudioDisplayComponent.h
-        src/media/MidiDisplayComponent.h
+        src/media/MediaDisplayComponent.cpp
+        src/media/AudioDisplayComponent.cpp
+        src/media/MidiDisplayComponent.cpp
+        src/media/OutputLabelComponent.cpp
 
         src/pianoroll/KeyboardComponent.cpp
         src/pianoroll/NoteGridComponent.cpp
@@ -87,7 +95,8 @@ target_compile_definitions(${PROJECT_NAME}
     PRIVATE
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
-        JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call
+        JUCE_USE_CURL=1     # only needed in Linux
+        JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
         JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_PRODUCT_NAME>"
         JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:${PROJECT_NAME},JUCE_VERSION>"
         JUCE_USE_FLAC=1
@@ -191,19 +200,19 @@ if (WIN32)
         $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 endif()
 # copy the pyinstaller tools to the  bundle
-if (APPLE)
-    add_custom_command(TARGET ${PROJECT_NAME}
-                    POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${CMAKE_SOURCE_DIR}/py/client/dist/
-                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources")
-else()
-    add_custom_command(TARGET ${PROJECT_NAME}
-                    POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${CMAKE_SOURCE_DIR}/py/client/dist/
-                    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
-endif()
+# if (APPLE)
+#     add_custom_command(TARGET ${PROJECT_NAME}
+#                     POST_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#                     ${CMAKE_SOURCE_DIR}/py/client/dist/
+#                     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources")
+# else()
+#     add_custom_command(TARGET ${PROJECT_NAME}
+#                     POST_BUILD
+#                     COMMAND ${CMAKE_COMMAND} -E copy_directory
+#                     ${CMAKE_SOURCE_DIR}/py/client/dist/
+#                     "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources")
+# endif()
 
 # this fixes the RPATH to be relative to the executable
 # in MacOS. Now, all we need to do is copy the 
