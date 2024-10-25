@@ -15,7 +15,6 @@
 #include "utils.h"
 #include <fstream>
 
-
 class WebModel : public Model
 {
 public:
@@ -344,7 +343,8 @@ public:
                         auto audioLabel = std::make_unique<AudioLabel>();
                         if (labelPyharp->hasProperty("amplitude"))
                         {
-                            if (labelPyharp->getProperty("amplitude").isDouble() || labelPyharp->getProperty("amplitude").isInt())
+                            if (labelPyharp->getProperty("amplitude").isDouble()
+                                || labelPyharp->getProperty("amplitude").isInt())
                             {
                                 audioLabel->amplitude =
                                     static_cast<float>(labelPyharp->getProperty("amplitude"));
@@ -357,7 +357,8 @@ public:
                         auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
                         if (labelPyharp->hasProperty("frequency"))
                         {
-                            if (labelPyharp->getProperty("frequency").isDouble() || labelPyharp->getProperty("frequency").isInt())
+                            if (labelPyharp->getProperty("frequency").isDouble()
+                                || labelPyharp->getProperty("frequency").isInt())
                             {
                                 spectrogramLabel->frequency =
                                     static_cast<float>(labelPyharp->getProperty("frequency"));
@@ -370,7 +371,8 @@ public:
                         auto midiLabel = std::make_unique<MidiLabel>();
                         if (labelPyharp->hasProperty("pitch"))
                         {
-                            if (labelPyharp->getProperty("pitch").isDouble() || labelPyharp->getProperty("pitch").isInt())
+                            if (labelPyharp->getProperty("pitch").isDouble()
+                                || labelPyharp->getProperty("pitch").isInt())
                             {
                                 midiLabel->pitch =
                                     static_cast<float>(labelPyharp->getProperty("pitch"));
@@ -396,7 +398,8 @@ public:
                     if (labelPyharp->hasProperty("t"))
                     {
                         // now check if it's a float
-                        if (labelPyharp->getProperty("t").isDouble() || labelPyharp->getProperty("t").isInt())
+                        if (labelPyharp->getProperty("t").isDouble()
+                            || labelPyharp->getProperty("t").isInt())
                         {
                             label->t = static_cast<float>(labelPyharp->getProperty("t"));
                         }
@@ -412,7 +415,8 @@ public:
                     if (labelPyharp->hasProperty("duration"))
                     {
                         // now check if it's a float
-                        if (labelPyharp->getProperty("duration").isDouble() || labelPyharp->getProperty("duration").isInt())
+                        if (labelPyharp->getProperty("duration").isDouble()
+                            || labelPyharp->getProperty("duration").isInt())
                         {
                             label->duration =
                                 static_cast<float>(labelPyharp->getProperty("duration"));
@@ -429,11 +433,13 @@ public:
                     if (labelPyharp->hasProperty("color"))
                     {
                         // now check if it's an int
-                        if ((labelPyharp->getProperty("color").isInt64() || labelPyharp->getProperty("color").isInt()))
-                        {   
+                        if ((labelPyharp->getProperty("color").isInt64()
+                             || labelPyharp->getProperty("color").isInt()))
+                        {
                             int color_val = static_cast<int>(labelPyharp->getProperty("color"));
 
-                            if (color_val != 0) {
+                            if (color_val != 0)
+                            {
                                 label->color = color_val;
                             }
                         }
@@ -580,7 +586,7 @@ private:
 
     CtrlList m_ctrls;
     GradioClient gradioClient;
-    
+
     // A helper variable to store the status of the model
     // before loading a new model. If the new model fails to load,
     // we want to go back to the status we had before the failed attempt

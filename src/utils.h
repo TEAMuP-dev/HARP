@@ -15,14 +15,14 @@ enum ModelStatus
     LOADING,
     GETTING_CONTROLS,
     LOADED,
-    
+
     STARTING,
     SENDING,
     PROCESSING,
     FINISHED,
     CANCELLED,
     CANCELLING,
-    
+
     ERROR
 };
 

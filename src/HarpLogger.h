@@ -11,8 +11,8 @@ class HarpLogger : private DeletedAtShutdown
 {
 public:
     // singleton instance of Logger
-    JUCE_DECLARE_SINGLETON (HarpLogger, false)
-    
+    JUCE_DECLARE_SINGLETON(HarpLogger, false)
+
     ~HarpLogger();
 
     // Disable copy constructor and assignment operator
@@ -34,4 +34,7 @@ private:
 
 // Function for easier access to logging
 // without having to write HarpLogger::getInstance()->LogAndDBG(message) every time
-inline void LogAndDBG(const juce::String& message) { HarpLogger::getInstance()->LogAndDBG(message); }
+inline void LogAndDBG(const juce::String& message)
+{
+    HarpLogger::getInstance()->LogAndDBG(message);
+}

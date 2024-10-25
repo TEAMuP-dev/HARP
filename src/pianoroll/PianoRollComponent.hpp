@@ -3,7 +3,6 @@
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
-
 /*
  --------------------
  |      |           |
@@ -14,13 +13,13 @@
  --------------------
  */
 
-class PianoRollComponent : public Component,
-                           public ChangeBroadcaster,
-                           private ScrollBar::Listener
+class PianoRollComponent : public Component, public ChangeBroadcaster, private ScrollBar::Listener
 {
 public:
-
-    PianoRollComponent(int _keyboardWidth=70, int _pianoRollSpacing=5, int _scrollBarSize=10, int _scrollBarSpacing=2);
+    PianoRollComponent(int _keyboardWidth = 70,
+                       int _pianoRollSpacing = 5,
+                       int _scrollBarSize = 10,
+                       int _scrollBarSpacing = 2);
 
     ~PianoRollComponent();
 
@@ -58,10 +57,8 @@ public:
     int getMaxKeysVisible() { return maxKeysVisible; }
 
 private:
-
     double zoomToKeysVisible(double zoomFactor);
     double keysVisibleToZoom(double numKeysVisible);
-
 
     int keyboardWidth;
     int pianoRollWidth;
@@ -73,7 +70,7 @@ private:
     NoteGridComponent noteGrid;
     Component noteGridContainer;
 
-    Range<double> fullKeyRange = {0.0, 128.0};
+    Range<double> fullKeyRange = { 0.0, 128.0 };
 
     int minKeysVisible = 5;
     int maxKeysVisible = 16;
@@ -81,7 +78,7 @@ private:
 
     Range<double> visibleMediaRange;
 
-    ScrollBar verticalScrollBar{ true };
+    ScrollBar verticalScrollBar { true };
 
-    Slider verticalZoomSlider{ Slider::LinearVertical, Slider::NoTextBox };
+    Slider verticalZoomSlider { Slider::LinearVertical, Slider::NoTextBox };
 };

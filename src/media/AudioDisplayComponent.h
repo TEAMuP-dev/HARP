@@ -4,31 +4,27 @@
 
 #include "MediaDisplayComponent.h"
 
-
 class AudioThumbnailWrapper : public Component
 {
 public:
-
     AudioThumbnailWrapper(AudioThumbnail& t, Range<double>& v) : thumbnail(t), visibleRange(v) {}
 
     void paint(Graphics& g) override
     {
         g.setColour(Colours::lightblue);
 
-        thumbnail.drawChannels(g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
+        thumbnail.drawChannels(
+            g, getLocalBounds(), visibleRange.getStart(), visibleRange.getEnd(), 1.0f);
     }
 
 private:
-
     AudioThumbnail& thumbnail;
     Range<double>& visibleRange;
 };
 
-
 class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
-
     AudioDisplayComponent();
     ~AudioDisplayComponent();
 
@@ -47,17 +43,16 @@ public:
     void addLabels(LabelList& labels) override;
 
 private:
-
     void resetDisplay() override;
 
     void postLoadActions(const URL& filePath) override;
 
-    TimeSliceThread thread{ "Audio File Thread" };
+    TimeSliceThread thread { "Audio File Thread" };
 
     std::unique_ptr<AudioFormatReaderSource> audioFileSource;
 
-    AudioThumbnailCache thumbnailCache{ 5 };
+    AudioThumbnailCache thumbnailCache { 5 };
     AudioThumbnail thumbnail = AudioThumbnail(512, formatManager, thumbnailCache);
 
-    AudioThumbnailWrapper thumbnailComponent{ thumbnail, visibleRange };
+    AudioThumbnailWrapper thumbnailComponent { thumbnail, visibleRange };
 };

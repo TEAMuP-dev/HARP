@@ -13,10 +13,10 @@
 #include <string>
 #include <unordered_map>
 
+#include "errors.h"
 #include "juce_audio_basics/juce_audio_basics.h"
 #include "juce_events/juce_events.h"
 #include "utils.h"
-#include "errors.h"
 
 using std::any;
 using std::map;
@@ -71,5 +71,4 @@ protected:
     ModelCard m_card;
     bool m_loaded { false };
     ModelStatus status2;
-
 };
