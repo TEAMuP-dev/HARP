@@ -325,31 +325,6 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 
     for (LabelOverlayComponent* label : labelOverlays)
     {   
-        if (label->isMouseOver()) {
-            String link = label->getLink();
-            DBG("Attempting to load link " << link);
-            if (link != "") {
-                URL link_url = URL(link);
-                if (!link_url.isWellFormed()) {
-                    DBG("Link appears malformed: " << link);
-                } else {
-                    DBG("Opening link " << link);
-                    link_url.launchInDefaultBrowser();
-                    return;
-                }
-            }
-        }
-    }
-
-    for (OverheadLabelComponent* label : oveheadLabels)
-    {
-        if (label->isMouseOver()) {
-            //TODO
-        }
-    }
-
-    for (LabelOverlayComponent* label : labelOverlays)
-    {   
         DBG("Checking label overlap");
         if (label->isMouseOver()) {
             String link = label->getLink();
