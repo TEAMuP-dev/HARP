@@ -28,6 +28,9 @@ public:
 
     void setDefaultAttributes();
 
+    // This method returns the appropriate mouse cursor based on the link state
+    juce::MouseCursor getMouseCursor() override;
+
     static float amplitudeToRelativeY(float amplitude);
     static float frequencyToRelativeY(float frequency);
     static float pitchToRelativeY(float pitch);

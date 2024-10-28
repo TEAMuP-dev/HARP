@@ -74,6 +74,16 @@ void LabelOverlayComponent::setDefaultAttributes()
     //setInterceptsMouseClicks(false, false);
 }
 
+// returns the appropriate mouse cursor based on the link state
+juce::MouseCursor LabelOverlayComponent::getMouseCursor()
+{
+    // Check if the label should behave like a link
+    if (link.isNotEmpty())
+        return juce::MouseCursor::PointingHandCursor;
+    else
+        return juce::MouseCursor::NormalCursor;
+}
+
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
     return jmin(1.0f, jmax(0.0f, 1 - (amplitude + 1) / 2));
