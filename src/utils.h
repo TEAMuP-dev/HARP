@@ -134,6 +134,7 @@ struct OutputLabel
     juce::String description { "" };
     std::optional<float> duration;
     std::optional<int> color;
+    std::optional<juce::String> link;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 

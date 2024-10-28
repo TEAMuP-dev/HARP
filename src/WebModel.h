@@ -444,6 +444,14 @@ public:
                             }
                         }
                     }
+                    if (labelPyharp->hasProperty("link"))
+                    {
+                        // now check if it's a string
+                        if (labelPyharp->getProperty("link").isString())
+                        {
+                            label->link = labelPyharp->getProperty("link").toString();
+                        }
+                    }
                     labels.push_back(std::move(label));
                 }
             }

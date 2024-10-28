@@ -43,6 +43,11 @@ LabelOverlayComponent::LabelOverlayComponent(double t,
     setColour(Label::backgroundColourId, getColor());
 }
 
+LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour clr, String lnk) : LabelOverlayComponent(t, lbl, y, dur, dsc, clr)
+{
+    setLink(lnk);
+}
+
 LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 {
     setTime(other.getTime());
@@ -51,6 +56,7 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
     setDuration(other.getDuration());
     setDescription(other.getDescription());
     setColor(other.getColor());
+    setLink(other.getLink());
 
     setDefaultAttributes();
 }
