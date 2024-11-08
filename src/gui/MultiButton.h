@@ -1,12 +1,14 @@
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
-class MultiButton : public juce::TextButton {
+class MultiButton : public juce::TextButton
+{
 public:
-    struct Mode {
+    struct Mode
+    {
         juce::String label;
         std::function<void()> callback;
         juce::Colour color;
@@ -20,7 +22,7 @@ public:
     MultiButton();
 
     void setMode(const juce::String& modeName);
-    juce::String  getModeName();
+    juce::String getModeName();
     void addMode(const Mode& mode);
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;

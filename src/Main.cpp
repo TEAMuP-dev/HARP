@@ -1,8 +1,7 @@
 #include "MainComponent.h"
 
-
 //==============================================================================
-class GuiAppApplication  : public juce::JUCEApplication
+class GuiAppApplication : public juce::JUCEApplication
 {
 public:
     //==============================================================================
@@ -11,26 +10,32 @@ public:
     // We inject these as compile definitions from the CMakeLists.txt
     // If you've enabled the juce header with `juce_generate_juce_header(<thisTarget>)`
     // you could `#include <JuceHeader.h>` and use `ProjectInfo::projectName` etc. instead.
-    const juce::String getApplicationName() override       { return JUCE_APPLICATION_NAME_STRING; }
-    const juce::String getApplicationVersion() override    { return JUCE_APPLICATION_VERSION_STRING; }
-    bool moreThanOneInstanceAllowed() override             { return true; }
+    const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
+    const juce::String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
+    bool moreThanOneInstanceAllowed() override { return true; }
 
-    bool debugFilesOn()                                    { return false; }
+    bool debugFilesOn() { return false; }
 
     //==============================================================================
-    void initialise (const juce::String& commandLine) override
+    void initialise(const juce::String& commandLine) override
     {
         // save the command line arguments to a debug file in my home directory
-        if (debugFilesOn()) {
-            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug.txt");
+        if (debugFilesOn())
+        {
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug.txt");
             debugFile.appendText(commandLine + "\n", true, true);
             debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+            debugFile.appendText(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                    + "\n",
+                true,
+                true);
         }
-        
+
         mainWindow.reset(new MainWindow(getApplicationName()));
         resetWindow(commandLine);
-
     }
 
     void shutdown() override
@@ -52,29 +57,37 @@ public:
     {
         File inputMediaFile(commandLine.unquoted().trim());
 
-        if (inputMediaFile.existsAsFile()) {
+        if (inputMediaFile.existsAsFile())
+        {
             URL inputMediaURL = URL(inputMediaFile);
-            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent())) {
+            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+            {
                 mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
             }
         }
     }
 
-    void anotherInstanceStarted (const juce::String& commandLine) override
+    void anotherInstanceStarted(const juce::String& commandLine) override
     {
         // When another instance of the app is launched while this one is running,
         // this method is invoked, and the commandLine parameter tells you what
         // the other instance's command-line arguments were.
         // save the command line arguments to a debug file in my home directory
-        if (debugFilesOn()) {
-            File debugFile(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "/debug2.txt");
+        if (debugFilesOn())
+        {
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug2.txt");
             debugFile.appendText(commandLine + "\n", true, true);
             debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName() + "\n", true, true);
+            debugFile.appendText(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                    + "\n",
+                true,
+                true);
         }
 
         resetWindow(commandLine);
-        
     }
 
     //==============================================================================
@@ -82,26 +95,26 @@ public:
         This class implements the desktop window that contains an instance of
         our MainComponent class.
     */
-    class MainWindow    : public juce::DocumentWindow
+    class MainWindow : public juce::DocumentWindow
     {
     public:
-        explicit MainWindow (juce::String name)
-            : DocumentWindow (name,
-                              juce::Desktop::getInstance().getDefaultLookAndFeel()
-                                                          .findColour (ResizableWindow::backgroundColourId),
-                              DocumentWindow::allButtons)
+        explicit MainWindow(juce::String name)
+            : DocumentWindow(name,
+                             juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
+                                 ResizableWindow::backgroundColourId),
+                             DocumentWindow::allButtons)
         {
-            setUsingNativeTitleBar (true);
-            setContentOwned (new MainComponent(), true);
+            setUsingNativeTitleBar(true);
+            setContentOwned(new MainComponent(), true);
 
-           #if JUCE_IOS || JUCE_ANDROID
-            setFullScreen (true);
-           #else
-            setResizable (true, true);
-            centreWithSize (getWidth(), getHeight());
-           #endif
+#if JUCE_IOS || JUCE_ANDROID
+            setFullScreen(true);
+#else
+            setResizable(true, true);
+            centreWithSize(getWidth(), getHeight());
+#endif
 
-            setVisible (true);
+            setVisible(true);
         }
 
         void closeButtonPressed() override
@@ -119,19 +132,21 @@ public:
            subclass also calls the superclass's method.
         */
 
-       void activeWindowStatusChanged() override 
-       {
+        void activeWindowStatusChanged() override
+        {
             //Check if an open file is still up to date when window comes back into focus
-            if (isActiveWindow()) {
-                if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent())) {
+            if (isActiveWindow())
+            {
+                if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent()))
+                {
                     mainComp->focusCallback();
                 }
             }
             DocumentWindow::activeWindowStatusChanged();
-       }
+        }
 
     private:
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
     };
 
 private:
@@ -140,4 +155,4 @@ private:
 
 //==============================================================================
 // This macro generates the main() routine that launches the app.
-START_JUCE_APPLICATION (GuiAppApplication)
+START_JUCE_APPLICATION(GuiAppApplication)

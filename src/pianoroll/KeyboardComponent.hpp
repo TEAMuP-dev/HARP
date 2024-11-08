@@ -6,7 +6,6 @@
 
 using namespace juce;
 
-
 class KeyboardComponent : public Component
 {
 public:

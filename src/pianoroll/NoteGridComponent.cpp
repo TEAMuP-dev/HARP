@@ -2,17 +2,13 @@
 
 #include "NoteGridComponent.hpp"
 
-
 NoteGridComponent::NoteGridComponent()
 {
     pixelsPerSecond = 0.0;
     lengthInSeconds = 0.0;
 }
 
-NoteGridComponent::~NoteGridComponent()
-{
-    resetNotes();
-}
+NoteGridComponent::~NoteGridComponent() { resetNotes(); }
 
 void NoteGridComponent::setResolution(double pps)
 {
@@ -28,16 +24,14 @@ void NoteGridComponent::updateLength(double l)
     updateSize();
 }
 
-void NoteGridComponent::updateSize()
-{
-    setSize(pixelsPerSecond * lengthInSeconds, getHeight());
-}
+void NoteGridComponent::updateSize() { setSize(pixelsPerSecond * lengthInSeconds, getHeight()); }
 
 void NoteGridComponent::resized()
 {
     const float keyHeight = getKeyHeight();
 
-    for (auto n : midiNotes) {
+    for (auto n : midiNotes)
+    {
         const float xPos = ((float) n->getStartTime()) * pixelsPerSecond;
         const float width = ((float) n->getNoteLength()) * pixelsPerSecond;
 
@@ -60,7 +54,8 @@ void NoteGridComponent::insertNote(MidiNoteComponent n)
 
 void NoteGridComponent::resetNotes()
 {
-    for (int i = 0; i < midiNotes.size(); i++) {
+    for (int i = 0; i < midiNotes.size(); i++)
+    {
         MidiNoteComponent* note = midiNotes.getReference(i);
         removeChildComponent(note);
 

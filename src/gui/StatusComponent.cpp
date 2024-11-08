@@ -11,18 +11,14 @@ void StatusComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
-    float cornerSize = 10.0f; 
-    auto bounds = getLocalBounds().toFloat(); 
+    float cornerSize = 10.0f;
+    auto bounds = getLocalBounds().toFloat();
 
-    g.setColour(juce::Colours::grey); 
+    g.setColour(juce::Colours::grey);
     g.fillRoundedRectangle(bounds, cornerSize);
 }
 
-
-void StatusComponent::resized()
-{
-    statusLabel.setBounds(getLocalBounds());
-}
+void StatusComponent::resized() { statusLabel.setBounds(getLocalBounds()); }
 
 void StatusComponent::setStatusMessage(const juce::String& message)
 {

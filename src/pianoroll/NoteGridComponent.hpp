@@ -8,11 +8,9 @@
 
 using namespace juce;
 
-
 class MidiNoteComponent : public Component
 {
 public:
-
     MidiNoteComponent(unsigned char n, unsigned char v, double s, double d)
     {
         noteNumber = n;
@@ -38,13 +36,18 @@ public:
         g.setColour(red);
         g.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
 
-        if (getWidth() > 10) {
+        if (getWidth() > 10)
+        {
             g.setColour(red.brighter());
 
             const int maxVelocityWidth = getWidth() - 10;
             const int verticalPosition = getHeight() * 0.5 - 2;
 
-            g.drawLine(5, verticalPosition, maxVelocityWidth * (getVelocity() / 127.0), verticalPosition, 4);
+            g.drawLine(5,
+                       verticalPosition,
+                       maxVelocityWidth * (getVelocity() / 127.0),
+                       verticalPosition,
+                       4);
         }
     }
 
@@ -54,18 +57,15 @@ public:
     double getNoteLength() { return duration; }
 
 private:
-
     unsigned char noteNumber;
     unsigned char velocity;
     double startTime;
     double duration;
 };
 
-
 class NoteGridComponent : public KeyboardComponent
 {
 public:
-
     NoteGridComponent();
 
     ~NoteGridComponent();
@@ -86,7 +86,6 @@ public:
     bool isKeyboardComponent() override { return false; }
 
 private:
-
     Array<MidiNoteComponent*> midiNotes;
 
     double pixelsPerSecond;
