@@ -1557,7 +1557,8 @@ private:
             mModelStatusTimer->setModel(model);
             ctrlComponent.populateGui();
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST
+                || spaceInfo.status == SpaceInfo::Status::GRADIO)
             {
                 spaceUrlButton.setButtonText("open localhost in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.gradio));
