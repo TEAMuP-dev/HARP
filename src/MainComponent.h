@@ -587,9 +587,28 @@ public:
                         }
                         else if (chosen == "Open Space URL")
                         {
-                            URL spaceUrl =
-                                this->model->getGradioClient().getSpaceInfo().huggingface;
-                            spaceUrl.launchInDefaultBrowser();
+                            // get the spaceInfo
+                            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                            if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+                            {
+                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+                            {
+                                URL spaceUrl =
+                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                            {
+                                // either choose hugingface or gradio, they are the same
+                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            // URL spaceUrl =
+                            //     this->model->getGradioClient().getSpaceInfo().huggingface;
+                            // spaceUrl.launchInDefaultBrowser();
                         }
 
                         if (lastLoadedModelItemIndex == -1)
@@ -1558,17 +1577,23 @@ private:
             mModelStatusTimer->setModel(model);
             ctrlComponent.populateGui();
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST
-                || spaceInfo.status == SpaceInfo::Status::GRADIO)
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                
             {
                 spaceUrlButton.setButtonText("open localhost in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.gradio));
             }
-            else
+            else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
             {
                 spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
                                              + spaceInfo.modelName + " in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+            }
+            else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+            {
+                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
+                                             + spaceInfo.modelName + " in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.gradio));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(spaceUrlButton);

@@ -139,11 +139,12 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
         // model = model.replace("-", "_");
         if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
         {
-            spaceInfo.huggingface = spaceAddress;
+            // spaceInfo.huggingface = spaceAddress;
+            spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
             // the embedded gradio app URL doesn't contain "_". So if the model name
             // contains "_", we replace it with "-"
-            model = model.replace("_", "-");
-            spaceInfo.gradio = "https://" + user + "-" + model + ".hf.space";
+            // model = model.replace("_", "-");
+            spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space";
         }
         else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
         {
