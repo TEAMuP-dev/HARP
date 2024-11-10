@@ -880,8 +880,9 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
-            "hugggof/vampnet-music",
             "cwitkowitz/timbre-trap",
+            "npruyne/audio_similarity",
+            "hugggof/vampnet-music",
             "hugggof/vampnet-percussion",
             "hugggof/vampnet-n64",
             "hugggof/vampnet-choir",
