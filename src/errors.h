@@ -28,6 +28,7 @@ enum class ErrorType
 struct Error
 {
     ErrorType type;
+    int code = -1;
     juce::String devMessage;
     juce::String userMessage;
 
@@ -35,6 +36,8 @@ struct Error
     * In this function, we parse the detailed developer message 
     * of an Error object, and fill the user message accordingly.
     * by default, we set the user message to the developer message.
+    * TODO: the if/else statements below are very simple checks, and 
+    * serve just as an example.
     */
     static void fillUserMessage(Error& error)
     {
@@ -50,6 +53,17 @@ struct Error
             if (containsAllSubstrings(error.devMessage, { "POST", "controls", "input stream" }))
             {
                 error.userMessage = "TIMEOUT: The gradio app is SLEEPING. Please try again later.";
+            }
+            else if (containsAllSubstrings(error.devMessage, { "GET", "input stream" }))
+            {
+                //
+                error.userMessage = error.devMessage;
+                // error.userMessage += "\n There was some network connectivity issue. Please try again";
+                if (error.code == 0)
+                {
+                    error.userMessage +=
+                        "\n\nProbably a request timeout, e.g the model is taking too long to process the audio file.";
+                }
             }
         }
         else if (error.type == ErrorType::FileUploadError)

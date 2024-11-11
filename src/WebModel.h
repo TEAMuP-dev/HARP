@@ -224,7 +224,8 @@ public:
         }
 
         juce::String response;
-        result = gradioClient.getResponseFromEventID(endpoint, eventId, response);
+        result =
+            gradioClient.getResponseFromEventID(endpoint, eventId, response, 14000);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -244,7 +245,7 @@ public:
         juce::JSON::parse(responseData, parsedData);
         if (! parsedData.isObject())
         {
-            error.devMessage = "Failed to parse the data portion of the received controls JSON.";
+            error.devMessage = "Failed to parse the 'data' key of the received JSON.";
             status2 = ModelStatus::ERROR;
             return OpResult::fail(error);
         }

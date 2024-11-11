@@ -14,8 +14,7 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
     {
         Error error;
         error.type = ErrorType::MissingJsonKey;
-        error.devMessage = "Key " + key + " not found in response";
-        error.userMessage = error.devMessage;
+        error.devMessage = "Missing Key in JSON :: Key " + key + " not found in response";
         return OpResult::fail(error);
     }
 
@@ -209,6 +208,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage = "Failed to create input stream for file upload request.";
         return OpResult::fail(error);
     }
@@ -281,6 +281,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage = "Failed to create input stream for POST request to " + endpoint;
         return OpResult::fail(error);
     }
@@ -290,6 +291,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
+        error.code = statusCode;
         error.devMessage =
             "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
         return OpResult::fail(error);
@@ -350,8 +352,9 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage =
-            "Failed to create input stream for GET request to " + callID + "/" + eventID;
+            "Failed to create input stream for GET request \nto " + callID + "/" + eventID;
         return OpResult::fail(error);
     }
 
