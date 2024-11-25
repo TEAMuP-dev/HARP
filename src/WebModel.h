@@ -380,6 +380,11 @@ public:
                         }
                         label = std::move(midiLabel);
                     }
+                    else if (labelType == "OutputLabel")
+                    {
+                        auto outputLabel = std::make_unique<OutputLabel>();
+                        label = std::move(outputLabel);
+                    }
                     else
                     {
                         error.type = ErrorType::UnknownLabelType;

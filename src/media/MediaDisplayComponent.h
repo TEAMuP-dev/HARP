@@ -93,8 +93,7 @@ public:
 
     String getMediaHandlerInstructions();
 
-    virtual void addLabels(LabelList& labels);
-
+    void addLabels(LabelList& labels);
     void addLabelOverlay(LabelOverlayComponent l);
     void addOverheadLabel(OverheadLabelComponent l);
 
@@ -160,5 +159,5 @@ private:
     const int labelHeight = 20;
 
     Array<LabelOverlayComponent*> labelOverlays;
-    Array<OverheadLabelComponent*> oveheadLabels;
+    Array<OverheadLabelComponent*> overheadLabels;
 };

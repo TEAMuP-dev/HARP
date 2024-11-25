@@ -32,8 +32,6 @@ public:
 
     void updateVisibleRange(Range<double> newRange) override;
 
-    void addLabels(LabelList& labels) override;
-
 private:
     void resetDisplay() override;
 

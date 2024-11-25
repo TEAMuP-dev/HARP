@@ -147,59 +147,6 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
     MediaDisplayComponent::updateVisibleRange(newRange);
 }
 
-void MidiDisplayComponent::addLabels(LabelList& labels)
-{
-    MediaDisplayComponent::addLabels(labels);
-
-    for (const auto& l : labels)
-    {
-        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get()))
-        {
-            String lbl = l->label;
-            String dsc = l->description;
-
-            if (dsc.isEmpty())
-            {
-                dsc = lbl;
-            }
-
-            float dur = 0.0f;
-
-            if ((l->duration).has_value())
-            {
-                dur = (l->duration).value();
-            }
-
-            Colour clr = Colours::purple.withAlpha(0.8f);
-
-            if ((l->color).has_value())
-            {
-                clr = Colour((l->color).value());
-            }
-
-            String lnk = "";
-
-            if ((l->link).has_value()) {
-                lnk = (l->link).value();
-            }
-
-            if ((midiLabel->pitch).has_value())
-            {
-                float p = (midiLabel->pitch).value();
-
-                float y = LabelOverlayComponent::pitchToRelativeY(p);
-
-                addLabelOverlay(
-                    LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr, lnk));
-            }
-            else
-            {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr);
-            }
-        }
-    }
-}
-
 void MidiDisplayComponent::resetDisplay()
 {
     MediaDisplayComponent::resetTransport();

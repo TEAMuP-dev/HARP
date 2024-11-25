@@ -65,7 +65,7 @@ void MediaDisplayComponent::repositionScrollBar()
 
 void MediaDisplayComponent::repositionOverheadLabels()
 {
-    // for (auto l : oveheadLabels) {}
+    // for (auto l : overheadLabels) {}
 }
 
 void MediaDisplayComponent::repositionLabelOverlays()
@@ -316,7 +316,7 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
-    for (OverheadLabelComponent* label : oveheadLabels)
+    for (OverheadLabelComponent* label : overheadLabels)
     {
         if (label->isMouseOver()) {
             //TODO
@@ -385,7 +385,7 @@ String MediaDisplayComponent::getMediaHandlerInstructions()
 {
     String toolTipText = mediaHandlerInstructions;
 
-    for (OverheadLabelComponent* label : oveheadLabels)
+    for (OverheadLabelComponent* label : overheadLabels)
     {
         if (label->isMouseOver())
         {
@@ -410,32 +410,58 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
     for (const auto& l : labels)
     {
+        double t = (double) l->t;
         String lbl = l->label;
+
         String dsc = l->description;
+        double dur = (double) (l->duration).value();
 
-        if (dsc.isEmpty())
-        {
-            dsc = lbl;
-        }
-
-        float dur = 0.0f;
-
-        if ((l->duration).has_value())
-        {
-            dur = (l->duration).value();
-        }
-
-        Colour color = Colours::purple.withAlpha(0.8f);
+        Colour clr;
 
         if ((l->color).has_value())
         {
-            color = Colour((l->color).value());
+            clr = Colour((l->color).value());
+        } else {
+            clr = Colours::purple.withAlpha(0.8f);
         }
 
-        if (! dynamic_cast<AudioLabel*>(l.get()) && ! dynamic_cast<SpectrogramLabel*>(l.get())
-            && ! dynamic_cast<MidiLabel*>(l.get()))
-        {
-            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, color);
+        String lnk = (l->link).value();
+
+        float y;
+
+        bool isOverlay = false;
+
+        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get())) {
+            if ((audioLabel->amplitude).has_value()) {
+                isOverlay = true;
+
+                float amp = (audioLabel->amplitude).value();
+
+                y = LabelOverlayComponent::amplitudeToRelativeY(amp);
+            }
+        }
+
+        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
+            if ((midiLabel->pitch).has_value()) {
+                isOverlay = true;
+
+                float p = (midiLabel->pitch).value();
+
+                y = LabelOverlayComponent::pitchToRelativeY(p);
+            }
+        }
+
+        OutputLabelComponent lc = OutputLabelComponent(t, lbl, dur, dsc, clr, lnk);
+
+        if (isOverlay) {
+            auto lo = static_cast<LabelOverlayComponent*>(&lc);
+            lo->setRelativeY(y);
+
+            addLabelOverlay(*lo);
+        } else {
+            auto ol = static_cast<OverheadLabelComponent*>(&lc);
+            
+            addOverheadLabel(*ol);
         }
     }
 }
@@ -451,7 +477,11 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
 {
-    // TODO
+    OverheadLabelComponent* label = new OverheadLabelComponent(l);
+    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    overheadLabels.add(label);
+
+    getMediaComponent()->addAndMakeVisible(label);
 }
 
 void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
@@ -473,14 +503,15 @@ void MediaDisplayComponent::clearLabels()
 
     labelOverlays.clear();
 
-    /*for (int i = 0; i < oveheadLabels.size(); i++) {
-        OverheadLabelComponent* l = oveheadLabels.getReference(i);
+    for (int i = 0; i < overheadLabels.size(); i++)
+    {
+        OverheadLabelComponent* l = overheadLabels.getReference(i);
         mediaComponent->removeChildComponent(l);
 
         delete l;
-    }*/
+    }
 
-    oveheadLabels.clear();
+    overheadLabels.clear();
 
     resized();
     repaint();
