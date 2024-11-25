@@ -131,10 +131,10 @@ struct OutputLabel
     float t;
     juce::String label;
     // optional on pyharp side
-    juce::String description { "" };
+    std::optional<juce::String> description;
     std::optional<float> duration;
     std::optional<int> color;
-    std::optional<juce::String> link { "" };
+    std::optional<juce::String> link;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 

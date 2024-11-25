@@ -410,22 +410,23 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
     for (const auto& l : labels)
     {
-        double t = (double) l->t;
-        String lbl = l->label;
+        OutputLabelComponent lc = OutputLabelComponent((double) l->t, l->label);
 
-        String dsc = l->description;
-        double dur = (double) (l->duration).value();
-
-        Colour clr;
-
-        if ((l->color).has_value())
-        {
-            clr = Colour((l->color).value());
-        } else {
-            clr = Colours::purple.withAlpha(0.8f);
+        if ((l->description).has_value()) {
+            lc.setDescription((l->description).value());
         }
 
-        String lnk = (l->link).value();
+        if ((l->duration).has_value()) {
+            lc.setDuration((double) (l->duration).value());
+        }
+
+        if ((l->color).has_value()) {
+            lc.setColor(Colour((l->color).value()));
+        }
+
+        if ((l->link).has_value()) {
+            lc.setLink((l->link).value());
+        }
 
         float y;
 
@@ -450,8 +451,6 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
                 y = LabelOverlayComponent::pitchToRelativeY(p);
             }
         }
-
-        OutputLabelComponent lc = OutputLabelComponent(t, lbl, dur, dsc, clr, lnk);
 
         if (isOverlay) {
             auto lo = static_cast<LabelOverlayComponent*>(&lc);

@@ -7,7 +7,7 @@ using namespace juce;
 class OutputLabelComponent : public Label
 {
 public:
-    OutputLabelComponent(double t, String lbl, double dur, String dsc, Colour clr, String lnk);
+    OutputLabelComponent(double t, String lbl, double dur = 0.0, String dsc = "", Colour clr = Colours::purple.withAlpha(0.8f), String lnk = "");
     OutputLabelComponent(const OutputLabelComponent& other);
     ~OutputLabelComponent();
 
