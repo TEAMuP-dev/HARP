@@ -1,58 +1,32 @@
 #include "OutputLabelComponent.h"
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y)
+OutputLabelComponent::OutputLabelComponent(double t,
+                                           String lbl,
+                                           double dur = 0.0,
+                                           String dsc = "",
+                                           Colour clr = Colours::purple.withAlpha(0.8f),
+                                           String lnk = "")
 {
     setTime(t);
     setLabel(lbl);
-    setRelativeY(y);
+    setDuration(dur);
+
+    if (dsc.isEmpty())
+    {
+        dsc = lbl;
+    }
+
+    setDescription(dsc);
+    setColor(clr);
+    setLink(lnk);
 
     setDefaultAttributes();
 }
 
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur)
-    : LabelOverlayComponent(t, lbl, y)
-{
-    setDuration(dur);
-}
-
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, String dsc)
-    : LabelOverlayComponent(t, lbl, y)
-{
-    setDescription(dsc);
-}
-
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc)
-    : LabelOverlayComponent(t, lbl, y)
-{
-    setDuration(dur);
-    setDescription(dsc);
-}
-
-LabelOverlayComponent::LabelOverlayComponent(double t,
-                                             String lbl,
-                                             float y,
-                                             double dur,
-                                             String dsc,
-                                             Colour clr)
-    : LabelOverlayComponent(t, lbl, y)
-{
-    setDuration(dur);
-    setDescription(dsc);
-    setColor(clr);
-
-    setColour(Label::backgroundColourId, getColor());
-}
-
-LabelOverlayComponent::LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour clr, String lnk) : LabelOverlayComponent(t, lbl, y, dur, dsc, clr)
-{
-    setLink(lnk);
-}
-
-LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
+OutputLabelComponent::OutputLabelComponent(const OutputLabelComponent& other)
 {
     setTime(other.getTime());
     setLabel(other.getLabel());
-    setRelativeY(other.getRelativeY());
     setDuration(other.getDuration());
     setDescription(other.getDescription());
     setColor(other.getColor());
@@ -61,9 +35,9 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
     setDefaultAttributes();
 }
 
-LabelOverlayComponent::~LabelOverlayComponent() {}
+OutputLabelComponent::~OutputLabelComponent() {}
 
-void LabelOverlayComponent::setDefaultAttributes()
+void OutputLabelComponent::setDefaultAttributes()
 {
     setText(getLabel(), dontSendNotification);
     setJustificationType(Justification::centred);
@@ -74,14 +48,41 @@ void LabelOverlayComponent::setDefaultAttributes()
     //setInterceptsMouseClicks(false, false);
 }
 
-// returns the appropriate mouse cursor based on the link state
-juce::MouseCursor LabelOverlayComponent::getMouseCursor()
+juce::MouseCursor OutputLabelComponent::getMouseCursor()
 {
-    // Check if the label should behave like a link
     if (link.isNotEmpty())
         return juce::MouseCursor::PointingHandCursor;
     else
         return juce::MouseCursor::NormalCursor;
+}
+
+OverheadLabelComponent::OverheadLabelComponent(double t,
+                                             String lbl,
+                                             double dur,
+                                             String dsc,
+                                             Colour clr,
+                                             String lnk)
+    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk) {}
+
+OverheadLabelComponent::OverheadLabelComponent(const OverheadLabelComponent& other)
+    : OutputLabelComponent(other) {}
+
+LabelOverlayComponent::LabelOverlayComponent(double t,
+                                             String lbl,
+                                             float y,
+                                             double dur,
+                                             String dsc,
+                                             Colour clr,
+                                             String lnk)
+    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk)
+{
+    setRelativeY(y);
+}
+
+LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
+    : OutputLabelComponent(other)
+{
+    setRelativeY(other.getRelativeY());
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)

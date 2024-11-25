@@ -177,6 +177,12 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
                 clr = Colour((l->color).value());
             }
 
+            String lnk = "";
+
+            if ((l->link).has_value()) {
+                lnk = (l->link).value();
+            }
+
             if ((midiLabel->pitch).has_value())
             {
                 float p = (midiLabel->pitch).value();
@@ -184,7 +190,7 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
                 float y = LabelOverlayComponent::pitchToRelativeY(p);
 
                 addLabelOverlay(
-                    LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr));
+                    LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr, lnk));
             }
             else
             {
