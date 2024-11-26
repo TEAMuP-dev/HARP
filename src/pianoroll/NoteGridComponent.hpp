@@ -17,6 +17,8 @@ public:
         velocity = v;
         startTime = s;
         duration = d;
+
+        setInterceptsMouseClicks(false, false);
     }
 
     MidiNoteComponent(const MidiNoteComponent& other)
@@ -25,6 +27,8 @@ public:
         velocity = other.velocity;
         startTime = other.startTime;
         duration = other.duration;
+
+        setInterceptsMouseClicks(false, false);
     }
 
     void paint(Graphics& g)

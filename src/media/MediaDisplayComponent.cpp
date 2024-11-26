@@ -108,6 +108,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
         yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
 
         l->setBounds(xPos, yPos, labelWidth, labelHeight);
+        l->toFront(true);
     }
 }
 
