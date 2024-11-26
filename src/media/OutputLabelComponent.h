@@ -28,6 +28,7 @@ public:
     String getLink() const { return link; }
 
     juce::MouseCursor getMouseCursor() override;
+    void mouseUp(const MouseEvent& e) override;
 
 protected:
     double time;
