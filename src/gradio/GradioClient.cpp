@@ -14,8 +14,7 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
     {
         Error error;
         error.type = ErrorType::MissingJsonKey;
-        error.devMessage = "Key " + key + " not found in response";
-        error.userMessage = error.devMessage;
+        error.devMessage = "Missing Key in JSON :: Key " + key + " not found in response";
         return OpResult::fail(error);
     }
 
@@ -139,11 +138,12 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
         // model = model.replace("-", "_");
         if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
         {
-            spaceInfo.huggingface = spaceAddress;
+            // spaceInfo.huggingface = spaceAddress;
+            spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
             // the embedded gradio app URL doesn't contain "_". So if the model name
             // contains "_", we replace it with "-"
-            model = model.replace("_", "-");
-            spaceInfo.gradio = "https://" + user + "-" + model + ".hf.space";
+            // model = model.replace("_", "-");
+            spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space";
         }
         else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
         {
@@ -208,6 +208,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage = "Failed to create input stream for file upload request.";
         return OpResult::fail(error);
     }
@@ -280,6 +281,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage = "Failed to create input stream for POST request to " + endpoint;
         return OpResult::fail(error);
     }
@@ -289,6 +291,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
+        error.code = statusCode;
         error.devMessage =
             "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
         return OpResult::fail(error);
@@ -349,8 +352,9 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
 
     if (stream == nullptr)
     {
+        error.code = statusCode;
         error.devMessage =
-            "Failed to create input stream for GET request to " + callID + "/" + eventID;
+            "Failed to create input stream for GET request \nto " + callID + "/" + eventID;
         return OpResult::fail(error);
     }
 

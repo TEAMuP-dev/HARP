@@ -587,9 +587,28 @@ public:
                         }
                         else if (chosen == "Open Space URL")
                         {
-                            URL spaceUrl =
-                                this->model->getGradioClient().getSpaceInfo().huggingface;
-                            spaceUrl.launchInDefaultBrowser();
+                            // get the spaceInfo
+                            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                            if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+                            {
+                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+                            {
+                                URL spaceUrl =
+                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                            {
+                                // either choose hugingface or gradio, they are the same
+                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            // URL spaceUrl =
+                            //     this->model->getGradioClient().getSpaceInfo().huggingface;
+                            // spaceUrl.launchInDefaultBrowser();
                         }
 
                         if (lastLoadedModelItemIndex == -1)
@@ -861,24 +880,26 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
-            "hugggof/vampnet-music",
             "cwitkowitz/timbre-trap",
+            "npruyne/audio_similarity",
+            "hugggof/vampnet-music",
             "hugggof/vampnet-percussion",
             "hugggof/vampnet-n64",
             "hugggof/vampnet-choir",
             "hugggof/vampnet-opera",
             "hugggof/vampnet-machines",
             "hugggof/vampnet-birds",
-            "descript/vampnet",
-            "pharoAIsanders420/micro-musicgen-jungle",
+            // "descript/vampnet",
+            // "pharoAIsanders420/micro-musicgen-jungle",
             "hugggof/nesquik",
-            "hugggof/pitch_shifter",
+            // "hugggof/pitch_shifter",
             "hugggof/harmonic_percussive",
-            "xribene/pitch_shifter",
+            // "xribene/pitch_shifter",
             "xribene/pitch_shifter_awake",
-            "xribene/pitch_shifter_slow",
+            "xribene/midi_pitch_shifter",
+            // "xribene/pitch_shifter_slow",
             // "http://localhost:7860",
-            "https://xribene-midi-pitch-shifter.hf.space/",
+            // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
             // "https://huggingface.co/spaces/xribene/pitch_shifter",
@@ -1557,17 +1578,23 @@ private:
             mModelStatusTimer->setModel(model);
             ctrlComponent.populateGui();
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST
-                || spaceInfo.status == SpaceInfo::Status::GRADIO)
+            if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                
             {
                 spaceUrlButton.setButtonText("open localhost in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.gradio));
             }
-            else
+            else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
             {
                 spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
                                              + spaceInfo.modelName + " in browser");
                 spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+            }
+            else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+            {
+                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
+                                             + spaceInfo.modelName + " in browser");
+                spaceUrlButton.setURL(URL(spaceInfo.gradio));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(spaceUrlButton);

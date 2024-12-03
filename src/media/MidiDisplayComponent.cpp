@@ -7,7 +7,7 @@ MidiDisplayComponent::MidiDisplayComponent()
     addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
-        "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical scroll to zoom in/out.\nHorizontal scroll to move the pianoroll.";
+        "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
 }
 
 MidiDisplayComponent::~MidiDisplayComponent()
