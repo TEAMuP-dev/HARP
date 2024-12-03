@@ -40,7 +40,6 @@ void OutputLabelComponent::setDefaultAttributes()
     setColour(Label::backgroundColourId, getColor());
 
     setMinimumHorizontalScale(0.0f);
-    //setInterceptsMouseClicks(false, false);
 }
 
 juce::MouseCursor OutputLabelComponent::getMouseCursor()
