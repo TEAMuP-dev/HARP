@@ -17,6 +17,8 @@ MediaDisplayComponent::MediaDisplayComponent()
 
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
+
+    addAndMakeVisible(overheadPanel);
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -44,16 +46,37 @@ void MediaDisplayComponent::paint(Graphics& g)
 
 void MediaDisplayComponent::resized()
 {
+    repositionOverheadPanel();
     repositionContent();
     repositionScrollBar();
     repositionLabels();
 }
 
+void MediaDisplayComponent::repositionOverheadPanel()
+{
+    if (overheadLabels.size())
+    {
+        overheadPanel.setBounds(getLocalBounds()
+                                    .removeFromTop(labelHeight + 2 * controlSpacing + 2)
+                                    .reduced(controlSpacing));
+    }
+    else
+    {
+        overheadPanel.setBounds(getLocalBounds().removeFromTop(0));
+    }
+}
+
 Rectangle<int> MediaDisplayComponent::getContentBounds()
 {
-    return getLocalBounds()
-        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing))
-        .reduced(controlSpacing);
+    Rectangle<int> contentBounds = getLocalBounds()
+        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
+
+    if (overheadLabels.size())
+    {
+        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
+    }
+
+    return contentBounds.reduced(controlSpacing);
 }
 
 void MediaDisplayComponent::repositionScrollBar()
@@ -65,7 +88,43 @@ void MediaDisplayComponent::repositionScrollBar()
 
 void MediaDisplayComponent::repositionOverheadLabels()
 {
-    // for (auto l : oveheadLabels) {}
+    if (! visibleRange.getLength())
+    {
+        return;
+    }
+
+    float mediaHeight = getMediaHeight();
+    float mediaWidth = getMediaWidth();
+
+    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
+
+    float minLabelWidth = 0.1 * getMediaWidth();
+    float maxLabelWidth = 0.10 * pixelsPerSecond;
+
+    float contentWidth = getContentBounds().getWidth();
+    float minVisibilityWidth = contentWidth / 200.0f;
+    float maxVisibilityWidth = contentWidth / 3.0f;
+
+    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
+    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
+
+    for (auto l : overheadLabels)
+    {
+        float textWidth = l->getFont().getStringWidthFloat(l->getText());
+        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * textSpacing));
+
+        // TODO - l->getDuration() unused
+
+        float xPos = timeToMediaX(l->getTime());
+
+        xPos -= labelWidth / 2.0f;
+
+        xPos = jmax(timeToMediaX(0.0), xPos);
+        xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
+
+        l->setBounds(xPos, 1, labelWidth, labelHeight);
+        l->toFront(true);
+    }
 }
 
 void MediaDisplayComponent::repositionLabelOverlays()
@@ -108,6 +167,7 @@ void MediaDisplayComponent::repositionLabelOverlays()
         yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
 
         l->setBounds(xPos, yPos, labelWidth, labelHeight);
+        l->toFront(true);
     }
 }
 
@@ -148,6 +208,7 @@ void MediaDisplayComponent::setupDisplay(const URL& filePath)
 
 void MediaDisplayComponent::updateDisplay(const URL& filePath)
 {
+    //clearLabels();
     resetDisplay();
 
     loadMediaFile(filePath);
@@ -316,32 +377,6 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
-    for (OverheadLabelComponent* label : oveheadLabels)
-    {
-        if (label->isMouseOver()) {
-            //TODO
-        }
-    }
-
-    for (LabelOverlayComponent* label : labelOverlays)
-    {   
-        DBG("Checking label overlap");
-        if (label->isMouseOver()) {
-            String link = label->getLink();
-            DBG("Attempting to load link " << link);
-            if (link != "") {
-                URL link_url = URL(link);
-                if (!link_url.isWellFormed()) {
-                    DBG("Link appears malformed: " << link);
-                } else {
-                    DBG("Opening link " << link);
-                    link_url.launchInDefaultBrowser();
-                    return;
-                }
-            }
-        }
-    }
-
     if (e.eventComponent == getMediaComponent())
     {
         start();
@@ -385,7 +420,7 @@ String MediaDisplayComponent::getMediaHandlerInstructions()
 {
     String toolTipText = mediaHandlerInstructions;
 
-    for (OverheadLabelComponent* label : oveheadLabels)
+    for (OverheadLabelComponent* label : overheadLabels)
     {
         if (label->isMouseOver())
         {
@@ -410,32 +445,57 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
     for (const auto& l : labels)
     {
-        String lbl = l->label;
-        String dsc = l->description;
+        OutputLabelComponent lc = OutputLabelComponent((double) l->t, l->label);
 
-        if (dsc.isEmpty())
-        {
-            dsc = lbl;
+        if ((l->description).has_value()) {
+            lc.setDescription((l->description).value());
         }
 
-        float dur = 0.0f;
-
-        if ((l->duration).has_value())
-        {
-            dur = (l->duration).value();
+        if ((l->duration).has_value()) {
+            lc.setDuration((double) (l->duration).value());
         }
 
-        Colour color = Colours::purple.withAlpha(0.8f);
-
-        if ((l->color).has_value())
-        {
-            color = Colour((l->color).value());
+        if ((l->color).has_value()) {
+            lc.setColor(Colour((l->color).value()));
         }
 
-        if (! dynamic_cast<AudioLabel*>(l.get()) && ! dynamic_cast<SpectrogramLabel*>(l.get())
-            && ! dynamic_cast<MidiLabel*>(l.get()))
-        {
-            // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, color);
+        if ((l->link).has_value()) {
+            lc.setLink((l->link).value());
+        }
+
+        float y;
+
+        bool isOverlay = false;
+
+        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get())) {
+            if ((audioLabel->amplitude).has_value()) {
+                isOverlay = true;
+
+                float amp = (audioLabel->amplitude).value();
+
+                y = LabelOverlayComponent::amplitudeToRelativeY(amp);
+            }
+        }
+
+        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
+            if ((midiLabel->pitch).has_value()) {
+                isOverlay = true;
+
+                float p = (midiLabel->pitch).value();
+
+                y = LabelOverlayComponent::pitchToRelativeY(p);
+            }
+        }
+
+        if (isOverlay) {
+            auto lo = static_cast<LabelOverlayComponent*>(&lc);
+            lo->setRelativeY(y);
+
+            addLabelOverlay(*lo);
+        } else {
+            auto ol = static_cast<OverheadLabelComponent*>(&lc);
+            
+            addOverheadLabel(*ol);
         }
     }
 }
@@ -451,7 +511,11 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
 {
-    // TODO
+    OverheadLabelComponent* label = new OverheadLabelComponent(l);
+    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    overheadLabels.add(label);
+
+    overheadPanel.addAndMakeVisible(label);
 }
 
 void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
@@ -473,14 +537,15 @@ void MediaDisplayComponent::clearLabels()
 
     labelOverlays.clear();
 
-    /*for (int i = 0; i < oveheadLabels.size(); i++) {
-        OverheadLabelComponent* l = oveheadLabels.getReference(i);
+    for (int i = 0; i < overheadLabels.size(); i++)
+    {
+        OverheadLabelComponent* l = overheadLabels.getReference(i);
         mediaComponent->removeChildComponent(l);
 
         delete l;
-    }*/
+    }
 
-    oveheadLabels.clear();
+    overheadLabels.clear();
 
     resized();
     repaint();
