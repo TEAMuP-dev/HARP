@@ -31,7 +31,7 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
 void MidiDisplayComponent::repositionOverheadPanel()
 {
     Rectangle<int> overheadPanelArea =
-        getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing);
+        getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
     overheadPanelArea = overheadPanelArea.removeFromRight(
         overheadPanelArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
     overheadPanelArea =

@@ -57,7 +57,7 @@ void MediaDisplayComponent::repositionOverheadPanel()
     if (overheadLabels.size())
     {
         overheadPanel.setBounds(getLocalBounds()
-                                    .removeFromTop(labelHeight + 2 * controlSpacing)
+                                    .removeFromTop(labelHeight + 2 * controlSpacing + 2)
                                     .reduced(controlSpacing));
     }
     else
@@ -73,7 +73,7 @@ Rectangle<int> MediaDisplayComponent::getContentBounds()
 
     if (overheadLabels.size())
     {
-        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing);
+        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
     }
 
     return contentBounds.reduced(controlSpacing);
@@ -93,7 +93,38 @@ void MediaDisplayComponent::repositionOverheadLabels()
         return;
     }
 
-    // for (auto l : overheadLabels) {}
+    float mediaHeight = getMediaHeight();
+    float mediaWidth = getMediaWidth();
+
+    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
+
+    float minLabelWidth = 0.1 * getMediaWidth();
+    float maxLabelWidth = 0.10 * pixelsPerSecond;
+
+    float contentWidth = getContentBounds().getWidth();
+    float minVisibilityWidth = contentWidth / 200.0f;
+    float maxVisibilityWidth = contentWidth / 3.0f;
+
+    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
+    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
+
+    for (auto l : overheadLabels)
+    {
+        float textWidth = l->getFont().getStringWidthFloat(l->getText());
+        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * textSpacing));
+
+        // TODO - l->getDuration() unused
+
+        float xPos = timeToMediaX(l->getTime());
+
+        xPos -= labelWidth / 2.0f;
+
+        xPos = jmax(timeToMediaX(0.0), xPos);
+        xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
+
+        l->setBounds(xPos, 1, labelWidth, labelHeight);
+        l->toFront(true);
+    }
 }
 
 void MediaDisplayComponent::repositionLabelOverlays()
@@ -484,7 +515,7 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
     label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
     overheadLabels.add(label);
 
-    getMediaComponent()->addAndMakeVisible(label);
+    overheadPanel.addAndMakeVisible(label);
 }
 
 void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
