@@ -13,6 +13,7 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
+    void repositionOverheadPanel() override;
     void repositionContent() override;
     void repositionScrollBar() override;
 

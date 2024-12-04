@@ -9,6 +9,15 @@
 
 using namespace juce;
 
+class OverheadPanel : public Component
+{
+public:
+    void paint(Graphics& g) override
+    {
+        g.fillAll(Colours::darkgrey.darker());
+    }
+};
+
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
@@ -24,6 +33,7 @@ public:
 
     void paint(Graphics& g) override;
     virtual void resized() override;
+    virtual void repositionOverheadPanel();
     Rectangle<int> getContentBounds();
     virtual void repositionContent() {};
     virtual void repositionScrollBar();
@@ -116,8 +126,13 @@ protected:
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
 
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
+
     Range<double> visibleRange;
 
+    OverheadPanel overheadPanel;
     ScrollBar horizontalScrollBar { false };
 
     String mediaHandlerInstructions;
@@ -153,10 +168,6 @@ private:
     DrawableRectangle currentPositionMarker;
 
     double currentHorizontalZoomFactor;
-
-    const int textSpacing = 2;
-    const int minFontSize = 10;
-    const int labelHeight = 20;
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> overheadLabels;

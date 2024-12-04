@@ -17,6 +17,8 @@ MediaDisplayComponent::MediaDisplayComponent()
 
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
+
+    addAndMakeVisible(overheadPanel);
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -44,16 +46,37 @@ void MediaDisplayComponent::paint(Graphics& g)
 
 void MediaDisplayComponent::resized()
 {
+    repositionOverheadPanel();
     repositionContent();
     repositionScrollBar();
     repositionLabels();
 }
 
+void MediaDisplayComponent::repositionOverheadPanel()
+{
+    if (overheadLabels.size())
+    {
+        overheadPanel.setBounds(getLocalBounds()
+                                    .removeFromTop(labelHeight + 2 * controlSpacing)
+                                    .reduced(controlSpacing));
+    }
+    else
+    {
+        overheadPanel.setBounds(getLocalBounds().removeFromTop(0));
+    }
+}
+
 Rectangle<int> MediaDisplayComponent::getContentBounds()
 {
-    return getLocalBounds()
-        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing))
-        .reduced(controlSpacing);
+    Rectangle<int> contentBounds = getLocalBounds()
+        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
+
+    if (overheadLabels.size())
+    {
+        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing);
+    }
+
+    return contentBounds.reduced(controlSpacing);
 }
 
 void MediaDisplayComponent::repositionScrollBar()
@@ -65,6 +88,11 @@ void MediaDisplayComponent::repositionScrollBar()
 
 void MediaDisplayComponent::repositionOverheadLabels()
 {
+    if (! visibleRange.getLength())
+    {
+        return;
+    }
+
     // for (auto l : overheadLabels) {}
 }
 
@@ -149,6 +177,7 @@ void MediaDisplayComponent::setupDisplay(const URL& filePath)
 
 void MediaDisplayComponent::updateDisplay(const URL& filePath)
 {
+    //clearLabels();
     resetDisplay();
 
     loadMediaFile(filePath);
