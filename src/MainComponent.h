@@ -898,7 +898,7 @@ public:
             "xribene/pitch_shifter_awake",
             "xribene/midi_pitch_shifter",
             // "xribene/pitch_shifter_slow",
-            // "http://localhost:7860",
+            "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
