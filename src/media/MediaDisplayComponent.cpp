@@ -86,95 +86,57 @@ void MediaDisplayComponent::repositionScrollBar()
                                       .reduced(controlSpacing));
 }
 
-void MediaDisplayComponent::repositionOverheadLabels()
-{
-    if (! visibleRange.getLength())
-    {
-        return;
-    }
-
-    float mediaHeight = getMediaHeight();
-    float mediaWidth = getMediaWidth();
-
-    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
-
-    float minLabelWidth = 0.1 * getMediaWidth();
-    float maxLabelWidth = 0.10 * pixelsPerSecond;
-
-    float contentWidth = getContentBounds().getWidth();
-    float minVisibilityWidth = contentWidth / 200.0f;
-    float maxVisibilityWidth = contentWidth / 3.0f;
-
-    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
-    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
-
-    for (auto l : overheadLabels)
-    {
-        float textWidth = l->getFont().getStringWidthFloat(l->getText());
-        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * textSpacing));
-
-        // TODO - l->getDuration() unused
-
-        float xPos = timeToMediaX(l->getTime());
-
-        xPos -= labelWidth / 2.0f;
-
-        xPos = jmax(timeToMediaX(0.0), xPos);
-        xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
-
-        l->setBounds(xPos, 1, labelWidth, labelHeight);
-        l->toFront(true);
-    }
-}
-
-void MediaDisplayComponent::repositionLabelOverlays()
-{
-    if (! visibleRange.getLength())
-    {
-        return;
-    }
-
-    float mediaHeight = getMediaHeight();
-    float mediaWidth = getMediaWidth();
-
-    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
-
-    float minLabelWidth = 0.1 * getMediaWidth();
-    float maxLabelWidth = 0.10 * pixelsPerSecond;
-
-    float contentWidth = getContentBounds().getWidth();
-    float minVisibilityWidth = contentWidth / 200.0f;
-    float maxVisibilityWidth = contentWidth / 3.0f;
-
-    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
-    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
-
-    for (auto l : labelOverlays)
-    {
-        float textWidth = l->getFont().getStringWidthFloat(l->getText());
-        float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, textWidth + 2 * textSpacing));
-
-        // TODO - l->getDuration() unused
-
-        float xPos = timeToMediaX(l->getTime());
-        float yPos = l->getRelativeY() * mediaHeight;
-
-        xPos -= labelWidth / 2.0f;
-        yPos -= labelHeight / 2.0f;
-
-        xPos = jmax(timeToMediaX(0.0), xPos);
-        xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
-        yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
-
-        l->setBounds(xPos, yPos, labelWidth, labelHeight);
-        l->toFront(true);
-    }
-}
-
 void MediaDisplayComponent::repositionLabels()
 {
-    repositionOverheadLabels();
-    repositionLabelOverlays();
+    if (! visibleRange.getLength())
+    {
+        return;
+    }
+
+    float mediaWidth = getMediaWidth();
+    float mediaHeight = getMediaHeight();
+
+    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
+
+    float minLabelWidth = 0.1 * mediaWidth;
+    float maxLabelWidth = 0.10 * pixelsPerSecond;
+
+    float contentWidth = getContentBounds().getWidth();
+    float minVisibilityWidth = contentWidth / 200.0f;
+    float maxVisibilityWidth = contentWidth / 3.0f;
+
+    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
+    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
+
+    auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto labels) {
+        for (auto l : labels)
+        {
+            float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2 * textSpacing));
+
+            float xPos = timeToMediaX(l->getTime());
+
+            xPos -= labelWidth / 2.0f;
+            xPos = jmax(timeToMediaX(0.0), xPos);
+            xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
+
+            float yPos = 1.0f;
+
+            if (auto lo = dynamic_cast<LabelOverlayComponent*>(l))
+            {
+                yPos = lo->getRelativeY() * mediaHeight;
+                yPos -= labelHeight / 2.0f;
+                yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
+            }
+
+            l->setBounds(xPos, yPos, labelWidth, labelHeight);
+            l->toFront(true);
+
+            // TODO - l->getDuration() unused
+        }
+    };
+
+    positionLabels(overheadLabels);
+    positionLabels(labelOverlays);
 }
 
 void MediaDisplayComponent::changeListenerCallback(ChangeBroadcaster*)

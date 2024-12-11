@@ -43,8 +43,6 @@ public:
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
-    void repositionOverheadLabels();
-    void repositionLabelOverlays();
     void repositionLabels();
 
     void changeListenerCallback(ChangeBroadcaster*) override;

@@ -27,6 +27,8 @@ public:
     Colour getColor() const { return color; }
     String getLink() const { return link; }
 
+    float getTextWidth();
+
     juce::MouseCursor getMouseCursor() override;
     void mouseUp(const MouseEvent& e) override;
 

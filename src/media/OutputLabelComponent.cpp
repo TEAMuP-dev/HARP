@@ -42,6 +42,11 @@ void OutputLabelComponent::setDefaultAttributes()
     setMinimumHorizontalScale(0.0f);
 }
 
+float OutputLabelComponent::getTextWidth()
+{
+    return getFont().getStringWidthFloat(getText());
+}
+
 juce::MouseCursor OutputLabelComponent::getMouseCursor()
 {
     if (link.isNotEmpty())
