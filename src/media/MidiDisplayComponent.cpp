@@ -28,6 +28,19 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
+void MidiDisplayComponent::repositionOverheadPanel()
+{
+    Rectangle<int> overheadPanelArea =
+        getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
+    overheadPanelArea = overheadPanelArea.removeFromRight(
+        overheadPanelArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
+    overheadPanelArea =
+        overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
+                                     - 4 * pianoRoll.getScrollBarSpacing());
+
+    overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
+}
+
 void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
 
 void MidiDisplayComponent::repositionScrollBar()
@@ -145,53 +158,6 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
 {
     pianoRoll.updateVisibleMediaRange(newRange);
     MediaDisplayComponent::updateVisibleRange(newRange);
-}
-
-void MidiDisplayComponent::addLabels(LabelList& labels)
-{
-    MediaDisplayComponent::addLabels(labels);
-
-    for (const auto& l : labels)
-    {
-        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get()))
-        {
-            String lbl = l->label;
-            String dsc = l->description;
-
-            if (dsc.isEmpty())
-            {
-                dsc = lbl;
-            }
-
-            float dur = 0.0f;
-
-            if ((l->duration).has_value())
-            {
-                dur = (l->duration).value();
-            }
-
-            Colour clr = Colours::purple.withAlpha(0.8f);
-
-            if ((l->color).has_value())
-            {
-                clr = Colour((l->color).value());
-            }
-
-            if ((midiLabel->pitch).has_value())
-            {
-                float p = (midiLabel->pitch).value();
-
-                float y = LabelOverlayComponent::pitchToRelativeY(p);
-
-                addLabelOverlay(
-                    LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr));
-            }
-            else
-            {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr);
-            }
-        }
-    }
 }
 
 void MidiDisplayComponent::resetDisplay()

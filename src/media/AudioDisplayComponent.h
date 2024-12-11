@@ -40,8 +40,6 @@ public:
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
     double getTimeAtOrigin() override { return visibleRange.getStart(); }
 
-    void addLabels(LabelList& labels) override;
-
 private:
     void resetDisplay() override;
 

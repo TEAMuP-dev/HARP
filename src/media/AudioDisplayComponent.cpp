@@ -87,56 +87,6 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
         audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
 }
 
-void AudioDisplayComponent::addLabels(LabelList& labels)
-{
-    MediaDisplayComponent::addLabels(labels);
-
-    for (const auto& l : labels)
-    {
-        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get()))
-        {
-            String lbl = l->label;
-            String dsc = l->description;
-
-            if (dsc.isEmpty())
-            {
-                dsc = lbl;
-            }
-
-            float dur = 0.0f;
-
-            if ((l->duration).has_value())
-            {
-                dur = (l->duration).value();
-            }
-
-            Colour clr = Colours::purple.withAlpha(0.8f);
-
-            if ((l->color).has_value())
-            {
-                clr = Colour((l->color).value());
-            }
-
-            String lnk = "";
-
-            if ((l->link).has_value()) {
-                lnk = (l->link).value();
-            }
-
-
-            if ((audioLabel->amplitude).has_value()) {
-                float amp = (audioLabel->amplitude).value();
-
-                float y = LabelOverlayComponent::amplitudeToRelativeY(amp);
-
-                addLabelOverlay(LabelOverlayComponent((double) l->t, lbl, y, (double) dur, dsc, clr, lnk));
-            } else {
-                // TODO - OverheadLabelComponent((double) l->t, lbl, (double) dur, dsc, clr, lnk);
-            }
-        }
-    }
-}
-
 void AudioDisplayComponent::resetDisplay()
 {
     MediaDisplayComponent::resetTransport();
