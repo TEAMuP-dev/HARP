@@ -57,14 +57,14 @@ public:
     {
         File inputMediaFile(commandLine.unquoted().trim());
 
-        if (inputMediaFile.existsAsFile())
-        {
-            URL inputMediaURL = URL(inputMediaFile);
-            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-            {
-                mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
-            }
-        }
+        // if (inputMediaFile.existsAsFile())
+        // {
+        //     URL inputMediaURL = URL(inputMediaFile);
+        //     if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+        //     {
+        //         mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
+        //     }
+        // }
     }
 
     void anotherInstanceStarted(const juce::String& commandLine) override

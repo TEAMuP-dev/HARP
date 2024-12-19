@@ -177,7 +177,9 @@ public:
         return OpResult::ok();
     }
 
-    OpResult process(juce::File filetoProcess)
+    // Shouldn't take a file for input. It should just visit 
+    // all media displays and controls and get their values. 
+    OpResult process(juce::File filetoProcess, juce::File outputFile)
     {
         status2 = ModelStatus::STARTING;
         // Create an Error object in case we need it
@@ -272,12 +274,29 @@ public:
                 status2 = ModelStatus::ERROR;
                 error.devMessage =
                     "The " + juce::String(i)
-                    + "th element of the array of processed outputs we received from the gradio app is not an object.";
+                    + "th returned element of the process_fn function in the gradio-app is not an object.";
                 return OpResult::fail(error);
             }
             // Make sure the object has a "meta" key
-            // Gradio output compoenents like File and Audio store metadata in the "meta" key
+            // Gradio output components like File and Audio store metadata in the "meta" key
             // so we can use that to identify what kind of output it is
+            if (!procObj.getDynamicObject())
+            {
+                status2 = ModelStatus::ERROR;
+                error.devMessage = "The " + juce::String(i) + 
+                    "th returned element of the process_fn function in the gradio-app is not a valid object. " +
+                    "Make sure you are using LabelList() and not just a python list, in process_fn, to return the output labels.";
+                return OpResult::fail(error);
+            }
+            if (!procObj.getDynamicObject()->hasProperty("meta"))
+            {
+                status2 = ModelStatus::ERROR;
+                error.type = ErrorType::MissingJsonKey;
+                error.devMessage = "The " + juce::String(i) + 
+                    "th element of the array of processed outputs does not have a meta object. " +
+                    "Make sure you are using LabelList() in process_fn to return the output labels.";
+                return OpResult::fail(error);
+            }
             juce::var meta = procObj.getDynamicObject()->getProperty("meta");
             // meta should be an object
             if (! meta.isObject())
@@ -286,7 +305,7 @@ public:
                 error.type = ErrorType::MissingJsonKey;
                 error.devMessage =
                     "The " + juce::String(i)
-                    + "th element of the array of processed outputs does not have a meta object.";
+                    + "th element of the array of processed outputs does not have a valid meta object.";
                 return OpResult::fail(error);
             }
             juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
@@ -325,7 +344,8 @@ public:
                 // Make a juce::File from the path
                 juce::File processedFile(outputFilePath);
                 // Replace the input file with the processed file
-                processedFile.moveFileTo(filetoProcess);
+                // processedFile.moveFileTo(filetoProcess);
+                processedFile.moveFileTo(outputFile);
             }
             else if (procObjType == "pyharp.LabelList")
             {
