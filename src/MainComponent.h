@@ -287,161 +287,161 @@ public:
 
     void saveCallback()
     {
-        if (saveEnabled)
-        {
-            DBG("HARPProcessorEditor::buttonClicked save button listener activated");
-            mediaDisplay->overwriteTarget();
+        // if (saveEnabled)
+        // {
+        //     DBG("HARPProcessorEditor::buttonClicked save button listener activated");
+        //     mediaDisplay->overwriteTarget();
 
-            saveEnabled = false;
-            setStatus("File saved successfully");
-        }
-        else
-        {
-            DBG("save button is disabled");
-            setStatus("Nothing to save");
-        }
+        //     saveEnabled = false;
+        //     setStatus("File saved successfully");
+        // }
+        // else
+        // {
+        //     DBG("save button is disabled");
+        //     setStatus("Nothing to save");
+        // }
     }
 
     void saveAsCallback()
     {
-        if (mediaDisplay->isFileLoaded())
-        {
-            StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-            String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
-            saveFileBrowser = std::make_unique<FileChooser>(
-                "Select a media file...", File(), filePatternsAllowed);
-            // Launch the file chooser dialog asynchronously
-            saveFileBrowser->launchAsync(
-                FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
-                [this](const FileChooser& browser)
-                {
-                    StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-                    File newFile = browser.getResult();
-                    if (newFile != File {})
-                    {
-                        if (newFile.getFileExtension().compare("") == 0)
-                        {
-                            newFile = newFile.withFileExtension(validExtensions[0]);
-                        }
-                        if (validExtensions.contains(newFile.getFileExtension()))
-                        {
-                            URL tempFilePath = mediaDisplay->getTempFilePath();
+        // if (mediaDisplay->isFileLoaded())
+        // {
+        //     StringArray validExtensions = mediaDisplay->getInstanceExtensions();
+        //     String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
+        //     saveFileBrowser = std::make_unique<FileChooser>(
+        //         "Select a media file...", File(), filePatternsAllowed);
+        //     // Launch the file chooser dialog asynchronously
+        //     saveFileBrowser->launchAsync(
+        //         FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
+        //         [this](const FileChooser& browser)
+        //         {
+        //             StringArray validExtensions = mediaDisplay->getInstanceExtensions();
+        //             File newFile = browser.getResult();
+        //             if (newFile != File {})
+        //             {
+        //                 if (newFile.getFileExtension().compare("") == 0)
+        //                 {
+        //                     newFile = newFile.withFileExtension(validExtensions[0]);
+        //                 }
+        //                 if (validExtensions.contains(newFile.getFileExtension()))
+        //                 {
+        //                     URL tempFilePath = mediaDisplay->getTempFilePath();
 
-                            // Attempt to save the file to the new location
-                            bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
-                            if (saveSuccessful)
-                            {
-                                // Inform the user of success
-                                AlertWindow::showMessageBoxAsync(AlertWindow::InfoIcon,
-                                                                 "Save As",
-                                                                 "File successfully saved as:\n"
-                                                                     + newFile.getFullPathName(),
-                                                                 "OK");
+        //                     // Attempt to save the file to the new location
+        //                     bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
+        //                     if (saveSuccessful)
+        //                     {
+        //                         // Inform the user of success
+        //                         AlertWindow::showMessageBoxAsync(AlertWindow::InfoIcon,
+        //                                                          "Save As",
+        //                                                          "File successfully saved as:\n"
+        //                                                              + newFile.getFullPathName(),
+        //                                                          "OK");
 
-                                // Update any necessary internal state
-                                // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
-                                DBG("File successfully saved as " << newFile.getFullPathName());
-                                loadMediaDisplay(newFile);
-                            }
-                            else
-                            {
-                                // Inform the user of failure
-                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                                 "Save As Failed",
-                                                                 "Failed to save file as:\n"
-                                                                     + newFile.getFullPathName(),
-                                                                 "OK");
-                                DBG("Failed to save file as " << newFile.getFullPathName());
-                            }
-                        }
-                        else
-                        {
-                            // Inform the user of failure
-                            AlertWindow::showMessageBoxAsync(
-                                AlertWindow::WarningIcon,
-                                "Save As Failed",
-                                "Can't save file with extension " + newFile.getFileExtension()
-                                    + " \n Valid extensions are: "
-                                    + validExtensions.joinIntoString(";"),
-                                "OK");
-                        }
-                    }
-                    else
-                    {
-                        DBG("Save As operation was cancelled by the user.");
-                    }
-                });
-        }
-        else
-        {
-            setStatus("Nothing to save. Please load an audio file first.");
-        }
+        //                         // Update any necessary internal state
+        //                         // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
+        //                         DBG("File successfully saved as " << newFile.getFullPathName());
+        //                         loadMediaDisplay(newFile);
+        //                     }
+        //                     else
+        //                     {
+        //                         // Inform the user of failure
+        //                         AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+        //                                                          "Save As Failed",
+        //                                                          "Failed to save file as:\n"
+        //                                                              + newFile.getFullPathName(),
+        //                                                          "OK");
+        //                         DBG("Failed to save file as " << newFile.getFullPathName());
+        //                     }
+        //                 }
+        //                 else
+        //                 {
+        //                     // Inform the user of failure
+        //                     AlertWindow::showMessageBoxAsync(
+        //                         AlertWindow::WarningIcon,
+        //                         "Save As Failed",
+        //                         "Can't save file with extension " + newFile.getFileExtension()
+        //                             + " \n Valid extensions are: "
+        //                             + validExtensions.joinIntoString(";"),
+        //                         "OK");
+        //                 }
+        //             }
+        //             else
+        //             {
+        //                 DBG("Save As operation was cancelled by the user.");
+        //             }
+        //         });
+        // }
+        // else
+        // {
+        //     setStatus("Nothing to save. Please load an audio file first.");
+        // }
     }
 
     void undoCallback()
     {
-        DBG("Undoing last edit");
+        // DBG("Undoing last edit");
 
-        // check if the audio file is loaded
-        if (! mediaDisplay->isFileLoaded())
-        {
-            // TODO - gray out undo option in this case?
-            // Fail with beep, we should just ignore this if it doesn't make sense
-            DBG("No file loaded to perform operation on");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-            return;
-        }
+        // // check if the audio file is loaded
+        // if (! mediaDisplay->isFileLoaded())
+        // {
+        //     // TODO - gray out undo option in this case?
+        //     // Fail with beep, we should just ignore this if it doesn't make sense
+        //     DBG("No file loaded to perform operation on");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        //     return;
+        // }
 
-        if (isProcessing)
-        {
-            DBG("Can't undo while processing occurring!");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-            return;
-        }
+        // if (isProcessing)
+        // {
+        //     DBG("Can't undo while processing occurring!");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        //     return;
+        // }
 
-        if (! mediaDisplay->iteratePreviousTempFile())
-        {
-            DBG("Nothing to undo!");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        }
-        else
-        {
-            saveEnabled = true;
-            DBG("Undo callback completed successfully");
-        }
+        // if (! mediaDisplay->iteratePreviousTempFile())
+        // {
+        //     DBG("Nothing to undo!");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        // }
+        // else
+        // {
+        //     saveEnabled = true;
+        //     DBG("Undo callback completed successfully");
+        // }
     }
 
     void redoCallback()
     {
-        DBG("Redoing last edit");
+        // DBG("Redoing last edit");
 
-        // check if the audio file is loaded
-        if (! mediaDisplay->isFileLoaded())
-        {
-            // TODO - gray out undo option in this case?
-            // Fail with beep, we should just ignore this if it doesn't make sense
-            DBG("No file loaded to perform operation on");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-            return;
-        }
+        // // check if the audio file is loaded
+        // if (! mediaDisplay->isFileLoaded())
+        // {
+        //     // TODO - gray out undo option in this case?
+        //     // Fail with beep, we should just ignore this if it doesn't make sense
+        //     DBG("No file loaded to perform operation on");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        //     return;
+        // }
 
-        if (isProcessing)
-        {
-            DBG("Can't redo while processing occurring!");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-            return;
-        }
+        // if (isProcessing)
+        // {
+        //     DBG("Can't redo while processing occurring!");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        //     return;
+        // }
 
-        if (! mediaDisplay->iterateNextTempFile())
-        {
-            DBG("Nothing to redo!");
-            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        }
-        else
-        {
-            saveEnabled = true;
-            DBG("Redo callback completed successfully");
-        }
+        // if (! mediaDisplay->iterateNextTempFile())
+        // {
+        //     DBG("Nothing to redo!");
+        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+        // }
+        // else
+        // {
+        //     saveEnabled = true;
+        //     DBG("Redo callback completed successfully");
+        // }
     }
 
     void loadModelCallback()
@@ -707,43 +707,43 @@ public:
 
     void focusCallback()
     {
-        if (mediaDisplay->isFileLoaded())
-        {
-            Time lastModTime =
-                mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
-            if (lastModTime > lastLoadTime)
-            {
-                // Create an AlertWindow
-                auto* reloadCheckWindow = new AlertWindow(
-                    "File has been modified",
-                    "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
-                    AlertWindow::QuestionIcon);
+        // if (mediaDisplay->isFileLoaded())
+        // {
+        //     Time lastModTime =
+        //         mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
+        //     if (lastModTime > lastLoadTime)
+        //     {
+        //         // Create an AlertWindow
+        //         auto* reloadCheckWindow = new AlertWindow(
+        //             "File has been modified",
+        //             "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
+        //             AlertWindow::QuestionIcon);
 
-                reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
-                reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
+        //         reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
+        //         reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
 
-                // Show the window and handle the result asynchronously
-                reloadCheckWindow->enterModalState(
-                    true,
-                    new CustomPathAlertCallback(
-                        [this, reloadCheckWindow](int result)
-                        {
-                            if (result == 1)
-                            { // Yes was clicked
-                                DBG("Reloading file");
-                                loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
-                            }
-                            else
-                            { // No was clicked or the window was closed
-                                DBG("Not reloading file");
-                                lastLoadTime =
-                                    Time::getCurrentTime(); //Reset time so we stop asking
-                            }
-                            delete reloadCheckWindow;
-                        }),
-                    true);
-            }
-        }
+        //         // Show the window and handle the result asynchronously
+        //         reloadCheckWindow->enterModalState(
+        //             true,
+        //             new CustomPathAlertCallback(
+        //                 [this, reloadCheckWindow](int result)
+        //                 {
+        //                     if (result == 1)
+        //                     { // Yes was clicked
+        //                         DBG("Reloading file");
+        //                         loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
+        //                     }
+        //                     else
+        //                     { // No was clicked or the window was closed
+        //                         DBG("Not reloading file");
+        //                         lastLoadTime =
+        //                             Time::getCurrentTime(); //Reset time so we stop asking
+        //                     }
+        //                     delete reloadCheckWindow;
+        //                 }),
+        //             true);
+        //     }
+        // }
     }
 
     explicit MainComponent(const URL& initialFilePath = URL())
@@ -769,13 +769,13 @@ public:
         saveFileButtonHandler.attach();
 
         // Initialize default media display
-        initializeMediaDisplay();
+        initializeMediaDisplay(0, mediaDisplay);
 
         if (initialFilePath.isLocalFile())
         {
             // TODO - it seems command line args are handled through Main.cpp and this is never hit
             // Load initial file into matching media display
-            loadMediaDisplay(initialFilePath.getLocalFile());
+            loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
         }
 
         // addAndMakeVisible (startStopButton);
@@ -990,6 +990,15 @@ public:
     ~MainComponent() override
     {
         mediaDisplay->removeChangeListener(this);
+        for (auto& inputMediaDisplay : inputMediaDisplays)
+        {
+            inputMediaDisplay->removeChangeListener(this);
+        }
+        for (auto& outputMediaDisplay : outputMediaDisplays)
+        {
+            outputMediaDisplay->removeChangeListener(this);
+        }
+
 
         // remove listeners
         mModelStatusTimer->removeChangeListener(this);
@@ -1037,8 +1046,8 @@ public:
     {
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
-        // check if the audio file is loaded
-        if (! mediaDisplay->isFileLoaded())
+        // check if the audio file is loaded for the first element of the inputMediaDisplays
+        if (! inputMediaDisplays[0]->isFileLoaded())
         {
             AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon,
@@ -1064,13 +1073,13 @@ public:
 
         bool matchingModel = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+        if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
         {
-            matchingModel = ! model->card().midi_in && ! model->card().midi_out;
+            matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
         }
         else
         {
-            matchingModel = model->card().midi_in && model->card().midi_out;
+            matchingModel = model->card().midi_in; //&& model->card().midi_out;
         }
         // Check if the model's type (Audio or MIDI) matches the input file's type
         // If not, show an error message and ask the user to either use another model
@@ -1087,8 +1096,8 @@ public:
             return;
         }
 
-        mediaDisplay->addNewTempFile();
-
+        inputMediaDisplays[0]->addNewTempFile();
+        outputMediaDisplays[0]->addNewTempFile();
         // print how many jobs are currently in the threadpool
         LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
@@ -1099,7 +1108,8 @@ public:
             // Individual job code for each iteration
             // copy the audio file, with the same filename except for an added _harp to the stem
             OpResult processingResult =
-                model->process(mediaDisplay->getTempFilePath().getLocalFile());
+                model->process(inputMediaDisplays[0]->getTempFilePath().getLocalFile(),
+                                outputMediaDisplays[0]->getTempFilePath().getLocalFile());
             if (processingResult.failed())
             {
                 Error processingError = processingResult.getError();
@@ -1125,37 +1135,37 @@ public:
         jobProcessorThread.signalTask();
     }
 
-    void initializeMediaDisplay(int mediaType = 0)
+    void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
     {
         if (mediaType == 1)
         {
-            mediaDisplay = std::make_unique<MidiDisplayComponent>();
+            cur_mediaDisplay = std::make_unique<MidiDisplayComponent>();
         }
         else
         {
             // Default to audio display
-            mediaDisplay = std::make_unique<AudioDisplayComponent>();
+            cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
         }
 
-        addAndMakeVisible(mediaDisplay.get());
-        mediaDisplay->addChangeListener(this);
+        addAndMakeVisible(cur_mediaDisplay.get());
+        cur_mediaDisplay->addChangeListener(this);
 
-        mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-        mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-        mediaDisplayHandler->onMouseMove = [this]()
-        { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
-        mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
-        mediaDisplayHandler->attach();
+        // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
+        // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
+        // mediaDisplayHandler->onMouseMove = [this]()
+        // { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
+        // mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
+        // mediaDisplayHandler->attach();
     }
 
-    void loadMediaDisplay(File mediaFile)
+    void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
     {
         // Check the file extension to determine type
         String extension = mediaFile.getFileExtension();
 
         bool matchingDisplay = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+        if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
         {
             matchingDisplay = audioExtensions.contains(extension);
         }
@@ -1167,9 +1177,9 @@ public:
         if (! matchingDisplay)
         {
             // Remove the existing media display
-            removeChildComponent(mediaDisplay.get());
-            mediaDisplay->removeChangeListener(this);
-            mediaDisplayHandler->detach();
+            removeChildComponent(cur_mediaDisplay.get());
+            cur_mediaDisplay->removeChangeListener(this);
+            // mediaDisplayHandler->detach();
 
             int mediaType = 0;
 
@@ -1189,10 +1199,10 @@ public:
             }
 
             // Initialize a matching display
-            initializeMediaDisplay(mediaType);
+            initializeMediaDisplay(mediaType, cur_mediaDisplay);
         }
 
-        mediaDisplay->setupDisplay(URL(mediaFile));
+        cur_mediaDisplay->setupDisplay(URL(mediaFile));
 
         lastLoadTime = Time::getCurrentTime();
 
@@ -1200,6 +1210,60 @@ public:
 
         resized();
     }
+    // TODO: ignore that for now. Load files using drag n drop which works fine
+    // for multiple mediaDisplays
+    // void loadMediaDisplay3(File mediaFile)
+    // {
+    //     // Check the file extension to determine type
+    //     String extension = mediaFile.getFileExtension();
+
+    //     bool matchingDisplay = true;
+
+    //     if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+    //     {
+    //         matchingDisplay = audioExtensions.contains(extension);
+    //     }
+    //     else
+    //     {
+    //         matchingDisplay = midiExtensions.contains(extension);
+    //     }
+
+    //     if (! matchingDisplay)
+    //     {
+    //         // Remove the existing media display
+    //         removeChildComponent(mediaDisplay.get());
+    //         mediaDisplay->removeChangeListener(this);
+    //         mediaDisplayHandler->detach();
+
+    //         int mediaType = 0;
+
+    //         if (audioExtensions.contains(extension))
+    //         {
+    //         }
+    //         else if (midiExtensions.contains(extension))
+    //         {
+    //             mediaType = 1;
+    //         }
+    //         else
+    //         {
+    //             DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
+    //                                                                             << "\'.");
+
+    //             AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
+    //         }
+
+    //         // Initialize a matching display
+    //         initializeMediaDisplay(mediaType);
+    //     }
+
+    //     mediaDisplay->setupDisplay(URL(mediaFile));
+
+    //     lastLoadTime = Time::getCurrentTime();
+
+    //     playStopButton.setEnabled(true);
+
+    //     resized();
+    // }
 
     void openFileChooser()
     {
@@ -1218,7 +1282,7 @@ public:
                                          File chosenFile = browser.getResult();
                                          if (chosenFile != File {})
                                          {
-                                             loadMediaDisplay(chosenFile);
+                                             loadMediaDisplay(chosenFile, mediaDisplay);
                                          }
                                      });
     }
@@ -1306,9 +1370,24 @@ public:
         // An empty space of 30px between the process button and the thumbnail area
         mainArea.removeFromTop(30);
 
-        // Row 7: thumbnail area
-        auto row7 = mainArea.removeFromTop(150).reduced(margin / 2); // adjust height as needed
-        mediaDisplay->setBounds(row7);
+        // // Row 7: thumbnail area
+        // auto row7 = mainArea.removeFromTop(150).reduced(margin / 2); // adjust height as needed
+        // mediaDisplay->setBounds(row7);
+        const int rowHeight = 150; // Adjust height as needed
+
+        // Row 7 and onwards: input media displays
+        for (auto& display : inputMediaDisplays)
+        {
+            auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
+            display->setBounds(row);
+        }
+
+        // Output media displays
+        for (auto& display : outputMediaDisplays)
+        {
+            auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
+            display->setBounds(row);
+        }
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(50); // adjust height as needed
@@ -1447,8 +1526,15 @@ private:
     std::unique_ptr<FileChooser> saveFileBrowser;
 
     std::unique_ptr<MediaDisplayComponent> mediaDisplay;
+    std::unique_ptr<MediaDisplayComponent> outputMediaDisplay;
+    // A list of input media displays
+    std::vector<std::unique_ptr<MediaDisplayComponent>> inputMediaDisplays;
+    // A list of output media displays
+    std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
+
 
     std::unique_ptr<HoverHandler> mediaDisplayHandler;
+    std::unique_ptr<HoverHandler> outputMediaDisplayHandler;
 
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
@@ -1471,20 +1557,37 @@ private:
 
     void play()
     {
-        if (! mediaDisplay->isPlaying())
+        // if (! mediaDisplay->isPlaying())
+        // {
+        //     mediaDisplay->start();
+        //     playStopButton.setMode(stopButtonInfo.label);
+        // }
+        // visit all the mediaDisplays and check each of them
+        for (auto& display : inputMediaDisplays)
         {
-            mediaDisplay->start();
-            playStopButton.setMode(stopButtonInfo.label);
+            if (! display->isPlaying())
+            {
+                display->start();
+            }
         }
+        playStopButton.setMode(stopButtonInfo.label);
     }
 
     void stop()
     {
-        if (mediaDisplay->isPlaying())
+        // if (mediaDisplay->isPlaying())
+        // {
+        //     mediaDisplay->stop();
+        //     playStopButton.setMode(playButtonInfo.label);
+        // }
+        for (auto& display : inputMediaDisplays)
         {
-            mediaDisplay->stop();
-            playStopButton.setMode(playButtonInfo.label);
+            if (display->isPlaying())
+            {
+                display->stop();
+            }
         }
+        playStopButton.setMode(playButtonInfo.label);
     }
 
     void resetProcessingButtons()
@@ -1498,32 +1601,61 @@ private:
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        if (source == mediaDisplay.get())
+            // Check if the source is one of the inputMediaDisplays
+        for (auto& display : inputMediaDisplays)
         {
-            if (mediaDisplay->isFileDropped())
+            if (source == display.get())
             {
-                URL droppedFilePath = mediaDisplay->getDroppedFilePath();
-
-                mediaDisplay->clearDroppedFile();
-
-                // Reload an appropriate display for dropped file
-                loadMediaDisplay(droppedFilePath.getLocalFile());
-            }
-            else if (mediaDisplay->isFileLoaded() && ! mediaDisplay->isPlaying())
-            {
-                playStopButton.setMode(playButtonInfo.label);
-                playStopButton.setEnabled(true);
-            }
-            else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying())
-            {
-                playStopButton.setMode(stopButtonInfo.label);
-            }
-            else
-            {
-                playStopButton.setMode(playButtonInfo.label);
-                playStopButton.setEnabled(false);
+                if (display->isFileDropped())
+                {
+                    URL droppedFilePath = display->getDroppedFilePath();
+                    display->clearDroppedFile();
+                    // Reload an appropriate display for dropped file
+                    loadMediaDisplay(droppedFilePath.getLocalFile(), display);
+                }
+                else if (display->isFileLoaded() && !display->isPlaying())
+                {
+                    playStopButton.setMode(playButtonInfo.label);
+                    playStopButton.setEnabled(true);
+                }
+                else if (display->isFileLoaded() && display->isPlaying())
+                {
+                    playStopButton.setMode(stopButtonInfo.label);
+                }
+                else
+                {
+                    playStopButton.setMode(playButtonInfo.label);
+                    playStopButton.setEnabled(false);
+                }
+                return; 
             }
         }
+        // if (source == mediaDisplay.get())
+        // {
+        //     if (mediaDisplay->isFileDropped())
+        //     {
+        //         URL droppedFilePath = mediaDisplay->getDroppedFilePath();
+
+        //         mediaDisplay->clearDroppedFile();
+
+        //         // Reload an appropriate display for dropped file
+        //         loadMediaDisplay(droppedFilePath.getLocalFile());
+        //     }
+        //     else if (mediaDisplay->isFileLoaded() && ! mediaDisplay->isPlaying())
+        //     {
+        //         playStopButton.setMode(playButtonInfo.label);
+        //         playStopButton.setEnabled(true);
+        //     }
+        //     else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying())
+        //     {
+        //         playStopButton.setMode(stopButtonInfo.label);
+        //     }
+        //     else
+        //     {
+        //         playStopButton.setMode(playButtonInfo.label);
+        //         playStopButton.setEnabled(false);
+        //     }
+        // }
         /*
         // The loadBroadcaster isn't used anymore. 
         // It's replaced by processLoadingResult
@@ -1541,32 +1673,36 @@ private:
 
         // The processBroadcaster should be also replaced in a similar way
         // as the loadBroadcaster
-        else if (source == &processBroadcaster)
+        if (source == &processBroadcaster)
         {
             // refresh the display for the new updated file
-            URL tempFilePath = mediaDisplay->getTempFilePath();
-            mediaDisplay->updateDisplay(tempFilePath);
+            URL tempFilePath = outputMediaDisplays[0]->getTempFilePath();
+            outputMediaDisplays[0]->updateDisplay(tempFilePath);
 
             // extract generated labels from the model
             LabelList& labels = model->getLabels();
 
             // add the labels to the display component
-            mediaDisplay->addLabels(labels);
+            outputMediaDisplays[0]->addLabels(labels);
 
             // now, we can enable the process button
             resetProcessingButtons();
+            return;
         }
-        else if (source == mModelStatusTimer.get())
+        
+        if (source == mModelStatusTimer.get())
         {
             // update the status label
             DBG("HARPProcessorEditor::changeListenerCallback: updating status label");
             // statusLabel.setText(model->getStatus(), dontSendNotification);
             setStatus(model->getStatus());
+            return;
         }
-        else
-        {
-            DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
-        }
+
+        
+        DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
+        return;
+        
     }
 
     void processLoadingResult(OpResult result)

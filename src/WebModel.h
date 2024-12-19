@@ -177,7 +177,9 @@ public:
         return OpResult::ok();
     }
 
-    OpResult process(juce::File filetoProcess)
+    // Shouldn't take a file for input. It should just visit 
+    // all media displays and controls and get their values. 
+    OpResult process(juce::File filetoProcess, juce::File outputFile)
     {
         status2 = ModelStatus::STARTING;
         // Create an Error object in case we need it
@@ -342,7 +344,8 @@ public:
                 // Make a juce::File from the path
                 juce::File processedFile(outputFilePath);
                 // Replace the input file with the processed file
-                processedFile.moveFileTo(filetoProcess);
+                // processedFile.moveFileTo(filetoProcess);
+                processedFile.moveFileTo(outputFile);
             }
             else if (procObjType == "pyharp.LabelList")
             {
