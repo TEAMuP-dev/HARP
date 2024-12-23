@@ -60,3 +60,5 @@ We now want to expand to allow for more use cases:
     juce::Array<juce::var> outputComponents;
     ```
     And then the UI components like `ControlAreaWidget.h` can use this information to create the appropriate UI components.
+
+    Error catching is not good now. ProcessLoadingResult wasn't suppose to crash, but now we can't be sure because the populateControls and Tracks can fail if the var received from pyharp are not valid.

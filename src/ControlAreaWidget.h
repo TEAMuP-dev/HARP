@@ -15,7 +15,7 @@ public:
 
     void setModel(std::shared_ptr<WebModel> model) { mModel = model; }
 
-    void populateGui()
+    void populateControls()
     {
         // headerLabel.setText("No model loaded", juce::dontSendNotification);
         // headerLabel.setJustificationType(juce::Justification::centred);
@@ -27,82 +27,172 @@ public:
             return;
         }
 
-        auto& ctrlList = mModel->controls();
+        // // clear the m_ctrls vector
+        // m_ctrls.clear();
+        juce::Array<juce::var>& inputComponents = mModel->getInputComponents();
 
-        for (const auto& pair : ctrlList)
+        // // iterate through the list of input components
+        // // and choosing only the ones that correspond to input controls and not input media
+        for (int i = 0; i < inputComponents.size(); i++)
         {
-            auto ctrlPtr = pair.second;
-            // SliderCtrl
-            if (auto sliderCtrl = dynamic_cast<SliderCtrl*>(ctrlPtr.get()))
-            {
-                auto sliderWithLabel = std::make_unique<SliderWithLabel>(
-                    sliderCtrl->label, juce::Slider::RotaryHorizontalVerticalDrag);
-                // auto& label = sliderWithLabel->getLabel();
-                // label.setColour(juce::Label::ColourIds::textColourId, mHARPLookAndFeel.textHeaderColor);
-                auto& slider = sliderWithLabel->getSlider();
-                slider.setName(sliderCtrl->id.toString());
-                slider.setRange(sliderCtrl->minimum, sliderCtrl->maximum, sliderCtrl->step);
-                slider.setValue(sliderCtrl->value);
-                slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-                slider.addListener(this);
-                addAndMakeVisible(*sliderWithLabel);
-                sliders.push_back(std::move(sliderWithLabel));
-                DBG("Slider: " + sliderCtrl->label + " added");
+            juce::var ctrl = inputComponents.getReference(i);
+            // Remove this if. it's already been checked in webmodel.h loading
+            // if (! ctrl.isObject())
+            // {
+            //     status2 = ModelStatus::ERROR;
+            //     error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+            //     return OpResult::fail(error);
+            // }
 
-                // ToggleCtrl
-            }
-            else if (auto toggleCtrl = dynamic_cast<ToggleCtrl*>(ctrlPtr.get()))
+            try
             {
-                auto toggle = std::make_unique<juce::ToggleButton>();
-                toggle->setName(toggleCtrl->id.toString());
-                toggle->setTitle(toggleCtrl->label);
-                toggle->setButtonText(toggleCtrl->label);
-                toggle->setToggleState(toggleCtrl->value, juce::dontSendNotification);
-                toggle->addListener(this);
-                addAndMakeVisible(*toggle);
-                toggles.push_back(std::move(toggle));
-                DBG("Toggle: " + toggleCtrl->label + " added");
+                // get the ctrl type
+                juce::String ctrl_type = ctrl["type"].toString().toStdString();
 
-                // TextBoxCtrl
-            }
-            else if (auto textBoxCtrl = dynamic_cast<TextBoxCtrl*>(ctrlPtr.get()))
-            {
-                auto textCtrl = std::make_unique<TitledTextBox>();
-                textCtrl->setName(textBoxCtrl->id.toString());
-                textCtrl->setTitle(textBoxCtrl->label);
-                textCtrl->setText(textBoxCtrl->value);
-                textCtrl->addListener(this);
-                addAndMakeVisible(*textCtrl);
-                textCtrls.push_back(std::move(textCtrl));
-                DBG("Text Box: " + textBoxCtrl->label + " added");
+                // For the first two, we are abusing the term control.
+                // They are actually the main inputs to the model (audio or midi)
+                // if (ctrl_type == "audio_in")
+                // {
+                //     // CB:TODO: NOT USED ANYWHERE
+                //     // ControlAreaWidget.h ignores this when populating the GUI
+                //     auto audio_in = std::make_shared<AudioInCtrl>();
+                //     audio_in->label = ctrl["label"].toString().toStdString();
 
-                // ComboBoxCtrl
-            }
-            else if (auto comboBoxCtrl = dynamic_cast<ComboBoxCtrl*>(ctrlPtr.get()))
-            {
-                auto comboBox = std::make_unique<juce::ComboBox>();
-                comboBox->setName(comboBoxCtrl->id.toString());
-                for (const auto& option : comboBoxCtrl->options)
+                //     m_ctrls.push_back({ audio_in->id, audio_in });
+                //     LogAndDBG("Audio In: " + audio_in->label + " added");
+                // }
+                // else if (ctrl_type == "midi_in")
+                // {
+                //     auto midi_in = std::make_shared<MidiInCtrl>();
+                //     midi_in->label = ctrl["label"].toString().toStdString();
+
+                //     m_ctrls.push_back({ midi_in->id, midi_in });
+                //     LogAndDBG("MIDI In: " + midi_in->label + " added");
+                // }
+                // The rest are the actual controls that map to hyperparameters
+                // of the model
+                if (ctrl_type == "slider")
                 {
-                    comboBox->addItem(option, comboBox->getNumItems() + 1);
+                    // auto slider = std::make_shared<SliderCtrl>();
+                    auto id = juce::Uuid();
+                    auto label = ctrl["label"].toString().toStdString();
+                    auto minimum = ctrl["minimum"].toString().getFloatValue();
+                    auto maximum = ctrl["maximum"].toString().getFloatValue();
+                    auto step = ctrl["step"].toString().getFloatValue();
+                    auto value = ctrl["value"].toString().getFloatValue();
+
+                    // m_ctrls.push_back({ slider->id, slider });
+                    // LogAndDBG("Slider: " + slider->label + " added");
+
+                    auto sliderWithLabel = std::make_unique<SliderWithLabel>(
+                        label, juce::Slider::RotaryHorizontalVerticalDrag);
+                    // auto& label = sliderWithLabel->getLabel();
+                    // label.setColour(juce::Label::ColourIds::textColourId, mHARPLookAndFeel.textHeaderColor);
+                    auto& slider = sliderWithLabel->getSlider();
+                    slider.setName(id.toString());
+                    slider.setRange(minimum, maximum, step);
+                    slider.setValue(value);
+                    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
+                    slider.addListener(this);
+                    addAndMakeVisible(*sliderWithLabel);
+                    sliders.push_back(std::move(sliderWithLabel));
+                    DBG("Slider: " + label + " added");
                 }
-
-                int selectedId = 1; // Default to first item if the desired value isn't found
-                for (int i = 0; i < comboBox->getNumItems(); ++i)
+                else if (ctrl_type == "text")
                 {
-                    if (comboBox->getItemText(i).toStdString() == comboBoxCtrl->value)
+                    // auto text = std::make_shared<TextBoxCtrl>();
+                    auto id = juce::Uuid();
+                    auto label = ctrl["label"].toString().toStdString();
+                    auto value = ctrl["value"].toString().toStdString();
+
+                    // m_ctrls.push_back({ text->id, text });
+                    // LogAndDBG("Text: " + text->label + " added");
+
+
+                    auto textCtrl = std::make_unique<TitledTextBox>();
+                    textCtrl->setName(id.toString());
+                    textCtrl->setTitle(label);
+                    textCtrl->setText(value);
+                    textCtrl->addListener(this);
+                    addAndMakeVisible(*textCtrl);
+                    textCtrls.push_back(std::move(textCtrl));
+                    DBG("Text Box: " + label + " added");
+
+                }
+                else if (ctrl_type == "number_box")
+                {
+                    // auto number_box = std::make_shared<NumberBoxCtrl>();
+                    auto id = juce::Uuid();
+                    auto label = ctrl["label"].toString().toStdString();
+                    auto min = ctrl["min"].toString().getFloatValue();
+                    auto max = ctrl["max"].toString().getFloatValue();
+                    auto value = ctrl["value"].toString().getFloatValue();
+
+                    // m_ctrls.push_back({ number_box->id, number_box });
+                    LogAndDBG("Number Box: " + label + " added");
+                    // TODO : Implement a number_box component
+
+                }
+                else if (ctrl_type == "toggle")
+                {
+                    auto id = juce::Uuid();
+                    auto label = ctrl["label"].toString().toStdString();
+                    auto value = 1; //ctrl["value"].toString().toStdString();
+
+                    LogAndDBG("Toggle not implemented yet");
+                    auto toggle = std::make_unique<juce::ToggleButton>();
+                    toggle->setName(id.toString());
+                    toggle->setTitle(label);
+                    toggle->setButtonText(label);
+                    toggle->setToggleState(value, juce::dontSendNotification);
+                    toggle->addListener(this);
+                    addAndMakeVisible(*toggle);
+                    toggles.push_back(std::move(toggle));
+                    DBG("Toggle: " + label + " added");
+                }
+                else if (ctrl_type == "dropdown")
+                {
+                    auto id = juce::Uuid();
+                    auto label = ctrl["label"].toString().toStdString();
+                    auto value = ctrl["value"].toString().toStdString();
+                    // auto options = ctrl["choices"].toString().toStdString();
+
+                    auto comboBox = std::make_unique<juce::ComboBox>();
+                    comboBox->setName(id.toString());
+                    // for (const auto& option : options)
+                    // {
+                    //     comboBox->addItem(option, comboBox->getNumItems() + 1);
+                    // }
+
+                    int selectedId = 1; // Default to first item if the desired value isn't found
+                    for (int j = 0; j < comboBox->getNumItems(); ++j)
                     {
-                        selectedId = i + 1; // item IDs start at 1
-                        break;
+                        if (comboBox->getItemText(j).toStdString() == value)
+                        {
+                            selectedId = j + 1; // item IDs start at 1
+                            break;
+                        }
                     }
+                    comboBox->addListener(this);
+                    comboBox->setTextWhenNoChoicesAvailable("No choices");
+                    addAndMakeVisible(*comboBox);
+                    optionCtrls.push_back(std::move(comboBox));
+                    DBG("Combo Box: " + label + " added");
                 }
-                comboBox->addListener(this);
-                comboBox->setTextWhenNoChoicesAvailable("No choices");
-                addAndMakeVisible(*comboBox);
-                optionCtrls.push_back(std::move(comboBox));
-                DBG("Combo Box: " + comboBoxCtrl->label + " added");
+                else
+                    LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
+            }
+            catch (const char* e)
+            {
+                // status2 = ModelStatus::ERROR;
+                // error.devMessage = "Failed to load controls from JSON. " + std::string(e);
+                // return OpResult::fail(error);
+                throw "it shouldn't throw here";
             }
         }
+
+        // OLD CODE
+        // }
         repaint();
         resized();
     }

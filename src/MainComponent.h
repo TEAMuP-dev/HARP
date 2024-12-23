@@ -975,13 +975,13 @@ public:
         // model controls
         controlAreaWidget.setModel(model);
         addAndMakeVisible(controlAreaWidget);
-        controlAreaWidget.populateGui();
-        inputTracksWidget.setModel(model);
-        addAndMakeVisible(inputTracksWidget);
-        inputTracksWidget.populateGui();
-        outputTracksWidget.setModel(model);
-        addAndMakeVisible(outputTracksWidget);
-        outputTracksWidget.populateGui();
+        controlAreaWidget.populateControls();
+        // inputTracksWidget.setModel(model);
+        // addAndMakeVisible(inputTracksWidget);
+        // inputTracksWidget.populateTracks();
+        // outputTracksWidget.setModel(model);
+        // addAndMakeVisible(outputTracksWidget);
+        // outputTracksWidget.populateTracks();
 
         addAndMakeVisible(nameLabel);
         addAndMakeVisible(authorLabel);
@@ -1091,14 +1091,15 @@ public:
 
         bool matchingModel = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
-        {
-            matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
-        }
-        else
-        {
-            matchingModel = model->card().midi_in; //&& model->card().midi_out;
-        }
+        // if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
+        // {
+        //     matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
+        // }
+        // else
+        // {
+        //     matchingModel = model->card().midi_in; //&& model->card().midi_out;
+        // }
+
         // Check if the model's type (Audio or MIDI) matches the input file's type
         // If not, show an error message and ask the user to either use another model
         // or another appropriate file
@@ -1441,18 +1442,19 @@ public:
             ? authorLabel.setText("", dontSendNotification)
             : authorLabel.setText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
-        if (card.midi_in && card.midi_out && ! card.author.empty())
-        {
-            audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
-        }
-        else if (! card.midi_in && ! card.midi_out && ! card.author.empty())
-        {
-            audioOrMidiLabel.setText("Wav-to-Wav", dontSendNotification);
-        }
-        else
-        {
-            audioOrMidiLabel.setText("", dontSendNotification);
-        }
+        // if (card.midi_in && card.midi_out && ! card.author.empty())
+        // {
+        //     audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
+        // }
+        // else if (! card.midi_in && ! card.midi_out && ! card.author.empty())
+        // {
+        //     audioOrMidiLabel.setText("Wav-to-Wav", dontSendNotification);
+        // }
+        // else
+        // {
+        //     audioOrMidiLabel.setText("", dontSendNotification);
+        // }
+        audioOrMidiLabel.setText("No need for that", dontSendNotification);
     }
 
     void setStatus(const ModelStatus& status)
@@ -1731,7 +1733,10 @@ private:
             setModelCard(model->card());
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
-            controlAreaWidget.populateGui();
+            controlAreaWidget.populateControls();
+            // inputTracksWidget.populateTracks();
+            // outputTracksWidget.populateTracks();
+
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                 

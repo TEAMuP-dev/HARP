@@ -26,6 +26,9 @@ public:
 
     CtrlList& controls() { return m_ctrls; }
 
+    juce::Array<juce::var>& getInputComponents() {return inputComponents;}
+    juce::Array<juce::var>& getOutputComponents() {return outputComponents;}
+
     OpResult load(const map<string, any>& params) override
     {
         // Create an Error object in case we need it
@@ -98,93 +101,97 @@ public:
 
         // TODO: This whole block should go into the ControlAreaWidget.populateUI()
         // InputTracksWidget.populateTracks() and OutputTracksWidget.populateTracks()
-        
+
         // // clear the m_ctrls vector
         // m_ctrls.clear();
 
         // // iterate through the list of controls
         // // and add them to the m_ctrls vector
-        // for (int i = 0; i < inputComponents.size(); i++)
-        // {
-        //     juce::var ctrl = inputComponents.getReference(i);
-        //     if (! ctrl.isObject())
-        //     {
-        //         status2 = ModelStatus::ERROR;
-        //         error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
-        //         return OpResult::fail(error);
-        //     }
+        for (int i = 0; i < inputComponents.size(); i++)
+        {
+            juce::var ctrl = inputComponents.getReference(i);
+            if (! ctrl.isObject())
+            {
+                status2 = ModelStatus::ERROR;
+                error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+                return OpResult::fail(error);
+            }
 
-        //     try
-        //     {
-        //         // get the ctrl type
-        //         juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
+            try
+            {
+                // get the ctrl type
+                juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
 
-        //         // For the first two, we are abusing the term control.
-        //         // They are actually the main inputs to the model (audio or midi)
-        //         if (ctrl_type == "audio_in")
-        //         {
-        //             // CB:TODO: NOT USED ANYWHERE
-        //             // ControlAreaWidget.h ignores this when populating the GUI
-        //             auto audio_in = std::make_shared<AudioInCtrl>();
-        //             audio_in->label = ctrl["label"].toString().toStdString();
+                // If ctrl_type is empty, throw an error
+                // if label is empty, throw an error --> maybe just use a default label
 
-        //             m_ctrls.push_back({ audio_in->id, audio_in });
-        //             LogAndDBG("Audio In: " + audio_in->label + " added");
-        //         }
-        //         else if (ctrl_type == "midi_in")
-        //         {
-        //             auto midi_in = std::make_shared<MidiInCtrl>();
-        //             midi_in->label = ctrl["label"].toString().toStdString();
+                // For the first two, we are abusing the term control.
+                // They are actually the main inputs to the model (audio or midi)
+                if (ctrl_type == "audio_in")
+                {
+                    // CB:TODO: NOT USED ANYWHERE
+                    // ControlAreaWidget.h ignores this when populating the GUI
+                    
+                    // auto audio_in = std::make_shared<AudioInCtrl>();
+                    // audio_in->label = ctrl["label"].toString().toStdString();
 
-        //             m_ctrls.push_back({ midi_in->id, midi_in });
-        //             LogAndDBG("MIDI In: " + midi_in->label + " added");
-        //         }
-        //         // The rest are the actual controls that map to hyperparameters
-        //         // of the model
-        //         else if (ctrl_type == "slider")
-        //         {
-        //             auto slider = std::make_shared<SliderCtrl>();
-        //             slider->id = juce::Uuid();
-        //             slider->label = ctrl["label"].toString().toStdString();
-        //             slider->minimum = ctrl["minimum"].toString().getFloatValue();
-        //             slider->maximum = ctrl["maximum"].toString().getFloatValue();
-        //             slider->step = ctrl["step"].toString().getFloatValue();
-        //             slider->value = ctrl["value"].toString().getFloatValue();
+                    // m_ctrls.push_back({ audio_in->id, audio_in });
+                    // LogAndDBG("Audio In: " + audio_in->label + " added");
+                }
+                else if (ctrl_type == "midi_in")
+                {
+                    // auto midi_in = std::make_shared<MidiInCtrl>();
+                    // midi_in->label = ctrl["label"].toString().toStdString();
 
-        //             m_ctrls.push_back({ slider->id, slider });
-        //             LogAndDBG("Slider: " + slider->label + " added");
-        //         }
-        //         else if (ctrl_type == "text")
-        //         {
-        //             auto text = std::make_shared<TextBoxCtrl>();
-        //             text->id = juce::Uuid();
-        //             text->label = ctrl["label"].toString().toStdString();
-        //             text->value = ctrl["value"].toString().toStdString();
+                    // m_ctrls.push_back({ midi_in->id, midi_in });
+                    // LogAndDBG("MIDI In: " + midi_in->label + " added");
+                }
+                // The rest are the actual controls that map to hyperparameters
+                // of the model
+                else if (ctrl_type == "slider")
+                {
+                    // auto slider = std::make_shared<SliderCtrl>();
+                    // slider->id = juce::Uuid();
+                    // slider->label = ctrl["label"].toString().toStdString();
+                    // slider->minimum = ctrl["minimum"].toString().getFloatValue();
+                    // slider->maximum = ctrl["maximum"].toString().getFloatValue();
+                    // slider->step = ctrl["step"].toString().getFloatValue();
+                    // slider->value = ctrl["value"].toString().getFloatValue();
 
-        //             m_ctrls.push_back({ text->id, text });
-        //             LogAndDBG("Text: " + text->label + " added");
-        //         }
-        //         else if (ctrl_type == "number_box")
-        //         {
-        //             auto number_box = std::make_shared<NumberBoxCtrl>();
-        //             number_box->label = ctrl["label"].toString().toStdString();
-        //             number_box->min = ctrl["min"].toString().getFloatValue();
-        //             number_box->max = ctrl["max"].toString().getFloatValue();
-        //             number_box->value = ctrl["value"].toString().getFloatValue();
+                    // m_ctrls.push_back({ slider->id, slider });
+                    // LogAndDBG("Slider: " + slider->label + " added");
+                }
+                else if (ctrl_type == "text")
+                {
+                    // auto text = std::make_shared<TextBoxCtrl>();
+                    // text->id = juce::Uuid();
+                    // text->label = ctrl["label"].toString().toStdString();
+                    // text->value = ctrl["value"].toString().toStdString();
 
-        //             m_ctrls.push_back({ number_box->id, number_box });
-        //             LogAndDBG("Number Box: " + number_box->label + " added");
-        //         }
-        //         else
-        //             LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
-        //     }
-        //     catch (const char* e)
-        //     {
-        //         status2 = ModelStatus::ERROR;
-        //         error.devMessage = "Failed to load controls from JSON. " + std::string(e);
-        //         return OpResult::fail(error);
-        //     }
-        // }
+                    // m_ctrls.push_back({ text->id, text });
+                    // LogAndDBG("Text: " + text->label + " added");
+                }
+                else if (ctrl_type == "number_box")
+                {
+                    // auto number_box = std::make_shared<NumberBoxCtrl>();
+                    // number_box->label = ctrl["label"].toString().toStdString();
+                    // number_box->min = ctrl["min"].toString().getFloatValue();
+                    // number_box->max = ctrl["max"].toString().getFloatValue();
+                    // number_box->value = ctrl["value"].toString().getFloatValue();
+
+                    // m_ctrls.push_back({ number_box->id, number_box });
+                    // LogAndDBG("Number Box: " + number_box->label + " added");
+                }
+                else
+                    LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
+            }
+            catch (const char* e)
+            {
+                status2 = ModelStatus::ERROR;
+                error.devMessage = "Failed to load controls from JSON. " + std::string(e);
+                return OpResult::fail(error);
+            }
+        }
         status2 = ModelStatus::LOADED;
         return OpResult::ok();
     }
