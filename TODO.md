@@ -38,3 +38,25 @@ We now want to expand to allow for more use cases:
 3. both media components as well as control components should be mentioned explicitly in the `input_components` and `output_components` lists.
     - Up until now, we ask from the users to only specify the control components (i.e Sliders) and not the input media components which was added internally by the `build_endpoint` function.
     - Similar for output, we would always return a single media file plus the output_labels, even if the app didn't generate any output_labels. Now the user decides what to return by specifying the output components explicitly.
+
+
+    772
+    1285
+
+    initially, add a wav display in the inputMediaDisplays. 
+    Later when we load the model, we empty the list of displays, and add whatever the model requires. Keep a counter in the webmodel of how many input and output media components are there. If output component is different than input component (midi vs audio) then we don't merge displays. If it is audio/audio or midi/midi then we expect the pyharp to tell us if we're merging or not. If we merge then one way is to add the
+
+    working on addNewTempFile
+    if the mediaDisplayComponent is for an output, then the original/target file should be an empty file of name as the label we get from pyharp
+
+    m_ctrls in webmodel.h maybe rename them ? because they include audio_in or midi_in
+    Actually, m_ctrls is of type CtrlList which is
+    ```cpp
+    using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+    ```
+    I'm arguing that we don't even need to define the `Ctrl` class. The webmodel.h can store the control info in the form of 
+    ```cpp
+    juce::Array<juce::var> inputComponents;
+    juce::Array<juce::var> outputComponents;
+    ```
+    And then the UI components like `ControlAreaWidget.h` can use this information to create the appropriate UI components.

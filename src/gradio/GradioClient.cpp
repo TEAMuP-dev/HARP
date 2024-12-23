@@ -364,7 +364,9 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     return OpResult::ok();
 }
 
-OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict)
+OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
+                                   juce::Array<juce::var>& outputComponents,
+                                   juce::DynamicObject& cardDict)
 {
     juce::String callID = "controls";
     juce::String eventID;
@@ -445,13 +447,21 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::Dynam
         cardDict.setProperty(key.name, key.value);
     }
 
-    juce::Array<juce::var>* ctrlArray = obj->getProperty("ctrls").getArray();
-    if (ctrlArray == nullptr)
+    juce::Array<juce::var>* inputsArray = obj->getProperty("inputs").getArray();
+    if (inputsArray == nullptr)
     {
         error.devMessage = "Couldn't load the controls array/list from the controls response.";
         return OpResult::fail(error);
     }
-    ctrlList = *ctrlArray;
+    inputComponents = *inputsArray;
+
+    juce::Array<juce::var>* outputsArray = obj->getProperty("outputs").getArray();
+    if (outputsArray == nullptr)
+    {
+        error.devMessage = "Couldn't load the controls array/list from the controls response.";
+        return OpResult::fail(error);
+    }
+    outputComponents = *outputsArray;
 
     return result;
 }

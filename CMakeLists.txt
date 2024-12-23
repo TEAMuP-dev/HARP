@@ -56,7 +56,7 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
         src/MainComponent.h
-        src/CtrlComponent.h
+        src/ControlAreaWidget.h
         src/Model.h 
         src/WebModel.h
         src/HarpLogger.h

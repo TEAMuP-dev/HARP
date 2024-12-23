@@ -12,7 +12,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#include "CtrlComponent.h"
+#include "ControlAreaWidget.h"
 #include "ThreadPoolJob.h"
 #include "WebModel.h"
 
@@ -769,7 +769,19 @@ public:
         saveFileButtonHandler.attach();
 
         // Initialize default media display
-        initializeMediaDisplay(0, mediaDisplay);
+        // initializeMediaDisplay(0, mediaDisplay);
+        // Create a new mediaDisplay and add it in the inputMediaDisplays vector
+        inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
+        outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
+        // Initialize all the inputMediaDisplays
+        for (int i = 0; i < inputMediaDisplays.size(); ++i)
+        {
+            initializeMediaDisplay(0, inputMediaDisplays[i]);
+        }
+        for (int i = 0; i < outputMediaDisplays.size(); ++i)
+        {
+            initializeMediaDisplay(1, outputMediaDisplays[i]);
+        }
 
         if (initialFilePath.isLocalFile())
         {
@@ -961,9 +973,15 @@ public:
         addAndMakeVisible(modelPathComboBox);
 
         // model controls
-        ctrlComponent.setModel(model);
-        addAndMakeVisible(ctrlComponent);
-        ctrlComponent.populateGui();
+        controlAreaWidget.setModel(model);
+        addAndMakeVisible(controlAreaWidget);
+        controlAreaWidget.populateGui();
+        inputTracksWidget.setModel(model);
+        addAndMakeVisible(inputTracksWidget);
+        inputTracksWidget.populateGui();
+        outputTracksWidget.setModel(model);
+        addAndMakeVisible(outputTracksWidget);
+        outputTracksWidget.populateGui();
 
         addAndMakeVisible(nameLabel);
         addAndMakeVisible(authorLabel);
@@ -1282,7 +1300,8 @@ public:
                                          File chosenFile = browser.getResult();
                                          if (chosenFile != File {})
                                          {
-                                             loadMediaDisplay(chosenFile, mediaDisplay);
+                                            //  loadMediaDisplay(chosenFile, mediaDisplay);
+                                            loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
                                          }
                                      });
     }
@@ -1350,9 +1369,9 @@ public:
         spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
         spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
 
-        // Row 5: CtrlComponent (flexible height)
+        // Row 5: ControlAreaWidget (flexible height)
         auto row5 = mainArea.removeFromTop(195); // the remaining area is for row 4
-        ctrlComponent.setBounds(row5.reduced(margin));
+        controlAreaWidget.setBounds(row5.reduced(margin));
 
         // An empty space of 20px between the ctrl component and the process button
         mainArea.removeFromTop(10);
@@ -1406,7 +1425,7 @@ public:
 
     void resetUI()
     {
-        ctrlComponent.resetUI();
+        controlAreaWidget.resetUI();
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
@@ -1505,7 +1524,7 @@ private:
     bool isProcessing = false;
 
     std::string customPath;
-    CtrlComponent ctrlComponent;
+    ControlAreaWidget controlAreaWidget;
 
     // model card
     Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
@@ -1710,9 +1729,9 @@ private:
         if (result.wasOk())
         {
             setModelCard(model->card());
-            ctrlComponent.setModel(model);
+            controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
-            ctrlComponent.populateGui();
+            controlAreaWidget.populateGui();
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                 

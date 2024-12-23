@@ -4,14 +4,14 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "utils.h"
 
-class CtrlComponent : public juce::Component,
-                      public Button::Listener,
-                      public Slider::Listener,
-                      public ComboBox::Listener,
-                      public TextEditor::Listener
+class ControlAreaWidget : public juce::Component,
+                          public Button::Listener,
+                          public Slider::Listener,
+                          public ComboBox::Listener,
+                          public TextEditor::Listener
 {
 public:
-    CtrlComponent() {}
+    ControlAreaWidget() {}
 
     void setModel(std::shared_ptr<WebModel> model) { mModel = model; }
 
@@ -109,7 +109,7 @@ public:
 
     void resetUI()
     {
-        DBG("CtrlComponent::resetUI called");
+        DBG("ControlAreaWidget::resetUI called");
         mModel.reset();
         // remove all the widgets and empty the vectors
         for (auto& ctrl : sliders)

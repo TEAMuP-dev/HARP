@@ -69,6 +69,9 @@ public:
 
     bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
 
+    bool displaysInput() {return ioMode == 0;}
+    bool displaysOutput() {return ioMode == 1;}
+    
     void clearDroppedFile() { droppedFilePath = URL(); }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
@@ -158,6 +161,8 @@ private:
     const int textSpacing = 2;
     const int minFontSize = 10;
     const int labelHeight = 20;
+
+    bool ioMode = 0; // 0 input, 1 output
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> oveheadLabels;

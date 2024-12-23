@@ -165,8 +165,14 @@ void MediaDisplayComponent::addNewTempFile()
     clearFutureTempFiles();
 
     int numTempFiles = tempFilePaths.size();
-
-    File originalFile = targetFilePath.getLocalFile();
+    // TODO: for outputMediaDisplays there might not be a
+    // targetFilePath yet, so we should handle that case
+    // "originalFile" is the first file that was displayed 
+    // in this mediaDisplay (either the first input)
+    // or the first output)
+    File originalFile;
+    if (targetFilePath.isLocalFile())
+        originalFile = targetFilePath.getLocalFile();        
 
     File targetFile;
 

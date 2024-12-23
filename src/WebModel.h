@@ -57,10 +57,17 @@ public:
 
         LogAndDBG(gradioClient.getSpaceInfo().toString());
 
-        juce::Array<juce::var> ctrlList;
+        // juce::Array<juce::var> inputComponents;
+        // juce::Array<juce::var> outputComponents;
+        // The input and outputComponents are now class members
+        // so we don't need to create them here
+        // here we just clear/empty them
+        inputComponents.clear();
+        outputComponents.clear();
+
         juce::DynamicObject cardDict;
         status2 = ModelStatus::GETTING_CONTROLS;
-        result = gradioClient.getControls(ctrlList, cardDict);
+        result = gradioClient.getControls(inputComponents, outputComponents, cardDict);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -72,8 +79,8 @@ public:
         m_card.name = cardDict.getProperty("name").toString().toStdString();
         m_card.description = cardDict.getProperty("description").toString().toStdString();
         m_card.author = cardDict.getProperty("author").toString().toStdString();
-        m_card.midi_in = (bool) cardDict.getProperty("midi_in");
-        m_card.midi_out = (bool) cardDict.getProperty("midi_out");
+        // m_card.midi_in = (bool) cardDict.getProperty("midi_in");
+        // m_card.midi_out = (bool) cardDict.getProperty("midi_out");
 
         // tags is a list of str
         juce::Array<juce::var>* tags = cardDict.getProperty("tags").getArray();
@@ -89,96 +96,101 @@ public:
             m_card.tags.push_back(tags->getReference(i).toString().toStdString());
         }
 
-        // clear the m_ctrls vector
-        m_ctrls.clear();
+        // TODO: This whole block should go into the ControlAreaWidget.populateUI()
+        // InputTracksWidget.populateTracks() and OutputTracksWidget.populateTracks()
+        
+        // // clear the m_ctrls vector
+        // m_ctrls.clear();
 
-        // iterate through the list of controls
-        // and add them to the m_ctrls vector
-        for (int i = 0; i < ctrlList.size(); i++)
-        {
-            juce::var ctrl = ctrlList.getReference(i);
-            if (! ctrl.isObject())
-            {
-                status2 = ModelStatus::ERROR;
-                error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
-                return OpResult::fail(error);
-            }
+        // // iterate through the list of controls
+        // // and add them to the m_ctrls vector
+        // for (int i = 0; i < inputComponents.size(); i++)
+        // {
+        //     juce::var ctrl = inputComponents.getReference(i);
+        //     if (! ctrl.isObject())
+        //     {
+        //         status2 = ModelStatus::ERROR;
+        //         error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+        //         return OpResult::fail(error);
+        //     }
 
-            try
-            {
-                // get the ctrl type
-                juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
+        //     try
+        //     {
+        //         // get the ctrl type
+        //         juce::String ctrl_type = ctrl["ctrl_type"].toString().toStdString();
 
-                // For the first two, we are abusing the term control.
-                // They are actually the main inputs to the model (audio or midi)
-                if (ctrl_type == "audio_in")
-                {
-                    auto audio_in = std::make_shared<AudioInCtrl>();
-                    audio_in->label = ctrl["label"].toString().toStdString();
+        //         // For the first two, we are abusing the term control.
+        //         // They are actually the main inputs to the model (audio or midi)
+        //         if (ctrl_type == "audio_in")
+        //         {
+        //             // CB:TODO: NOT USED ANYWHERE
+        //             // ControlAreaWidget.h ignores this when populating the GUI
+        //             auto audio_in = std::make_shared<AudioInCtrl>();
+        //             audio_in->label = ctrl["label"].toString().toStdString();
 
-                    m_ctrls.push_back({ audio_in->id, audio_in });
-                    LogAndDBG("Audio In: " + audio_in->label + " added");
-                }
-                else if (ctrl_type == "midi_in")
-                {
-                    auto midi_in = std::make_shared<MidiInCtrl>();
-                    midi_in->label = ctrl["label"].toString().toStdString();
+        //             m_ctrls.push_back({ audio_in->id, audio_in });
+        //             LogAndDBG("Audio In: " + audio_in->label + " added");
+        //         }
+        //         else if (ctrl_type == "midi_in")
+        //         {
+        //             auto midi_in = std::make_shared<MidiInCtrl>();
+        //             midi_in->label = ctrl["label"].toString().toStdString();
 
-                    m_ctrls.push_back({ midi_in->id, midi_in });
-                    LogAndDBG("MIDI In: " + midi_in->label + " added");
-                }
-                // The rest are the actual controls that map to hyperparameters
-                // of the model
-                else if (ctrl_type == "slider")
-                {
-                    auto slider = std::make_shared<SliderCtrl>();
-                    slider->id = juce::Uuid();
-                    slider->label = ctrl["label"].toString().toStdString();
-                    slider->minimum = ctrl["minimum"].toString().getFloatValue();
-                    slider->maximum = ctrl["maximum"].toString().getFloatValue();
-                    slider->step = ctrl["step"].toString().getFloatValue();
-                    slider->value = ctrl["value"].toString().getFloatValue();
+        //             m_ctrls.push_back({ midi_in->id, midi_in });
+        //             LogAndDBG("MIDI In: " + midi_in->label + " added");
+        //         }
+        //         // The rest are the actual controls that map to hyperparameters
+        //         // of the model
+        //         else if (ctrl_type == "slider")
+        //         {
+        //             auto slider = std::make_shared<SliderCtrl>();
+        //             slider->id = juce::Uuid();
+        //             slider->label = ctrl["label"].toString().toStdString();
+        //             slider->minimum = ctrl["minimum"].toString().getFloatValue();
+        //             slider->maximum = ctrl["maximum"].toString().getFloatValue();
+        //             slider->step = ctrl["step"].toString().getFloatValue();
+        //             slider->value = ctrl["value"].toString().getFloatValue();
 
-                    m_ctrls.push_back({ slider->id, slider });
-                    LogAndDBG("Slider: " + slider->label + " added");
-                }
-                else if (ctrl_type == "text")
-                {
-                    auto text = std::make_shared<TextBoxCtrl>();
-                    text->id = juce::Uuid();
-                    text->label = ctrl["label"].toString().toStdString();
-                    text->value = ctrl["value"].toString().toStdString();
+        //             m_ctrls.push_back({ slider->id, slider });
+        //             LogAndDBG("Slider: " + slider->label + " added");
+        //         }
+        //         else if (ctrl_type == "text")
+        //         {
+        //             auto text = std::make_shared<TextBoxCtrl>();
+        //             text->id = juce::Uuid();
+        //             text->label = ctrl["label"].toString().toStdString();
+        //             text->value = ctrl["value"].toString().toStdString();
 
-                    m_ctrls.push_back({ text->id, text });
-                    LogAndDBG("Text: " + text->label + " added");
-                }
-                else if (ctrl_type == "number_box")
-                {
-                    auto number_box = std::make_shared<NumberBoxCtrl>();
-                    number_box->label = ctrl["label"].toString().toStdString();
-                    number_box->min = ctrl["min"].toString().getFloatValue();
-                    number_box->max = ctrl["max"].toString().getFloatValue();
-                    number_box->value = ctrl["value"].toString().getFloatValue();
+        //             m_ctrls.push_back({ text->id, text });
+        //             LogAndDBG("Text: " + text->label + " added");
+        //         }
+        //         else if (ctrl_type == "number_box")
+        //         {
+        //             auto number_box = std::make_shared<NumberBoxCtrl>();
+        //             number_box->label = ctrl["label"].toString().toStdString();
+        //             number_box->min = ctrl["min"].toString().getFloatValue();
+        //             number_box->max = ctrl["max"].toString().getFloatValue();
+        //             number_box->value = ctrl["value"].toString().getFloatValue();
 
-                    m_ctrls.push_back({ number_box->id, number_box });
-                    LogAndDBG("Number Box: " + number_box->label + " added");
-                }
-                else
-                    LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
-            }
-            catch (const char* e)
-            {
-                status2 = ModelStatus::ERROR;
-                error.devMessage = "Failed to load controls from JSON. " + std::string(e);
-                return OpResult::fail(error);
-            }
-        }
+        //             m_ctrls.push_back({ number_box->id, number_box });
+        //             LogAndDBG("Number Box: " + number_box->label + " added");
+        //         }
+        //         else
+        //             LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
+        //     }
+        //     catch (const char* e)
+        //     {
+        //         status2 = ModelStatus::ERROR;
+        //         error.devMessage = "Failed to load controls from JSON. " + std::string(e);
+        //         return OpResult::fail(error);
+        //     }
+        // }
         status2 = ModelStatus::LOADED;
         return OpResult::ok();
     }
 
-    // Shouldn't take a file for input. It should just visit 
-    // all media displays and controls and get their values. 
+    // TODO: Shouldn't take a file for input. It should just visit
+    // all media displays and controls and get their values.
     OpResult process(juce::File filetoProcess, juce::File outputFile)
     {
         status2 = ModelStatus::STARTING;
@@ -189,6 +201,7 @@ public:
         OpResult result = OpResult::ok();
 
         status2 = ModelStatus::SENDING;
+        // TODO: I should upload all inputMediaDisplays files first
         juce::String uploadedFilePath;
         result = gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath);
         if (result.failed())
@@ -226,8 +239,7 @@ public:
         }
 
         juce::String response;
-        result =
-            gradioClient.getResponseFromEventID(endpoint, eventId, response, 14000);
+        result = gradioClient.getResponseFromEventID(endpoint, eventId, response, 14000);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -280,21 +292,23 @@ public:
             // Make sure the object has a "meta" key
             // Gradio output components like File and Audio store metadata in the "meta" key
             // so we can use that to identify what kind of output it is
-            if (!procObj.getDynamicObject())
+            if (! procObj.getDynamicObject())
             {
                 status2 = ModelStatus::ERROR;
-                error.devMessage = "The " + juce::String(i) + 
-                    "th returned element of the process_fn function in the gradio-app is not a valid object. " +
-                    "Make sure you are using LabelList() and not just a python list, in process_fn, to return the output labels.";
+                error.devMessage =
+                    "The " + juce::String(i)
+                    + "th returned element of the process_fn function in the gradio-app is not a valid object. "
+                    + "Make sure you are using LabelList() and not just a python list, in process_fn, to return the output labels.";
                 return OpResult::fail(error);
             }
-            if (!procObj.getDynamicObject()->hasProperty("meta"))
+            if (! procObj.getDynamicObject()->hasProperty("meta"))
             {
                 status2 = ModelStatus::ERROR;
                 error.type = ErrorType::MissingJsonKey;
-                error.devMessage = "The " + juce::String(i) + 
-                    "th element of the array of processed outputs does not have a meta object. " +
-                    "Make sure you are using LabelList() in process_fn to return the output labels.";
+                error.devMessage =
+                    "The " + juce::String(i)
+                    + "th element of the array of processed outputs does not have a meta object. "
+                    + "Make sure you are using LabelList() in process_fn to return the output labels.";
                 return OpResult::fail(error);
             }
             juce::var meta = procObj.getDynamicObject()->getProperty("meta");
@@ -614,6 +628,8 @@ private:
     }
 
     CtrlList m_ctrls;
+    juce::Array<juce::var> inputComponents;
+    juce::Array<juce::var> outputComponents;
     GradioClient gradioClient;
 
     // A helper variable to store the status of the model
