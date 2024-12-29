@@ -26,14 +26,14 @@ enum ModelStatus
     ERROR
 };
 
-struct Ctrl
+struct PyHarpComponentInfo
 {
     juce::Uuid id { "" };
     std::string label { "" };
-    virtual ~Ctrl() = default; // virtual destructor
+    virtual ~PyHarpComponentInfo() = default; // virtual destructor
 };
 
-struct SliderCtrl : public Ctrl
+struct SliderInfo : public PyHarpComponentInfo
 {
     double minimum;
     double maximum;
@@ -41,34 +41,34 @@ struct SliderCtrl : public Ctrl
     double value;
 };
 
-struct TextBoxCtrl : public Ctrl
+struct TextBoxInfo : public PyHarpComponentInfo
 {
     std::string value;
 };
 
-struct AudioInCtrl : public Ctrl
+struct AudioTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
 };
 
-struct MidiInCtrl : public Ctrl
+struct MidiTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
 };
 
-struct NumberBoxCtrl : public Ctrl
+struct NumberBoxInfo : public PyHarpComponentInfo
 {
     double min;
     double max;
     double value;
 };
 
-struct ToggleCtrl : public Ctrl
+struct ToggleInfo : public PyHarpComponentInfo
 {
     bool value;
 };
 
-struct ComboBoxCtrl : public Ctrl
+struct ComboBoxInfo : public PyHarpComponentInfo
 {
     std::vector<std::string> options;
     std::string value;
@@ -156,5 +156,5 @@ struct MidiLabel : public OutputLabel
     std::optional<float> pitch;
 };
 
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using ComponentInfoList = std::vector<std::pair<juce::Uuid, std::shared_ptr<PyHarpComponentInfo>>>;
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;

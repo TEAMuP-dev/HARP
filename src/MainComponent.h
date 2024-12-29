@@ -13,6 +13,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "ControlAreaWidget.h"
+#include "TrackAreaWidget.h"
 #include "ThreadPoolJob.h"
 #include "WebModel.h"
 
@@ -26,9 +27,9 @@
 
 #include "HarpLogger.h"
 #include "external/magic_enum.hpp"
-#include "media/AudioDisplayComponent.h"
-#include "media/MediaDisplayComponent.h"
-#include "media/MidiDisplayComponent.h"
+// #include "media/AudioDisplayComponent.h"
+// #include "media/MediaDisplayComponent.h"
+// #include "media/MidiDisplayComponent.h"
 using namespace juce;
 
 // this only calls the callback ONCE
@@ -771,24 +772,25 @@ public:
         // Initialize default media display
         // initializeMediaDisplay(0, mediaDisplay);
         // Create a new mediaDisplay and add it in the inputMediaDisplays vector
-        inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
-        outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
+        // inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
+        // outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
         // Initialize all the inputMediaDisplays
-        for (int i = 0; i < inputMediaDisplays.size(); ++i)
-        {
-            initializeMediaDisplay(0, inputMediaDisplays[i]);
-        }
-        for (int i = 0; i < outputMediaDisplays.size(); ++i)
-        {
-            initializeMediaDisplay(1, outputMediaDisplays[i]);
-        }
+        // for (int i = 0; i < inputMediaDisplays.size(); ++i)
+        // {
+        //     initializeMediaDisplay(0, inputMediaDisplays[i]);
+        // }
+        // for (int i = 0; i < outputMediaDisplays.size(); ++i)
+        // {
+        //     initializeMediaDisplay(1, outputMediaDisplays[i]);
+        // }
 
-        if (initialFilePath.isLocalFile())
-        {
-            // TODO - it seems command line args are handled through Main.cpp and this is never hit
-            // Load initial file into matching media display
-            loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
-        }
+        // TODO: check how it behaves when running with a file as input
+        // if (initialFilePath.isLocalFile())
+        // {
+        //     // TODO - it seems command line args are handled through Main.cpp and this is never hit
+        //     // Load initial file into matching media display
+        //     loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
+        // }
 
         // addAndMakeVisible (startStopButton);
         playStopButton.addMode(playButtonInfo);
@@ -982,6 +984,9 @@ public:
         // outputTracksWidget.setModel(model);
         // addAndMakeVisible(outputTracksWidget);
         // outputTracksWidget.populateTracks();
+        trackAreaWidget.setModel(model);
+        addAndMakeVisible(trackAreaWidget);
+        trackAreaWidget.populateTracks();
 
         addAndMakeVisible(nameLabel);
         addAndMakeVisible(authorLabel);
@@ -1001,21 +1006,23 @@ public:
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
         setOpaque(true);
-        setSize(800, 800);
+        setSize(800, 2000);
+        // set to full screen
+        // setFullScreen(true);
         resized();
     }
 
     ~MainComponent() override
     {
-        mediaDisplay->removeChangeListener(this);
-        for (auto& inputMediaDisplay : inputMediaDisplays)
-        {
-            inputMediaDisplay->removeChangeListener(this);
-        }
-        for (auto& outputMediaDisplay : outputMediaDisplays)
-        {
-            outputMediaDisplay->removeChangeListener(this);
-        }
+        // mediaDisplay->removeChangeListener(this);
+        // for (auto& inputMediaDisplay : inputMediaDisplays)
+        // {
+        //     inputMediaDisplay->removeChangeListener(this);
+        // }
+        // for (auto& outputMediaDisplay : outputMediaDisplays)
+        // {
+        //     outputMediaDisplay->removeChangeListener(this);
+        // }
 
 
         // remove listeners
@@ -1055,179 +1062,183 @@ public:
             return;
         }
         // We already added a temp file, so we need to undo that
-        mediaDisplay->iteratePreviousTempFile();
-        mediaDisplay->clearFutureTempFiles();
+        // TODO: this is functionality that I need to add back
+        // mediaDisplay->iteratePreviousTempFile();
+        // mediaDisplay->clearFutureTempFiles();
         processCancelButton.setEnabled(false);
     }
 
     void processCallback()
     {
-        DBG("HARPProcessorEditor::buttonClicked button listener activated");
+        return;
+        
+        // DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
-        // check if the audio file is loaded for the first element of the inputMediaDisplays
-        if (! inputMediaDisplays[0]->isFileLoaded())
-        {
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Error",
-                "Audio file is not loaded. Please load an audio file first.");
-            return;
-        }
-
-        processCancelButton.setEnabled(true);
-        processCancelButton.setMode(cancelButtonInfo.label);
-
-        saveEnabled = false;
-        isProcessing = true;
-
-        if (model == nullptr)
-        {
-            AlertWindow("Error",
-                        "Model is not loaded. Please load a model first.",
-                        AlertWindow::WarningIcon);
-            isProcessing = false;
-            return;
-        }
-
-        bool matchingModel = true;
-
-        // if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
+        // // check if the audio file is loaded for the first element of the inputMediaDisplays
+        // if (! inputMediaDisplays[0]->isFileLoaded())
         // {
-        //     matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
-        // }
-        // else
-        // {
-        //     matchingModel = model->card().midi_in; //&& model->card().midi_out;
+        //     AlertWindow::showMessageBoxAsync(
+        //         AlertWindow::WarningIcon,
+        //         "Error",
+        //         "Audio file is not loaded. Please load an audio file first.");
+        //     return;
         // }
 
-        // Check if the model's type (Audio or MIDI) matches the input file's type
-        // If not, show an error message and ask the user to either use another model
-        // or another appropriate file
-        if (! matchingModel)
-        {
-            LogAndDBG("Model and file type mismatch");
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Processing Error",
-                "Model and file type mismatch. Please use an appropriate model or file.");
-            // processBroadcaster.sendChangeMessage();
-            resetProcessingButtons();
-            return;
-        }
+        // processCancelButton.setEnabled(true);
+        // processCancelButton.setMode(cancelButtonInfo.label);
 
-        inputMediaDisplays[0]->addNewTempFile();
-        outputMediaDisplays[0]->addNewTempFile();
-        // print how many jobs are currently in the threadpool
-        LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
+        // saveEnabled = false;
+        // isProcessing = true;
 
-        // empty customJobs
-        customJobs.clear();
+        // if (model == nullptr)
+        // {
+        //     AlertWindow("Error",
+        //                 "Model is not loaded. Please load a model first.",
+        //                 AlertWindow::WarningIcon);
+        //     isProcessing = false;
+        //     return;
+        // }
 
-        customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
-            // Individual job code for each iteration
-            // copy the audio file, with the same filename except for an added _harp to the stem
-            OpResult processingResult =
-                model->process(inputMediaDisplays[0]->getTempFilePath().getLocalFile(),
-                                outputMediaDisplays[0]->getTempFilePath().getLocalFile());
-            if (processingResult.failed())
-            {
-                Error processingError = processingResult.getError();
-                Error::fillUserMessage(processingError);
-                LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
-                AlertWindow::showMessageBoxAsync(
-                    AlertWindow::WarningIcon,
-                    "Processing Error",
-                    "An error occurred while processing the audio file: \n"
-                        + processingError.userMessage);
-                // cb: I commented this out, and it doesn't seem to change anything
-                // it was also causing a crash. If we need it, it needs to run on
-                // the message thread using MessageManager::callAsync
-                // resetProcessingButtons();
-                return;
-            }
-            // load the audio file again
-            processBroadcaster.sendChangeMessage();
+        // bool matchingModel = true;
 
-        }));
+        // // if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
+        // // {
+        // //     matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
+        // // }
+        // // else
+        // // {
+        // //     matchingModel = model->card().midi_in; //&& model->card().midi_out;
+        // // }
 
-        // Now the customJobs are ready to be added to be run in the threadPool
-        jobProcessorThread.signalTask();
+        // // Check if the model's type (Audio or MIDI) matches the input file's type
+        // // If not, show an error message and ask the user to either use another model
+        // // or another appropriate file
+        // if (! matchingModel)
+        // {
+        //     LogAndDBG("Model and file type mismatch");
+        //     AlertWindow::showMessageBoxAsync(
+        //         AlertWindow::WarningIcon,
+        //         "Processing Error",
+        //         "Model and file type mismatch. Please use an appropriate model or file.");
+        //     // processBroadcaster.sendChangeMessage();
+        //     resetProcessingButtons();
+        //     return;
+        // }
+
+        // inputMediaDisplays[0]->addNewTempFile();
+        // outputMediaDisplays[0]->addNewTempFile();
+        // // print how many jobs are currently in the threadpool
+        // LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
+
+        // // empty customJobs
+        // customJobs.clear();
+
+        // customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
+        //     // Individual job code for each iteration
+        //     // copy the audio file, with the same filename except for an added _harp to the stem
+        //     OpResult processingResult =
+        //         model->process(inputMediaDisplays[0]->getTempFilePath().getLocalFile(),
+        //                         outputMediaDisplays[0]->getTempFilePath().getLocalFile());
+        //     if (processingResult.failed())
+        //     {
+        //         Error processingError = processingResult.getError();
+        //         Error::fillUserMessage(processingError);
+        //         LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
+        //         AlertWindow::showMessageBoxAsync(
+        //             AlertWindow::WarningIcon,
+        //             "Processing Error",
+        //             "An error occurred while processing the audio file: \n"
+        //                 + processingError.userMessage);
+        //         // cb: I commented this out, and it doesn't seem to change anything
+        //         // it was also causing a crash. If we need it, it needs to run on
+        //         // the message thread using MessageManager::callAsync
+        //         // resetProcessingButtons();
+        //         return;
+        //     }
+        //     // load the audio file again
+        //     processBroadcaster.sendChangeMessage();
+
+        // }));
+
+        // // Now the customJobs are ready to be added to be run in the threadPool
+        // jobProcessorThread.signalTask();
     }
 
-    void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    {
-        if (mediaType == 1)
-        {
-            cur_mediaDisplay = std::make_unique<MidiDisplayComponent>();
-        }
-        else
-        {
-            // Default to audio display
-            cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
-        }
+    // void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
+    // {
+    //     if (mediaType == 1)
+    //     {
+    //         cur_mediaDisplay = std::make_unique<MidiDisplayComponent>();
+    //     }
+    //     else
+    //     {
+    //         // Default to audio display
+    //         cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
+    //     }
 
-        addAndMakeVisible(cur_mediaDisplay.get());
-        cur_mediaDisplay->addChangeListener(this);
+    //     addAndMakeVisible(cur_mediaDisplay.get());
+    //     cur_mediaDisplay->addChangeListener(this);
 
-        // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-        // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-        // mediaDisplayHandler->onMouseMove = [this]()
-        // { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
-        // mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
-        // mediaDisplayHandler->attach();
-    }
+    //     // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
+    //     // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
+    //     // mediaDisplayHandler->onMouseMove = [this]()
+    //     // { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
+    //     // mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
+    //     // mediaDisplayHandler->attach();
+    // }
 
     void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
     {
-        // Check the file extension to determine type
-        String extension = mediaFile.getFileExtension();
+        return;
+        // // Check the file extension to determine type
+        // String extension = mediaFile.getFileExtension();
 
-        bool matchingDisplay = true;
+        // bool matchingDisplay = true;
 
-        if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
-        {
-            matchingDisplay = audioExtensions.contains(extension);
-        }
-        else
-        {
-            matchingDisplay = midiExtensions.contains(extension);
-        }
+        // if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
+        // {
+        //     matchingDisplay = audioExtensions.contains(extension);
+        // }
+        // else
+        // {
+        //     matchingDisplay = midiExtensions.contains(extension);
+        // }
 
-        if (! matchingDisplay)
-        {
-            // Remove the existing media display
-            removeChildComponent(cur_mediaDisplay.get());
-            cur_mediaDisplay->removeChangeListener(this);
-            // mediaDisplayHandler->detach();
+        // if (! matchingDisplay)
+        // {
+        //     // Remove the existing media display
+        //     removeChildComponent(cur_mediaDisplay.get());
+        //     cur_mediaDisplay->removeChangeListener(this);
+        //     // mediaDisplayHandler->detach();
 
-            int mediaType = 0;
+        //     int mediaType = 0;
 
-            if (audioExtensions.contains(extension))
-            {
-            }
-            else if (midiExtensions.contains(extension))
-            {
-                mediaType = 1;
-            }
-            else
-            {
-                DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-                                                                                << "\'.");
+        //     if (audioExtensions.contains(extension))
+        //     {
+        //     }
+        //     else if (midiExtensions.contains(extension))
+        //     {
+        //         mediaType = 1;
+        //     }
+        //     else
+        //     {
+        //         DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
+        //                                                                         << "\'.");
 
-                AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-            }
+        //         AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
+        //     }
 
-            // Initialize a matching display
-            initializeMediaDisplay(mediaType, cur_mediaDisplay);
-        }
+        //     // Initialize a matching display
+        //     initializeMediaDisplay(mediaType, cur_mediaDisplay);
+        // }
 
-        cur_mediaDisplay->setupDisplay(URL(mediaFile));
+        // cur_mediaDisplay->setupDisplay(URL(mediaFile));
 
-        lastLoadTime = Time::getCurrentTime();
+        // lastLoadTime = Time::getCurrentTime();
 
-        playStopButton.setEnabled(true);
+        // playStopButton.setEnabled(true);
 
-        resized();
+        // resized();
     }
     // TODO: ignore that for now. Load files using drag n drop which works fine
     // for multiple mediaDisplays
@@ -1302,7 +1313,7 @@ public:
                                          if (chosenFile != File {})
                                          {
                                             //  loadMediaDisplay(chosenFile, mediaDisplay);
-                                            loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
+                                            // loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
                                          }
                                      });
     }
@@ -1396,18 +1407,20 @@ public:
         const int rowHeight = 150; // Adjust height as needed
 
         // Row 7 and onwards: input media displays
-        for (auto& display : inputMediaDisplays)
-        {
-            auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
-            display->setBounds(row);
-        }
+        // for (auto& display : inputMediaDisplays)
+        // {
+        //     auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
+        //     display->setBounds(row);
+        // }
 
-        // Output media displays
-        for (auto& display : outputMediaDisplays)
-        {
-            auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
-            display->setBounds(row);
-        }
+        // // Output media displays
+        // for (auto& display : outputMediaDisplays)
+        // {
+        //     auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
+        //     display->setBounds(row);
+        // }
+
+        trackAreaWidget.setBounds(mainArea.removeFromTop(150).reduced(margin));
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(50); // adjust height as needed
@@ -1427,6 +1440,7 @@ public:
     void resetUI()
     {
         controlAreaWidget.resetUI();
+        trackAreaWidget.resetUI();
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
@@ -1527,6 +1541,7 @@ private:
 
     std::string customPath;
     ControlAreaWidget controlAreaWidget;
+    TrackAreaWidget trackAreaWidget;
 
     // model card
     Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
@@ -1546,12 +1561,12 @@ private:
     std::unique_ptr<FileChooser> openFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
 
-    std::unique_ptr<MediaDisplayComponent> mediaDisplay;
-    std::unique_ptr<MediaDisplayComponent> outputMediaDisplay;
-    // A list of input media displays
-    std::vector<std::unique_ptr<MediaDisplayComponent>> inputMediaDisplays;
-    // A list of output media displays
-    std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
+    // std::unique_ptr<MediaDisplayComponent> mediaDisplay;
+    // std::unique_ptr<MediaDisplayComponent> outputMediaDisplay;
+    // // A list of input media displays
+    // std::vector<std::unique_ptr<MediaDisplayComponent>> inputMediaDisplays;
+    // // A list of output media displays
+    // std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
 
 
     std::unique_ptr<HoverHandler> mediaDisplayHandler;
@@ -1584,7 +1599,7 @@ private:
         //     playStopButton.setMode(stopButtonInfo.label);
         // }
         // visit all the mediaDisplays and check each of them
-        for (auto& display : inputMediaDisplays)
+        for (auto& display : trackAreaWidget.getInputMediaDisplays())
         {
             if (! display->isPlaying())
             {
@@ -1601,7 +1616,7 @@ private:
         //     mediaDisplay->stop();
         //     playStopButton.setMode(playButtonInfo.label);
         // }
-        for (auto& display : inputMediaDisplays)
+        for (auto& display : trackAreaWidget.getInputMediaDisplays())
         {
             if (display->isPlaying())
             {
@@ -1622,35 +1637,38 @@ private:
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-            // Check if the source is one of the inputMediaDisplays
-        for (auto& display : inputMediaDisplays)
-        {
-            if (source == display.get())
-            {
-                if (display->isFileDropped())
-                {
-                    URL droppedFilePath = display->getDroppedFilePath();
-                    display->clearDroppedFile();
-                    // Reload an appropriate display for dropped file
-                    loadMediaDisplay(droppedFilePath.getLocalFile(), display);
-                }
-                else if (display->isFileLoaded() && !display->isPlaying())
-                {
-                    playStopButton.setMode(playButtonInfo.label);
-                    playStopButton.setEnabled(true);
-                }
-                else if (display->isFileLoaded() && display->isPlaying())
-                {
-                    playStopButton.setMode(stopButtonInfo.label);
-                }
-                else
-                {
-                    playStopButton.setMode(playButtonInfo.label);
-                    playStopButton.setEnabled(false);
-                }
-                return; 
-            }
-        }
+        // // Check if the source is one of the inputMediaDisplays
+        // for (auto& display : trackAreaWidget.getInputMediaDisplays())
+        // {
+        //     if (source == display.get())
+        //     {
+        //         if (display->isFileDropped())
+        //         {
+        //             URL droppedFilePath = display->getDroppedFilePath();
+        //             display->clearDroppedFile();
+        //             // Reload an appropriate display for dropped file
+        //             loadMediaDisplay(droppedFilePath.getLocalFile(), display);
+        //         }
+        //         else if (display->isFileLoaded() && !display->isPlaying())
+        //         {
+        //             playStopButton.setMode(playButtonInfo.label);
+        //             playStopButton.setEnabled(true);
+        //         }
+        //         else if (display->isFileLoaded() && display->isPlaying())
+        //         {
+        //             playStopButton.setMode(stopButtonInfo.label);
+        //         }
+        //         else
+        //         {
+        //             playStopButton.setMode(playButtonInfo.label);
+        //             playStopButton.setEnabled(false);
+        //         }
+        //         return; 
+        //     }
+        // }
+
+        // old
+
         // if (source == mediaDisplay.get())
         // {
         //     if (mediaDisplay->isFileDropped())
@@ -1696,19 +1714,20 @@ private:
         // as the loadBroadcaster
         if (source == &processBroadcaster)
         {
-            // refresh the display for the new updated file
-            URL tempFilePath = outputMediaDisplays[0]->getTempFilePath();
-            outputMediaDisplays[0]->updateDisplay(tempFilePath);
-
-            // extract generated labels from the model
-            LabelList& labels = model->getLabels();
-
-            // add the labels to the display component
-            outputMediaDisplays[0]->addLabels(labels);
-
-            // now, we can enable the process button
-            resetProcessingButtons();
             return;
+            // // refresh the display for the new updated file
+            // URL tempFilePath = outputMediaDisplays[0]->getTempFilePath();
+            // outputMediaDisplays[0]->updateDisplay(tempFilePath);
+
+            // // extract generated labels from the model
+            // LabelList& labels = model->getLabels();
+
+            // // add the labels to the display component
+            // outputMediaDisplays[0]->addLabels(labels);
+
+            // // now, we can enable the process button
+            // resetProcessingButtons();
+            // return;
         }
         
         if (source == mModelStatusTimer.get())
@@ -1728,6 +1747,7 @@ private:
 
     void processLoadingResult(OpResult result)
     {
+        // return;
         if (result.wasOk())
         {
             setModelCard(model->card());
@@ -1736,6 +1756,11 @@ private:
             controlAreaWidget.populateControls();
             // inputTracksWidget.populateTracks();
             // outputTracksWidget.populateTracks();
+            // trackAreaWidget.setModel(model);
+            // trackAreaWidget.populateTracks();
+            trackAreaWidget.setModel(model);
+            // addAndMakeVisible(trackAreaWidget);
+            trackAreaWidget.populateTracks();
 
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)

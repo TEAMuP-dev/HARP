@@ -57,6 +57,7 @@ target_sources(${PROJECT_NAME}
         src/Main.cpp
         src/MainComponent.h
         src/ControlAreaWidget.h
+        src/TrackAreaWidget.h
         src/Model.h 
         src/WebModel.h
         src/HarpLogger.h
