@@ -74,6 +74,7 @@ target_sources(${PROJECT_NAME}
         src/gui/TitledTextBox.h
         src/gui/SliderWithLabel.h
         src/gui/CustomPathDialog.h
+        src/gui/ModelAuthorLabel.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp

@@ -123,6 +123,18 @@ struct SpaceInfo
         str += "Error: " + error + "\n";
         return str;
     }
+
+    juce::String getModelSlashUser() const 
+    {
+        if (status == LOCALHOST)
+        {
+            return "localhost";
+        }
+        else
+        {
+            return userName + "/" + modelName;
+        }
+    }
 };
 
 struct OutputLabel

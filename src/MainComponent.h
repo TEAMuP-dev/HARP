@@ -13,8 +13,8 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "ControlAreaWidget.h"
-#include "TrackAreaWidget.h"
 #include "ThreadPoolJob.h"
+#include "TrackAreaWidget.h"
 #include "WebModel.h"
 
 #include "gui/CustomPathDialog.h"
@@ -22,6 +22,7 @@
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
+#include "gui/ModelAuthorLabel.h"
 
 #include "gradio/GradioClient.h"
 
@@ -604,7 +605,8 @@ public:
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
-                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().huggingface;
+                                URL spaceUrl =
+                                    this->model->getGradioClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
@@ -685,7 +687,9 @@ public:
         // cb: why do we resetUI inside a function named resetModelPathComboBox ?
         resetUI();
         //should I clear this?
-        spaceUrlButton.setButtonText("");
+        // spaceUrlButton.setButtonText("");
+        // spaceUrlButtonHandler.detach();
+
         int numItems = modelPathComboBox.getNumItems();
         std::vector<std::string> options;
 
@@ -988,7 +992,7 @@ public:
         addAndMakeVisible(trackAreaWidget);
         trackAreaWidget.populateTracks();
 
-        addAndMakeVisible(nameLabel);
+        // addAndMakeVisible(nameLabel);
         addAndMakeVisible(authorLabel);
         addAndMakeVisible(descriptionLabel);
         addAndMakeVisible(tagsLabel);
@@ -1023,7 +1027,6 @@ public:
         // {
         //     outputMediaDisplay->removeChangeListener(this);
         // }
-
 
         // remove listeners
         mModelStatusTimer->removeChangeListener(this);
@@ -1071,7 +1074,7 @@ public:
     void processCallback()
     {
         return;
-        
+
         // DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
         // // check if the audio file is loaded for the first element of the inputMediaDisplays
@@ -1175,10 +1178,8 @@ public:
     //         // Default to audio display
     //         cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
     //     }
-
     //     addAndMakeVisible(cur_mediaDisplay.get());
     //     cur_mediaDisplay->addChangeListener(this);
-
     //     // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
     //     // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
     //     // mediaDisplayHandler->onMouseMove = [this]()
@@ -1312,8 +1313,8 @@ public:
                                          File chosenFile = browser.getResult();
                                          if (chosenFile != File {})
                                          {
-                                            //  loadMediaDisplay(chosenFile, mediaDisplay);
-                                            // loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
+                                             //  loadMediaDisplay(chosenFile, mediaDisplay);
+                                             // loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
                                          }
                                      });
     }
@@ -1323,7 +1324,7 @@ public:
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
-    void resized() override
+    void resized2()
     {
         auto area = getLocalBounds();
 
@@ -1345,16 +1346,22 @@ public:
         auto row2a = mainArea.removeFromTop(35); // adjust height as needed
         nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
         nameLabel.setFont(Font(20.0f, Font::bold));
+
+        // Row 4: Space URL Hyperlink
+        auto row4 = mainArea.removeFromTop(22); // adjust height as needed
+        // spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
+        // spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
+
         // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
 
-        auto row2b = mainArea.removeFromTop(20);
-        authorLabel.setBounds(row2b.reduced(margin));
-        authorLabel.setFont(Font(10.0f));
+        // auto row2b = mainArea.removeFromTop(20);
+        // authorLabel.setBounds(row2b.reduced(margin));
+        // authorLabel.setFont(Font(10.0f));
 
-        auto row2c = mainArea.removeFromTop(30);
-        audioOrMidiLabel.setBounds(row2c.reduced(margin));
-        audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
-        audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
+        // auto row2c = mainArea.removeFromTop(30);
+        // audioOrMidiLabel.setBounds(row2c.reduced(margin));
+        // audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
+        // audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
 
         // Row 3: Description Label
 
@@ -1376,13 +1383,8 @@ public:
         auto row3 = mainArea.removeFromTop((int) textHeight).reduced(margin);
         descriptionLabel.setBounds(row3);
 
-        // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(22); // adjust height as needed
-        spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
-        spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
-
         // Row 5: ControlAreaWidget (flexible height)
-        auto row5 = mainArea.removeFromTop(195); // the remaining area is for row 4
+        auto row5 = mainArea.removeFromTop(195);
         controlAreaWidget.setBounds(row5.reduced(margin));
 
         // An empty space of 20px between the ctrl component and the process button
@@ -1395,32 +1397,14 @@ public:
         // Assign bounds to processButton
         processCancelButton.setBounds(
             row6.withSizeKeepingCentre(100, 20)); // centering the button in the row
-        // place the status label to the left of the process button (justified left)
-        // statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
 
         // An empty space of 30px between the process button and the thumbnail area
         mainArea.removeFromTop(30);
 
         // // Row 7: thumbnail area
-        // auto row7 = mainArea.removeFromTop(150).reduced(margin / 2); // adjust height as needed
-        // mediaDisplay->setBounds(row7);
         const int rowHeight = 150; // Adjust height as needed
 
-        // Row 7 and onwards: input media displays
-        // for (auto& display : inputMediaDisplays)
-        // {
-        //     auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
-        //     display->setBounds(row);
-        // }
-
-        // // Output media displays
-        // for (auto& display : outputMediaDisplays)
-        // {
-        //     auto row = mainArea.removeFromTop(rowHeight).reduced(margin / 2);
-        //     display->setBounds(row);
-        // }
-
-        trackAreaWidget.setBounds(mainArea.removeFromTop(150).reduced(margin));
+        trackAreaWidget.setBounds(mainArea.removeFromTop(600).reduced(margin));
 
         // Row 8: Buttons for Play/Stop and Open File
         auto row8 = mainArea.removeFromTop(50); // adjust height as needed
@@ -1429,7 +1413,7 @@ public:
         saveFileButton.setBounds(row8.reduced(margin));
 
         // Status area
-        auto row9 = mainArea.removeFromBottom(80);
+        auto row9 = mainArea.removeFromBottom(300);
         // Split row9 to two columns
         auto row9a = row9.removeFromLeft(row9.getWidth() / 2);
         auto row9b = row9;
@@ -1437,6 +1421,90 @@ public:
         statusArea.setBounds(row9b.reduced(margin));
     }
 
+    void resized() override
+    {
+        auto area = getLocalBounds();
+
+#if not JUCE_MAC
+        menuBar->setBounds(
+            area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
+#endif
+
+        auto margin = 5; // Adjusted margin value for top and bottom spacing
+
+        // Create a FlexBox container
+        juce::FlexBox flexBox;
+        flexBox.flexDirection = juce::FlexBox::Direction::column;
+        flexBox.alignContent = juce::FlexBox::AlignContent::stretch;
+        flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+
+        // Row 1: Model Path ComboBox and Load Model Button
+        juce::FlexBox row1;
+        row1.flexDirection = juce::FlexBox::Direction::row;
+        row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
+        row1.items.add(juce::FlexItem(loadModelButton).withFlex(2).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.3));
+
+        // Row 2: Name Label and Space URL Button
+        juce::FlexBox row2;
+        row2.flexDirection = juce::FlexBox::Direction::row;
+
+        // Add the custom component to row2 with 50% width
+        row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
+
+        // Add an empty FlexItem to occupy the remaining 50%
+        row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
+
+        flexBox.items.add(juce::FlexItem(row2).withFlex(1));
+        // // Create a FlexBox for model and author name
+        // juce::FlexBox subRow2;
+        // subRow2.flexDirection = juce::FlexBox::Direction::row;
+        // subRow2.items.add(juce::FlexItem(nameLabelButton).withFlex(1).withMargin(margin));
+        // auto authorLabelFlexItem = juce::FlexItem(authorLabel).withFlex(1).withMargin(margin);
+        // authorLabelFlexItem.margin.top += 7;
+        // // authorLabelFlexItem.alignSelf = juce::FlexItem::AlignSelf::flexEnd;
+        // subRow2.items.add(authorLabelFlexItem);
+        // authorLabel.setFont(Font(11.0f));
+        // nameLabelButton.setFont(Font(22.0f, Font::bold), false, Justification::centredLeft);
+
+        // // Add the subRow2 to row2 with 50% width
+        // row2.items.add(juce::FlexItem(subRow2).withFlex(0.4).withMargin(margin));
+
+        // // Add an empty FlexItem to occupy the remaining 50%
+        // row2.items.add(juce::FlexItem().withFlex(0.6).withMargin(margin));
+
+        // flexBox.items.add(juce::FlexItem(row2).withFlex(1));
+
+        // Row 3: Description Label
+        flexBox.items.add(juce::FlexItem(descriptionLabel).withFlex(2).withMargin(margin));
+
+        // Row 4: Control Area Widget
+        flexBox.items.add(juce::FlexItem(controlAreaWidget).withFlex(3).withMargin(margin));
+
+        // Row 5: Process Cancel Button
+        flexBox.items.add(juce::FlexItem(processCancelButton).withFlex(1).withMargin(margin));
+
+        // Row 6: Track Area Widget
+        flexBox.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
+
+        // Row 7: Play/Stop Button, Open File Button, and Save File Button
+        juce::FlexBox row7;
+        row7.flexDirection = juce::FlexBox::Direction::row;
+        row7.items.add(juce::FlexItem(playStopButton).withFlex(1).withMargin(margin));
+        row7.items.add(juce::FlexItem(chooseFileButton).withFlex(1).withMargin(margin));
+        row7.items.add(juce::FlexItem(saveFileButton).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row7).withFlex(1));
+
+        // Row 8: Instructions Area and Status Area
+        juce::FlexBox row8;
+        row8.flexDirection = juce::FlexBox::Direction::row;
+        row8.items.add(juce::FlexItem(instructionsArea).withFlex(1).withMargin(margin));
+        row8.items.add(juce::FlexItem(statusArea).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row8).withFlex(1));
+
+        // Apply the FlexBox layout to the main area
+        flexBox.performLayout(area);
+    }
     void resetUI()
     {
         controlAreaWidget.resetUI();
@@ -1444,17 +1512,19 @@ public:
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
+        modelAuthorLabelHandler.detach();
     }
 
     void setModelCard(const ModelCard& card)
     {
         // Set the text for the labels
-        nameLabel.setText(String(card.name), dontSendNotification);
+        // nameLabel.setText(String(card.name), dontSendNotification);
+        modelAuthorLabel.setModelText(String(card.name));
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
         card.author.empty()
-            ? authorLabel.setText("", dontSendNotification)
-            : authorLabel.setText("by " + String(card.author), dontSendNotification);
+            ? modelAuthorLabel.setAuthorText("", dontSendNotification)
+            : modelAuthorLabel.setAuthorText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
         // if (card.midi_in && card.midi_out && ! card.author.empty())
         // {
@@ -1468,7 +1538,7 @@ public:
         // {
         //     audioOrMidiLabel.setText("", dontSendNotification);
         // }
-        audioOrMidiLabel.setText("No need for that", dontSendNotification);
+        // audioOrMidiLabel.setText("No need for that", dontSendNotification);
     }
 
     void setStatus(const ModelStatus& status)
@@ -1507,6 +1577,12 @@ private:
     TextButton saveFileButton { "Save File" };
     HoverHandler saveFileButtonHandler { saveFileButton };
 
+    // TextButton
+    // HyperlinkButton nameLabelButton;
+    // HoverHandler nameLabelButtonHandler { nameLabelButton };
+    ModelAuthorLabel modelAuthorLabel;
+    HoverHandler modelAuthorLabelHandler { modelAuthorLabel };
+
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
     // 2. loadModelButton doesn't need to be a MultiButton
@@ -1544,12 +1620,11 @@ private:
     TrackAreaWidget trackAreaWidget;
 
     // model card
-    Label nameLabel, authorLabel, descriptionLabel, tagsLabel;
+    // Label nameLabel, authorLabel, 
+    Label descriptionLabel, tagsLabel;
     // For now it is assumed that both input and output types
     // of the model are the same (audio or midi)
     Label audioOrMidiLabel;
-    HyperlinkButton spaceUrlButton;
-
     StatusComponent statusArea { 15.0f, juce::Justification::centred };
     StatusComponent instructionsArea { 13.0f, juce::Justification::centredLeft };
 
@@ -1567,7 +1642,6 @@ private:
     // std::vector<std::unique_ptr<MediaDisplayComponent>> inputMediaDisplays;
     // // A list of output media displays
     // std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
-
 
     std::unique_ptr<HoverHandler> mediaDisplayHandler;
     std::unique_ptr<HoverHandler> outputMediaDisplayHandler;
@@ -1663,7 +1737,7 @@ private:
         //             playStopButton.setMode(playButtonInfo.label);
         //             playStopButton.setEnabled(false);
         //         }
-        //         return; 
+        //         return;
         //     }
         // }
 
@@ -1729,7 +1803,7 @@ private:
             // resetProcessingButtons();
             // return;
         }
-        
+
         if (source == mModelStatusTimer.get())
         {
             // update the status label
@@ -1739,10 +1813,8 @@ private:
             return;
         }
 
-        
         DBG("HARPProcessorEditor::changeListenerCallback: unhandled change broadcaster");
         return;
-        
     }
 
     void processLoadingResult(OpResult result)
@@ -1763,26 +1835,38 @@ private:
             trackAreaWidget.populateTracks();
 
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+            // juce::String spaceUrlButtonText;
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-                
+
             {
-                spaceUrlButton.setButtonText("open localhost in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                // spaceUrlButton.setButtonText("open localhost in browser");
+                // nameLabelButton.setURL(URL(spaceInfo.gradio));
+                modelAuthorLabel.setURL(URL(spaceInfo.gradio));
             }
             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
             {
-                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-                                             + spaceInfo.modelName + " in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+                // spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+                //                              + spaceInfo.modelName + " in browser");
+                // nameLabelButton.setURL(URL(spaceInfo.huggingface));
+                modelAuthorLabel.setURL(URL(spaceInfo.huggingface));
             }
             else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
             {
-                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
-                                             + spaceInfo.modelName + " in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                // spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
+                //                              + spaceInfo.modelName + " in browser");
+                // nameLabelButton.setURL(URL(spaceInfo.gradio));
+                modelAuthorLabel.setURL(URL(spaceInfo.gradio));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-            addAndMakeVisible(spaceUrlButton);
+            addAndMakeVisible(modelAuthorLabel);
+            modelAuthorLabelHandler.onMouseEnter = [this]()
+            {
+                setInstructions("Click to visit "
+                                + model->getGradioClient().getSpaceInfo().getModelSlashUser()
+                                + "\nin your browser");
+            };
+            modelAuthorLabelHandler.onMouseExit = [this]() { clearInstructions(); };
+            modelAuthorLabelHandler.attach();
         }
 
         // now, we can enable the buttons
