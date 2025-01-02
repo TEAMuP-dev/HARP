@@ -45,12 +45,14 @@ juce_add_gui_app(${PROJECT_NAME}
 # include all your JUCE module headers; if you're happy to include module headers directly, you
 # probably don't need to call this.
 
-# juce_generate_juce_header(${PROJECT_NAME})
+juce_generate_juce_header(${PROJECT_NAME})
 
 # `target_sources` adds source files to a target. We pass the target that needs the sources as the
 # first argument, then a visibility parameter for the sources which should normally be PRIVATE.
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
+
+# add_subdirectory(src/external/fontaudio)
 
 target_sources(${PROJECT_NAME}
     PRIVATE
@@ -67,6 +69,20 @@ target_sources(${PROJECT_NAME}
 
         src/gradio/GradioClient.cpp
         src/external/magic_enum.hpp
+        # src/external/fontaudio/fontaudio.cpp
+        # src/external/fontaudio/fontaudio.h
+        # src/external/fontaudio/fontaudio.mm
+        src/external/fontaudio/src/FontAudio.h
+        src/external/fontaudio/src/FontAudio.cpp
+        src/external/fontaudio/data/FontAudioData.h
+        src/external/fontaudio/data/FontAudioData.cpp
+        src/external/fontaudio/data/Icons.h
+
+        src/external/fontawesome/src/FontAwesome.h
+        src/external/fontawesome/src/FontAwesome.cpp
+        src/external/fontawesome/data/FontAwesomeData.h
+        src/external/fontawesome/data/FontAwesomeData.cpp
+        src/external/fontawesome/data/Icons.h
         
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp

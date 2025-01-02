@@ -1,0 +1,17 @@
+{
+  "id":             "danlin_fontawesome",
+  "name":           "Font Awesome",
+  "version":        "1.3.0-4.7.0",
+  "description":    "Font Awesome gives you scalable vector icons that can instantly be customized",
+  "website":        "http://fortawesome.github.io/Font-Awesome/",
+  "license":        "The MIT License (MIT)",
+
+  "dependencies":   [ { "id": "juce_core", "version": "matching" }, { "id": "juce_graphics", "version": "matching" } ],
+
+  "include":        "danlin_fontawesome.h",
+
+  "compile":        [ { "file": "danlin_fontawesome.cpp", "target": "! xcode" },
+                      { "file": "danlin_fontawesome.mm",  "target": "xcode" } ],
+
+  "browse":         [ "src/*" ]
+}

@@ -993,7 +993,7 @@ public:
         trackAreaWidget.populateTracks();
 
         // addAndMakeVisible(nameLabel);
-        addAndMakeVisible(authorLabel);
+        // addAndMakeVisible(authorLabel);
         addAndMakeVisible(descriptionLabel);
         addAndMakeVisible(tagsLabel);
         addAndMakeVisible(audioOrMidiLabel);
@@ -1344,8 +1344,8 @@ public:
         loadModelButton.setBounds(row1.reduced(margin));
         // Row 2: Name and Author Labels
         auto row2a = mainArea.removeFromTop(35); // adjust height as needed
-        nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
-        nameLabel.setFont(Font(20.0f, Font::bold));
+        // nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
+        // nameLabel.setFont(Font(20.0f, Font::bold));
 
         // Row 4: Space URL Hyperlink
         auto row4 = mainArea.removeFromTop(22); // adjust height as needed
@@ -1523,8 +1523,9 @@ public:
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
         card.author.empty()
-            ? modelAuthorLabel.setAuthorText("", dontSendNotification)
-            : modelAuthorLabel.setAuthorText("by " + String(card.author), dontSendNotification);
+            ? modelAuthorLabel.setAuthorText("")
+            : modelAuthorLabel.setAuthorText("by " + String(card.author));
+        modelAuthorLabel.resized();
         // It is assumed we only support wav2wav or midi2midi models for now
         // if (card.midi_in && card.midi_out && ! card.author.empty())
         // {
