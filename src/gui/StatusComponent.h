@@ -1,17 +1,71 @@
+// #pragma once
+
+// #include "juce_gui_basics/juce_gui_basics.h"
+
+// class StatusComponent : public juce::Component
+// {
+// public:
+//     StatusComponent(float fontSize = 15.0f,
+//                     juce::Justification justification = juce::Justification::centred);
+//     void paint(juce::Graphics& g) override;
+//     void resized() override;
+//     void setStatusMessage(const juce::String& message);
+//     void clearStatusMessage();
+
+// private:
+//     juce::Label statusLabel;
+// };
+
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
 
-class StatusComponent : public juce::Component
+class InstructionBox : public juce::Component
 {
 public:
-    StatusComponent(float fontSize = 15.0f,
-                    juce::Justification justification = juce::Justification::centred);
+    InstructionBox(float fontSize = 15.0f,
+                  juce::Justification justification = juce::Justification::centred);
     void paint(juce::Graphics& g) override;
     void resized() override;
     void setStatusMessage(const juce::String& message);
     void clearStatusMessage();
 
-private:
+protected:
     juce::Label statusLabel;
+
+private:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstructionBox)
 };
+
+class StatusBox : public juce::Component
+{
+public:
+    StatusBox(float fontSize = 15.0f,
+                  juce::Justification justification = juce::Justification::centred);
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+    void setStatusMessage(const juce::String& message);
+    void clearStatusMessage();
+
+protected:
+    juce::Label statusLabel;
+
+private:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatusBox)
+};
+
+// class InstructionBox : public BaseStatusBox
+// {
+// public:
+//     InstructionBox();
+// private:
+//     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstructionBox)
+// };
+
+// class StatusBox : public BaseStatusBox
+// {
+// public:
+//     StatusBox();
+// private:
+//     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatusBox)
+// };

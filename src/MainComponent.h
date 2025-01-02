@@ -758,6 +758,8 @@ public:
     {
         // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
         HarpLogger::getInstance()->initializeLogger();
+        // instructionBox = InstructionBox::getInstance();
+        // statusBox = StatusBox::getInstance();
 
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
@@ -998,8 +1000,8 @@ public:
         addAndMakeVisible(tagsLabel);
         addAndMakeVisible(audioOrMidiLabel);
 
-        addAndMakeVisible(statusArea);
-        addAndMakeVisible(instructionsArea);
+        addAndMakeVisible(statusBox);
+        addAndMakeVisible(instructionBox);
         // model card component
         // Get the modelCard from the EditorView
         auto& card = model->card();
@@ -1417,8 +1419,8 @@ public:
         // Split row9 to two columns
         auto row9a = row9.removeFromLeft(row9.getWidth() / 2);
         auto row9b = row9;
-        instructionsArea.setBounds(row9a.reduced(margin));
-        statusArea.setBounds(row9b.reduced(margin));
+        instructionBox->setBounds(row9a.reduced(margin));
+        statusBox->setBounds(row9b.reduced(margin));
     }
 
     void resized() override
@@ -1498,8 +1500,8 @@ public:
         // Row 8: Instructions Area and Status Area
         juce::FlexBox row8;
         row8.flexDirection = juce::FlexBox::Direction::row;
-        row8.items.add(juce::FlexItem(instructionsArea).withFlex(1).withMargin(margin));
-        row8.items.add(juce::FlexItem(statusArea).withFlex(1).withMargin(margin));
+        row8.items.add(juce::FlexItem(*instructionBox).withFlex(1).withMargin(margin));
+        row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
         flexBox.items.add(juce::FlexItem(row8).withFlex(1));
 
         // Apply the FlexBox layout to the main area
@@ -1512,7 +1514,7 @@ public:
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
-        modelAuthorLabelHandler.detach();
+        // modelAuthorLabelHandler.detach();
     }
 
     void setModelCard(const ModelCard& card)
@@ -1545,19 +1547,19 @@ public:
     void setStatus(const ModelStatus& status)
     {
         juce::String statusName = std::string(magic_enum::enum_name(status)).c_str();
-        statusArea.setStatusMessage("ModelStatus::" + statusName);
+        statusBox->setStatusMessage("ModelStatus::" + statusName);
     }
 
-    void setStatus(const juce::String& message) { statusArea.setStatusMessage(message); }
+    void setStatus(const juce::String& message) { statusBox->setStatusMessage(message); }
 
-    void clearStatus() { statusArea.clearStatusMessage(); }
+    void clearStatus() { statusBox->clearStatusMessage(); }
 
     void setInstructions(const juce::String& message)
     {
-        instructionsArea.setStatusMessage(message);
+        instructionBox->setStatusMessage(message);
     }
 
-    void clearInstructions() { instructionsArea.clearStatusMessage(); }
+    void clearInstructions() { instructionBox->clearStatusMessage(); }
 
 private:
     // HARP UI
@@ -1582,7 +1584,7 @@ private:
     // HyperlinkButton nameLabelButton;
     // HoverHandler nameLabelButtonHandler { nameLabelButton };
     ModelAuthorLabel modelAuthorLabel;
-    HoverHandler modelAuthorLabelHandler { modelAuthorLabel };
+    // HoverHandler modelAuthorLabelHandler { modelAuthorLabel };
 
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
@@ -1626,8 +1628,12 @@ private:
     // For now it is assumed that both input and output types
     // of the model are the same (audio or midi)
     Label audioOrMidiLabel;
-    StatusComponent statusArea { 15.0f, juce::Justification::centred };
-    StatusComponent instructionsArea { 13.0f, juce::Justification::centredLeft };
+    // StatusComponent statusBox { 15.0f, juce::Justification::centred };
+    // InstructionStatus instructionBox { 13.0f, juce::Justification::centredLeft };
+    // std::shared_ptr<InstructionBox> instructionBox;
+    // std::shared_ptr<StatusBox> statusBox;
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
+    juce::SharedResourcePointer<StatusBox> statusBox;
 
     Time lastLoadTime;
 
@@ -1860,14 +1866,14 @@ private:
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(modelAuthorLabel);
-            modelAuthorLabelHandler.onMouseEnter = [this]()
-            {
-                setInstructions("Click to visit "
-                                + model->getGradioClient().getSpaceInfo().getModelSlashUser()
-                                + "\nin your browser");
-            };
-            modelAuthorLabelHandler.onMouseExit = [this]() { clearInstructions(); };
-            modelAuthorLabelHandler.attach();
+            // modelAuthorLabelHandler.onMouseEnter = [this]()
+            // {
+            //     setInstructions("Click to visit "
+            //                     + model->getGradioClient().getSpaceInfo().getModelSlashUser()
+            //                     + "\nin your browser");
+            // };
+            // modelAuthorLabelHandler.onMouseExit = [this]() { clearInstructions(); };
+            // modelAuthorLabelHandler.attach();
         }
 
         // now, we can enable the buttons

@@ -47,6 +47,7 @@ public:
         // Reset label style back to the original color
         setColour(juce::Label::textColourId, originalTextColor); // Reset to original text color
         // setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack); // Reset background color
+        if (onExit) onExit(); // Call the exit callback if set
         repaint(); // Request a repaint to reflect changes
         Label::mouseExit(event); // Call base class
     }
@@ -61,7 +62,7 @@ public:
 
     // Callback for hover event
     std::function<void()> onHover;
-
+    std::function<void()> onExit;
     // Callback for click event
     std::function<void()> onClick;
 
@@ -73,8 +74,6 @@ private:
         auto textWidth = font.getStringWidth(getText());
         auto textHeight = font.getHeight();
 
-        auto width = getBounds().getWidth();
-        auto height = getBounds().getHeight();
         auto x_offset = (getBounds().getWidth() - textWidth) / 2;
         auto y_offset = (getBounds().getHeight() - textHeight) / 2;
         
@@ -91,12 +90,21 @@ public:
     ModelAuthorLabel() //juce::Label& modelLabel, juce::Label& authorLabel, const juce::URL& url
         // :  url(url) //modelLabel(modelLabel), authorLabel(authorLabel),
     {
+        // instructionBox = InstructionBox::getInstance();
         sharedFontAudio = std::make_shared<fontaudio::IconHelper>();
         sharedFontAwesome = std::make_shared<fontawesome::IconHelper>();
+        
 
         // Set up hover and click callbacks
         modelLabel.onHover = [this] { 
             // Handle hover action
+            instructionBox->setStatusMessage("Click to view the model's page");
+                                 // + model->getGradioClient().getSpaceInfo().getModelSlashUser()
+        };
+
+        modelLabel.onExit = [this] {
+            // Handle exit action
+            instructionBox->clearStatusMessage();
         };
 
         modelLabel.onClick = [this] {
@@ -177,6 +185,9 @@ private:
 
     std::shared_ptr<fontaudio::IconHelper> sharedFontAudio;
     std::shared_ptr<fontawesome::IconHelper> sharedFontAwesome;
+    // std::shared_ptr<InstructionBox> instructionBox;
+    // InstructionBox* instructionBox;
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
 
     std::unique_ptr<juce::Drawable> createIconDrawable()
     {
