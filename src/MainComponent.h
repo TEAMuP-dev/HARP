@@ -19,10 +19,10 @@
 
 #include "gui/CustomPathDialog.h"
 #include "gui/HoverHandler.h"
+#include "gui/ModelAuthorLabel.h"
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
-#include "gui/ModelAuthorLabel.h"
 
 #include "gradio/GradioClient.h"
 
@@ -751,82 +751,8 @@ public:
         // }
     }
 
-    explicit MainComponent(const URL& initialFilePath = URL())
-        : jobsFinished(0),
-          totalJobs(0),
-          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+    void initMenuBar()
     {
-        // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
-        HarpLogger::getInstance()->initializeLogger();
-        // instructionBox = InstructionBox::getInstance();
-        // statusBox = StatusBox::getInstance();
-
-        addAndMakeVisible(chooseFileButton);
-        chooseFileButton.onClick = [this] { openFileChooser(); };
-        chooseFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to choose an audio file"); };
-        chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-        chooseFileButtonHandler.attach();
-
-        addAndMakeVisible(saveFileButton);
-        saveFileButton.onClick = [this] { saveCallback(); };
-        saveFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to save results to original audio file"); };
-        saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-        saveFileButtonHandler.attach();
-
-        // Initialize default media display
-        // initializeMediaDisplay(0, mediaDisplay);
-        // Create a new mediaDisplay and add it in the inputMediaDisplays vector
-        // inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
-        // outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
-        // Initialize all the inputMediaDisplays
-        // for (int i = 0; i < inputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(0, inputMediaDisplays[i]);
-        // }
-        // for (int i = 0; i < outputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(1, outputMediaDisplays[i]);
-        // }
-
-        // TODO: check how it behaves when running with a file as input
-        // if (initialFilePath.isLocalFile())
-        // {
-        //     // TODO - it seems command line args are handled through Main.cpp and this is never hit
-        //     // Load initial file into matching media display
-        //     loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
-        // }
-
-        // addAndMakeVisible (startStopButton);
-        playStopButton.addMode(playButtonInfo);
-        playStopButton.addMode(stopButtonInfo);
-        playStopButton.setMode(playButtonInfo.label);
-        playStopButton.setEnabled(false);
-        addAndMakeVisible(playStopButton);
-        playStopButton.onMouseEnter = [this]
-        {
-            if (playStopButton.getModeName() == playButtonInfo.label)
-                setInstructions("Click to start playback");
-            else if (playStopButton.getModeName() == stopButtonInfo.label)
-                setInstructions("Click to stop playback");
-        };
-        playStopButton.onMouseExit = [this] { clearInstructions(); };
-
-        // initialize HARP UI
-        // TODO: what happens if the model is nullptr rn?
-        if (model == nullptr)
-        {
-            DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
-            jassertfalse;
-            return;
-        }
-
-        // Set setWantsKeyboardFocus to true for this component
-        // Doing that, everytime we click outside the modelPathTextBox,
-        // the focus will be taken away from the modelPathTextBox
-        setWantsKeyboardFocus(true);
-
         // init the menu bar
         menuBar.reset(new MenuBarComponent(this));
         addAndMakeVisible(menuBar.get());
@@ -844,38 +770,84 @@ public:
 
         menuBar->setVisible(true);
         menuItemsChanged();
+    }
 
+    void initSomeButtons()
+    {
+        addAndMakeVisible(chooseFileButton);
+        chooseFileButton.onClick = [this] { openFileChooser(); };
+        chooseFileButtonHandler.onMouseEnter = [this]()
+        { setInstructions("Click to choose an audio file"); };
+        chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+        chooseFileButtonHandler.attach();
+
+        addAndMakeVisible(saveFileButton);
+        saveFileButton.onClick = [this] { saveCallback(); };
+        saveFileButtonHandler.onMouseEnter = [this]()
+        { setInstructions("Click to save results to original audio file"); };
+        saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+        saveFileButtonHandler.attach();
+    }
+
+    void initPlayStopButton()
+    {
+        playButtonInfo =
+            MultiButton::Mode { "Play",
+                                [this] { play(); },
+                                juce::Colours::limegreen,
+                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
+                                    fontawesome::FontAwesome_Play, 1.0f, juce::Colours::limegreen)),
+                                fontawesome::FontAwesome_Play,
+                                "Click to start playback",
+                                MultiButton::DrawingMode::IconOnly };
+        stopButtonInfo =
+            MultiButton::Mode { "Stop",
+                                [this] { stop(); },
+                                Colours::orangered,
+                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
+                                    fontawesome::FontAwesome_Stop, 1.0f, juce::Colours::orangered)),
+                                fontawesome::FontAwesome_Stop,
+                                "Click to stop playback",
+                                MultiButton::DrawingMode::IconOnly };
+        playStopButton.addMode(playButtonInfo);
+        playStopButton.addMode(stopButtonInfo);
+        playStopButton.setMode(playButtonInfo.label);
+        playStopButton.setEnabled(false);
+        addAndMakeVisible(playStopButton);
+    }
+
+    void initProcessCancelButton()
+    {
         // The Process/Cancel button
+        processButtonInfo =
+            MultiButton::Mode { "Process",
+                                [this] { processCallback(); },
+                                Colours::lightgrey,
+                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
+                                    fontawesome::FontAwesome_Play, 1.0f, juce::Colours::green)),
+                                fontawesome::FontAwesome_Play,
+                                "Click to send the audio file for processing",
+                                MultiButton::DrawingMode::TextOnly };
+
+        cancelButtonInfo = MultiButton::Mode {
+            "Cancel",
+            [this] { cancelCallback(); },
+            Colours::lightgrey,
+            std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
+                fontawesome::FontAwesome_Amazon, 1.0f, juce::Colours::red)),
+            fontawesome::FontAwesome_Amazon,
+            "Click to cancel the processing",
+            MultiButton::DrawingMode::TextOnly,
+        };
+
         processCancelButton.addMode(processButtonInfo);
         processCancelButton.addMode(cancelButtonInfo);
         processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(false);
         addAndMakeVisible(processCancelButton);
-        processCancelButton.onMouseEnter = [this]
-        {
-            if (processCancelButton.getModeName() == processButtonInfo.label)
-                setInstructions("Click to send the audio file for processing");
-            else if (processCancelButton.getModeName() == cancelButtonInfo.label)
-                setInstructions("Click to cancel the processing");
-        };
-        processCancelButton.onMouseExit = [this]
-        {
-            // processCancelButton.setColour (TextButton::buttonColourId, getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::buttonOnColour));
-            clearInstructions();
-        };
 
         processBroadcaster.addChangeListener(this);
         saveEnabled = false;
-
-        loadModelButton.addMode(loadButtonInfo);
-        loadModelButton.setMode(loadButtonInfo.label);
-        loadModelButton.setEnabled(false);
-        addAndMakeVisible(loadModelButton);
-        loadModelButton.onMouseEnter = [this]
-        { setInstructions("Loads the model and populates the UI with the model's parameters"); };
-        loadModelButton.onMouseExit = [this] { clearInstructions(); };
-
-        loadBroadcaster.addChangeListener(this);
 
         ModelStatus currentStatus = model->getStatus();
         if (currentStatus == ModelStatus::LOADED || currentStatus == ModelStatus::FINISHED)
@@ -889,14 +861,30 @@ public:
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(cancelButtonInfo.label);
         }
-
         setStatus(currentStatus);
+    }
 
-        // add a status timer to update the status label periodically
-        mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
-        mModelStatusTimer->addChangeListener(this);
-        mModelStatusTimer->startTimer(50); // 100 ms interval
+    void initLoadModelButton()
+    {
+        loadButtonInfo = MultiButton::Mode {
+            "Load Model",
+            [this] { loadModelCallback(); },
+            Colours::lightgrey,
+            std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
+                fontawesome::FontAwesome_CloudUpload, 1.0f, juce::Colours::blue)),
+            fontawesome::FontAwesome_CloudUpload,
+            "Click to load the selected model path",
+            MultiButton::DrawingMode::IconOnly,
+        };
+        loadModelButton.addMode(loadButtonInfo);
+        loadModelButton.setMode(loadButtonInfo.label);
+        loadModelButton.setEnabled(false);
+        addAndMakeVisible(loadModelButton);
+        loadBroadcaster.addChangeListener(this);
+    }
 
+    void initModelPathComboBox()
+    {
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
@@ -979,29 +967,86 @@ public:
         };
 
         addAndMakeVisible(modelPathComboBox);
+    }
+
+    explicit MainComponent(const URL& initialFilePath = URL())
+        : jobsFinished(0),
+          totalJobs(0),
+          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+    {
+        HarpLogger::getInstance()->initializeLogger();
+        fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
+        fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
+
+        initSomeButtons();
+        initPlayStopButton();
+
+        // Initialize default media display
+        // initializeMediaDisplay(0, mediaDisplay);
+        // Create a new mediaDisplay and add it in the inputMediaDisplays vector
+        // inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
+        // outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
+        // Initialize all the inputMediaDisplays
+        // for (int i = 0; i < inputMediaDisplays.size(); ++i)
+        // {
+        //     initializeMediaDisplay(0, inputMediaDisplays[i]);
+        // }
+        // for (int i = 0; i < outputMediaDisplays.size(); ++i)
+        // {
+        //     initializeMediaDisplay(1, outputMediaDisplays[i]);
+        // }
+
+        // TODO: check how it behaves when running with a file as input
+        // if (initialFilePath.isLocalFile())
+        // {
+        //     // TODO - it seems command line args are handled through Main.cpp and this is never hit
+        //     // Load initial file into matching media display
+        //     loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
+        // }
+
+        // initialize HARP UI
+        // TODO: what happens if the model is nullptr rn?
+        if (model == nullptr)
+        {
+            DBG("FATAL HARPProcessorEditor::HARPProcessorEditor: model is null");
+            jassertfalse;
+            return;
+        }
+
+        // Set setWantsKeyboardFocus to true for this component
+        // Doing that, everytime we click outside the modelPathTextBox,
+        // the focus will be taken away from the modelPathTextBox
+        setWantsKeyboardFocus(true);
+
+        initMenuBar();
+
+        initProcessCancelButton();
+
+        initLoadModelButton();
+
+        // add a status timer to update the status label periodically
+        mModelStatusTimer = std::make_unique<ModelStatusTimer>(model);
+        mModelStatusTimer->addChangeListener(this);
+        mModelStatusTimer->startTimer(50); // 100 ms interval
+
+        initModelPathComboBox();
 
         // model controls
         controlAreaWidget.setModel(model);
         addAndMakeVisible(controlAreaWidget);
         controlAreaWidget.populateControls();
-        // inputTracksWidget.setModel(model);
-        // addAndMakeVisible(inputTracksWidget);
-        // inputTracksWidget.populateTracks();
-        // outputTracksWidget.setModel(model);
-        // addAndMakeVisible(outputTracksWidget);
-        // outputTracksWidget.populateTracks();
+
         trackAreaWidget.setModel(model);
         addAndMakeVisible(trackAreaWidget);
         trackAreaWidget.populateTracks();
 
-        // addAndMakeVisible(nameLabel);
-        // addAndMakeVisible(authorLabel);
         addAndMakeVisible(descriptionLabel);
-        addAndMakeVisible(tagsLabel);
-        addAndMakeVisible(audioOrMidiLabel);
+        // addAndMakeVisible(tagsLabel);
+        // addAndMakeVisible(audioOrMidiLabel);
 
         addAndMakeVisible(statusBox);
         addAndMakeVisible(instructionBox);
+
         // model card component
         // Get the modelCard from the EditorView
         auto& card = model->card();
@@ -1009,8 +1054,6 @@ public:
 
         jobProcessorThread.startThread();
 
-        // ARA requires that plugin editors are resizable to support tight integration
-        // into the host UI
         setOpaque(true);
         setSize(800, 2000);
         // set to full screen
@@ -1445,48 +1488,44 @@ public:
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(2).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row1).withFlex(0.3));
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.5));
 
-        // Row 2: Name Label and Space URL Button
+        // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
         row2.flexDirection = juce::FlexBox::Direction::row;
-
-        // Add the custom component to row2 with 50% width
         row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
-
-        // Add an empty FlexItem to occupy the remaining 50%
         row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row2).withFlex(0.5));
 
-        flexBox.items.add(juce::FlexItem(row2).withFlex(1));
-        // // Create a FlexBox for model and author name
-        // juce::FlexBox subRow2;
-        // subRow2.flexDirection = juce::FlexBox::Direction::row;
-        // subRow2.items.add(juce::FlexItem(nameLabelButton).withFlex(1).withMargin(margin));
-        // auto authorLabelFlexItem = juce::FlexItem(authorLabel).withFlex(1).withMargin(margin);
-        // authorLabelFlexItem.margin.top += 7;
-        // // authorLabelFlexItem.alignSelf = juce::FlexItem::AlignSelf::flexEnd;
-        // subRow2.items.add(authorLabelFlexItem);
-        // authorLabel.setFont(Font(11.0f));
-        // nameLabelButton.setFont(Font(22.0f, Font::bold), false, Justification::centredLeft);
+        flexBox.performLayout(area);
 
-        // // Add the subRow2 to row2 with 50% width
-        // row2.items.add(juce::FlexItem(subRow2).withFlex(0.4).withMargin(margin));
-
-        // // Add an empty FlexItem to occupy the remaining 50%
-        // row2.items.add(juce::FlexItem().withFlex(0.6).withMargin(margin));
-
-        // flexBox.items.add(juce::FlexItem(row2).withFlex(1));
-
-        // Row 3: Description Label
-        flexBox.items.add(juce::FlexItem(descriptionLabel).withFlex(2).withMargin(margin));
+        // Row 3: Description
+        auto font = Font(15.0f);
+        descriptionLabel.setFont(font);
+        // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
+        auto maxLabelWidth = area.getWidth() - 2 * margin;
+        auto numberOfLines =
+            font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
+        float textHeight =
+            (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+        flexBox.items.add(
+            juce::FlexItem(descriptionLabel).withHeight(textHeight).withMargin(margin));
 
         // Row 4: Control Area Widget
-        flexBox.items.add(juce::FlexItem(controlAreaWidget).withFlex(3).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(controlAreaWidget).withFlex(1).withMargin(margin));
 
         // Row 5: Process Cancel Button
-        flexBox.items.add(juce::FlexItem(processCancelButton).withFlex(1).withMargin(margin));
+        // Row for Process Cancel Button
+        juce::FlexBox rowProcessCancelButton;
+        rowProcessCancelButton.flexDirection = juce::FlexBox::Direction::row;
+        rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
+        rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
+        rowProcessCancelButton.items.add(
+            juce::FlexItem(processCancelButton).withWidth(area.getWidth() / 4).withMargin(margin));
+        rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
+        flexBox.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.5));
 
-        // Row 6: Track Area Widget
+        // Row 6: Input and Output Tracks Area Widget
         flexBox.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
 
         // Row 7: Play/Stop Button, Open File Button, and Save File Button
@@ -1524,9 +1563,8 @@ public:
         modelAuthorLabel.setModelText(String(card.name));
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
-        card.author.empty()
-            ? modelAuthorLabel.setAuthorText("")
-            : modelAuthorLabel.setAuthorText("by " + String(card.author));
+        card.author.empty() ? modelAuthorLabel.setAuthorText("")
+                            : modelAuthorLabel.setAuthorText("by " + String(card.author));
         modelAuthorLabel.resized();
         // It is assumed we only support wav2wav or midi2midi models for now
         // if (card.midi_in && card.midi_out && ! card.author.empty())
@@ -1554,10 +1592,7 @@ public:
 
     void clearStatus() { statusBox->clearStatusMessage(); }
 
-    void setInstructions(const juce::String& message)
-    {
-        instructionBox->setStatusMessage(message);
-    }
+    void setInstructions(const juce::String& message) { instructionBox->setStatusMessage(message); }
 
     void clearInstructions() { instructionBox->clearStatusMessage(); }
 
@@ -1580,38 +1615,18 @@ private:
     TextButton saveFileButton { "Save File" };
     HoverHandler saveFileButtonHandler { saveFileButton };
 
-    // TextButton
-    // HyperlinkButton nameLabelButton;
-    // HoverHandler nameLabelButtonHandler { nameLabelButton };
     ModelAuthorLabel modelAuthorLabel;
-    // HoverHandler modelAuthorLabelHandler { modelAuthorLabel };
 
-    // cb: TODO:
-    // 1. Use HoverHandler for MultiButtons
-    // 2. loadModelButton doesn't need to be a MultiButton
-    // 3. Modify HoverHandler so that it needs less boilerplate code
     MultiButton loadModelButton;
+    MultiButton::Mode loadButtonInfo;
+
     MultiButton processCancelButton;
+    MultiButton::Mode processButtonInfo;
+    MultiButton::Mode cancelButtonInfo;
+
     MultiButton playStopButton;
-    MultiButton::Mode loadButtonInfo { "Load",
-                                       [this] { loadModelCallback(); },
-                                       getUIColourIfAvailable(
-                                           LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
-                                           Colours::lightgrey) };
-    MultiButton::Mode processButtonInfo {
-        "Process",
-        [this] { processCallback(); },
-        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
-                               Colours::lightgrey)
-    };
-    MultiButton::Mode cancelButtonInfo {
-        "Cancel",
-        [this] { cancelCallback(); },
-        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground,
-                               Colours::lightgrey)
-    };
-    MultiButton::Mode playButtonInfo { "Play", [this] { play(); }, Colours::limegreen };
-    MultiButton::Mode stopButtonInfo { "Stop", [this] { stop(); }, Colours::orangered };
+    MultiButton::Mode playButtonInfo;
+    MultiButton::Mode stopButtonInfo;
 
     // Label statusLabel;
     // A flag that indicates if the audio file can be saved
@@ -1623,11 +1638,10 @@ private:
     TrackAreaWidget trackAreaWidget;
 
     // model card
-    // Label nameLabel, authorLabel, 
-    Label descriptionLabel, tagsLabel;
-    // For now it is assumed that both input and output types
-    // of the model are the same (audio or midi)
-    Label audioOrMidiLabel;
+    // Label nameLabel, authorLabel,
+    Label descriptionLabel;
+    // Label tagsLabel;
+    // Label audioOrMidiLabel;
     // StatusComponent statusBox { 15.0f, juce::Justification::centred };
     // InstructionStatus instructionBox { 13.0f, juce::Justification::centredLeft };
     // std::shared_ptr<InstructionBox> instructionBox;
@@ -1671,6 +1685,9 @@ private:
     ApplicationCommandManager commandManager;
     // MenuBar
     std::unique_ptr<MenuBarComponent> menuBar;
+
+    std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
+    std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
 
     void play()
     {

@@ -4,7 +4,8 @@
 #include <functional>
 #include "../external/fontaudio/src/FontAudio.h"
 #include "../external/fontawesome/src/FontAwesome.h"
-
+#include "CustomPathDialog.h"
+#include "StatusComponent.h"
 
 class HoverableLabel : public juce::Label
 {
@@ -90,44 +91,20 @@ public:
     ModelAuthorLabel() //juce::Label& modelLabel, juce::Label& authorLabel, const juce::URL& url
         // :  url(url) //modelLabel(modelLabel), authorLabel(authorLabel),
     {
-        // instructionBox = InstructionBox::getInstance();
-        sharedFontAudio = std::make_shared<fontaudio::IconHelper>();
-        sharedFontAwesome = std::make_shared<fontawesome::IconHelper>();
-        
-
-        // Set up hover and click callbacks
         modelLabel.onHover = [this] { 
-            // Handle hover action
             instructionBox->setStatusMessage("Click to view the model's page");
-                                 // + model->getGradioClient().getSpaceInfo().getModelSlashUser()
         };
 
         modelLabel.onExit = [this] {
-            // Handle exit action
             instructionBox->clearStatusMessage();
         };
 
         modelLabel.onClick = [this] {
-            // Handle click action
             url.launchInDefaultBrowser();
         };
 
         addAndMakeVisible(modelLabel);
         addAndMakeVisible(authorLabel);
-        // iconButton.setButtonText("");
-        // iconButton.onClick = [this] { url.launchInDefaultBrowser(); };
-        // addAndMakeVisible(iconButton);
-        
-        // Create and configure the icon button
-        // iconDrawable = createIconDrawable();
-        // iconDrawable = createIconDrawableFromSVG("icons/external-link.svg");
-        
-        // iconButton.setImages(iconDrawable.get());
-        // auto testIconName = fontawesome::FontAwesome_MousePointer;
-        // auto testIcon = sharedFontAwesome->getIcon(testIconName, 20, juce::Colours::blue, 1.0f);
-        // use createFromImageData(const void *data, size_t numBytes) to create a drawable from an image
-        // iconDrawable->createFromImageData(testIcon.getPixelData(), 
-        
         
     }
 
@@ -138,25 +115,11 @@ public:
         auto nameWidth =
             modelLabel.getFont().getStringWidthFloat(modelLabel.getText()) + 10; // Add some padding
         modelLabel.setBounds(area.removeFromLeft(static_cast<int>(nameWidth)));
-        // iconButton.setBounds(area.removeFromLeft(20)); // Adjust size as needed
         authorLabel.setBounds(area);
     }
 
     void paint(juce::Graphics& g) override
     {
-        // g.fillAll(juce::Colours::white);
-        // fontaudio::IconName offIcon =fontaudio::Bluetooth;
-        // fontaudio::IconName onIcon = fontaudio::RoundswitchOn;
-        // g.setFont(sharedFontAudio->getFont(getHeight() * 0.8f));
-        // g.drawFittedText(offIcon, iconButton.getBounds(), Justification::centred, 1, 1);
-        
-
-        // fontawesome::IconName faicon = fontawesome::FontAwesome_ExternalLinkSquare;
-        // sharedFontAwesome->drawCenterd(g, faicon, modelLabel.getHeight() * 1.0f, juce::Colours::red, iconButton.getBounds());
-        // g.setFont(sharedFontAwesome->getFont(getHeight() * 0.8f));
-        // g.drawFittedText(faicon, getLocalBounds(), Justification::centred, 1, 1);
-
-        // just the default juce code in paint
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
@@ -176,43 +139,6 @@ public:
 private:
     HoverableLabel modelLabel;
     juce::Label authorLabel;
-
-
-    // juce::Label offIconLabel;
     juce::URL url;
-    juce::DrawableButton iconButton { "iconButton", juce::DrawableButton::ImageFitted };
-    std::unique_ptr<juce::Drawable> iconDrawable;
-
-    std::shared_ptr<fontaudio::IconHelper> sharedFontAudio;
-    std::shared_ptr<fontawesome::IconHelper> sharedFontAwesome;
-    // std::shared_ptr<InstructionBox> instructionBox;
-    // InstructionBox* instructionBox;
     juce::SharedResourcePointer<InstructionBox> instructionBox;
-
-    std::unique_ptr<juce::Drawable> createIconDrawable()
-    {
-        auto drawable = std::make_unique<juce::DrawablePath>();
-        juce::Path path;
-        path.addEllipse(0, 0, 10, 10); // Example: a simple circle
-        drawable->setPath(path);
-        drawable->setFill(juce::Colours::grey); // Example: blue color
-        return drawable;
-    }
-    
-    std::unique_ptr<juce::Drawable> createIconDrawableFromSVG(const juce::String& svgFilePath)
-    {
-        juce::File aaa = juce::File::getCurrentWorkingDirectory().getChildFile (svgFilePath);
-        juce::File svgFile(svgFilePath);
-        juce::FileInputStream svgFileStream(svgFile);
-
-        if (svgFileStream.openedOk())
-        {
-            auto svgXml = juce::XmlDocument::parse(svgFile);
-            {
-                return juce::Drawable::createFromSVG(*svgXml);
-            }
-        }
-
-        return nullptr;
-    }
 };
