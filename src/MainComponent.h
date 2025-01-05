@@ -968,7 +968,7 @@ public:
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         HarpLogger::getInstance()->initializeLogger();
-        fontaudioHelper = std::make_shared<fontaudio::IconHelper2>();
+        fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
         fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
 
         initSomeButtons();
@@ -1680,7 +1680,7 @@ private:
     std::unique_ptr<MenuBarComponent> menuBar;
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
-    std::shared_ptr<fontaudio::IconHelper2> fontaudioHelper;
+    std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
 
     void play()
     {

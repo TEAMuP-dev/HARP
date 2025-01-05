@@ -163,7 +163,7 @@ private:
     juce::String currentMode;
     // juce::Drawable* currentIcon = nullptr;
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
-    std::shared_ptr<fontaudio::IconHelper2> fontaudioHelper;
+    std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
     SharedResourcePointer<InstructionBox> instructionBox;
     DrawingMode drawingMode;
 };

@@ -9,7 +9,7 @@
  Usage :
  
  declare a class Member...
-  SharedResourcePointer<fontaudio::IconHelper2> sharedFontAudio;
+  SharedResourcePointer<fontaudio::IconHelper> sharedFontAudio;
  ... wherever you want to use the class below
  
  The FontAudio_ptr member below will be constructed once and its owner class will be
@@ -32,11 +32,11 @@ namespace fontaudio
 
 typedef juce::Image RenderedIcon;
 
-class IconHelper2
+class IconHelper
 {
 public:
-    IconHelper2();
-    virtual ~IconHelper2();
+    IconHelper();
+    virtual ~IconHelper();
 
     RenderedIcon getIcon(IconName icon, float size, juce::Colour colour, float scaleFactor = 1.0f);
     RenderedIcon getRotatedIcon(IconName icon,

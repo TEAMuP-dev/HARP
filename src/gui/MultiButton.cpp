@@ -11,7 +11,7 @@ MultiButton::MultiButton(const juce::String& buttonName) : juce::TextButton(butt
     // Optionally set default properties
     setToggleState(false, juce::dontSendNotification);
     fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
-    fontaudioHelper = std::make_shared<fontaudio::IconHelper2>();
+    fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
 }
 
 // MultiButton::MultiButton()

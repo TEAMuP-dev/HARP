@@ -695,7 +695,7 @@ namespace fontawesome
     const IconName Tv = IconName::fromUTF8(convertChar8ToChar(u8"\uf26c"));
     const IconName Television = IconName::fromUTF8(convertChar8ToChar(u8"\uf26c"));
     const IconName Contao = IconName::fromUTF8(convertChar8ToChar(u8"\uf26d"));
-    const IconName 500px = IconName::fromUTF8(convertChar8ToChar(u8"\uf26e"));
+    const IconName Px500px = IconName::fromUTF8(convertChar8ToChar(u8"\uf26e"));
     const IconName Amazon = IconName::fromUTF8(convertChar8ToChar(u8"\uf270"));
     const IconName CalendarPlusO = IconName::fromUTF8(convertChar8ToChar(u8"\uf271"));
     const IconName CalendarMinusO = IconName::fromUTF8(convertChar8ToChar(u8"\uf272"));
