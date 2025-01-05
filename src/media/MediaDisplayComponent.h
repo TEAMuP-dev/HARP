@@ -25,7 +25,7 @@ public:
     void paint(Graphics& g) override;
     virtual void resized() override;
     Rectangle<int> getContentBounds();
-    virtual void repositionContent() {};
+    // virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
     virtual Component* getMediaComponent() { return this; }

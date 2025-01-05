@@ -37,10 +37,10 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::repositionContent()
-{
-    // thumbnailComponent.setBounds(getContentBounds());
-}
+// void AudioDisplayComponent::repositionContent()
+// {
+//     // thumbnailComponent.setBounds(getContentBounds());
+// }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 {

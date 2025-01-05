@@ -28,7 +28,7 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
+// void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
 
 void MidiDisplayComponent::repositionScrollBar()
 {
@@ -194,6 +194,11 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
     }
 }
 
+void MidiDisplayComponent::resized()
+{
+    MediaDisplayComponent::resized();
+    pianoRoll.setBounds(mediaBox.getBounds());
+}
 void MidiDisplayComponent::resetDisplay()
 {
     MediaDisplayComponent::resetTransport();

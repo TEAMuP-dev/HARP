@@ -13,7 +13,7 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
-    void repositionContent() override;
+    // void repositionContent() override;
     void repositionScrollBar() override;
 
     Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
@@ -33,6 +33,8 @@ public:
     void updateVisibleRange(Range<double> newRange) override;
 
     void addLabels(LabelList& labels) override;
+
+    void resized() override;
 
 private:
     void resetDisplay() override;

@@ -31,7 +31,7 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
 
-    void repositionContent() override;
+    // void repositionContent() override;
 
     Component* getMediaComponent() { return &thumbnailComponent; }
 
