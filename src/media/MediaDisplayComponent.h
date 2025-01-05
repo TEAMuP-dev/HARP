@@ -132,6 +132,17 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
+    juce::Component controlBox; // Left panel
+    juce::Component mediaBox;   // Media content area
+
+    juce::FlexBox trackRowFlexBox;
+    juce::FlexBox controlFlexBox;
+    juce::FlexBox mediaFlexBox;
+    juce::Label textLabel;
+    juce::TextButton button1;
+    juce::TextButton button2;
+    juce::TextButton button3;
+
 private:
     void resetPaths();
 

@@ -86,7 +86,7 @@ namespace fontawesome
     const IconName Bookmark = IconName::fromUTF8(convertChar8ToChar(u8"\uf02e"));
     const IconName Print = IconName::fromUTF8(convertChar8ToChar(u8"\uf02f"));
     const IconName Camera = IconName::fromUTF8(convertChar8ToChar(u8"\uf030"));
-    const IconName Font = IconName::fromUTF8(convertChar8ToChar(u8"\uf031"));
+    const IconName Font2 = IconName::fromUTF8(convertChar8ToChar(u8"\uf031"));
     const IconName Bold = IconName::fromUTF8(convertChar8ToChar(u8"\uf032"));
     const IconName Italic = IconName::fromUTF8(convertChar8ToChar(u8"\uf033"));
     const IconName TextHeight = IconName::fromUTF8(convertChar8ToChar(u8"\uf034"));
@@ -101,7 +101,7 @@ namespace fontawesome
     const IconName Indent = IconName::fromUTF8(convertChar8ToChar(u8"\uf03c"));
     const IconName VideoCamera = IconName::fromUTF8(convertChar8ToChar(u8"\uf03d"));
     const IconName Photo = IconName::fromUTF8(convertChar8ToChar(u8"\uf03e"));
-    const IconName Image = IconName::fromUTF8(convertChar8ToChar(u8"\uf03e"));
+    const IconName Image0 = IconName::fromUTF8(convertChar8ToChar(u8"\uf03e"));
     const IconName PictureO = IconName::fromUTF8(convertChar8ToChar(u8"\uf03e"));
     const IconName Pencil = IconName::fromUTF8(convertChar8ToChar(u8"\uf040"));
     const IconName MapMarker = IconName::fromUTF8(convertChar8ToChar(u8"\uf041"));
@@ -766,7 +766,7 @@ namespace fontawesome
     const IconName GooglePlusCircle = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b3"));
     const IconName GooglePlusOfficial = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b3"));
     const IconName Fa = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b4"));
-    const IconName FontAwesome = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b4"));
+    const IconName FontAwesome2 = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b4"));
     const IconName HandshakeO = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b5"));
     const IconName EnvelopeOpen = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b6"));
     const IconName EnvelopeOpenO = IconName::fromUTF8(convertChar8ToChar(u8"\uf2b7"));

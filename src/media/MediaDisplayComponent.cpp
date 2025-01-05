@@ -17,6 +17,32 @@ MediaDisplayComponent::MediaDisplayComponent()
 
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
+
+
+    textLabel.setText("Media Info", juce::dontSendNotification);
+    button1.setButtonText("Button 1");
+    button1.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    // button2.setButtonText("Button 2");
+    // button3.setButtonText("Button 3");
+
+    // leftPanelFlexBox.items.add(juce::FlexItem(textLabel));
+    // leftPanelFlexBox.items.add(juce::FlexItem(button1));
+    // leftPanelFlexBox.items.add(juce::FlexItem(button2).withMinHeight(30.0f).withFlex(1.0f));
+    // leftPanelFlexBox.items.add(juce::FlexItem(button3).withMinHeight(30.0f).withFlex(1.0f));
+
+    // addAndMakeVisible(textLabel);
+    // addAndMakeVisible(button1);
+    // addAndMakeVisible(button2);
+    // addAndMakeVisible(button3);
+
+    addAndMakeVisible(controlBox);
+    addAndMakeVisible(mediaBox);
+
+    // Add controls to controlBox
+    controlBox.addAndMakeVisible(textLabel);
+    controlBox.addAndMakeVisible(button1);
+    // controlBox.addAndMakeVisible(button2);
+    // controlBox.addAndMakeVisible(button3);
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -40,20 +66,103 @@ void MediaDisplayComponent::paint(Graphics& g)
         g.setFont(14.0f);
         g.drawFittedText("No media file selected...", getLocalBounds(), Justification::centred, 2);
     }
+    jassert(button1.isVisible());
+    jassert(button1.getWidth() > 0 && button1.getHeight() > 0);
 }
 
 void MediaDisplayComponent::resized()
 {
-    repositionContent();
+    auto totalBounds = getLocalBounds();
+
+    // Build trackRowBox items
+    trackRowFlexBox.items.clear();
+    trackRowFlexBox.items.add(juce::FlexItem(controlBox).withWidth(200)); // Fixed width for controlBox
+    trackRowFlexBox.items.add(juce::FlexItem(mediaBox).withFlex(1));      // Media area takes remaining space
+
+    trackRowFlexBox.performLayout(totalBounds);
+
+    // Set up controlFlexBox for the controls inside controlBox
+    controlFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    controlFlexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    controlFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+
+    controlFlexBox.items.clear();
+    controlFlexBox.items.add(juce::FlexItem(textLabel).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(button1).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(button2).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(button3).withHeight(30));
+
+    // Perform layout of controls inside controlBox
+    controlFlexBox.performLayout(controlBox.getLocalBounds());
+    
+    
+    // juce::FlexBox trackRow;
+    // trackRowBox.flexDirection = juce::FlexBox::Direction::row;
+    // trackRowBox.justifyContent = juce::FlexBox::JustifyContent::center;
+    // trackRowBox.alignItems = juce::FlexBox::AlignItems::center;
+
+    
+    // // Remove top area for control spacing
+    // totalBounds.removeFromTop(controlSpacing);
+
+    // // Remove bottom area for scrollbar and spacing
+    // totalBounds.removeFromBottom(scrollBarSize + controlSpacing);
+
+    // Get the full bounds
+    // auto totalBounds = getLocalBounds();
+
+    // int leftPanelWidth = jmin(0.2f * totalBounds.getWidth(), 200.0f);
+    // Get bounds for the left panel
+    // auto leftPanelBounds = totalBounds.removeFromLeft(leftPanelWidth);
+
+    // Layout the left panel components using FlexBox
+    // Initialize FlexBox and add components
+    // controlBox.flexDirection = juce::FlexBox::Direction::column;
+    // controlBox.justifyContent = juce::FlexBox::JustifyContent::center;
+    // controlBox.alignItems = juce::FlexBox::AlignItems::center;
+
+    // controlBox.items.add(juce::FlexItem(textLabel).withFlex(1));
+    // controlBox.items.add(juce::FlexItem(button1).withFlex(1));
+    
+
+    // trackRowBox.items.add(juce::FlexItem(controlBox).withFlex(1));
+    // // trackRowBox.items.add(juce::FlexItem(*this).withFlex(4));
+    // trackRowBox.items.add(juce::FlexItem(mediaBox).withFlex(2));
+
+    // trackRowBox.performLayout(totalBounds);
+
+    // jassert(button1.isVisible());
+    // jassert(button1.getWidth() > 0 && button1.getHeight() > 0);
+
+    // button1.setBounds(10, 10, 100, 30);
+    // repositionContent();
     repositionScrollBar();
     repositionLabels();
 }
 
+// Rectangle<int> MediaDisplayComponent::getContentBounds()
+// {
+//     return getLocalBounds()
+//         .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing))
+//         .reduced(controlSpacing);
+// }
+
 Rectangle<int> MediaDisplayComponent::getContentBounds()
 {
-    return getLocalBounds()
-        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing))
-        .reduced(controlSpacing);
+
+    // // Start with the local bounds
+    auto bounds = getLocalBounds();
+    // auto leftPanelWidth = jmin(0.1f * bounds.getWidth(), 200.0f);
+    // // Remove the left panel area from the bounds
+    // bounds.removeFromLeft(leftPanelWidth);
+
+    // // Now apply your existing calculations
+    // bounds = bounds
+    //     .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing))
+    //     .reduced(controlSpacing);
+
+    // auto bounds = mediaBox.
+    return bounds;
 }
 
 void MediaDisplayComponent::repositionScrollBar()

@@ -42,6 +42,8 @@ public:
 
     void addLabels(LabelList& labels) override;
 
+    void resized() override;
+
 private:
     void resetDisplay() override;
 
