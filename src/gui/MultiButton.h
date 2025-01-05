@@ -19,21 +19,17 @@
  *         "Play",
  *         [this] { play(); },
  *         juce::Colours::limegreen,
- *         std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
- *             fontawesome::FontAwesome_Play, 1.0f, juce::Colours::limegreen)),
- *         fontawesome::FontAwesome_Play,
  *         "Click to start playback",
- *         MultiButton::DrawingMode::IconOnly
+ *         MultiButton::DrawingMode::IconOnly,
+ *         fontawesome::Play,
  *     };
  *     stopButtonInfo = MultiButton::Mode {
  *         "Stop",
  *         [this] { stop(); },
  *         juce::Colours::orangered,
- *         std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
- *             fontawesome::FontAwesome_Stop, 1.0f, juce::Colours::orangered)),
- *         fontawesome::FontAwesome_Stop,
  *         "Click to stop playback",
  *         MultiButton::DrawingMode::IconOnly
+ *         fontawesome::FontAwesome_Stop,
  *     };
  *     playStopButton.addMode(playButtonInfo);
  *     playStopButton.addMode(stopButtonInfo);
@@ -144,13 +140,13 @@ public:
     juce::String getModeName();
     void addMode(const Mode& mode);
 
-    template <class IconT>
-    void addMode(const juce::String& modeLabel,
-                std::function<void()> callback,
-                juce::Colour color,
-                IconT icon,
-                const juce::String& instruction,
-                DrawingMode drawingMode);
+    // template <class IconT>
+    // void addMode(const juce::String& modeLabel,
+    //             std::function<void()> callback,
+    //             juce::Colour color,
+    //             IconT icon,
+    //             const juce::String& instruction,
+    //             DrawingMode drawingMode);
 
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
