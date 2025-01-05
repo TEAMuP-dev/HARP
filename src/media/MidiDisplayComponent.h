@@ -8,6 +8,7 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
     MidiDisplayComponent();
+    MidiDisplayComponent(String trackName);
     ~MidiDisplayComponent();
 
     static StringArray getSupportedExtensions();

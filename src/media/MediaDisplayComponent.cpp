@@ -1,6 +1,12 @@
 #include "MediaDisplayComponent.h"
 
 MediaDisplayComponent::MediaDisplayComponent()
+    : MediaDisplayComponent("Media Track")
+{
+}
+
+MediaDisplayComponent::MediaDisplayComponent(String trackName)
+    : trackName(trackName)
 {
     resetPaths();
 
@@ -19,9 +25,9 @@ MediaDisplayComponent::MediaDisplayComponent()
     addAndMakeVisible(currentPositionMarker);
 
 
-    textLabel.setText("Media Info", juce::dontSendNotification);
-    button1.setButtonText("Button 1");
-    button1.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    textLabel.setText(trackName, juce::dontSendNotification);
+    // button1.setButtonText("Button 1");
+    // button1.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     // button2.setButtonText("Button 2");
     // button3.setButtonText("Button 3");
 
@@ -30,9 +36,10 @@ MediaDisplayComponent::MediaDisplayComponent()
 
     // Add controls to controlBox
     controlBox.addAndMakeVisible(textLabel);
-    controlBox.addAndMakeVisible(button1);
+    // controlBox.addAndMakeVisible(button1);
     // controlBox.addAndMakeVisible(button2);
     // controlBox.addAndMakeVisible(button3);
+    initMultiButtons();
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -76,9 +83,9 @@ void MediaDisplayComponent::resized()
 
     controlFlexBox.items.clear();
     controlFlexBox.items.add(juce::FlexItem(textLabel).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(button1).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(button2).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(button3).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(playStopButton).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(chooseFileButton).withHeight(30));
+    controlFlexBox.items.add(juce::FlexItem(saveFileButton).withHeight(30));
 
     // Perform layout of controls inside controlBox
     controlFlexBox.performLayout(controlBox.getLocalBounds());
@@ -393,6 +400,8 @@ void MediaDisplayComponent::start()
     startPlaying();
 
     startTimerHz(40);
+
+    playStopButton.setMode(stopButtonInfo.label);
 }
 
 void MediaDisplayComponent::stop()
@@ -403,6 +412,8 @@ void MediaDisplayComponent::stop()
 
     currentPositionMarker.setVisible(false);
     setPlaybackPosition(0.0);
+
+    playStopButton.setMode(playButtonInfo.label);
 }
 
 float MediaDisplayComponent::getPixelsPerSecond()
@@ -602,6 +613,56 @@ void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
     auto newEnd = scrollPosX + newScale * (visibleStart + totalLength - scrollPosX) / totalLength;
 
     updateVisibleRange({ newStart, newEnd });
+}
+
+void MediaDisplayComponent::initMultiButtons()
+{
+    playButtonInfo = MultiButton::Mode {
+        "Play",
+        [this] { start(); },
+        juce::Colours::limegreen,
+        "Click to start playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Play,
+    };
+    stopButtonInfo = MultiButton::Mode {
+        "Stop",
+        [this] { stop(); },
+        Colours::orangered,
+        "Click to stop playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Stop,
+    };
+    playStopButton.addMode(playButtonInfo);
+    playStopButton.addMode(stopButtonInfo);
+    playStopButton.setMode(playButtonInfo.label);
+    playStopButton.setEnabled(true);
+    controlBox.addAndMakeVisible(playStopButton);
+
+    chooseButtonInfo = MultiButton::Mode {
+        "Choose",
+        [this] {  }, // chooseFile();
+        juce::Colours::lightblue,
+        "Click to choose a media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Folder,
+    };
+    chooseFileButton.addMode(chooseButtonInfo);
+    chooseFileButton.setMode(chooseButtonInfo.label);
+    controlBox.addAndMakeVisible(chooseFileButton);
+
+    saveButtonInfo = MultiButton::Mode {
+        "Save",
+        [this] {  }, // saveFile();
+        juce::Colours::lightblue,
+        "Click to save the media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    saveFileButton.addMode(saveButtonInfo);
+    saveFileButton.setMode(saveButtonInfo.label);
+    controlBox.addAndMakeVisible(saveFileButton);
+
 }
 
 void MediaDisplayComponent::resetPaths()

@@ -6,6 +6,8 @@
 
 #include "../utils.h"
 #include "OutputLabelComponent.h"
+#include "../gui/MultiButton.h"
+
 
 using namespace juce;
 
@@ -18,6 +20,7 @@ class MediaDisplayComponent : public Component,
 {
 public:
     MediaDisplayComponent();
+    MediaDisplayComponent(String trackName);
     ~MediaDisplayComponent();
 
     virtual StringArray getInstanceExtensions() = 0;
@@ -30,6 +33,8 @@ public:
 
     virtual Component* getMediaComponent() { return this; }
     virtual float getMediaXPos() { return 0.0f; }
+
+    String getTrackName() { return trackName; }
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
@@ -139,11 +144,21 @@ protected:
     juce::FlexBox controlFlexBox;
     juce::FlexBox mediaFlexBox;
     juce::Label textLabel;
-    juce::TextButton button1;
-    juce::TextButton button2;
-    juce::TextButton button3;
+    // juce::TextButton button1;
+    // juce::TextButton button2;
+    // juce::TextButton button3;
+    MultiButton playStopButton;
+    MultiButton::Mode playButtonInfo;
+    MultiButton::Mode stopButtonInfo;
+    MultiButton chooseFileButton;
+    MultiButton::Mode chooseButtonInfo;
+    MultiButton saveFileButton;
+    MultiButton::Mode saveButtonInfo;
 
 private:
+
+    void initMultiButtons();
+
     void resetPaths();
 
     virtual void resetDisplay() = 0;
@@ -177,4 +192,6 @@ private:
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> oveheadLabels;
+
+    juce::String trackName;
 };

@@ -1,3 +1,4 @@
+#pragma once
 #include "WebModel.h"
 #include "gui/SliderWithLabel.h"
 #include "gui/TitledTextBox.h"
@@ -37,36 +38,59 @@ public:
 
         // // iterate through the list of input components
         // // and choosing only the ones that correspond to input controls and not input media
+        auto counter = 1;
         for (const auto& pair : inputTracksInfo)
         {
             auto trackInfo = pair.second;
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
-                inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
+                if (audioTrackInfo->label == "")
+                {
+                    audioTrackInfo->label = "InputAudio-" + std::to_string(counter);
+                }
+                inputMediaDisplays.push_back(
+                    std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
-                outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
-                addAndMakeVisible(outputMediaDisplays.back().get());
-                outputMediaDisplays.back()->addChangeListener(this);
+                if (midiTrackInfo->label == "")
+                {
+                    midiTrackInfo->label = "InputMidi-" + std::to_string(counter);
+                }
+                inputMediaDisplays.push_back(
+                    std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
+                addAndMakeVisible(inputMediaDisplays.back().get());
+                inputMediaDisplays.back()->addChangeListener(this);
             }
+            counter++;
         }
 
         auto& outputTracksInfo = mModel->getOutputTracks();
+        counter = 1;
         for (const auto& pair : outputTracksInfo)
         {
             auto trackInfo = pair.second;
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
-                inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
-                addAndMakeVisible(inputMediaDisplays.back().get());
-                inputMediaDisplays.back()->addChangeListener(this);
+                if (audioTrackInfo->label == "")
+                {
+                    audioTrackInfo->label = "OutputAudio-" + std::to_string(counter);
+                }
+                outputMediaDisplays.push_back(
+                    std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
+                addAndMakeVisible(outputMediaDisplays.back().get());
+                outputMediaDisplays.back()->addChangeListener(this);
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
-                outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
+                if (midiTrackInfo->label == "")
+                {
+                    midiTrackInfo->label = "OutputMidi-" + std::to_string(counter);
+                }
+                outputMediaDisplays.push_back(
+                    std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
                 addAndMakeVisible(outputMediaDisplays.back().get());
                 outputMediaDisplays.back()->addChangeListener(this);
             }
@@ -141,7 +165,6 @@ public:
             // auto row = area.removeFromTop(150).reduced(2);
             // display->setBounds(row);
             mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50));
-
         }
 
         // Perform Layout
@@ -155,7 +178,6 @@ public:
     }
 
     // TODO: a function for drag'n'drop a file from one track to another
-
 
     // Implement the listener callback
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
@@ -188,13 +210,11 @@ public:
                 //     playStopButton.setMode(playButtonInfo.label);
                 //     playStopButton.setEnabled(false);
                 // }
-                return; 
+                return;
             }
         }
     }
 
-
-    
 private:
     void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
     {
@@ -214,10 +234,8 @@ private:
         if (! matchingDisplay)
         {
             // AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                         "Save As",
-                                                         "Wrong FileType\n",
-                                                         "OK");
+            AlertWindow::showMessageBoxAsync(
+                AlertWindow::WarningIcon, "Save As", "Wrong FileType\n", "OK");
 
             // return;
             // // Remove the existing media display
@@ -252,8 +270,6 @@ private:
             // playStopButton.setEnabled(true);
             resized();
         }
-
-        
     }
 
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
@@ -271,8 +287,8 @@ private:
     std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
 
     // A label for the input tracks
-    std::unique_ptr<juce::Label> inputTracksLabel { 
-        std::make_unique<juce::Label>("Input Tracks", "Input Tracks") };
+    std::unique_ptr<juce::Label> inputTracksLabel { std::make_unique<juce::Label>("Input Tracks",
+                                                                                  "Input Tracks") };
     // A label for the output tracks
     std::unique_ptr<juce::Label> outputTracksLabel {
         std::make_unique<juce::Label>("Output Tracks", "Output Tracks")

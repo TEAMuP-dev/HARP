@@ -1,6 +1,12 @@
 #include "MidiDisplayComponent.h"
 
 MidiDisplayComponent::MidiDisplayComponent()
+    : MediaDisplayComponent("Midi Track")
+{
+}
+
+MidiDisplayComponent::MidiDisplayComponent(String trackName)
+    : MediaDisplayComponent(trackName)
 {
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
