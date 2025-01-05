@@ -2,7 +2,32 @@
 
 namespace fontaudio
 {
-	typedef juce::String IconName;
+	// typedef juce::String IconName;
+	struct IconName
+    {
+        juce::String name;
+
+        // Default constructor
+        IconName() = default;
+
+        // Constructor from juce::String
+        IconName(const juce::String& s) : name(s) {}
+
+        // Constructor from const char*
+        IconName(const char* s) : name(s) {}
+
+        // Static method to create IconName from UTF-8 string
+        static IconName fromUTF8(const char* utf8)
+        {
+            return IconName(juce::String::fromUTF8(utf8));
+        }
+
+        // Conversion operator to juce::String
+        operator juce::String() const { return name; }
+
+        // Conversion operator to const char*
+        operator const char*() const { return name.toRawUTF8(); }
+    };
 
 	inline const char* convertChar8ToChar(const char8_t* str)
 	{

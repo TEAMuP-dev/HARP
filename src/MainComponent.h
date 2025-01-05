@@ -791,24 +791,22 @@ public:
 
     void initPlayStopButton()
     {
-        playButtonInfo =
-            MultiButton::Mode { "Play",
-                                [this] { play(); },
-                                juce::Colours::limegreen,
-                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
-                                    fontawesome::FontAwesome_Play, 1.0f, juce::Colours::limegreen)),
-                                fontawesome::FontAwesome_Play,
-                                "Click to start playback",
-                                MultiButton::DrawingMode::IconOnly };
-        stopButtonInfo =
-            MultiButton::Mode { "Stop",
-                                [this] { stop(); },
-                                Colours::orangered,
-                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
-                                    fontawesome::FontAwesome_Stop, 1.0f, juce::Colours::orangered)),
-                                fontawesome::FontAwesome_Stop,
-                                "Click to stop playback",
-                                MultiButton::DrawingMode::IconOnly };
+        playButtonInfo = MultiButton::Mode {
+            "Play",
+            [this] { play(); },
+            juce::Colours::limegreen,
+            "Click to start playback",
+            MultiButton::DrawingMode::IconOnly,
+            fontaudio::Stop,
+        };
+        stopButtonInfo = MultiButton::Mode {
+            "Stop",
+            [this] { stop(); },
+            Colours::orangered,
+            "Click to stop playback",
+            MultiButton::DrawingMode::IconOnly,
+            fontaudio::Stop,
+        };
         playStopButton.addMode(playButtonInfo);
         playStopButton.addMode(stopButtonInfo);
         playStopButton.setMode(playButtonInfo.label);
@@ -819,25 +817,22 @@ public:
     void initProcessCancelButton()
     {
         // The Process/Cancel button
-        processButtonInfo =
-            MultiButton::Mode { "Process",
-                                [this] { processCallback(); },
-                                Colours::lightgrey,
-                                std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
-                                    fontawesome::FontAwesome_Play, 1.0f, juce::Colours::green)),
-                                fontawesome::FontAwesome_Play,
-                                "Click to send the audio file for processing",
-                                MultiButton::DrawingMode::TextOnly };
+        processButtonInfo = MultiButton::Mode {
+            "Process",
+            [this] { processCallback(); },
+            Colours::orangered,
+            "Click to send the audio file for processing",
+            MultiButton::DrawingMode::IconOnly,
+            fontaudio::Pause,
+        };
 
         cancelButtonInfo = MultiButton::Mode {
             "Cancel",
             [this] { cancelCallback(); },
             Colours::lightgrey,
-            std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
-                fontawesome::FontAwesome_Amazon, 1.0f, juce::Colours::red)),
-            fontawesome::FontAwesome_Amazon,
             "Click to cancel the processing",
             MultiButton::DrawingMode::TextOnly,
+            fontaudio::Pause,
         };
 
         processCancelButton.addMode(processButtonInfo);
@@ -870,11 +865,9 @@ public:
             "Load Model",
             [this] { loadModelCallback(); },
             Colours::lightgrey,
-            std::make_shared<juce::Image>(fontawesomeHelper->getIcon(
-                fontawesome::FontAwesome_CloudUpload, 1.0f, juce::Colours::blue)),
-            fontawesome::FontAwesome_CloudUpload,
             "Click to load the selected model path",
             MultiButton::DrawingMode::IconOnly,
+            fontaudio::LogoReaper,
         };
         loadModelButton.addMode(loadButtonInfo);
         loadModelButton.setMode(loadButtonInfo.label);
@@ -975,7 +968,7 @@ public:
           jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         HarpLogger::getInstance()->initializeLogger();
-        fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
+        fontaudioHelper = std::make_shared<fontaudio::IconHelper2>();
         fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
 
         initSomeButtons();
@@ -1687,7 +1680,7 @@ private:
     std::unique_ptr<MenuBarComponent> menuBar;
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
-    std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
+    std::shared_ptr<fontaudio::IconHelper2> fontaudioHelper;
 
     void play()
     {

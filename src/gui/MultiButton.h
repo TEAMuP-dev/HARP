@@ -61,17 +61,75 @@ public:
         IconOnly,
         TextAndIcon
     };
+
+    enum class IconType
+    {
+        None,
+        FontAwesome,
+        FontAudio
+    };
     struct Mode
     {
         juce::String label;
         std::function<void()> callback;
         juce::Colour color;
-        std::shared_ptr<juce::Image> icon;
-        juce::String iconName;
+        // std::shared_ptr<juce::Image> icon;
+        // juce::String iconName;
         juce::String instructionMessage;
         DrawingMode drawingMode;
         // juce::Colour iconColor;
         // juce::String iconName;
+
+        IconType iconType = IconType::None;
+        fontawesome::IconName awesomeIcon {}; // For FontAwesome
+        fontaudio::IconName audioIcon {};  
+
+        // 1) Constructor for text-only
+        Mode(const juce::String& lbl,
+             std::function<void()> cb,
+             juce::Colour col,
+             const juce::String& instr,
+             DrawingMode dm)
+            : label(lbl),
+              callback(cb),
+              color(col),
+              instructionMessage(instr),
+              drawingMode(dm),
+              iconType(IconType::None)
+        {
+        } 
+
+        // 2) Template constructor for an icon (FontAwesome or FontAudio)
+        template <typename IconT>
+        Mode(const juce::String& lbl,
+             std::function<void()> cb,
+             juce::Colour col,
+             const juce::String& instr,
+             DrawingMode dm,
+             IconT icon)
+            : label(lbl),
+              callback(cb),
+              color(col),
+              instructionMessage(instr),
+              drawingMode(dm)
+        {
+            if constexpr (std::is_same_v<IconT, fontawesome::IconName>)
+            {
+                iconType = IconType::FontAwesome;
+                awesomeIcon = icon;
+            }
+            else if constexpr (std::is_same_v<IconT, fontaudio::IconName>)
+            {
+                iconType = IconType::FontAudio;
+                audioIcon = icon;
+            }
+        }
+
+        Mode()
+        : drawingMode(DrawingMode::TextOnly),
+          iconType(IconType::None)
+        {
+        }
     };
 
     std::function<void()> onMouseEnter;
@@ -85,6 +143,15 @@ public:
     void setMode(const juce::String& modeName);
     juce::String getModeName();
     void addMode(const Mode& mode);
+
+    template <class IconT>
+    void addMode(const juce::String& modeLabel,
+                std::function<void()> callback,
+                juce::Colour color,
+                IconT icon,
+                const juce::String& instruction,
+                DrawingMode drawingMode);
+
     void mouseEnter(const juce::MouseEvent& event) override;
     void mouseExit(const juce::MouseEvent& event) override;
 
@@ -100,7 +167,7 @@ private:
     juce::String currentMode;
     // juce::Drawable* currentIcon = nullptr;
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
-    std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
+    std::shared_ptr<fontaudio::IconHelper2> fontaudioHelper;
     SharedResourcePointer<InstructionBox> instructionBox;
     DrawingMode drawingMode;
 };

@@ -11,6 +11,7 @@ MultiButton::MultiButton(const juce::String& buttonName) : juce::TextButton(butt
     // Optionally set default properties
     setToggleState(false, juce::dontSendNotification);
     fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
+    fontaudioHelper = std::make_shared<fontaudio::IconHelper2>();
 }
 
 // MultiButton::MultiButton()
@@ -66,23 +67,6 @@ void MultiButton::mouseExit(const juce::MouseEvent& event)
 
 juce::String MultiButton::getModeName() { return currentMode; }
 
-// void MultiButton::paint(juce::Graphics& g)
-// {
-//     g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
-//     // g.setFont(fontawesomeHelper->getFont());
-//     // g.setColour(juce::Colours::red);
-//     // g.drawFittedText(fontawesome::FontAwesome_Play, textArea, juce::Justification::centred, 1);
-    
-//     auto textArea = getLocalBounds();//.reduced(10); // Add some padding
-    
-//     // auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
-//     auto currentIconName = modes[currentMode].iconName;
-//     auto currentColor = modes[currentMode].color;
-//     auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
-//     fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
-
-// }
-
 void MultiButton::paintButton(juce::Graphics& g,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown)
@@ -126,11 +110,26 @@ void MultiButton::paintButton(juce::Graphics& g,
     {
         auto textArea = getLocalBounds();//.reduced(10); // Add some padding
         // auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
-        auto currentIconName = modes[currentMode].iconName;
+        juce::String currentIconName;
         auto currentColor = modes[currentMode].color;
         auto size = jmin(getWidth(), getHeight());
-        auto icon = fontawesomeHelper->getIcon(currentIconName, size, currentColor, 1.0f);
-        fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
+        if (modes[currentMode].iconType == IconType::FontAwesome)
+        {
+            currentIconName = modes[currentMode].awesomeIcon;
+            auto icon = fontawesomeHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+            fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
+        }
+        else if (modes[currentMode].iconType == IconType::FontAudio)
+        {
+            currentIconName = modes[currentMode].audioIcon;
+            auto icon = fontaudioHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+            fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
+        }
+        // auto icon = fontawesomeHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+        // fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
+        // auto icon = fontaudioHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+        // fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
+        
     }
     // int shouldDrawButtonAsHighlightedInt = shouldDrawButtonAsHighlighted ? 1 : 0;
     // int shouldDrawButtonAsDownInt = shouldDrawButtonAsDown ? 1 : 0;

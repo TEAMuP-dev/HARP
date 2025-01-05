@@ -14,54 +14,13 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 // using namespace juce;
 #include "../data/FontAwesomeData.h"
-#include "../data/Icons.h"
+#include "../data/FontAwesomeIcons.h"
 
 namespace fontawesome
 {
 IconHelper::IconHelper() {}
 
 IconHelper::~IconHelper() {}
-
-// std::unique_ptr<juce::Drawable> IconHelper::createIconDrawable(IconName icon,
-//                                                                float size,
-//                                                                juce::Colour colour,
-//                                                                float scaleFactor)
-// {
-//     auto iconImage = getIcon(icon, size, colour, scaleFactor);
-//     return std::make_unique<juce::DrawableImage>(iconImage);
-// }
-
-std::unique_ptr<juce::Drawable> IconHelper::getDrawableFromImage(const juce::Image& image)
-{
-    auto drawableImage = std::make_unique<juce::DrawableImage>();
-    drawableImage->setImage(image);
-    return drawableImage;
-}
-
-std::unique_ptr<juce::Drawable> IconHelper::getFontAwesomeIcon(const juce::String& iconName, float size, juce::Colour colour)
-{
-    // Create a juce::Image from the fontawesome icon
-    juce::Image iconImage = createFontAwesomeImage(iconName, size, colour);
-
-    // Create a juce::Drawable from the juce::Image
-    return getDrawableFromImage(iconImage);
-}
-
-juce::Image IconHelper::createFontAwesomeImage(const juce::String& iconName, float size, juce::Colour colour)
-{
-    // Create an image with the specified size and colour
-    juce::Image image(juce::Image::ARGB, static_cast<int>(size), static_cast<int>(size), true);
-    juce::Graphics g(image);
-
-    // Set the font to FontAwesome and draw the icon
-    // juce::Font font("FontAwesome", size, juce::Font::plain);
-    juce::Font font = getFont();
-    g.setFont(font);
-    g.setColour(colour);
-    g.drawText(iconName, image.getBounds(), juce::Justification::centred, true);
-
-    return image;
-}
 
 RenderedIcon IconHelper::getIcon(IconName icon, float size, juce::Colour colour, float scaleFactor)
 {

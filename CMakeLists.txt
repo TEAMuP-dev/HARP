@@ -69,20 +69,26 @@ target_sources(${PROJECT_NAME}
 
         src/gradio/GradioClient.cpp
         src/external/magic_enum.hpp
-        # src/external/fontaudio/fontaudio.cpp
-        # src/external/fontaudio/fontaudio.h
-        # src/external/fontaudio/fontaudio.mm
+
         src/external/fontaudio/src/FontAudio.h
         src/external/fontaudio/src/FontAudio.cpp
         src/external/fontaudio/data/FontAudioData.h
         src/external/fontaudio/data/FontAudioData.cpp
-        src/external/fontaudio/data/Icons.h
+        src/external/fontaudio/data/FontAudioIcons.h
 
         src/external/fontawesome/src/FontAwesome.h
         src/external/fontawesome/src/FontAwesome.cpp
         src/external/fontawesome/data/FontAwesomeData.h
         src/external/fontawesome/data/FontAwesomeData.cpp
-        src/external/fontawesome/data/Icons.h
+        src/external/fontawesome/data/FontAwesomeIcons.h
+        # src/external/fonts/src/IconHelper.h
+        # src/external/fonts/src/IconHelper.cpp
+        # src/external/fonts/data/FontAudioIcons.h
+        # src/external/fonts/data/FontAwesomeIcons.h
+        # src/external/fonts/data/FontAudioData.h 
+        # src/external/fonts/data/FontAwesomeData.h
+        # src/external/fonts/data/FontAudioData.cpp 
+        # src/external/fonts/data/FontAwesomeData.cpp
         
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp
