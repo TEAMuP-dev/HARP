@@ -1,3 +1,13 @@
+# [Gen-I/O] Current View of UI
+To test the current gen-i/o version of HARP locally, build the HARP branch `cb/gen-inputs`.
+
+To run a compatible model, you will need to execute the [`examples/pitch_shifter/app.py`](https://github.com/TEAMuP-dev/pyharp/blob/cb/gen-inputs/examples/pitch_shifter/app.py)
+from the `pyHarp` repository on the `cb/gen-inputs` branch.
+![Screenshot 2025-01-10 at 12 59 45 PM](https://github.com/user-attachments/assets/ecb2bdbc-c5d7-4528-bc39-24381d080f3f)
+
+---
+# HARP
+
 ![herofig_revised](https://github.com/TEAMuP-dev/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
 ![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main)
