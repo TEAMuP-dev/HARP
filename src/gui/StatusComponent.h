@@ -1,5 +1,13 @@
+/**
+ * @file StatusComponent.h
+ * @brief Instructions and status components for the GUI
+ * @author xribene
+ * 
+ * Both are identical. The reason is in order for them to be sharedResources
+ * they can't inherit from the same class. This is a workaround.
+ * There is probably a better way to do this.
+ */
 #pragma once
-
 #include "juce_gui_basics/juce_gui_basics.h"
 
 class InstructionBox : public juce::Component

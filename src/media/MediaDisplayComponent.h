@@ -74,6 +74,11 @@ public:
 
     bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
 
+    void openFileChooser();
+
+    // Callback for the save button
+    void saveCallback();
+
     bool displaysInput() {return ioMode == 0;}
     bool displaysOutput() {return ioMode == 1;}
     
@@ -137,7 +142,11 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
-    
+    std::unique_ptr<FileChooser> openFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
+
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
+    juce::SharedResourcePointer<StatusBox> statusBox;
 
     juce::FlexBox mainFlexBox;
     juce::FlexBox headerFlexBox;
@@ -155,7 +164,8 @@ protected:
     MultiButton chooseFileButton;
     MultiButton::Mode chooseButtonInfo;
     MultiButton saveFileButton;
-    MultiButton::Mode saveButtonInfo;
+    MultiButton::Mode saveButtonActiveInfo;
+    MultiButton::Mode saveButtonInactiveInfo;
 
 private:
 

@@ -1,3 +1,9 @@
+/**
+ * @file TrackAreaWidget.h
+ * @brief The component that displays the input and output tracks in the GUI.
+ * @author xribene
+ * 
+ */
 #pragma once
 #include "WebModel.h"
 #include "gui/SliderWithLabel.h"
@@ -9,10 +15,6 @@
 #include "utils.h"
 
 class TrackAreaWidget : public juce::Component, public juce::ChangeListener
-//   public Button::Listener,
-//   public Slider::Listener,
-//   public ComboBox::Listener,
-//   public TextEditor::Listener
 {
 public:
     TrackAreaWidget() {}
@@ -145,8 +147,8 @@ public:
         inputTracksCounter = 0;
         outputTracksCounter = 0;
         // remove input and output TracksLabel
-        inputTracksLabel->setText("", juce::dontSendNotification);
-        outputTracksLabel->setText("", juce::dontSendNotification);
+        // inputTracksLabel->setText("", juce::dontSendNotification);
+        // outputTracksLabel->setText("", juce::dontSendNotification);
     }
 
     void resized() override
@@ -164,7 +166,7 @@ public:
         if (inputTracksCounter > 0)
         {
             // Before input tracks, add a centered label for the input tracks
-            mainBox.items.add(juce::FlexItem(*inputTracksLabel).withFlex(0.5).withMinHeight(30));
+            mainBox.items.add(juce::FlexItem(*inputTracksLabel).withFlex(0.25).withMinHeight(15));
 
             // Input tracks
             for (auto& display : inputMediaDisplays)
@@ -178,7 +180,7 @@ public:
         if (outputTracksCounter > 0)
         {
             // Before output tracks, add a centered label for the output tracks
-            mainBox.items.add(juce::FlexItem(*outputTracksLabel).withFlex(0.5).withMinHeight(30));
+            mainBox.items.add(juce::FlexItem(*outputTracksLabel).withFlex(0.25).withMinHeight(15));
 
             // Output tracks
             for (auto& display : outputMediaDisplays)
@@ -199,9 +201,10 @@ public:
         return inputMediaDisplays;
     }
 
-    // TODO: a function for drag'n'drop a file from one track to another
-
     // Implement the listener callback
+    // It listens to events emmited from MediaDisplayComponents 
+    // using the sendChangeMessage() function
+    // NOTE: not used, but might be useful in the future
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
     {
         // Check if the source is one of the inputMediaDisplays
@@ -209,93 +212,21 @@ public:
         {
             if (source == display.get())
             {
-                if (display->isFileDropped())
-                {
-                    URL droppedFilePath = display->getDroppedFilePath();
-                    display->clearDroppedFile();
-                    // Reload an appropriate display for dropped file
-                    loadMediaDisplay(droppedFilePath.getLocalFile(), display);
-                    // File mediaFile = droppedFilePath.getLocalFile();
-                    // String extension = mediaFile.getFileExtension();
-                }
-                // else if (display->isFileLoaded() && !display->isPlaying())
-                // {
-                //     playStopButton.setMode(playButtonInfo.label);
-                //     playStopButton.setEnabled(true);
-                // }
-                // else if (display->isFileLoaded() && display->isPlaying())
-                // {
-                //     playStopButton.setMode(stopButtonInfo.label);
-                // }
-                // else
-                // {
-                //     playStopButton.setMode(playButtonInfo.label);
-                //     playStopButton.setEnabled(false);
-                // }
+                // Do something
+                return;
+            }
+        }
+        for (auto& display : outputMediaDisplays)
+        {
+            if (source == display.get())
+            {
+                // Do something
                 return;
             }
         }
     }
 
 private:
-    void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    {
-        String extension = mediaFile.getFileExtension();
-
-        bool matchingDisplay = true;
-
-        if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
-        {
-            matchingDisplay = audioExtensions.contains(extension);
-        }
-        else
-        {
-            matchingDisplay = midiExtensions.contains(extension);
-        }
-
-        if (! matchingDisplay)
-        {
-            // AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon, "Save As", "Wrong FileType\n", "OK");
-
-            // return;
-            // // Remove the existing media display
-            // removeChildComponent(cur_mediaDisplay.get());
-            // cur_mediaDisplay->removeChangeListener(this);
-            // // mediaDisplayHandler->detach();
-
-            // int mediaType = 0;
-
-            // if (audioExtensions.contains(extension))
-            // {
-            // }
-            // else if (midiExtensions.contains(extension))
-            // {
-            //     mediaType = 1;
-            // }
-            // else
-            // {
-            //     DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-            //                                                                     << "\'.");
-
-            //     AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-            // }
-
-            // // Initialize a matching display
-            // initializeMediaDisplay(mediaType, cur_mediaDisplay);
-        }
-        else
-        {
-            cur_mediaDisplay->setupDisplay(URL(mediaFile));
-            // lastLoadTime = Time::getCurrentTime();
-            // playStopButton.setEnabled(true);
-            resized();
-        }
-    }
-
-    StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
-    StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
 
     // ToolbarSliderStyle toolbarSliderStyle;
     std::shared_ptr<WebModel> mModel { nullptr };

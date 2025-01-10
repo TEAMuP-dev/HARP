@@ -1,6 +1,9 @@
-
+/**
+ * @file HoverableLabel.h
+ * @brief A custom label that is clickable and changes color when hovering over the text
+ * @author xribene
+ */
 #pragma once
-
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <functional>
 

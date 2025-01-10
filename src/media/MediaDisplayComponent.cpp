@@ -63,7 +63,7 @@ void MediaDisplayComponent::resized()
 
     // Build trackRowBox items
     mainFlexBox.items.clear();
-    mainFlexBox.items.add(juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40)); 
+    mainFlexBox.items.add(juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4)); 
      // Media area takes remaining space
     mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));     
 
@@ -86,22 +86,6 @@ void MediaDisplayComponent::resized()
     headerFlexBox.items.add(juce::FlexItem(trackNameLabel).withFlex(1));
     headerFlexBox.items.add(juce::FlexItem(buttonsFlexBox).withFlex(1));
 
-    // // Perform layout of controls inside headerComponent
-    // headerFlexBox.performLayout(headerComponent.getLocalBounds());
-    // // Perform layout of controls inside headerComponent
-
-    // // Rotate the trackNameLabel by -90 degrees (counter-clockwise)
-    // auto labelBounds = trackNameLabel.getBounds().toFloat();
-    // auto labelCentreX = labelBounds.getCentreX();
-    // auto labelCentreY = labelBounds.getCentreY();
-
-    // trackNameLabel.setTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi,
-    //                                                           labelCentreX, labelCentreY));
-    
-    // auto originalBounds = trackNameLabel.getBounds();
-    // trackNameLabel.setBounds(originalBounds.withSizeKeepingCentre(originalBounds.getHeight(),
-    //                                                           originalBounds.getWidth()));
-    
     // Perform layout of controls inside headerComponent
     headerFlexBox.performLayout(headerComponent.getLocalBounds());
 
@@ -207,13 +191,14 @@ void MediaDisplayComponent::resetMedia()
     resetPaths();
     clearLabels();
     resetDisplay();
-    sendChangeMessage();
+    sendChangeMessage(); // cb: what's the point of this ? 
 
     currentHorizontalZoomFactor = 1.0;
     horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
     horizontalScrollBar.setVisible(false);
 }
 
+// the function we need to call when we want to load a media file
 void MediaDisplayComponent::setupDisplay(const URL& filePath)
 {
     resetMedia();
@@ -377,7 +362,62 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
     // TODO - warning or handling for additional files
 
     droppedFilePath = URL(File(files[0]));
-    sendChangeMessage();
+    auto mediaFile = droppedFilePath.getLocalFile();
+    // sendChangeMessage();
+    // loadMediaFile(droppedFilePath);
+    String extension = mediaFile.getFileExtension();
+
+    bool matchingDisplay = getInstanceExtensions().contains(extension);
+
+    if (! matchingDisplay)
+    {
+        AlertWindow::showMessageBoxAsync(
+            AlertWindow::WarningIcon, "Wrong file extension", "Please drop one of the following file types: " + getInstanceExtensions().joinIntoString(", "), "OK");
+    }
+    else
+    {
+        setupDisplay(URL(mediaFile));
+        saveFileButton.setMode(saveButtonActiveInfo.label);
+    }
+    droppedFilePath = URL();
+}
+
+void MediaDisplayComponent::openFileChooser()
+{
+    StringArray allExtensions = StringArray(getInstanceExtensions());
+    // allExtensions.mergeArray(midiExtensions);
+
+    String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
+
+    openFileBrowser =
+        std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
+
+    openFileBrowser->launchAsync(FileBrowserComponent::openMode
+                                        | FileBrowserComponent::canSelectFiles,
+                                    [this](const FileChooser& browser)
+                                    {
+                                        File chosenFile = browser.getResult();
+                                        if (chosenFile != File {})
+                                        {
+                                            setupDisplay(URL(chosenFile));
+                                            saveFileButton.setMode(saveButtonActiveInfo.label);
+                                        }
+                                    });
+}
+
+void MediaDisplayComponent::saveCallback()
+{
+    if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
+    {
+        overwriteTarget();
+        // saveFileButton.setEnabled(false);
+        saveFileButton.setMode(saveButtonInactiveInfo.label);
+        statusBox->setStatusMessage("File saved successfully");
+    }
+    else
+    {
+        statusBox->setStatusMessage("Nothing to save");
+    }
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
@@ -680,7 +720,7 @@ void MediaDisplayComponent::populateTrackHeader()
 
     chooseButtonInfo = MultiButton::Mode {
         "Choose",
-        [this] {  }, // chooseFile();
+        [this] { openFileChooser(); }, // chooseFile();
         juce::Colours::lightblue,
         "Click to choose a media file",
         MultiButton::DrawingMode::IconOnly,
@@ -690,16 +730,27 @@ void MediaDisplayComponent::populateTrackHeader()
     chooseFileButton.setMode(chooseButtonInfo.label);
     headerComponent.addAndMakeVisible(chooseFileButton);
 
-    saveButtonInfo = MultiButton::Mode {
-        "Save",
-        [this] {  }, // saveFile();
+    saveButtonActiveInfo = MultiButton::Mode {
+        "Save1",
+        [this] { saveCallback(); }, // saveFile();
         juce::Colours::lightblue,
         "Click to save the media file",
         MultiButton::DrawingMode::IconOnly,
         fontawesome::Save,
     };
-    saveFileButton.addMode(saveButtonInfo);
-    saveFileButton.setMode(saveButtonInfo.label);
+    // We can use a separate mode for the save button
+    // to be used when there is nothing to save
+    saveButtonInactiveInfo = MultiButton::Mode {
+        "Save2", // mode labels need to be unique for the button
+        [this] { saveCallback(); }, // saveFile();
+        juce::Colours::lightgrey,
+        "Nothing to save",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    saveFileButton.addMode(saveButtonActiveInfo);
+    saveFileButton.addMode(saveButtonInactiveInfo);
+    saveFileButton.setMode(saveButtonInactiveInfo.label);
     headerComponent.addAndMakeVisible(saveFileButton);
 
 }
