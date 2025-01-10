@@ -25,21 +25,13 @@ MediaDisplayComponent::MediaDisplayComponent(String trackName)
     addAndMakeVisible(currentPositionMarker);
 
 
-    textLabel.setText(trackName, juce::dontSendNotification);
-    // button1.setButtonText("Button 1");
-    // button1.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
-    // button2.setButtonText("Button 2");
-    // button3.setButtonText("Button 3");
+    trackNameLabel.setText(trackName, juce::dontSendNotification);
+    addAndMakeVisible(headerComponent);
+    addAndMakeVisible(mediaComponent);
 
-    addAndMakeVisible(controlBox);
-    addAndMakeVisible(mediaBox);
-
-    // Add controls to controlBox
-    controlBox.addAndMakeVisible(textLabel);
-    // controlBox.addAndMakeVisible(button1);
-    // controlBox.addAndMakeVisible(button2);
-    // controlBox.addAndMakeVisible(button3);
-    initMultiButtons();
+    // Add controls to headerComponent
+    headerComponent.addAndMakeVisible(trackNameLabel);
+    populateTrackHeader();
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -70,25 +62,72 @@ void MediaDisplayComponent::resized()
     auto totalBounds = getLocalBounds();
 
     // Build trackRowBox items
-    trackRowFlexBox.items.clear();
-    trackRowFlexBox.items.add(juce::FlexItem(controlBox).withWidth(200)); // Fixed width for controlBox
-    trackRowFlexBox.items.add(juce::FlexItem(mediaBox).withFlex(1));      // Media area takes remaining space
+    mainFlexBox.items.clear();
+    mainFlexBox.items.add(juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40)); 
+     // Media area takes remaining space
+    mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));     
 
-    trackRowFlexBox.performLayout(totalBounds);
+    mainFlexBox.performLayout(totalBounds);
 
-    // Set up controlFlexBox for the controls inside controlBox
-    controlFlexBox.flexDirection = juce::FlexBox::Direction::column;
-    controlFlexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    controlFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+    // Set up headerFlexBox for the controls inside headerComponent
+    headerFlexBox.flexDirection = juce::FlexBox::Direction::row;
+    headerFlexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    headerFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
 
-    controlFlexBox.items.clear();
-    controlFlexBox.items.add(juce::FlexItem(textLabel).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(playStopButton).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(chooseFileButton).withHeight(30));
-    controlFlexBox.items.add(juce::FlexItem(saveFileButton).withHeight(30));
+    juce::FlexBox buttonsFlexBox;
+    buttonsFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    buttonsFlexBox.justifyContent = juce::FlexBox::JustifyContent::center;
+    buttonsFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+    buttonsFlexBox.items.add(juce::FlexItem(playStopButton).withHeight(30));
+    buttonsFlexBox.items.add(juce::FlexItem(chooseFileButton).withHeight(30));
+    buttonsFlexBox.items.add(juce::FlexItem(saveFileButton).withHeight(30));
 
-    // Perform layout of controls inside controlBox
-    controlFlexBox.performLayout(controlBox.getLocalBounds());
+    headerFlexBox.items.clear();
+    headerFlexBox.items.add(juce::FlexItem(trackNameLabel).withFlex(1));
+    headerFlexBox.items.add(juce::FlexItem(buttonsFlexBox).withFlex(1));
+
+    // // Perform layout of controls inside headerComponent
+    // headerFlexBox.performLayout(headerComponent.getLocalBounds());
+    // // Perform layout of controls inside headerComponent
+
+    // // Rotate the trackNameLabel by -90 degrees (counter-clockwise)
+    // auto labelBounds = trackNameLabel.getBounds().toFloat();
+    // auto labelCentreX = labelBounds.getCentreX();
+    // auto labelCentreY = labelBounds.getCentreY();
+
+    // trackNameLabel.setTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi,
+    //                                                           labelCentreX, labelCentreY));
+    
+    // auto originalBounds = trackNameLabel.getBounds();
+    // trackNameLabel.setBounds(originalBounds.withSizeKeepingCentre(originalBounds.getHeight(),
+    //                                                           originalBounds.getWidth()));
+    
+    // Perform layout of controls inside headerComponent
+    headerFlexBox.performLayout(headerComponent.getLocalBounds());
+
+    // After layout, adjust the trackNameLabel
+    auto labelBounds = trackNameLabel.getBounds().toFloat();
+    auto labelCentre = labelBounds.getCentre();
+
+    // Apply rotation
+    trackNameLabel.setTransform(juce::AffineTransform::rotation(-juce::MathConstants<float>::halfPi,
+                                                               labelCentre.x, labelCentre.y));
+
+    // Swap width and height
+    int newWidth = labelBounds.getHeight();
+    int newHeight = labelBounds.getWidth();
+
+    // Update label bounds and position
+    trackNameLabel.setBounds(labelBounds.withSize(newWidth, newHeight).toNearestInt());
+
+    // Reposition the label to center it within headerComponent
+    auto headerBounds = headerComponent.getLocalBounds();
+    int labelX = (headerBounds.getWidth() - newWidth) / 2;
+    int labelY = (headerBounds.getHeight() - newHeight) / 2;
+    trackNameLabel.setTopLeftPosition(labelX, labelY);
+
+    // Set text justification to centered
+    trackNameLabel.setJustificationType(juce::Justification::centred);
     
     repositionScrollBar();
     repositionLabels();
@@ -97,7 +136,7 @@ void MediaDisplayComponent::resized()
 
 void MediaDisplayComponent::repositionScrollBar()
 {
-    horizontalScrollBar.setBounds(mediaBox.getBounds()
+    horizontalScrollBar.setBounds(mediaComponent.getBounds()
                                       .removeFromBottom(scrollBarSize + 2 * controlSpacing)
                                       .reduced(controlSpacing));
 }
@@ -122,8 +161,8 @@ void MediaDisplayComponent::repositionLabelOverlays()
     float minLabelWidth = 0.1 * getMediaWidth();
     float maxLabelWidth = 0.10 * pixelsPerSecond;
 
-    //cb:TODO: check if mediaBox.getBounds() is correct
-    float contentWidth = mediaBox.getBounds().getWidth();
+    //cb:TODO: check if mediaComponent.getBounds() is correct
+    float contentWidth = mediaComponent.getBounds().getWidth();
     float minVisibilityWidth = contentWidth / 200.0f;
     float maxVisibilityWidth = contentWidth / 3.0f;
 
@@ -615,7 +654,7 @@ void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
     updateVisibleRange({ newStart, newEnd });
 }
 
-void MediaDisplayComponent::initMultiButtons()
+void MediaDisplayComponent::populateTrackHeader()
 {
     playButtonInfo = MultiButton::Mode {
         "Play",
@@ -637,7 +676,7 @@ void MediaDisplayComponent::initMultiButtons()
     playStopButton.addMode(stopButtonInfo);
     playStopButton.setMode(playButtonInfo.label);
     playStopButton.setEnabled(true);
-    controlBox.addAndMakeVisible(playStopButton);
+    headerComponent.addAndMakeVisible(playStopButton);
 
     chooseButtonInfo = MultiButton::Mode {
         "Choose",
@@ -649,7 +688,7 @@ void MediaDisplayComponent::initMultiButtons()
     };
     chooseFileButton.addMode(chooseButtonInfo);
     chooseFileButton.setMode(chooseButtonInfo.label);
-    controlBox.addAndMakeVisible(chooseFileButton);
+    headerComponent.addAndMakeVisible(chooseFileButton);
 
     saveButtonInfo = MultiButton::Mode {
         "Save",
@@ -661,7 +700,7 @@ void MediaDisplayComponent::initMultiButtons()
     };
     saveFileButton.addMode(saveButtonInfo);
     saveFileButton.setMode(saveButtonInfo.label);
-    controlBox.addAndMakeVisible(saveFileButton);
+    headerComponent.addAndMakeVisible(saveFileButton);
 
 }
 
@@ -683,7 +722,7 @@ void MediaDisplayComponent::updateCursorPosition()
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
-    Rectangle<int> mediaBounds = mediaBox.getLocalBounds();
+    Rectangle<int> mediaBounds = mediaComponent.getLocalBounds();
 
     float cursorBoundsStartX = mediaBounds.getX() + getMediaXPos();
     float cursorBoundsWidth = visibleRange.getLength() * getPixelsPerSecond();
@@ -700,7 +739,7 @@ void MediaDisplayComponent::updateCursorPosition()
     }
 
     cursorPositionX -= cursorWidth / 2.0f;
-    cursorPositionX += mediaBox.getBounds().getX();
+    cursorPositionX += mediaComponent.getBounds().getX();
 
     currentPositionMarker.setRectangle(Rectangle<float>(
         cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));

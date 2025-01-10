@@ -203,7 +203,7 @@ void MidiDisplayComponent::addLabels(LabelList& labels)
 void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
-    pianoRoll.setBounds(mediaBox.getBounds());
+    pianoRoll.setBounds(mediaComponent.getBounds());
 }
 void MidiDisplayComponent::resetDisplay()
 {

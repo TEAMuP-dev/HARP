@@ -168,6 +168,7 @@ public:
                 else if (type == "number_box")
                 {
                     auto number_box = std::make_shared<NumberBoxInfo>();
+                    number_box->id = juce::Uuid();
                     number_box->label = pyharpComponent["label"].toString().toStdString();
                     number_box->min = pyharpComponent["min"].toString().getFloatValue();
                     number_box->max = pyharpComponent["max"].toString().getFloatValue();
@@ -175,6 +176,16 @@ public:
 
                     controlsInfo.push_back({ number_box->id, number_box });
                     LogAndDBG("Number Box: " + number_box->label + " added");
+                }
+                else if (type == "toggle")
+                {
+                    auto toggle = std::make_shared<ToggleInfo>();
+                    toggle->id = juce::Uuid();
+                    toggle->label = pyharpComponent["label"].toString().toStdString();
+                    toggle->value = ("1"  == pyharpComponent["value"].toString().toStdString());
+                    // toggle->value = (aa == "1");
+                    controlsInfo.push_back({ toggle->id, toggle });
+                    LogAndDBG("Toggle: " + toggle->label + " added");
                 }
                 else
                     LogAndDBG("failed to parse control with unknown type: " + type);

@@ -154,8 +154,8 @@ public:
         mainBox.flexDirection =
             juce::FlexBox::Direction::column; // Set the main flex direction to column
 
-        juce::FlexItem::Margin margin(2);
-
+        // juce::FlexItem::Margin margin(2);
+        int margin = 4;
         // Sliders
         juce::FlexBox sliderBox;
         sliderBox.flexDirection = juce::FlexBox::Direction::row;
@@ -165,7 +165,7 @@ public:
                 + " to sliderBox");
             sliderBox.items.add(juce::FlexItem(*sliderWithLabel)
                                     .withFlex(1)
-                                    .withMinWidth(100)
+                                    .withMinWidth(20)
                                     .withMargin(margin)); // Adjusted min height
         }
 
@@ -206,15 +206,18 @@ public:
         }
         if (toggles.size() > 0)
         {
-            mainBox.items.add(juce::FlexItem(toggleBox).withFlex(1).withMinHeight(30));
+            mainBox.items.add(
+                juce::FlexItem(toggleBox).withFlex(1).withMinHeight(30).withMargin(margin));
         }
         if (optionCtrls.size() > 0)
         {
-            mainBox.items.add(juce::FlexItem(optionBox).withFlex(1).withMinHeight(30));
+            mainBox.items.add(
+                juce::FlexItem(optionBox).withFlex(1).withMinHeight(30).withMargin(margin));
         }
         if (textCtrls.size() > 0)
         {
-            mainBox.items.add(juce::FlexItem(textBox).withFlex(1).withMinHeight(30));
+            mainBox.items.add(
+                juce::FlexItem(textBox).withFlex(1).withMinHeight(40).withMargin(margin));
         }
 
         // Perform Layout

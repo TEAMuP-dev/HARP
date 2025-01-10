@@ -822,7 +822,7 @@ public:
             [this] { processCallback(); },
             Colours::orangered,
             "Click to send the audio file for processing",
-            MultiButton::DrawingMode::IconOnly,
+            MultiButton::DrawingMode::TextOnly,
             fontaudio::Pause,
         };
 
@@ -867,7 +867,7 @@ public:
             Colours::lightgrey,
             "Click to load the selected model path",
             MultiButton::DrawingMode::IconOnly,
-            fontaudio::LogoReaper,
+            fontawesome::Download,
         };
         loadModelButton.addMode(loadButtonInfo);
         loadModelButton.setMode(loadButtonInfo.label);
@@ -1362,103 +1362,6 @@ public:
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
-    void resized2()
-    {
-        auto area = getLocalBounds();
-
-#if not JUCE_MAC
-        menuBar->setBounds(
-            area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
-#endif
-        auto margin = 5; // Adjusted margin value for top and bottom spacing
-        auto docViewHeight = 1;
-        auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
-        // auto documentViewArea = area; // what remains is the 15% area for documentView
-        // Row 1: Model Path TextBox and Load Model Button
-        auto row1 = mainArea.removeFromTop(30); // adjust height as needed
-        modelPathComboBox.setBounds(
-            row1.removeFromLeft(static_cast<int>(row1.getWidth() * 0.8f)).reduced(margin));
-        //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
-        loadModelButton.setBounds(row1.reduced(margin));
-        // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(35); // adjust height as needed
-        // nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
-        // nameLabel.setFont(Font(20.0f, Font::bold));
-
-        // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(22); // adjust height as needed
-        // spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
-        // spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
-
-        // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
-
-        // auto row2b = mainArea.removeFromTop(20);
-        // authorLabel.setBounds(row2b.reduced(margin));
-        // authorLabel.setFont(Font(10.0f));
-
-        // auto row2c = mainArea.removeFromTop(30);
-        // audioOrMidiLabel.setBounds(row2c.reduced(margin));
-        // audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
-        // audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
-
-        // Row 3: Description Label
-
-        // A way to dynamically adjust the height of the description label
-        // doesn't work perfectly yet, but it's good for now.
-        auto font = Font(15.0f);
-        descriptionLabel.setFont(font);
-        // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
-        auto numberOfLines =
-            font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
-        float textHeight =
-            (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
-
-        if (textHeight < 80)
-        {
-            textHeight = 80;
-        }
-        auto row3 = mainArea.removeFromTop((int) textHeight).reduced(margin);
-        descriptionLabel.setBounds(row3);
-
-        // Row 5: ControlAreaWidget (flexible height)
-        auto row5 = mainArea.removeFromTop(195);
-        controlAreaWidget.setBounds(row5.reduced(margin));
-
-        // An empty space of 20px between the ctrl component and the process button
-        mainArea.removeFromTop(10);
-
-        // Row 6: Process Button (taken out in advance to preserve its height)
-        auto row6Height = 20; // adjust height as needed
-        auto row6 = mainArea.removeFromTop(row6Height);
-
-        // Assign bounds to processButton
-        processCancelButton.setBounds(
-            row6.withSizeKeepingCentre(100, 20)); // centering the button in the row
-
-        // An empty space of 30px between the process button and the thumbnail area
-        mainArea.removeFromTop(30);
-
-        // // Row 7: thumbnail area
-        const int rowHeight = 150; // Adjust height as needed
-
-        trackAreaWidget.setBounds(mainArea.removeFromTop(600).reduced(margin));
-
-        // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(50); // adjust height as needed
-        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 3).reduced(margin));
-        chooseFileButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
-        saveFileButton.setBounds(row8.reduced(margin));
-
-        // Status area
-        auto row9 = mainArea.removeFromBottom(300);
-        // Split row9 to two columns
-        auto row9a = row9.removeFromLeft(row9.getWidth() / 2);
-        auto row9b = row9;
-        instructionBox->setBounds(row9a.reduced(margin));
-        statusBox->setBounds(row9b.reduced(margin));
-    }
-
     void resized() override
     {
         auto area = getLocalBounds();
@@ -1480,8 +1383,8 @@ public:
         juce::FlexBox row1;
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
-        row1.items.add(juce::FlexItem(loadModelButton).withFlex(2).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row1).withFlex(0.5));
+        row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2));
 
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
@@ -1516,25 +1419,25 @@ public:
         rowProcessCancelButton.items.add(
             juce::FlexItem(processCancelButton).withWidth(area.getWidth() / 4).withMargin(margin));
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        flexBox.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.5));
+        flexBox.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.25));
 
         // Row 6: Input and Output Tracks Area Widget
         flexBox.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
 
         // Row 7: Play/Stop Button, Open File Button, and Save File Button
-        juce::FlexBox row7;
-        row7.flexDirection = juce::FlexBox::Direction::row;
-        row7.items.add(juce::FlexItem(playStopButton).withFlex(1).withMargin(margin));
-        row7.items.add(juce::FlexItem(chooseFileButton).withFlex(1).withMargin(margin));
-        row7.items.add(juce::FlexItem(saveFileButton).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row7).withFlex(1));
+        // juce::FlexBox row7;
+        // row7.flexDirection = juce::FlexBox::Direction::row;
+        // row7.items.add(juce::FlexItem(playStopButton).withFlex(1).withMargin(margin));
+        // row7.items.add(juce::FlexItem(chooseFileButton).withFlex(1).withMargin(margin));
+        // row7.items.add(juce::FlexItem(saveFileButton).withFlex(1).withMargin(margin));
+        // flexBox.items.add(juce::FlexItem(row7).withFlex(1));
 
         // Row 8: Instructions Area and Status Area
         juce::FlexBox row8;
         row8.flexDirection = juce::FlexBox::Direction::row;
         row8.items.add(juce::FlexItem(*instructionBox).withFlex(1).withMargin(margin));
         row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row8).withFlex(1));
+        flexBox.items.add(juce::FlexItem(row8).withFlex(0.4));
 
         // Apply the FlexBox layout to the main area
         flexBox.performLayout(area);

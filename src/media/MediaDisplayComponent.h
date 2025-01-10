@@ -137,16 +137,18 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
-    juce::Component controlBox; // Left panel
-    juce::Component mediaBox;   // Media content area
+    
 
-    juce::FlexBox trackRowFlexBox;
-    juce::FlexBox controlFlexBox;
+    juce::FlexBox mainFlexBox;
+    juce::FlexBox headerFlexBox;
     juce::FlexBox mediaFlexBox;
-    juce::Label textLabel;
-    // juce::TextButton button1;
-    // juce::TextButton button2;
-    // juce::TextButton button3;
+    // Track sub-components
+    // Left panel containing track name and buttons
+    juce::Component headerComponent;
+    // Media (audio or MIDI) content area
+    juce::Component mediaComponent;  
+    // Header sub-components
+    juce::Label trackNameLabel;
     MultiButton playStopButton;
     MultiButton::Mode playButtonInfo;
     MultiButton::Mode stopButtonInfo;
@@ -157,7 +159,7 @@ protected:
 
 private:
 
-    void initMultiButtons();
+    void populateTrackHeader();
 
     void resetPaths();
 

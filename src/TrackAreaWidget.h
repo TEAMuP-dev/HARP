@@ -38,15 +38,17 @@ public:
 
         // // iterate through the list of input components
         // // and choosing only the ones that correspond to input controls and not input media
-        auto counter = 1;
+        inputTracksCounter = 0;
+        // auto counter = 1;
         for (const auto& pair : inputTracksInfo)
         {
+            inputTracksCounter++;
             auto trackInfo = pair.second;
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
                 if (audioTrackInfo->label == "")
                 {
-                    audioTrackInfo->label = "InputAudio-" + std::to_string(counter);
+                    audioTrackInfo->label = "InputAudio-" + std::to_string(inputTracksCounter);
                 }
                 inputMediaDisplays.push_back(
                     std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
@@ -57,26 +59,28 @@ public:
             {
                 if (midiTrackInfo->label == "")
                 {
-                    midiTrackInfo->label = "InputMidi-" + std::to_string(counter);
+                    midiTrackInfo->label = "InputMidi-" + std::to_string(inputTracksCounter);
                 }
                 inputMediaDisplays.push_back(
                     std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
             }
-            counter++;
+            
         }
 
+        // if (counter)
         auto& outputTracksInfo = mModel->getOutputTracks();
-        counter = 1;
+        outputTracksCounter = 0;
         for (const auto& pair : outputTracksInfo)
         {
+            outputTracksCounter++;
             auto trackInfo = pair.second;
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
                 if (audioTrackInfo->label == "")
                 {
-                    audioTrackInfo->label = "OutputAudio-" + std::to_string(counter);
+                    audioTrackInfo->label = "OutputAudio-" + std::to_string(outputTracksCounter);
                 }
                 outputMediaDisplays.push_back(
                     std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
@@ -87,7 +91,7 @@ public:
             {
                 if (midiTrackInfo->label == "")
                 {
-                    midiTrackInfo->label = "OutputMidi-" + std::to_string(counter);
+                    midiTrackInfo->label = "OutputMidi-" + std::to_string(outputTracksCounter);
                 }
                 outputMediaDisplays.push_back(
                     std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
@@ -96,15 +100,21 @@ public:
             }
         }
 
-        // inputTracksLabel->setText("Input Tracks", juce::dontSendNotification);
-        inputTracksLabel->setJustificationType(juce::Justification::centred);
-        inputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
-        addAndMakeVisible(inputTracksLabel.get());
-
-        // outputTracksLabel->setText("Output Tracks", juce::dontSendNotification);
-        outputTracksLabel->setJustificationType(juce::Justification::centred);
-        outputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
-        addAndMakeVisible(outputTracksLabel.get());
+        if (inputTracksCounter > 0)
+        {
+            // inputTracksLabel->setText("Input Tracks", juce::dontSendNotification);
+            inputTracksLabel->setJustificationType(juce::Justification::centred);
+            inputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+            addAndMakeVisible(inputTracksLabel.get());
+        }
+        
+        if (outputTracksCounter > 0)
+        {
+            // outputTracksLabel->setText("Output Tracks", juce::dontSendNotification);
+            outputTracksLabel->setJustificationType(juce::Justification::centred);
+            outputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+            addAndMakeVisible(outputTracksLabel.get());
+        }
 
         repaint();
         resized();
@@ -131,6 +141,12 @@ public:
 
         inputMediaDisplays.clear();
         outputMediaDisplays.clear();
+
+        inputTracksCounter = 0;
+        outputTracksCounter = 0;
+        // remove input and output TracksLabel
+        inputTracksLabel->setText("", juce::dontSendNotification);
+        outputTracksLabel->setText("", juce::dontSendNotification);
     }
 
     void resized() override
@@ -145,26 +161,32 @@ public:
 
         juce::FlexItem::Margin margin(2);
 
-        // Before input tracks, add a centered label for the input tracks
-        mainBox.items.add(juce::FlexItem(*inputTracksLabel).withFlex(1).withMinHeight(30));
-
-        // Input tracks
-        for (auto& display : inputMediaDisplays)
+        if (inputTracksCounter > 0)
         {
-            // auto row = area.removeFromTop(150).reduced(2);
-            // display->setBounds(row);
-            mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50));
+            // Before input tracks, add a centered label for the input tracks
+            mainBox.items.add(juce::FlexItem(*inputTracksLabel).withFlex(0.5).withMinHeight(30));
+
+            // Input tracks
+            for (auto& display : inputMediaDisplays)
+            {
+                // auto row = area.removeFromTop(150).reduced(2);
+                // display->setBounds(row);
+                mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
+            }
         }
 
-        // Before output tracks, add a centered label for the output tracks
-        mainBox.items.add(juce::FlexItem(*outputTracksLabel).withFlex(1).withMinHeight(30));
-
-        // Output tracks
-        for (auto& display : outputMediaDisplays)
+        if (outputTracksCounter > 0)
         {
-            // auto row = area.removeFromTop(150).reduced(2);
-            // display->setBounds(row);
-            mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50));
+            // Before output tracks, add a centered label for the output tracks
+            mainBox.items.add(juce::FlexItem(*outputTracksLabel).withFlex(0.5).withMinHeight(30));
+
+            // Output tracks
+            for (auto& display : outputMediaDisplays)
+            {
+                // auto row = area.removeFromTop(150).reduced(2);
+                // display->setBounds(row);
+                mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
+            }
         }
 
         // Perform Layout
@@ -293,4 +315,6 @@ private:
     std::unique_ptr<juce::Label> outputTracksLabel {
         std::make_unique<juce::Label>("Output Tracks", "Output Tracks")
     };
+    int inputTracksCounter = 0;
+    int outputTracksCounter = 0;
 };
