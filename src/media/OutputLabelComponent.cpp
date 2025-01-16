@@ -42,6 +42,14 @@ void OutputLabelComponent::setDefaultAttributes()
     setMinimumHorizontalScale(0.0f);
 }
 
+void OutputLabelComponent::setColor(Colour clr)
+{
+    color = clr;
+
+    leftMarker.setColor(clr);
+    rightMarker.setColor(clr);
+}
+
 float OutputLabelComponent::getTextWidth()
 {
     return getFont().getStringWidthFloat(getText());

@@ -4,6 +4,26 @@
 
 using namespace juce;
 
+class TimeMarkerComponent : public Component
+{
+public:
+    TimeMarkerComponent(Colour clr = Colours::purple.withAlpha(0.8f))
+    {
+        color = clr;
+    }
+
+    void setColor(Colour clr) { color = clr; }
+
+    void paint(juce::Graphics& g) override
+    {
+        g.setColour(color);
+        g.fillRect(getLocalBounds());
+    }
+
+private:
+    Colour color;
+};
+
 class OutputLabelComponent : public Label
 {
 public:
@@ -17,7 +37,7 @@ public:
     void setLabel(String lbl) { label = lbl; }
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
-    void setColor(Colour clr) { color = clr; }
+    void setColor(Colour clr);
     void setLink(String lnk) {link = lnk; }
 
     double getTime() const { return time; }
@@ -32,6 +52,12 @@ public:
     juce::MouseCursor getMouseCursor() override;
     void mouseUp(const MouseEvent& e) override;
 
+    void setLeftMarkerBounds(Rectangle<int> b) { leftMarker.setBounds(b); }
+    void setRightMarkerBounds(Rectangle<int> b)  { rightMarker.setBounds(b); }
+
+    TimeMarkerComponent* getLeftTimeMarker() { return &leftMarker; }
+    TimeMarkerComponent* getRightTimeMarker() { return &rightMarker; }
+
 protected:
     double time;
     String label;
@@ -41,6 +67,10 @@ protected:
     String description;
     Colour color;
     String link;
+
+private:
+    TimeMarkerComponent leftMarker;
+    TimeMarkerComponent rightMarker;
 };
 
 class OverheadLabelComponent : public OutputLabelComponent

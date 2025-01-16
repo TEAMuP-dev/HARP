@@ -148,6 +148,8 @@ private:
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
+    int correctToBounds(float x, float width);
+
     void updateCursorPosition();
 
     void timerCallback() override;

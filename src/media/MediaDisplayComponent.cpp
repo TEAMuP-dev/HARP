@@ -113,12 +113,10 @@ void MediaDisplayComponent::repositionLabels()
         {
             float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2 * textSpacing));
 
-            float xPos = timeToMediaX(l->getTime());
+            float labelStartTime = l->getTime();
+            float labelStopTime = labelStartTime + l->getDuration();
 
-            xPos -= labelWidth / 2.0f;
-            xPos = jmax(timeToMediaX(0.0), xPos);
-            xPos = jmin(timeToMediaX(getTotalLengthInSecs()) - labelWidth, xPos);
-
+            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2) - labelWidth / 2.0f, labelWidth);
             float yPos = 1.0f;
 
             if (auto lo = dynamic_cast<LabelOverlayComponent*>(l))
@@ -131,7 +129,13 @@ void MediaDisplayComponent::repositionLabels()
             l->setBounds(xPos, yPos, labelWidth, labelHeight);
             l->toFront(true);
 
-            // TODO - l->getDuration() unused
+            float leftLabelMarkerPos = correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2);
+            l->setLeftMarkerBounds(Rectangle<float>(
+                leftLabelMarkerPos, 0, cursorWidth, getHeight()).toNearestInt());
+
+            float rightLabelMarkerPos = correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2);
+            l->setRightMarkerBounds(Rectangle<float>(
+                rightLabelMarkerPos, 0, cursorWidth, getHeight()).toNearestInt());
         }
     };
 
@@ -469,6 +473,8 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
     labelOverlays.add(label);
 
     getMediaComponent()->addAndMakeVisible(label);
+    getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
+    getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
@@ -478,6 +484,8 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
     overheadLabels.add(label);
 
     overheadPanel.addAndMakeVisible(label);
+    getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
+    getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
 }
 
 void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
@@ -492,6 +500,8 @@ void MediaDisplayComponent::clearLabels()
     for (int i = 0; i < labelOverlays.size(); i++)
     {
         LabelOverlayComponent* l = labelOverlays.getReference(i);
+        mediaComponent->removeChildComponent(l->getLeftTimeMarker());
+        mediaComponent->removeChildComponent(l->getRightTimeMarker());
         mediaComponent->removeChildComponent(l);
 
         delete l;
@@ -502,7 +512,9 @@ void MediaDisplayComponent::clearLabels()
     for (int i = 0; i < overheadLabels.size(); i++)
     {
         OverheadLabelComponent* l = overheadLabels.getReference(i);
-        mediaComponent->removeChildComponent(l);
+        mediaComponent->removeChildComponent(l->getLeftTimeMarker());
+        mediaComponent->removeChildComponent(l->getRightTimeMarker());
+        overheadPanel.removeChildComponent(l);
 
         delete l;
     }
@@ -600,6 +612,14 @@ void MediaDisplayComponent::resetPaths()
 
     tempFilePaths.clear();
     currentTempFileIdx = -1;
+}
+
+int MediaDisplayComponent::correctToBounds(float x, float width) {
+
+    x = jmax(timeToMediaX(0.0), x);
+    x = jmin(timeToMediaX(getTotalLengthInSecs()) - width, x);
+
+    return x;
 }
 
 // TODO - may be able to simplify some of this logic by embedding cursor in media component
