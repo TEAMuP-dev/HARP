@@ -54,9 +54,11 @@ public:
 
     void setLeftMarkerBounds(Rectangle<int> b) { leftMarker.setBounds(b); }
     void setRightMarkerBounds(Rectangle<int> b)  { rightMarker.setBounds(b); }
+    void setDurationFillBounds(Rectangle<int> b) { durationFill.setBounds(b); }
 
     TimeMarkerComponent* getLeftTimeMarker() { return &leftMarker; }
     TimeMarkerComponent* getRightTimeMarker() { return &rightMarker; }
+    TimeMarkerComponent* getDurationFillComponent() { return &durationFill; }
 
 protected:
     double time;
@@ -71,6 +73,7 @@ protected:
 private:
     TimeMarkerComponent leftMarker;
     TimeMarkerComponent rightMarker;
+    TimeMarkerComponent durationFill;
 };
 
 class OverheadLabelComponent : public OutputLabelComponent

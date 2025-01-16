@@ -48,6 +48,7 @@ void OutputLabelComponent::setColor(Colour clr)
 
     leftMarker.setColor(clr);
     rightMarker.setColor(clr);
+    durationFill.setColor(clr.withAlpha(0.5f));
 }
 
 float OutputLabelComponent::getTextWidth()

@@ -136,6 +136,10 @@ void MediaDisplayComponent::repositionLabels()
             float rightLabelMarkerPos = correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2);
             l->setRightMarkerBounds(Rectangle<float>(
                 rightLabelMarkerPos, 0, cursorWidth, getHeight()).toNearestInt());
+
+            float durationWidth = jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2);
+            l->setDurationFillBounds(Rectangle<float>(
+                leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, getHeight()).toNearestInt());
         }
     };
 
@@ -475,6 +479,7 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
     getMediaComponent()->addAndMakeVisible(label);
     getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
     getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
+    getMediaComponent()->addAndMakeVisible(label->getDurationFillComponent());
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
@@ -486,6 +491,7 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
     overheadPanel.addAndMakeVisible(label);
     getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
     getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
+    getMediaComponent()->addAndMakeVisible(label->getDurationFillComponent());
 }
 
 void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
@@ -502,6 +508,7 @@ void MediaDisplayComponent::clearLabels()
         LabelOverlayComponent* l = labelOverlays.getReference(i);
         mediaComponent->removeChildComponent(l->getLeftTimeMarker());
         mediaComponent->removeChildComponent(l->getRightTimeMarker());
+        mediaComponent->removeChildComponent(l->getDurationFillComponent());
         mediaComponent->removeChildComponent(l);
 
         delete l;
@@ -514,6 +521,7 @@ void MediaDisplayComponent::clearLabels()
         OverheadLabelComponent* l = overheadLabels.getReference(i);
         mediaComponent->removeChildComponent(l->getLeftTimeMarker());
         mediaComponent->removeChildComponent(l->getRightTimeMarker());
+        mediaComponent->removeChildComponent(l->getDurationFillComponent());
         overheadPanel.removeChildComponent(l);
 
         delete l;
