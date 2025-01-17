@@ -39,6 +39,7 @@ public:
     void setDescription(String d) { description = d; }
     void setColor(Colour clr);
     void setLink(String lnk) {link = lnk; }
+    void setIndex(int i) {processingIndex = i; }
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
@@ -46,6 +47,7 @@ public:
     String getDescription() const { return description; }
     Colour getColor() const { return color; }
     String getLink() const { return link; }
+    int getIndex() const { return processingIndex; }
 
     float getTextWidth();
 
@@ -71,6 +73,8 @@ protected:
     String link;
 
 private:
+    int processingIndex = 0;
+
     TimeMarkerComponent leftMarker;
     TimeMarkerComponent rightMarker;
     TimeMarkerComponent durationFill;

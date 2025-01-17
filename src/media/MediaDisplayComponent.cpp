@@ -54,7 +54,7 @@ void MediaDisplayComponent::resized()
 
 void MediaDisplayComponent::repositionOverheadPanel()
 {
-    if (overheadLabels.size())
+    if (getNumOverheadLabels())
     {
         overheadPanel.setBounds(getLocalBounds()
                                     .removeFromTop(labelHeight + 2 * controlSpacing + 2)
@@ -71,7 +71,7 @@ Rectangle<int> MediaDisplayComponent::getContentBounds()
     Rectangle<int> contentBounds = getLocalBounds()
         .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
 
-    if (overheadLabels.size())
+    if (getNumOverheadLabels())
     {
         contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
     }
@@ -140,6 +140,18 @@ void MediaDisplayComponent::repositionLabels()
             float durationWidth = jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2);
             l->setDurationFillBounds(Rectangle<float>(
                 leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, getHeight()).toNearestInt());
+
+            if (l->getIndex() == currentTempFileIdx) {
+                l->setVisible(true);
+                l->getLeftTimeMarker()->setVisible(true);
+                l->getRightTimeMarker()->setVisible(true);
+                l->getDurationFillComponent()->setVisible(true);
+            } else {
+                l->setVisible(false);
+                l->getLeftTimeMarker()->setVisible(false);
+                l->getRightTimeMarker()->setVisible(false);
+                l->getDurationFillComponent()->setVisible(false);
+            }
         }
     };
 
@@ -178,7 +190,6 @@ void MediaDisplayComponent::setupDisplay(const URL& filePath)
 
 void MediaDisplayComponent::updateDisplay(const URL& filePath)
 {
-    //clearLabels();
     resetDisplay();
 
     loadMediaFile(filePath);
@@ -279,6 +290,8 @@ void MediaDisplayComponent::clearFutureTempFiles()
     int n = tempFilePaths.size() - (currentTempFileIdx + 1);
 
     tempFilePaths.removeLast(n);
+
+    clearLabels(currentTempFileIdx + 1);
 }
 
 void MediaDisplayComponent::overwriteTarget()
@@ -411,8 +424,6 @@ String MediaDisplayComponent::getMediaHandlerInstructions()
 
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
-    clearLabels();
-
     for (const auto& l : labels)
     {
         OutputLabelComponent lc = OutputLabelComponent((double) l->t, l->label);
@@ -474,63 +485,104 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
     label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    label->setIndex(currentTempFileIdx);
     labelOverlays.add(label);
 
-    getMediaComponent()->addAndMakeVisible(label);
-    getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
-    getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
-    getMediaComponent()->addAndMakeVisible(label->getDurationFillComponent());
+    Component* mediaComponent = getMediaComponent();
+    mediaComponent->addAndMakeVisible(label);
+    mediaComponent->addAndMakeVisible(label->getLeftTimeMarker());
+    mediaComponent->addAndMakeVisible(label->getRightTimeMarker());
+    mediaComponent->addAndMakeVisible(label->getDurationFillComponent());
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
 {
     OverheadLabelComponent* label = new OverheadLabelComponent(l);
     label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    label->setIndex(currentTempFileIdx);
     overheadLabels.add(label);
 
     overheadPanel.addAndMakeVisible(label);
-    getMediaComponent()->addAndMakeVisible(label->getLeftTimeMarker());
-    getMediaComponent()->addAndMakeVisible(label->getRightTimeMarker());
-    getMediaComponent()->addAndMakeVisible(label->getDurationFillComponent());
-}
 
-void MediaDisplayComponent::removeOutputLabel(OutputLabelComponent* l)
-{
-    // TODO
-}
-
-void MediaDisplayComponent::clearLabels()
-{
     Component* mediaComponent = getMediaComponent();
+    mediaComponent->addAndMakeVisible(label->getLeftTimeMarker());
+    mediaComponent->addAndMakeVisible(label->getRightTimeMarker());
+    mediaComponent->addAndMakeVisible(label->getDurationFillComponent());
+}
 
-    for (int i = 0; i < labelOverlays.size(); i++)
+void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
+{
+    for (int i = labelOverlays.size() - 1; i >= 0; --i)
     {
         LabelOverlayComponent* l = labelOverlays.getReference(i);
-        mediaComponent->removeChildComponent(l->getLeftTimeMarker());
-        mediaComponent->removeChildComponent(l->getRightTimeMarker());
-        mediaComponent->removeChildComponent(l->getDurationFillComponent());
-        mediaComponent->removeChildComponent(l);
 
-        delete l;
+        if (l->getIndex() >= processingIdxCutoff) {
+            removeLabelOverlay(l);
+        }
     }
 
-    labelOverlays.clear();
+    if (!processingIdxCutoff) {
+        labelOverlays.clear();
+    }
 
-    for (int i = 0; i < overheadLabels.size(); i++)
+    for (int i = overheadLabels.size() - 1; i >= 0; --i)
     {
         OverheadLabelComponent* l = overheadLabels.getReference(i);
-        mediaComponent->removeChildComponent(l->getLeftTimeMarker());
-        mediaComponent->removeChildComponent(l->getRightTimeMarker());
-        mediaComponent->removeChildComponent(l->getDurationFillComponent());
-        overheadPanel.removeChildComponent(l);
 
-        delete l;
+        if (l->getIndex() >= processingIdxCutoff) {
+            removeOverheadLabel(l);
+        }
     }
 
-    overheadLabels.clear();
+    if (!processingIdxCutoff) {
+        overheadLabels.clear();
+    }
 
     resized();
     repaint();
+}
+
+void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
+{
+    Component* mediaComponent = getMediaComponent();
+
+    mediaComponent->removeChildComponent(l->getLeftTimeMarker());
+    mediaComponent->removeChildComponent(l->getRightTimeMarker());
+    mediaComponent->removeChildComponent(l->getDurationFillComponent());
+    mediaComponent->removeChildComponent(l);
+
+    labelOverlays.removeFirstMatchingValue(l);
+
+    delete l;
+}
+
+void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
+{
+    Component* mediaComponent = getMediaComponent();
+
+    mediaComponent->removeChildComponent(l->getLeftTimeMarker());
+    mediaComponent->removeChildComponent(l->getRightTimeMarker());
+    mediaComponent->removeChildComponent(l->getDurationFillComponent());
+    overheadPanel.removeChildComponent(l);
+
+    overheadLabels.removeFirstMatchingValue(l);
+
+    delete l;
+}
+
+int MediaDisplayComponent::getNumOverheadLabels()
+{
+    int nOverheadLabels = 0;
+
+    for (auto l : overheadLabels)
+    {
+        if (l->getIndex() == currentTempFileIdx)
+        {
+            nOverheadLabels++;
+        }
+    }
+
+    return nOverheadLabels;
 }
 
 void MediaDisplayComponent::setNewTarget(URL filePath)

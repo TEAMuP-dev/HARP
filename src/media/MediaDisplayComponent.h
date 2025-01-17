@@ -102,11 +102,15 @@ public:
     String getMediaHandlerInstructions();
 
     void addLabels(LabelList& labels);
-    void addLabelOverlay(LabelOverlayComponent l);
-    void addOverheadLabel(OverheadLabelComponent l);
+    void clearLabels(int processingIdxCutoff = 0);
 
-    void removeOutputLabel(OutputLabelComponent* l);
-    void clearLabels();
+    void addLabelOverlay(LabelOverlayComponent l);
+    void removeLabelOverlay(LabelOverlayComponent* l);
+
+    void addOverheadLabel(OverheadLabelComponent l);
+    void removeOverheadLabel(OverheadLabelComponent* l);
+
+    int getNumOverheadLabels();
 
 protected:
     void setNewTarget(URL filePath);
