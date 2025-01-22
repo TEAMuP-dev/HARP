@@ -131,26 +131,20 @@ void MediaDisplayComponent::repositionLabels()
 
             float leftLabelMarkerPos = correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2);
             l->setLeftMarkerBounds(Rectangle<float>(
-                leftLabelMarkerPos, 0, cursorWidth, getHeight()).toNearestInt());
+                leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
             float rightLabelMarkerPos = correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2);
             l->setRightMarkerBounds(Rectangle<float>(
-                rightLabelMarkerPos, 0, cursorWidth, getHeight()).toNearestInt());
+                rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
             float durationWidth = jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2);
             l->setDurationFillBounds(Rectangle<float>(
-                leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, getHeight()).toNearestInt());
+                leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight).toNearestInt());
 
             if (l->getIndex() == currentTempFileIdx) {
-                l->setVisible(true);
-                l->getLeftTimeMarker()->setVisible(true);
-                l->getRightTimeMarker()->setVisible(true);
-                l->getDurationFillComponent()->setVisible(true);
+                l->setMarkerVisibility(true);
             } else {
-                l->setVisible(false);
-                l->getLeftTimeMarker()->setVisible(false);
-                l->getRightTimeMarker()->setVisible(false);
-                l->getDurationFillComponent()->setVisible(false);
+                l->setMarkerVisibility(false);
             }
         }
     };
@@ -490,9 +484,7 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 
     Component* mediaComponent = getMediaComponent();
     mediaComponent->addAndMakeVisible(label);
-    mediaComponent->addAndMakeVisible(label->getLeftTimeMarker());
-    mediaComponent->addAndMakeVisible(label->getRightTimeMarker());
-    mediaComponent->addAndMakeVisible(label->getDurationFillComponent());
+    label->addMarkersTo(mediaComponent);
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
@@ -505,9 +497,7 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
     overheadPanel.addAndMakeVisible(label);
 
     Component* mediaComponent = getMediaComponent();
-    mediaComponent->addAndMakeVisible(label->getLeftTimeMarker());
-    mediaComponent->addAndMakeVisible(label->getRightTimeMarker());
-    mediaComponent->addAndMakeVisible(label->getDurationFillComponent());
+    label->addMarkersTo(mediaComponent);
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
@@ -546,9 +536,7 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
 {
     Component* mediaComponent = getMediaComponent();
 
-    mediaComponent->removeChildComponent(l->getLeftTimeMarker());
-    mediaComponent->removeChildComponent(l->getRightTimeMarker());
-    mediaComponent->removeChildComponent(l->getDurationFillComponent());
+    l->removeMarkersFrom(mediaComponent);
     mediaComponent->removeChildComponent(l);
 
     labelOverlays.removeFirstMatchingValue(l);
@@ -560,9 +548,7 @@ void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
 {
     Component* mediaComponent = getMediaComponent();
 
-    mediaComponent->removeChildComponent(l->getLeftTimeMarker());
-    mediaComponent->removeChildComponent(l->getRightTimeMarker());
-    mediaComponent->removeChildComponent(l->getDurationFillComponent());
+    l->removeMarkersFrom(mediaComponent);
     overheadPanel.removeChildComponent(l);
 
     overheadLabels.removeFirstMatchingValue(l);

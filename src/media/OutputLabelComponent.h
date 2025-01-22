@@ -58,9 +58,9 @@ public:
     void setRightMarkerBounds(Rectangle<int> b)  { rightMarker.setBounds(b); }
     void setDurationFillBounds(Rectangle<int> b) { durationFill.setBounds(b); }
 
-    TimeMarkerComponent* getLeftTimeMarker() { return &leftMarker; }
-    TimeMarkerComponent* getRightTimeMarker() { return &rightMarker; }
-    TimeMarkerComponent* getDurationFillComponent() { return &durationFill; }
+    void addMarkersTo(Component* c);
+    void removeMarkersFrom(Component* c);
+    void setMarkerVisibility(bool v);
 
 protected:
     double time;
