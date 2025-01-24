@@ -39,7 +39,6 @@ void OutputLabelComponent::setDefaultAttributes()
     setColour(Label::textColourId, Colours::white);
     setColour(Label::backgroundColourId, getColor());
 
-    setFillVisibility(false);
     setMinimumHorizontalScale(0.0f);
 }
 
