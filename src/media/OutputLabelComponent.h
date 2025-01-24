@@ -53,6 +53,8 @@ public:
 
     juce::MouseCursor getMouseCursor() override;
     void mouseUp(const MouseEvent& e) override;
+    void mouseEnter(const MouseEvent& e) override;
+    void mouseExit(const MouseEvent& e) override;
 
     void setLeftMarkerBounds(Rectangle<int> b) { leftMarker.setBounds(b); }
     void setRightMarkerBounds(Rectangle<int> b)  { rightMarker.setBounds(b); }
@@ -61,6 +63,7 @@ public:
     void addMarkersTo(Component* c);
     void removeMarkersFrom(Component* c);
     void setMarkerVisibility(bool v);
+    void setFillVisibility(bool v);
 
 protected:
     double time;
