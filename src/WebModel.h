@@ -191,7 +191,7 @@ public:
         result = gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath);
         if (result.failed())
         {
-	  error.devMessage = "Failed to open upload file request";
+            error.devMessage = "Failed to open upload file request";
             status2 = ModelStatus::ERROR;
             return result;
         }
@@ -203,7 +203,7 @@ public:
         result = ctrlsToJson(ctrlJson, uploadedFilePath.toStdString());
         if (result.failed())
         {
-	  error.devMessage = "Failed to upload file";
+            error.devMessage = "Failed to upload file";
             status2 = ModelStatus::ERROR;
             return result;
         }
@@ -221,28 +221,27 @@ public:
         result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
         if (result.failed())
         {
-	  error.devMessage = "Failed to make post request.";
+            error.devMessage = "Failed to make post request.";
             status2 = ModelStatus::ERROR;
             return result;
         }
 
         juce::String response;
-        result =
-	  gradioClient.getResponseFromEventID(endpoint, eventId, response, 20 * 1000);
+        result = gradioClient.getResponseFromEventID(endpoint, eventId, response, 20 * 1000);
         if (result.failed())
         {
-	  error.devMessage = "Failed to make get request";
+            error.devMessage = "Failed to make get request";
             status2 = ModelStatus::ERROR;
             return result;
         }
 
         juce::String responseData;
-	
+
         juce::String key = "data: ";
         result = gradioClient.extractKeyFromResponse(response, responseData, key);
         if (result.failed())
         {
-	  error.devMessage = "Failed to extract 'data:'";
+            error.devMessage = "Failed to extract 'data:'";
             status2 = ModelStatus::ERROR;
             return result;
         }
@@ -513,10 +512,10 @@ public:
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
-        return std::find_if(m_ctrls.begin(),
-                            m_ctrls.end(),
-                            [&uuid](const CtrlList::value_type& pair)
-                            { return pair.first == uuid; });
+        return std::find_if(
+            m_ctrls.begin(), m_ctrls.end(), [&uuid](const CtrlList::value_type& pair) {
+                return pair.first == uuid;
+            });
     }
 
     GradioClient& getGradioClient() { return gradioClient; }

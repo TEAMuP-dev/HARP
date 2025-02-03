@@ -5,20 +5,18 @@ using namespace juce;
 class CustomThreadPoolJob : public ThreadPoolJob
 {
 public:
-  CustomThreadPoolJob(std::function<void(String)> _jobFunction, String jobID)
+    CustomThreadPoolJob(std::function<void(String)> _jobFunction, String jobID)
         : ThreadPoolJob(jobID), jobFunction(_jobFunction)
     {
     }
 
-  ~CustomThreadPoolJob() override {
-    DBG("Job Stopped");
-  }
+    ~CustomThreadPoolJob() override { DBG("Job Stopped"); }
 
     JobStatus runJob() override
     {
         if (jobFunction)
         {
-	  jobFunction(getJobName());
+            jobFunction(getJobName());
             return jobHasFinished;
         }
         else
@@ -30,7 +28,6 @@ public:
 private:
     std::function<void(String)> jobFunction;
 };
-
 
 /* This Class is no longer in use!!!!!
 class JobProcessorThread : public Thread
