@@ -191,17 +191,19 @@ public:
         result = gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath);
         if (result.failed())
         {
+	  error.devMessage = "Failed to open upload file request";
             status2 = ModelStatus::ERROR;
             return result;
         }
 
         juce::String eventId;
         juce::String endpoint = "process";
-        // the  jsonBody is created by ctrlsToJson
+        // the jsonBody is created by ctrlsToJson
         juce::String ctrlJson;
         result = ctrlsToJson(ctrlJson, uploadedFilePath.toStdString());
         if (result.failed())
         {
+	  error.devMessage = "Failed to upload file";
             status2 = ModelStatus::ERROR;
             return result;
         }
@@ -219,24 +221,28 @@ public:
         result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
         if (result.failed())
         {
+	  error.devMessage = "Failed to make post request.";
             status2 = ModelStatus::ERROR;
             return result;
         }
 
         juce::String response;
         result =
-            gradioClient.getResponseFromEventID(endpoint, eventId, response, 14000);
+	  gradioClient.getResponseFromEventID(endpoint, eventId, response, 20 * 1000);
         if (result.failed())
         {
+	  error.devMessage = "Failed to make get request";
             status2 = ModelStatus::ERROR;
             return result;
         }
 
         juce::String responseData;
+	
         juce::String key = "data: ";
         result = gradioClient.extractKeyFromResponse(response, responseData, key);
         if (result.failed())
         {
+	  error.devMessage = "Failed to extract 'data:'";
             status2 = ModelStatus::ERROR;
             return result;
         }

@@ -7,6 +7,20 @@
 #pragma once
 
 #include "juce_core/juce_core.h"
+#include "external/magic_enum.hpp"
+
+template <typename EnumType>
+inline juce::String enumToString(EnumType enumValue) {
+    return juce::String(magic_enum::enum_name(enumValue).data());
+}
+
+enum GradioEvents
+{
+    complete,
+    error,
+    heartbeat,
+    generating
+};
 
 enum ModelStatus
 {

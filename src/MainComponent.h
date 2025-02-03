@@ -31,6 +31,26 @@
 #include "media/MidiDisplayComponent.h"
 using namespace juce;
 
+
+String genID() {
+  int len = 16;
+  static const char alphanum[] =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+  char tmp_s[len+1];
+  
+  for (int i = 0; i < len; ++i) {
+    tmp_s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+  }
+  tmp_s[len] = '\0';
+
+  const char* ctmp = (const char*) tmp_s;
+  
+  return String(ctmp);
+}
+
+
 // this only calls the callback ONCE
 class TimedCallback : public Timer
 {
@@ -748,8 +768,8 @@ public:
 
     explicit MainComponent(const URL& initialFilePath = URL())
         : jobsFinished(0),
-          totalJobs(0),
-          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+          totalJobs(0) //,
+          // jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
         HarpLogger::getInstance()->initializeLogger();
@@ -978,7 +998,7 @@ public:
         auto& card = model->card();
         setModelCard(card);
 
-        jobProcessorThread.startThread();
+        // jobProcessorThread.startThread();
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
@@ -996,12 +1016,12 @@ public:
         loadBroadcaster.removeChangeListener(this);
         processBroadcaster.removeChangeListener(this);
 
-        jobProcessorThread.signalThreadShouldExit();
+        // jobProcessorThread.signalThreadShouldExit();
         // This will not actually run any processing task
         // It'll just make sure that the thread is not waiting
         // and it'll allow it to check for the threadShouldExit flag
-        jobProcessorThread.signalTask();
-        jobProcessorThread.waitForThreadToExit(-1);
+        // jobProcessorThread.signalTask();
+        // jobProcessorThread.waitForThreadToExit(-1);
 
 #if JUCE_MAC
         MenuBarModel::setMacMainMenu(nullptr);
@@ -1022,15 +1042,20 @@ public:
                                              "Cancel Error",
                                              "An error occurred while cancelling the processing: \n"
                                                  + cancelResult.getError().devMessage);
-            // processCancelButton.setEnabled(true);
-            // processCancelButton.setMode(processButtonInfo.label);
             resetProcessingButtons();
             return;
         }
+        // Update current process to empty
+	processMutex.lock();
+	DBG("Cancel ProcessID: " + currentProcessID);
+	currentProcessID = "";
+	processMutex.unlock();
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
-        processCancelButton.setEnabled(false);
+	// Should we restore back to process???
+	processCancelButton.setMode(processButtonInfo.label);
+        processCancelButton.setEnabled(true);
     }
 
     void processCallback()
@@ -1092,14 +1117,27 @@ public:
         // print how many jobs are currently in the threadpool
         LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
-        // empty customJobs
-        customJobs.clear();
+	// Get new processID
+	String processID = genID();
+	processMutex.lock();
+	currentProcessID = processID;
+	DBG("Set Process ID: " + processID);
+	processMutex.unlock();
 
-        customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
+	// Directly add the job to the thread pool
+        jobProcessorThread.addJob(new CustomThreadPoolJob([this](String processID) { // &jobsFinished, totalJobs
             // Individual job code for each iteration
             // copy the audio file, with the same filename except for an added _harp to the stem
             OpResult processingResult =
                 model->process(mediaDisplay->getTempFilePath().getLocalFile());
+	    processMutex.lock();
+	    if (processID != currentProcessID) {
+	      DBG("ProcessID " + processID + " not found");
+	      DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+	      DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
+	      processMutex.unlock();
+	      return;
+	    }
             if (processingResult.failed())
             {
                 Error processingError = processingResult.getError();
@@ -1113,16 +1151,20 @@ public:
                 // cb: I commented this out, and it doesn't seem to change anything
                 // it was also causing a crash. If we need it, it needs to run on
                 // the message thread using MessageManager::callAsync
-                // resetProcessingButtons();
+		// hy: Now this line works.
+                resetProcessingButtons();
+		processMutex.unlock();
                 return;
             }
             // load the audio file again
+	    DBG("ProcessID " + processID + " succeed");
+	    currentProcessID = "";
             processBroadcaster.sendChangeMessage();
+	    processMutex.unlock();
 
-        }));
-
-        // Now the customJobs are ready to be added to be run in the threadPool
-        jobProcessorThread.signalTask();
+							  }, processID), true);
+	DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+	DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
     void initializeMediaDisplay(int mediaType = 0)
@@ -1400,6 +1442,9 @@ private:
     MultiButton loadModelButton;
     MultiButton processCancelButton;
     MultiButton playStopButton;
+
+  String currentProcessID;
+  std::mutex processMutex;
     MultiButton::Mode loadButtonInfo { "Load",
                                        [this] { loadModelCallback(); },
                                        getUIColourIfAvailable(
@@ -1459,8 +1504,9 @@ private:
     ThreadPool threadPool { 1 };
     int jobsFinished;
     int totalJobs;
-    JobProcessorThread jobProcessorThread;
-    std::vector<CustomThreadPoolJob*> customJobs;
+  // JobProcessorThread jobProcessorThread;
+  ThreadPool jobProcessorThread{10};
+    std::deque<CustomThreadPoolJob*> customJobs;
 
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
