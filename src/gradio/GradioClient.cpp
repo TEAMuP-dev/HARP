@@ -383,7 +383,9 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
 	return OpResult::fail(error);
       }
 
-      // Canceled job detection
+      // Canceled job detection for repeating 0-length lines
+      // Once we detect two empty lines in a row, we regard this job as fail/or canceled,
+      // and then break the loop
       if (response.length() == 0) {
 	if (cancel_flag) {
 	  error.code = statusCode;
