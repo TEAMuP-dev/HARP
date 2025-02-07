@@ -1096,7 +1096,7 @@ public:
         LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
         // Get new processID
-        String processID = genID();
+        String processID = juce::Uuid().toString(); //genID();
         processMutex.lock();
         currentProcessID = processID;
         DBG("Set Process ID: " + processID);
