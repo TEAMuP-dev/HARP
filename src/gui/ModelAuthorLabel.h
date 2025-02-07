@@ -11,13 +11,16 @@ class ModelAuthorLabel : public juce::Component
 public:
     ModelAuthorLabel()
     {
-        modelLabel.onHover = [this] { 
-            instructionBox->setStatusMessage("Click to view the model's page");
-        };
+        // Uncomment this when the instruction box is implemented
+        // as a SharedResourceComponent in HARP 3.0
+        
+        // modelLabel.onHover = [this] { 
+        //     instructionBox->setStatusMessage("Click to view the model's page");
+        // };
 
-        modelLabel.onExit = [this] {
-            instructionBox->clearStatusMessage();
-        };
+        // modelLabel.onExit = [this] {
+        //     instructionBox->clearStatusMessage();
+        // };
 
         modelLabel.onClick = [this] {
             url.launchInDefaultBrowser();
@@ -58,10 +61,15 @@ public:
     {
         url = newURL;
     }
+    
+    HoverableLabel& getModelLabel()
+    {
+        return modelLabel;
+    }
 
 private:
     HoverableLabel modelLabel;
     juce::Label authorLabel;
     juce::URL url;
-    juce::SharedResourcePointer<InstructionBox> instructionBox;
+    // juce::SharedResourcePointer<InstructionBox> instructionBox;
 };
