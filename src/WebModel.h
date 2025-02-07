@@ -512,10 +512,10 @@ public:
 
     CtrlList::iterator findCtrlByUuid(const juce::Uuid& uuid)
     {
-        return std::find_if(
-            m_ctrls.begin(), m_ctrls.end(), [&uuid](const CtrlList::value_type& pair) {
-                return pair.first == uuid;
-            });
+        return std::find_if(m_ctrls.begin(),
+                            m_ctrls.end(),
+                            [&uuid](const CtrlList::value_type& pair)
+                            { return pair.first == uuid; });
     }
 
     GradioClient& getGradioClient() { return gradioClient; }
