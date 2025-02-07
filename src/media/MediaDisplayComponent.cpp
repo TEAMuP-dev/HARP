@@ -291,6 +291,12 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 {
     // TODO - warning or handling for additional files
 
+    // Avoid self-dragging
+    if (getTargetFilePath() == URL(File(files[0]))) {
+        DBG("Won't self drag");
+        return;
+    }
+
     droppedFilePath = URL(File(files[0]));
     sendChangeMessage();
 }
@@ -310,6 +316,8 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
         setPlaybackPosition(mediaXToTime(x_));
         updateCursorPosition();
     }
+
+    performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
 }
 
 void MediaDisplayComponent::mouseUp(const MouseEvent& e)
@@ -342,7 +350,7 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
         }
     }
 
-    if (e.eventComponent == getMediaComponent())
+    if (e.eventComponent == getMediaComponent() && isMouseOver(true)) //Only start playback if we're still in this area
     {
         start();
         sendChangeMessage();
