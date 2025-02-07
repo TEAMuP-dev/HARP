@@ -163,6 +163,16 @@ public:
                     m_ctrls.push_back({ number_box->id, number_box });
                     LogAndDBG("Number Box: " + number_box->label + " added");
                 }
+                else if (ctrl_type == "toggle")
+                {
+                    auto toggle = std::make_shared<ToggleCtrl>();
+                    toggle->id = juce::Uuid();
+                    toggle->label = ctrl["label"].toString().toStdString();
+                    toggle->value = ("1"  == ctrl["value"].toString().toStdString());
+                    // toggle->value = (aa == "1");
+                    m_ctrls.push_back({ toggle->id, toggle });
+                    LogAndDBG("Toggle: " + toggle->label + " added");
+                }
                 else if (ctrl_type == "dropdown")
                 {
                     auto dropdown = std::make_shared<ComboBoxCtrl>();
