@@ -96,6 +96,7 @@ public:
                         break;
                     }
                 }
+                comboBox->setSelectedId(selectedId, juce::dontSendNotification);
                 comboBox->addListener(this);
                 comboBox->setTextWhenNoChoicesAvailable("No choices");
                 addAndMakeVisible(*comboBox);

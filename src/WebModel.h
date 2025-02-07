@@ -163,6 +163,44 @@ public:
                     m_ctrls.push_back({ number_box->id, number_box });
                     LogAndDBG("Number Box: " + number_box->label + " added");
                 }
+                else if (ctrl_type == "dropdown")
+                {
+                    auto dropdown = std::make_shared<ComboBoxCtrl>();
+                    dropdown->id = juce::Uuid();
+                    dropdown->label = ctrl["label"].toString().toStdString();
+                    juce::Array<juce::var>* choices = ctrl["choices"].getArray();
+                    if (choices == nullptr)
+                    {
+                        status2 = ModelStatus::ERROR;
+                        error.devMessage = "Failed to load controls from JSON. options is null.";
+                        return OpResult::fail(error);
+                    }
+                    for (int j = 0; j < choices->size(); j++)
+                    {
+                        dropdown->options.push_back(choices->getReference(j).getArray()->getFirst().toString().toStdString());
+                    }
+                    // Check if options is empty
+                    if (dropdown->options.empty())
+                    {
+                        // Don't fail here, just log a warning
+                        LogAndDBG("Dropdown control has no options.");
+                    }
+                    else 
+                    {
+                        // Check if "value" is set
+                        if (! ctrl.hasProperty("value"))
+                        {
+                            // If not, set the value to the first option
+                            dropdown->value = dropdown->options[0];
+                        }
+                        else
+                        {
+                            dropdown->value = ctrl["value"].toString().toStdString();
+                        }
+                        m_ctrls.push_back({ dropdown->id, dropdown });
+                    }
+                    
+                }
                 else
                     LogAndDBG("failed to parse control with unknown type: " + ctrl_type);
             }
