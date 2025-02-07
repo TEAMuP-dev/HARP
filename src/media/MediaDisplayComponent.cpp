@@ -143,10 +143,8 @@ void MediaDisplayComponent::repositionLabels()
 
             if (l->getIndex() == currentTempFileIdx) {
                 l->setVisible(true);
-                l->setMarkerVisibility(true);
             } else {
                 l->setVisible(false);
-                l->setMarkerVisibility(false);
             }
         }
     };

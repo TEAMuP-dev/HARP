@@ -82,17 +82,19 @@ void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
 void OutputLabelComponent::mouseEnter(const juce::MouseEvent& e)
 {
     setFillVisibility(true);
+    setMarkerVisibility(true);
 }
 
 void OutputLabelComponent::mouseExit(const juce::MouseEvent& e)
 {
     setFillVisibility(false);
+    setMarkerVisibility(false);
 }
 
 void OutputLabelComponent::addMarkersTo(Component* c)
 {
-    c->addAndMakeVisible(leftMarker);
-    c->addAndMakeVisible(rightMarker);
+    c->addChildComponent(leftMarker);
+    c->addChildComponent(rightMarker);
     c->addChildComponent(durationFill);
 }
 
