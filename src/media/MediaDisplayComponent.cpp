@@ -337,7 +337,7 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (e.eventComponent == getMediaComponent() && ! isPlaying())
+    if (e.eventComponent == getMediaComponent() && isFileLoaded() && ! isPlaying())
     {
         float x_ = (float) e.x;
 
@@ -422,22 +422,22 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     for (const auto& l : labels)
     {
-        OutputLabelComponent lc = OutputLabelComponent((double) l->t, l->label);
+        std::unique_ptr<OutputLabelComponent> lc = std::make_unique<OutputLabelComponent>((double)l->t, l->label);;
 
         if ((l->description).has_value()) {
-            lc.setDescription((l->description).value());
+            lc->setDescription((l->description).value());
         }
 
         if ((l->duration).has_value()) {
-            lc.setDuration((double) (l->duration).value());
+            lc->setDuration((double) (l->duration).value());
         }
 
         if ((l->color).has_value()) {
-            lc.setColor(Colour((l->color).value()));
+            lc->setColor(Colour((l->color).value()));
         }
 
         if ((l->link).has_value()) {
-            lc.setLink((l->link).value());
+            lc->setLink((l->link).value());
         }
 
         float y;
@@ -465,13 +465,12 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
         }
 
         if (isOverlay) {
-            auto lo = static_cast<LabelOverlayComponent*>(&lc);
+            auto lo = static_cast<LabelOverlayComponent*>(lc.get());
             lo->setRelativeY(y);
 
             addLabelOverlay(*lo);
         } else {
-            auto ol = static_cast<OverheadLabelComponent*>(&lc);
-            
+            auto ol = static_cast<OverheadLabelComponent*>(lc.get());
             addOverheadLabel(*ol);
         }
     }
