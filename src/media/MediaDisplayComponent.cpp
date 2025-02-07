@@ -142,8 +142,10 @@ void MediaDisplayComponent::repositionLabels()
                 leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight).toNearestInt());
 
             if (l->getIndex() == currentTempFileIdx) {
+                l->setVisible(true);
                 l->setMarkerVisibility(true);
             } else {
+                l->setVisible(false);
                 l->setMarkerVisibility(false);
             }
         }

@@ -79,11 +79,21 @@ void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
     }
 }
 
+void OutputLabelComponent::mouseEnter(const juce::MouseEvent& e)
+{
+    setFillVisibility(true);
+}
+
+void OutputLabelComponent::mouseExit(const juce::MouseEvent& e)
+{
+    setFillVisibility(false);
+}
+
 void OutputLabelComponent::addMarkersTo(Component* c)
 {
     c->addAndMakeVisible(leftMarker);
     c->addAndMakeVisible(rightMarker);
-    c->addAndMakeVisible(durationFill);
+    c->addChildComponent(durationFill);
 }
 
 void OutputLabelComponent::removeMarkersFrom(Component* c)
@@ -95,9 +105,12 @@ void OutputLabelComponent::removeMarkersFrom(Component* c)
 
 void OutputLabelComponent::setMarkerVisibility(bool v)
 {
-    setVisible(v);
     leftMarker.setVisible(v);
     rightMarker.setVisible(v);
+}
+
+void OutputLabelComponent::setFillVisibility(bool v)
+{
     durationFill.setVisible(v);
 }
 
