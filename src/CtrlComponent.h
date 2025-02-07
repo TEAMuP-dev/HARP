@@ -347,6 +347,7 @@ public:
         }
 
         // The toggle column as a FlexItem
+        toggleColumn.justifyContent = juce::FlexBox::JustifyContent::center;
         juce::FlexItem toggleColumnItem(toggleColumn);
         // toggleColumnItem.withMinWidth(30)
         //                 .withMaxWidth(50)
@@ -396,6 +397,7 @@ public:
         }
 
         // The text box row as a FlexItem
+        textBoxRow.justifyContent = juce::FlexBox::JustifyContent::center;
         juce::FlexItem textBoxRowItem(textBoxRow);
         // textBoxRowItem.withMinWidth(200)
                         // .withMaxWidth(250)
@@ -420,6 +422,7 @@ public:
                     .withMargin(margin));
         }
         // The option column as a FlexItem
+        optionColumn.justifyContent = juce::FlexBox::JustifyContent::center;
         juce::FlexItem optionColumnItem(optionColumn);
         optionColumnItem.withMinWidth(80)
                         .withMaxWidth(200)
