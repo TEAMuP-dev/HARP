@@ -96,6 +96,7 @@ public:
                         break;
                     }
                 }
+                comboBox->setSelectedId(selectedId, juce::dontSendNotification);
                 comboBox->addListener(this);
                 comboBox->setTextWhenNoChoicesAvailable("No choices");
                 addAndMakeVisible(*comboBox);
@@ -137,7 +138,7 @@ public:
         textCtrls.clear();
     }
 
-    void resized() override
+    void resized2() 
     {
         auto area = getLocalBounds();
 
@@ -213,6 +214,290 @@ public:
         // Perform Layout
         mainBox.performLayout(area);
     }
+
+    void resized1() 
+    {
+        /*
+        place sliders side by side, with minWidth 30 and max 50
+        place toggles first in their own column with minWidth 30 and maxWidth 50, and then put them in the same row as sliders.
+        place textboxes side by side with minWIdth 80 and max 200
+        Precalculate the length of all the controls side by side and dynamically set the number of rows. 
+        For example if 1 slider 1 toggle and 1 textbox, their total min width is 30 + 30 + 80 = 140
+        so if the area.width() is 200, then we can fit all of them in one row.
+        If however, the area.width() is 100, then we need to put them in two rows.
+        Another example, if 2 sliders, 2 toggles and 2 textboxes, their total min width is 60 + 30 + 160 = 250
+        The reason that I don't count the width of toggles 2 times is because they are first placed in their own column.
+        
+        */
+        auto area = getLocalBounds();
+
+        // headerLabel.setBounds(area.removeFromTop(30));  // Adjust height to your preference
+
+        juce::FlexBox mainBox;
+        mainBox.flexDirection =
+            juce::FlexBox::Direction::row; // Set the main flex direction to column
+
+
+        // juce::FlexItem::Margin margin(2);
+        int margin = 4;
+        int maxHeight = 100;
+        // Sliders
+        juce::FlexBox sliderBox;
+        sliderBox.flexDirection = juce::FlexBox::Direction::row;
+        for (auto& sliderWithLabel : sliders)
+        {
+            DBG("Adding slider with name: " + sliderWithLabel->getSlider().getName()
+                + " to sliderBox");
+            sliderBox.items.add(juce::FlexItem(*sliderWithLabel)
+                                    .withFlex(1)
+                                    .withMinWidth(20)
+                                    .withMaxHeight(maxHeight)
+                                    .withMargin(margin)); // Adjusted min height
+        }
+
+        // Toggles
+        juce::FlexBox toggleBox;
+        toggleBox.flexDirection = juce::FlexBox::Direction::row;
+        for (auto& toggle : toggles)
+        {
+            DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
+            toggleBox.items.add(
+                juce::FlexItem(*toggle).withFlex(1)
+                                        .withMinWidth(80)
+                                        .withMaxHeight(20)
+                                        .withMargin(margin));
+        }
+
+        // Option Controls
+        juce::FlexBox optionBox;
+        optionBox.flexDirection = juce::FlexBox::Direction::row;
+        for (auto& optionCtrl : optionCtrls)
+        {
+            DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
+            optionBox.items.add(
+                juce::FlexItem(*optionCtrl).withFlex(1)
+                                            .withMinWidth(80)
+                                            .withMaxHeight(40)
+                                            // .withMaxHeight(maxHeight)
+                                            .withMargin(margin));
+        }
+
+        // Text Controls
+        juce::FlexBox textBox;
+        textBox.flexDirection = juce::FlexBox::Direction::row;
+        for (auto& textCtrl : textCtrls)
+        {
+            DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
+            textBox.items.add(
+                juce::FlexItem(*textCtrl).withFlex(1).withMinWidth(80).withMaxWidth(180)
+                    .withMaxHeight(maxHeight)
+                    .withMargin(margin));
+        }
+
+        // Add each FlexBox to the main FlexBox
+        if (sliders.size() > 0)
+        {
+            mainBox.items.add(juce::FlexItem(sliderBox).withFlex(1).withMinHeight(90));
+        }
+        if (toggles.size() > 0)
+        {
+            mainBox.items.add(
+                juce::FlexItem(toggleBox).withFlex(1).withMinHeight(30).withMargin(margin));
+        }
+        if (optionCtrls.size() > 0)
+        {
+            mainBox.items.add(
+                juce::FlexItem(optionBox).withFlex(1).withMinHeight(30).withMargin(margin));
+        }
+        if (textCtrls.size() > 0)
+        {
+            mainBox.items.add(
+                juce::FlexItem(textBox).withFlex(1).withMinHeight(40).withMargin(margin));
+        }
+
+        // Perform Layout
+        mainBox.performLayout(area);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds();
+        int availableWidth = area.getWidth();
+        int margin = 4;
+
+        juce::FlexBox mainBox;
+        mainBox.flexDirection =
+            juce::FlexBox::Direction::row; // Set the main flex direction to column
+
+        // --------------------
+        // Toggles: Vertical Column
+        // --------------------
+        juce::FlexBox toggleColumn;
+        toggleColumn.flexDirection = juce::FlexBox::Direction::column;
+        for (auto& toggle : toggles)
+        {
+            DBG("Adding toggle with name: " + toggle->getName() + " to toggleColumn");
+            toggleColumn.items.add(
+                juce::FlexItem(*toggle)
+                    .withFlex(1)
+                    .withMinWidth(30)
+                    .withMaxWidth(150)
+                    .withMaxHeight(40)
+                    .withMargin(margin));
+        }
+
+        // The toggle column as a FlexItem
+        toggleColumn.justifyContent = juce::FlexBox::JustifyContent::center;
+        juce::FlexItem toggleColumnItem(toggleColumn);
+        // toggleColumnItem.withMinWidth(30)
+        //                 .withMaxWidth(50)
+        //                 .withMargin(margin);
+
+        // --------------------
+        // Sliders: Horizontal Row
+        // --------------------
+        juce::FlexBox sliderRow;
+        sliderRow.flexDirection = juce::FlexBox::Direction::row;
+        // sliderRow.flexWrap = juce::FlexBox::Wrap::wrap; // Allow wrapping to next line
+        for (auto& sliderWithLabel : sliders)
+        {
+            DBG("Adding slider with name: " + sliderWithLabel->getSlider().getName()
+                + " to sliderRow");
+            sliderRow.items.add(
+                juce::FlexItem(*sliderWithLabel)
+                    .withFlex(1)
+                    .withMinWidth(40)
+                    .withMaxWidth(100)
+                    .withMinHeight(80)
+                    .withMargin(margin));
+        }
+        sliderRow.justifyContent = juce::FlexBox::JustifyContent::center;
+        // The slider row as a FlexItem
+        juce::FlexItem sliderRowItem(sliderRow);
+        // sliderRowItem.withMinWidth(30)
+        //              .withMaxWidth(100)
+        //              .withMargin(margin);
+
+        // --------------------
+        // Text Controls: Horizontal Row
+        // --------------------
+        juce::FlexBox textBoxRow;
+        textBoxRow.flexDirection = juce::FlexBox::Direction::row;
+        // textBoxRow.flexWrap = juce::FlexBox::Wrap::wrap;
+        for (auto& textCtrl : textCtrls)
+        {
+            DBG("Adding text control with name: " + textCtrl->getName() + " to textBoxRow");
+            textBoxRow.items.add(
+                juce::FlexItem(*textCtrl)
+                    .withFlex(1)
+                    // .withMinWidth(200)
+                    .withMaxWidth(250)
+                    // .withMaxHeight(100)
+                    .withMargin(margin));
+        }
+
+        // The text box row as a FlexItem
+        textBoxRow.justifyContent = juce::FlexBox::JustifyContent::center;
+        juce::FlexItem textBoxRowItem(textBoxRow);
+        // textBoxRowItem.withMinWidth(200)
+                        // .withMaxWidth(250)
+        //                 .withMaxHeight(100)
+        //                 .withMargin(margin);
+
+        // --------------------
+        // Option Controls: Horizontal Row
+        // --------------------
+        juce::FlexBox optionColumn;
+        optionColumn.flexDirection = juce::FlexBox::Direction::column;
+        // optionColumn.flexWrap = juce::FlexBox::Wrap::wrap;
+        for (auto& optionCtrl : optionCtrls)
+        {
+            DBG("Adding option control with name: " + optionCtrl->getName() + " to optionRow");
+            optionColumn.items.add(
+                juce::FlexItem(*optionCtrl)
+                    .withFlex(1)
+                    .withMinWidth(80)
+                    .withMaxWidth(200)
+                    .withMaxHeight(40)
+                    .withMargin(margin));
+        }
+        // The option column as a FlexItem
+        optionColumn.justifyContent = juce::FlexBox::JustifyContent::center;
+        juce::FlexItem optionColumnItem(optionColumn);
+        optionColumnItem.withMinWidth(80)
+                        .withMaxWidth(200)
+                        .withMargin(margin);
+
+
+        // --------------------
+        // Arrange Controls in Rows
+        // --------------------
+        // juce::FlexBox mainBox;
+        // mainBox.flexDirection = juce::FlexBox::Direction::column;
+
+        // First Row: Toggles and Sliders
+        // juce::FlexBox firstRow;
+        // firstRow.flexDirection = juce::FlexBox::Direction::row;
+        // firstRow.flexWrap = juce::FlexBox::Wrap::wrap;
+
+        // int firstRowMinWidth = 0;
+
+        // if (!toggles.empty())
+        // {
+        //     firstRow.items.add(toggleColumnItem);
+        //     firstRowMinWidth += static_cast<int>(toggleColumnItem.minWidth + toggleColumnItem.margin.left + toggleColumnItem.margin.right);
+        // }
+
+        // // Calculate how many sliders can fit in the first row after the toggle column
+        // int availableWidthForSliders = availableWidth - firstRowMinWidth;
+        // int currentRowWidth = 0;
+
+        // juce::Array<juce::FlexItem> sliderItems = sliderRow.items;
+        // juce::FlexBox slidersInFirstRow;
+        // slidersInFirstRow.flexDirection = juce::FlexBox::Direction::row;
+
+        // for (auto& sliderItem : sliderItems)
+        // {
+        //     int itemWidth = static_cast<int>(sliderItem.minWidth + sliderItem.margin.left + sliderItem.margin.right);
+
+        //     if (currentRowWidth + itemWidth > availableWidthForSliders && currentRowWidth > 0)
+        //     {
+        //         // Can't fit more sliders in the first row
+        //         break;
+        //     }
+
+        //     slidersInFirstRow.items.add(sliderItem);
+        //     currentRowWidth += itemWidth;
+        // }
+
+        // Add Sliders Row
+        if (!sliders.empty())
+        {
+            mainBox.items.add(sliderRowItem.withFlex(int((sliders.size() + 1) / 2)));
+        }
+
+        // Add Option Controls Row
+        if (!optionCtrls.empty())
+        {
+            mainBox.items.add(optionColumnItem.withFlex(1));
+        }
+
+        // Add Toggles Column
+        if (!toggles.empty())
+        {
+            mainBox.items.add(toggleColumnItem.withFlex(1));
+        }
+
+        // Add Text Controls Row
+        if (!textCtrls.empty())
+        {
+            mainBox.items.add(textBoxRowItem.withFlex(2 * textCtrls.size()));
+        }
+
+        // Perform the layout
+        mainBox.performLayout(area);
+    }
+
 
     void buttonClicked(Button* button) override
     {

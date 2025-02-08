@@ -5,16 +5,18 @@ using namespace juce;
 class CustomThreadPoolJob : public ThreadPoolJob
 {
 public:
-    CustomThreadPoolJob(std::function<void()> _jobFunction)
-        : ThreadPoolJob("CustomThreadPoolJob"), jobFunction(_jobFunction)
+    CustomThreadPoolJob(std::function<void(String)> _jobFunction, String jobID)
+        : ThreadPoolJob(jobID), jobFunction(_jobFunction)
     {
     }
+
+    ~CustomThreadPoolJob() override { DBG("Job Stopped"); }
 
     JobStatus runJob() override
     {
         if (jobFunction)
         {
-            jobFunction();
+            jobFunction(getJobName());
             return jobHasFinished;
         }
         else
@@ -24,13 +26,15 @@ public:
     }
 
 private:
-    std::function<void()> jobFunction;
+    std::function<void(String)> jobFunction;
 };
 
+/* This Class is no longer in use!!!!!
 class JobProcessorThread : public Thread
 {
 public:
-    JobProcessorThread(const std::vector<CustomThreadPoolJob*>& jobs,
+  JobProcessorThread( //const
+		       std::vector<CustomThreadPoolJob*>& jobs,
                        int& _jobsFinished,
                        int& _totalJobs,
                        ChangeBroadcaster& broadcaster)
@@ -53,6 +57,7 @@ public:
         while (! threadShouldExit())
         {
             // Wait for a signal to execute a task
+	  DBG("WAITING FOR SIGNAL...");
             signalEvent.wait(-1);
 
             // Check if the thread should exit before executing the task
@@ -72,9 +77,22 @@ public:
         signalEvent.signal();
     }
 
+  void cancelAllJobs() {
+    DBG("CANCEL ALL JOBS RECEIVED");
+    // bool result = threadPool.removeAllJobs(true, -1);
+    // DBG((result?"STOPPED":"FAIL TO STOP"));
+    for (auto& customJob : customJobs) {
+      customJob -> signalJobShouldExit();
+    }
+  }
+
 private:
     void executeTask()
     {
+      DBG("EXECUTE TASK");
+      // threadPool.addJob(customJobs.front());
+      DBG("JOBS ADDED");
+      
         for (auto& customJob : customJobs)
         {
             threadPool.addJob(
@@ -87,14 +105,17 @@ private:
         {
             threadPool.waitForJobToFinish(customJob, -1); // -1 for no timeout
         }
+	DBG("ALL JOB FINISHED");
+	customJobs.clear();
 
         // This will run after all jobs are done
         // if (jobsFinished == totalJobs) {
-        processBroadcaster.sendChangeMessage();
+        // processBroadcaster.sendChangeMessage();
         // }
     }
 
-    const std::vector<CustomThreadPoolJob*>& customJobs;
+  // const
+    std::vector<CustomThreadPoolJob*>& customJobs;
 
     // HUGO: these are unused. What are they for?
     int& jobsFinished;
@@ -105,3 +126,4 @@ private:
     ChangeBroadcaster& processBroadcaster;
     WaitableEvent signalEvent;
 };
+*/

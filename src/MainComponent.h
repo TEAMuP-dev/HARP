@@ -21,6 +21,7 @@
 #include "gui/MultiButton.h"
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
+#include "gui/ModelAuthorLabel.h"
 
 #include "gradio/GradioClient.h"
 
@@ -313,8 +314,7 @@ public:
             // Launch the file chooser dialog asynchronously
             saveFileBrowser->launchAsync(
                 FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
-                [this](const FileChooser& browser)
-                {
+                [this](const FileChooser& browser) {
                     StringArray validExtensions = mediaDisplay->getInstanceExtensions();
                     File newFile = browser.getResult();
                     if (newFile != File {})
@@ -467,13 +467,11 @@ public:
         processCancelButton.setEnabled(false);
 
         // loading happens asynchronously.
-        threadPool.addJob(
-            [this, params]
+        threadPool.addJob([this, params] {
+            try
             {
-                try
-                {
-                    juce::String loadingError;
-                    /*
+                juce::String loadingError;
+                /*
                         cb: This is an idea, that might be useful for the future
                         Whenever trying to load a new gradio app, we could create a new WebModel
                         if loading is successful, we could replace the old model with the new one
@@ -487,196 +485,187 @@ public:
                         status of the model before the attempt to load a new model.
                     */
 
-                    // set the last status to the current status
-                    // If loading of the new model fails,
-                    // we want to go back to the status we had before the failed attempt
-                    model->setLastStatus(model->getStatus());
+                // set the last status to the current status
+                // If loading of the new model fails,
+                // we want to go back to the status we had before the failed attempt
+                model->setLastStatus(model->getStatus());
 
-                    OpResult loadingResult = model->load(params);
-                    if (loadingResult.failed())
-                    {
-                        throw loadingResult.getError();
-                    }
-
-                    // loading succeeded
-                    // Do some UI stuff to add the new model to the comboBox
-                    // if it's not already there
-                    // and update the lastSelectedItemIndex and lastLoadedModelItemIndex
-                    MessageManager::callAsync(
-                        [this, loadingResult]
-                        {
-                            resetUI();
-                            if (modelPathComboBox.getSelectedItemIndex() == 0)
-                            {
-                                bool alreadyInComboBox = false;
-
-                                for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
-                                {
-                                    if (modelPathComboBox.getItemText(i)
-                                        == (juce::String) customPath)
-                                    {
-                                        alreadyInComboBox = true;
-                                        modelPathComboBox.setSelectedId(i + 1);
-                                        lastSelectedItemIndex = i;
-                                        lastLoadedModelItemIndex = i;
-                                    }
-                                }
-
-                                if (! alreadyInComboBox)
-                                {
-                                    int new_id = modelPathComboBox.getNumItems() + 1;
-                                    modelPathComboBox.addItem(customPath, new_id);
-                                    modelPathComboBox.setSelectedId(new_id);
-                                    lastSelectedItemIndex = new_id - 1;
-                                    lastLoadedModelItemIndex = new_id - 1;
-                                }
-                            }
-                            else
-                            {
-                                lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
-                            }
-                            processLoadingResult(loadingResult);
-                        });
-                }
-                catch (Error& loadingError)
+                OpResult loadingResult = model->load(params);
+                if (loadingResult.failed())
                 {
-                    Error::fillUserMessage(loadingError);
-                    LogAndDBG("Error in Model Loading:\n" + loadingError.devMessage);
-                    auto msgOpts =
-                        MessageBoxOptions()
-                            .withTitle("Loading Error")
-                            .withIconType(AlertWindow::WarningIcon)
-                            .withTitle("Error")
-                            .withMessage("An error occurred while loading the WebModel: \n"
-                                         + loadingError.userMessage);
-                    // if (! String(e.what()).contains("404")
-                    //     && ! String(e.what()).contains("Invalid URL"))
-                    if (loadingError.type != ErrorType::InvalidURL)
-                    {
-                        msgOpts = msgOpts.withButton("Open Space URL");
-                    }
+                    throw loadingResult.getError();
+                }
 
-                    msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
-                    auto alertCallback = [this, msgOpts, loadingError](int result)
+                // loading succeeded
+                // Do some UI stuff to add the new model to the comboBox
+                // if it's not already there
+                // and update the lastSelectedItemIndex and lastLoadedModelItemIndex
+                MessageManager::callAsync([this, loadingResult] {
+                    resetUI();
+                    if (modelPathComboBox.getSelectedItemIndex() == 0)
                     {
-                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                        // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
-                        // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
-                        // auto chosen = msgOpts.getButtonText(result);
-                        // they're not the same as the order of the buttons in the alert
-                        // this is the order that I actually observed them to be.
-                        // UPDATE/TODO (xribene): This should be fixed in Juce v8
-                        // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
-                        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                        std::map<int, std::string> observedButtonIndicesMap = {};
-                        if (msgOpts.getNumButtons() == 3)
+                        bool alreadyInComboBox = false;
+
+                        for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
                         {
-                            observedButtonIndicesMap.insert(
-                                { 1, "Open Space URL" }); // should actually be 0 right?
+                            if (modelPathComboBox.getItemText(i) == (juce::String) customPath)
+                            {
+                                alreadyInComboBox = true;
+                                modelPathComboBox.setSelectedId(i + 1);
+                                lastSelectedItemIndex = i;
+                                lastLoadedModelItemIndex = i;
+                            }
                         }
+
+                        if (! alreadyInComboBox)
+                        {
+                            int new_id = modelPathComboBox.getNumItems() + 1;
+                            modelPathComboBox.addItem(customPath, new_id);
+                            modelPathComboBox.setSelectedId(new_id);
+                            lastSelectedItemIndex = new_id - 1;
+                            lastLoadedModelItemIndex = new_id - 1;
+                        }
+                    }
+                    else
+                    {
+                        lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
+                    }
+                    processLoadingResult(loadingResult);
+                });
+            }
+            catch (Error& loadingError)
+            {
+                Error::fillUserMessage(loadingError);
+                LogAndDBG("Error in Model Loading:\n" + loadingError.devMessage);
+                auto msgOpts = MessageBoxOptions()
+                                   .withTitle("Loading Error")
+                                   .withIconType(AlertWindow::WarningIcon)
+                                   .withTitle("Error")
+                                   .withMessage("An error occurred while loading the WebModel: \n"
+                                                + loadingError.userMessage);
+                // if (! String(e.what()).contains("404")
+                //     && ! String(e.what()).contains("Invalid URL"))
+                if (loadingError.type != ErrorType::InvalidURL)
+                {
+                    msgOpts = msgOpts.withButton("Open Space URL");
+                }
+
+                msgOpts = msgOpts.withButton("Open HARP Logs").withButton("Ok");
+                auto alertCallback = [this, msgOpts, loadingError](int result) {
+                    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    // NOTE (hugo): there's something weird about the button indices assigned by the msgOpts here
+                    // DBG("ALERT-CALLBACK: buttonClicked alertCallback listener activated: chosen: " << chosen);
+                    // auto chosen = msgOpts.getButtonText(result);
+                    // they're not the same as the order of the buttons in the alert
+                    // this is the order that I actually observed them to be.
+                    // UPDATE/TODO (xribene): This should be fixed in Juce v8
+                    // see: https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
+                    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    std::map<int, std::string> observedButtonIndicesMap = {};
+                    if (msgOpts.getNumButtons() == 3)
+                    {
                         observedButtonIndicesMap.insert(
-                            { msgOpts.getNumButtons() - 1,
-                              "Open HARP Logs" }); // should actually be 1
-                        observedButtonIndicesMap.insert({ 0, "Ok" }); // should be 2
+                            { 1, "Open Space URL" }); // should actually be 0 right?
+                    }
+                    observedButtonIndicesMap.insert(
+                        { msgOpts.getNumButtons() - 1, "Open HARP Logs" }); // should actually be 1
+                    observedButtonIndicesMap.insert({ 0, "Ok" }); // should be 2
 
-                        auto chosen = observedButtonIndicesMap[result];
+                    auto chosen = observedButtonIndicesMap[result];
 
-                        if (chosen == "Open HARP Logs")
+                    if (chosen == "Open HARP Logs")
+                    {
+                        HarpLogger::getInstance()->getLogFile().revealToUser();
+                    }
+                    else if (chosen == "Open Space URL")
+                    {
+                        // get the spaceInfo
+                        SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                        if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                         {
-                            HarpLogger::getInstance()->getLogFile().revealToUser();
+                            URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
+                            spaceUrl.launchInDefaultBrowser();
                         }
-                        else if (chosen == "Open Space URL")
+                        else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                         {
-                            // get the spaceInfo
-                            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
-                            if (spaceInfo.status == SpaceInfo::Status::GRADIO)
-                            {
-                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
-                                spaceUrl.launchInDefaultBrowser();
-                            }
-                            else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
-                            {
-                                URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
-                                spaceUrl.launchInDefaultBrowser();
-                            }
-                            else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-                            {
-                                // either choose hugingface or gradio, they are the same
-                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().huggingface;
-                                spaceUrl.launchInDefaultBrowser();
-                            }
-                            // URL spaceUrl =
-                            //     this->model->getGradioClient().getSpaceInfo().huggingface;
-                            // spaceUrl.launchInDefaultBrowser();
+                            URL spaceUrl =
+                                this->model->getGradioClient().getSpaceInfo().huggingface;
+                            spaceUrl.launchInDefaultBrowser();
                         }
+                        else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                        {
+                            // either choose hugingface or gradio, they are the same
+                            URL spaceUrl =
+                                this->model->getGradioClient().getSpaceInfo().huggingface;
+                            spaceUrl.launchInDefaultBrowser();
+                        }
+                        // URL spaceUrl =
+                        //     this->model->getGradioClient().getSpaceInfo().huggingface;
+                        // spaceUrl.launchInDefaultBrowser();
+                    }
 
-                        if (lastLoadedModelItemIndex == -1)
-                        {
-                            // If before the failed attempt to load a new model, we HAD NO model loaded
-                            // TODO: these two functions we call here might be an overkill for this case
-                            // we need to simplify
-                            MessageManager::callAsync(
-                                [this, loadingError]
-                                {
-                                    resetModelPathComboBox();
-                                    model->setStatus(ModelStatus::INITIALIZED);
-                                    processLoadingResult(OpResult::fail(loadingError));
-                                });
-                        }
-                        else
-                        {
-                            // If before the failed attempt to load a new model, we HAD a model loaded
-                            MessageManager::callAsync(
-                                [this, loadingError]
-                                {
-                                    // We set the status to
-                                    // the status of the model before the failed attempt
-                                    model->setStatus(model->getLastStatus());
-                                    processLoadingResult(OpResult::fail(loadingError));
-                                });
-                        }
-
-                        // This if/elseif/else block is responsible for setting the selected item
-                        // in the modelPathComboBox to the correct item (i.e the model/path/app that
-                        // was selected before the failed attempt to load a new model)
-                        // cb: sometimes setSelectedId it doesn't work and I dont know why.
-                        // I've tried nesting it in MessageManage::callAsync, but still nothing.
-                        if (lastLoadedModelItemIndex != -1)
-                        {
-                            modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
-                        }
-                        else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
-                        {
-                            modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
-                        }
-                        else
-                        {
+                    if (lastLoadedModelItemIndex == -1)
+                    {
+                        // If before the failed attempt to load a new model, we HAD NO model loaded
+                        // TODO: these two functions we call here might be an overkill for this case
+                        // we need to simplify
+                        MessageManager::callAsync([this, loadingError] {
                             resetModelPathComboBox();
-                            MessageManager::callAsync([this, loadingError]
-                                                      { loadModelButton.setEnabled(false); });
-                        }
-                    };
+                            model->setStatus(ModelStatus::INITIALIZED);
+                            processLoadingResult(OpResult::fail(loadingError));
+                        });
+                    }
+                    else
+                    {
+                        // If before the failed attempt to load a new model, we HAD a model loaded
+                        MessageManager::callAsync([this, loadingError] {
+                            // We set the status to
+                            // the status of the model before the failed attempt
+                            model->setStatus(model->getLastStatus());
+                            processLoadingResult(OpResult::fail(loadingError));
+                        });
+                    }
 
-                    AlertWindow::showAsync(msgOpts, alertCallback);
-                    saveEnabled = false;
-                }
-                catch (const std::exception& e)
-                {
-                    // Catch any other standard exceptions (like std::runtime_error)
-                    DBG("Caught std::exception: " << e.what());
-                    AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                     "Error",
-                                                     "An unexpected error occurred: "
-                                                         + juce::String(e.what()));
-                }
-                catch (...) // Catch any other exceptions
-                {
-                    DBG("Caught unknown exception");
-                    AlertWindow::showMessageBoxAsync(
-                        AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
-                }
-            });
+                    // This if/elseif/else block is responsible for setting the selected item
+                    // in the modelPathComboBox to the correct item (i.e the model/path/app that
+                    // was selected before the failed attempt to load a new model)
+                    // cb: sometimes setSelectedId it doesn't work and I dont know why.
+                    // I've tried nesting it in MessageManage::callAsync, but still nothing.
+                    if (lastLoadedModelItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+                    }
+                    else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+                    {
+                        modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+                    }
+                    else
+                    {
+                        resetModelPathComboBox();
+                        MessageManager::callAsync(
+                            [this, loadingError] { loadModelButton.setEnabled(false); });
+                    }
+                };
+
+                AlertWindow::showAsync(msgOpts, alertCallback);
+                saveEnabled = false;
+            }
+            catch (const std::exception& e)
+            {
+                // Catch any other standard exceptions (like std::runtime_error)
+                DBG("Caught std::exception: " << e.what());
+                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                 "Error",
+                                                 "An unexpected error occurred: "
+                                                     + juce::String(e.what()));
+            }
+            catch (...) // Catch any other exceptions
+            {
+                DBG("Caught unknown exception");
+                AlertWindow::showMessageBoxAsync(
+                    AlertWindow::WarningIcon, "Error", "An unexpected error occurred.");
+            }
+        });
     }
 
     void resetModelPathComboBox()
@@ -725,46 +714,43 @@ public:
                 // Show the window and handle the result asynchronously
                 reloadCheckWindow->enterModalState(
                     true,
-                    new CustomPathAlertCallback(
-                        [this, reloadCheckWindow](int result)
-                        {
-                            if (result == 1)
-                            { // Yes was clicked
-                                DBG("Reloading file");
-                                loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
-                            }
-                            else
-                            { // No was clicked or the window was closed
-                                DBG("Not reloading file");
-                                lastLoadTime =
-                                    Time::getCurrentTime(); //Reset time so we stop asking
-                            }
-                            delete reloadCheckWindow;
-                        }),
+                    new CustomPathAlertCallback([this, reloadCheckWindow](int result) {
+                        if (result == 1)
+                        { // Yes was clicked
+                            DBG("Reloading file");
+                            loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
+                        }
+                        else
+                        { // No was clicked or the window was closed
+                            DBG("Not reloading file");
+                            lastLoadTime = Time::getCurrentTime(); //Reset time so we stop asking
+                        }
+                        delete reloadCheckWindow;
+                    }),
                     true);
             }
         }
     }
 
-    explicit MainComponent(const URL& initialFilePath = URL())
-        : jobsFinished(0),
-          totalJobs(0),
-          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+    explicit MainComponent(const URL& initialFilePath = URL()) : jobsFinished(0), totalJobs(0) //,
+    // jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         // logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
         HarpLogger::getInstance()->initializeLogger();
 
         addAndMakeVisible(chooseFileButton);
         chooseFileButton.onClick = [this] { openFileChooser(); };
-        chooseFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to choose an audio file"); };
+        chooseFileButtonHandler.onMouseEnter = [this]() {
+            setInstructions("Click to choose an audio file");
+        };
         chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         chooseFileButtonHandler.attach();
 
         addAndMakeVisible(saveFileButton);
         saveFileButton.onClick = [this] { saveCallback(); };
-        saveFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to save results to original audio file"); };
+        saveFileButtonHandler.onMouseEnter = [this]() {
+            setInstructions("Click to save results to original audio file");
+        };
         saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         saveFileButtonHandler.attach();
 
@@ -784,8 +770,7 @@ public:
         playStopButton.setMode(playButtonInfo.label);
         playStopButton.setEnabled(false);
         addAndMakeVisible(playStopButton);
-        playStopButton.onMouseEnter = [this]
-        {
+        playStopButton.onMouseEnter = [this] {
             if (playStopButton.getModeName() == playButtonInfo.label)
                 setInstructions("Click to start playback");
             else if (playStopButton.getModeName() == stopButtonInfo.label)
@@ -831,15 +816,13 @@ public:
         processCancelButton.setMode(processButtonInfo.label);
         processCancelButton.setEnabled(false);
         addAndMakeVisible(processCancelButton);
-        processCancelButton.onMouseEnter = [this]
-        {
+        processCancelButton.onMouseEnter = [this] {
             if (processCancelButton.getModeName() == processButtonInfo.label)
                 setInstructions("Click to send the audio file for processing");
             else if (processCancelButton.getModeName() == cancelButtonInfo.label)
                 setInstructions("Click to cancel the processing");
         };
-        processCancelButton.onMouseExit = [this]
-        {
+        processCancelButton.onMouseExit = [this] {
             // processCancelButton.setColour (TextButton::buttonColourId, getUIColourIfAvailable (LookAndFeel_V4::ColourScheme::UIColour::buttonOnColour));
             clearInstructions();
         };
@@ -851,8 +834,9 @@ public:
         loadModelButton.setMode(loadButtonInfo.label);
         loadModelButton.setEnabled(false);
         addAndMakeVisible(loadModelButton);
-        loadModelButton.onMouseEnter = [this]
-        { setInstructions("Loads the model and populates the UI with the model's parameters"); };
+        loadModelButton.onMouseEnter = [this] {
+            setInstructions("Loads the model and populates the UI with the model's parameters");
+        };
         loadModelButton.onMouseExit = [this] { clearInstructions(); };
 
         loadBroadcaster.addChangeListener(this);
@@ -889,16 +873,15 @@ public:
             "hugggof/vampnet-opera",
             "hugggof/vampnet-machines",
             "hugggof/vampnet-birds",
-            // "descript/vampnet",
-            // "pharoAIsanders420/micro-musicgen-jungle",
             "hugggof/nesquik",
             // "hugggof/pitch_shifter",
             "hugggof/harmonic_percussive",
             // "xribene/pitch_shifter",
             "xribene/pitch_shifter_awake",
             "xribene/midi_pitch_shifter",
+            "xribene/pyharp_demucs",
             // "xribene/pitch_shifter_slow",
-            // "http://localhost:7860",
+            "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
@@ -910,8 +893,7 @@ public:
         {
             modelPathComboBox.addItem(modelPaths[i], static_cast<int>(i) + 1);
         }
-        modelPathComboBoxHandler.onMouseEnter = [this]()
-        {
+        modelPathComboBoxHandler.onMouseEnter = [this]() {
             setInstructions(
                 "A drop-down menu with some available models. Any new model you add will automatically be added to the list");
         };
@@ -919,21 +901,18 @@ public:
         modelPathComboBoxHandler.attach();
 
         // Usage within your existing onChange handler
-        modelPathComboBox.onChange = [this]
-        {
+        modelPathComboBox.onChange = [this] {
             // Check if the 'custom path...' option is selected
             if (modelPathComboBox.getSelectedItemIndex() == 0)
             {
                 // Create and show the custom path dialog with a callback
                 std::function<void(const juce::String&)> loadCallback =
-                    [this](const juce::String& customPath)
-                {
-                    DBG("Custom path entered: " + customPath);
-                    this->customPath = customPath.toStdString(); // Store the custom path
-                    loadModelButton.triggerClick(); // Trigger the load model button click
-                };
-                std::function<void()> cancelCallback = [this]()
-                {
+                    [this](const juce::String& customPath) {
+                        DBG("Custom path entered: " + customPath);
+                        this->customPath = customPath.toStdString(); // Store the custom path
+                        loadModelButton.triggerClick(); // Trigger the load model button click
+                    };
+                std::function<void()> cancelCallback = [this]() {
                     // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
                     if (lastLoadedModelItemIndex != -1)
                     {
@@ -978,7 +957,7 @@ public:
         auto& card = model->card();
         setModelCard(card);
 
-        jobProcessorThread.startThread();
+        // jobProcessorThread.startThread();
 
         // ARA requires that plugin editors are resizable to support tight integration
         // into the host UI
@@ -996,12 +975,12 @@ public:
         loadBroadcaster.removeChangeListener(this);
         processBroadcaster.removeChangeListener(this);
 
-        jobProcessorThread.signalThreadShouldExit();
+        // jobProcessorThread.signalThreadShouldExit();
         // This will not actually run any processing task
         // It'll just make sure that the thread is not waiting
         // and it'll allow it to check for the threadShouldExit flag
-        jobProcessorThread.signalTask();
-        jobProcessorThread.waitForThreadToExit(-1);
+        // jobProcessorThread.signalTask();
+        // jobProcessorThread.waitForThreadToExit(-1);
 
 #if JUCE_MAC
         MenuBarModel::setMacMainMenu(nullptr);
@@ -1022,15 +1001,20 @@ public:
                                              "Cancel Error",
                                              "An error occurred while cancelling the processing: \n"
                                                  + cancelResult.getError().devMessage);
-            // processCancelButton.setEnabled(true);
-            // processCancelButton.setMode(processButtonInfo.label);
             resetProcessingButtons();
             return;
         }
+        // Update current process to empty
+        processMutex.lock();
+        DBG("Cancel ProcessID: " + currentProcessID);
+        currentProcessID = "";
+        processMutex.unlock();
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
-        processCancelButton.setEnabled(false);
+        // Should we restore back to process???
+        processCancelButton.setMode(processButtonInfo.label);
+        processCancelButton.setEnabled(true);
     }
 
     void processCallback()
@@ -1092,37 +1076,65 @@ public:
         // print how many jobs are currently in the threadpool
         LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
-        // empty customJobs
-        customJobs.clear();
+        // Get new processID
+        String processID = juce::Uuid().toString();
+        processMutex.lock();
+        currentProcessID = processID;
+        DBG("Set Process ID: " + processID);
+        processMutex.unlock();
 
-        customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
-            // Individual job code for each iteration
-            // copy the audio file, with the same filename except for an added _harp to the stem
-            OpResult processingResult =
-                model->process(mediaDisplay->getTempFilePath().getLocalFile());
-            if (processingResult.failed())
-            {
-                Error processingError = processingResult.getError();
-                Error::fillUserMessage(processingError);
-                LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
-                AlertWindow::showMessageBoxAsync(
-                    AlertWindow::WarningIcon,
-                    "Processing Error",
-                    "An error occurred while processing the audio file: \n"
-                        + processingError.userMessage);
-                // cb: I commented this out, and it doesn't seem to change anything
-                // it was also causing a crash. If we need it, it needs to run on
-                // the message thread using MessageManager::callAsync
-                // resetProcessingButtons();
-                return;
-            }
-            // load the audio file again
-            processBroadcaster.sendChangeMessage();
+        // Directly add the job to the thread pool
+        jobProcessorThread.addJob(
+            new CustomThreadPoolJob(
+                [this](String processID) { // &jobsFinished, totalJobs
+                    // Individual job code for each iteration
+                    // copy the audio file, with the same filename except for an added _harp to the stem
+                    OpResult processingResult =
+                        model->process(mediaDisplay->getTempFilePath().getLocalFile());
+                    processMutex.lock();
+                    if (processID != currentProcessID)
+                    {
+                        DBG("ProcessID " + processID + " not found");
+                        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+                        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
+                        processMutex.unlock();
+                        return;
+                    }
+                    if (processingResult.failed())
+                    {
+                        Error processingError = processingResult.getError();
+                        Error::fillUserMessage(processingError);
+                        LogAndDBG("Error in Processing:\n"
+                                  + processingError.devMessage.toStdString());
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
+                            "Processing Error",
+                            "An error occurred while processing the audio file: \n"
+                                + processingError.userMessage);
+                        // cb: I commented this out, and it doesn't seem to change anything
+                        // it was also causing a crash. If we need it, it needs to run on
+                        // the message thread using MessageManager::callAsync
+                        // hy: Now this line works.
+                        // resetProcessingButtons();
+                        // cb: Needs to be in the message thread or else it crashes
+                        // It's used when the processing fails to reset the process/cancel
+                        // button back to the process mode.
+                        MessageManager::callAsync([this] { resetProcessingButtons(); });
+                        processMutex.unlock();
+                        return;
+                    }
+                    // load the audio file again
+                    DBG("ProcessID " + processID + " succeed");
+                    currentProcessID = "";
+                    model->setStatus(ModelStatus::FINISHED);
+                    processBroadcaster.sendChangeMessage();
+                    processMutex.unlock();
 
-        }));
-
-        // Now the customJobs are ready to be added to be run in the threadPool
-        jobProcessorThread.signalTask();
+                },
+                processID),
+            true);
+        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
     void initializeMediaDisplay(int mediaType = 0)
@@ -1142,8 +1154,9 @@ public:
 
         mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
         mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-        mediaDisplayHandler->onMouseMove = [this]()
-        { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
+        mediaDisplayHandler->onMouseMove = [this]() {
+            setInstructions(mediaDisplay->getMediaHandlerInstructions());
+        };
         mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
         mediaDisplayHandler->attach();
     }
@@ -1213,8 +1226,7 @@ public:
 
         openFileBrowser->launchAsync(FileBrowserComponent::openMode
                                          | FileBrowserComponent::canSelectFiles,
-                                     [this](const FileChooser& browser)
-                                     {
+                                     [this](const FileChooser& browser) {
                                          File chosenFile = browser.getResult();
                                          if (chosenFile != File {})
                                          {
@@ -1236,93 +1248,79 @@ public:
         menuBar->setBounds(
             area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
+
         auto margin = 5; // Adjusted margin value for top and bottom spacing
-        auto docViewHeight = 1;
-        auto mainArea = area.removeFromTop(area.getHeight() - docViewHeight);
-        // auto documentViewArea = area; // what remains is the 15% area for documentView
-        // Row 1: Model Path TextBox and Load Model Button
-        auto row1 = mainArea.removeFromTop(30); // adjust height as needed
-        modelPathComboBox.setBounds(
-            row1.removeFromLeft(static_cast<int>(row1.getWidth() * 0.8f)).reduced(margin));
-        //modelPathTextBox.setBounds(row1.removeFromLeft(row1.getWidth() * 0.8f).reduced(margin));
-        loadModelButton.setBounds(row1.reduced(margin));
-        // Row 2: Name and Author Labels
-        auto row2a = mainArea.removeFromTop(35); // adjust height as needed
-        nameLabel.setBounds(row2a.removeFromLeft(row2a.getWidth() / 2).reduced(margin));
-        nameLabel.setFont(Font(20.0f, Font::bold));
-        // nameLabel.setColour(Label::textColourId, mHARPLookAndFeel.textHeaderColor);
 
-        auto row2b = mainArea.removeFromTop(20);
-        authorLabel.setBounds(row2b.reduced(margin));
-        authorLabel.setFont(Font(10.0f));
+        // Create a FlexBox container
+        juce::FlexBox flexBox;
+        flexBox.flexDirection = juce::FlexBox::Direction::column;
+        flexBox.alignContent = juce::FlexBox::AlignContent::stretch;
+        flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
-        auto row2c = mainArea.removeFromTop(30);
-        audioOrMidiLabel.setBounds(row2c.reduced(margin));
-        audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
-        audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
+        // Row 1: Model Path ComboBox and Load Model Button
+        juce::FlexBox row1;
+        row1.flexDirection = juce::FlexBox::Direction::row;
+        row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
+        row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.4));
 
-        // Row 3: Description Label
+        // Row 2: ModelName / AuthorName Labels
+        juce::FlexBox row2;
+        row2.flexDirection = juce::FlexBox::Direction::row;
+        row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
+        row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
+        // audioOrMidiLabel.setFont(Font(10.0f, Font::bold));
+        // audioOrMidiLabel.setColour(Label::textColourId, Colours::bisque);
+        flexBox.items.add(juce::FlexItem(row2).withFlex(0.5));
 
-        // A way to dynamically adjust the height of the description label
-        // doesn't work perfectly yet, but it's good for now.
+        flexBox.performLayout(area);
+
+        // Row 3: Description
         auto font = Font(15.0f);
         descriptionLabel.setFont(font);
         // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
+        auto maxLabelWidth = area.getWidth() - 2 * margin;
         auto numberOfLines =
             font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
         float textHeight =
             (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
+        flexBox.items.add(
+            juce::FlexItem(descriptionLabel).withHeight(textHeight).withMargin(margin));
 
-        if (textHeight < 80)
-        {
-            textHeight = 80;
-        }
-        auto row3 = mainArea.removeFromTop((int) textHeight).reduced(margin);
-        descriptionLabel.setBounds(row3);
+        // Row 4: Control Area Widget
+        flexBox.items.add(juce::FlexItem(ctrlComponent).withFlex(1.3).withMargin(2 * margin));
 
-        // Row 4: Space URL Hyperlink
-        auto row4 = mainArea.removeFromTop(22); // adjust height as needed
-        spaceUrlButton.setBounds(row4.reduced(margin).removeFromLeft(row4.getWidth() / 2));
-        spaceUrlButton.setFont(Font(11.0f), false, Justification::centredLeft);
+        // Row 6: Media Display
+        flexBox.items.add(juce::FlexItem(*mediaDisplay).withFlex(3).withMargin(margin));
 
-        // Row 5: CtrlComponent (flexible height)
-        auto row5 = mainArea.removeFromTop(195); // the remaining area is for row 4
-        ctrlComponent.setBounds(row5.reduced(margin));
+        // Row 5: Process Cancel Button
+        // Row for Process Cancel Button
+        juce::FlexBox rowProcessCancelButton;
+        rowProcessCancelButton.flexDirection = juce::FlexBox::Direction::row;
+        rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
+        rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
+        rowProcessCancelButton.items.add(
+            juce::FlexItem(processCancelButton).withWidth(area.getWidth() / 4).withMargin(margin));
+        rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
+        flexBox.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.5));
 
-        // An empty space of 20px between the ctrl component and the process button
-        mainArea.removeFromTop(10);
+        // Row 7: Play/Stop Button, Open File Button, and Save File Button
+        juce::FlexBox row7;
+        row7.flexDirection = juce::FlexBox::Direction::row;
+        row7.items.add(juce::FlexItem(playStopButton).withFlex(1).withMargin(margin));
+        row7.items.add(juce::FlexItem(chooseFileButton).withFlex(1).withMargin(margin));
+        row7.items.add(juce::FlexItem(saveFileButton).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row7).withFlex(0.4));
 
-        // Row 6: Process Button (taken out in advance to preserve its height)
-        auto row6Height = 20; // adjust height as needed
-        auto row6 = mainArea.removeFromTop(row6Height);
+        // Row 8: Instructions Area and Status Area
+        juce::FlexBox row8;
+        row8.flexDirection = juce::FlexBox::Direction::row;
+        row8.items.add(juce::FlexItem(instructionsArea).withFlex(1).withMargin(margin));
+        row8.items.add(juce::FlexItem(statusArea).withFlex(1).withMargin(margin));
+        flexBox.items.add(juce::FlexItem(row8).withFlex(0.6));
 
-        // Assign bounds to processButton
-        processCancelButton.setBounds(
-            row6.withSizeKeepingCentre(100, 20)); // centering the button in the row
-        // place the status label to the left of the process button (justified left)
-        // statusLabel.setBounds(processCancelButton.getBounds().translated(-200, 0));
-
-        // An empty space of 30px between the process button and the thumbnail area
-        mainArea.removeFromTop(30);
-
-        // Row 7: thumbnail area
-        auto row7 = mainArea.removeFromTop(150).reduced(margin / 2); // adjust height as needed
-        mediaDisplay->setBounds(row7);
-
-        // Row 8: Buttons for Play/Stop and Open File
-        auto row8 = mainArea.removeFromTop(50); // adjust height as needed
-        playStopButton.setBounds(row8.removeFromLeft(row8.getWidth() / 3).reduced(margin));
-        chooseFileButton.setBounds(row8.removeFromLeft(row8.getWidth() / 2).reduced(margin));
-        saveFileButton.setBounds(row8.reduced(margin));
-
-        // Status area
-        auto row9 = mainArea.removeFromBottom(80);
-        // Split row9 to two columns
-        auto row9a = row9.removeFromLeft(row9.getWidth() / 2);
-        auto row9b = row9;
-        instructionsArea.setBounds(row9a.reduced(margin));
-        statusArea.setBounds(row9b.reduced(margin));
+        // Apply the FlexBox layout to the main area
+        flexBox.performLayout(area);
     }
 
     void resetUI()
@@ -1335,13 +1333,20 @@ public:
 
     void setModelCard(const ModelCard& card)
     {
-        // Set the text for the labels
-        nameLabel.setText(String(card.name), dontSendNotification);
+        modelAuthorLabel.setModelText(String(card.name));
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
-        card.author.empty()
-            ? authorLabel.setText("", dontSendNotification)
-            : authorLabel.setText("by " + String(card.author), dontSendNotification);
+        card.author.empty() ? modelAuthorLabel.setAuthorText("")
+                            : modelAuthorLabel.setAuthorText("by " + String(card.author));
+        modelAuthorLabel.resized();
+
+        // // Set the text for the labels
+        // nameLabel.setText(String(card.name), dontSendNotification);
+        // descriptionLabel.setText(String(card.description), dontSendNotification);
+        // // set the author label text to "by {author}" only if {author} isn't empty
+        // card.author.empty()
+        //     ? authorLabel.setText("", dontSendNotification)
+        //     : authorLabel.setText("by " + String(card.author), dontSendNotification);
         // It is assumed we only support wav2wav or midi2midi models for now
         if (card.midi_in && card.midi_out && ! card.author.empty())
         {
@@ -1393,6 +1398,7 @@ private:
     TextButton saveFileButton { "Save File" };
     HoverHandler saveFileButtonHandler { saveFileButton };
 
+    ModelAuthorLabel modelAuthorLabel;
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
     // 2. loadModelButton doesn't need to be a MultiButton
@@ -1400,6 +1406,9 @@ private:
     MultiButton loadModelButton;
     MultiButton processCancelButton;
     MultiButton playStopButton;
+
+    String currentProcessID;
+    std::mutex processMutex;
     MultiButton::Mode loadButtonInfo { "Load",
                                        [this] { loadModelCallback(); },
                                        getUIColourIfAvailable(
@@ -1459,8 +1468,9 @@ private:
     ThreadPool threadPool { 1 };
     int jobsFinished;
     int totalJobs;
-    JobProcessorThread jobProcessorThread;
-    std::vector<CustomThreadPoolJob*> customJobs;
+    // JobProcessorThread jobProcessorThread;
+    ThreadPool jobProcessorThread { 10 };
+    std::deque<CustomThreadPoolJob*> customJobs;
 
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
@@ -1579,25 +1589,44 @@ private:
             ctrlComponent.populateGui();
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-                
+
             {
-                spaceUrlButton.setButtonText("open localhost in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                // spaceUrlButton.setButtonText("open localhost in browser");
+                // spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                modelAuthorLabel.setURL(URL(spaceInfo.gradio));
             }
             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
             {
-                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
-                                             + spaceInfo.modelName + " in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+                // spaceUrlButton.setButtonText("open " + spaceInfo.userName + "/"
+                //                              + spaceInfo.modelName + " in browser");
+                // spaceUrlButton.setURL(URL(spaceInfo.huggingface));
+                modelAuthorLabel.setURL(URL(spaceInfo.huggingface));
             }
             else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
             {
-                spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
-                                             + spaceInfo.modelName + " in browser");
-                spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                // spaceUrlButton.setButtonText("open " + spaceInfo.userName + "-"
+                //                              + spaceInfo.modelName + " in browser");
+                // spaceUrlButton.setURL(URL(spaceInfo.gradio));
+                modelAuthorLabel.setURL(URL(spaceInfo.gradio));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
-            addAndMakeVisible(spaceUrlButton);
+            // addAndMakeVisible(spaceUrlButton);
+            addAndMakeVisible(modelAuthorLabel);
+            // modelAuthorLabelHandler.onMouseEnter = [this]()
+            // {
+            //     setInstructions("Click to visit "
+            //                     + model->getGradioClient().getSpaceInfo().getModelSlashUser()
+            //                     + "\nin your browser");
+            // };
+            // modelAuthorLabelHandler.onMouseExit = [this]() { clearInstructions(); };
+            // modelAuthorLabelHandler.attach();
+            modelAuthorLabel.getModelLabel().onHover = [this] { 
+                setInstructions("Click to view the model's page");
+            };
+
+            modelAuthorLabel.getModelLabel().onExit = [this] {
+                clearInstructions();
+            };
         }
 
         // now, we can enable the buttons

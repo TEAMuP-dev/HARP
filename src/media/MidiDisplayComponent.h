@@ -13,6 +13,7 @@ public:
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
 
+    void repositionOverheadPanel() override;
     void repositionContent() override;
     void repositionScrollBar() override;
 
@@ -31,8 +32,6 @@ public:
     float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
 
     void updateVisibleRange(Range<double> newRange) override;
-
-    void addLabels(LabelList& labels) override;
 
 private:
     void resetDisplay() override;
