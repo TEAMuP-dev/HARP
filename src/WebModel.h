@@ -521,7 +521,8 @@ public:
                           + " object, that we don't yet support in HARP.");
             }
         }
-        status2 = ModelStatus::FINISHED;
+        // Finished status will be set by the MainComponent.h
+        // status2 = ModelStatus::FINISHED;
         return result;
     }
 

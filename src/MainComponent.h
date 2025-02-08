@@ -32,25 +32,6 @@
 #include "media/MidiDisplayComponent.h"
 using namespace juce;
 
-String genID()
-{
-    int len = 16;
-    static const char alphanum[] = "0123456789"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "abcdefghijklmnopqrstuvwxyz";
-    char tmp_s[len + 1];
-
-    for (int i = 0; i < len; ++i)
-    {
-        tmp_s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
-    tmp_s[len] = '\0';
-
-    const char* ctmp = (const char*) tmp_s;
-
-    return String(ctmp);
-}
-
 // this only calls the callback ONCE
 class TimedCallback : public Timer
 {
@@ -892,16 +873,15 @@ public:
             "hugggof/vampnet-opera",
             "hugggof/vampnet-machines",
             "hugggof/vampnet-birds",
-            // "descript/vampnet",
-            // "pharoAIsanders420/micro-musicgen-jungle",
             "hugggof/nesquik",
             // "hugggof/pitch_shifter",
             "hugggof/harmonic_percussive",
             // "xribene/pitch_shifter",
             "xribene/pitch_shifter_awake",
             "xribene/midi_pitch_shifter",
+            "xribene/pyharp_demucs",
             // "xribene/pitch_shifter_slow",
-            // "http://localhost:7860",
+            "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
@@ -1097,7 +1077,7 @@ public:
         LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
 
         // Get new processID
-        String processID = juce::Uuid().toString(); //genID();
+        String processID = juce::Uuid().toString();
         processMutex.lock();
         currentProcessID = processID;
         DBG("Set Process ID: " + processID);
@@ -1146,6 +1126,7 @@ public:
                     // load the audio file again
                     DBG("ProcessID " + processID + " succeed");
                     currentProcessID = "";
+                    model->setStatus(ModelStatus::FINISHED);
                     processBroadcaster.sendChangeMessage();
                     processMutex.unlock();
 
