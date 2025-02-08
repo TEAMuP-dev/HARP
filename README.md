@@ -35,7 +35,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
 HARP has been tested on the following operating systems:
 | OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
 | :-: | :-: | :-: | :-: | :-: |
-| Version(s) | 13.0, 13.4, 14.2.1 | 10.15 | 10, 11 | 22.04 |
+| Version(s) | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
 
 ## MacOS
 * Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
@@ -195,6 +195,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 2.1.0 | 0.2.1 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
 | 1.2.0 | 0.1.0 |
