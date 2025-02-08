@@ -464,6 +464,7 @@ public:
                         if (labelPyharp->getProperty("label").isString())
                         {
                             label->label = labelPyharp->getProperty("label").toString();
+                            DBG("label: " + label->label);
                         }
                     }
                     if (labelPyharp->hasProperty("duration"))

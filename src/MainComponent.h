@@ -1135,7 +1135,11 @@ public:
                         // it was also causing a crash. If we need it, it needs to run on
                         // the message thread using MessageManager::callAsync
                         // hy: Now this line works.
-                        resetProcessingButtons();
+                        // resetProcessingButtons();
+                        // cb: Needs to be in the message thread or else it crashes
+                        // It's used when the processing fails to reset the process/cancel
+                        // button back to the process mode.
+                        MessageManager::callAsync([this] { resetProcessingButtons(); });
                         processMutex.unlock();
                         return;
                     }
