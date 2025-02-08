@@ -22,6 +22,7 @@ class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
                               public FileDragAndDropTarget,
+                              public DragAndDropContainer,
                               private Timer,
                               private ScrollBar::Listener
 {

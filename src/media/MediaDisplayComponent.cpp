@@ -329,13 +329,19 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 {
     // TODO - warning or handling for additional files
 
+    // Avoid self-dragging
+    if (getTargetFilePath() == URL(File(files[0]))) {
+        DBG("Won't self drag");
+        return;
+    }
+
     droppedFilePath = URL(File(files[0]));
     sendChangeMessage();
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (e.eventComponent == getMediaComponent() && isFileLoaded() && ! isPlaying())
+    if (e.eventComponent == getMediaComponent() && ! isPlaying() && isMouseOver(true))
     {
         float x_ = (float) e.x;
 
@@ -346,15 +352,52 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
         x_ = jmin(timeToMediaX(visibleStop), x_);
 
         setPlaybackPosition(mediaXToTime(x_));
-        updateCursorPosition();
     }
+
+    if (!isMouseOver(true))
+    {
+        performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
+
+        if (! isPlaying())
+        {
+            setPlaybackPosition(0.0);
+        }
+    }
+
+    updateCursorPosition();
 }
 
 void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
-    if (e.eventComponent == getMediaComponent())
+    for (OverheadLabelComponent* label : overheadLabels)
+    {
+        if (label->isMouseOver()) {
+            //TODO
+        }
+    }
+
+    for (LabelOverlayComponent* label : labelOverlays)
+    {   
+        DBG("Checking label overlap");
+        if (label->isMouseOver()) {
+            String link = label->getLink();
+            DBG("Attempting to load link " << link);
+            if (link != "") {
+                URL link_url = URL(link);
+                if (!link_url.isWellFormed()) {
+                    DBG("Link appears malformed: " << link);
+                } else {
+                    DBG("Opening link " << link);
+                    link_url.launchInDefaultBrowser();
+                    return;
+                }
+            }
+        }
+    }
+
+    if (e.eventComponent == getMediaComponent() && isMouseOver(true)) //Only start playback if we're still in this area
     {
         start();
         sendChangeMessage();
@@ -671,7 +714,7 @@ int MediaDisplayComponent::correctToBounds(float x, float width) {
 void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor =
-        isFileLoaded() && (isPlaying() || getMediaComponent()->isMouseButtonDown(true));
+        isFileLoaded() && (isPlaying() || (getMediaComponent()->isMouseButtonDown(true) && isMouseOver(true)));
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
