@@ -1,5 +1,6 @@
 #include "GradioClient.h"
 #include "../errors.h"
+#include "../external/magic_enum.hpp"
 
 OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
                                               juce::String& responseKey,
@@ -297,6 +298,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
         return OpResult::fail(error);
     }
 
+
     // Parse the response
     juce::var parsedResponse = juce::JSON::parse(response);
     if (! parsedResponse.isObject())
@@ -319,6 +321,8 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
         error.devMessage = "event_id not found in the response from " + endpoint;
         return OpResult::fail(error);
     }
+    
+    DBG(eventID);
 
     return OpResult::ok();
 }
@@ -349,6 +353,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
                        .withNumRedirectsToFollow(5);
     //  .withHttpRequestCmd ("POST");
     std::unique_ptr<juce::InputStream> stream(getEndpoint.createInputStream(options));
+    DBG("Input stream created");
 
     if (stream == nullptr)
     {
@@ -358,9 +363,43 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
         return OpResult::fail(error);
     }
 
-    // Read the entire response from the stream
-    response = stream->readEntireStreamAsString();
+    // Stream the response
+    bool cancel_flag = false;
+    while (true) {
+      response = stream -> readNextLine();
+      
+      DBG(eventID);
+      DBG(response);
+      DBG(response.length());
+      
+      if (response.contains(enumToString(GradioEvents::complete))) {
+	response = stream -> readNextLine();
+	break;
+      }
+      else if (response.contains(enumToString(GradioEvents::error))) {
+	response = stream -> readNextLine();
+	error.code = statusCode;
+	error.devMessage = response;
+	return OpResult::fail(error);
+      }
 
+      // Canceled job detection for repeating 0-length lines
+      // Once we detect two empty lines in a row, we regard this job as fail/or canceled,
+      // and then break the loop
+      if (response.length() == 0) {
+	if (cancel_flag) {
+	  error.code = statusCode;
+	  error.devMessage == "Job Canceled";
+	  return OpResult::fail(error);
+	}
+	else {
+	  cancel_flag = true;
+	}
+      }
+      else {
+	cancel_flag = false;
+      }
+    }
     return OpResult::ok();
 }
 
