@@ -315,14 +315,15 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
         setPlaybackPosition(mediaXToTime(x_));
     }
-    else
-    {
-        setPlaybackPosition(0.0);
-    }
 
     if (!isMouseOver(true))
     {
         performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
+
+        if (! isPlaying())
+        {
+            setPlaybackPosition(0.0);
+        }
     }
 
     updateCursorPosition();
