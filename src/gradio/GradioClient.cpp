@@ -363,8 +363,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     }
 
     // Stream the response
-    bool cancel_flag = false;
-    while (true)
+    while (!stream->isExhausted())
     {
         response = stream->readNextLine();
 
@@ -383,27 +382,6 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
             error.code = statusCode;
             error.devMessage = response;
             return OpResult::fail(error);
-        }
-
-        // Canceled job detection for repeating 0-length lines
-        // Once we detect two empty lines in a row, we regard this job as fail/or canceled,
-        // and then break the loop
-        if (response.length() == 0)
-        {
-            if (cancel_flag)
-            {
-                error.code = statusCode;
-                error.devMessage == "Job Canceled";
-                return OpResult::fail(error);
-            }
-            else
-            {
-                cancel_flag = true;
-            }
-        }
-        else
-        {
-            cancel_flag = false;
         }
     }
     return OpResult::ok();

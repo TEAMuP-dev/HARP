@@ -275,7 +275,7 @@ public:
         }
 
         juce::String response;
-        result = gradioClient.getResponseFromEventID(endpoint, eventId, response, 20 * 1000);
+        result = gradioClient.getResponseFromEventID(endpoint, eventId, response, -1);
         if (result.failed())
         {
             error.devMessage = "Failed to make get request";
