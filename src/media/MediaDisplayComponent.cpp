@@ -341,37 +341,40 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (e.eventComponent == getMediaComponent() && ! isPlaying() && isMouseOver(true))
+    if (isFileLoaded())
     {
-        float x_ = (float) e.x;
-
-        double visibleStart = visibleRange.getStart();
-        double visibleStop = visibleStart + visibleRange.getLength();
-
-        x_ = jmax(timeToMediaX(visibleStart), x_);
-        x_ = jmin(timeToMediaX(visibleStop), x_);
-
-        setPlaybackPosition(mediaXToTime(x_));
-    }
-
-    if (!isMouseOver(true))
-    {
-        performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
-
-        if (! isPlaying())
+        if (e.eventComponent == getMediaComponent() && ! isPlaying() && isMouseOver(true))
         {
-            setPlaybackPosition(0.0);
-        }
-    }
+            float x_ = (float) e.x;
 
-    updateCursorPosition();
+            double visibleStart = visibleRange.getStart();
+            double visibleStop = visibleStart + visibleRange.getLength();
+
+            x_ = jmax(timeToMediaX(visibleStart), x_);
+            x_ = jmin(timeToMediaX(visibleStop), x_);
+
+            setPlaybackPosition(mediaXToTime(x_));
+        }
+
+        if (!isMouseOver(true))
+        {
+            performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
+
+            if (! isPlaying())
+            {
+                setPlaybackPosition(0.0);
+            }
+        }
+
+        updateCursorPosition();
+    }
 }
 
 void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
-    if (e.eventComponent == getMediaComponent() && isMouseOver(true)) //Only start playback if we're still in this area
+    if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true)) //Only start playback if we're still in this area
     {
         start();
         sendChangeMessage();
