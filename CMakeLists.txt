@@ -109,7 +109,7 @@ target_compile_definitions(${PROJECT_NAME}
         APP_VERSION="${CURRENT_VERSION}"
         APP_COMPANY="TEAMuP"
         APP_NAME="HARP"
-        APP_COPYRIGHT="Copyright 2024 TEAMuP. All rights reserved."    
+        APP_COPYRIGHT="Copyright 2025 TEAMuP. All rights reserved."    
 )
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of

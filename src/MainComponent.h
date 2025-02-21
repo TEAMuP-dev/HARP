@@ -240,7 +240,7 @@ public:
 
         // hyperlink buttons
         auto* modelGlossaryButton = new HyperlinkButton(
-            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#available-models"));
+            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#models"));
         modelGlossaryButton->setSize(380, 24);
         modelGlossaryButton->setTopLeftPosition(10, 110);
         modelGlossaryButton->setJustificationType(Justification::centred);
@@ -865,23 +865,26 @@ public:
         std::vector<std::string> modelPaths = {
             "custom path...",
             "cwitkowitz/timbre-trap",
-            "npruyne/audio_similarity",
+            // "npruyne/audio_similarity",
             "hugggof/vampnet-music",
             "hugggof/vampnet-percussion",
             "hugggof/vampnet-n64",
             "hugggof/vampnet-choir",
             "hugggof/vampnet-opera",
             "hugggof/vampnet-machines",
-            "hugggof/vampnet-birds",
-            "hugggof/nesquik",
+            // "hugggof/vampnet-birds",
+            // "hugggof/nesquik",
             // "hugggof/pitch_shifter",
+            "lllindsey0615/pyharp_demucs",
+            "lllindsey0615/pyharp_AMT",
             "hugggof/harmonic_percussive",
             // "xribene/pitch_shifter",
-            "xribene/pitch_shifter_awake",
+            "xribene/pitch_shifter",
             "xribene/midi_pitch_shifter",
-            "xribene/pyharp_demucs",
+            // "xribene/pyharp_demucs",
+            "xribene/HARP-UI-Test"
             // "xribene/pitch_shifter_slow",
-            "http://localhost:7860",
+            // "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
