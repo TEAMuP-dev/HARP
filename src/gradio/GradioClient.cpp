@@ -1,5 +1,6 @@
 #include "GradioClient.h"
 #include "../errors.h"
+#include "../external/magic_enum.hpp"
 
 OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
                                               juce::String& responseKey,
@@ -320,6 +321,8 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
         return OpResult::fail(error);
     }
 
+    DBG(eventID);
+
     return OpResult::ok();
 }
 
@@ -349,6 +352,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
                        .withNumRedirectsToFollow(5);
     //  .withHttpRequestCmd ("POST");
     std::unique_ptr<juce::InputStream> stream(getEndpoint.createInputStream(options));
+    DBG("Input stream created");
 
     if (stream == nullptr)
     {
@@ -358,9 +362,28 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
         return OpResult::fail(error);
     }
 
-    // Read the entire response from the stream
-    response = stream->readEntireStreamAsString();
+    // Stream the response
+    while (!stream->isExhausted())
+    {
+        response = stream->readNextLine();
 
+        DBG(eventID);
+        DBG(response);
+        DBG(response.length());
+
+        if (response.contains(enumToString(GradioEvents::complete)))
+        {
+            response = stream->readNextLine();
+            break;
+        }
+        else if (response.contains(enumToString(GradioEvents::error)))
+        {
+            response = stream->readNextLine();
+            error.code = statusCode;
+            error.devMessage = response;
+            return OpResult::fail(error);
+        }
+    }
     return OpResult::ok();
 }
 

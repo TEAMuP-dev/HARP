@@ -16,6 +16,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Standalone](#standalone)**
     * **[REAPER](#reaper)**
     * **[Logic Pro X](#logic-pro-x)**
+    * **[Acoustica Mixcraft](#acoustica-mixcraft)**
     <!--* **[Ableton Live](#ableton-live)**-->
 * **[Usage](#usage)**
     * **[Warning!](#warning)**
@@ -35,7 +36,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
 HARP has been tested on the following operating systems:
 | OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
 | :-: | :-: | :-: | :-: | :-: |
-| Version(s) | 13.0, 13.4, 14.2.1 | 10.15 | 10, 11 | 22.04 |
+| Version(s) | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
 
 ## MacOS
 * Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
@@ -148,17 +149,29 @@ If you would like to process only an excerpt of a track, first trim the exceprt 
 
 While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
 
-* Pitch Shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
+* Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-* Harmonic/Percussive Source Separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+* VampNet Music Audio Generation Suite:
+  * [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)
+  * [hugggof/vampnet-percussion](https://huggingface.co/spaces/hugggof/vampnet-percussion)
+  * [hugggof/vampnet-n64](https://huggingface.co/spaces/hugggof/vampnet-n64)
+  * [hugggof/vampnet-choir](https://huggingface.co/spaces/hugggof/vampnet-choir)
+  * [hugggof/vampnet-opera](https://huggingface.co/spaces/hugggof/vampnet-opera)
+  * [hugggof/vampnet-machines](https://huggingface.co/spaces/hugggof/vampnet-machines)
 
-* Music Audio Generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-
-* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)
+<!--* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)-->
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
-* Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+* Stem-Wise Source Separation: [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+
+* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT)
+
+* Harmonic/Percussive Source Separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+
+* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)
+
+* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)
 
 ## Workflow
 * After opening HARP as an external sample editor or standalone application, the following window will appear.
@@ -195,6 +208,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 2.1.0 | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
 | 1.2.0 | 0.1.0 |

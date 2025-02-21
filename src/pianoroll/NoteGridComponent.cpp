@@ -44,6 +44,7 @@ void NoteGridComponent::resized()
 void NoteGridComponent::insertNote(MidiNoteComponent n)
 {
     MidiNoteComponent* note = new MidiNoteComponent(n);
+    note->setInterceptsMouseClicks(false, false);
     midiNotes.add(note);
 
     addAndMakeVisible(note);
