@@ -30,6 +30,9 @@
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
+
+#include "windows/AboutWindow.h"
+
 using namespace juce;
 
 // this only calls the callback ONCE
@@ -227,56 +230,10 @@ public:
 
     void showAboutDialog()
     {
-        // Maybe create a new class for the about dialog
-        auto* aboutComponent = new Component();
-        aboutComponent->setSize(400, 300);
+        auto aboutComponent = std::make_unique<AboutWindow>();
 
-        // label for the about text
-        auto* aboutText = new Label();
-        aboutText->setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
-                           dontSendNotification);
-        aboutText->setJustificationType(Justification::centred);
-        aboutText->setSize(380, 100);
-
-        // hyperlink buttons
-        auto* modelGlossaryButton = new HyperlinkButton(
-            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#models"));
-        modelGlossaryButton->setSize(380, 24);
-        modelGlossaryButton->setTopLeftPosition(10, 110);
-        modelGlossaryButton->setJustificationType(Justification::centred);
-        modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* visitWebpageButton =
-            new HyperlinkButton("Visit HARP webpage", URL("https://harp-plugin.netlify.app/"));
-        visitWebpageButton->setSize(380, 24);
-        visitWebpageButton->setTopLeftPosition(10, 140);
-        visitWebpageButton->setJustificationType(Justification::centred);
-        visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* reportIssueButton = new HyperlinkButton(
-            "Report an issue", URL("https://github.com/TEAMuP-dev/harp/issues"));
-        reportIssueButton->setSize(380, 24);
-        reportIssueButton->setTopLeftPosition(10, 170);
-        reportIssueButton->setJustificationType(Justification::centred);
-        reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        // label for the copyright
-        auto* copyrightLabel = new Label();
-        copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
-        copyrightLabel->setJustificationType(Justification::centred);
-        copyrightLabel->setSize(380, 100);
-        copyrightLabel->setTopLeftPosition(10, 200);
-
-        // Add components to the main component
-        aboutComponent->addAndMakeVisible(aboutText);
-        aboutComponent->addAndMakeVisible(modelGlossaryButton);
-        aboutComponent->addAndMakeVisible(visitWebpageButton);
-        aboutComponent->addAndMakeVisible(reportIssueButton);
-        aboutComponent->addAndMakeVisible(copyrightLabel);
-
-        // The dialog window with the custom component as its content
         DialogWindow::LaunchOptions dialog;
-        dialog.content.setOwned(aboutComponent);
+        dialog.content.setOwned(aboutComponent.release());
         dialog.dialogTitle = "About " + String(APP_NAME);
         dialog.dialogBackgroundColour = Colours::grey;
         dialog.escapeKeyTriggersCloseButton = true;

@@ -358,7 +358,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
         if (!isMouseOver(true))
         {
-            performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true);
+            performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true, this);
 
             if (! isPlaying())
             {
