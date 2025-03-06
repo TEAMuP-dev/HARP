@@ -931,7 +931,7 @@ public:
                         MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
                     }
                 };
-                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
+                new CustomPathDialog(loadCallback, cancelCallback);
             }
             else
             {
