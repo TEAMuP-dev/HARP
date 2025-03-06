@@ -104,6 +104,8 @@ public:
         // Set size of the content component and center
         centreWithSize(400, 150);
         setVisible(true);
+
+        DialogWindow::enterModalState(true, nullptr, true);
     }
 
     void loadButtonPressed(const String& path)
