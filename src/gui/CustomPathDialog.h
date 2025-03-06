@@ -105,6 +105,7 @@ public:
         centreWithSize(400, 150);
         setVisible(true);
 
+        // Ensure user cannot click off this window
         DialogWindow::enterModalState(true, nullptr, true);
     }
 
