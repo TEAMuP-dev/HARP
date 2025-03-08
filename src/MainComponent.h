@@ -951,17 +951,16 @@ public:
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+
         OpResult cancelResult = model->cancel();
+
         if (cancelResult.failed())
         {
-            // This "if" block hasn't been tested
-
             LogAndDBG(cancelResult.getError().devMessage.toStdString());
             AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                              "Cancel Error",
                                              "An error occurred while cancelling the processing: \n"
                                                  + cancelResult.getError().devMessage);
-            resetProcessingButtons();
             return;
         }
         // Update current process to empty
@@ -972,9 +971,8 @@ public:
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
-        // Should we restore back to process???
-        processCancelButton.setMode(processButtonInfo.label);
-        processCancelButton.setEnabled(true);
+
+        resetProcessingButtons();
     }
 
     void processCallback()
