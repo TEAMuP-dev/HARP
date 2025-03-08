@@ -33,8 +33,12 @@ public:
 
         Colour red(252, 97, 92);
 
-        g.setColour(red);
-        g.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
+        if (getWidth() > 2)
+        {
+            g.setColour(red);
+
+            g.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
+        }
 
         if (getWidth() > 10)
         {

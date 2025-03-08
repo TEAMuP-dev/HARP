@@ -84,6 +84,8 @@ target_sources(${PROJECT_NAME}
         src/pianoroll/KeyboardComponent.cpp
         src/pianoroll/NoteGridComponent.cpp
         src/pianoroll/PianoRollComponent.cpp
+
+        src/windows/AboutWindow.h
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
