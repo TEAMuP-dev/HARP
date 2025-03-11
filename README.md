@@ -315,11 +315,21 @@ After running `package.sh`, you should have a signed and notarized dmg file in t
 TODO
 -->
 
-## Citing
-If you use HARP in your research, please cite our [NeurIPS paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
+## Citations
+[ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
+```
+@article{benetatos2025harp,
+    title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
+    author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
+    year      = 2025
+    journal   = {ISMIR Late Breaking and Demo Papers}
+}
+```
+
+[NeurIPS 2023 Paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
 ```
 @inproceedings{garcia2023harp,
-    title     = {{HARP}: Bringing Deep Learning to the DAW with Hosted, Asynchronous, Remote Processing},
+    title     = {{HARP}: Bringing Deep Learning to the {DAW} with Hosted, Asynchronous, Remote Processing},
     author    = {Garcia, Hugo Flores and O’Reilly, Patrick and Aguilar, Aldo and Pardo, Bryan and Benetatos, Christodoulos and Duan, Zhiyao},
     year      = 2023,
     booktitle = {NeurIPS Workshop on Machine Learning for Creativity and Design}
