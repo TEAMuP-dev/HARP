@@ -888,7 +888,7 @@ public:
                         MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
                     }
                 };
-                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
+                new CustomPathDialog(loadCallback, cancelCallback);
             }
             else
             {
@@ -979,28 +979,35 @@ public:
     {
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
-        // check if the audio file is loaded
-        if (! mediaDisplay->isFileLoaded())
-        {
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Error",
-                "Audio file is not loaded. Please load an audio file first.");
-            return;
-        }
-
-        processCancelButton.setEnabled(true);
-        processCancelButton.setMode(cancelButtonInfo.label);
-
-        saveEnabled = false;
-        isProcessing = true;
-
         if (model == nullptr)
         {
             AlertWindow("Error",
                         "Model is not loaded. Please load a model first.",
                         AlertWindow::WarningIcon);
-            isProcessing = false;
+            return;
+        }
+
+        // check if the file is loaded
+        if (! mediaDisplay->isFileLoaded())
+        {
+            String fileTypeString;
+
+            if (model->card().midi_in)
+            {
+                fileTypeString = "midi";
+            }
+            else
+            {
+                fileTypeString = "audio";
+            }
+
+            AlertWindow::showMessageBoxAsync(
+                AlertWindow::WarningIcon,
+                "Error",
+                fileTypeString.substring(0, 1).toUpperCase()
+                + fileTypeString.substring(1).toLowerCase()
+                + " file is not loaded. Please load "
+                + fileTypeString + " file first.");
             return;
         }
 
@@ -1025,9 +1032,14 @@ public:
                 "Processing Error",
                 "Model and file type mismatch. Please use an appropriate model or file.");
             // processBroadcaster.sendChangeMessage();
-            resetProcessingButtons();
             return;
         }
+
+        processCancelButton.setEnabled(true);
+        processCancelButton.setMode(cancelButtonInfo.label);
+
+        saveEnabled = false;
+        isProcessing = true;
 
         mediaDisplay->addNewTempFile();
 

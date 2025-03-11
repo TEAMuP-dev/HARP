@@ -66,15 +66,18 @@ juce::MouseCursor OutputLabelComponent::getMouseCursor()
 
 void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
 {
-    String lnk = getLink();
+    if (isMouseOver(true))
+    {
+        String lnk = getLink();
 
-    if (lnk.isNotEmpty()) {
-        URL url = URL(lnk);
+        if (lnk.isNotEmpty()) {
+            URL url = URL(lnk);
 
-        if (url.isWellFormed()) {
-            url.launchInDefaultBrowser();
-        } else {
-            DBG("OutputLabelComponent::mouseUp: label link \'" << lnk << "\' appears malformed.");
+            if (url.isWellFormed()) {
+                url.launchInDefaultBrowser();
+            } else {
+                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk << "\' appears malformed.");
+            }
         }
     }
 }

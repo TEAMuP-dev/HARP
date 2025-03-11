@@ -343,7 +343,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
     {
-        if (e.eventComponent == getMediaComponent() && ! isPlaying() && isMouseOver(true))
+        if (!isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = (float) e.x;
 
@@ -356,7 +356,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             setPlaybackPosition(mediaXToTime(x_));
         }
 
-        if (!isMouseOver(true))
+        if (!getLocalBounds().contains(getMouseXYRelative()))
         {
             performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true, this);
 
@@ -691,7 +691,7 @@ int MediaDisplayComponent::correctToBounds(float x, float width) {
 void MediaDisplayComponent::updateCursorPosition()
 {
     bool displayCursor =
-        isFileLoaded() && (isPlaying() || (getMediaComponent()->isMouseButtonDown(true) && isMouseOver(true)));
+        isFileLoaded() && (isPlaying() || (getMediaComponent()->isMouseButtonDown(false) && getLocalBounds().contains(getMouseXYRelative())));
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
