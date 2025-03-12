@@ -358,7 +358,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
         if (!getLocalBounds().contains(getMouseXYRelative()))
         {
-            performExternalDragDropOfFiles(StringArray(getTargetFilePath().getLocalFile().getFullPathName()), true, this);
+            performExternalDragDropOfFiles(StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
 
             if (! isPlaying())
             {
