@@ -28,7 +28,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Building Harp](#building-harp)**
     * **[Debugging](#debugging)**
     * **[Distribution](#distribution)**
-* **[Citing](#citing)**
+* **[Citations](#citations)**
 
 
 
