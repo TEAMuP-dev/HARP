@@ -151,13 +151,12 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
 
 * Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-* VampNet Music Audio Generation Suite:
-  * [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)
-  * [hugggof/vampnet-percussion](https://huggingface.co/spaces/hugggof/vampnet-percussion)
+* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)
+  <!-- * [hugggof/vampnet-percussion](https://huggingface.co/spaces/hugggof/vampnet-percussion)
   * [hugggof/vampnet-n64](https://huggingface.co/spaces/hugggof/vampnet-n64)
   * [hugggof/vampnet-choir](https://huggingface.co/spaces/hugggof/vampnet-choir)
   * [hugggof/vampnet-opera](https://huggingface.co/spaces/hugggof/vampnet-opera)
-  * [hugggof/vampnet-machines](https://huggingface.co/spaces/hugggof/vampnet-machines)
+  * [hugggof/vampnet-machines](https://huggingface.co/spaces/hugggof/vampnet-machines) -->
 
 <!--* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)-->
 
@@ -167,7 +166,7 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
 
 * Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT)
 
-* Harmonic/Percussive Source Separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
 
 * Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)
 
@@ -208,7 +207,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
-| 2.1.0 | 0.2.0 |
+| 2.1.x | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
 | 1.2.0 | 0.1.0 |
