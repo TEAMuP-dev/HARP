@@ -163,7 +163,7 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
   * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
   * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive)
 
 <!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
 
