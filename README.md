@@ -157,7 +157,7 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
   * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
   * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
 
-* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT)
+* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
 
 * Pitch-Preserving Timbre-Removal:
   * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
