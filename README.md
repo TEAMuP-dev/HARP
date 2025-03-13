@@ -149,28 +149,25 @@ If you would like to process only an excerpt of a track, first trim the exceprt 
 
 While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
 
-* Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
-
-* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)
-  <!-- * [hugggof/vampnet-percussion](https://huggingface.co/spaces/hugggof/vampnet-percussion)
-  * [hugggof/vampnet-n64](https://huggingface.co/spaces/hugggof/vampnet-n64)
-  * [hugggof/vampnet-choir](https://huggingface.co/spaces/hugggof/vampnet-choir)
-  * [hugggof/vampnet-opera](https://huggingface.co/spaces/hugggof/vampnet-opera)
-  * [hugggof/vampnet-machines](https://huggingface.co/spaces/hugggof/vampnet-machines) -->
-
-<!--* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)-->
+* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music) (ZeroGPU)
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
-* Stem-Wise Source Separation: [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+* Stem-Wise Source Separation:
+  * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
+  * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
 
 * Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT)
 
+* Pitch-Preserving Timbre-Removal:
+  * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
+  * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+
 * Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
 
-* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)
+<!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
 
-* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)
+<!--* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)-->
 
 ## Workflow
 * After opening HARP as an external sample editor or standalone application, the following window will appear.
