@@ -30,6 +30,9 @@
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
+
+#include "windows/AboutWindow.h"
+
 using namespace juce;
 
 // this only calls the callback ONCE
@@ -227,56 +230,10 @@ public:
 
     void showAboutDialog()
     {
-        // Maybe create a new class for the about dialog
-        auto* aboutComponent = new Component();
-        aboutComponent->setSize(400, 300);
+        auto aboutComponent = std::make_unique<AboutWindow>();
 
-        // label for the about text
-        auto* aboutText = new Label();
-        aboutText->setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
-                           dontSendNotification);
-        aboutText->setJustificationType(Justification::centred);
-        aboutText->setSize(380, 100);
-
-        // hyperlink buttons
-        auto* modelGlossaryButton = new HyperlinkButton(
-            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#models"));
-        modelGlossaryButton->setSize(380, 24);
-        modelGlossaryButton->setTopLeftPosition(10, 110);
-        modelGlossaryButton->setJustificationType(Justification::centred);
-        modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* visitWebpageButton =
-            new HyperlinkButton("Visit HARP webpage", URL("https://harp-plugin.netlify.app/"));
-        visitWebpageButton->setSize(380, 24);
-        visitWebpageButton->setTopLeftPosition(10, 140);
-        visitWebpageButton->setJustificationType(Justification::centred);
-        visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* reportIssueButton = new HyperlinkButton(
-            "Report an issue", URL("https://github.com/TEAMuP-dev/harp/issues"));
-        reportIssueButton->setSize(380, 24);
-        reportIssueButton->setTopLeftPosition(10, 170);
-        reportIssueButton->setJustificationType(Justification::centred);
-        reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        // label for the copyright
-        auto* copyrightLabel = new Label();
-        copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
-        copyrightLabel->setJustificationType(Justification::centred);
-        copyrightLabel->setSize(380, 100);
-        copyrightLabel->setTopLeftPosition(10, 200);
-
-        // Add components to the main component
-        aboutComponent->addAndMakeVisible(aboutText);
-        aboutComponent->addAndMakeVisible(modelGlossaryButton);
-        aboutComponent->addAndMakeVisible(visitWebpageButton);
-        aboutComponent->addAndMakeVisible(reportIssueButton);
-        aboutComponent->addAndMakeVisible(copyrightLabel);
-
-        // The dialog window with the custom component as its content
         DialogWindow::LaunchOptions dialog;
-        dialog.content.setOwned(aboutComponent);
+        dialog.content.setOwned(aboutComponent.release());
         dialog.dialogTitle = "About " + String(APP_NAME);
         dialog.dialogBackgroundColour = Colours::grey;
         dialog.escapeKeyTriggersCloseButton = true;
@@ -864,25 +821,17 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
-            "cwitkowitz/timbre-trap",
-            // "npruyne/audio_similarity",
             "hugggof/vampnet-music",
-            "hugggof/vampnet-percussion",
-            "hugggof/vampnet-n64",
-            "hugggof/vampnet-choir",
-            "hugggof/vampnet-opera",
-            "hugggof/vampnet-machines",
-            // "hugggof/vampnet-birds",
-            // "hugggof/nesquik",
-            // "hugggof/pitch_shifter",
             "lllindsey0615/pyharp_demucs",
             "lllindsey0615/pyharp_AMT",
-            "hugggof/harmonic_percussive",
+            "npruyne/timbre-trap",
+            "xribene/harmonic_percussive",
+            "lllindsey0615/DEMUCS_GPU",
+            "cwitkowitz/timbre-trap",
+            // "npruyne/audio_similarity",
             // "xribene/pitch_shifter",
-            "xribene/pitch_shifter",
-            "xribene/midi_pitch_shifter",
-            // "xribene/pyharp_demucs",
-            "xribene/HARP-UI-Test"
+            // "xribene/midi_pitch_shifter",
+            // "xribene/HARP-UI-Test"
             // "xribene/pitch_shifter_slow",
             // "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
@@ -931,7 +880,7 @@ public:
                         MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
                     }
                 };
-                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
+                new CustomPathDialog(loadCallback, cancelCallback);
             }
             else
             {
@@ -994,17 +943,16 @@ public:
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+
         OpResult cancelResult = model->cancel();
+
         if (cancelResult.failed())
         {
-            // This "if" block hasn't been tested
-
             LogAndDBG(cancelResult.getError().devMessage.toStdString());
             AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                              "Cancel Error",
                                              "An error occurred while cancelling the processing: \n"
                                                  + cancelResult.getError().devMessage);
-            resetProcessingButtons();
             return;
         }
         // Update current process to empty
@@ -1015,37 +963,43 @@ public:
         // We already added a temp file, so we need to undo that
         mediaDisplay->iteratePreviousTempFile();
         mediaDisplay->clearFutureTempFiles();
-        // Should we restore back to process???
-        processCancelButton.setMode(processButtonInfo.label);
-        processCancelButton.setEnabled(true);
+
+        resetProcessingButtons();
     }
 
     void processCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked button listener activated");
 
-        // check if the audio file is loaded
-        if (! mediaDisplay->isFileLoaded())
-        {
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Error",
-                "Audio file is not loaded. Please load an audio file first.");
-            return;
-        }
-
-        processCancelButton.setEnabled(true);
-        processCancelButton.setMode(cancelButtonInfo.label);
-
-        saveEnabled = false;
-        isProcessing = true;
-
         if (model == nullptr)
         {
             AlertWindow("Error",
                         "Model is not loaded. Please load a model first.",
                         AlertWindow::WarningIcon);
-            isProcessing = false;
+            return;
+        }
+
+        // check if the file is loaded
+        if (! mediaDisplay->isFileLoaded())
+        {
+            String fileTypeString;
+
+            if (model->card().midi_in)
+            {
+                fileTypeString = "midi";
+            }
+            else
+            {
+                fileTypeString = "audio";
+            }
+
+            AlertWindow::showMessageBoxAsync(
+                AlertWindow::WarningIcon,
+                "Error",
+                fileTypeString.substring(0, 1).toUpperCase()
+                + fileTypeString.substring(1).toLowerCase()
+                + " file is not loaded. Please load "
+                + fileTypeString + " file first.");
             return;
         }
 
@@ -1070,9 +1024,14 @@ public:
                 "Processing Error",
                 "Model and file type mismatch. Please use an appropriate model or file.");
             // processBroadcaster.sendChangeMessage();
-            resetProcessingButtons();
             return;
         }
+
+        processCancelButton.setEnabled(true);
+        processCancelButton.setMode(cancelButtonInfo.label);
+
+        saveEnabled = false;
+        isProcessing = true;
 
         mediaDisplay->addNewTempFile();
 

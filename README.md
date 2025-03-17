@@ -28,7 +28,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Building Harp](#building-harp)**
     * **[Debugging](#debugging)**
     * **[Distribution](#distribution)**
-* **[Citing](#citing)**
+* **[Citations](#citations)**
 
 
 
@@ -149,29 +149,25 @@ If you would like to process only an excerpt of a track, first trim the exceprt 
 
 While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
 
-* Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
-
-* VampNet Music Audio Generation Suite:
-  * [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)
-  * [hugggof/vampnet-percussion](https://huggingface.co/spaces/hugggof/vampnet-percussion)
-  * [hugggof/vampnet-n64](https://huggingface.co/spaces/hugggof/vampnet-n64)
-  * [hugggof/vampnet-choir](https://huggingface.co/spaces/hugggof/vampnet-choir)
-  * [hugggof/vampnet-opera](https://huggingface.co/spaces/hugggof/vampnet-opera)
-  * [hugggof/vampnet-machines](https://huggingface.co/spaces/hugggof/vampnet-machines)
-
-<!--* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)-->
+* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music) (ZeroGPU)
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
-* Stem-Wise Source Separation: [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+* Stem-Wise Source Separation:
+  * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
+  * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
 
-* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT)
+* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
 
-* Harmonic/Percussive Source Separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
+* Pitch-Preserving Timbre-Removal:
+  * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
+  * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)
+* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive)
 
-* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)
+<!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
+
+<!--* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)-->
 
 ## Workflow
 * After opening HARP as an external sample editor or standalone application, the following window will appear.
@@ -208,7 +204,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
-| 2.1.0 | 0.2.0 |
+| 2.1.x | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
 | 1.2.0 | 0.1.0 |
@@ -315,11 +311,21 @@ After running `package.sh`, you should have a signed and notarized dmg file in t
 TODO
 -->
 
-## Citing
-If you use HARP in your research, please cite our [NeurIPS paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
+## Citations
+[ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
+```
+@article{benetatos2025harp,
+    title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
+    author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
+    year      = 2025
+    journal   = {ISMIR Late Breaking and Demo Papers}
+}
+```
+
+[NeurIPS 2023 Paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
 ```
 @inproceedings{garcia2023harp,
-    title     = {{HARP}: Bringing Deep Learning to the DAW with Hosted, Asynchronous, Remote Processing},
+    title     = {{HARP}: Bringing Deep Learning to the {DAW} with Hosted, Asynchronous, Remote Processing},
     author    = {Garcia, Hugo Flores and O’Reilly, Patrick and Aguilar, Aldo and Pardo, Bryan and Benetatos, Christodoulos and Duan, Zhiyao},
     year      = 2023,
     booktitle = {NeurIPS Workshop on Machine Learning for Creativity and Design}

@@ -37,7 +37,7 @@ void NoteGridComponent::resized()
 
         const float yPos = getHeight() - ((1 + n->getNoteNumber()) * keyHeight);
 
-        n->setBounds(xPos, yPos, width, keyHeight);
+        n->setBounds(xPos, yPos, jmax(3.0f, width), keyHeight);
     }
 }
 
