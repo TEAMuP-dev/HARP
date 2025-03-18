@@ -314,11 +314,11 @@ TODO
 ## Citations
 [ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
 ```
-@article{benetatos2025harp,
+@article{benetatos2024harp,
     title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
     author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
-    year      = 2025
-    journal   = {ISMIR Late Breaking and Demo Papers}
+    year      = 2024
+    journal   = {ISMIR Late Breaking Demo Papers}
 }
 ```
 
