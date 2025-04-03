@@ -18,12 +18,11 @@ inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiCo
     return fallback;
 }
 
-class CustomPathComponent : public juce::Component
+class CustomPathComponent : public Component
 {
 public:
-    CustomPathComponent(std::function<void(const juce::String&)> onLoadCallback,
+    CustomPathComponent(std::function<void(const String&)> onLoadCallback,
                         std::function<void()> onCancelCallback)
-        : m_onLoadCallback(onLoadCallback)
     {
         // Set up the TextEditor for path input
         addAndMakeVisible(customPathEditor);
@@ -38,11 +37,7 @@ public:
         loadButton.setEnabled(false); // Initially disabled
         loadButton.onClick = [this, onLoadCallback]()
         {
-            if (onLoadCallback)
-            {
-                onLoadCallback(customPathEditor.getText());
-                closeDialog();
-            }
+            onLoadCallback(customPathEditor.getText());
         };
 
         // Set up the Cancel button
@@ -50,22 +45,10 @@ public:
         cancelButton.setButtonText("Cancel");
         cancelButton.onClick = [this, onCancelCallback]()
         {
-            if (onCancelCallback)
-            {
-                onCancelCallback();
-            }
-            closeDialog();
+            onCancelCallback();
         };
 
         setSize(400, 150); // Set a fixed size for the component
-    }
-
-    void closeDialog()
-    {
-        if (auto* dw = findParentComponentOfClass<juce::DialogWindow>())
-        {
-            dw->closeButtonPressed(); // Close the dialog
-        }
     }
 
     void visibilityChanged() override
@@ -92,40 +75,72 @@ public:
     }
 
 private:
-    juce::TextEditor customPathEditor;
-    juce::TextButton loadButton, cancelButton;
-    std::function<void(const juce::String&)> m_onLoadCallback;
+    TextEditor customPathEditor;
+    TextButton loadButton, cancelButton;
 };
 
-class CustomPathDialog
+
+class CustomPathDialog : public DialogWindow
 {
 public:
-    static void showDialogWindow(std::function<void(const juce::String&)> onLoadCallback,
-                                 std::function<void()> onCancelCallback)
+    CustomPathDialog(std::function<void(const String&)> onLoadCallback,
+                     std::function<void()> onCancelCallback)
+        : DialogWindow("Enter Custom Path", Colours::lightgrey, true),
+          m_onLoadCallback(onLoadCallback), m_onCancelCallback(onCancelCallback)
     {
-        // Create the custom path component
-        auto* customPathComponent = new CustomPathComponent(onLoadCallback, onCancelCallback);
+        // Create the content component
+        auto* content = new CustomPathComponent(
+            [this](const String& path) { loadButtonPressed(path); },
+            [this]() { cancelButtonPressed(); }
+        );
 
-        // Set up the launch options
-        juce::DialogWindow::LaunchOptions options;
-        options.content.setOwned(
-            customPathComponent); // Transfer ownership of the component to JUCE
+        // Add custom content
+        setContentOwned(content, true);
 
-        // Set size of the content component
-        options.content->setSize(400, 150);
+        // Other dialog window options
+        setUsingNativeTitleBar(false);
+        setResizable(false, false);
 
-        // Dialog window options
-        options.dialogTitle = "Enter Custom Path";
-        options.dialogBackgroundColour = juce::Colours::lightgrey;
-        options.escapeKeyTriggersCloseButton = true;
-        options.useNativeTitleBar = false;
-        options.resizable = false;
+        // Set size of the content component and center
+        centreWithSize(400, 150);
+        setVisible(true);
 
-        // Launch the dialog asynchronously
-        auto* dialogWindow = options.launchAsync();
-
-        // Optionally center the dialog window
-        if (dialogWindow != nullptr)
-            dialogWindow->centreWithSize(400, 150);
+        // Ensure user cannot click off this window
+        DialogWindow::enterModalState(true, nullptr, true);
     }
+
+    void loadButtonPressed(const String& path)
+    {
+        if (m_onLoadCallback)
+        {
+            m_onLoadCallback(path);
+
+            closeWindow();
+        }
+    }
+
+    void cancelButtonPressed()
+    {
+        closeButtonPressed();
+    }
+
+    void closeButtonPressed() override
+    {
+        if (m_onCancelCallback)
+        {
+            m_onCancelCallback();
+        }
+
+        closeWindow();
+    }
+
+    void closeWindow()
+    {
+        setVisible(false);
+        delete this;
+    }
+
+private:
+    std::function<void(const String&)> m_onLoadCallback;
+    std::function<void()> m_onCancelCallback;
 };
