@@ -4,20 +4,16 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
+#include "../gui/MultiButton.h"
 #include "../utils.h"
 #include "OutputLabelComponent.h"
-#include "../gui/MultiButton.h"
-
 
 using namespace juce;
 
 class OverheadPanel : public Component
 {
 public:
-    void paint(Graphics& g) override
-    {
-        g.fillAll(Colours::darkgrey.darker());
-    }
+    void paint(Graphics& g) override { g.fillAll(Colours::darkgrey.darker()); }
 };
 
 class MediaDisplayComponent : public Component,
@@ -88,9 +84,9 @@ public:
     // Callback for the save button
     void saveCallback();
 
-    bool displaysInput() {return ioMode == 0;}
-    bool displaysOutput() {return ioMode == 1;}
-    
+    bool displaysInput() { return ioMode == 0; }
+    bool displaysOutput() { return ioMode == 1; }
+
     void clearDroppedFile() { droppedFilePath = URL(); }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
@@ -172,7 +168,7 @@ protected:
     // Left panel containing track name and buttons
     juce::Component headerComponent;
     // Media (audio or MIDI) content area
-    juce::Component mediaComponent;  
+    juce::Component mediaComponent;
     // Header sub-components
     juce::Label trackNameLabel;
     MultiButton playStopButton;
@@ -185,7 +181,6 @@ protected:
     MultiButton::Mode saveButtonInactiveInfo;
 
 private:
-
     void populateTrackHeader();
 
     void resetPaths();

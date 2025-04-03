@@ -363,7 +363,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     }
 
     // Stream the response
-    while (!stream->isExhausted())
+    while (! stream->isExhausted())
     {
         response = stream->readNextLine();
 

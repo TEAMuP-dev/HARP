@@ -36,17 +36,12 @@ public:
         loadButton.setButtonText("Load");
         loadButton.setEnabled(false); // Initially disabled
         loadButton.onClick = [this, onLoadCallback]()
-        {
-            onLoadCallback(customPathEditor.getText());
-        };
+        { onLoadCallback(customPathEditor.getText()); };
 
         // Set up the Cancel button
         addAndMakeVisible(cancelButton);
         cancelButton.setButtonText("Cancel");
-        cancelButton.onClick = [this, onCancelCallback]()
-        {
-            onCancelCallback();
-        };
+        cancelButton.onClick = [this, onCancelCallback]() { onCancelCallback(); };
 
         setSize(400, 150); // Set a fixed size for the component
     }
@@ -79,20 +74,19 @@ private:
     TextButton loadButton, cancelButton;
 };
 
-
 class CustomPathDialog : public DialogWindow
 {
 public:
     CustomPathDialog(std::function<void(const String&)> onLoadCallback,
                      std::function<void()> onCancelCallback)
         : DialogWindow("Enter Custom Path", Colours::lightgrey, true),
-          m_onLoadCallback(onLoadCallback), m_onCancelCallback(onCancelCallback)
+          m_onLoadCallback(onLoadCallback),
+          m_onCancelCallback(onCancelCallback)
     {
         // Create the content component
-        auto* content = new CustomPathComponent(
-            [this](const String& path) { loadButtonPressed(path); },
-            [this]() { cancelButtonPressed(); }
-        );
+        auto* content =
+            new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
+                                    [this]() { cancelButtonPressed(); });
 
         // Add custom content
         setContentOwned(content, true);
@@ -119,10 +113,7 @@ public:
         }
     }
 
-    void cancelButtonPressed()
-    {
-        closeButtonPressed();
-    }
+    void cancelButtonPressed() { closeButtonPressed(); }
 
     void closeButtonPressed() override
     {

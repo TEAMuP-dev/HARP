@@ -78,7 +78,7 @@ public:
 
         IconType iconType = IconType::None;
         fontawesome::IconName awesomeIcon {}; // For FontAwesome
-        fontaudio::IconName audioIcon {};  
+        fontaudio::IconName audioIcon {};
 
         // 1) Constructor for text-only
         Mode(const juce::String& lbl,
@@ -93,7 +93,7 @@ public:
               drawingMode(dm),
               iconType(IconType::None)
         {
-        } 
+        }
 
         // 2) Template constructor for an icon (FontAwesome or FontAudio)
         template <typename IconT>
@@ -103,11 +103,7 @@ public:
              const juce::String& instr,
              DrawingMode dm,
              IconT icon)
-            : label(lbl),
-              callback(cb),
-              color(col),
-              instructionMessage(instr),
-              drawingMode(dm)
+            : label(lbl), callback(cb), color(col), instructionMessage(instr), drawingMode(dm)
         {
             if constexpr (std::is_same_v<IconT, fontawesome::IconName>)
             {
@@ -121,11 +117,7 @@ public:
             }
         }
 
-        Mode()
-        : drawingMode(DrawingMode::TextOnly),
-          iconType(IconType::None)
-        {
-        }
+        Mode() : drawingMode(DrawingMode::TextOnly), iconType(IconType::None) {}
     };
 
     std::function<void()> onMouseEnter;

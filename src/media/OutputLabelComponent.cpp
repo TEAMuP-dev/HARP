@@ -1,6 +1,11 @@
 #include "OutputLabelComponent.h"
 
-OutputLabelComponent::OutputLabelComponent(double t, String lbl, double dur, String dsc, Colour clr, String lnk)
+OutputLabelComponent::OutputLabelComponent(double t,
+                                           String lbl,
+                                           double dur,
+                                           String dsc,
+                                           Colour clr,
+                                           String lnk)
 {
     setTime(t);
     setLabel(lbl);
@@ -51,10 +56,7 @@ void OutputLabelComponent::setColor(Colour clr)
     durationFill.setColor(clr.withAlpha(0.5f));
 }
 
-float OutputLabelComponent::getTextWidth()
-{
-    return getFont().getStringWidthFloat(getText());
-}
+float OutputLabelComponent::getTextWidth() { return getFont().getStringWidthFloat(getText()); }
 
 juce::MouseCursor OutputLabelComponent::getMouseCursor()
 {
@@ -70,13 +72,18 @@ void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
     {
         String lnk = getLink();
 
-        if (lnk.isNotEmpty()) {
+        if (lnk.isNotEmpty())
+        {
             URL url = URL(lnk);
 
-            if (url.isWellFormed()) {
+            if (url.isWellFormed())
+            {
                 url.launchInDefaultBrowser();
-            } else {
-                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk << "\' appears malformed.");
+            }
+            else
+            {
+                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk
+                                                                   << "\' appears malformed.");
             }
         }
     }
@@ -114,21 +121,22 @@ void OutputLabelComponent::setMarkerVisibility(bool v)
     rightMarker.setVisible(v);
 }
 
-void OutputLabelComponent::setFillVisibility(bool v)
-{
-    durationFill.setVisible(v);
-}
+void OutputLabelComponent::setFillVisibility(bool v) { durationFill.setVisible(v); }
 
 OverheadLabelComponent::OverheadLabelComponent(double t,
-                                             String lbl,
-                                             double dur,
-                                             String dsc,
-                                             Colour clr,
-                                             String lnk)
-    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk) {}
+                                               String lbl,
+                                               double dur,
+                                               String dsc,
+                                               Colour clr,
+                                               String lnk)
+    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk)
+{
+}
 
 OverheadLabelComponent::OverheadLabelComponent(const OverheadLabelComponent& other)
-    : OutputLabelComponent(other) {}
+    : OutputLabelComponent(other)
+{
+}
 
 LabelOverlayComponent::LabelOverlayComponent(double t,
                                              String lbl,

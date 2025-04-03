@@ -139,7 +139,7 @@ struct SpaceInfo
         return str;
     }
 
-    juce::String getModelSlashUser() const 
+    juce::String getModelSlashUser() const
     {
         if (status == LOCALHOST)
         {

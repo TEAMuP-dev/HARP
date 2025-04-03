@@ -99,16 +99,16 @@ void MultiButton::paintButton(juce::Graphics& g,
 
         if (textWidth > 0)
             g.drawFittedText(getButtonText(),
-                            leftIndent,
-                            yIndent,
-                            textWidth,
-                            getHeight() - yIndent * 2,
-                            Justification::centred,
-                            2);
+                             leftIndent,
+                             yIndent,
+                             textWidth,
+                             getHeight() - yIndent * 2,
+                             Justification::centred,
+                             2);
     }
     else if (modes[currentMode].drawingMode == DrawingMode::IconOnly)
     {
-        auto textArea = getLocalBounds();//.reduced(10); // Add some padding
+        auto textArea = getLocalBounds(); //.reduced(10); // Add some padding
         // auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
         juce::String currentIconName;
         auto currentColor = modes[currentMode].color;
@@ -129,7 +129,6 @@ void MultiButton::paintButton(juce::Graphics& g,
         // fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
         // auto icon = fontaudioHelper->getIcon(currentIconName, size, currentColor, 1.0f);
         // fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
-        
     }
     // int shouldDrawButtonAsHighlightedInt = shouldDrawButtonAsHighlighted ? 1 : 0;
     // int shouldDrawButtonAsDownInt = shouldDrawButtonAsDown ? 1 : 0;
@@ -142,7 +141,7 @@ void MultiButton::paint(juce::Graphics& g)
     juce::TextButton::paint(g); // Call the base class paint method
 }
 
-void MultiButton::resized() 
+void MultiButton::resized()
 {
     if (modes[currentMode].drawingMode == DrawingMode::IconOnly)
     {

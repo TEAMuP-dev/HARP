@@ -182,7 +182,7 @@ public:
                     auto toggle = std::make_shared<ToggleInfo>();
                     toggle->id = juce::Uuid();
                     toggle->label = pyharpComponent["label"].toString().toStdString();
-                    toggle->value = ("1"  == pyharpComponent["value"].toString().toStdString());
+                    toggle->value = ("1" == pyharpComponent["value"].toString().toStdString());
                     // toggle->value = (aa == "1");
                     controlsInfo.push_back({ toggle->id, toggle });
                     LogAndDBG("Toggle: " + toggle->label + " added");
@@ -201,7 +201,11 @@ public:
                     }
                     for (int j = 0; j < choices->size(); j++)
                     {
-                        dropdown->options.push_back(choices->getReference(j).getArray()->getFirst().toString().toStdString());
+                        dropdown->options.push_back(choices->getReference(j)
+                                                        .getArray()
+                                                        ->getFirst()
+                                                        .toString()
+                                                        .toStdString());
                     }
                     // Check if options is empty
                     if (dropdown->options.empty())
@@ -209,7 +213,7 @@ public:
                         // Don't fail here, just log a warning
                         LogAndDBG("Dropdown control has no options.");
                     }
-                    else 
+                    else
                     {
                         // Check if "value" is set
                         if (! pyharpComponent.hasProperty("value"))
@@ -223,7 +227,6 @@ public:
                         }
                         controlsInfo.push_back({ dropdown->id, dropdown });
                     }
-                    
                 }
                 else
                     LogAndDBG("failed to parse control with unknown type: " + type);

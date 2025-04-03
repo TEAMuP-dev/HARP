@@ -1,12 +1,8 @@
 #include "MidiDisplayComponent.h"
 
-MidiDisplayComponent::MidiDisplayComponent()
-    : MediaDisplayComponent("Midi Track")
-{
-}
+MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String trackName)
-    : MediaDisplayComponent(trackName)
+MidiDisplayComponent::MidiDisplayComponent(String trackName) : MediaDisplayComponent(trackName)
 {
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
@@ -38,11 +34,12 @@ void MidiDisplayComponent::repositionOverheadPanel()
 {
     Rectangle<int> overheadPanelArea =
         getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
-    overheadPanelArea = overheadPanelArea.removeFromRight(
-        overheadPanelArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-    overheadPanelArea =
-        overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-                                     - 4 * pianoRoll.getScrollBarSpacing());
+    overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
+                                                          - pianoRoll.getKeyboardWidth()
+                                                          - pianoRoll.getPianoRollSpacing());
+    overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
+                                                         - 2 * pianoRoll.getScrollBarSize()
+                                                         - 4 * pianoRoll.getScrollBarSpacing());
 
     overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
 }

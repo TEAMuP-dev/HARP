@@ -29,11 +29,11 @@ public:
 
     // std::unique_ptr<juce::Drawable>
     //     createIconDrawable(IconName icon, float size, juce::Colour colour, float scaleFactor);
-    
+
     // std::unique_ptr<juce::Drawable> getDrawableFromImage(const juce::Image& image);
 
     // juce::Image createFontAwesomeImage(const IconName& iconName, float size, juce::Colour colour);
-    
+
     // std::unique_ptr<juce::Drawable>
     //     getFontAwesomeIcon(const IconName& iconName, float size, juce::Colour colour);
 

@@ -54,17 +54,17 @@ public:
         // setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack); // Reset background color
         // Call the exit callback if set
         if (onExit)
-            onExit(); 
+            onExit();
         repaint();
         // Call base class
-        Label::mouseExit(event); 
+        Label::mouseExit(event);
     }
 
     void mouseDown(const juce::MouseEvent& event) override
     {
         // Check if clicking over the text
         // and call the click callback if set
-        if (hitTest(event.x, event.y) && onClick) 
+        if (hitTest(event.x, event.y) && onClick)
             onClick();
         Label::mouseDown(event);
     }
