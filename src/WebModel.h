@@ -351,8 +351,7 @@ public:
                 // juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
                 juce::String outputFilePath;
                 juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
-                // First check if the gradio app is a localmodel or not
-                // if it is, we leave the url/path as is
+
                 result = gradioClient.downloadFileFromURL(url, outputFilePath);
                 if (result.failed())
                 {
