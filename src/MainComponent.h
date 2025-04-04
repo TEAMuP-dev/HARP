@@ -1086,14 +1086,22 @@ public:
     {
         return;
 
-        // if (model == nullptr)
-        // {
-        //     AlertWindow("Error",
-        //                 "Model is not loaded. Please load a model first.",
-        //                 AlertWindow::WarningIcon);
-        //     return;
-        // }
+        if (model == nullptr)
+        {
+            AlertWindow("Error",
+                        "Model is not loaded. Please load a model first.",
+                        AlertWindow::WarningIcon);
+            return;
+        }
 
+        // Get new processID
+        String processID = juce::Uuid().toString();
+        processMutex.lock();
+        currentProcessID = processID;
+        DBG("Set Process ID: " + processID);
+        processMutex.unlock();
+
+        // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
         // // check if the file is loaded
         // if (! mediaDisplay->isFileLoaded())
         // {
@@ -1118,95 +1126,69 @@ public:
         //     return;
         // }
 
-        // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
-        // {
-        //     matchingModel = ! model->card().midi_in && ! model->card().midi_out;
-        // }
-        // else
-        // {
-        //     matchingModel = model->card().midi_in && model->card().midi_out;
-        // }
-        // // Check if the model's type (Audio or MIDI) matches the input file's type
-        // // If not, show an error message and ask the user to either use another model
-        // // or another appropriate file
-        // if (! matchingModel)
-        // {
-        //     LogAndDBG("Model and file type mismatch");
-        //     AlertWindow::showMessageBoxAsync(
-        //         AlertWindow::WarningIcon,
-        //         "Processing Error",
-        //         "Model and file type mismatch. Please use an appropriate model or file.");
-        //     // processBroadcaster.sendChangeMessage();
-        //     return;
-        // }
+        processCancelButton.setEnabled(true);
+        processCancelButton.setMode(cancelButtonInfo.label);
 
-        // processCancelButton.setEnabled(true);
-        // processCancelButton.setMode(cancelButtonInfo.label);
-
-        // saveEnabled = false;
-        // isProcessing = true;
+        saveEnabled = false;
+        isProcessing = true;
 
         // mediaDisplay->addNewTempFile();
+        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
 
-        // // Get new processID
-        // String processID = juce::Uuid().toString();
-        // processMutex.lock();
-        // currentProcessID = processID;
-        // DBG("Set Process ID: " + processID);
-        // processMutex.unlock();
+        
 
-        // // Directly add the job to the thread pool
-        // jobProcessorThread.addJob(
-        //     new CustomThreadPoolJob(
-        //         [this](String processID) { // &jobsFinished, totalJobs
-        //             // Individual job code for each iteration
-        //             // copy the audio file, with the same filename except for an added _harp to the stem
-        //             OpResult processingResult =
-        //                 model->process(mediaDisplay->getTempFilePath().getLocalFile());
-        //             processMutex.lock();
-        //             if (processID != currentProcessID)
-        //             {
-        //                 DBG("ProcessID " + processID + " not found");
-        //                 DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
-        //                 DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
-        //                 processMutex.unlock();
-        //                 return;
-        //             }
-        //             if (processingResult.failed())
-        //             {
-        //                 Error processingError = processingResult.getError();
-        //                 Error::fillUserMessage(processingError);
-        //                 LogAndDBG("Error in Processing:\n"
-        //                           + processingError.devMessage.toStdString());
-        //                 AlertWindow::showMessageBoxAsync(
-        //                     AlertWindow::WarningIcon,
-        //                     "Processing Error",
-        //                     "An error occurred while processing the audio file: \n"
-        //                         + processingError.userMessage);
-        //                 // cb: I commented this out, and it doesn't seem to change anything
-        //                 // it was also causing a crash. If we need it, it needs to run on
-        //                 // the message thread using MessageManager::callAsync
-        //                 // hy: Now this line works.
-        //                 // resetProcessingButtons();
-        //                 // cb: Needs to be in the message thread or else it crashes
-        //                 // It's used when the processing fails to reset the process/cancel
-        //                 // button back to the process mode.
-        //                 MessageManager::callAsync([this] { resetProcessingButtons(); });
-        //                 processMutex.unlock();
-        //                 return;
-        //             }
-        //             // load the audio file again
-        //             DBG("ProcessID " + processID + " succeed");
-        //             currentProcessID = "";
-        //             model->setStatus(ModelStatus::FINISHED);
-        //             processBroadcaster.sendChangeMessage();
-        //             processMutex.unlock();
+        // Directly add the job to the thread pool
+        jobProcessorThread.addJob(
+            new CustomThreadPoolJob(
+                [this](String processID) { // &jobsFinished, totalJobs
+                    // Individual job code for each iteration
+                    // copy the audio file, with the same filename except for an added _harp to the stem
+                    OpResult processingResult =
+                        model->process(mediaDisplay->getTempFilePath().getLocalFile());
+                    processMutex.lock();
+                    if (processID != currentProcessID)
+                    {
+                        DBG("ProcessID " + processID + " not found");
+                        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+                        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
+                        processMutex.unlock();
+                        return;
+                    }
+                    if (processingResult.failed())
+                    {
+                        Error processingError = processingResult.getError();
+                        Error::fillUserMessage(processingError);
+                        LogAndDBG("Error in Processing:\n"
+                                  + processingError.devMessage.toStdString());
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
+                            "Processing Error",
+                            "An error occurred while processing the audio file: \n"
+                                + processingError.userMessage);
+                        // cb: I commented this out, and it doesn't seem to change anything
+                        // it was also causing a crash. If we need it, it needs to run on
+                        // the message thread using MessageManager::callAsync
+                        // hy: Now this line works.
+                        // resetProcessingButtons();
+                        // cb: Needs to be in the message thread or else it crashes
+                        // It's used when the processing fails to reset the process/cancel
+                        // button back to the process mode.
+                        MessageManager::callAsync([this] { resetProcessingButtons(); });
+                        processMutex.unlock();
+                        return;
+                    }
+                    // load the audio file again
+                    DBG("ProcessID " + processID + " succeed");
+                    currentProcessID = "";
+                    model->setStatus(ModelStatus::FINISHED);
+                    processBroadcaster.sendChangeMessage();
+                    processMutex.unlock();
 
-        //         },
-        //         processID),
-        //     true);
-        // DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
-        // DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
+                },
+                processID),
+            true);
+        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
     // void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
