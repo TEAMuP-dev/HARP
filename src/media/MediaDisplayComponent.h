@@ -42,6 +42,10 @@ public:
     virtual float getMediaXPos() { return 0.0f; }
 
     String getTrackName() { return trackName; }
+    void setTrackName(String name) { trackName = name; }
+    void setTrackId(juce::Uuid id) { trackID = id; }
+    juce::Uuid getTrackId() { return trackID; }
+    
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
@@ -216,4 +220,5 @@ private:
     Array<OverheadLabelComponent*> overheadLabels;
 
     juce::String trackName;
+    juce::Uuid trackID;
 };

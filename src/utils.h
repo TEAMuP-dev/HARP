@@ -184,4 +184,5 @@ struct MidiLabel : public OutputLabel
 };
 
 using ComponentInfoList = std::vector<std::pair<juce::Uuid, std::shared_ptr<PyHarpComponentInfo>>>;
+using ComponentInfoMap = std::map<juce::Uuid, std::shared_ptr<PyHarpComponentInfo>>;
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;

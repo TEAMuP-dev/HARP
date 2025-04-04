@@ -24,12 +24,53 @@ public:
 
     bool ready() const override { return status2 == ModelStatus::LOADED; }
 
-    ComponentInfoList& getControls() { return controlsInfo; }
-    ComponentInfoList& getInputTracks() { return inputTracksInfo; }
-    ComponentInfoList& getOutputTracks() { return outputTracksInfo; }
+    ComponentInfoList& getControlsInfo() { return controlsInfo; }
+    ComponentInfoList& getInputTracksInfo() { return inputTracksInfo; }
+    ComponentInfoList& getOutputTracksInfo() { return outputTracksInfo; }
 
-    // juce::Array<juce::var>& getInputComponents() {return inputComponents;}
-    // juce::Array<juce::var>& getOutputComponents() {return outputComponents;}
+    // A getter function that gets a Uuid and returns the corresponding info object
+    // from any of the three maps
+    // This is when using ComponentInfoMap
+    // std::shared_ptr<PyHarpComponentInfo> findComponentInfoByUuid(const juce::Uuid& id) const
+    // {
+    //     auto pair = controlsInfo.find(id);
+    //     if (pair != controlsInfo.end())
+    //         return pair->second;
+
+    //     pair = inputTracksInfo.find(id);
+    //     if (pair != inputTracksInfo.end())
+    //         return pair->second;
+
+    //     pair = outputTracksInfo.find(id);
+    //     if (pair != outputTracksInfo.end())
+    //         return pair->second;
+
+    //     return nullptr;
+    // }
+
+    // A getter function that gets a Uuid and returns the corresponding info object
+    // from any of the three maps
+    // This is when using ComponentInfoList
+    // Not as efficient as the map version, but it's easier to use vector<pair<>> in the GUI
+    std::shared_ptr<PyHarpComponentInfo> findComponentInfoByUuid(const juce::Uuid& id) const
+    {
+        for (const auto& pair : controlsInfo)
+        {
+            if (pair.first == id)
+                return pair.second;
+        }
+        for (const auto& pair : inputTracksInfo)
+        {
+            if (pair.first == id)
+                return pair.second;
+        }
+        for (const auto& pair : outputTracksInfo)
+        {
+            if (pair.first == id)
+                return pair.second;
+        }
+        return nullptr;
+    }
 
     OpResult load(const map<string, any>& params) override
     {
@@ -96,7 +137,7 @@ public:
             m_card.tags.push_back(tags->getReference(i).toString().toStdString());
         }
 
-        // clear the m_ctrls vector
+        // clear the m_controls vector
         controlsInfo.clear();
         inputTracksInfo.clear();
         outputTracksInfo.clear();
@@ -111,13 +152,13 @@ public:
             if (! pyharpComponent.isObject())
             {
                 status2 = ModelStatus::ERROR;
-                error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+                error.devMessage = "Failed to load controls from JSON. control is not an object.";
                 return OpResult::fail(error);
             }
 
             try
             {
-                // get the ctrl type
+                // get the control type
                 juce::String type = pyharpComponent["type"].toString().toStdString();
 
                 // For the first two, we are abusing the term control.
@@ -127,17 +168,25 @@ public:
                     // CB:TODO: NOT USED ANYWHERE
                     // ControlAreaWidget.h ignores this when populating the GUI
                     auto audio_in = std::make_shared<AudioTrackInfo>();
+                    // cb: maybe the id doesn't need to be stored inside the object
+                    // since now we are using a map to store the objects
+                    audio_in->id = juce::Uuid();
                     audio_in->label = pyharpComponent["label"].toString().toStdString();
 
                     inputTracksInfo.push_back({ audio_in->id, audio_in });
+                    // inputTracksInfo[audio_in->id] = audio_in;
+                    uuidsInOrder.push_back(audio_in->id);
                     LogAndDBG("Audio In: " + audio_in->label + " added");
                 }
                 else if (type == "midi_track")
                 {
                     auto midi_in = std::make_shared<MidiTrackInfo>();
+                    midi_in->id = juce::Uuid();
                     midi_in->label = pyharpComponent["label"].toString().toStdString();
 
                     inputTracksInfo.push_back({ midi_in->id, midi_in });
+                    // inputTracksInfo[midi_in->id] = midi_in;
+                    uuidsInOrder.push_back(midi_in->id);
                     LogAndDBG("MIDI In: " + midi_in->label + " added");
                 }
                 // The rest are the actual controls that map to hyperparameters
@@ -153,6 +202,8 @@ public:
                     slider->value = pyharpComponent["value"].toString().getFloatValue();
 
                     controlsInfo.push_back({ slider->id, slider });
+                    // controlsInfo[slider->id] = slider;
+                    uuidsInOrder.push_back(slider->id);
                     LogAndDBG("Slider: " + slider->label + " added");
                 }
                 else if (type == "text_box")
@@ -163,6 +214,8 @@ public:
                     text->value = pyharpComponent["value"].toString().toStdString();
 
                     controlsInfo.push_back({ text->id, text });
+                    // controlsInfo[text->id] = text;
+                    uuidsInOrder.push_back(text->id);
                     LogAndDBG("Text: " + text->label + " added");
                 }
                 else if (type == "number_box")
@@ -175,6 +228,8 @@ public:
                     number_box->value = pyharpComponent["value"].toString().getFloatValue();
 
                     controlsInfo.push_back({ number_box->id, number_box });
+                    // controlsInfo[number_box->id] = number_box;
+                    uuidsInOrder.push_back(number_box->id);
                     LogAndDBG("Number Box: " + number_box->label + " added");
                 }
                 else if (type == "toggle")
@@ -185,6 +240,8 @@ public:
                     toggle->value = ("1" == pyharpComponent["value"].toString().toStdString());
                     // toggle->value = (aa == "1");
                     controlsInfo.push_back({ toggle->id, toggle });
+                    // controlsInfo[toggle->id] = toggle;
+                    uuidsInOrder.push_back(toggle->id);
                     LogAndDBG("Toggle: " + toggle->label + " added");
                 }
                 else if (type == "dropdown")
@@ -226,6 +283,8 @@ public:
                             dropdown->value = pyharpComponent["value"].toString().toStdString();
                         }
                         controlsInfo.push_back({ dropdown->id, dropdown });
+                        // controlsInfo[dropdown->id] = dropdown;
+                        uuidsInOrder.push_back(dropdown->id);
                     }
                 }
                 else
@@ -246,13 +305,13 @@ public:
             if (! pyharpComponent.isObject())
             {
                 status2 = ModelStatus::ERROR;
-                error.devMessage = "Failed to load controls from JSON. ctrl is not an object.";
+                error.devMessage = "Failed to load controls from JSON. control is not an object.";
                 return OpResult::fail(error);
             }
 
             try
             {
-                // get the ctrl type
+                // get the control type
                 juce::String type = pyharpComponent["type"].toString().toStdString();
 
                 // For the first two, we are abusing the term control.
@@ -263,16 +322,22 @@ public:
                     // ControlAreaWidget.h ignores this when populating the GUI
                     auto audio_out = std::make_shared<AudioTrackInfo>();
                     audio_out->label = pyharpComponent["label"].toString().toStdString();
+                    audio_out->id = juce::Uuid();
 
                     outputTracksInfo.push_back({ audio_out->id, audio_out });
+                    // outputTracksInfo[audio_out->id] = audio_out;
+                    // uuidsInOrder.push_back(audio_out->id);
                     LogAndDBG("Audio Out: " + audio_out->label + " added");
                 }
                 else if (type == "midi_track")
                 {
                     auto midi_out = std::make_shared<MidiTrackInfo>();
                     midi_out->label = pyharpComponent["label"].toString().toStdString();
+                    midi_out->id = juce::Uuid();
 
                     outputTracksInfo.push_back({ midi_out->id, midi_out });
+                    // outputTracksInfo[midi_out->id] = midi_out;
+                    // uuidsInOrder.push_back(midi_out->id);
                     LogAndDBG("MIDI Out: " + midi_out->label + " added");
                 }
             }
@@ -287,9 +352,9 @@ public:
         return OpResult::ok();
     }
 
-    // TODO: Shouldn't take a file for input. It should just visit
-    // all media displays and controls and get their values.
-    OpResult process(juce::File filetoProcess, juce::File outputFile)
+    // The input is a vector of String:File objects corresponding to
+    // the files currently loaded in each inputMediaDisplay
+    OpResult process(std::vector<std::tuple<Uuid, String, File>> localInputTrackFiles)
     {
         status2 = ModelStatus::STARTING;
         // Create an Error object in case we need it
@@ -299,39 +364,75 @@ public:
         OpResult result = OpResult::ok();
 
         status2 = ModelStatus::SENDING;
-        // TODO: I should upload all inputMediaDisplays files first
-        juce::String uploadedFilePath;
-        result = gradioClient.uploadFileRequest(filetoProcess, uploadedFilePath);
-        if (result.failed())
+
+        // We need to upload all the localInputTrackFiles to the gradio server
+        // and get the vector of the remote (uploaded) file paths
+        // iterate over the localInputTrackFiles map
+        // and upload each file
+        // and get the corresponding remote file path
+        // juce::StringArray remoteTrackFilePaths;
+        // std::map<juce::Uuid, std::string> remoteTrackFilePaths;
+        for (auto& tuple : localInputTrackFiles)
         {
-            result.getError().devMessage = "Failed to open upload file request";
-            status2 = ModelStatus::ERROR;
-            return result;
+            juce::String remoteTrackFilePath;
+            result = gradioClient.uploadFileRequest(std::get<2>(tuple), remoteTrackFilePath);
+            if (result.failed())
+            {
+                result.getError().userMessage = "Failed to upload file for track "
+                                                + std::get<1>(tuple) + ": "
+                                                + std::get<2>(tuple).getFileName();
+                status2 = ModelStatus::ERROR;
+                return result;
+            }
+            // remoteTrackFilePaths[std::get<0>(tuple)] = remoteTrackFilePath.toStdString();
+            // The following line would be a better way to do it, instead of using the remoteTrackFilePaths dict
+            // it won't work though because the pyharpCOmponentInfo in the inputTracksInfo
+            // needs to dynamically casted to the correct type AudioTrackInfo or MidiTrackInfo
+            // inputTracksInfo[std::get<0>(tuple)]->value = remoteTrackFilePath.toStdString();
+            // Here is how to do it:
+            auto trackInfo = findComponentInfoByUuid(std::get<0>(tuple));
+            if (trackInfo == nullptr)
+            {
+                status2 = ModelStatus::ERROR;
+                error.devMessage = "Failed to upload file for track "
+                                   + std::get<1>(tuple) + ": "
+                                   + std::get<2>(tuple).getFileName()
+                                   + ". The track is not an audio or midi track.";
+                return OpResult::fail(error);
+            }
+            if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
+            {
+                audioTrackInfo->value = remoteTrackFilePath.toStdString();
+            }
+            else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
+            {
+                midiTrackInfo->value = remoteTrackFilePath.toStdString();
+            }
         }
 
         juce::String eventId;
         juce::String endpoint = "process";
-        // the jsonBody is created by ctrlsToJson
-        juce::String ctrlJson;
-        result = ctrlsToJson(ctrlJson, uploadedFilePath.toStdString());
+        // the jsonBody is created by controlsToJson
+        juce::String processingPayload;
+        result = prepareProcessingPayload(processingPayload);
         if (result.failed())
         {
             result.getError().devMessage = "Failed to upload file";
             status2 = ModelStatus::ERROR;
             return result;
         }
-        // TODO: The jsonBody should be created using DynamicObject and var
-        // TODO: make a utility function that wraps this into an object with a "data" key
-        // TODO: or maybe make this a part of ctrlsToJson
-        juce::String jsonBody = R"(
-            {
-                "data": )" + ctrlJson
-                                + R"(
-            }
-            )";
+        // // TODO: The jsonBody should be created using DynamicObject and var
+        // // TODO: make a utility function that wraps this into an object with a "data" key
+        // // TODO: or maybe make this a part of controlsToJson
+        // juce::String jsonBody = R"(
+        //     {
+        //         "data": )" + processingPayload
+        //                         + R"(
+        //     }
+        //     )";
 
         status2 = ModelStatus::PROCESSING;
-        result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
+        result = gradioClient.makePostRequestForEventID(endpoint, eventId, processingPayload);
         if (result.failed())
         {
             result.getError().devMessage = "Failed to make post request.";
@@ -463,7 +564,7 @@ public:
                 juce::File processedFile(outputFilePath);
                 // Replace the input file with the processed file
                 // processedFile.moveFileTo(filetoProcess);
-                processedFile.moveFileTo(outputFile);
+                // processedFile.moveFileTo(outputFile);
             }
             else if (procObjType == "pyharp.LabelList")
             {
@@ -650,58 +751,66 @@ public:
     ModelStatus getLastStatus() { return lastStatus; }
     void setLastStatus(ModelStatus status) { lastStatus = status; }
 
-    ComponentInfoList::iterator findComponentInfoByUuid(const juce::Uuid& uuid)
-    {
-        return std::find_if(controlsInfo.begin(),
-                            controlsInfo.end(),
-                            [&uuid](const ComponentInfoList::value_type& pair)
-                            { return pair.first == uuid; });
-    }
-
     GradioClient& getGradioClient() { return gradioClient; }
 
     LabelList& getLabels() { return labels; }
 
 private:
-    OpResult ctrlsToJson(juce::String& ctrlJson, std::string mediaInputPath) const
+    OpResult prepareProcessingPayload(juce::String& payloadJson)
     {
         // Create a JSON array to hold each control's value
-        juce::Array<juce::var> jsonCtrlsArray;
+        juce::Array<juce::var> jsonControlsArray;
 
         // Iterate through each control in controlsInfo
-        for (const auto& ctrlPair : controlsInfo)
+        // for (const auto& controlPair : controlsInfo)
+        for (const auto& currentUuid : uuidsInOrder)
         {
-            auto ctrl = ctrlPair.second;
-            // Check the type of ctrl and extract its value
-            if (auto sliderCtrl = dynamic_cast<SliderInfo*>(ctrl.get()))
+            auto element = findComponentInfoByUuid(currentUuid);
+            if (! element)
             {
-                // Slider control, use sliderCtrl->value
-                jsonCtrlsArray.add(juce::var(sliderCtrl->value));
+                // Control not found, handle the error
+                Error error;
+                // error.type = ErrorType::MissingJsonKey;
+                error.devMessage =
+                    "Control with ID: " + currentUuid.toString() + " not found in controlsInfo.";
+                return OpResult::fail(error);
             }
-            else if (auto textBoxCtrl = dynamic_cast<TextBoxInfo*>(ctrl.get()))
+            // auto elementIt = (it1 != controlsInfo.end()) ? it1 : it2;
+
+            // auto element = elementIt->second;
+
+            // auto control = controlPair.second;
+            // Check the type of control and extract its value
+            if (auto sliderControl = dynamic_cast<SliderInfo*>(element.get()))
             {
-                // Text box control, use textBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(textBoxCtrl->value));
+                // Slider control, use sliderControl->value
+                jsonControlsArray.add(juce::var(sliderControl->value));
             }
-            else if (auto numberBoxCtrl = dynamic_cast<NumberBoxInfo*>(ctrl.get()))
+            else if (auto textBoxControl = dynamic_cast<TextBoxInfo*>(element.get()))
             {
-                // Number box control, use numberBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(numberBoxCtrl->value));
+                // Text box control, use textBoxControl->value
+                jsonControlsArray.add(juce::var(textBoxControl->value));
             }
-            else if (auto toggleCtrl = dynamic_cast<ToggleInfo*>(ctrl.get()))
+            else if (auto numberBoxControl = dynamic_cast<NumberBoxInfo*>(element.get()))
             {
-                // Toggle control, use toggleCtrl->value
-                jsonCtrlsArray.add(juce::var(toggleCtrl->value));
+                // Number box control, use numberBoxControl->value
+                jsonControlsArray.add(juce::var(numberBoxControl->value));
             }
-            else if (auto comboBoxCtrl = dynamic_cast<ComboBoxInfo*>(ctrl.get()))
+            else if (auto toggleControl = dynamic_cast<ToggleInfo*>(element.get()))
             {
-                // Combo box control, use comboBoxCtrl->value
-                jsonCtrlsArray.add(juce::var(comboBoxCtrl->value));
+                // Toggle control, use toggleControl->value
+                jsonControlsArray.add(juce::var(toggleControl->value));
             }
-            else if (auto audioInCtrl = dynamic_cast<AudioTrackInfo*>(ctrl.get()))
+            else if (auto comboBoxControl = dynamic_cast<ComboBoxInfo*>(element.get()))
             {
-                // Audio in control, use audioInCtrl->value
-                audioInCtrl->value = mediaInputPath;
+                // Combo box control, use comboBoxControl->value
+                jsonControlsArray.add(juce::var(comboBoxControl->value));
+            }
+            else if (auto audioInTrackInfo = dynamic_cast<AudioTrackInfo*>(element.get()))
+            {
+                // cb: Not sure if storing the remote path inside the object is needed
+                // audioInTrackInfo->value = remoteTrackFilePaths[audioInTrackInfo->id];
+
                 // Due to the way gradio http api works, we need to add the mediaInputPath
                 // into another object first, like this:
                 // {
@@ -709,17 +818,17 @@ private:
                 // }
                 // juce::DynamicObject obj;
                 juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-                obj->setProperty("path", juce::var(audioInCtrl->value));
+                obj->setProperty("path", juce::var(audioInTrackInfo->value));
                 // Then we add the object to the array
-                jsonCtrlsArray.add(juce::var(obj));
+                jsonControlsArray.add(juce::var(obj));
             }
-            else if (auto midiInCtrl = dynamic_cast<MidiTrackInfo*>(ctrl.get()))
+            else if (auto midiInTrackInfo = dynamic_cast<MidiTrackInfo*>(element.get()))
             {
-                midiInCtrl->value = mediaInputPath;
-                // same as audioInCtrl
+                // midiInTrackInfo->value = remoteTrackFilePaths[midiInTrackInfo->id];
+                // same as audioInControl
                 juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-                obj->setProperty("path", juce::var(midiInCtrl->value));
-                jsonCtrlsArray.add(juce::var(obj));
+                obj->setProperty("path", juce::var(midiInTrackInfo->value));
+                jsonControlsArray.add(juce::var(obj));
             }
             else
             {
@@ -727,20 +836,32 @@ private:
                 error.type = ErrorType::UnsupportedControlType;
                 // Unsupported control type or missing implementation
                 error.devMessage =
-                    "Unsupported control type or missing implementation for control with ID: "
-                    + ctrl->id.toString();
+                    "Unsupported control type or missing implementation for control with UUID: "
+                    + currentUuid.toString();
                 return OpResult::fail(error);
             }
         }
 
-        // Convert the array to a JSON string
-        ctrlJson = juce::JSON::toString(jsonCtrlsArray, true); // true for human-readable
+        // Create a DynamicObject to wrap the array with a "data" key
+        juce::DynamicObject::Ptr dataObject = new juce::DynamicObject();
+        dataObject->setProperty("data", jsonControlsArray);
+
+        // Convert the entire object to a JSON string at the end
+        payloadJson = juce::JSON::toString(juce::var(dataObject), true); // true for human-readable
         return OpResult::ok();
     }
 
     ComponentInfoList controlsInfo;
     ComponentInfoList inputTracksInfo;
     ComponentInfoList outputTracksInfo;
+    // A vector that stores the Uuid of the input and control components
+    // in the order they are received from the server
+    // We need to keep track the order to be able to send the data
+    // for processing in the same order.
+    // We wouldn't have to do that if
+    //    1. c++ had an ordered map (like python)
+    //    2. the gradio server would accept key:value pairs instead of list
+    std::vector<juce::Uuid> uuidsInOrder;
     // juce::Array<juce::var> inputComponents;
     // juce::Array<juce::var> outputComponents;
     GradioClient gradioClient;

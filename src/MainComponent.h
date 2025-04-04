@@ -1084,23 +1084,7 @@ public:
 
     void processCallback()
     {
-        return;
-
-        if (model == nullptr)
-        {
-            AlertWindow("Error",
-                        "Model is not loaded. Please load a model first.",
-                        AlertWindow::WarningIcon);
-            return;
-        }
-
-        // Get new processID
-        String processID = juce::Uuid().toString();
-        processMutex.lock();
-        currentProcessID = processID;
-        DBG("Set Process ID: " + processID);
-        processMutex.unlock();
-
+        // return;
         // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
         // // check if the file is loaded
         // if (! mediaDisplay->isFileLoaded())
@@ -1126,6 +1110,23 @@ public:
         //     return;
         // }
 
+
+        if (model == nullptr)
+        {
+            AlertWindow("Error",
+                        "Model is not loaded. Please load a model first.",
+                        AlertWindow::WarningIcon);
+            return;
+        }
+
+        // Get new processID
+        String processID = juce::Uuid().toString();
+        processMutex.lock();
+        currentProcessID = processID;
+        DBG("Set Process ID: " + processID);
+        processMutex.unlock();
+
+      
         processCancelButton.setEnabled(true);
         processCancelButton.setMode(cancelButtonInfo.label);
 
@@ -1135,16 +1136,38 @@ public:
         // mediaDisplay->addNewTempFile();
         auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
 
-        
+        // Get all the getTempFilePaths from the inputMediaDisplays
+        // and store them in a map/dictionary with the track name as the key
+        std::vector<std::tuple<Uuid, String, File>> localInputTrackFiles;
+        for (auto& inputMediaDisplay : inputMediaDisplays)
+        {
+            if (inputMediaDisplay->isFileLoaded())
+            {
+                inputMediaDisplay->addNewTempFile();
+                localInputTrackFiles.push_back(
+                    std::make_tuple(inputMediaDisplay->getTrackId(),
+                                    inputMediaDisplay->getTrackName(),
+                                    inputMediaDisplay->getTempFilePath().getLocalFile()));
+            }
+            else
+            {
+                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                 "Error",
+                                                 "Input file is not loaded for track "
+                                                     + inputMediaDisplay->getTrackName()
+                                                     + ". Please load an input file first.");
+                return;
+            }
+        }
 
         // Directly add the job to the thread pool
         jobProcessorThread.addJob(
             new CustomThreadPoolJob(
-                [this](String processID) { // &jobsFinished, totalJobs
+                [this, localInputTrackFiles](String processID) { // &jobsFinished, totalJobs
                     // Individual job code for each iteration
                     // copy the audio file, with the same filename except for an added _harp to the stem
                     OpResult processingResult =
-                        model->process(mediaDisplay->getTempFilePath().getLocalFile());
+                        model->process(localInputTrackFiles);
                     processMutex.lock();
                     if (processID != currentProcessID)
                     {

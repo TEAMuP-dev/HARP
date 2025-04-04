@@ -33,7 +33,7 @@ public:
             return;
         }
 
-        auto& inputTracksInfo = mModel->getInputTracks();
+        auto& inputTracksInfo = mModel->getInputTracksInfo();
         // clear the m_ctrls vector
         // m_ctrls.clear();
         // juce::Array<juce::var>& inputComponents = mModel->getControls();
@@ -54,6 +54,7 @@ public:
                 }
                 inputMediaDisplays.push_back(
                     std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
+                inputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
             }
@@ -65,13 +66,14 @@ public:
                 }
                 inputMediaDisplays.push_back(
                     std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
+                inputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
             }
         }
 
         // if (counter)
-        auto& outputTracksInfo = mModel->getOutputTracks();
+        auto& outputTracksInfo = mModel->getOutputTracksInfo();
         outputTracksCounter = 0;
         for (const auto& pair : outputTracksInfo)
         {
@@ -85,6 +87,7 @@ public:
                 }
                 outputMediaDisplays.push_back(
                     std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
+                outputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
                 addAndMakeVisible(outputMediaDisplays.back().get());
                 outputMediaDisplays.back()->addChangeListener(this);
             }
@@ -96,6 +99,7 @@ public:
                 }
                 outputMediaDisplays.push_back(
                     std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
+                outputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
                 addAndMakeVisible(outputMediaDisplays.back().get());
                 outputMediaDisplays.back()->addChangeListener(this);
             }
