@@ -313,7 +313,6 @@ public:
         juce::FlexBox mainBox;
         mainBox.flexDirection =
             juce::FlexBox::Direction::row; // Set the main flex direction to column
-        
 
         // juce::FlexItem::Margin margin(2);
         int margin = 4;
@@ -339,10 +338,8 @@ public:
         {
             DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
             toggleBox.items.add(
-                juce::FlexItem(*toggle).withFlex(1)
-                                        .withMinWidth(80)
-                                        .withMaxHeight(20)
-                                        .withMargin(margin));
+                juce::FlexItem(*toggle).withFlex(1).withMinWidth(80).withMaxHeight(20).withMargin(
+                    margin));
         }
 
         // Option Controls
@@ -351,8 +348,11 @@ public:
         for (auto& optionCtrl : optionCtrls)
         {
             DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
-            optionBox.items.add(
-                juce::FlexItem(*optionCtrl).withFlex(1).withMinWidth(80).withMaxHeight(maxHeight).withMargin(margin));
+            optionBox.items.add(juce::FlexItem(*optionCtrl)
+                                    .withFlex(1)
+                                    .withMinWidth(80)
+                                    .withMaxHeight(maxHeight)
+                                    .withMargin(margin));
         }
 
         // Text Controls
@@ -361,10 +361,12 @@ public:
         for (auto& textCtrl : textCtrls)
         {
             DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
-            textBox.items.add(
-                juce::FlexItem(*textCtrl).withFlex(1).withMinWidth(80).withMaxWidth(180)
-                    .withMaxHeight(maxHeight)
-                    .withMargin(margin));
+            textBox.items.add(juce::FlexItem(*textCtrl)
+                                  .withFlex(1)
+                                  .withMinWidth(80)
+                                  .withMaxWidth(180)
+                                  .withMaxHeight(maxHeight)
+                                  .withMargin(margin));
         }
 
         // Add each FlexBox to the main FlexBox

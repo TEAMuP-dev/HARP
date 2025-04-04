@@ -1,5 +1,5 @@
-# [Gen-I/O] Current View of UI
-To test the current gen-i/o version of HARP locally, build the HARP branch `cb/gen-inputs`.
+# [Harp v3.alpha] Current View of UI
+To test the current stage of HARP v3 locally, build the HARP branch `cb/gen-inputs`.
 
 To run a compatible model, you will need to execute the [`examples/pitch_shifter/app.py`](https://github.com/TEAMuP-dev/pyharp/blob/cb/gen-inputs/examples/pitch_shifter/app.py)
 from the `pyHarp` repository on the `cb/gen-inputs` branch.
@@ -26,6 +26,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Standalone](#standalone)**
     * **[REAPER](#reaper)**
     * **[Logic Pro X](#logic-pro-x)**
+    * **[Acoustica Mixcraft](#acoustica-mixcraft)**
     <!--* **[Ableton Live](#ableton-live)**-->
 * **[Usage](#usage)**
     * **[Warning!](#warning)**
@@ -37,7 +38,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Building Harp](#building-harp)**
     * **[Debugging](#debugging)**
     * **[Distribution](#distribution)**
-* **[Citing](#citing)**
+* **[Citations](#citations)**
 
 
 
@@ -45,7 +46,7 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
 HARP has been tested on the following operating systems:
 | OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
 | :-: | :-: | :-: | :-: | :-: |
-| Version(s) | 13.0, 13.4, 14.2.1 | 10.15 | 10, 11 | 22.04 |
+| Version(s) | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
 
 ## MacOS
 * Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
@@ -158,17 +159,25 @@ If you would like to process only an excerpt of a track, first trim the exceprt 
 
 While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
 
-* Pitch Shifting: [hugggof/pitch_shifter](https://huggingface.co/spaces/hugggof/pitch_shifter)
-
-* Harmonic/Percussive Source Separation: [hugggof/harmonic_percussive](https://huggingface.co/spaces/hugggof/harmonic_percussive)
-
-* Music Audio Generation: [descript/vampnet](https://huggingface.co/spaces/descript/vampnet)
-
-* Convert Instrumental Music into 8-bit Chiptune: [hugggof/nesquik](https://huggingface.co/spaces/hugggof/nesquik)
+* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music) (ZeroGPU)
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
-* Pitch-Preserving Timbre-Removal: [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+* Stem-Wise Source Separation:
+  * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
+  * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+
+* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
+
+* Pitch-Preserving Timbre-Removal:
+  * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
+  * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
+
+* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive)
+
+<!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
+
+<!--* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)-->
 
 ## Workflow
 * After opening HARP as an external sample editor or standalone application, the following window will appear.
@@ -205,6 +214,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 2.1.x | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
 | 1.2.0 | 0.1.0 |
@@ -311,11 +321,21 @@ After running `package.sh`, you should have a signed and notarized dmg file in t
 TODO
 -->
 
-## Citing
-If you use HARP in your research, please cite our [NeurIPS paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
+## Citations
+[ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
+```
+@article{benetatos2025harp,
+    title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
+    author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
+    year      = 2025
+    journal   = {ISMIR Late Breaking and Demo Papers}
+}
+```
+
+[NeurIPS 2023 Paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf):
 ```
 @inproceedings{garcia2023harp,
-    title     = {{HARP}: Bringing Deep Learning to the DAW with Hosted, Asynchronous, Remote Processing},
+    title     = {{HARP}: Bringing Deep Learning to the {DAW} with Hosted, Asynchronous, Remote Processing},
     author    = {Garcia, Hugo Flores and O’Reilly, Patrick and Aguilar, Aldo and Pardo, Bryan and Benetatos, Christodoulos and Duan, Zhiyao},
     year      = 2023,
     booktitle = {NeurIPS Workshop on Machine Learning for Creativity and Design}

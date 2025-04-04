@@ -68,7 +68,6 @@ public:
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
             }
-            
         }
 
         // if (counter)
@@ -109,7 +108,7 @@ public:
             inputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
             addAndMakeVisible(inputTracksLabel.get());
         }
-        
+
         if (outputTracksCounter > 0)
         {
             // outputTracksLabel->setText("Output Tracks", juce::dontSendNotification);
@@ -173,7 +172,8 @@ public:
             {
                 // auto row = area.removeFromTop(150).reduced(2);
                 // display->setBounds(row);
-                mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
+                mainBox.items.add(
+                    juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
             }
         }
 
@@ -187,7 +187,8 @@ public:
             {
                 // auto row = area.removeFromTop(150).reduced(2);
                 // display->setBounds(row);
-                mainBox.items.add(juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
+                mainBox.items.add(
+                    juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
             }
         }
 
@@ -202,7 +203,7 @@ public:
     }
 
     // Implement the listener callback
-    // It listens to events emmited from MediaDisplayComponents 
+    // It listens to events emmited from MediaDisplayComponents
     // using the sendChangeMessage() function
     // NOTE: not used, but might be useful in the future
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
@@ -227,7 +228,6 @@ public:
     }
 
 private:
-
     // ToolbarSliderStyle toolbarSliderStyle;
     std::shared_ptr<WebModel> mModel { nullptr };
 

@@ -4,17 +4,23 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
+#include "../gui/MultiButton.h"
 #include "../utils.h"
 #include "OutputLabelComponent.h"
-#include "../gui/MultiButton.h"
-
 
 using namespace juce;
+
+class OverheadPanel : public Component
+{
+public:
+    void paint(Graphics& g) override { g.fillAll(Colours::darkgrey.darker()); }
+};
 
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
                               public FileDragAndDropTarget,
+                              public DragAndDropContainer,
                               private Timer,
                               private ScrollBar::Listener
 {
@@ -27,6 +33,7 @@ public:
 
     void paint(Graphics& g) override;
     virtual void resized() override;
+    virtual void repositionOverheadPanel();
     Rectangle<int> getContentBounds();
     // virtual void repositionContent() {};
     virtual void repositionScrollBar();
@@ -38,8 +45,6 @@ public:
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
-    void repositionOverheadLabels();
-    void repositionLabelOverlays();
     void repositionLabels();
 
     void changeListenerCallback(ChangeBroadcaster*) override;
@@ -79,9 +84,9 @@ public:
     // Callback for the save button
     void saveCallback();
 
-    bool displaysInput() {return ioMode == 0;}
-    bool displaysOutput() {return ioMode == 1;}
-    
+    bool displaysInput() { return ioMode == 0; }
+    bool displaysOutput() { return ioMode == 1; }
+
     void clearDroppedFile() { droppedFilePath = URL(); }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
@@ -106,13 +111,16 @@ public:
 
     String getMediaHandlerInstructions();
 
-    virtual void addLabels(LabelList& labels);
+    void addLabels(LabelList& labels);
+    void clearLabels(int processingIdxCutoff = 0);
 
     void addLabelOverlay(LabelOverlayComponent l);
-    void addOverheadLabel(OverheadLabelComponent l);
+    void removeLabelOverlay(LabelOverlayComponent* l);
 
-    void removeOutputLabel(OutputLabelComponent* l);
-    void clearLabels();
+    void addOverheadLabel(OverheadLabelComponent l);
+    void removeOverheadLabel(OverheadLabelComponent* l);
+
+    int getNumOverheadLabels();
 
 protected:
     void setNewTarget(URL filePath);
@@ -130,8 +138,13 @@ protected:
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
 
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
+
     Range<double> visibleRange;
 
+    OverheadPanel overheadPanel;
     ScrollBar horizontalScrollBar { false };
 
     String mediaHandlerInstructions;
@@ -155,7 +168,7 @@ protected:
     // Left panel containing track name and buttons
     juce::Component headerComponent;
     // Media (audio or MIDI) content area
-    juce::Component mediaComponent;  
+    juce::Component mediaComponent;
     // Header sub-components
     juce::Label trackNameLabel;
     MultiButton playStopButton;
@@ -168,7 +181,6 @@ protected:
     MultiButton::Mode saveButtonInactiveInfo;
 
 private:
-
     void populateTrackHeader();
 
     void resetPaths();
@@ -176,6 +188,8 @@ private:
     virtual void resetDisplay() = 0;
 
     virtual void postLoadActions(const URL& filePath) = 0;
+
+    int correctToBounds(float x, float width);
 
     void updateCursorPosition();
 
@@ -196,14 +210,10 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    const int textSpacing = 2;
-    const int minFontSize = 10;
-    const int labelHeight = 20;
-
     bool ioMode = 0; // 0 input, 1 output
 
     Array<LabelOverlayComponent*> labelOverlays;
-    Array<OverheadLabelComponent*> oveheadLabels;
+    Array<OverheadLabelComponent*> overheadLabels;
 
     juce::String trackName;
 };

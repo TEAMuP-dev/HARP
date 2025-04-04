@@ -31,6 +31,9 @@
 // #include "media/AudioDisplayComponent.h"
 // #include "media/MediaDisplayComponent.h"
 // #include "media/MidiDisplayComponent.h"
+
+#include "windows/AboutWindow.h"
+
 using namespace juce;
 
 // this only calls the callback ONCE
@@ -228,56 +231,10 @@ public:
 
     void showAboutDialog()
     {
-        // Maybe create a new class for the about dialog
-        auto* aboutComponent = new Component();
-        aboutComponent->setSize(400, 300);
+        auto aboutComponent = std::make_unique<AboutWindow>();
 
-        // label for the about text
-        auto* aboutText = new Label();
-        aboutText->setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
-                           dontSendNotification);
-        aboutText->setJustificationType(Justification::centred);
-        aboutText->setSize(380, 100);
-
-        // hyperlink buttons
-        auto* modelGlossaryButton = new HyperlinkButton(
-            "Model Glossary", URL("https://github.com/TEAMuP-dev/HARP#available-models"));
-        modelGlossaryButton->setSize(380, 24);
-        modelGlossaryButton->setTopLeftPosition(10, 110);
-        modelGlossaryButton->setJustificationType(Justification::centred);
-        modelGlossaryButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* visitWebpageButton =
-            new HyperlinkButton("Visit HARP webpage", URL("https://harp-plugin.netlify.app/"));
-        visitWebpageButton->setSize(380, 24);
-        visitWebpageButton->setTopLeftPosition(10, 140);
-        visitWebpageButton->setJustificationType(Justification::centred);
-        visitWebpageButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        auto* reportIssueButton = new HyperlinkButton(
-            "Report an issue", URL("https://github.com/TEAMuP-dev/harp/issues"));
-        reportIssueButton->setSize(380, 24);
-        reportIssueButton->setTopLeftPosition(10, 170);
-        reportIssueButton->setJustificationType(Justification::centred);
-        reportIssueButton->setColour(HyperlinkButton::textColourId, Colours::blue);
-
-        // label for the copyright
-        auto* copyrightLabel = new Label();
-        copyrightLabel->setText(String(APP_COPYRIGHT) + "\n\n", dontSendNotification);
-        copyrightLabel->setJustificationType(Justification::centred);
-        copyrightLabel->setSize(380, 100);
-        copyrightLabel->setTopLeftPosition(10, 200);
-
-        // Add components to the main component
-        aboutComponent->addAndMakeVisible(aboutText);
-        aboutComponent->addAndMakeVisible(modelGlossaryButton);
-        aboutComponent->addAndMakeVisible(visitWebpageButton);
-        aboutComponent->addAndMakeVisible(reportIssueButton);
-        aboutComponent->addAndMakeVisible(copyrightLabel);
-
-        // The dialog window with the custom component as its content
         DialogWindow::LaunchOptions dialog;
-        dialog.content.setOwned(aboutComponent);
+        dialog.content.setOwned(aboutComponent.release());
         dialog.dialogTitle = "About " + String(APP_NAME);
         dialog.dialogBackgroundColour = Colours::grey;
         dialog.escapeKeyTriggersCloseButton = true;
@@ -315,8 +272,7 @@ public:
         //     // Launch the file chooser dialog asynchronously
         //     saveFileBrowser->launchAsync(
         //         FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
-        //         [this](const FileChooser& browser)
-        //         {
+        //         [this](const FileChooser& browser) {
         //             StringArray validExtensions = mediaDisplay->getInstanceExtensions();
         //             File newFile = browser.getResult();
         //             if (newFile != File {})
@@ -598,9 +554,30 @@ public:
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
-                                URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
-                                spaceUrl.launchInDefaultBrowser();
+                                // get the spaceInfo
+                                SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                                if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+                                {
+                                    URL spaceUrl =
+                                        this->model->getGradioClient().getSpaceInfo().gradio;
+                                    spaceUrl.launchInDefaultBrowser();
+                                }
+                                else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+                                {
+                                    URL spaceUrl =
+                                        this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    spaceUrl.launchInDefaultBrowser();
+                                }
+                                else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
+                                {
+                                    // either choose hugingface or gradio, they are the same
+                                    URL spaceUrl =
+                                        this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    spaceUrl.launchInDefaultBrowser();
+                                }
+                                // URL spaceUrl =
+                                //     this->model->getGradioClient().getSpaceInfo().huggingface;
+                                // spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
@@ -881,23 +858,17 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",
-            "cwitkowitz/timbre-trap",
-            "npruyne/audio_similarity",
             "hugggof/vampnet-music",
-            "hugggof/vampnet-percussion",
-            "hugggof/vampnet-n64",
-            "hugggof/vampnet-choir",
-            "hugggof/vampnet-opera",
-            "hugggof/vampnet-machines",
-            "hugggof/vampnet-birds",
-            // "descript/vampnet",
-            // "pharoAIsanders420/micro-musicgen-jungle",
-            "hugggof/nesquik",
-            // "hugggof/pitch_shifter",
-            "hugggof/harmonic_percussive",
+            "lllindsey0615/pyharp_demucs",
+            "lllindsey0615/pyharp_AMT",
+            "npruyne/timbre-trap",
+            "xribene/harmonic_percussive",
+            "lllindsey0615/DEMUCS_GPU",
+            "cwitkowitz/timbre-trap",
+            // "npruyne/audio_similarity",
             // "xribene/pitch_shifter",
-            "xribene/pitch_shifter_awake",
-            "xribene/midi_pitch_shifter",
+            // "xribene/midi_pitch_shifter",
+            // "xribene/HARP-UI-Test"
             // "xribene/pitch_shifter_slow",
             "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
@@ -950,7 +921,7 @@ public:
                         MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
                     }
                 };
-                CustomPathDialog::showDialogWindow(loadCallback, cancelCallback);
+                new CustomPathDialog(loadCallback, cancelCallback);
             }
             else
             {
@@ -962,10 +933,8 @@ public:
         addAndMakeVisible(modelPathComboBox);
     }
 
-    explicit MainComponent(const URL& initialFilePath = URL())
-        : jobsFinished(0),
-          totalJobs(0),
-          jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
+    explicit MainComponent(const URL& initialFilePath = URL()) : jobsFinished(0), totalJobs(0)
+    //   jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         HarpLogger::getInstance()->initializeLogger();
         fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
@@ -1045,7 +1014,7 @@ public:
         auto& card = model->card();
         setModelCard(card);
 
-        jobProcessorThread.startThread();
+        // jobProcessorThread.startThread();
 
         setOpaque(true);
         setSize(800, 2000);
@@ -1071,12 +1040,12 @@ public:
         loadBroadcaster.removeChangeListener(this);
         processBroadcaster.removeChangeListener(this);
 
-        jobProcessorThread.signalThreadShouldExit();
+        // jobProcessorThread.signalThreadShouldExit();
         // This will not actually run any processing task
         // It'll just make sure that the thread is not waiting
         // and it'll allow it to check for the threadShouldExit flag
-        jobProcessorThread.signalTask();
-        jobProcessorThread.waitForThreadToExit(-1);
+        // jobProcessorThread.signalTask();
+        // jobProcessorThread.waitForThreadToExit(-1);
 
 #if JUCE_MAC
         MenuBarModel::setMacMainMenu(nullptr);
@@ -1087,122 +1056,139 @@ public:
     void cancelCallback()
     {
         DBG("HARPProcessorEditor::buttonClicked cancel button listener activated");
+
         OpResult cancelResult = model->cancel();
+
         if (cancelResult.failed())
         {
-            // This "if" block hasn't been tested
-
             LogAndDBG(cancelResult.getError().devMessage.toStdString());
             AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                              "Cancel Error",
                                              "An error occurred while cancelling the processing: \n"
                                                  + cancelResult.getError().devMessage);
-            // processCancelButton.setEnabled(true);
-            // processCancelButton.setMode(processButtonInfo.label);
-            resetProcessingButtons();
             return;
         }
+        // Update current process to empty
+        processMutex.lock();
+        DBG("Cancel ProcessID: " + currentProcessID);
+        currentProcessID = "";
+        processMutex.unlock();
         // We already added a temp file, so we need to undo that
-        // TODO: this is functionality that I need to add back
+        // TODO: this is functionality that I need to add back // #TODO
         // mediaDisplay->iteratePreviousTempFile();
         // mediaDisplay->clearFutureTempFiles();
-        processCancelButton.setEnabled(false);
+
+        // processCancelButton.setEnabled(false); // this is the og v3
+        resetProcessingButtons(); // This is the new way
     }
 
     void processCallback()
     {
         return;
 
-        // DBG("HARPProcessorEditor::buttonClicked button listener activated");
+        if (model == nullptr)
+        {
+            AlertWindow("Error",
+                        "Model is not loaded. Please load a model first.",
+                        AlertWindow::WarningIcon);
+            return;
+        }
 
-        // // check if the audio file is loaded for the first element of the inputMediaDisplays
-        // if (! inputMediaDisplays[0]->isFileLoaded())
+        // Get new processID
+        String processID = juce::Uuid().toString();
+        processMutex.lock();
+        currentProcessID = processID;
+        DBG("Set Process ID: " + processID);
+        processMutex.unlock();
+
+        // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
+        // // check if the file is loaded
+        // if (! mediaDisplay->isFileLoaded())
         // {
+        //     String fileTypeString;
+
+        //     if (model->card().midi_in)
+        //     {
+        //         fileTypeString = "midi";
+        //     }
+        //     else
+        //     {
+        //         fileTypeString = "audio";
+        //     }
+
         //     AlertWindow::showMessageBoxAsync(
         //         AlertWindow::WarningIcon,
         //         "Error",
-        //         "Audio file is not loaded. Please load an audio file first.");
+        //         fileTypeString.substring(0, 1).toUpperCase()
+        //         + fileTypeString.substring(1).toLowerCase()
+        //         + " file is not loaded. Please load "
+        //         + fileTypeString + " file first.");
         //     return;
         // }
 
-        // processCancelButton.setEnabled(true);
-        // processCancelButton.setMode(cancelButtonInfo.label);
+        processCancelButton.setEnabled(true);
+        processCancelButton.setMode(cancelButtonInfo.label);
 
-        // saveEnabled = false;
-        // isProcessing = true;
+        saveEnabled = false;
+        isProcessing = true;
 
-        // if (model == nullptr)
-        // {
-        //     AlertWindow("Error",
-        //                 "Model is not loaded. Please load a model first.",
-        //                 AlertWindow::WarningIcon);
-        //     isProcessing = false;
-        //     return;
-        // }
+        // mediaDisplay->addNewTempFile();
+        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
 
-        // bool matchingModel = true;
+        
 
-        // // if (dynamic_cast<AudioDisplayComponent*>(inputMediaDisplays[0].get()))
-        // // {
-        // //     matchingModel = ! model->card().midi_in; //&& ! model->card().midi_out;
-        // // }
-        // // else
-        // // {
-        // //     matchingModel = model->card().midi_in; //&& model->card().midi_out;
-        // // }
+        // Directly add the job to the thread pool
+        jobProcessorThread.addJob(
+            new CustomThreadPoolJob(
+                [this](String processID) { // &jobsFinished, totalJobs
+                    // Individual job code for each iteration
+                    // copy the audio file, with the same filename except for an added _harp to the stem
+                    OpResult processingResult =
+                        model->process(mediaDisplay->getTempFilePath().getLocalFile());
+                    processMutex.lock();
+                    if (processID != currentProcessID)
+                    {
+                        DBG("ProcessID " + processID + " not found");
+                        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+                        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
+                        processMutex.unlock();
+                        return;
+                    }
+                    if (processingResult.failed())
+                    {
+                        Error processingError = processingResult.getError();
+                        Error::fillUserMessage(processingError);
+                        LogAndDBG("Error in Processing:\n"
+                                  + processingError.devMessage.toStdString());
+                        AlertWindow::showMessageBoxAsync(
+                            AlertWindow::WarningIcon,
+                            "Processing Error",
+                            "An error occurred while processing the audio file: \n"
+                                + processingError.userMessage);
+                        // cb: I commented this out, and it doesn't seem to change anything
+                        // it was also causing a crash. If we need it, it needs to run on
+                        // the message thread using MessageManager::callAsync
+                        // hy: Now this line works.
+                        // resetProcessingButtons();
+                        // cb: Needs to be in the message thread or else it crashes
+                        // It's used when the processing fails to reset the process/cancel
+                        // button back to the process mode.
+                        MessageManager::callAsync([this] { resetProcessingButtons(); });
+                        processMutex.unlock();
+                        return;
+                    }
+                    // load the audio file again
+                    DBG("ProcessID " + processID + " succeed");
+                    currentProcessID = "";
+                    model->setStatus(ModelStatus::FINISHED);
+                    processBroadcaster.sendChangeMessage();
+                    processMutex.unlock();
 
-        // // Check if the model's type (Audio or MIDI) matches the input file's type
-        // // If not, show an error message and ask the user to either use another model
-        // // or another appropriate file
-        // if (! matchingModel)
-        // {
-        //     LogAndDBG("Model and file type mismatch");
-        //     AlertWindow::showMessageBoxAsync(
-        //         AlertWindow::WarningIcon,
-        //         "Processing Error",
-        //         "Model and file type mismatch. Please use an appropriate model or file.");
-        //     // processBroadcaster.sendChangeMessage();
-        //     resetProcessingButtons();
-        //     return;
-        // }
-
-        // inputMediaDisplays[0]->addNewTempFile();
-        // outputMediaDisplays[0]->addNewTempFile();
-        // // print how many jobs are currently in the threadpool
-        // LogAndDBG("threadPool.getNumJobs: " + std::to_string(threadPool.getNumJobs()));
-
-        // // empty customJobs
-        // customJobs.clear();
-
-        // customJobs.push_back(new CustomThreadPoolJob([this] { // &jobsFinished, totalJobs
-        //     // Individual job code for each iteration
-        //     // copy the audio file, with the same filename except for an added _harp to the stem
-        //     OpResult processingResult =
-        //         model->process(inputMediaDisplays[0]->getTempFilePath().getLocalFile(),
-        //                         outputMediaDisplays[0]->getTempFilePath().getLocalFile());
-        //     if (processingResult.failed())
-        //     {
-        //         Error processingError = processingResult.getError();
-        //         Error::fillUserMessage(processingError);
-        //         LogAndDBG("Error in Processing:\n" + processingError.devMessage.toStdString());
-        //         AlertWindow::showMessageBoxAsync(
-        //             AlertWindow::WarningIcon,
-        //             "Processing Error",
-        //             "An error occurred while processing the audio file: \n"
-        //                 + processingError.userMessage);
-        //         // cb: I commented this out, and it doesn't seem to change anything
-        //         // it was also causing a crash. If we need it, it needs to run on
-        //         // the message thread using MessageManager::callAsync
-        //         // resetProcessingButtons();
-        //         return;
-        //     }
-        //     // load the audio file again
-        //     processBroadcaster.sendChangeMessage();
-
-        // }));
-
-        // // Now the customJobs are ready to be added to be run in the threadPool
-        // jobProcessorThread.signalTask();
+                },
+                processID),
+            true);
+        DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
+        DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
     // void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
@@ -1279,6 +1265,7 @@ public:
 
         // resized();
     }
+
     // TODO: ignore that for now. Load files using drag n drop which works fine
     // for multiple mediaDisplays
     // void loadMediaDisplay3(File mediaFile)
@@ -1384,7 +1371,7 @@ public:
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2));
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2)); // is 0.4 in v2
 
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
@@ -1454,28 +1441,12 @@ public:
 
     void setModelCard(const ModelCard& card)
     {
-        // Set the text for the labels
-        // nameLabel.setText(String(card.name), dontSendNotification);
         modelAuthorLabel.setModelText(String(card.name));
         descriptionLabel.setText(String(card.description), dontSendNotification);
         // set the author label text to "by {author}" only if {author} isn't empty
         card.author.empty() ? modelAuthorLabel.setAuthorText("")
                             : modelAuthorLabel.setAuthorText("by " + String(card.author));
         modelAuthorLabel.resized();
-        // It is assumed we only support wav2wav or midi2midi models for now
-        // if (card.midi_in && card.midi_out && ! card.author.empty())
-        // {
-        //     audioOrMidiLabel.setText("Midi-to-Midi", dontSendNotification);
-        // }
-        // else if (! card.midi_in && ! card.midi_out && ! card.author.empty())
-        // {
-        //     audioOrMidiLabel.setText("Wav-to-Wav", dontSendNotification);
-        // }
-        // else
-        // {
-        //     audioOrMidiLabel.setText("", dontSendNotification);
-        // }
-        // audioOrMidiLabel.setText("No need for that", dontSendNotification);
     }
 
     void setStatus(const ModelStatus& status)
@@ -1512,7 +1483,6 @@ private:
     HoverHandler saveFileButtonHandler { saveFileButton };
 
     ModelAuthorLabel modelAuthorLabel;
-
     MultiButton loadModelButton;
     MultiButton::Mode loadButtonInfo;
 
@@ -1566,14 +1536,18 @@ private:
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
 
+    String currentProcessID;
+    std::mutex processMutex;
+
     /// CustomThreadPoolJob
     // This one is used for Loading the models
     // The thread pull for Processing lives inside the JobProcessorThread
     ThreadPool threadPool { 1 };
     int jobsFinished;
     int totalJobs;
-    JobProcessorThread jobProcessorThread;
-    std::vector<CustomThreadPoolJob*> customJobs;
+    // JobProcessorThread jobProcessorThread;
+    ThreadPool jobProcessorThread { 10 };
+    std::deque<CustomThreadPoolJob*> customJobs;
 
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
