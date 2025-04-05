@@ -394,8 +394,7 @@ public:
             if (trackInfo == nullptr)
             {
                 status2 = ModelStatus::ERROR;
-                error.devMessage = "Failed to upload file for track "
-                                   + std::get<1>(tuple) + ": "
+                error.devMessage = "Failed to upload file for track " + std::get<1>(tuple) + ": "
                                    + std::get<2>(tuple).getFileName()
                                    + ". The track is not an audio or midi track.";
                 return OpResult::fail(error);
@@ -561,7 +560,14 @@ public:
                     return result;
                 }
                 // Make a juce::File from the path
-                juce::File processedFile(outputFilePath);
+                // juce::File processedFile(outputFilePath);
+                juce::File downloadedFile(outputFilePath);
+                auto aa = downloadedFile.getFileName();
+                auto bb = downloadedFile.getFullPathName();
+                auto cc = URL(downloadedFile).toString(true);
+                outputFilePaths.push_back(URL(downloadedFile).toString(true));
+
+                // outputFilePaths.push_back(outputFilePath);
                 // Replace the input file with the processed file
                 // processedFile.moveFileTo(filetoProcess);
                 // processedFile.moveFileTo(outputFile);
@@ -755,6 +761,8 @@ public:
 
     LabelList& getLabels() { return labels; }
 
+    std::vector<juce::String>& getOutputFilePaths() { return outputFilePaths; }
+
 private:
     OpResult prepareProcessingPayload(juce::String& payloadJson)
     {
@@ -873,6 +881,10 @@ private:
 
     // A variable to store the latest labelList received during processing
     LabelList labels;
+    // A vector to store the output file paths we get from gradio
+    // after processing. We assume that the order of the output files
+    // is the same as the order of the outputTracksInfo
+    std::vector<juce::String> outputFilePaths;
 };
 
 // a timer that checks the status of the model and broadcasts a change if if there is one

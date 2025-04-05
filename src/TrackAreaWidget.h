@@ -57,6 +57,9 @@ public:
                 inputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
+                inputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
+                    updateInstructionBox(text);
+                };
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
@@ -69,6 +72,9 @@ public:
                 inputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
                 addAndMakeVisible(inputMediaDisplays.back().get());
                 inputMediaDisplays.back()->addChangeListener(this);
+                inputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
+                    updateInstructionBox(text);
+                };
             }
         }
 
@@ -90,6 +96,9 @@ public:
                 outputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
                 addAndMakeVisible(outputMediaDisplays.back().get());
                 outputMediaDisplays.back()->addChangeListener(this);
+                outputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
+                    updateInstructionBox(text);
+                };
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
@@ -102,6 +111,9 @@ public:
                 outputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
                 addAndMakeVisible(outputMediaDisplays.back().get());
                 outputMediaDisplays.back()->addChangeListener(this);
+                outputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
+                    updateInstructionBox(text);
+                };
             }
         }
 
@@ -206,6 +218,11 @@ public:
         return inputMediaDisplays;
     }
 
+    std::vector<std::unique_ptr<MediaDisplayComponent>>& getOutputMediaDisplays()
+    {
+        return outputMediaDisplays;
+    }
+
     // Implement the listener callback
     // It listens to events emmited from MediaDisplayComponents
     // using the sendChangeMessage() function
@@ -232,6 +249,9 @@ public:
     }
 
 private:
+
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
+
     // ToolbarSliderStyle toolbarSliderStyle;
     std::shared_ptr<WebModel> mModel { nullptr };
 
@@ -252,4 +272,12 @@ private:
     };
     int inputTracksCounter = 0;
     int outputTracksCounter = 0;
+
+    void updateInstructionBox(const juce::String& text)
+    {
+        if (instructionBox != nullptr)
+        {
+            instructionBox->setStatusMessage(text);
+        }
+    }
 };

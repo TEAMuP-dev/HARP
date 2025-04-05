@@ -287,9 +287,24 @@ void MediaDisplayComponent::addNewTempFile()
     // "originalFile" is the first file that was displayed
     // in this mediaDisplay (either the first input)
     // or the first output)
-    File originalFile;
-    if (targetFilePath.isLocalFile())
-        originalFile = targetFilePath.getLocalFile();
+    // File originalFile;
+    // if (currentTempFileIdx == 0)
+    // {
+    //     originalFile = targetFilePath.getLocalFile();
+    // }
+    // else
+    // {
+    //     originalFile = tempFilePaths.getReference(currentTempFileIdx - 1).getLocalFile();
+    // }
+
+    // targetFilePath is of type URL
+    // for outputMediaDisplays, there isn't a targetFilePath.
+    if (targetFilePath.isEmpty())
+    {
+        DBG("MediaDisplayComponent::addNewTempFile: No target file path.");
+        return;
+    }
+    File originalFile = targetFilePath.getLocalFile();
 
     File targetFile;
 
@@ -470,6 +485,29 @@ void MediaDisplayComponent::openFileChooser()
                                  });
 }
 
+void MediaDisplayComponent::setNewTarget(URL filePath)
+{
+    targetFilePath = filePath;
+
+    addNewTempFile();
+}
+
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
+}
+
+void MediaDisplayComponent::resetPaths()
+{
+    clearDroppedFile();
+
+    targetFilePath = URL();
+
+    tempFilePaths.clear();
+    currentTempFileIdx = -1;
+}
+
 void MediaDisplayComponent::saveCallback()
 {
     if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
@@ -588,10 +626,19 @@ String MediaDisplayComponent::getMediaHandlerInstructions()
     return toolTipText;
 }
 
+void MediaDisplayComponent::setMediaHandlerInstructions(String instructions)
+{
+    mediaHandlerInstructions = instructions;
+}
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     for (const auto& l : labels)
     {
+        
+        if (!shouldRenderLabel(l))
+        {
+            continue;
+        }
         std::unique_ptr<OutputLabelComponent> lc =
             std::make_unique<OutputLabelComponent>((double) l->t, l->label);
         ;
@@ -759,12 +806,6 @@ int MediaDisplayComponent::getNumOverheadLabels()
     return nOverheadLabels;
 }
 
-void MediaDisplayComponent::setNewTarget(URL filePath)
-{
-    targetFilePath = filePath;
-
-    addNewTempFile();
-}
 
 double MediaDisplayComponent::mediaXToTime(const float x)
 {
@@ -801,12 +842,6 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
     float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
 
     return dX;
-}
-
-void MediaDisplayComponent::resetTransport()
-{
-    transportSource.stop();
-    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::horizontalMove(float deltaX)
@@ -898,15 +933,6 @@ void MediaDisplayComponent::populateTrackHeader()
     headerComponent.addAndMakeVisible(saveFileButton);
 }
 
-void MediaDisplayComponent::resetPaths()
-{
-    clearDroppedFile();
-
-    targetFilePath = URL();
-
-    tempFilePaths.clear();
-    currentTempFileIdx = -1;
-}
 
 int MediaDisplayComponent::correctToBounds(float x, float width)
 {
@@ -1012,4 +1038,15 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
         repaint();
     }
+}
+
+void MediaDisplayComponent::mouseEnter(const juce::MouseEvent& /*event*/)
+{
+    if (instructionBoxWriter)
+        instructionBoxWriter(mediaHandlerInstructions);
+}
+void MediaDisplayComponent::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    if (instructionBoxWriter)
+        instructionBoxWriter("");
 }

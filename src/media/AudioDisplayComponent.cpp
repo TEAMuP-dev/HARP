@@ -45,6 +45,24 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 {
+    // const auto source = std::make_unique<URLInputSource>(filePath);
+
+    // if (source == nullptr)
+    // {
+    //     DBG("AudioDisplayComponent::loadMediaFile: Failed to create source for " << filePath.toString(true));
+    //     jassertfalse;
+    //     return;
+    // }
+
+    // auto stream = rawToUniquePtr(source->createInputStream());
+
+    // if (stream == nullptr)
+    // {
+    //     DBG("AudioDisplayComponent::loadMediaFile: Failed to create input stream for " << filePath.toString(true));
+    //     jassertfalse;
+    //     return;
+    // }
+
     const auto source = std::make_unique<URLInputSource>(filePath);
 
     File audioFile = filePath.getLocalFile();

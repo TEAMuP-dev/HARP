@@ -61,9 +61,10 @@ void MidiDisplayComponent::repositionScrollBar()
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
+    DBG("Loading MIDI filePath: " << filePath.toString(true));
     // Create the local file this URL points to
     File file = filePath.getLocalFile();
-
+    DBG("Loading MIDI file: " << file.getFullPathName());
     std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
 
     // Read the MIDI file from the File object

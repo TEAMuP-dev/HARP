@@ -38,6 +38,11 @@ public:
 
     void resized() override;
 
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
+    {
+        return dynamic_cast<MidiLabel*>(label.get()) != nullptr;
+    }
+
 private:
     void resetDisplay() override;
 

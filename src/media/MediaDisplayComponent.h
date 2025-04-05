@@ -45,7 +45,7 @@ public:
     void setTrackName(String name) { trackName = name; }
     void setTrackId(juce::Uuid id) { trackID = id; }
     juce::Uuid getTrackId() { return trackID; }
-    
+
     float getMediaHeight() { return getMediaComponent()->getHeight(); }
     float getMediaWidth() { return getMediaComponent()->getWidth(); }
 
@@ -114,6 +114,7 @@ public:
     virtual void updateVisibleRange(Range<double> r);
 
     String getMediaHandlerInstructions();
+    void setMediaHandlerInstructions(String instructions);
 
     void addLabels(LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
@@ -126,7 +127,14 @@ public:
 
     int getNumOverheadLabels();
 
+    std::function<void(const juce::String&)> instructionBoxWriter;
+
 protected:
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const
+    {
+        return true;
+    }
+
     void setNewTarget(URL filePath);
 
     double mediaXToTime(const float x);
@@ -202,6 +210,9 @@ private:
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+
+    void mouseEnter(const juce::MouseEvent& /*event*/) override;
+    void mouseExit(const juce::MouseEvent& /*event*/) override;
 
     URL targetFilePath;
     URL droppedFilePath;

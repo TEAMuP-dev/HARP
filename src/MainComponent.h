@@ -555,7 +555,7 @@ public:
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
                                 // get the spaceInfo
-                                SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                                // SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
                                 if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                                 {
                                     URL spaceUrl =
@@ -898,10 +898,10 @@ public:
             {
                 // Create and show the custom path dialog with a callback
                 std::function<void(const juce::String&)> loadCallback =
-                    [this](const juce::String& customPath)
+                    [this](const juce::String& customPath2)
                 {
-                    DBG("Custom path entered: " + customPath);
-                    this->customPath = customPath.toStdString(); // Store the custom path
+                    DBG("Custom path entered: " + customPath2);
+                    this->customPath = customPath2.toStdString(); // Store the custom path
                     loadModelButton.triggerClick(); // Trigger the load model button click
                 };
                 std::function<void()> cancelCallback = [this]()
@@ -933,7 +933,8 @@ public:
         addAndMakeVisible(modelPathComboBox);
     }
 
-    explicit MainComponent(const URL& initialFilePath = URL()) : jobsFinished(0), totalJobs(0)
+    // explicit MainComponent(const URL& initialFilePath = URL()) : jobsFinished(0), totalJobs(0)
+    explicit MainComponent() : jobsFinished(0), totalJobs(0)
     //   jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         HarpLogger::getInstance()->initializeLogger();
@@ -1163,15 +1164,15 @@ public:
         // Directly add the job to the thread pool
         jobProcessorThread.addJob(
             new CustomThreadPoolJob(
-                [this, localInputTrackFiles](String processID) { // &jobsFinished, totalJobs
+                [this, localInputTrackFiles](String jobProcessID) { // &jobsFinished, totalJobs
                     // Individual job code for each iteration
                     // copy the audio file, with the same filename except for an added _harp to the stem
                     OpResult processingResult =
                         model->process(localInputTrackFiles);
                     processMutex.lock();
-                    if (processID != currentProcessID)
+                    if (jobProcessID != currentProcessID)
                     {
-                        DBG("ProcessID " + processID + " not found");
+                        DBG("ProcessID " + jobProcessID + " not found");
                         DBG("NumJobs: " + std::to_string(jobProcessorThread.getNumJobs()));
                         DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
                         processMutex.unlock();
@@ -1201,7 +1202,7 @@ public:
                         return;
                     }
                     // load the audio file again
-                    DBG("ProcessID " + processID + " succeed");
+                    DBG("ProcessID " + jobProcessID + " succeed");
                     currentProcessID = "";
                     model->setStatus(ModelStatus::FINISHED);
                     processBroadcaster.sendChangeMessage();
@@ -1235,9 +1236,9 @@ public:
     //     // mediaDisplayHandler->attach();
     // }
 
-    void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    {
-        return;
+    // void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
+    // {
+    //     return;
         // // Check the file extension to determine type
         // String extension = mediaFile.getFileExtension();
 
@@ -1287,7 +1288,7 @@ public:
         // playStopButton.setEnabled(true);
 
         // resized();
-    }
+    // }
 
     // TODO: ignore that for now. Load files using drag n drop which works fine
     // for multiple mediaDisplays
@@ -1356,7 +1357,7 @@ public:
 
         openFileBrowser->launchAsync(FileBrowserComponent::openMode
                                          | FileBrowserComponent::canSelectFiles,
-                                     [this](const FileChooser& browser)
+                                     [](const FileChooser& browser)
                                      {
                                          File chosenFile = browser.getResult();
                                          if (chosenFile != File {})
@@ -1394,7 +1395,7 @@ public:
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2)); // is 0.4 in v2
+        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2f)); // is 0.4 in v2
 
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
@@ -1447,7 +1448,7 @@ public:
         row8.flexDirection = juce::FlexBox::Direction::row;
         row8.items.add(juce::FlexItem(*instructionBox).withFlex(1).withMargin(margin));
         row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row8).withFlex(0.4));
+        flexBox.items.add(juce::FlexItem(row8).withFlex(0.4f));
 
         // Apply the FlexBox layout to the main area
         flexBox.performLayout(area);
@@ -1553,8 +1554,8 @@ private:
     // // A list of output media displays
     // std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
 
-    std::unique_ptr<HoverHandler> mediaDisplayHandler;
-    std::unique_ptr<HoverHandler> outputMediaDisplayHandler;
+    // std::unique_ptr<HoverHandler> mediaDisplayHandler;
+    // std::unique_ptr<HoverHandler> outputMediaDisplayHandler;
 
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
@@ -1628,97 +1629,44 @@ private:
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        // // Check if the source is one of the inputMediaDisplays
-        // for (auto& display : trackAreaWidget.getInputMediaDisplays())
-        // {
-        //     if (source == display.get())
-        //     {
-        //         if (display->isFileDropped())
-        //         {
-        //             URL droppedFilePath = display->getDroppedFilePath();
-        //             display->clearDroppedFile();
-        //             // Reload an appropriate display for dropped file
-        //             loadMediaDisplay(droppedFilePath.getLocalFile(), display);
-        //         }
-        //         else if (display->isFileLoaded() && !display->isPlaying())
-        //         {
-        //             playStopButton.setMode(playButtonInfo.label);
-        //             playStopButton.setEnabled(true);
-        //         }
-        //         else if (display->isFileLoaded() && display->isPlaying())
-        //         {
-        //             playStopButton.setMode(stopButtonInfo.label);
-        //         }
-        //         else
-        //         {
-        //             playStopButton.setMode(playButtonInfo.label);
-        //             playStopButton.setEnabled(false);
-        //         }
-        //         return;
-        //     }
-        // }
-
-        // old
-
-        // if (source == mediaDisplay.get())
-        // {
-        //     if (mediaDisplay->isFileDropped())
-        //     {
-        //         URL droppedFilePath = mediaDisplay->getDroppedFilePath();
-
-        //         mediaDisplay->clearDroppedFile();
-
-        //         // Reload an appropriate display for dropped file
-        //         loadMediaDisplay(droppedFilePath.getLocalFile());
-        //     }
-        //     else if (mediaDisplay->isFileLoaded() && ! mediaDisplay->isPlaying())
-        //     {
-        //         playStopButton.setMode(playButtonInfo.label);
-        //         playStopButton.setEnabled(true);
-        //     }
-        //     else if (mediaDisplay->isFileLoaded() && mediaDisplay->isPlaying())
-        //     {
-        //         playStopButton.setMode(stopButtonInfo.label);
-        //     }
-        //     else
-        //     {
-        //         playStopButton.setMode(playButtonInfo.label);
-        //         playStopButton.setEnabled(false);
-        //     }
-        // }
-        /*
-        // The loadBroadcaster isn't used anymore. 
-        // It's replaced by processLoadingResult
-        // it's more usefull because I can pass the result of the loading
-        // as argument to the callback
-        // it'll be used like this:
-        MessageManager::callAsync(
-                                [this, loadingError]
-                                {
-                                    processLoadingResult(OpResult::fail(loadingError));
-                                });
-        */
-
-        // else if (source == &loadBroadcaster)
-
         // The processBroadcaster should be also replaced in a similar way
-        // as the loadBroadcaster
+        // as the loadBroadcaster (see processLoadingResult)
         if (source == &processBroadcaster)
         {
-            return;
+            
             // // refresh the display for the new updated file
             // URL tempFilePath = outputMediaDisplays[0]->getTempFilePath();
             // outputMediaDisplays[0]->updateDisplay(tempFilePath);
 
             // // extract generated labels from the model
-            // LabelList& labels = model->getLabels();
+            
 
             // // add the labels to the display component
             // outputMediaDisplays[0]->addLabels(labels);
 
-            // // now, we can enable the process button
-            // resetProcessingButtons();
-            // return;
+            
+            // The above commented code was for the case of a single output media display.
+            // Now, we get from model all the outputPaths using model->getOutputPaths()
+            // and we iterate over both outputMediaDisplays and outputPaths to update the display
+
+            // Additionally, we filter the labels to only show the audio labels to audio output media displays
+            // and midi labels to midi output media displays.
+            
+            LabelList& labels = model->getLabels();
+            auto outputProcessedPaths = model->getOutputFilePaths();
+            auto& outputMediaDisplays = trackAreaWidget.getOutputMediaDisplays();
+            for (size_t i = 0; i < outputMediaDisplays.size(); ++i)
+            {
+                URL tempFile = outputProcessedPaths[i];
+                outputMediaDisplays[i]->setupDisplay(tempFile);
+                outputMediaDisplays[i]->addLabels(labels);
+            }
+            // URL tempFilePath = outputProcessedPaths[0];
+            // outputMediaDisplays[0]->setupDisplay(tempFilePath);
+
+            // now, we can enable the process button
+            resetProcessingButtons();
+            return;
         }
 
         if (source == mModelStatusTimer.get())

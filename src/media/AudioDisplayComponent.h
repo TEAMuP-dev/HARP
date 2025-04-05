@@ -28,11 +28,14 @@ public:
     ~AudioDisplayComponent();
 
     static StringArray getSupportedExtensions();
-    StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
+    StringArray getInstanceExtensions() override
+    {
+        return AudioDisplayComponent::getSupportedExtensions();
+    }
 
     // void repositionContent() override;
 
-    Component* getMediaComponent() { return &thumbnailComponent; }
+    Component* getMediaComponent() override { return &thumbnailComponent; }
 
     void loadMediaFile(const URL& filePath) override;
 
@@ -40,6 +43,11 @@ public:
     double getTimeAtOrigin() override { return visibleRange.getStart(); }
 
     void resized() override;
+
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
+    {
+        return dynamic_cast<AudioLabel*>(label.get()) != nullptr;
+    }
 
 private:
     void resetDisplay() override;
