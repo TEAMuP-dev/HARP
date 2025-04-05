@@ -182,7 +182,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
                                          const int timeoutMs) const
 {
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("upload");
+    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("gradio_api").getChildURL("upload");
 
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
@@ -262,7 +262,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
     // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
+    juce::URL requestEndpoint = gradioEndpoint.getChildURL("gradio_api").getChildURL("call").getChildURL(endpoint);
 
     // Prepare the POST request
     // juce::String jsonBody = R"({"data": []})";
@@ -340,7 +340,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     // /{eventID} appended
     juce::URL gradioEndpoint = spaceInfo.gradio;
     juce::URL getEndpoint =
-        gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
+        gradioEndpoint.getChildURL("gradio_api").getChildURL("call").getChildURL(callID).getChildURL(eventID);
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)

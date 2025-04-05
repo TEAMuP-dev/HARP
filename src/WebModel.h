@@ -351,24 +351,7 @@ public:
                 // juce::String path = procObj.getDynamicObject()->getProperty("path").toString();
                 juce::String outputFilePath;
                 juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
-                // First check if the gradio app is a localmodel or not
-                // if it is, we leave the url/path as is
-                // if not, we'll use the url, after we remove the substring
-                // "/c/file=" with "/file="
-                // Check if the url contains "space/c/file="
-                if (url.contains("/c/file="))
-                {
-                    // Replace "space/c/file=" with "space/file="
-                    url = url.replace("/c/file=", "/file=");
-                }
-                else
-                {
-                    status2 = ModelStatus::ERROR;
-                    error.type = ErrorType::FileDownloadError;
-                    error.devMessage =
-                        "The url does not contain the expected substring '/c/file='. Check if https://github.com/gradio-app/gradio/issues/9049 has been fixed";
-                    return OpResult::fail(error);
-                }
+
                 result = gradioClient.downloadFileFromURL(url, outputFilePath);
                 if (result.failed())
                 {
@@ -625,6 +608,12 @@ private:
                 // juce::DynamicObject obj;
                 juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                 obj->setProperty("path", juce::var(audioInCtrl->value));
+
+                juce::DynamicObject::Ptr type = new juce::DynamicObject();
+        
+                type->setProperty("_type", juce::var("gradio.FileData"));
+                obj->setProperty("meta", juce::var(type));
+
                 // Then we add the object to the array
                 jsonCtrlsArray.add(juce::var(obj));
             }
@@ -634,6 +623,12 @@ private:
                 // same as audioInCtrl
                 juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                 obj->setProperty("path", juce::var(midiInCtrl->value));
+
+                juce::DynamicObject::Ptr type = new juce::DynamicObject();
+        
+                type->setProperty("_type", juce::var("gradio.FileData"));
+                obj->setProperty("meta", juce::var(type));
+
                 jsonCtrlsArray.add(juce::var(obj));
             }
             else
