@@ -165,7 +165,7 @@ public:
 
         juce::MidiBuffer incomingMidi;
 
-        int lastSample = readPosition + samplesPerBlock;
+        int64 lastSample = readPosition + samplesPerBlock;
 
         for (int eventIdx = 0; eventIdx < sequence.getNumEvents(); ++eventIdx)
         {
@@ -176,7 +176,7 @@ public:
 
             if (startTimeSamples >= readPosition && startTimeSamples <= lastSample)
             {
-                incomingMidi.addEvent(midiMessage, startTimeSamples - readPosition);
+                incomingMidi.addEvent(midiMessage, static_cast<int>(startTimeSamples - readPosition));
 
                 // DBG("Event " << eventIdx << " at " << startTimeSamples << ": " << midiMessage.getDescription());
             }
@@ -206,7 +206,7 @@ public:
         return 0;
     }
 
-    void setLooping(bool shouldLoop) override
+    void setLooping(bool /*shouldLoop*/) override
     {
         // TODO
     }

@@ -95,7 +95,7 @@ struct SpaceInfo
         GRADIO,
         HUGGINGFACE,
         LOCALHOST,
-        ERROR,
+        FAILED,
         EMPTY
     };
     juce::String huggingface;
@@ -118,7 +118,7 @@ struct SpaceInfo
                 return "HuggingFace";
             case LOCALHOST:
                 return "Localhost";
-            case ERROR:
+            case FAILED:
                 return "Error";
             case EMPTY:
                 return "Empty";

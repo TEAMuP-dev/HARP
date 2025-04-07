@@ -94,7 +94,7 @@ public:
 
         result = gradioClient.setSpaceInfo(userSpaceAddress);
 
-        // if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::ERROR)
+        // if (gradioClient.getSpaceInfo().status == SpaceInfo::Status::FAILED)
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;

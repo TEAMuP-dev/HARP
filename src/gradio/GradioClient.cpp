@@ -65,7 +65,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected huggingface.co URL but could not parse user and "
                               "model. Too few parts in "
                               + spaceAddress;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -96,7 +96,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected hf.space URL but could not parse user and model. No "
                               "hyphen found in the subdomain: "
                               + subdomain;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -119,7 +119,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected user/model URL but could not parse user and model. "
                               "Too many/few slashes in "
                               + spaceAddress;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -128,7 +128,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     {
         spaceInfo.error =
             "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
-        spaceInfo.status = SpaceInfo::Status::ERROR;
+        spaceInfo.status = SpaceInfo::Status::FAILED;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }
@@ -162,7 +162,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     else
     {
         spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
-        spaceInfo.status = SpaceInfo::Status::ERROR;
+        spaceInfo.status = SpaceInfo::Status::FAILED;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }

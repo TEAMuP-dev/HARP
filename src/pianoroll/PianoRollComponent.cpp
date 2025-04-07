@@ -35,17 +35,17 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth,
 
 PianoRollComponent::~PianoRollComponent() { resetNotes(); }
 
-void PianoRollComponent::paint(Graphics& g)
+void PianoRollComponent::paint(Graphics& /*g*/)
 {
     double keysVisible = zoomToKeysVisible(verticalZoomSlider.getValue());
     double keyHeight = getHeight() / keysVisible;
 
-    keyboard.setSize(keyboard.getWidth(), 128.0 * keyHeight);
-    noteGrid.setSize(noteGrid.getWidth(), 128.0 * keyHeight);
+    keyboard.setSize(keyboard.getWidth(), static_cast<int>(128.0 * keyHeight));
+    noteGrid.setSize(noteGrid.getWidth(), static_cast<int>(128.0 * keyHeight));
 
     double pixelsPerSecond;
 
-    if (visibleMediaRange.getLength())
+    if (visibleMediaRange.getLength() > 0)
     {
         pixelsPerSecond = getPianoRollWidth() / visibleMediaRange.getLength();
     }
@@ -59,8 +59,8 @@ void PianoRollComponent::paint(Graphics& g)
     double currYPosition = -visibleKeyRange.getStart() * keyHeight;
     double currXPosition = -visibleMediaRange.getStart() * pixelsPerSecond;
 
-    keyboard.setTopLeftPosition(0, currYPosition);
-    noteGrid.setTopLeftPosition(currXPosition, currYPosition);
+    keyboard.setTopLeftPosition(0, static_cast<int>(currYPosition));
+    noteGrid.setTopLeftPosition(static_cast<int>(currXPosition), static_cast<int>(currYPosition));
 
     sendChangeMessage();
 }
@@ -89,7 +89,7 @@ void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
     noteGrid.updateLength(lengthInSecs);
 
-    if (lengthInSecs)
+    if (lengthInSecs > 0)
     {
         noteGrid.setResolution(getPianoRollWidth() / lengthInSecs);
     }
@@ -142,7 +142,7 @@ void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
     updateVisibleKeyRange(newRange);
 }
 
-void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY)
+void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float /*scrollPosY*/)
 {
     // get the current value of the verticalZoomSlider
     auto currentZoom = verticalZoomSlider.getValue();

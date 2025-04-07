@@ -92,15 +92,15 @@ public:
                     comboBox->addItem(option, comboBox->getNumItems() + 1);
                 }
 
-                int selectedId = 1; // Default to first item if the desired value isn't found
-                for (int i = 0; i < comboBox->getNumItems(); ++i)
-                {
-                    if (comboBox->getItemText(i).toStdString() == comboBoxCtrl->value)
-                    {
-                        selectedId = i + 1; // item IDs start at 1
-                        break;
-                    }
-                }
+                // int selectedId = 1; // Default to first item if the desired value isn't found
+                // for (int i = 0; i < comboBox->getNumItems(); ++i)
+                // {
+                //     if (comboBox->getItemText(i).toStdString() == comboBoxCtrl->value)
+                //     {
+                //         selectedId = i + 1; // item IDs start at 1
+                //         break;
+                //     }
+                // }
                 comboBox->addListener(this);
                 comboBox->setTextWhenNoChoicesAvailable("No choices");
                 addAndMakeVisible(*comboBox);

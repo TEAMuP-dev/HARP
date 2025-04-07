@@ -21,7 +21,7 @@ public:
                        int _scrollBarSize = 10,
                        int _scrollBarSpacing = 2);
 
-    ~PianoRollComponent();
+    ~PianoRollComponent() override;
 
     void paint(Graphics& g) override;
     void resized() override;
@@ -53,7 +53,7 @@ public:
     int getPianoRollSpacing() { return pianoRollSpacing; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
-    int getResolution() { return noteGrid.getPixelsPerSecond(); }
+    double getResolution() { return noteGrid.getPixelsPerSecond(); }
     int getMaxKeysVisible() { return maxKeysVisible; }
 
 private:
@@ -61,7 +61,7 @@ private:
     double keysVisibleToZoom(double numKeysVisible);
 
     int keyboardWidth;
-    int pianoRollWidth;
+    // int pianoRollWidth;
     int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
