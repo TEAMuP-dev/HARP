@@ -12,7 +12,7 @@ KeyboardComponent::KeyboardComponent() {}
 
 KeyboardComponent::~KeyboardComponent() {}
 
-float KeyboardComponent::getKeyHeight() { return getHeight() / 128.0f; }
+float KeyboardComponent::getKeyHeight() { return static_cast<float>(getHeight()) / 128.0f; }
 
 void KeyboardComponent::paint(Graphics& g)
 {
@@ -54,6 +54,6 @@ void KeyboardComponent::paint(Graphics& g)
         cumHeight += keyHeight;
 
         g.setColour(Colours::black);
-        g.drawLine(0, (int) cumHeight, getWidth(), (int) cumHeight);
+        g.drawLine(0.0f, cumHeight, static_cast<float>(getWidth()), cumHeight);
     }
 }

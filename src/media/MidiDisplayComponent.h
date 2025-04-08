@@ -25,7 +25,7 @@ public:
 
     float getMediaXPos() override
     {
-        return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing();
+        return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
     }
 
     void loadMediaFile(const URL& filePath) override;
@@ -33,7 +33,7 @@ public:
     void startPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
-    float getPixelsPerSecond() override { return (float)pianoRoll.getResolution(); }
+    float getPixelsPerSecond() override { return (float) pianoRoll.getResolution(); }
 
     void updateVisibleRange(Range<double> newRange) override;
 

@@ -146,10 +146,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
     medianMidi = midiNumbers[midiNumbers.size() / 2];
     // Find std
     float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
-    float mean = sum / midiNumbers.size();
+    float mean = sum / static_cast<float>(midiNumbers.size());
     float sq_sum =
         std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
-    stdDevMidi = std::sqrt(sq_sum / midiNumbers.size() - mean * mean);
+    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(midiNumbers.size()) - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
@@ -205,7 +205,7 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
     {
         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
         // bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        // bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 #if (JUCE_MAC)
         bool zoomMod = isCmdPressed;
 #else

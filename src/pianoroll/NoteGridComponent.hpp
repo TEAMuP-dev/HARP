@@ -44,14 +44,14 @@ public:
         {
             g.setColour(red.brighter());
 
-            const int maxVelocityWidth = getWidth() - 10;
-            const int verticalPosition = static_cast<int>(getHeight() * 0.5 - 2);
+            const float maxVelocityWidth = static_cast<float>(getWidth() - 10);
+            const float verticalPosition = static_cast<float>(getHeight()) * 0.5f - 2.0f;
 
-            g.drawLine(5,
+            g.drawLine(5.0f,
                        verticalPosition,
-                       static_cast<float>(maxVelocityWidth * (getVelocity() / 127)),
+                       maxVelocityWidth * (getVelocity() / 127.0f),
                        verticalPosition,
-                       4);
+                       4.0f);
         }
     }
 

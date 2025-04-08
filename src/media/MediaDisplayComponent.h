@@ -46,8 +46,8 @@ public:
     void setTrackId(juce::Uuid id) { trackID = id; }
     juce::Uuid getTrackId() { return trackID; }
 
-    float getMediaHeight() { return getMediaComponent()->getHeight(); }
-    float getMediaWidth() { return getMediaComponent()->getWidth(); }
+    float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
+    float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
 
     void repositionLabels();
 

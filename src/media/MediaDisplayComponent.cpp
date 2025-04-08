@@ -103,8 +103,8 @@ void MediaDisplayComponent::resized()
 
     // Reposition the label to center it within headerComponent
     auto headerBounds = headerComponent.getLocalBounds();
-    float labelX = (headerBounds.getWidth() - newWidth) / 2;
-    float labelY = (headerBounds.getHeight() - newHeight) / 2;
+    float labelX = (static_cast<float>(headerBounds.getWidth()) - newWidth) / 2.0f;
+    float labelY = (static_cast<float>(headerBounds.getHeight()) - newHeight) / 2.0f;
     trackNameLabel.setTopLeftPosition(static_cast<int>(labelX), static_cast<int>(labelY));
 
     // Set text justification to centered
@@ -169,7 +169,7 @@ void MediaDisplayComponent::repositionLabels()
     float maxLabelWidth = 0.1f * pixelsPerSecond;
 
     //cb:TODO: check if mediaComponent.getBounds() is correct
-    float contentWidth = mediaComponent.getBounds().getWidth();
+    float contentWidth = static_cast<float>(mediaComponent.getBounds().getWidth());
     float minVisibilityWidth = contentWidth / 200.0f;
     float maxVisibilityWidth = contentWidth / 3.0f;
 
@@ -181,12 +181,12 @@ void MediaDisplayComponent::repositionLabels()
         for (auto l : labels)
         {
             float labelWidth =
-                jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2 * textSpacing));
+                jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
 
             float labelStartTime = static_cast<float>(l->getTime());
             float labelStopTime = labelStartTime + static_cast<float>(l->getDuration());
 
-            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2)
+            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2.0f)
                                              - labelWidth / 2.0f,
                                          labelWidth);
             float yPos = 1.0f;
@@ -194,25 +194,23 @@ void MediaDisplayComponent::repositionLabels()
             if (auto lo = dynamic_cast<LabelOverlayComponent*>(l))
             {
                 yPos = lo->getRelativeY() * mediaHeight;
-                yPos -= labelHeight / 2.0f;
-                yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
+                yPos -= static_cast<float>(labelHeight) / 2.0f;
+                yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
             }
-            juce::Rectangle<float> labelBounds(xPos, yPos, labelWidth, labelHeight);
+            juce::Rectangle<float> labelBounds(xPos, yPos, labelWidth, static_cast<float>(labelHeight));
             l->setBounds(labelBounds.toNearestInt());
             l->toFront(true);
 
-            float leftLabelMarkerPos =
-                correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2);
+            float leftLabelMarkerPos = static_cast<float>(correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2.0f));
             l->setLeftMarkerBounds(
                 Rectangle<float>(leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
-            float rightLabelMarkerPos =
-                correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2);
+            float rightLabelMarkerPos = static_cast<float>(correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2.0f));
             l->setRightMarkerBounds(
                 Rectangle<float>(rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
             float durationWidth =
-                jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2);
+                jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2.0f);
             l->setDurationFillBounds(
                 Rectangle<float>(
                     leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight)
@@ -689,7 +687,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
                 y = LabelOverlayComponent::pitchToRelativeY(p);
             }
         }
-        
+
         if (isOverlay)
         {
             auto lo = static_cast<LabelOverlayComponent*>(lc.get());
@@ -708,7 +706,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 {
     LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    label->setFont(Font(static_cast<float>(jmax(minFontSize, labelHeight - 2 * textSpacing))));
     label->setIndex(currentTempFileIdx);
     labelOverlays.add(label);
 
@@ -720,7 +718,7 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
 {
     OverheadLabelComponent* label = new OverheadLabelComponent(l);
-    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    label->setFont(Font(static_cast<float>(jmax(minFontSize, labelHeight - 2 * textSpacing))));
     label->setIndex(currentTempFileIdx);
     overheadLabels.add(label);
 
@@ -835,9 +833,9 @@ float MediaDisplayComponent::timeToMediaX(const double t)
 float MediaDisplayComponent::mediaXToDisplayX(const float mX)
 {
     float visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
-    float offsetX = ((float) getTimeAtOrigin()) * getPixelsPerSecond();
+    float offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
 
-    float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
+    float dX = static_cast<float>(controlSpacing) + getMediaXPos() + mX - (visibleStartX - offsetX);
 
     return dX;
 }
@@ -951,7 +949,7 @@ void MediaDisplayComponent::updateCursorPosition()
 
     Rectangle<int> mediaBounds = mediaComponent.getLocalBounds();
 
-    float cursorBoundsStartX = mediaBounds.getX() + getMediaXPos();
+    float cursorBoundsStartX = static_cast<float>(mediaBounds.getX()) + getMediaXPos();
     float cursorBoundsWidth = static_cast<float>(visibleRange.getLength() * getPixelsPerSecond());
 
     // TODO - due to very small differences, cursor may not be visible at media bounds when zoomed in
@@ -966,10 +964,13 @@ void MediaDisplayComponent::updateCursorPosition()
     }
 
     cursorPositionX -= cursorWidth / 2.0f;
-    cursorPositionX += mediaComponent.getBounds().getX();
+    cursorPositionX += static_cast<float>(mediaComponent.getBounds().getX());
 
-    currentPositionMarker.setRectangle(Rectangle<float>(
-        cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));
+    currentPositionMarker.setRectangle(
+        Rectangle<float>(cursorPositionX,
+                         static_cast<float>(mediaBounds.getY()),
+                         cursorWidth,
+                         static_cast<float>(mediaBounds.getHeight())));
 }
 
 void MediaDisplayComponent::timerCallback()
@@ -996,23 +997,22 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-
     if (getTotalLengthInSecs() > 0.0)
     {
-//         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-//         bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-//         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        //         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
+        //         bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        //         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 
-// #if JUCE_MAC
-//         bool zoomMod = isCmdPressed;
-// #else
-//         bool zoomMod = isCtrlPressed;
-// #endif
-        auto totalLength = visibleRange.getLength();
-        auto visibleStart = visibleRange.getStart();
+        // #if JUCE_MAC
+        //         bool zoomMod = isCmdPressed;
+        // #else
+        //         bool zoomMod = isCtrlPressed;
+        // #endif
+        // auto totalLength = visibleRange.getLength();
+        // auto visibleStart = visibleRange.getStart();
         auto scrollTime = static_cast<float>(mediaXToTime(evt.position.getX()));
-        DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
-                               << ") Scrolled at time: " << scrollTime);
+        // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
+        //                        << ") Scrolled at time: " << scrollTime);
 
         if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
         {

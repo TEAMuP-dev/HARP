@@ -38,7 +38,8 @@ void NoteGridComponent::resized()
         const float xPos = static_cast<float>(n->getStartTime() * pixelsPerSecond);
         const float width = static_cast<float>(n->getNoteLength() * pixelsPerSecond);
 
-        const float yPos = getHeight() - ((1 + n->getNoteNumber()) * keyHeight);
+        const float yPos =
+            static_cast<float>(getHeight()) - ((1.0f + n->getNoteNumber()) * keyHeight);
         juce::Rectangle<float> bounds(xPos, yPos, jmax(3.0f, width), keyHeight);
         n->setBounds(bounds.toNearestInt());
         // n->setBounds(xPos, yPos, jmax(3.0f, width), keyHeight);

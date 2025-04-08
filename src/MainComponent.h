@@ -914,7 +914,7 @@ public:
     }
 
     // explicit MainComponent(const URL& initialFilePath = URL()) : jobsFinished(0), totalJobs(0)
-    explicit MainComponent() : jobsFinished(0), totalJobs(0)
+    explicit MainComponent() //: jobsFinished(0), totalJobs(0)
     //   jobProcessorThread(customJobs, jobsFinished, totalJobs, processBroadcaster)
     {
         HarpLogger::getInstance()->initializeLogger();
@@ -1547,8 +1547,8 @@ private:
     // This one is used for Loading the models
     // The thread pull for Processing lives inside the JobProcessorThread
     ThreadPool threadPool { 1 };
-    int jobsFinished;
-    int totalJobs;
+    // int jobsFinished;
+    // int totalJobs;
     // JobProcessorThread jobProcessorThread;
     ThreadPool jobProcessorThread { 10 };
     std::deque<CustomThreadPoolJob*> customJobs;
