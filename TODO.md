@@ -11,6 +11,8 @@
   - If the temp input isn't compatible with the model (e.g. audio file + MIDI model), show a dialog:
     - Option 1: Delete the input file and continue.
     - Option 2: Cancel model selection and let the user choose another model.
+- Modify main.cpp to accept multiple input files:
+  - If an instance of HARP is already open, can we display a dialog box to ask the user if they want to open a new instance or use the existing one? 
 
 ---
 
@@ -54,6 +56,11 @@
   - **"Save As"** – to save dumped output manually.
   - **"Send to DAW"** – fast export to original file location.
 
+
 ### Other
 - Add an `export labels` button to save the labels in a JSON file.
+- option for spliting input/output tracks ?
+
+## Playback Sync
+- have a discussion about playback sync
 ---
