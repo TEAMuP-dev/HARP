@@ -41,7 +41,7 @@ public:
         // Set up the Cancel button
         addAndMakeVisible(cancelButton);
         cancelButton.setButtonText("Cancel");
-        cancelButton.onClick = [this, onCancelCallback]() { onCancelCallback(); };
+        cancelButton.onClick = [onCancelCallback]() { onCancelCallback(); };
 
         setSize(400, 150); // Set a fixed size for the component
     }

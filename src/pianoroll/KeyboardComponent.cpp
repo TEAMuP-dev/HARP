@@ -12,7 +12,7 @@ KeyboardComponent::KeyboardComponent() {}
 
 KeyboardComponent::~KeyboardComponent() {}
 
-float KeyboardComponent::getKeyHeight() { return getHeight() / 128.0; }
+float KeyboardComponent::getKeyHeight() { return getHeight() / 128.0f; }
 
 void KeyboardComponent::paint(Graphics& g)
 {

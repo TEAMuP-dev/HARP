@@ -431,19 +431,6 @@ public:
                 try
                 {
                     juce::String loadingError;
-                    /*
-                        cb: This is an idea, that might be useful for the future
-                        Whenever trying to load a new gradio app, we could create a new WebModel
-                        if loading is successful, we could replace the old model with the new one
-                        This prevents the confussion of having ModelStatuses in the same class that
-                        correspond to different Gradio Apps. 
-                        For example, in the scenario the new model fails to load, we want to go back to 
-                        the one we had before. However we got a 
-                        ModelStatus::ERROR, but the old model is still loaded, so the status should change
-                        to ModelStatus::LOADED (or whatever it was before the failed attempt). 
-                        For now, we added a lastStatus variable to the WebModel class to keep track of the
-                        status of the model before the attempt to load a new model.
-                    */
 
                     // set the last status to the current status
                     // If loading of the new model fails,
@@ -555,7 +542,6 @@ public:
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
                                 // get the spaceInfo
-                                // SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
                                 if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                                 {
                                     URL spaceUrl =
@@ -575,9 +561,6 @@ public:
                                         this->model->getGradioClient().getSpaceInfo().huggingface;
                                     spaceUrl.launchInDefaultBrowser();
                                 }
-                                // URL spaceUrl =
-                                //     this->model->getGradioClient().getSpaceInfo().huggingface;
-                                // spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
@@ -586,9 +569,6 @@ public:
                                     this->model->getGradioClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
-                            // URL spaceUrl =
-                            //     this->model->getGradioClient().getSpaceInfo().huggingface;
-                            // spaceUrl.launchInDefaultBrowser();
                         }
 
                         if (lastLoadedModelItemIndex == -1)

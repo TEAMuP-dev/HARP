@@ -27,7 +27,7 @@ class MediaDisplayComponent : public Component,
 public:
     MediaDisplayComponent();
     MediaDisplayComponent(String trackName);
-    ~MediaDisplayComponent();
+    ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
 
@@ -130,7 +130,7 @@ public:
     std::function<void(const juce::String&)> instructionBoxWriter;
 
 protected:
-    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
     {
         return true;
     }

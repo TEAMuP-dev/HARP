@@ -9,16 +9,19 @@ class MidiDisplayComponent : public MediaDisplayComponent
 public:
     MidiDisplayComponent();
     MidiDisplayComponent(String trackName);
-    ~MidiDisplayComponent();
+    ~MidiDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
-    StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
+    StringArray getInstanceExtensions() override
+    {
+        return MidiDisplayComponent::getSupportedExtensions();
+    }
 
     void repositionOverheadPanel() override;
     // void repositionContent() override; // new from v2
     void repositionScrollBar() override;
 
-    Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
+    Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
 
     float getMediaXPos() override
     {
@@ -30,7 +33,7 @@ public:
     void startPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
-    float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
+    float getPixelsPerSecond() override { return (float)pianoRoll.getResolution(); }
 
     void updateVisibleRange(Range<double> newRange) override;
 

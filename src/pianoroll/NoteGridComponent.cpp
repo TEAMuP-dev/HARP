@@ -24,7 +24,10 @@ void NoteGridComponent::updateLength(double l)
     updateSize();
 }
 
-void NoteGridComponent::updateSize() { setSize(pixelsPerSecond * lengthInSeconds, getHeight()); }
+void NoteGridComponent::updateSize()
+{
+    setSize(static_cast<int>(pixelsPerSecond * lengthInSeconds), getHeight());
+}
 
 void NoteGridComponent::resized()
 {
@@ -32,12 +35,13 @@ void NoteGridComponent::resized()
 
     for (auto n : midiNotes)
     {
-        const float xPos = ((float) n->getStartTime()) * pixelsPerSecond;
-        const float width = ((float) n->getNoteLength()) * pixelsPerSecond;
+        const float xPos = static_cast<float>(n->getStartTime() * pixelsPerSecond);
+        const float width = static_cast<float>(n->getNoteLength() * pixelsPerSecond);
 
         const float yPos = getHeight() - ((1 + n->getNoteNumber()) * keyHeight);
-
-        n->setBounds(xPos, yPos, jmax(3.0f, width), keyHeight);
+        juce::Rectangle<float> bounds(xPos, yPos, jmax(3.0f, width), keyHeight);
+        n->setBounds(bounds.toNearestInt());
+        // n->setBounds(xPos, yPos, jmax(3.0f, width), keyHeight);
     }
 }
 

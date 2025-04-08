@@ -133,7 +133,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
             }
 
             // Create a component for each for each note
-            MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
+            MidiNoteComponent n = MidiNoteComponent(static_cast<unsigned char>(noteNumber),
+                                                    static_cast<unsigned char>(velocity),
+                                                    startTime,
+                                                    duration);
             pianoRoll.insertNote(n);
         }
     }
@@ -142,10 +145,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
     std::sort(midiNumbers.begin(), midiNumbers.end());
     medianMidi = midiNumbers[midiNumbers.size() / 2];
     // Find std
-    int sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0);
+    float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
     float mean = sum / midiNumbers.size();
     float sq_sum =
-        std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0);
+        std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
     stdDevMidi = std::sqrt(sq_sum / midiNumbers.size() - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
@@ -178,7 +181,7 @@ void MidiDisplayComponent::resetDisplay()
     pianoRoll.resizeNoteGrid(0.0);
 }
 
-void MidiDisplayComponent::postLoadActions(const URL& filePath)
+void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
 {
     // Auto-center the pianoRoll viewbox on the median note
     pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
@@ -201,8 +204,8 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
     if (getTotalLengthInSecs() > 0.0)
     {
         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        // bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        // bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 #if (JUCE_MAC)
         bool zoomMod = isCmdPressed;
 #else

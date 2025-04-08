@@ -108,7 +108,7 @@ void MultiButton::paintButton(juce::Graphics& g,
     }
     else if (modes[currentMode].drawingMode == DrawingMode::IconOnly)
     {
-        auto textArea = getLocalBounds(); //.reduced(10); // Add some padding
+        // auto textArea = getLocalBounds(); //.reduced(10); // Add some padding
         // auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
         juce::String currentIconName;
         auto currentColor = modes[currentMode].color;

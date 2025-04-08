@@ -20,8 +20,47 @@ file(STRINGS VERSION CURRENT_VERSION)
 # directories, and the current project version. This is a standard CMake command.
 
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
+
+# Add these lines to suppress warnings for JUCE 
+# ------------------------------------------
+# For macOS Xcode deprecation warnings
+# set(JUCE_SILENCE_XCODE_DEPRECATION_WARNINGS ON)
+
+# Add these lines to suppress warnings for JUCE 
+# ------------------------------------------
+# For macOS Xcode deprecation warnings
+set(JUCE_SILENCE_XCODE_DEPRECATION_WARNINGS ON)
+
+# Suppress all warnings from JUCE code - CORRECTED VERSION
+# if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+#     add_compile_options(-w)
+# elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+#     add_compile_options(/W0)
+# endif()
+# ------------------------------------------
+
+# Suppress all warnings from JUCE code
+# set_directory_properties(PROPERTIES COMPILE_OPTIONS 
+#     "$<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-w>"
+#     "$<$<CXX_COMPILER_ID:MSVC>:/W0>"
+# )
+# ------------------------------------------
+
 add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
+# Reset warning levels for your own code (optional) - CORRECTED VERSION
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+    add_compile_options(-Wall -Wextra)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_options(/W4)
+endif()
+# ------------------------------------------
+# Reset warning levels for your own code (optional)
+# set_directory_properties(PROPERTIES COMPILE_OPTIONS 
+#     "$<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall;-Wextra>"
+#     "$<$<CXX_COMPILER_ID:MSVC>:/W4>"
+# )
+# add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
 # `juce_add_gui_app` adds an executable target with the name passed as the first argument
 # (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set

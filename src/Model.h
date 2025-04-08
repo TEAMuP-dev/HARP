@@ -37,8 +37,6 @@ struct ModelCard
     std::string description;
     std::string author;
     std::vector<std::string> tags;
-    // bool midi_in;
-    // bool midi_out;
 };
 
 /**

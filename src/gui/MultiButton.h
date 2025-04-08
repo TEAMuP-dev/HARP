@@ -157,5 +157,5 @@ private:
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
     SharedResourcePointer<InstructionBox> instructionBox;
-    DrawingMode drawingMode;
+    // DrawingMode drawingMode;
 };

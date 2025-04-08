@@ -62,7 +62,7 @@ RenderedIcon IconHelper::getRotatedIcon(IconName icon,
     canvas = Image(Image::PixelFormat::ARGB, renderdIcon.getWidth(), renderdIcon.getHeight(), true);
     Graphics g(canvas);
     g.drawImageTransformed(renderdIcon,
-                           AffineTransform::rotation(-(float_Pi * iconRotation),
+                           AffineTransform::rotation(-(juce::MathConstants<float>::pi * iconRotation),
                                                      renderdIcon.getWidth() * 0.5f,
                                                      renderdIcon.getHeight() * 0.5f));
     juce::ImageCache::addImageToCache(canvas, hash);

@@ -31,7 +31,7 @@ public:
                          Colour clr = Colours::purple.withAlpha(0.8f),
                          String lnk = "");
     OutputLabelComponent(const OutputLabelComponent& other);
-    ~OutputLabelComponent();
+    ~OutputLabelComponent() override;
 
     void setDefaultAttributes();
 

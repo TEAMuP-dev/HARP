@@ -1,5 +1,3 @@
-#pragma once
-// #include "juce_gui_basics/juce_gui_basics.h"
 #include "FontAudio.h"
 #include "juce_core/juce_core.h"
 #include "juce_graphics/juce_graphics.h"
@@ -56,7 +54,7 @@ RenderedIcon IconHelper::getRotatedIcon(IconName icon,
     canvas = Image(Image::PixelFormat::ARGB, renderdIcon.getWidth(), renderdIcon.getHeight(), true);
     Graphics g(canvas);
     g.drawImageTransformed(renderdIcon,
-                           AffineTransform::rotation(-(float_Pi * iconRotation),
+                           AffineTransform::rotation(-(MathConstants<float>::pi * iconRotation),
                                                      renderdIcon.getWidth() * 0.5f,
                                                      renderdIcon.getHeight() * 0.5f));
     juce::ImageCache::addImageToCache(canvas, hash);

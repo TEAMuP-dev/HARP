@@ -66,7 +66,7 @@ juce::MouseCursor OutputLabelComponent::getMouseCursor()
         return juce::MouseCursor::NormalCursor;
 }
 
-void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
+void OutputLabelComponent::mouseUp(const juce::MouseEvent& /*e*/)
 {
     if (isMouseOver(true))
     {
@@ -89,13 +89,13 @@ void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
     }
 }
 
-void OutputLabelComponent::mouseEnter(const juce::MouseEvent& e)
+void OutputLabelComponent::mouseEnter(const juce::MouseEvent& /*e*/)
 {
     setFillVisibility(true);
     setMarkerVisibility(true);
 }
 
-void OutputLabelComponent::mouseExit(const juce::MouseEvent& e)
+void OutputLabelComponent::mouseExit(const juce::MouseEvent& /*e*/)
 {
     setFillVisibility(false);
     setMarkerVisibility(false);
@@ -161,7 +161,7 @@ float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
     return jmin(1.0f, jmax(0.0f, 1 - (amplitude + 1) / 2));
 }
 
-float LabelOverlayComponent::frequencyToRelativeY(float frequency)
+float LabelOverlayComponent::frequencyToRelativeY(float /*frequency*/)
 {
     return 0.0f; // TODO
 }

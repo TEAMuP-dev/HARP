@@ -25,7 +25,7 @@ class AudioDisplayComponent : public MediaDisplayComponent
 public:
     AudioDisplayComponent();
     AudioDisplayComponent(String trackName);
-    ~AudioDisplayComponent();
+    ~AudioDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
     StringArray getInstanceExtensions() override
