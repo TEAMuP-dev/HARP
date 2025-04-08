@@ -180,8 +180,9 @@ void MediaDisplayComponent::repositionLabels()
     {
         for (auto l : labels)
         {
-            float labelWidth =
-                jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
+            float labelWidth = jmax(
+                minLabelWidth,
+                jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
 
             float labelStartTime = static_cast<float>(l->getTime());
             float labelStopTime = labelStartTime + static_cast<float>(l->getDuration());
@@ -197,15 +198,18 @@ void MediaDisplayComponent::repositionLabels()
                 yPos -= static_cast<float>(labelHeight) / 2.0f;
                 yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
             }
-            juce::Rectangle<float> labelBounds(xPos, yPos, labelWidth, static_cast<float>(labelHeight));
+            juce::Rectangle<float> labelBounds(
+                xPos, yPos, labelWidth, static_cast<float>(labelHeight));
             l->setBounds(labelBounds.toNearestInt());
             l->toFront(true);
 
-            float leftLabelMarkerPos = static_cast<float>(correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2.0f));
+            float leftLabelMarkerPos = static_cast<float>(
+                correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2.0f));
             l->setLeftMarkerBounds(
                 Rectangle<float>(leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
-            float rightLabelMarkerPos = static_cast<float>(correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2.0f));
+            float rightLabelMarkerPos = static_cast<float>(
+                correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2.0f));
             l->setRightMarkerBounds(
                 Rectangle<float>(rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
