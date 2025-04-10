@@ -12,6 +12,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
+
 #include "CtrlComponent.h"
 #include "ThreadPoolJob.h"
 #include "WebModel.h"
@@ -97,6 +98,7 @@ class MainComponent : public Component,
                       private ChangeListener,
                       public MenuBarModel,
                       public ApplicationCommandTarget
+
 {
 public:
     enum CommandIDs
@@ -711,6 +713,49 @@ public:
         saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         saveFileButtonHandler.attach();
 
+         //Login by geeting the user's access token
+        addAndMakeVisible(loginButton);
+        loginButton.onClick = [this]() {
+            auto* prompt = new juce::AlertWindow(
+                "Login to Hugging Face",
+                "Paste your Hugging Face access token below.\n\n"
+                "Click 'Get Token' to open Hugging Face token page.",
+                juce::AlertWindow::NoIcon);
+        
+            prompt->addTextEditor("token", "", "Access Token:");
+            prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+            prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+            prompt->addButton("Get Token", 2);
+        
+            prompt->enterModalState(
+                true,
+                juce::ModalCallbackFunction::create([this, prompt](int result) {
+                    if (result == 1) {
+                        auto token = prompt->getTextEditor("token")->getText().trim();
+                        if (!token.isEmpty()) {
+                            accessToken = token;
+                            DBG("Stored Hugging Face Token: " + token);
+                            setStatus("Logged in to Hugging Face");
+                        } else {
+                            setStatus("No token entered.");
+                        }
+                        delete prompt;
+                    } else if (result == 2) {
+                        juce::URL("https://huggingface.co/settings/tokens").launchInDefaultBrowser();
+                        // Reopen the prompt
+                        loginButton.triggerClick(); // reopen after redirecting
+                        delete prompt;
+                    } else {
+                        setStatus("Login cancelled.");
+                        delete prompt;
+                    }
+                }),
+                false);
+        };
+        
+        
+        
+
         // Initialize default media display
         initializeMediaDisplay();
 
@@ -1226,6 +1271,9 @@ public:
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
         flexBox.items.add(juce::FlexItem(row1).withFlex(0.4));
 
+        //  Row 1.5 – Login Button
+        flexBox.items.add(juce::FlexItem(loginButton).withHeight(30).withMargin(margin));
+
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
         row2.flexDirection = juce::FlexBox::Direction::row;
@@ -1360,6 +1408,11 @@ private:
     TextButton saveFileButton { "Save File" };
     HoverHandler saveFileButtonHandler { saveFileButton };
 
+    //  the login button:
+    TextButton loginButton { "Login to Hugging Face" };
+    HoverHandler loginButtonHandler { loginButton };
+    juce::String accessToken;
+
     ModelAuthorLabel modelAuthorLabel;
     // cb: TODO:
     // 1. Use HoverHandler for MultiButtons
@@ -1390,6 +1443,7 @@ private:
     };
     MultiButton::Mode playButtonInfo { "Play", [this] { play(); }, Colours::limegreen };
     MultiButton::Mode stopButtonInfo { "Stop", [this] { stop(); }, Colours::orangered };
+      
 
     // Label statusLabel;
     // A flag that indicates if the audio file can be saved
@@ -1608,6 +1662,25 @@ private:
         resized();
         repaint();
     }
+
+
+    //added for user login
+    /*
+    void openHuggingFaceLogin()
+    {
+        const juce::String clientId = "e4b6e82c-8b6b-4168-aae4-378d771b0247";  // a test oauth app
+        const juce::String redirectUri = "http://localhost:12345/callback";  
+        const juce::String scope = "openid inference-api";
+
+        juce::String url = "https://huggingface.co/oauth/authorize"
+                       "?response_type=code"
+                       "&client_id=" + clientId
+                       + "&redirect_uri=" + redirectUri
+                       + "&scope=" + scope;
+
+        juce::URL(url).launchInDefaultBrowser();
+    }*/
+        
 
     // void processProcessingResult(OpResult result)
     // {
