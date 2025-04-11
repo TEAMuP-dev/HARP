@@ -172,7 +172,7 @@ public:
                     // since now we are using a map to store the objects
                     audio_in->id = juce::Uuid();
                     audio_in->label = pyharpComponent["label"].toString().toStdString();
-
+                    audio_in->required = stringToBool(pyharpComponent["required"].toString());
                     inputTracksInfo.push_back({ audio_in->id, audio_in });
                     // inputTracksInfo[audio_in->id] = audio_in;
                     uuidsInOrder.push_back(audio_in->id);
@@ -183,7 +183,7 @@ public:
                     auto midi_in = std::make_shared<MidiTrackInfo>();
                     midi_in->id = juce::Uuid();
                     midi_in->label = pyharpComponent["label"].toString().toStdString();
-
+                    midi_in->required = stringToBool(pyharpComponent["required"].toString());
                     inputTracksInfo.push_back({ midi_in->id, midi_in });
                     // inputTracksInfo[midi_in->id] = midi_in;
                     uuidsInOrder.push_back(midi_in->id);

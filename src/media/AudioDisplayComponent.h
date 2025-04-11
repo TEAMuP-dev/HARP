@@ -24,7 +24,7 @@ class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
     AudioDisplayComponent();
-    AudioDisplayComponent(String trackName);
+    AudioDisplayComponent(String trackName, bool required = true);
     ~AudioDisplayComponent() override;
 
     static StringArray getSupportedExtensions();

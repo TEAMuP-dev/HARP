@@ -2,7 +2,8 @@
 
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String trackName) : MediaDisplayComponent(trackName)
+MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
+    : MediaDisplayComponent(trackName, required)
 {
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);

@@ -25,8 +25,16 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
+    enum IOMode
+    {
+        Input,
+        Output,
+        // Hybrid
+    };
+
     MediaDisplayComponent();
-    MediaDisplayComponent(String trackName);
+    // MediaDisplayComponent(String trackName);
+    MediaDisplayComponent(String trackName, bool required = true);
     ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
@@ -129,6 +137,12 @@ public:
 
     std::function<void(const juce::String&)> instructionBoxWriter;
 
+    void setIOMode(IOMode mode) { ioMode = mode; }
+    IOMode getIOMode() { return ioMode; }
+
+    // void setRequired(bool required) { _required = required; }
+    bool isRequired() const { return _required; }
+
 protected:
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
     {
@@ -225,7 +239,10 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    bool ioMode = 0; // 0 input, 1 output
+    IOMode ioMode = IOMode::Input;
+    // It's const because we only set it in the constructor
+    // and never change it again
+    const bool _required = true;
 
     Array<LabelOverlayComponent*> labelOverlays;
     Array<OverheadLabelComponent*> overheadLabels;

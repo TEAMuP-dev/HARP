@@ -2,7 +2,8 @@
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
-MediaDisplayComponent::MediaDisplayComponent(String name) : trackName(name)
+MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
+    : _required(required), trackName(name)
 {
     resetPaths();
 
@@ -29,6 +30,34 @@ MediaDisplayComponent::MediaDisplayComponent(String name) : trackName(name)
     populateTrackHeader();
     addAndMakeVisible(overheadPanel); // new from v2
 }
+
+// MediaDisplayComponent::MediaDisplayComponent(String name) : trackName(name)
+// {
+//     resetPaths();
+
+//     formatManager.registerBasicFormats();
+
+//     deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
+//     deviceManager.addAudioCallback(&sourcePlayer);
+
+//     sourcePlayer.setSource(&transportSource);
+
+//     addChildComponent(horizontalScrollBar);
+//     horizontalScrollBar.setAutoHide(false);
+//     horizontalScrollBar.addListener(this);
+
+//     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
+//     addAndMakeVisible(currentPositionMarker);
+
+//     trackNameLabel.setText(trackName, juce::dontSendNotification);
+//     addAndMakeVisible(headerComponent);
+//     addAndMakeVisible(mediaComponent);
+
+//     // Add controls to headerComponent
+//     headerComponent.addAndMakeVisible(trackNameLabel);
+//     populateTrackHeader();
+//     addAndMakeVisible(overheadPanel); // new from v2
+// }
 
 MediaDisplayComponent::~MediaDisplayComponent()
 {
@@ -246,7 +275,7 @@ void MediaDisplayComponent::resetMedia()
     resetPaths();
     clearLabels();
     resetDisplay();
-    sendChangeMessage(); // cb: what's the point of this ?
+    sendChangeMessage();
 
     currentHorizontalZoomFactor = 1.0;
     horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
@@ -280,7 +309,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 }
 
 void MediaDisplayComponent::addNewTempFile()
-{
+{ // either just before processing by processCallback, or when importing a new file
     clearFutureTempFiles();
 
     int numTempFiles = tempFilePaths.size();
@@ -301,24 +330,25 @@ void MediaDisplayComponent::addNewTempFile()
 
     // targetFilePath is of type URL
     // for outputMediaDisplays, there isn't a targetFilePath.
-    if (targetFilePath.isEmpty())
-    {
-        DBG("MediaDisplayComponent::addNewTempFile: No target file path.");
-        return;
-    }
+    // if (targetFilePath.isEmpty())
+    // {
+    //     DBG("MediaDisplayComponent::addNewTempFile: No target file path.");
+    //     return;
+    // }
+    // there might be past tempFiles
     File originalFile = targetFilePath.getLocalFile();
-
+    // in case of new import file, targetFilePath is already the new file, so the originalFile is always the latest imported file, and not the first imported file
     File targetFile;
-
-    if (! numTempFiles)
-    {
+    // targetFile is not always the targetFilePath.
+    if (! numTempFiles) // if zero past files.
+    { // when no temp files exist, the only available file is the original file which is the original targetFilePath
         targetFile = originalFile;
     }
     else
-    {
+    { // else we create a tempFile from the latest tempFile
         targetFile = getTempFilePath().getLocalFile();
     }
-
+    // the targetFile is the one we are going to create a new tempFile from
     String docsDirectory =
         File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory)
             .getFullPathName();

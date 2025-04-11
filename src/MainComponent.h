@@ -350,12 +350,12 @@ public:
         //     return;
         // }
 
-        // if (isProcessing)
-        // {
-        //     DBG("Can't undo while processing occurring!");
-        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        //     return;
-        // }
+        if (isProcessing)
+        {
+            DBG("Can't undo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
 
         // if (! mediaDisplay->iteratePreviousTempFile())
         // {
@@ -367,6 +367,22 @@ public:
         //     saveEnabled = true;
         //     DBG("Undo callback completed successfully");
         // }
+
+        // Iterate over all inputMediaDisplays and call the iteratePreviousTempFile()
+        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
+        for (auto& inputMediaDisplay : inputMediaDisplays)
+        {
+            if (! inputMediaDisplay->iteratePreviousTempFile())
+            {
+                DBG("Nothing to undo!");
+                // juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            }
+            else
+            {
+                saveEnabled = true;
+                DBG("Undo callback completed successfully");
+            }
+        }
     }
 
     void redoCallback()
@@ -383,23 +399,28 @@ public:
         //     return;
         // }
 
-        // if (isProcessing)
-        // {
-        //     DBG("Can't redo while processing occurring!");
-        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        //     return;
-        // }
+        if (isProcessing)
+        {
+            DBG("Can't redo while processing occurring!");
+            juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            return;
+        }
 
-        // if (! mediaDisplay->iterateNextTempFile())
-        // {
-        //     DBG("Nothing to redo!");
-        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        // }
-        // else
-        // {
-        //     saveEnabled = true;
-        //     DBG("Redo callback completed successfully");
-        // }
+        // Iterate over all inputMediaDisplays and call the iterateNextTempFile()
+        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
+        for (auto& inputMediaDisplay : inputMediaDisplays)
+        {
+            if (! inputMediaDisplay->iterateNextTempFile())
+            {
+                DBG("Nothing to redo!");
+                // juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+            }
+            else
+            {
+                saveEnabled = true;
+                DBG("Redo callback completed successfully");
+            }
+        }
     }
 
     void loadModelCallback()
@@ -1122,15 +1143,7 @@ public:
         std::vector<std::tuple<Uuid, String, File>> localInputTrackFiles;
         for (auto& inputMediaDisplay : inputMediaDisplays)
         {
-            if (inputMediaDisplay->isFileLoaded())
-            {
-                inputMediaDisplay->addNewTempFile();
-                localInputTrackFiles.push_back(
-                    std::make_tuple(inputMediaDisplay->getTrackId(),
-                                    inputMediaDisplay->getTrackName(),
-                                    inputMediaDisplay->getTempFilePath().getLocalFile()));
-            }
-            else
+            if (!inputMediaDisplay->isFileLoaded() && inputMediaDisplay->isRequired())
             {
                 AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                                  "Error",
@@ -1138,6 +1151,14 @@ public:
                                                      + inputMediaDisplay->getTrackName()
                                                      + ". Please load an input file first.");
                 return;
+            }
+            if (inputMediaDisplay->isFileLoaded())
+            {
+                inputMediaDisplay->addNewTempFile();
+                localInputTrackFiles.push_back(
+                    std::make_tuple(inputMediaDisplay->getTrackId(),
+                                    inputMediaDisplay->getTrackName(),
+                                    inputMediaDisplay->getTempFilePath().getLocalFile()));
             }
         }
 

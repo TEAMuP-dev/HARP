@@ -34,86 +34,72 @@ public:
         }
 
         auto& inputTracksInfo = mModel->getInputTracksInfo();
-        // clear the m_ctrls vector
-        // m_ctrls.clear();
-        // juce::Array<juce::var>& inputComponents = mModel->getControls();
-
-        // // iterate through the list of input components
-        // // and choosing only the ones that correspond to input controls and not input media
         inputTracksCounter = 0;
-        // auto counter = 1;
+
         for (const auto& pair : inputTracksInfo)
         {
             inputTracksCounter++;
             auto trackInfo = pair.second;
+            std::unique_ptr<MediaDisplayComponent> display;
+
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
-                if (audioTrackInfo->label == "")
-                {
-                    audioTrackInfo->label = "InputAudio-" + std::to_string(inputTracksCounter);
-                }
-                inputMediaDisplays.push_back(
-                    std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
-                inputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
-                addAndMakeVisible(inputMediaDisplays.back().get());
-                inputMediaDisplays.back()->addChangeListener(this);
-                inputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
-                    updateInstructionBox(text);
-                };
+                std::string label = audioTrackInfo->label.empty()
+                                        ? "InputAudio-" + std::to_string(inputTracksCounter)
+                                        : audioTrackInfo->label;
+                display = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required);
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
-                if (midiTrackInfo->label == "")
-                {
-                    midiTrackInfo->label = "InputMidi-" + std::to_string(inputTracksCounter);
-                }
-                inputMediaDisplays.push_back(
-                    std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
-                inputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
-                addAndMakeVisible(inputMediaDisplays.back().get());
-                inputMediaDisplays.back()->addChangeListener(this);
-                inputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
-                    updateInstructionBox(text);
-                };
+                std::string label = midiTrackInfo->label.empty()
+                                        ? "InputMidi-" + std::to_string(inputTracksCounter)
+                                        : midiTrackInfo->label;
+                display = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required);
+            }
+
+            if (display)
+            {
+                display->setTrackId(trackInfo->id);
+                display->addChangeListener(this);
+                display->instructionBoxWriter = [this](const juce::String& text)
+                { updateInstructionBox(text); };
+                addAndMakeVisible(display.get());
+                inputMediaDisplays.push_back(std::move(display));
             }
         }
 
-        // if (counter)
         auto& outputTracksInfo = mModel->getOutputTracksInfo();
         outputTracksCounter = 0;
+
         for (const auto& pair : outputTracksInfo)
         {
             outputTracksCounter++;
             auto trackInfo = pair.second;
+            std::unique_ptr<MediaDisplayComponent> display;
+
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
-                if (audioTrackInfo->label == "")
-                {
-                    audioTrackInfo->label = "OutputAudio-" + std::to_string(outputTracksCounter);
-                }
-                outputMediaDisplays.push_back(
-                    std::make_unique<AudioDisplayComponent>(audioTrackInfo->label));
-                outputMediaDisplays.back()->setTrackId(audioTrackInfo->id);
-                addAndMakeVisible(outputMediaDisplays.back().get());
-                outputMediaDisplays.back()->addChangeListener(this);
-                outputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
-                    updateInstructionBox(text);
-                };
+                std::string label = audioTrackInfo->label.empty()
+                                        ? "OutputAudio-" + std::to_string(outputTracksCounter)
+                                        : audioTrackInfo->label;
+                display = std::make_unique<AudioDisplayComponent>(label);
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {
-                if (midiTrackInfo->label == "")
-                {
-                    midiTrackInfo->label = "OutputMidi-" + std::to_string(outputTracksCounter);
-                }
-                outputMediaDisplays.push_back(
-                    std::make_unique<MidiDisplayComponent>(midiTrackInfo->label));
-                outputMediaDisplays.back()->setTrackId(midiTrackInfo->id);
-                addAndMakeVisible(outputMediaDisplays.back().get());
-                outputMediaDisplays.back()->addChangeListener(this);
-                outputMediaDisplays.back()->instructionBoxWriter = [this](const juce::String& text) {
-                    updateInstructionBox(text);
-                };
+                std::string label = midiTrackInfo->label.empty()
+                                        ? "OutputMidi-" + std::to_string(outputTracksCounter)
+                                        : midiTrackInfo->label;
+                display = std::make_unique<MidiDisplayComponent>(label);
+            }
+
+            if (display)
+            {
+                display->setTrackId(trackInfo->id);
+                display->addChangeListener(this);
+                display->instructionBoxWriter = [this](const juce::String& text)
+                { updateInstructionBox(text); };
+                addAndMakeVisible(display.get());
+                outputMediaDisplays.push_back(std::move(display));
             }
         }
 
@@ -249,7 +235,6 @@ public:
     }
 
 private:
-
     juce::SharedResourcePointer<InstructionBox> instructionBox;
 
     // ToolbarSliderStyle toolbarSliderStyle;

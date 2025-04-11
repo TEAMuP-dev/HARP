@@ -9,6 +9,15 @@
 #include "external/magic_enum.hpp"
 #include "juce_core/juce_core.h"
 
+// A function to convert a boolean string to a c++ boolean value
+// JUCE doesn't have a built-in function to do this
+inline bool stringToBool(const juce::String& str) {
+    juce::String lowerStr = str.toLowerCase();
+    if (lowerStr == "true" || lowerStr == "1" || lowerStr == "yes" || lowerStr == "y")
+        return true;
+    return false;
+}
+
 template <typename EnumType>
 inline juce::String enumToString(EnumType enumValue)
 {
@@ -64,11 +73,13 @@ struct TextBoxInfo : public PyHarpComponentInfo
 struct AudioTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
+    bool required;
 };
 
 struct MidiTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
+    bool required;
 };
 
 struct NumberBoxInfo : public PyHarpComponentInfo
