@@ -51,7 +51,6 @@ public:
     void shutdown() override
     {
         // Add your application's shutdown code here..
-
         mainWindow = nullptr; // (deletes our window)
     }
 
@@ -84,7 +83,7 @@ public:
 
         if (inputMediaFile.existsAsFile())
         {
-            // We deal with UI stuff so it's safe to work on the message thread
+            // We deal with UI stuff so it's safer to work on the message thread
             MessageManager::callAsync(
                 [this, inputMediaFile]()
                 {
@@ -128,6 +127,7 @@ public:
                         auto rememberCheckbox =
                             std::make_unique<ToggleButton>("Remember my choice");
                         rememberCheckbox->setSize(200, 24);
+
                         // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
                         // So we need to delete it manually when the alertWindow is closed
                         alertWindow->addCustomComponent(rememberCheckbox.get());
@@ -226,14 +226,35 @@ public:
             setVisible(true);
         }
 
+        /*
+            Defines the behavior of the window when the user tries to close it.
+            Even though we have multiple windows, all of them actually belong to the 
+            same application instance. This would mean that if the user chose to 
+            close the main window (the first one that was created) then all the other
+            would also close. 
+            To avoid this, we check if the window is the main one and if it is, we check
+            if there are other windows open. If there are, we promote one of them to be the main window.
+        */
         void closeButtonPressed() override
         {
-            // If this is the main window
-            if (this
+                        if (this
                 == dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
                        ->getMainWindowPtr())
             {
-                JUCEApplication::getInstance()->systemRequestedQuit();
+                auto* app = dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance());
+
+                // Check if there are other windows open
+                if (app->hasAdditionalWindows())
+                {
+                    // Promote one of the additionalal windows to main window
+                    app->promoteAdditionalWindowToMain();
+                    // The main window will be deleted automatically when it goes out of scope
+                }
+                else
+                {
+                    // No other windows, terminate the application
+                    JUCEApplication::getInstance()->systemRequestedQuit();
+                }
             }
             else
             {
@@ -242,13 +263,6 @@ public:
                     ->removeAdditionalWindow(this);
             }
         }
-
-        /* Note: Be careful if you override any DocumentWindow methods - the base
-           class uses a lot of them, so by overriding you might break its functionality.
-           It's best to do all your work in your content component instead, but if
-           you really have to override any DocumentWindow methods, make sure your
-           subclass also calls the superclass's method.
-        */
 
         void activeWindowStatusChanged() override
         {
@@ -268,6 +282,18 @@ public:
     };
 
     MainWindow* getMainWindowPtr() const { return mainWindow.get(); }
+
+    bool hasAdditionalWindows() const { return ! additionalWindows.isEmpty(); }
+
+    void promoteAdditionalWindowToMain()
+    {
+        // Get the first additional window to be the new main
+        if (! additionalWindows.isEmpty())
+        {
+            mainWindow = std::move(additionalWindows.getReference(0));
+            additionalWindows.remove(0);
+        }
+    }
 
     void removeAdditionalWindow(MainWindow* windowToRemove)
     {
