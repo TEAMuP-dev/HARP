@@ -32,6 +32,7 @@
 #include "media/MidiDisplayComponent.h"
 
 #include "windows/AboutWindow.h"
+#include "AppSettings.h"
 
 using namespace juce;
 
