@@ -26,30 +26,61 @@ public:
     // you could `#include <JuceHeader.h>` and use `ProjectInfo::projectName` etc. instead.
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
     const juce::String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
+    // In MacOS it's always false, but in Windows and Linux it can be true
+    // we keep it false for every OS to avoid confusion
     bool moreThanOneInstanceAllowed() override { return false; }
 
-    bool debugFilesOn() { return false; }
+    // Set this to true only for debugging the current Main.cpp file
+    // it doesn't affect debugging in HARP itself
+    bool debugFilesOn() { return true; }
+
+    // Local debugging just for this file because there is no way to debug the app
+    // at this stage using the debugger when invoking it from the DAW
+    void writeDebugLog(const juce::String& message)
+    {
+        if (!debugFilesOn())
+            return;
+        DBG(message);
+        File debugFile(
+            juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+            + "/debug.txt");
+        debugFile.appendText(message + "\n", true, true);
+    }
 
     //==============================================================================
     void initialise(const juce::String& commandLine) override
     {
-        // save the command line arguments to a debug file in my home directory
-        if (debugFilesOn())
+        appJustLaunched = true;
+        originalCommandLine = commandLine;
+        writeDebugLog("commandLine: " + commandLine);
+        writeDebugLog("getCommandLineParameters(): " + getCommandLineParameters());
+
+        File inputMediaFile(commandLine.unquoted().trim());
+
+        if (inputMediaFile.existsAsFile())
         {
-            File debugFile(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                + "/debug.txt");
-            debugFile.appendText(commandLine + "\n", true, true);
-            debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                    + "\n",
-                true,
-                true);
+            // Create main window with the file name in the title
+            mainWindow.reset(
+                new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
+
+            // Load the file directly
+            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+            {
+                mainComp->loadMediaDisplay(inputMediaFile);
+            }
+        }
+        else
+        {
+            // Only create a blank window if no file was specified
+            mainWindow.reset(new MainWindow(getApplicationName()));
         }
 
-        mainWindow.reset(new MainWindow(getApplicationName()));
-        resetWindow(commandLine);
+        // An ugly solution for an ugy problem
+        // Described here https://github.com/juce-framework/JUCE/issues/607
+        // It's supposed to happen only in MacOS
+        // I'm assuming that no one can re-invoke the app from the DAW within
+        // 500ms of the first launch, so this should be safe
+        Timer::callAfterDelay(500, [this]() { appJustLaunched = false; });
     }
 
     void shutdown() override
@@ -82,8 +113,45 @@ public:
 
     void anotherInstanceStarted(const juce::String& commandLine) override
     {
+        // This method is called when another instance of the app is started.
+        // We can handle the command line arguments here to open files in the current instance.
+        
+        // What happens in reality, is that (at least on MacOS) the app is launched more than once
+        // and it depends on the number of arguments passed to the app, and also who is launching it.
+        // For example, when the app is launched by Reaper with a file as argument, initialize() is
+        // called once with no arguments, and then anotherInstanceStarted() is called with the file as argument.
+        // On the other hand when we call the app from the command line like this 
+        // `pathToHARP/build/HARP_artefacts/Debug/HARP.app/Contents/MacOS/Harp pathToHARP/test.wav
+        // initialize() is called with the file as argument, and then anotherInstanceStarted() is called with the same file as argument.
+        // So this is why we need the appJustLaunched flag
+        // Hopefully these MacOS hacks won't affect the Linux and Windows versions.
+        if (appJustLaunched)
+        {
+            if (!commandLine.isEmpty() && originalCommandLine.isEmpty())
+            {
+                // DBG("Replacing original window (empty commandLine) with " + commandLine);
+                writeDebugLog("Replacing original window (empty commandLine) with " + commandLine);
+                resetWindow(commandLine);
+                return;
+            }
+            writeDebugLog("Ignoring spurious anotherInstanceStarted during startup: " + commandLine);
+            return;
+
+        }
+
+        DBG("Another instance started with command line: " + commandLine);
+
         // First check if it's a valid file
         File inputMediaFile(commandLine.unquoted().trim());
+
+        if (debugFilesOn())
+        {
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug.txt");
+            debugFile.appendText(
+                "Another instance started with command line: " + commandLine + "\n", true, true);
+        }
 
         if (inputMediaFile.existsAsFile())
         {
@@ -382,7 +450,9 @@ public:
 private:
     std::unique_ptr<MainWindow> mainWindow;
     juce::Array<std::unique_ptr<MainWindow>> additionalWindows;
-    ApplicationProperties applicationProperties; // Keep this as it's the actual storage mechanism
+    ApplicationProperties applicationProperties;
+    bool appJustLaunched;
+    juce::String originalCommandLine;
 };
 
 //==============================================================================
