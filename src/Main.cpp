@@ -29,6 +29,7 @@ public:
     //==============================================================================
     void initialise(const juce::String& commandLine) override
     {
+        appJustLaunched = true;
         // save the command line arguments to a debug file in my home directory
         if (debugFilesOn())
         {
@@ -44,8 +45,33 @@ public:
                 true);
         }
 
-        mainWindow.reset(new MainWindow(getApplicationName()));
-        resetWindow(commandLine);
+        // mainWindow.reset(new MainWindow(getApplicationName()));
+        // resetWindow(commandLine);
+        File inputMediaFile(commandLine.unquoted().trim());
+    
+        if (inputMediaFile.existsAsFile())
+        {
+            // Create main window with the file name in the title
+            mainWindow.reset(new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
+            
+            // Load the file directly
+            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+            {
+                mainComp->loadMediaDisplay(inputMediaFile);
+            }
+        }
+        else
+        {
+            // Only create a blank window if no file was specified
+            mainWindow.reset(new MainWindow(getApplicationName()));
+        }
+
+        // An ugly solution for an ugy problem
+        // Described here https://github.com/juce-framework/JUCE/issues/607
+        // It's supposed to happen only in MacOS
+        // I'm assuming that no one can re-invoke the app from the DAW within
+        // 500ms of the first launch, so this should be safe
+        Timer::callAfterDelay(500, [this]() { appJustLaunched = false; });
     }
 
     void shutdown() override
@@ -77,6 +103,21 @@ public:
     }
 
     void anotherInstanceStarted(const juce::String& commandLine) override
+    {
+        // This method is called when another instance of the app is started.
+        // We can handle the command line arguments here to open files in the current instance.
+        // For now, we just print the command line arguments to the console.
+        // DBG("Another instance started with command line: " + commandLine);
+        if (appJustLaunched)
+        {
+            DBG("Ignoring spurious anotherInstanceStarted during startup: " + commandLine);
+            return;
+        }
+        
+        DBG("Another instance started with command line: " + commandLine);
+        anotherInstanceStarted2(commandLine);
+    }
+    void anotherInstanceStarted2(const juce::String& commandLine)
     {
         // First check if it's a valid file
         File inputMediaFile(commandLine.unquoted().trim());
@@ -311,6 +352,7 @@ private:
     std::unique_ptr<MainWindow> mainWindow;
     juce::Array<std::unique_ptr<MainWindow>> additionalWindows;
     ApplicationProperties applicationProperties;
+    bool appJustLaunched;
 };
 
 //==============================================================================
