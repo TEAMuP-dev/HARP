@@ -22,38 +22,43 @@ public:
     // you could `#include <JuceHeader.h>` and use `ProjectInfo::projectName` etc. instead.
     const juce::String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
     const juce::String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
+    // In MacOS it's always false, but in Windows and Linux it can be true
+    // we keep it false for every OS to avoid confusion
     bool moreThanOneInstanceAllowed() override { return false; }
 
-    bool debugFilesOn() { return false; }
+    // Set this to true only for debugging the current Main.cpp file
+    // it doesn't affect debugging in HARP itself
+    bool debugFilesOn() { return true; }
+
+    // Local debugging just for this file because there is no way to debug the app
+    // at this stage using the debugger when invoking it from the DAW
+    void writeDebugLog(const juce::String& message)
+    {
+        if (!debugFilesOn())
+            return;
+        DBG(message);
+        File debugFile(
+            juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+            + "/debug.txt");
+        debugFile.appendText(message + "\n", true, true);
+    }
 
     //==============================================================================
     void initialise(const juce::String& commandLine) override
     {
         appJustLaunched = true;
-        // save the command line arguments to a debug file in my home directory
-        if (debugFilesOn())
-        {
-            File debugFile(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                + "/debug.txt");
-            debugFile.appendText(commandLine + "\n", true, true);
-            debugFile.appendText(getCommandLineParameters() + "\n", true, true);
-            debugFile.appendText(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                    + "\n",
-                true,
-                true);
-        }
+        originalCommandLine = commandLine;
+        writeDebugLog("commandLine: " + commandLine);
+        writeDebugLog("getCommandLineParameters(): " + getCommandLineParameters());
 
-        // mainWindow.reset(new MainWindow(getApplicationName()));
-        // resetWindow(commandLine);
         File inputMediaFile(commandLine.unquoted().trim());
-    
+
         if (inputMediaFile.existsAsFile())
         {
             // Create main window with the file name in the title
-            mainWindow.reset(new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
-            
+            mainWindow.reset(
+                new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
+
             // Load the file directly
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
             {
@@ -106,21 +111,43 @@ public:
     {
         // This method is called when another instance of the app is started.
         // We can handle the command line arguments here to open files in the current instance.
-        // For now, we just print the command line arguments to the console.
-        // DBG("Another instance started with command line: " + commandLine);
+        
+        // What happens in reality, is that (at least on MacOS) the app is launched more than once
+        // and it depends on the number of arguments passed to the app, and also who is launching it.
+        // For example, when the app is launched by Reaper with a file as argument, initialize() is
+        // called once with no arguments, and then anotherInstanceStarted() is called with the file as argument.
+        // On the other hand when we call the app from the command line like this 
+        // `pathToHARP/build/HARP_artefacts/Debug/HARP.app/Contents/MacOS/Harp pathToHARP/test.wav
+        // initialize() is called with the file as argument, and then anotherInstanceStarted() is called with the same file as argument.
+        // So this is why we need the appJustLaunched flag
+        // Hopefully these MacOS hacks won't affect the Linux and Windows versions.
         if (appJustLaunched)
         {
-            DBG("Ignoring spurious anotherInstanceStarted during startup: " + commandLine);
+            if (!commandLine.isEmpty() && originalCommandLine.isEmpty())
+            {
+                // DBG("Replacing original window (empty commandLine) with " + commandLine);
+                writeDebugLog("Replacing original window (empty commandLine) with " + commandLine);
+                resetWindow(commandLine);
+                return;
+            }
+            writeDebugLog("Ignoring spurious anotherInstanceStarted during startup: " + commandLine);
             return;
+
         }
-        
+
         DBG("Another instance started with command line: " + commandLine);
-        anotherInstanceStarted2(commandLine);
-    }
-    void anotherInstanceStarted2(const juce::String& commandLine)
-    {
+
         // First check if it's a valid file
         File inputMediaFile(commandLine.unquoted().trim());
+
+        if (debugFilesOn())
+        {
+            File debugFile(
+                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
+                + "/debug.txt");
+            debugFile.appendText(
+                "Another instance started with command line: " + commandLine + "\n", true, true);
+        }
 
         if (inputMediaFile.existsAsFile())
         {
@@ -278,7 +305,7 @@ public:
         */
         void closeButtonPressed() override
         {
-                        if (this
+            if (this
                 == dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
                        ->getMainWindowPtr())
             {
@@ -353,6 +380,7 @@ private:
     juce::Array<std::unique_ptr<MainWindow>> additionalWindows;
     ApplicationProperties applicationProperties;
     bool appJustLaunched;
+    juce::String originalCommandLine;
 };
 
 //==============================================================================
