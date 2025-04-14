@@ -140,14 +140,7 @@ public:
         // First check if it's a valid file
         File inputMediaFile(commandLine.unquoted().trim());
 
-        if (debugFilesOn())
-        {
-            File debugFile(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                + "/debug.txt");
-            debugFile.appendText(
-                "Another instance started with command line: " + commandLine + "\n", true, true);
-        }
+        writeDebugLog("Another instance started with command line: " + commandLine + "\n");
 
         if (inputMediaFile.existsAsFile())
         {
@@ -283,14 +276,8 @@ public:
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);
-
-#if JUCE_IOS || JUCE_ANDROID
-            setFullScreen(true);
-#else
             setResizable(true, true);
             centreWithSize(getWidth(), getHeight());
-#endif
-
             setVisible(true);
         }
 
@@ -334,7 +321,7 @@ public:
 
         void activeWindowStatusChanged() override
         {
-            //Check if an open file is still up to date when window comes back into focus
+            // Check if an open file is still up to date when window comes back into focus
             if (isActiveWindow())
             {
                 if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent()))
