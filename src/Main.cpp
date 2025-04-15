@@ -41,15 +41,14 @@ public:
         DBG(message);
 
         // Get the application data directory based on platform
-        // For MacOS it's ~/Library/Logs/HARP
         File logsDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                           .getChildFile("Logs")
-                           .getChildFile(getApplicationName());
+                           .getChildFile(getApplicationName())
+                           .getChildFile("Logs");
 
         logsDir.createDirectory(); // Ensure directory exists
 
         // Create the debug log file
-        File debugFile = logsDir.getChildFile("debug.txt");
+        File debugFile = logsDir.getChildFile("launch.log");
         debugFile.appendText(message + "\n", true, true);
     }
 
@@ -63,11 +62,12 @@ public:
 
         File inputMediaFile(commandLine.unquoted().trim());
 
+        juce::String windowTitle = getApplicationName() + " " + juce::String(windowCounter++);
+
         if (inputMediaFile.existsAsFile())
         {
             // Create main window with the file name in the title
-            mainWindow.reset(
-                new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
+            mainWindow.reset(new MainWindow(windowTitle));
 
             // Load the file directly
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
@@ -78,7 +78,7 @@ public:
         else
         {
             // Only create a blank window if no file was specified
-            mainWindow.reset(new MainWindow(getApplicationName()));
+            mainWindow.reset(new MainWindow(windowTitle));
         }
 
         // An ugly solution for an ugy problem
