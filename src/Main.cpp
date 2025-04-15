@@ -13,7 +13,9 @@ public:
         // For macos the settings path is ~/Library/Application Support/HARP/HARP.settings
         // For windows is %APPDATA%\HARP\HARP.settings (no need to manually set this)
         // For linux is ~/.config/HARP/HARP.settings (no need to manually set this)
-        options.osxLibrarySubFolder = "Application Support";
+        options.osxLibrarySubFolder = "Application Support/";
+        options.folderName = getApplicationName();
+        options.commonToAllUsers = false;
         applicationProperties.setStorageParameters(options);
     }
 
@@ -37,9 +39,17 @@ public:
         if (!debugFilesOn())
             return;
         DBG(message);
-        File debugFile(
-            juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-            + "/debug.txt");
+        
+        // Get the application data directory based on platform
+        // For MacOS it's ~/Library/Logs/HARP
+        File logsDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                                .getChildFile("Logs")
+                                .getChildFile(getApplicationName());
+        
+        logsDir.createDirectory(); // Ensure directory exists
+        
+        // Create the debug log file
+        File debugFile = logsDir.getChildFile("debug.txt");
         debugFile.appendText(message + "\n", true, true);
     }
 
