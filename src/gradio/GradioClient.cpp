@@ -197,7 +197,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       .withExtraHeaders(createExtraHeaders())
+                       //.withExtraHeaders(createExtraHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)

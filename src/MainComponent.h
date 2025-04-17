@@ -433,7 +433,7 @@ public:
                 {
                     if (choice == 1)
                     {
-                        accessToken = prompt->getTextEditor("token")->getText().trim();
+                        auto accessToken = prompt->getTextEditor("token")->getText().trim();
                         if (! accessToken.isEmpty())
                         {
                             auto result = model->getGradioClient().validateToken(accessToken);
@@ -1521,8 +1521,6 @@ private:
     ApplicationCommandManager commandManager;
     // MenuBar
     std::unique_ptr<MenuBarComponent> menuBar;
-
-    juce::String accessToken;
 
     void play()
     {
