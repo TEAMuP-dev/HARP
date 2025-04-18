@@ -56,8 +56,12 @@ public:
     OpResult validateToken(const juce::String& token) const;
 
 private:
-
-    juce::String createExtraHeaders() const;
+    
+    juce::String getAuthorizationHeader() const;
+    juce::String getJsonContentTypeHeader() const;
+    juce::String getAcceptHeader() const;
+    juce::String createCommonHeaders() const;
+    juce::String createJsonHeaders() const;
 
     static OpResult parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***

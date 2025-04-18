@@ -197,7 +197,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       //.withExtraHeaders(createExtraHeaders())
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -271,7 +271,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       .withExtraHeaders(createExtraHeaders())
+                       .withExtraHeaders(createJsonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -347,7 +347,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                       .withExtraHeaders(createExtraHeaders())
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -498,6 +498,7 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -537,23 +538,38 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     return OpResult::ok();
 }
 
-juce::String GradioClient::createExtraHeaders() const
+juce::String GradioClient::getAuthorizationHeader() const
 {
-    juce::String headers = "Content-Type: application/json\r\n";
-    headers += "Accept: */*\r\n";
-    if (tokenEnabled and ! token.isEmpty())
+    if (tokenEnabled && ! token.isEmpty())
     {
-        headers += "Authorization: Bearer " + token + "\r\n";
+        return "Authorization: Bearer " + token + "\r\n";
     }
-    return headers;
+    return "";
+}
+
+juce::String GradioClient::getJsonContentTypeHeader() const
+{
+    return "Content-Type: application/json\r\n";
+}
+
+juce::String GradioClient::getAcceptHeader() const { return "Accept: */*\r\n"; }
+
+juce::String GradioClient::createCommonHeaders() const
+{
+    return getAcceptHeader() + getAuthorizationHeader();
+}
+
+juce::String GradioClient::createJsonHeaders() const
+{
+    return getJsonContentTypeHeader() + getAcceptHeader() + getAuthorizationHeader();
 }
 
 OpResult GradioClient::validateToken(const juce::String& token) const
 {
     // TODO
     // GET request to https://huggingface.co/api/whoami-v2
-    // Add the token to the header 
-    // Parse the json response 
+    // Add the token to the header
+    // Parse the json response
     // Check if expired and if it has the permissions
     // "inference.endpoints.infer.write"
     // and
@@ -561,17 +577,8 @@ OpResult GradioClient::validateToken(const juce::String& token) const
     return OpResult::ok();
 }
 
-void GradioClient::setToken(const juce::String& token)
-{
-    this->token = token;
-}
+void GradioClient::setToken(const juce::String& token) { this->token = token; }
 
-juce::String GradioClient::getToken() const
-{
-    return token;
-}
+juce::String GradioClient::getToken() const { return token; }
 
-void GradioClient::setTokenEnabled(bool enabled)
-{
-    tokenEnabled = enabled;
-}
+void GradioClient::setTokenEnabled(bool enabled) { tokenEnabled = enabled; }
