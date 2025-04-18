@@ -14,7 +14,9 @@ public:
         // For macos the settings path is ~/Library/Application Support/HARP/HARP.settings
         // For windows is %APPDATA%\HARP\HARP.settings (no need to manually set this)
         // For linux is ~/.config/HARP/HARP.settings (no need to manually set this)
-        options.osxLibrarySubFolder = "Application Support";
+        options.osxLibrarySubFolder = "Application Support/";
+        options.folderName = getApplicationName();
+        options.commonToAllUsers = false;
         applicationProperties.setStorageParameters(options);
         
         // Initialize the AppSettings singleton with our application properties
@@ -38,12 +40,20 @@ public:
     // at this stage using the debugger when invoking it from the DAW
     void writeDebugLog(const juce::String& message)
     {
-        if (!debugFilesOn())
+        if (! debugFilesOn())
             return;
         DBG(message);
-        File debugFile(
-            juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-            + "/debug.txt");
+
+        // Get the application data directory based on platform
+        // For MacOS it's ~/Library/Logs/HARP
+        File logsDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                           .getChildFile("Logs")
+                           .getChildFile(getApplicationName());
+
+        logsDir.createDirectory(); // Ensure directory exists
+
+        // Create the debug log file
+        File debugFile = logsDir.getChildFile("debug.txt");
         debugFile.appendText(message + "\n", true, true);
     }
 
@@ -115,28 +125,28 @@ public:
     {
         // This method is called when another instance of the app is started.
         // We can handle the command line arguments here to open files in the current instance.
-        
+
         // What happens in reality, is that (at least on MacOS) the app is launched more than once
         // and it depends on the number of arguments passed to the app, and also who is launching it.
         // For example, when the app is launched by Reaper with a file as argument, initialize() is
         // called once with no arguments, and then anotherInstanceStarted() is called with the file as argument.
-        // On the other hand when we call the app from the command line like this 
+        // On the other hand when we call the app from the command line like this
         // `pathToHARP/build/HARP_artefacts/Debug/HARP.app/Contents/MacOS/Harp pathToHARP/test.wav
         // initialize() is called with the file as argument, and then anotherInstanceStarted() is called with the same file as argument.
         // So this is why we need the appJustLaunched flag
         // Hopefully these MacOS hacks won't affect the Linux and Windows versions.
         if (appJustLaunched)
         {
-            if (!commandLine.isEmpty() && originalCommandLine.isEmpty())
+            if (! commandLine.isEmpty() && originalCommandLine.isEmpty())
             {
                 // DBG("Replacing original window (empty commandLine) with " + commandLine);
                 writeDebugLog("Replacing original window (empty commandLine) with " + commandLine);
                 resetWindow(commandLine);
                 return;
             }
-            writeDebugLog("Ignoring spurious anotherInstanceStarted during startup: " + commandLine);
+            writeDebugLog("Ignoring spurious anotherInstanceStarted during startup: "
+                          + commandLine);
             return;
-
         }
 
         DBG("Another instance started with command line: " + commandLine);
@@ -144,14 +154,7 @@ public:
         // First check if it's a valid file
         File inputMediaFile(commandLine.unquoted().trim());
 
-        if (debugFilesOn())
-        {
-            File debugFile(
-                juce::File::getSpecialLocation(juce::File::userHomeDirectory).getFullPathName()
-                + "/debug.txt");
-            debugFile.appendText(
-                "Another instance started with command line: " + commandLine + "\n", true, true);
-        }
+        writeDebugLog("Another instance started with command line: " + commandLine + "\n");
 
         if (inputMediaFile.existsAsFile())
         {
@@ -243,8 +246,9 @@ public:
             // New Window
             case 0:
             {
-                std::unique_ptr<MainWindow> newWindow = std::make_unique<MainWindow>(
-                    getApplicationName() + " - " + inputMediaFile.getFileName());
+                juce::String windowTitle =
+                    getApplicationName() + " " + juce::String(windowCounter++);
+                std::unique_ptr<MainWindow> newWindow = std::make_unique<MainWindow>(windowTitle);
 
                 // Configure the window before making it visible
                 if (auto* mainComp = dynamic_cast<MainComponent*>(newWindow->getContentComponent()))
@@ -285,15 +289,11 @@ public:
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);
-
-#if JUCE_IOS || JUCE_ANDROID
-            setFullScreen(true);
-#else
             setResizable(true, true);
             
             // Try to restore saved position and size
             restoreWindowPosition();
-#endif
+// #endif
 
             setVisible(true);
         }
@@ -341,7 +341,7 @@ public:
 
         void activeWindowStatusChanged() override
         {
-            //Check if an open file is still up to date when window comes back into focus
+            // Check if an open file is still up to date when window comes back into focus
             if (isActiveWindow())
             {
                 if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent()))
@@ -453,6 +453,7 @@ private:
     ApplicationProperties applicationProperties;
     bool appJustLaunched;
     juce::String originalCommandLine;
+    int windowCounter = 1;
 };
 
 //==============================================================================
