@@ -1,4 +1,5 @@
 #include "MediaDisplayComponent.h"
+#include "../HarpLogger.h"
 
 MediaDisplayComponent::MediaDisplayComponent()
 {
@@ -108,9 +109,12 @@ void MediaDisplayComponent::repositionLabels()
     minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
     maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
 
-    auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto labels) {
-        for (auto l : labels)
+    auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto& labels) {
+        for (auto* l : labels)
         {
+            if (l == nullptr)
+                continue;
+
             float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2 * textSpacing));
 
             float labelStartTime = l->getTime();
@@ -483,47 +487,47 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
         }
 
         if (isOverlay) {
-            auto lo = static_cast<LabelOverlayComponent*>(lc.get());
+            auto* lo = new LabelOverlayComponent(*static_cast<LabelOverlayComponent*>(lc.get()));
             lo->setRelativeY(y);
 
-            addLabelOverlay(*lo);
+            addLabelOverlay(lo);
         } else {
-            auto ol = static_cast<OverheadLabelComponent*>(lc.get());
-            addOverheadLabel(*ol);
+            auto* ol = new OverheadLabelComponent(*static_cast<OverheadLabelComponent*>(lc.get()));
+            addOverheadLabel(ol);
         }
     }
 }
 
-void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent l)
+void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
 {
-    LabelOverlayComponent* label = new LabelOverlayComponent(l);
-    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    label->setIndex(currentTempFileIdx);
-    labelOverlays.add(label);
+
+    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    l->setIndex(currentTempFileIdx);
+    labelOverlays.add(l);
 
     Component* mediaComponent = getMediaComponent();
-    mediaComponent->addAndMakeVisible(label);
-    label->addMarkersTo(mediaComponent);
+    mediaComponent->addAndMakeVisible(l);
+    l->addMarkersTo(mediaComponent);
 }
 
-void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent l)
+void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
 {
-    OverheadLabelComponent* label = new OverheadLabelComponent(l);
-    label->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    label->setIndex(currentTempFileIdx);
-    overheadLabels.add(label);
+    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    l->setIndex(currentTempFileIdx);
+    overheadLabels.add(l);
 
-    overheadPanel.addAndMakeVisible(label);
+    overheadPanel.addAndMakeVisible(l);
 
     Component* mediaComponent = getMediaComponent();
-    label->addMarkersTo(mediaComponent);
+    l->addMarkersTo(mediaComponent);
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
 {
+    LogAndDBG("Starting clear labels");
     for (int i = labelOverlays.size() - 1; i >= 0; --i)
     {
-        LabelOverlayComponent* l = labelOverlays.getReference(i);
+        LabelOverlayComponent* l = labelOverlays[i];
 
         if (l->getIndex() >= processingIdxCutoff) {
             removeLabelOverlay(l);
@@ -536,7 +540,7 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
 
     for (int i = overheadLabels.size() - 1; i >= 0; --i)
     {
-        OverheadLabelComponent* l = overheadLabels.getReference(i);
+        OverheadLabelComponent* l = overheadLabels[i];
 
         if (l->getIndex() >= processingIdxCutoff) {
             removeOverheadLabel(l);
@@ -546,6 +550,7 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     if (!processingIdxCutoff) {
         overheadLabels.clear();
     }
+
 
     resized();
     repaint();
@@ -557,10 +562,8 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
 
     l->removeMarkersFrom(mediaComponent);
     mediaComponent->removeChildComponent(l);
+    labelOverlays.removeObject(l);
 
-    labelOverlays.removeFirstMatchingValue(l);
-
-    delete l;
 }
 
 void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
@@ -570,9 +573,8 @@ void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
     l->removeMarkersFrom(mediaComponent);
     overheadPanel.removeChildComponent(l);
 
-    overheadLabels.removeFirstMatchingValue(l);
+    overheadLabels.removeObject(l);
 
-    delete l;
 }
 
 int MediaDisplayComponent::getNumOverheadLabels()
