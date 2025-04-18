@@ -1,5 +1,4 @@
 #include "MediaDisplayComponent.h"
-#include "../HarpLogger.h"
 
 MediaDisplayComponent::MediaDisplayComponent()
 {
@@ -524,7 +523,6 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
 {
-    LogAndDBG("Starting clear labels");
     for (int i = labelOverlays.size() - 1; i >= 0; --i)
     {
         LabelOverlayComponent* l = labelOverlays[i];
