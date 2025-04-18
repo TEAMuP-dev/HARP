@@ -71,6 +71,11 @@ struct Error
             error.userMessage =
                 "Failed to upload the file to the gradio app. Please check you internet connection.";
         }
+        else if (error.type == ErrorType::FileDownloadError)
+        {
+            error.userMessage =
+                "Processing was successfull but Failed to download the file from the gradio app. Please check you internet connection.";
+        }
     }
 
     // Function to check if all substrings are contained in the given string

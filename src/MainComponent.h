@@ -102,13 +102,14 @@ class MainComponent : public Component,
 public:
     enum CommandIDs
     {
-        open = 0x2000,
-        save = 0x2001,
-        saveAs = 0x2002,
-        about = 0x2003,
-        undo = 0x2005,
-        redo = 0x2006
-        // settings = 0x2004,
+        about = 0x2000,
+        open = 0x2001,
+        save = 0x2002,
+        saveAs = 0x2003,
+        undo = 0x2004,
+        redo = 0x2005,
+        login = 0x2006
+        // settings = 0x2007,
     };
 
     StringArray getMenuBarNames() override { return { "File" }; }
@@ -136,6 +137,7 @@ public:
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
+            menu.addCommandItem(&commandManager, CommandIDs::login);
             menu.addCommandItem(&commandManager, CommandIDs::about);
         }
         return menu;
@@ -153,7 +155,8 @@ public:
     {
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::about,
+            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
+            CommandIDs::about
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -188,6 +191,9 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
+            case CommandIDs::login:
+                result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -199,6 +205,10 @@ public:
     {
         switch (info.commandID)
         {
+            case CommandIDs::open:
+                DBG("Open command invoked");
+                openFileChooser();
+                break;
             case CommandIDs::save:
                 DBG("Save command invoked");
                 saveCallback();
@@ -207,10 +217,6 @@ public:
                 DBG("Save As command invoked");
                 saveAsCallback();
                 break;
-            case CommandIDs::open:
-                DBG("Open command invoked");
-                openFileChooser();
-                break;
             case CommandIDs::undo:
                 DBG("Undo command invoked");
                 undoCallback();
@@ -218,6 +224,10 @@ public:
             case CommandIDs::redo:
                 DBG("Redo command invoked");
                 redoCallback();
+                break;
+            case CommandIDs::login:
+                DBG("Login command invoked");
+                loginPromptCallback();
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -402,6 +412,62 @@ public:
             DBG("Redo callback completed successfully");
         }
     }
+
+    void loginPromptCallback()
+    {
+        auto* prompt =
+            new juce::AlertWindow("Login to Hugging Face",
+                                  "Paste your Hugging Face access token below.\n\n"
+                                  "Click 'Get Token' to open Hugging Face token page.",
+                                  juce::AlertWindow::NoIcon);
+
+        prompt->addTextEditor("token", "", "Access Token:");
+        prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+        prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+        prompt->addButton("Get Token", 2);
+
+        prompt->enterModalState(
+            true,
+            juce::ModalCallbackFunction::create(
+                [this, prompt](int choice)
+                {
+                    if (choice == 1)
+                    {
+                        auto accessToken = prompt->getTextEditor("token")->getText().trim();
+                        if (! accessToken.isEmpty())
+                        {
+                            auto result = model->getGradioClient().validateToken(accessToken);
+                            if (result.failed())
+                            {
+                                // TODO: handle error
+                                setStatus("Invalid token. Please try again.");
+                            }
+                            else
+                            {
+                                model->getGradioClient().setToken(accessToken);
+                                setStatus("Logged in to Hugging Face");
+                            }
+                        }
+                        else
+                        {
+                            setStatus("No token entered.");
+                        }
+                    }
+                    else if (choice == 2)
+                    {
+                        juce::URL("https://huggingface.co/settings/tokens")
+                            .launchInDefaultBrowser();
+                        // Reopen the prompt
+                        loginPromptCallback(); // reopen after redirecting
+                    }
+                    else
+                    {
+                        setStatus("Login cancelled.");
+                    }
+                    delete prompt;
+                }),
+            false);
+    };
 
     void loadModelCallback()
     {
@@ -725,65 +791,6 @@ public:
         { setInstructions("Click to save results to original audio file"); };
         saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
         saveFileButtonHandler.attach();
-
-        //Login by geeting the user's access token
-        addAndMakeVisible(loginButton);
-        loginButton.onClick = [this]()
-        {
-            auto* prompt =
-                new juce::AlertWindow("Login to Hugging Face",
-                                      "Paste your Hugging Face access token below.\n\n"
-                                      "Click 'Get Token' to open Hugging Face token page.",
-                                      juce::AlertWindow::NoIcon);
-
-            prompt->addTextEditor("token", "", "Access Token:");
-            prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-            prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-            prompt->addButton("Get Token", 2);
-
-            prompt->enterModalState(
-                true,
-                juce::ModalCallbackFunction::create(
-                    [this, prompt](int choice)
-                    {
-                        if (choice == 1)
-                        {
-                            auto token = prompt->getTextEditor("token")->getText().trim();
-                            if (! token.isEmpty())
-                            {
-                                // accessToken = token;
-                                auto result = model->getGradioClient().validateToken(token);
-                                if (result.failed())
-                                {
-                                    // TODO: handle error
-                                    setStatus("Invalid token. Please try again.");
-                                }
-                                else
-                                {
-                                    model->getGradioClient().setToken(token);
-                                    setStatus("Logged in to Hugging Face");
-                                }
-                            }
-                            else
-                            {
-                                setStatus("No token entered.");
-                            }
-                        }
-                        else if (choice == 2)
-                        {
-                            juce::URL("https://huggingface.co/settings/tokens")
-                                .launchInDefaultBrowser();
-                            // Reopen the prompt
-                            loginButton.triggerClick(); // reopen after redirecting
-                        }
-                        else
-                        {
-                            setStatus("Login cancelled.");
-                        }
-                        delete prompt;
-                    }),
-                false);
-        };
 
         // Initialize default media display
         initializeMediaDisplay();
@@ -1300,9 +1307,6 @@ public:
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
         flexBox.items.add(juce::FlexItem(row1).withFlex(0.4));
 
-        //  Row 1.5 – Login Button
-        flexBox.items.add(juce::FlexItem(loginButton).withHeight(30).withMargin(margin));
-
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
         row2.flexDirection = juce::FlexBox::Direction::row;
@@ -1436,11 +1440,6 @@ private:
 
     TextButton saveFileButton { "Save File" };
     HoverHandler saveFileButtonHandler { saveFileButton };
-
-    //  the login button:
-    TextButton loginButton { "Login to Hugging Face" };
-    HoverHandler loginButtonHandler { loginButton };
-    juce::String accessToken;
 
     ModelAuthorLabel modelAuthorLabel;
     // cb: TODO:
@@ -1687,28 +1686,6 @@ private:
         resized();
         repaint();
     }
-
-    //added for user login
-    /*
-    void openHuggingFaceLogin()
-    {
-        const juce::String clientId = "e4b6e82c-8b6b-4168-aae4-378d771b0247";  // a test oauth app
-        const juce::String redirectUri = "http://localhost:12345/callback";  
-        const juce::String scope = "openid inference-api";
-
-        juce::String url = "https://huggingface.co/oauth/authorize"
-                       "?response_type=code"
-                       "&client_id=" + clientId
-                       + "&redirect_uri=" + redirectUri
-                       + "&scope=" + scope;
-
-        juce::URL(url).launchInDefaultBrowser();
-    }*/
-
-    // void processProcessingResult(OpResult result)
-    // {
-
-    // }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
