@@ -566,14 +566,63 @@ juce::String GradioClient::createJsonHeaders() const
 
 OpResult GradioClient::validateToken(const juce::String& token) const
 {
-    // TODO
-    // GET request to https://huggingface.co/api/whoami-v2
-    // Add the token to the header
-    // Parse the json response
-    // Check if expired and if it has the permissions
-    // "inference.endpoints.infer.write"
-    // and
-    // "repo.content.read"
+    // Create the error here, in case we need it
+    Error error;
+    int statusCode = 0;
+
+    juce::URL url = juce::URL("https://huggingface.co/api/whoami-v2");
+
+    // Create a GET request to whoami-v2 API with provided token 
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       .withExtraHeaders("Authorization: Bearer " + token + "\r\n")
+                       .withConnectionTimeoutMs(5000)
+                       .withStatusCode(&statusCode);
+
+    std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+
+    if (stream == nullptr)
+    {
+        error.code = statusCode;
+        error.devMessage =
+            "Failed to create input stream for GET request \nto validate token.";
+        return OpResult::fail(error);
+    }
+
+    juce::String response = stream->readEntireStreamAsString();
+
+    // Check the status code to ensure the request was successful
+    if (statusCode != 200)
+    {
+        error.code = statusCode;
+        error.devMessage =
+            "Authentication failed with status code: " + juce::String(statusCode);
+        return OpResult::fail(error);
+    }
+
+    // Parse the response
+    juce::var parsedResponse = juce::JSON::parse(response);
+    if (! parsedResponse.isObject())
+    {
+        error.devMessage = "Failed to parse JSON response from whoami-v2 API.";
+        return OpResult::fail(error);
+    }
+
+    juce::DynamicObject* obj = parsedResponse.getDynamicObject();
+    if (obj == nullptr)
+    {
+        error.devMessage = "Parsed JSON is not an object from whoami-v2 API.";
+        return OpResult::fail(error);
+    }
+
+    /*
+    if (obj->hasProperty("error"))
+    {
+        //error.devMessage = obj->getProperty("error");
+        error.devMessage = "Invalid token. Please try again.";
+        return OpResult::fail(error);
+    }
+    */
+
     return OpResult::ok();
 }
 
