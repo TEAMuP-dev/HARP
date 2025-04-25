@@ -614,14 +614,45 @@ OpResult GradioClient::validateToken(const juce::String& token) const
         return OpResult::fail(error);
     }
 
-    /*
-    if (obj->hasProperty("error"))
+    auto* tokenJSON = obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
+
+    String role = tokenJSON->getProperty("role").toString();
+
+    if (!(role == "write" || role == "read"))
     {
-        //error.devMessage = obj->getProperty("error");
-        error.devMessage = "Invalid token. Please try again.";
-        return OpResult::fail(error);
+        bool hasAllPermissions = false;
+
+        auto* scopedArray = tokenJSON->getProperty("fineGrained").getDynamicObject()->getProperty("scoped").getArray();
+
+        for (const auto& scopeEntry : *scopedArray)
+        {
+            if (!scopeEntry.isObject())
+                continue;
+    
+            var permissionsVar = scopeEntry.getDynamicObject()->getProperty("permissions");
+    
+            if (!permissionsVar.isArray())
+                continue;
+    
+            auto* permissionsArray = permissionsVar.getArray();
+            bool hasAll = permissionsArray->contains("repo.content.read") &&
+                          permissionsArray->contains("repo.write") &&
+                          permissionsArray->contains("inference.serverless.write") &&
+                          permissionsArray->contains("inference.endpoints.infer.write");
+    
+            if (hasAll)
+            {
+                hasAllPermissions = true;
+                break;
+            }
+        }
+    
+        if (!hasAllPermissions)
+        {
+            error.devMessage = "Provided token does not have suitable read/write permissions.";
+            return OpResult::fail(error);
+        }
     }
-    */
 
     return OpResult::ok();
 }
