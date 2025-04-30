@@ -204,6 +204,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 2.2.0 | 0.2.1 |
 | 2.1.x | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
