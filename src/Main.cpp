@@ -40,16 +40,15 @@ public:
             return;
         DBG(message);
 
-        // Get the application data directory based on platform
-        // For MacOS it's ~/Library/Logs/HARP
-        File logsDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                           .getChildFile("Logs")
+        // Get the application log directory based on platform
+        // MacOS: ~/Library/Logs/HARP/launch.log
+        // Linux: ~/.config/HARP/launch.log
+        // Windows: C:\Users\<username>\AppData\Roaming\HARP\launch.log
+        File logsDir = juce::FileLogger::getSystemLogFileFolder()
                            .getChildFile(getApplicationName());
-
         logsDir.createDirectory(); // Ensure directory exists
-
         // Create the debug log file
-        File debugFile = logsDir.getChildFile("debug.txt");
+        File debugFile = logsDir.getChildFile("launch.log");
         debugFile.appendText(message + "\n", true, true);
     }
 
@@ -63,22 +62,22 @@ public:
 
         File inputMediaFile(commandLine.unquoted().trim());
 
+        juce::String windowTitle = getApplicationName();
+        windowCounter++;
+        if (windowCounter > 1)
+        {
+            windowTitle += " (" + juce::String(windowCounter - 1) + ")";
+        }
+
+        mainWindow.reset(new MainWindow(windowTitle));
+
         if (inputMediaFile.existsAsFile())
         {
-            // Create main window with the file name in the title
-            mainWindow.reset(
-                new MainWindow(getApplicationName() + " - " + inputMediaFile.getFileName()));
-
-            // Load the file directly
+            // Load the file 
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
             {
                 mainComp->loadMediaDisplay(inputMediaFile);
             }
-        }
-        else
-        {
-            // Only create a blank window if no file was specified
-            mainWindow.reset(new MainWindow(getApplicationName()));
         }
 
         // An ugly solution for an ugy problem
@@ -245,8 +244,13 @@ public:
             // New Window
             case 0:
             {
-                juce::String windowTitle =
-                    getApplicationName() + " " + juce::String(windowCounter++);
+                windowCounter++;
+                juce::String windowTitle = getApplicationName();
+                if (windowCounter > 1)
+                {
+                    windowTitle += " (" + juce::String(windowCounter - 1) + ")";
+                }
+                
                 std::unique_ptr<MainWindow> newWindow = std::make_unique<MainWindow>(windowTitle);
 
                 // Configure the window before making it visible
@@ -379,7 +383,7 @@ private:
     ApplicationProperties applicationProperties;
     bool appJustLaunched;
     juce::String originalCommandLine;
-    int windowCounter = 1;
+    int windowCounter = 0;
 };
 
 //==============================================================================
