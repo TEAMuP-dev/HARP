@@ -199,6 +199,7 @@ public:
                         auto rememberCheckbox =
                             std::make_unique<ToggleButton>("Remember my choice");
                         rememberCheckbox->setSize(200, 24);
+                        rememberCheckbox->setName("");
 
                         // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
                         // So we need to delete it manually when the alertWindow is closed
