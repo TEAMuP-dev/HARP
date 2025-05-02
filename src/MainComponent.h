@@ -947,7 +947,7 @@ public:
         // model path textbox
         std::vector<std::string> modelPaths = {
             "custom path...",           "hugggof/vampnet-music",  "lllindsey0615/pyharp_demucs",
-            "lllindsey0615/pyharp_AMT", "npruyne/timbre-trap",    "xribene/harmonic_percussive",
+            "lllindsey0615/pyharp_AMT", "npruyne/timbre-trap",    "xribene/harmonic_percussive_v5",
             "lllindsey0615/DEMUCS_GPU", "cwitkowitz/timbre-trap",
             // "npruyne/audio_similarity",
             // "xribene/pitch_shifter",
