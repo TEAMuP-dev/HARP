@@ -95,10 +95,15 @@ public:
     {
         if (auto* settings = getUserSettings())
         {
-            settings->removeValue(keyName);
+            // Check if the key exists before removing
+            if (settings->containsKey(keyName))
+            {
+                settings->removeValue(keyName);
             
-            if (saveImmediately)
-                settings->saveIfNeeded();
+                if (saveImmediately)
+                    settings->saveIfNeeded();
+            }
+            
         }
     }
 

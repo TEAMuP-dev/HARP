@@ -414,6 +414,21 @@ public:
         }
     }
 
+    void tryLoadSavedToken()
+    {
+        if (AppSettings::containsKey("huggingFaceToken"))
+        {
+            juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
+            if (!savedToken.isEmpty())
+            {
+                // Set the token without validation to avoid network requests on startup
+                // TODO: IDeally, we should validate the token at some point
+                // because it might have expired or been revoked
+                model->getGradioClient().setToken(savedToken);
+                setStatus("Using saved authentication token");
+            }
+        }
+    }
     void loginPromptCallback()
     {
         auto* prompt =
@@ -426,11 +441,17 @@ public:
         prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
         prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
         prompt->addButton("Get Token", 2);
+        
+        // Add "Remember Token" checkbox
+        auto rememberCheckbox = std::make_unique<ToggleButton>("Remember this token");
+        rememberCheckbox->setSize(200, 24);
+        rememberCheckbox->setName("");
+        prompt->addCustomComponent(rememberCheckbox.get());
 
         prompt->enterModalState(
             true,
             juce::ModalCallbackFunction::create(
-                [this, prompt](int choice)
+                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
                 {
                     if (choice == 1)
                     {
@@ -450,11 +471,24 @@ public:
                                     "An error occurred while performing authentication: \n"
                                         + loginError.userMessage);
                                 setStatus("Invalid token. Please try again.");
+                                
                             }
                             else
                             {
                                 model->getGradioClient().setToken(accessToken);
-                                setStatus("Authentication successful.");
+                                // Save token if checkbox is ticked
+                                if (rememberCheckboxPtr->getToggleState())
+                                {
+                                    AppSettings::setValue("huggingFaceToken", accessToken);
+                                    AppSettings::saveIfNeeded();
+                                    setStatus("Authentication successful. Token saved.");
+                                }
+                                else
+                                {
+                                    // Clear the token from settings if not saved
+                                    AppSettings::removeValue("huggingFaceToken");
+                                    setStatus("Authentication successful. Token not saved.");
+                                }
                             }
                         }
                         else
@@ -1001,9 +1035,8 @@ public:
         setModelCard(card);
 
         // jobProcessorThread.startThread();
+        tryLoadSavedToken();
 
-        // ARA requires that plugin editors are resizable to support tight integration
-        // into the host UI
         setOpaque(true);
         setSize(800, 800);
         resized();
