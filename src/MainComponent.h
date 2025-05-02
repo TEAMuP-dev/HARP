@@ -436,16 +436,24 @@ public:
                         auto accessToken = prompt->getTextEditor("token")->getText().trim();
                         if (! accessToken.isEmpty())
                         {
-                            auto result = model->getGradioClient().validateToken(accessToken);
-                            if (result.failed())
+                            auto loginResult = model->getGradioClient().validateToken(accessToken);
+                            if (loginResult.failed())
                             {
-                                // TODO: handle error
+                                Error loginError = loginResult.getError();
+                                Error::fillUserMessage(loginError);
+                                LogAndDBG("Error during authentication:\n"
+                                          + loginError.devMessage.toStdString());
+                                AlertWindow::showMessageBoxAsync(
+                                    AlertWindow::WarningIcon,
+                                    "Login Error",
+                                    "An error occurred while performing authentication: \n"
+                                        + loginError.userMessage);
                                 setStatus("Invalid token. Please try again.");
                             }
                             else
                             {
                                 model->getGradioClient().setToken(accessToken);
-                                setStatus("Logged in to Hugging Face");
+                                setStatus("Authentication successful.");
                             }
                         }
                         else
