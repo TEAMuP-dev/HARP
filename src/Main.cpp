@@ -276,6 +276,8 @@ public:
         }
     }
 
+    void incrimentWindowCounter() { windowCounter++; }
+    void decrimentWindowCounter() { windowCounter--; }
     //==============================================================================
     /*
         This class implements the desktop window that contains an instance of
@@ -321,7 +323,7 @@ public:
                        ->getMainWindowPtr())
             {
                 auto* app = dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance());
-
+                app->decrimentWindowCounter();
                 // Check if there are other windows open
                 if (app->hasAdditionalWindows())
                 {
@@ -337,9 +339,11 @@ public:
             }
             else
             {
+                auto* app = dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance());
                 // Just remove this window from the additionalWindows array
-                dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
-                    ->removeAdditionalWindow(this);
+                // dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
+                app->removeAdditionalWindow(this);
+                app->decrimentWindowCounter();
             }
         }
 
