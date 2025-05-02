@@ -1,4 +1,5 @@
 #include "MainComponent.h"
+#include "AppSettings.h"
 
 //==============================================================================
 class GuiAppApplication : public juce::JUCEApplication
@@ -17,6 +18,9 @@ public:
         options.folderName = getApplicationName();
         options.commonToAllUsers = false;
         applicationProperties.setStorageParameters(options);
+        
+        // Initialize the AppSettings singleton with our application properties
+        AppSettings::initialize(&applicationProperties);
     }
 
     // We inject these as compile definitions from the CMakeLists.txt
@@ -157,11 +161,9 @@ public:
             MessageManager::callAsync(
                 [this, inputMediaFile]()
                 {
-                    auto* userSettings = applicationProperties.getUserSettings();
-
                     // Check if the user made a choice before
-                    bool hasPreference = userSettings->containsKey("newInstancePreference");
-                    int preferenceValue = userSettings->getIntValue("newInstancePreference", -1);
+                    bool hasPreference = AppSettings::containsKey("newInstancePreference");
+                    int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
 
                     if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
                     {
@@ -209,7 +211,6 @@ public:
                                 [this,
                                  alertWindow = alertWindow.release(),
                                  inputMediaFile,
-                                 userSettings,
                                  rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
                                 {
                                     if (result != 0) // 0 is Cancel in this case
@@ -222,8 +223,8 @@ public:
                                         // Don't save the Cancel choice
                                         if (rememberChoice && choice <= 1)
                                         {
-                                            userSettings->setValue("newInstancePreference", choice);
-                                            userSettings->saveIfNeeded();
+                                            AppSettings::setValue("newInstancePreference", choice);
+                                            AppSettings::saveIfNeeded();
                                         }
 
                                         // Handle the choice
@@ -287,12 +288,17 @@ public:
             : DocumentWindow(name,
                              juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
                                  ResizableWindow::backgroundColourId),
-                             DocumentWindow::allButtons)
+                             DocumentWindow::allButtons),
+              windowIdentifier(name.replaceCharacters(" :", "__"))
         {
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);
             setResizable(true, true);
-            centreWithSize(getWidth(), getHeight());
+            
+            // Try to restore saved position and size
+            restoreWindowPosition();
+// #endif
+
             setVisible(true);
         }
 
@@ -307,6 +313,9 @@ public:
         */
         void closeButtonPressed() override
         {
+            // Save window position and size before closing
+            saveWindowPosition();
+            
             if (this
                 == dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
                        ->getMainWindowPtr())
@@ -348,6 +357,71 @@ public:
         }
 
     private:
+        juce::String windowIdentifier;
+        
+        void saveWindowPosition()
+        {
+            // Don't save if minimized
+            if (isMinimised())
+                return;
+                
+            auto bounds = getBounds();
+            
+            // Create property names using the window identifier to avoid conflicts
+            juce::String prefix = "window." + windowIdentifier + ".";
+            AppSettings::setValue(prefix + "x", bounds.getX());
+            AppSettings::setValue(prefix + "y", bounds.getY());
+            AppSettings::setValue(prefix + "width", bounds.getWidth());
+            AppSettings::setValue(prefix + "height", bounds.getHeight());
+            
+            AppSettings::saveIfNeeded();
+        }
+        
+        void restoreWindowPosition()
+        {
+            juce::String prefix = "window." + windowIdentifier + ".";
+            
+            // Check if we have saved position data
+            if (AppSettings::containsKey(prefix + "x") && 
+                AppSettings::containsKey(prefix + "y") &&
+                AppSettings::containsKey(prefix + "width") &&
+                AppSettings::containsKey(prefix + "height"))
+            {
+                // Get the stored position and size
+                int x = AppSettings::getIntValue(prefix + "x");
+                int y = AppSettings::getIntValue(prefix + "y");
+                int width = AppSettings::getIntValue(prefix + "width");
+                int height = AppSettings::getIntValue(prefix + "height");
+                
+                // Validate size
+                width = juce::jmax(100, width);
+                height = juce::jmax(100, height);
+                
+                // Create a rectangle with the stored bounds
+                juce::Rectangle<int> bounds(x, y, width, height);
+                
+                // Check if the position is on any display
+                auto displays = Desktop::getInstance().getDisplays();
+                auto* display = displays.getDisplayForRect(bounds);
+                
+                if (display != nullptr)
+                {
+                    // Position is valid
+                    setBounds(bounds);
+                }
+                else
+                {
+                    // No display found for the saved position, center on the main display
+                    centreWithSize(width, height);
+                }
+            }
+            else
+            {
+                // No saved position, center on screen
+                centreWithSize(getWidth(), getHeight());
+            }
+        }
+        
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
     };
 
