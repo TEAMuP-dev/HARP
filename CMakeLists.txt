@@ -101,6 +101,7 @@ target_sources(${PROJECT_NAME}
         src/TrackAreaWidget.h
         src/Model.h 
         src/WebModel.h
+        src/AppSettings.h
         src/HarpLogger.h
         src/HarpLogger.cpp
         src/errors.h

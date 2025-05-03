@@ -127,10 +127,10 @@ public:
     void addLabels(LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
 
-    void addLabelOverlay(LabelOverlayComponent l);
+    void addLabelOverlay(LabelOverlayComponent* l);
     void removeLabelOverlay(LabelOverlayComponent* l);
 
-    void addOverheadLabel(OverheadLabelComponent l);
+    void addOverheadLabel(OverheadLabelComponent* l);
     void removeOverheadLabel(OverheadLabelComponent* l);
 
     int getNumOverheadLabels();
@@ -244,8 +244,8 @@ private:
     // and never change it again
     const bool _required = true;
 
-    Array<LabelOverlayComponent*> labelOverlays;
-    Array<OverheadLabelComponent*> overheadLabels;
+    OwnedArray<LabelOverlayComponent> labelOverlays;
+    OwnedArray<OverheadLabelComponent> overheadLabels;
 
     juce::String trackName;
     juce::Uuid trackID;

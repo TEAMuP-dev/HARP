@@ -48,8 +48,23 @@ public:
     OpResult downloadFileFromURL(const juce::URL& fileURL,
                                  juce::String& downloadedFilePath,
                                  const int timeoutMs = 10000) const;
+    
+    void setToken(const juce::String& token);
+
+    juce::String getToken() const;
+
+    void setTokenEnabled(bool enabled);
+
+    OpResult validateToken(const juce::String& token) const;
 
 private:
+    
+    juce::String getAuthorizationHeader() const;
+    juce::String getJsonContentTypeHeader() const;
+    juce::String getAcceptHeader() const;
+    juce::String createCommonHeaders() const;
+    juce::String createJsonHeaders() const;
+
     static OpResult parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo);
     /***
     We parse the space address given by the user
@@ -70,4 +85,7 @@ private:
     }
     ***/
     SpaceInfo spaceInfo;
+    juce::String token;
+    // A bool flag that could be controlled by a checkbox
+    bool tokenEnabled = true;
 };

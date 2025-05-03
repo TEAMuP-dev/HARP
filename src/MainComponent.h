@@ -33,6 +33,7 @@
 // #include "media/MidiDisplayComponent.h"
 
 #include "windows/AboutWindow.h"
+#include "AppSettings.h"
 
 using namespace juce;
 
@@ -98,17 +99,19 @@ class MainComponent : public Component,
                       private ChangeListener,
                       public MenuBarModel,
                       public ApplicationCommandTarget
+
 {
 public:
     enum CommandIDs
     {
-        open = 0x2000,
-        save = 0x2001,
-        saveAs = 0x2002,
-        about = 0x2003,
-        undo = 0x2005,
-        redo = 0x2006
-        // settings = 0x2004,
+        about = 0x2000,
+        open = 0x2001,
+        save = 0x2002,
+        saveAs = 0x2003,
+        undo = 0x2004,
+        redo = 0x2005,
+        login = 0x2006
+        // settings = 0x2007,
     };
 
     StringArray getMenuBarNames() override { return { "File" }; }
@@ -136,6 +139,7 @@ public:
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator();
+            menu.addCommandItem(&commandManager, CommandIDs::login);
             menu.addCommandItem(&commandManager, CommandIDs::about);
         }
         return menu;
@@ -153,7 +157,8 @@ public:
     {
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::about,
+            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
+            CommandIDs::about
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -188,6 +193,9 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
+            case CommandIDs::login:
+                result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -199,6 +207,10 @@ public:
     {
         switch (info.commandID)
         {
+            case CommandIDs::open:
+                DBG("Open command invoked");
+                openFileChooser();
+                break;
             case CommandIDs::save:
                 DBG("Save command invoked");
                 saveCallback();
@@ -207,10 +219,6 @@ public:
                 DBG("Save As command invoked");
                 saveAsCallback();
                 break;
-            case CommandIDs::open:
-                DBG("Open command invoked");
-                openFileChooser();
-                break;
             case CommandIDs::undo:
                 DBG("Undo command invoked");
                 undoCallback();
@@ -218,6 +226,10 @@ public:
             case CommandIDs::redo:
                 DBG("Redo command invoked");
                 redoCallback();
+                break;
+            case CommandIDs::login:
+                DBG("Login command invoked");
+                loginPromptCallback();
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -423,6 +435,104 @@ public:
         }
     }
 
+    void tryLoadSavedToken()
+    {
+        if (AppSettings::containsKey("huggingFaceToken"))
+        {
+            juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
+            if (!savedToken.isEmpty())
+            {
+                // Set the token without validation to avoid network requests on startup
+                // TODO: IDeally, we should validate the token at some point
+                // because it might have expired or been revoked
+                model->getGradioClient().setToken(savedToken);
+                setStatus("Using saved authentication token");
+            }
+        }
+    }
+    void loginPromptCallback()
+    {
+        auto* prompt =
+            new juce::AlertWindow("Login to Hugging Face",
+                                  "Paste your Hugging Face access token below.\n\n"
+                                  "Click 'Get Token' to open Hugging Face token page.",
+                                  juce::AlertWindow::NoIcon);
+
+        prompt->addTextEditor("token", "", "Access Token:");
+        prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+        prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+        prompt->addButton("Get Token", 2);
+        
+        // Add "Remember Token" checkbox
+        auto rememberCheckbox = std::make_unique<ToggleButton>("Remember this token");
+        rememberCheckbox->setSize(200, 24);
+        rememberCheckbox->setName("");
+        prompt->addCustomComponent(rememberCheckbox.get());
+
+        prompt->enterModalState(
+            true,
+            juce::ModalCallbackFunction::create(
+                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+                {
+                    if (choice == 1)
+                    {
+                        auto accessToken = prompt->getTextEditor("token")->getText().trim();
+                        if (! accessToken.isEmpty())
+                        {
+                            auto loginResult = model->getGradioClient().validateToken(accessToken);
+                            if (loginResult.failed())
+                            {
+                                Error loginError = loginResult.getError();
+                                Error::fillUserMessage(loginError);
+                                LogAndDBG("Error during authentication:\n"
+                                          + loginError.devMessage.toStdString());
+                                AlertWindow::showMessageBoxAsync(
+                                    AlertWindow::WarningIcon,
+                                    "Login Error",
+                                    "An error occurred while performing authentication: \n"
+                                        + loginError.userMessage);
+                                setStatus("Invalid token. Please try again.");
+                                
+                            }
+                            else
+                            {
+                                model->getGradioClient().setToken(accessToken);
+                                // Save token if checkbox is ticked
+                                if (rememberCheckboxPtr->getToggleState())
+                                {
+                                    AppSettings::setValue("huggingFaceToken", accessToken);
+                                    AppSettings::saveIfNeeded();
+                                    setStatus("Authentication successful. Token saved.");
+                                }
+                                else
+                                {
+                                    // Clear the token from settings if not saved
+                                    AppSettings::removeValue("huggingFaceToken");
+                                    setStatus("Authentication successful. Token not saved.");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            setStatus("No token entered.");
+                        }
+                    }
+                    else if (choice == 2)
+                    {
+                        juce::URL("https://huggingface.co/settings/tokens")
+                            .launchInDefaultBrowser();
+                        // Reopen the prompt
+                        loginPromptCallback(); // reopen after redirecting
+                    }
+                    else
+                    {
+                        setStatus("Login cancelled.");
+                    }
+                    delete prompt;
+                }),
+            false);
+    };
+
     void loadModelCallback()
     {
         // Get the URL/path the user provided in the comboBox
@@ -562,26 +672,9 @@ public:
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
-                                // get the spaceInfo
-                                if (spaceInfo.status == SpaceInfo::Status::GRADIO)
-                                {
-                                    URL spaceUrl =
-                                        this->model->getGradioClient().getSpaceInfo().gradio;
-                                    spaceUrl.launchInDefaultBrowser();
-                                }
-                                else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
-                                {
-                                    URL spaceUrl =
-                                        this->model->getGradioClient().getSpaceInfo().huggingface;
-                                    spaceUrl.launchInDefaultBrowser();
-                                }
-                                else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
-                                {
-                                    // either choose hugingface or gradio, they are the same
-                                    URL spaceUrl =
-                                        this->model->getGradioClient().getSpaceInfo().huggingface;
-                                    spaceUrl.launchInDefaultBrowser();
-                                }
+                                URL spaceUrl =
+                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
@@ -590,6 +683,9 @@ public:
                                     this->model->getGradioClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
+                            // URL spaceUrl =
+                            //     this->model->getGradioClient().getSpaceInfo().huggingface;
+                            // spaceUrl.launchInDefaultBrowser();
                         }
 
                         if (lastLoadedModelItemIndex == -1)
@@ -750,22 +846,22 @@ public:
         menuItemsChanged();
     }
 
-    void initSomeButtons()
-    {
-        addAndMakeVisible(chooseFileButton);
-        chooseFileButton.onClick = [this] { openFileChooser(); };
-        chooseFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to choose an audio file"); };
-        chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-        chooseFileButtonHandler.attach();
+    // void initSomeButtons()
+    // {
+    //     addAndMakeVisible(chooseFileButton);
+    //     chooseFileButton.onClick = [this] { openFileChooser(); };
+    //     chooseFileButtonHandler.onMouseEnter = [this]()
+    //     { setInstructions("Click to choose an audio file"); };
+    //     chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+    //     chooseFileButtonHandler.attach();
 
-        addAndMakeVisible(saveFileButton);
-        saveFileButton.onClick = [this] { saveCallback(); };
-        saveFileButtonHandler.onMouseEnter = [this]()
-        { setInstructions("Click to save results to original audio file"); };
-        saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-        saveFileButtonHandler.attach();
-    }
+    //     addAndMakeVisible(saveFileButton);
+    //     saveFileButton.onClick = [this] { saveCallback(); };
+    //     saveFileButtonHandler.onMouseEnter = [this]()
+    //     { setInstructions("Click to save results to original audio file"); };
+    //     saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
+    //     saveFileButtonHandler.attach();
+    // }
 
     void initPlayStopButton()
     {
@@ -858,14 +954,9 @@ public:
     {
         // model path textbox
         std::vector<std::string> modelPaths = {
-            "custom path...",
-            "hugggof/vampnet-music",
-            "lllindsey0615/pyharp_demucs",
-            "lllindsey0615/pyharp_AMT",
-            "npruyne/timbre-trap",
-            "xribene/harmonic_percussive",
-            "lllindsey0615/DEMUCS_GPU",
-            "cwitkowitz/timbre-trap",
+            "custom path...",           "hugggof/vampnet-music",  "lllindsey0615/pyharp_demucs",
+            "lllindsey0615/pyharp_AMT", "npruyne/timbre-trap",    "xribene/harmonic_percussive_v5",
+            "lllindsey0615/DEMUCS_GPU", "cwitkowitz/timbre-trap",
             // "npruyne/audio_similarity",
             // "xribene/pitch_shifter",
             // "xribene/midi_pitch_shifter",
@@ -942,7 +1033,7 @@ public:
         fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
         fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
 
-        initSomeButtons();
+        // initSomeButtons();
         initPlayStopButton();
 
         // Initialize default media display
@@ -1017,6 +1108,7 @@ public:
         setModelCard(card);
 
         // jobProcessorThread.startThread();
+        tryLoadSavedToken();
 
         setOpaque(true);
         setSize(800, 2000);
@@ -1237,9 +1329,10 @@ public:
     //     // mediaDisplayHandler->attach();
     // }
 
-    // void loadMediaDisplay(File mediaFile, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    // {
-    //     return;
+    void loadMediaDisplay(File mediaFile)
+    {
+        return;
+    }
         // // Check the file extension to determine type
         // String extension = mediaFile.getFileExtension();
 
@@ -1501,11 +1594,11 @@ private:
     int lastLoadedModelItemIndex = -1;
     HoverHandler modelPathComboBoxHandler { modelPathComboBox };
 
-    TextButton chooseFileButton { "Open File" };
-    HoverHandler chooseFileButtonHandler { chooseFileButton };
+    // TextButton chooseFileButton { "Open File" };
+    // HoverHandler chooseFileButtonHandler { chooseFileButton };
 
-    TextButton saveFileButton { "Save File" };
-    HoverHandler saveFileButtonHandler { saveFileButton };
+    // TextButton saveFileButton { "Save File" };
+    // HoverHandler saveFileButtonHandler { saveFileButton };
 
     ModelAuthorLabel modelAuthorLabel;
     MultiButton loadModelButton;
@@ -1752,11 +1845,6 @@ private:
         resized();
         repaint();
     }
-
-    // void processProcessingResult(OpResult result)
-    // {
-
-    // }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

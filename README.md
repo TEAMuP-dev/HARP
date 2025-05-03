@@ -173,7 +173,7 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
   * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
   * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
 
-* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive)
+* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive_v5)
 
 <!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
 
@@ -214,6 +214,7 @@ The current versions of HARP and PyHARP are shown below. They are fully compatib
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 2.2.0 | 0.2.1 |
 | 2.1.x | 0.2.0 |
 | 2.0.0 | 0.2.0 |
 | 1.3.0 | 0.1.1 |
