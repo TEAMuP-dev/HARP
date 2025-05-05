@@ -33,11 +33,25 @@ public:
         titleLabel.setBounds(topArea);
         textBox.setBounds(area);
         textBox.setMultiLine(true, true);
+        textBox.setReadOnly(false);
+        textBox.setCaretVisible(true);
+        textBox.setScrollbarsShown(true);
+        textBox.setWantsKeyboardFocus(true);
+        // Without this, the parent takes the focus
+        // and we can't type in the text box
+        setWantsKeyboardFocus(false); 
+        // Some other interesting methods to consider:
+        // textBox.setInterceptsMouseClicks(true, false);
+        // textBox.setMouseClickGrabsKeyboardFocus(true);
         addAndMakeVisible(titleLabel);
         addAndMakeVisible(textBox);
     }
 
-    void setName(const juce::String& nameId) override { textBox.setName(nameId); }
+    void setName(const juce::String& nameId) override
+    {
+        Component::setName(nameId);
+        textBox.setName(nameId);
+    }
 
     juce::String getName() { return textBox.getName(); }
 
