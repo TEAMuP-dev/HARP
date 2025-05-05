@@ -1844,6 +1844,7 @@ private:
 
         // Set the focus to the process button
         // so that the user can press SPACE to trigger the playback
+        // cb: I don't understand this.
         processCancelButton.grabKeyboardFocus();
         resized();
         repaint();

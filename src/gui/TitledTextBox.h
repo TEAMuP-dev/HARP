@@ -41,8 +41,8 @@ public:
         // and we can't type in the text box
         setWantsKeyboardFocus(false); 
         // Some other interesting methods to consider:
-        // textBox.setInterceptsMouseClicks(true, false);
-        // textBox.setMouseClickGrabsKeyboardFocus(true);
+        textBox.setInterceptsMouseClicks(true, false);
+        textBox.setMouseClickGrabsKeyboardFocus(true);
         addAndMakeVisible(titleLabel);
         addAndMakeVisible(textBox);
     }

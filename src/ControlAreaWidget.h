@@ -94,6 +94,19 @@ public:
                     comboBox.addItem(option, comboBox.getNumItems() + 1);
                 }
 
+                // Set initial selection if value is present
+                if (!comboBoxCtrl->value.empty())
+                {
+                    comboBox.setSelectedItemIndex(
+                        std::distance(comboBoxCtrl->options.begin(),
+                                    std::find(comboBoxCtrl->options.begin(), comboBoxCtrl->options.end(), comboBoxCtrl->value)),
+                        juce::dontSendNotification);
+                }
+                else
+                {
+                    comboBox.setSelectedItemIndex(0, juce::dontSendNotification); // fallback to first item
+                }
+
                 comboBox.addListener(this);
                 comboBox.setTextWhenNoChoicesAvailable("No choices");
                 addAndMakeVisible(*comboBoxWithLabel);
