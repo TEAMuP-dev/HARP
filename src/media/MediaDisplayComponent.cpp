@@ -19,7 +19,7 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
 
     trackNameLabel.setText(trackName, juce::dontSendNotification);
     addAndMakeVisible(headerComponent);
-    addAndMakeVisible(mediaComponent);
+    // addAndMakeVisible(mediaComponent);
 
     // Add controls to headerComponent
     headerComponent.addAndMakeVisible(trackNameLabel);
@@ -27,9 +27,10 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
     addAndMakeVisible(mediaAreaContainer);
     mediaAreaContainer.addAndMakeVisible(mediaComponent);
     mediaAreaContainer.addAndMakeVisible(overheadPanel); 
-    mediaAreaContainer.addChildComponent(horizontalScrollBar);
+    mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
+    mediaAreaContainer.addMouseListener(this, true);
     
     populateTrackHeader();
     // addAndMakeVisible(overheadPanel); // new from v2
@@ -1056,7 +1057,8 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 void MediaDisplayComponent::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (instructionBoxWriter)
-        instructionBoxWriter(mediaHandlerInstructions);
+        // instructionBoxWriter(mediaHandlerInstructions);
+        instructionBoxWriter(getMediaHandlerInstructions());
 }
 void MediaDisplayComponent::mouseExit(const juce::MouseEvent& /*event*/)
 {

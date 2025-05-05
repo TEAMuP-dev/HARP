@@ -148,8 +148,8 @@ public:
         inputTracksCounter = 0;
         outputTracksCounter = 0;
         // remove input and output TracksLabel
-        // inputTracksLabel->setText("", juce::dontSendNotification);
-        // outputTracksLabel->setText("", juce::dontSendNotification);
+        removeChildComponent(inputTracksLabel.get());
+        removeChildComponent(outputTracksLabel.get());
     }
 
     void resized() override
