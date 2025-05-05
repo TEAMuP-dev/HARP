@@ -1,6 +1,7 @@
 #include "WebModel.h"
 #include "gui/SliderWithLabel.h"
 #include "gui/TitledTextBox.h"
+#include "gui/ComboBoxWIthLabel.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "utils.h"
 
@@ -85,26 +86,18 @@ public:
             }
             else if (auto comboBoxCtrl = dynamic_cast<ComboBoxInfo*>(controlInfo.get()))
             {
-                auto comboBox = std::make_unique<juce::ComboBox>();
-                comboBox->setName(comboBoxCtrl->id.toString());
+                auto comboBoxWithLabel = std::make_unique<ComboBoxWithLabel>(comboBoxCtrl->label);
+                auto& comboBox = comboBoxWithLabel->getComboBox();
+                comboBox.setName(comboBoxCtrl->id.toString());
                 for (const auto& option : comboBoxCtrl->options)
                 {
-                    comboBox->addItem(option, comboBox->getNumItems() + 1);
+                    comboBox.addItem(option, comboBox.getNumItems() + 1);
                 }
 
-                // int selectedId = 1; // Default to first item if the desired value isn't found
-                // for (int i = 0; i < comboBox->getNumItems(); ++i)
-                // {
-                //     if (comboBox->getItemText(i).toStdString() == comboBoxCtrl->value)
-                //     {
-                //         selectedId = i + 1; // item IDs start at 1
-                //         break;
-                //     }
-                // }
-                comboBox->addListener(this);
-                comboBox->setTextWhenNoChoicesAvailable("No choices");
-                addAndMakeVisible(*comboBox);
-                optionCtrls.push_back(std::move(comboBox));
+                comboBox.addListener(this);
+                comboBox.setTextWhenNoChoicesAvailable("No choices");
+                addAndMakeVisible(*comboBoxWithLabel);
+                optionCtrls.push_back(std::move(comboBoxWithLabel));
                 DBG("Combo Box: " + comboBoxCtrl->label + " added");
             }
             // TODO: NumberBox (check class HarpNumberBox in pyharp)
@@ -174,8 +167,8 @@ public:
         sliderBox.flexDirection = juce::FlexBox::Direction::row;
         for (auto& sliderWithLabel : sliders)
         {
-            DBG("Adding slider with name: " + sliderWithLabel->getSlider().getName()
-                + " to sliderBox");
+            // DBG("Adding slider with name: " + sliderWithLabel->getSlider().getName()
+            //     + " to sliderBox");
             sliderBox.items.add(juce::FlexItem(*sliderWithLabel)
                                     .withFlex(1)
                                     .withMinWidth(20)
@@ -188,9 +181,9 @@ public:
         toggleBox.flexDirection = juce::FlexBox::Direction::row;
         for (auto& toggle : toggles)
         {
-            DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
+            // DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
             toggleBox.items.add(
-                juce::FlexItem(*toggle).withFlex(1).withMinWidth(80).withMaxHeight(20).withMargin(
+                juce::FlexItem(*toggle).withFlex(1).withMinWidth(40).withMaxHeight(20).withMargin(
                     margin));
         }
 
@@ -199,11 +192,11 @@ public:
         optionBox.flexDirection = juce::FlexBox::Direction::row;
         for (auto& optionCtrl : optionCtrls)
         {
-            DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
+            // DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
             optionBox.items.add(juce::FlexItem(*optionCtrl)
                                     .withFlex(1)
-                                    .withMinWidth(80)
-                                    .withMaxHeight(maxHeight)
+                                    .withMinWidth(40)
+                                    .withMaxHeight(50)
                                     .withMargin(margin));
         }
 
@@ -212,7 +205,7 @@ public:
         textBox.flexDirection = juce::FlexBox::Direction::row;
         for (auto& textCtrl : textCtrls)
         {
-            DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
+            // DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
             textBox.items.add(juce::FlexItem(*textCtrl)
                                   .withFlex(1)
                                   .withMinWidth(80)
@@ -346,6 +339,6 @@ private:
     // Vectors of unique pointers to widgets
     std::vector<std::unique_ptr<SliderWithLabel>> sliders;
     std::vector<std::unique_ptr<juce::ToggleButton>> toggles;
-    std::vector<std::unique_ptr<juce::ComboBox>> optionCtrls;
+    std::vector<std::unique_ptr<ComboBoxWithLabel>> optionCtrls;
     std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
 };

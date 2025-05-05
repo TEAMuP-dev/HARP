@@ -48,18 +48,18 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
 
 // void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
 
-void MidiDisplayComponent::repositionScrollBar()
-{
-    Rectangle<int> scrollBarArea =
-        getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
-    scrollBarArea = scrollBarArea.removeFromRight(
-        scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-    scrollBarArea =
-        scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-                                     - 4 * pianoRoll.getScrollBarSpacing());
+// void MidiDisplayComponent::repositionScrollBar()
+// {
+//     Rectangle<int> scrollBarArea =
+//         getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
+//     scrollBarArea = scrollBarArea.removeFromRight(
+//         scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
+//     scrollBarArea =
+//         scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
+//                                      - 4 * pianoRoll.getScrollBarSpacing());
 
-    horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
-}
+//     horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
+// }
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {

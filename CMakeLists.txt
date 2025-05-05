@@ -130,6 +130,7 @@ target_sources(${PROJECT_NAME}
         src/gui/CustomPathDialog.h
         src/gui/ModelAuthorLabel.h
         src/gui/HoverableLabel.h
+        src/gui/ComboBoxWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp

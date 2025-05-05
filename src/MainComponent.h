@@ -895,7 +895,7 @@ public:
             "Process",
             [this] { processCallback(); },
             Colours::orangered,
-            "Click to send the audio file for processing",
+            "Click to send the input for processing",
             MultiButton::DrawingMode::TextOnly,
             fontaudio::Pause,
         };
@@ -1478,12 +1478,13 @@ public:
             area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
 
-        auto margin = 5; // Adjusted margin value for top and bottom spacing
+        auto margin = 2; // Adjusted margin value for top and bottom spacing
 
         // Create a FlexBox container
         juce::FlexBox flexBox;
         flexBox.flexDirection = juce::FlexBox::Direction::column;
-        flexBox.alignContent = juce::FlexBox::AlignContent::stretch;
+        flexBox.alignContent = juce::FlexBox::AlignContent::flexStart;
+        flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
         flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
         // Row 1: Model Path ComboBox and Load Model Button
@@ -1498,7 +1499,7 @@ public:
         row2.flexDirection = juce::FlexBox::Direction::row;
         row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
         row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row2).withFlex(0.5));
+        flexBox.items.add(juce::FlexItem(row2).withHeight(30).withMargin(margin));
 
         flexBox.performLayout(area);
 

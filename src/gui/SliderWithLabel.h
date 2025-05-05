@@ -29,7 +29,7 @@ public:
         auto bounds = getLocalBounds();
         label.setBounds(bounds.removeFromTop(bounds.getHeight() / 6));
         slider.setBounds(bounds);
-        DBG("Slider bounds now considered " + getBounds().toString());
+        // DBG("Slider bounds now considered " + getBounds().toString());
     }
 
     juce::Slider& getSlider() { return slider; }

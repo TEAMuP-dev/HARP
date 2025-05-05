@@ -19,7 +19,7 @@ public:
 
     // void repositionOverheadPanel() override;
     // void repositionContent() override; // new from v2
-    void repositionScrollBar() override;
+    // void repositionScrollBar() override;
 
     Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
 
