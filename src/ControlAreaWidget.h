@@ -1,7 +1,7 @@
 #include "WebModel.h"
 #include "gui/SliderWithLabel.h"
 #include "gui/TitledTextBox.h"
-#include "gui/ComboBoxWIthLabel.h"
+#include "gui/ComboBoxWithLabel.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "utils.h"
 
