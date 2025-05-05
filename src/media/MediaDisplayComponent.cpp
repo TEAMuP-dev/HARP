@@ -14,10 +14,6 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
 
     sourcePlayer.setSource(&transportSource);
 
-    addChildComponent(horizontalScrollBar);
-    horizontalScrollBar.setAutoHide(false);
-    horizontalScrollBar.addListener(this);
-
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
 
@@ -27,37 +23,17 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
 
     // Add controls to headerComponent
     headerComponent.addAndMakeVisible(trackNameLabel);
+
+    addAndMakeVisible(mediaAreaContainer);
+    mediaAreaContainer.addAndMakeVisible(mediaComponent);
+    mediaAreaContainer.addAndMakeVisible(overheadPanel); 
+    mediaAreaContainer.addChildComponent(horizontalScrollBar);
+    horizontalScrollBar.setAutoHide(false);
+    horizontalScrollBar.addListener(this);
+    
     populateTrackHeader();
-    addAndMakeVisible(overheadPanel); // new from v2
+    // addAndMakeVisible(overheadPanel); // new from v2
 }
-
-// MediaDisplayComponent::MediaDisplayComponent(String name) : trackName(name)
-// {
-//     resetPaths();
-
-//     formatManager.registerBasicFormats();
-
-//     deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-//     deviceManager.addAudioCallback(&sourcePlayer);
-
-//     sourcePlayer.setSource(&transportSource);
-
-//     addChildComponent(horizontalScrollBar);
-//     horizontalScrollBar.setAutoHide(false);
-//     horizontalScrollBar.addListener(this);
-
-//     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
-//     addAndMakeVisible(currentPositionMarker);
-
-//     trackNameLabel.setText(trackName, juce::dontSendNotification);
-//     addAndMakeVisible(headerComponent);
-//     addAndMakeVisible(mediaComponent);
-
-//     // Add controls to headerComponent
-//     headerComponent.addAndMakeVisible(trackNameLabel);
-//     populateTrackHeader();
-//     addAndMakeVisible(overheadPanel); // new from v2
-// }
 
 MediaDisplayComponent::~MediaDisplayComponent()
 {
@@ -91,9 +67,35 @@ void MediaDisplayComponent::resized()
     mainFlexBox.items.add(
         juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
     // Media area takes remaining space
-    mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));
+    // mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));
+    mainFlexBox.items.add(juce::FlexItem(mediaAreaContainer).withFlex(8));
 
     mainFlexBox.performLayout(totalBounds);
+
+    // Set up the media area container
+    // Set up the vertical layout within the media area container
+    mediaAreaFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    mediaAreaFlexBox.items.clear();
+    
+    // Add overhead panel if needed
+    if (getNumOverheadLabels() > 0) {
+        mediaAreaFlexBox.items.add(
+            juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing + 2));
+    } else {
+        overheadPanel.setBounds(0, 0, 0, 0); // Hide panel when not needed
+    }
+    
+    // Media component takes remaining space
+    mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
+
+    // Add horizontal scrollbar with fixed height
+    mediaAreaFlexBox.items.add(
+        juce::FlexItem(horizontalScrollBar).withHeight(scrollBarSize + 2 * controlSpacing));
+    
+    
+    
+    // Perform layout in media area
+    mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
 
     // Set up headerFlexBox for the controls inside headerComponent
     headerFlexBox.flexDirection = juce::FlexBox::Direction::row;
@@ -139,48 +141,29 @@ void MediaDisplayComponent::resized()
     // Set text justification to centered
     trackNameLabel.setJustificationType(juce::Justification::centred);
 
-    repositionOverheadPanel();
+    // repositionOverheadPanel();
     // repositionContent();
-    repositionScrollBar();
+    // repositionScrollBar();
     repositionLabels();
 }
 
-void MediaDisplayComponent::repositionOverheadPanel() // new from v2
-{
-    if (getNumOverheadLabels())
-    {
-        overheadPanel.setBounds(
-            mediaComponent.getBounds() // cb: replace with mediaComponent.getLocalBounds() ?
-                .removeFromTop(labelHeight + 2 * controlSpacing + 2)
-                .reduced(controlSpacing));
-    }
-    else
-    {
-        // overheadPanel.setBounds(getLocalBounds().removeFromTop(
-        //     0)); // cb: replace with mediaComponent.getLocalBounds() ?
-        overheadPanel.setBounds(mediaComponent.getBounds()
-                                    .removeFromTop(0)
-                                    );
-    }
-}
+// Rectangle<int> MediaDisplayComponent::getContentBounds() // new from v2
+// {
+//     Rectangle<int> contentBounds =
+//         mediaComponent.getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
+//             .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
 
-Rectangle<int> MediaDisplayComponent::getContentBounds() // new from v2
-{
-    Rectangle<int> contentBounds =
-        mediaComponent.getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
-            .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
+//     if (getNumOverheadLabels())
+//     {
+//         contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
+//     }
 
-    if (getNumOverheadLabels())
-    {
-        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
-    }
-
-    return contentBounds.reduced(controlSpacing);
-}
+//     return contentBounds.reduced(controlSpacing);
+// }
 
 void MediaDisplayComponent::repositionScrollBar()
 {
-    horizontalScrollBar.setBounds(mediaComponent.getBounds()
+    horizontalScrollBar.setBounds(mediaAreaContainer.getBounds()
                                       .removeFromBottom(scrollBarSize + 2 * controlSpacing)
                                       .reduced(controlSpacing));
 }
@@ -665,6 +648,7 @@ void MediaDisplayComponent::setMediaHandlerInstructions(String instructions)
 {
     mediaHandlerInstructions = instructions;
 }
+
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     for (const auto& l : labels)
@@ -980,8 +964,9 @@ void MediaDisplayComponent::updateCursorPosition()
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
-    Rectangle<int> mediaBounds = mediaComponent.getLocalBounds();
-
+    Rectangle<int> mediaBounds = mediaComponent.getBounds();
+    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
+    
     float cursorBoundsStartX = static_cast<float>(mediaBounds.getX()) + getMediaXPos();
     float cursorBoundsWidth = static_cast<float>(visibleRange.getLength() * getPixelsPerSecond());
 
@@ -997,7 +982,7 @@ void MediaDisplayComponent::updateCursorPosition()
     }
 
     cursorPositionX -= cursorWidth / 2.0f;
-    cursorPositionX += static_cast<float>(mediaComponent.getBounds().getX());
+    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
 
     currentPositionMarker.setRectangle(
         Rectangle<float>(cursorPositionX,

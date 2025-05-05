@@ -17,7 +17,7 @@ public:
         return MidiDisplayComponent::getSupportedExtensions();
     }
 
-    void repositionOverheadPanel() override;
+    // void repositionOverheadPanel() override;
     // void repositionContent() override; // new from v2
     void repositionScrollBar() override;
 

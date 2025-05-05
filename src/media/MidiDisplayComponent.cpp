@@ -31,19 +31,19 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void MidiDisplayComponent::repositionOverheadPanel()
-{
-    Rectangle<int> overheadPanelArea =
-        getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
-    overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
-                                                          - pianoRoll.getKeyboardWidth()
-                                                          - pianoRoll.getPianoRollSpacing());
-    overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
-                                                         - 2 * pianoRoll.getScrollBarSize()
-                                                         - 4 * pianoRoll.getScrollBarSpacing());
+// void MidiDisplayComponent::repositionOverheadPanel()
+// {
+//     Rectangle<int> overheadPanelArea =
+//         getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
+//     overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
+//                                                           - pianoRoll.getKeyboardWidth()
+//                                                           - pianoRoll.getPianoRollSpacing());
+//     overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
+//                                                          - 2 * pianoRoll.getScrollBarSize()
+//                                                          - 4 * pianoRoll.getScrollBarSpacing());
 
-    overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
-}
+//     overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
+// }
 
 // void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
 
