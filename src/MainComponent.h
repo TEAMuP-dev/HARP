@@ -1223,7 +1223,6 @@ public:
       
         processCancelButton.setEnabled(true);
         processCancelButton.setMode(cancelButtonInfo.label);
-
         saveEnabled = false;
         isProcessing = true;
 
@@ -1242,6 +1241,9 @@ public:
                                                  "Input file is not loaded for track "
                                                      + inputMediaDisplay->getTrackName()
                                                      + ". Please load an input file first.");
+                processCancelButton.setMode(processButtonInfo.label);
+                isProcessing = false;
+                saveEnabled = true;
                 return;
             }
             if (inputMediaDisplay->isFileLoaded())

@@ -150,21 +150,24 @@ void MediaDisplayComponent::repositionOverheadPanel() // new from v2
     if (getNumOverheadLabels())
     {
         overheadPanel.setBounds(
-            getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
+            mediaComponent.getBounds() // cb: replace with mediaComponent.getLocalBounds() ?
                 .removeFromTop(labelHeight + 2 * controlSpacing + 2)
                 .reduced(controlSpacing));
     }
     else
     {
-        overheadPanel.setBounds(getLocalBounds().removeFromTop(
-            0)); // cb: replace with mediaComponent.getLocalBounds() ?
+        // overheadPanel.setBounds(getLocalBounds().removeFromTop(
+        //     0)); // cb: replace with mediaComponent.getLocalBounds() ?
+        overheadPanel.setBounds(mediaComponent.getBounds()
+                                    .removeFromTop(0)
+                                    );
     }
 }
 
 Rectangle<int> MediaDisplayComponent::getContentBounds() // new from v2
 {
     Rectangle<int> contentBounds =
-        getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
+        mediaComponent.getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
             .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
 
     if (getNumOverheadLabels())

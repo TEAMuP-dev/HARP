@@ -39,6 +39,11 @@ auto alertCallback = [this, msgOpts, loadingError](int result)
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
+## Buttons and MultiButtons
+
+## Icons - FontAwesome and FontAudio
+
+## FlexBox
 
 ## Managing Collections  of Dynamically Created Objects
 
