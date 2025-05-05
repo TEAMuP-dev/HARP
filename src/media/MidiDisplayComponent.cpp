@@ -5,9 +5,10 @@ MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track
 MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
     : MediaDisplayComponent(trackName, required)
 {
+    mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
-    addAndMakeVisible(pianoRoll);
+    // addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";

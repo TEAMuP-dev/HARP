@@ -7,7 +7,7 @@ AudioDisplayComponent::AudioDisplayComponent(String trackName, bool required)
     thread.startThread(Thread::Priority::normal);
 
     thumbnailComponent.addMouseListener(this, true);
-    addAndMakeVisible(thumbnailComponent);
+    // addAndMakeVisible(thumbnailComponent);
 
     thumbnail.addChangeListener(this);
 
