@@ -8,7 +8,7 @@ var searchData=
   ['compatible_20with_20harp_5',['Making a deep learning model compatible with HARP',['../index.html#autotoc_md2',1,'']]],
   ['crossfade_2eh_6',['Crossfade.h',['../_crossfade_8h.html',1,'']]],
   ['ctrl_7',['Ctrl',['../struct_ctrl.html',1,'']]],
-  ['ctrlcomponent_8',['CtrlComponent',['../class_ctrl_component.html',1,'']]],
+  ['ctrlcomponent_8',['ControlAreaWidget',['../class_ctrl_component.html',1,'']]],
   ['customcomponents_2eh_9',['CustomComponents.h',['../_custom_components_8h.html',1,'']]],
   ['customthreadpooljob_10',['CustomThreadPoolJob',['../class_custom_thread_pool_job.html',1,'']]],
   ['cyclemarkercomponent_11',['CycleMarkerComponent',['../class_rulers_view_1_1_cycle_marker_component.html',1,'RulersView']]]

@@ -1,10 +1,14 @@
 #include "MidiDisplayComponent.h"
 
-MidiDisplayComponent::MidiDisplayComponent()
+MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
+
+MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
+    : MediaDisplayComponent(trackName, required)
 {
+    mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
-    addAndMakeVisible(pianoRoll);
+    // addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
@@ -28,39 +32,41 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void MidiDisplayComponent::repositionOverheadPanel()
-{
-    Rectangle<int> overheadPanelArea =
-        getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
-    overheadPanelArea = overheadPanelArea.removeFromRight(
-        overheadPanelArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-    overheadPanelArea =
-        overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-                                     - 4 * pianoRoll.getScrollBarSpacing());
+// void MidiDisplayComponent::repositionOverheadPanel()
+// {
+//     Rectangle<int> overheadPanelArea =
+//         getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
+//     overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
+//                                                           - pianoRoll.getKeyboardWidth()
+//                                                           - pianoRoll.getPianoRollSpacing());
+//     overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
+//                                                          - 2 * pianoRoll.getScrollBarSize()
+//                                                          - 4 * pianoRoll.getScrollBarSpacing());
 
-    overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
-}
+//     overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
+// }
 
-void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
+// void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
 
-void MidiDisplayComponent::repositionScrollBar()
-{
-    Rectangle<int> scrollBarArea =
-        getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
-    scrollBarArea = scrollBarArea.removeFromRight(
-        scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-    scrollBarArea =
-        scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-                                     - 4 * pianoRoll.getScrollBarSpacing());
+// void MidiDisplayComponent::repositionScrollBar()
+// {
+//     Rectangle<int> scrollBarArea =
+//         getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
+//     scrollBarArea = scrollBarArea.removeFromRight(
+//         scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
+//     scrollBarArea =
+//         scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
+//                                      - 4 * pianoRoll.getScrollBarSpacing());
 
-    horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
-}
+//     horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
+// }
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
+    DBG("Loading MIDI filePath: " << filePath.toString(true));
     // Create the local file this URL points to
     File file = filePath.getLocalFile();
-
+    DBG("Loading MIDI file: " << file.getFullPathName());
     std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
 
     // Read the MIDI file from the File object
@@ -129,7 +135,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
             }
 
             // Create a component for each for each note
-            MidiNoteComponent n = MidiNoteComponent(noteNumber, velocity, startTime, duration);
+            MidiNoteComponent n = MidiNoteComponent(static_cast<unsigned char>(noteNumber),
+                                                    static_cast<unsigned char>(velocity),
+                                                    startTime,
+                                                    duration);
             pianoRoll.insertNote(n);
         }
     }
@@ -138,11 +147,11 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
     std::sort(midiNumbers.begin(), midiNumbers.end());
     medianMidi = midiNumbers[midiNumbers.size() / 2];
     // Find std
-    int sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0);
-    float mean = sum / midiNumbers.size();
+    float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
+    float mean = sum / static_cast<float>(midiNumbers.size());
     float sq_sum =
-        std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0);
-    stdDevMidi = std::sqrt(sq_sum / midiNumbers.size() - mean * mean);
+        std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
+    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(midiNumbers.size()) - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
@@ -160,6 +169,12 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
     MediaDisplayComponent::updateVisibleRange(newRange);
 }
 
+void MidiDisplayComponent::resized()
+{
+    MediaDisplayComponent::resized();
+    pianoRoll.setBounds(mediaComponent.getBounds());
+}
+
 void MidiDisplayComponent::resetDisplay()
 {
     MediaDisplayComponent::resetTransport();
@@ -168,7 +183,7 @@ void MidiDisplayComponent::resetDisplay()
     pianoRoll.resizeNoteGrid(0.0);
 }
 
-void MidiDisplayComponent::postLoadActions(const URL& filePath)
+void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
 {
     // Auto-center the pianoRoll viewbox on the median note
     pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
@@ -191,7 +206,7 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
     if (getTotalLengthInSecs() > 0.0)
     {
         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        // bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 #if (JUCE_MAC)
         bool zoomMod = isCmdPressed;

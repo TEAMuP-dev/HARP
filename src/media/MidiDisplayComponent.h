@@ -8,20 +8,24 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
     MidiDisplayComponent();
-    ~MidiDisplayComponent();
+    MidiDisplayComponent(String trackName, bool required = true);
+    ~MidiDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
-    StringArray getInstanceExtensions() { return MidiDisplayComponent::getSupportedExtensions(); }
+    StringArray getInstanceExtensions() override
+    {
+        return MidiDisplayComponent::getSupportedExtensions();
+    }
 
-    void repositionOverheadPanel() override;
-    void repositionContent() override;
-    void repositionScrollBar() override;
+    // void repositionOverheadPanel() override;
+    // void repositionContent() override; // new from v2
+    // void repositionScrollBar() override;
 
-    Component* getMediaComponent() { return pianoRoll.getNoteGrid(); }
+    Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
 
     float getMediaXPos() override
     {
-        return pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing();
+        return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
     }
 
     void loadMediaFile(const URL& filePath) override;
@@ -29,9 +33,18 @@ public:
     void startPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
-    float getPixelsPerSecond() override { return pianoRoll.getResolution(); }
+    float getPixelsPerSecond() override { return (float) pianoRoll.getResolution(); }
 
     void updateVisibleRange(Range<double> newRange) override;
+
+    // void addLabels(LabelList& labels) override; // was deleted in new v2
+
+    void resized() override;
+
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
+    {
+        return dynamic_cast<MidiLabel*>(label.get()) != nullptr;
+    }
 
 private:
     void resetDisplay() override;

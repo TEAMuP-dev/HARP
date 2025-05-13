@@ -22,6 +22,7 @@ public:
         label.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
         addAndMakeVisible(slider);
+        setThumbColor(juce::Colours::coral);
     }
 
     void resized() override
@@ -29,7 +30,12 @@ public:
         auto bounds = getLocalBounds();
         label.setBounds(bounds.removeFromTop(bounds.getHeight() / 6));
         slider.setBounds(bounds);
-        DBG("Slider bounds now considered " + getBounds().toString());
+        // DBG("Slider bounds now considered " + getBounds().toString());
+    }
+
+    void setThumbColor(juce::Colour colour)
+    {
+        slider.setColour(juce::Slider::thumbColourId, colour);
     }
 
     juce::Slider& getSlider() { return slider; }

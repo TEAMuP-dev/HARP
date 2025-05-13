@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>HARP: Source/ARA/CtrlComponent.h Source File</title>
+<title>HARP: Source/ARA/ControlAreaWidget.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -79,7 +79,7 @@ $(document).ready(function() { init_codefold(0); });
 </div>
 </div><!-- top -->
 <div class="header">
-  <div class="headertitle"><div class="title">CtrlComponent.h</div></div>
+  <div class="headertitle"><div class="title">ControlAreaWidget.h</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include &quot;juce_gui_basics/juce_gui_basics.h&quot;</span></div>
@@ -121,7 +121,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
 <div class="foldopen" id="foldopen00037" data-start="{" data-end="};">
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="class_ctrl_component.html">   37</a></span><span class="keyword">class </span><a class="code hl_class" href="class_ctrl_component.html">CtrlComponent</a>: <span class="keyword">public</span> juce::Component, </div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="class_ctrl_component.html">   37</a></span><span class="keyword">class </span><a class="code hl_class" href="class_ctrl_component.html">ControlAreaWidget</a>: <span class="keyword">public</span> juce::Component, </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>                     <span class="keyword">public</span> Button::Listener, </div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>                     <span class="keyword">public</span> Slider::Listener,</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>                     <span class="keyword">public</span> ComboBox::Listener,</div>
@@ -130,7 +130,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span><span class="keyword">public</span>:</div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <a class="code hl_class" href="class_ctrl_component.html">CtrlComponent</a>() {}</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <a class="code hl_class" href="class_ctrl_component.html">ControlAreaWidget</a>() {}</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>  <span class="keywordtype">void</span> setModel(std::shared_ptr&lt;WebWave2Wave&gt; model) {</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    mModel = model;</div>
@@ -217,7 +217,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  }</div>
 <div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>  <span class="keywordtype">void</span> resetUI(){</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    DBG(<span class="stringliteral">&quot;CtrlComponent::resetUI called&quot;</span>);</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    DBG(<span class="stringliteral">&quot;ControlAreaWidget::resetUI called&quot;</span>);</div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    mModel.reset();</div>
 <div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="comment">// remove all the widgets and empty the vectors</span></div>
 <div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;ctrl : sliders) {</div>
@@ -395,9 +395,9 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
 <div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span> </div>
 <div class="ttc" id="a_editor_view_8h_html"><div class="ttname"><a href="_editor_view_8h.html">EditorView.h</a></div><div class="ttdoc">Implementation of the ARA Editor View.</div></div>
-<div class="ttc" id="aclass_ctrl_component_html"><div class="ttname"><a href="class_ctrl_component.html">CtrlComponent</a></div><div class="ttdef"><b>Definition</b> CtrlComponent.h:42</div></div>
+<div class="ttc" id="aclass_ctrl_component_html"><div class="ttname"><a href="class_ctrl_component.html">ControlAreaWidget</a></div><div class="ttdef"><b>Definition</b> ControlAreaWidget.h:42</div></div>
 <div class="ttc" id="aclass_h_a_r_p_look_and_feel_html"><div class="ttname"><a href="class_h_a_r_p_look_and_feel.html">HARPLookAndFeel</a></div><div class="ttdef"><b>Definition</b> LookAndFeel.h:7</div></div>
-<div class="ttc" id="aclass_slider_with_label_html"><div class="ttname"><a href="class_slider_with_label.html">SliderWithLabel</a></div><div class="ttdef"><b>Definition</b> CtrlComponent.h:10</div></div>
+<div class="ttc" id="aclass_slider_with_label_html"><div class="ttname"><a href="class_slider_with_label.html">SliderWithLabel</a></div><div class="ttdef"><b>Definition</b> ControlAreaWidget.h:10</div></div>
 <div class="ttc" id="astruct_combo_box_ctrl_html"><div class="ttname"><a href="struct_combo_box_ctrl.html">ComboBoxCtrl</a></div><div class="ttdef"><b>Definition</b> WebModel.h:54</div></div>
 <div class="ttc" id="astruct_number_box_ctrl_html"><div class="ttname"><a href="struct_number_box_ctrl.html">NumberBoxCtrl</a></div><div class="ttdef"><b>Definition</b> WebModel.h:44</div></div>
 <div class="ttc" id="astruct_slider_ctrl_html"><div class="ttname"><a href="struct_slider_ctrl.html">SliderCtrl</a></div><div class="ttdef"><b>Definition</b> WebModel.h:28</div></div>

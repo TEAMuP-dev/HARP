@@ -12,7 +12,8 @@ public:
         setSize(400, 300);
 
         // label for the about text
-        aboutText.setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n", dontSendNotification);
+        aboutText.setText(String(APP_NAME) + "\nVersion: " + String(APP_VERSION) + "\n\n",
+                          dontSendNotification);
         aboutText.setJustificationType(Justification::centred);
         aboutText.setSize(380, 100);
         addAndMakeVisible(aboutText);
