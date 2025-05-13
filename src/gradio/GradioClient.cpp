@@ -502,6 +502,12 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     // Determine the local temporary directory for storing the downloaded file
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::String fileName = fileURL.getFileName();
+    // // Add a timestamp to the file name to avoid overwriting
+    // // Insert timestamp before the file extension using juce::File operations
+    // juce::String baseName = juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    // juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
+    // juce::String timestamp = "_" + juce::String(juce::Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
+    // fileName = baseName + timestamp + extension;
     juce::File downloadedFile = tempDir.getChildFile(fileName);
 
     // Create input stream to download the file

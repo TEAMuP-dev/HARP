@@ -313,6 +313,11 @@ public:
 
         status2 = ModelStatus::SENDING;
 
+        // Clear the outputFilePaths and the labels
+        // They will be populated with the new processing results
+        outputFilePaths.clear();
+        labels.clear();
+
         // We need to upload all the localInputTrackFiles to the gradio server
         // and get the vector of the remote (uploaded) file paths
         // iterate over the localInputTrackFiles map
@@ -491,7 +496,7 @@ public:
             {
                 juce::Array<juce::var>* labelsPyharp =
                     procObj.getDynamicObject()->getProperty("labels").getArray();
-                labels.clear();
+
                 for (int j = 0; j < labelsPyharp->size(); j++)
                 {
                     juce::DynamicObject* labelPyharp =
@@ -677,6 +682,11 @@ public:
     LabelList& getLabels() { return labels; }
 
     std::vector<juce::String>& getOutputFilePaths() { return outputFilePaths; }
+
+    void clearOutputFilePaths()
+    {
+        outputFilePaths.clear();
+    }
 
 private:
     OpResult prepareProcessingPayload(juce::String& payloadJson)
