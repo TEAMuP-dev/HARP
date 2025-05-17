@@ -153,9 +153,15 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
+* Text-Guided Music Generation and Editing: [hugggof/melodyflow](https://huggingface.co/spaces/hugggof/melodyflow) (ZeroGPU)
+
+<!--
 * Stem-Wise Source Separation:
   * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
   * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+-->
+
+* Stem-Wise Source Separation: [cwitkowitz/demucs-cpu](https://huggingface.co/spaces/cwitkowitz/demucs-cpu)
 
 * Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
 
