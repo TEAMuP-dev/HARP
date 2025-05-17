@@ -182,7 +182,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
                                          const int timeoutMs) const
 {
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("upload");
+    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("gradio_api").getChildURL("upload");
 
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
@@ -197,7 +197,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       // .withExtraHeaders("Accept: */*")
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -262,7 +262,8 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
 
     // Ensure that setSpaceInfo has been called before this method
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL requestEndpoint = gradioEndpoint.getChildURL("call").getChildURL(endpoint);
+    juce::URL requestEndpoint =
+        gradioEndpoint.getChildURL("gradio_api").getChildURL("call").getChildURL(endpoint);
 
     // Prepare the POST request
     // juce::String jsonBody = R"({"data": []})";
@@ -270,7 +271,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                       .withExtraHeaders("Content-Type: application/json\r\nAccept: */*")
+                       .withExtraHeaders(createJsonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -339,13 +340,14 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     // The endpoint for the get request is the same as the post request with
     // /{eventID} appended
     juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL getEndpoint =
-        gradioEndpoint.getChildURL("call").getChildURL(callID).getChildURL(eventID);
+    juce::URL getEndpoint = gradioEndpoint.getChildURL("gradio_api")
+                                .getChildURL("call")
+                                .getChildURL(callID)
+                                .getChildURL(eventID);
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                       //    .withExtraHeaders("Content-Type: application/json\r\nAccept:
-                       //    */*")
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -363,7 +365,7 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     }
 
     // Stream the response
-    while (!stream->isExhausted())
+    while (! stream->isExhausted())
     {
         response = stream->readNextLine();
 
@@ -496,6 +498,7 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     juce::StringPairArray responseHeaders;
     int statusCode = 0;
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
@@ -534,3 +537,128 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
 
     return OpResult::ok();
 }
+
+juce::String GradioClient::getAuthorizationHeader() const
+{
+    if (tokenEnabled && ! token.isEmpty())
+    {
+        return "Authorization: Bearer " + token + "\r\n";
+    }
+    return "";
+}
+
+juce::String GradioClient::getJsonContentTypeHeader() const
+{
+    return "Content-Type: application/json\r\n";
+}
+
+juce::String GradioClient::getAcceptHeader() const { return "Accept: */*\r\n"; }
+
+juce::String GradioClient::createCommonHeaders() const
+{
+    return getAcceptHeader() + getAuthorizationHeader();
+}
+
+juce::String GradioClient::createJsonHeaders() const
+{
+    return getJsonContentTypeHeader() + getAcceptHeader() + getAuthorizationHeader();
+}
+
+OpResult GradioClient::validateToken(const juce::String& token) const
+{
+    // Create the error here, in case we need it
+    Error error;
+    int statusCode = 0;
+
+    juce::URL url = juce::URL("https://huggingface.co/api/whoami-v2");
+
+    // Create a GET request to whoami-v2 API with provided token 
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                       .withExtraHeaders("Authorization: Bearer " + token + "\r\n")
+                       .withConnectionTimeoutMs(5000)
+                       .withStatusCode(&statusCode);
+
+    std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+
+    if (stream == nullptr)
+    {
+        error.code = statusCode;
+        error.devMessage =
+            "Failed to create input stream for GET request \nto validate token.";
+        return OpResult::fail(error);
+    }
+
+    juce::String response = stream->readEntireStreamAsString();
+
+    // Check the status code to ensure the request was successful
+    if (statusCode != 200)
+    {
+        error.code = statusCode;
+        error.devMessage =
+            "Authentication failed with status code: " + juce::String(statusCode);
+        return OpResult::fail(error);
+    }
+
+    // Parse the response
+    juce::var parsedResponse = juce::JSON::parse(response);
+    if (! parsedResponse.isObject())
+    {
+        error.devMessage = "Failed to parse JSON response from whoami-v2 API.";
+        return OpResult::fail(error);
+    }
+
+    juce::DynamicObject* obj = parsedResponse.getDynamicObject();
+    if (obj == nullptr)
+    {
+        error.devMessage = "Parsed JSON is not an object from whoami-v2 API.";
+        return OpResult::fail(error);
+    }
+
+    auto* tokenJSON = obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
+
+    String role = tokenJSON->getProperty("role").toString();
+
+    if (!(role == "write" || role == "read"))
+    {
+        bool hasAllPermissions = false;
+
+        auto* scopedArray = tokenJSON->getProperty("fineGrained").getDynamicObject()->getProperty("scoped").getArray();
+
+        for (const auto& scopeEntry : *scopedArray)
+        {
+            if (!scopeEntry.isObject())
+                continue;
+    
+            var permissionsVar = scopeEntry.getDynamicObject()->getProperty("permissions");
+    
+            if (!permissionsVar.isArray())
+                continue;
+    
+            auto* permissionsArray = permissionsVar.getArray();
+            bool hasAll = permissionsArray->contains("repo.content.read") &&
+                          permissionsArray->contains("repo.write") &&
+                          permissionsArray->contains("inference.serverless.write") &&
+                          permissionsArray->contains("inference.endpoints.infer.write");
+    
+            if (hasAll)
+            {
+                hasAllPermissions = true;
+                break;
+            }
+        }
+    
+        if (!hasAllPermissions)
+        {
+            error.devMessage = "Provided token does not have suitable read/write permissions.";
+            return OpResult::fail(error);
+        }
+    }
+
+    return OpResult::ok();
+}
+
+void GradioClient::setToken(const juce::String& token) { this->token = token; }
+
+juce::String GradioClient::getToken() const { return token; }
+
+void GradioClient::setTokenEnabled(bool enabled) { tokenEnabled = enabled; }

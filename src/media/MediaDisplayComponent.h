@@ -105,10 +105,10 @@ public:
     void addLabels(LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
 
-    void addLabelOverlay(LabelOverlayComponent l);
+    void addLabelOverlay(LabelOverlayComponent* l);
     void removeLabelOverlay(LabelOverlayComponent* l);
 
-    void addOverheadLabel(OverheadLabelComponent l);
+    void addOverheadLabel(OverheadLabelComponent* l);
     void removeOverheadLabel(OverheadLabelComponent* l);
 
     int getNumOverheadLabels();
@@ -174,6 +174,6 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    Array<LabelOverlayComponent*> labelOverlays;
-    Array<OverheadLabelComponent*> overheadLabels;
+    OwnedArray<LabelOverlayComponent> labelOverlays;
+    OwnedArray<OverheadLabelComponent> overheadLabels;
 };

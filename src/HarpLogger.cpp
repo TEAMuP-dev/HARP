@@ -21,7 +21,10 @@ void HarpLogger::LogAndDBG(const juce::String& message) const
 // Initialize the logger
 void HarpLogger::initializeLogger()
 {
-    logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "harp.log", "hello, harp!"));
+    // MacOS: ~/Library/Logs/HARP/main.log
+    // Linux: ~/.config/HARP/main.log
+    // Windows: C:\Users\<username>\AppData\Roaming\HARP\main.log
+    logger.reset(juce::FileLogger::createDefaultAppLogger("HARP", "main.log", "Hello, HARP!"));
 }
 
 juce::File HarpLogger::getLogFile() const { return logger->getLogFile(); }

@@ -59,6 +59,7 @@ target_sources(${PROJECT_NAME}
         src/CtrlComponent.h
         src/Model.h 
         src/WebModel.h
+        src/AppSettings.h
         src/HarpLogger.h
         src/HarpLogger.cpp
         src/errors.h
