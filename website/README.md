@@ -46,6 +46,8 @@ The website's content is primarily managed through Markdown files and VitePress 
     *   Thanks to the `prebuild` script, Markdown files from the root of the `HARP` repository are automatically available under `website/content/HARP/`.
     *   Similarly, Markdown files from the `pyHARP` submodule are available under `website/content/pyHARP/`.
     *   You should edit these original files in their respective repositories (`HARP/*.md` or `HARP/pyHARP/*.md`) when you want to update the documentation. The changes will be reflected on the website after the next build.
+    *   **Important Warning for `pyHARP` (Submodule) Updates:** For changes in the `pyHARP` repository's Markdown files to appear on the website, the `pyHARP` submodule within the main `HARP` repository **must be updated to point to the latest commit** from the `pyHARP` repository. Simply pushing changes to the standalone `pyHARP` repository is not enough. You need to go into the `HARP` repository, update the `pyHARP` submodule (e.g., `git submodule update --remote pyHARP` or by manually checking out the desired commit within the submodule and then committing the change in the parent `HARP` repo), and then commit this submodule update in the `HARP` repository.
+
 *   **Additional Website-Specific Content:**
     *   You can create new Markdown files directly within `website/content/` or its subdirectories (e.g., `website/content/new-page.md`) for content that is specific to the website and doesn't belong in the main repositories.
 *   **Site Structure and Navigation:**
