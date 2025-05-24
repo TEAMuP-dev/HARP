@@ -32,7 +32,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Released under the BSD 3-Clause License License.',
+      message: 'Released under the BSD 3-Clause License.',
       copyright: 'Copyright © 2023-present TEAMuP-dev'
     },
     search: {
