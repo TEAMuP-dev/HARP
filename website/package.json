@@ -1,9 +1,12 @@
 {
   "devDependencies": {
+    "cpx": "^1.5.0",
     "vitepress": "1.0.0-rc.31",
     "vue": "^3.3.11"
   },
   "scripts": {
+    "prebuild": "cpx \"../*.md\" ./content/HARP && cpx \"../pyharp/*.md\" ./content/pyHARP",
+    "build": "vitepress build",
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview"
