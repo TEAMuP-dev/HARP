@@ -1,0 +1,13 @@
+This folder needs to remain empty. During deployment of the website, 
+all the markdown files in the HARP repository will be copied here,
+so that they can be served by the website.
+
+When you build the website locally, the markdown files will be copied here.
+Even if you accidentally commit them, the will be replaced during building of the website,
+so it is not a problem.
+
+That was the only way we can only edit the markdown files in one place, and forget about the website,
+and be sure it 'll always point to the latest version of the documentation.
+
+The command that copies the MD files is in package.json.
+Check website/.vitepress/config.mjs to see how the MD files can be used. 

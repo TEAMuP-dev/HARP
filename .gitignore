@@ -65,3 +65,7 @@ cache
 dist
 
 testproj.RPP
+
+# Ignore all the *.md files in website/HARP
+website/content/HARP/*.md
+website/content/pyHARP/*.md
