@@ -211,14 +211,14 @@ public:
                 DBG("Open command invoked");
                 openFileChooser();
                 break;
-            case CommandIDs::save:
-                DBG("Save command invoked");
-                saveCallback();
-                break;
-            case CommandIDs::saveAs:
-                DBG("Save As command invoked");
-                saveAsCallback();
-                break;
+            // case CommandIDs::save:
+            //     DBG("Save command invoked");
+            //     saveCallback();
+            //     break;
+            // case CommandIDs::saveAs:
+            //     DBG("Save As command invoked");
+            //     saveAsCallback();
+            //     break;
             case CommandIDs::undo:
                 DBG("Undo command invoked");
                 undoCallback();
@@ -254,98 +254,6 @@ public:
         dialog.resizable = false;
 
         dialog.launchAsync();
-    }
-
-    void saveCallback()
-    {
-        // if (saveEnabled)
-        // {
-        //     DBG("HARPProcessorEditor::buttonClicked save button listener activated");
-        //     mediaDisplay->overwriteTarget();
-
-        //     saveEnabled = false;
-        //     setStatus("File saved successfully");
-        // }
-        // else
-        // {
-        //     DBG("save button is disabled");
-        //     setStatus("Nothing to save");
-        // }
-    }
-
-    void saveAsCallback()
-    {
-        // if (mediaDisplay->isFileLoaded())
-        // {
-        //     StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-        //     String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
-        //     saveFileBrowser = std::make_unique<FileChooser>(
-        //         "Select a media file...", File(), filePatternsAllowed);
-        //     // Launch the file chooser dialog asynchronously
-        //     saveFileBrowser->launchAsync(
-        //         FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
-        //         [this](const FileChooser& browser) {
-        //             StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-        //             File newFile = browser.getResult();
-        //             if (newFile != File {})
-        //             {
-        //                 if (newFile.getFileExtension().compare("") == 0)
-        //                 {
-        //                     newFile = newFile.withFileExtension(validExtensions[0]);
-        //                 }
-        //                 if (validExtensions.contains(newFile.getFileExtension()))
-        //                 {
-        //                     URL tempFilePath = mediaDisplay->getTempFilePath();
-
-        //                     // Attempt to save the file to the new location
-        //                     bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
-        //                     if (saveSuccessful)
-        //                     {
-        //                         // Inform the user of success
-        //                         AlertWindow::showMessageBoxAsync(AlertWindow::InfoIcon,
-        //                                                          "Save As",
-        //                                                          "File successfully saved as:\n"
-        //                                                              + newFile.getFullPathName(),
-        //                                                          "OK");
-
-        //                         // Update any necessary internal state
-        //                         // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
-        //                         DBG("File successfully saved as " << newFile.getFullPathName());
-        //                         loadMediaDisplay(newFile);
-        //                     }
-        //                     else
-        //                     {
-        //                         // Inform the user of failure
-        //                         AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-        //                                                          "Save As Failed",
-        //                                                          "Failed to save file as:\n"
-        //                                                              + newFile.getFullPathName(),
-        //                                                          "OK");
-        //                         DBG("Failed to save file as " << newFile.getFullPathName());
-        //                     }
-        //                 }
-        //                 else
-        //                 {
-        //                     // Inform the user of failure
-        //                     AlertWindow::showMessageBoxAsync(
-        //                         AlertWindow::WarningIcon,
-        //                         "Save As Failed",
-        //                         "Can't save file with extension " + newFile.getFileExtension()
-        //                             + " \n Valid extensions are: "
-        //                             + validExtensions.joinIntoString(";"),
-        //                         "OK");
-        //                 }
-        //             }
-        //             else
-        //             {
-        //                 DBG("Save As operation was cancelled by the user.");
-        //             }
-        //         });
-        // }
-        // else
-        // {
-        //     setStatus("Nothing to save. Please load an audio file first.");
-        // }
     }
 
     void undoCallback()
@@ -846,23 +754,6 @@ public:
         menuItemsChanged();
     }
 
-    // void initSomeButtons()
-    // {
-    //     addAndMakeVisible(chooseFileButton);
-    //     chooseFileButton.onClick = [this] { openFileChooser(); };
-    //     chooseFileButtonHandler.onMouseEnter = [this]()
-    //     { setInstructions("Click to choose an audio file"); };
-    //     chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-    //     chooseFileButtonHandler.attach();
-
-    //     addAndMakeVisible(saveFileButton);
-    //     saveFileButton.onClick = [this] { saveCallback(); };
-    //     saveFileButtonHandler.onMouseEnter = [this]()
-    //     { setInstructions("Click to save results to original audio file"); };
-    //     saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-    //     saveFileButtonHandler.attach();
-    // }
-
     void initPlayStopButton()
     {
         playButtonInfo = MultiButton::Mode {
@@ -1037,29 +928,6 @@ public:
         // initSomeButtons();
         initPlayStopButton();
 
-        // Initialize default media display
-        // initializeMediaDisplay(0, mediaDisplay);
-        // Create a new mediaDisplay and add it in the inputMediaDisplays vector
-        // inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
-        // outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
-        // Initialize all the inputMediaDisplays
-        // for (int i = 0; i < inputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(0, inputMediaDisplays[i]);
-        // }
-        // for (int i = 0; i < outputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(1, outputMediaDisplays[i]);
-        // }
-
-        // TODO: check how it behaves when running with a file as input
-        // if (initialFilePath.isLocalFile())
-        // {
-        //     // TODO - it seems command line args are handled through Main.cpp and this is never hit
-        //     // Load initial file into matching media display
-        //     loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
-        // }
-
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
         if (model == nullptr)
@@ -1120,16 +988,6 @@ public:
 
     ~MainComponent() override
     {
-        // mediaDisplay->removeChangeListener(this);
-        // for (auto& inputMediaDisplay : inputMediaDisplays)
-        // {
-        //     inputMediaDisplay->removeChangeListener(this);
-        // }
-        // for (auto& outputMediaDisplay : outputMediaDisplays)
-        // {
-        //     outputMediaDisplay->removeChangeListener(this);
-        // }
-
         // remove listeners
         mModelStatusTimer->removeChangeListener(this);
         loadBroadcaster.removeChangeListener(this);
@@ -1179,33 +1037,6 @@ public:
 
     void processCallback()
     {
-        // return;
-        // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
-        // // check if the file is loaded
-        // if (! mediaDisplay->isFileLoaded())
-        // {
-        //     String fileTypeString;
-
-        //     if (model->card().midi_in)
-        //     {
-        //         fileTypeString = "midi";
-        //     }
-        //     else
-        //     {
-        //         fileTypeString = "audio";
-        //     }
-
-        //     AlertWindow::showMessageBoxAsync(
-        //         AlertWindow::WarningIcon,
-        //         "Error",
-        //         fileTypeString.substring(0, 1).toUpperCase()
-        //         + fileTypeString.substring(1).toLowerCase()
-        //         + " file is not loaded. Please load "
-        //         + fileTypeString + " file first.");
-        //     return;
-        // }
-
-
         if (model == nullptr)
         {
             AlertWindow("Error",
@@ -1311,136 +1142,13 @@ public:
         DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
-    // void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    // {
-    //     if (mediaType == 1)
-    //     {
-    //         cur_mediaDisplay = std::make_unique<MidiDisplayComponent>();
-    //     }
-    //     else
-    //     {
-    //         // Default to audio display
-    //         cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
-    //     }
-    //     addAndMakeVisible(cur_mediaDisplay.get());
-    //     cur_mediaDisplay->addChangeListener(this);
-    //     // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-    //     // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-    //     // mediaDisplayHandler->onMouseMove = [this]()
-    //     // { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
-    //     // mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
-    //     // mediaDisplayHandler->attach();
-    // }
-
-    void loadMediaDisplay(File mediaFile)
+    /*
+    Entry point for importing new files into the application.
+    */
+    void importNewFile(File mediaFile)
     {
         return;
     }
-        // // Check the file extension to determine type
-        // String extension = mediaFile.getFileExtension();
-
-        // bool matchingDisplay = true;
-
-        // if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
-        // {
-        //     matchingDisplay = audioExtensions.contains(extension);
-        // }
-        // else
-        // {
-        //     matchingDisplay = midiExtensions.contains(extension);
-        // }
-
-        // if (! matchingDisplay)
-        // {
-        //     // Remove the existing media display
-        //     removeChildComponent(cur_mediaDisplay.get());
-        //     cur_mediaDisplay->removeChangeListener(this);
-        //     // mediaDisplayHandler->detach();
-
-        //     int mediaType = 0;
-
-        //     if (audioExtensions.contains(extension))
-        //     {
-        //     }
-        //     else if (midiExtensions.contains(extension))
-        //     {
-        //         mediaType = 1;
-        //     }
-        //     else
-        //     {
-        //         DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-        //                                                                         << "\'.");
-
-        //         AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-        //     }
-
-        //     // Initialize a matching display
-        //     initializeMediaDisplay(mediaType, cur_mediaDisplay);
-        // }
-
-        // cur_mediaDisplay->setupDisplay(URL(mediaFile));
-
-        // lastLoadTime = Time::getCurrentTime();
-
-        // playStopButton.setEnabled(true);
-
-        // resized();
-    // }
-
-    // TODO: ignore that for now. Load files using drag n drop which works fine
-    // for multiple mediaDisplays
-    // void loadMediaDisplay3(File mediaFile)
-    // {
-    //     // Check the file extension to determine type
-    //     String extension = mediaFile.getFileExtension();
-
-    //     bool matchingDisplay = true;
-
-    //     if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
-    //     {
-    //         matchingDisplay = audioExtensions.contains(extension);
-    //     }
-    //     else
-    //     {
-    //         matchingDisplay = midiExtensions.contains(extension);
-    //     }
-
-    //     if (! matchingDisplay)
-    //     {
-    //         // Remove the existing media display
-    //         removeChildComponent(mediaDisplay.get());
-    //         mediaDisplay->removeChangeListener(this);
-    //         mediaDisplayHandler->detach();
-
-    //         int mediaType = 0;
-
-    //         if (audioExtensions.contains(extension))
-    //         {
-    //         }
-    //         else if (midiExtensions.contains(extension))
-    //         {
-    //             mediaType = 1;
-    //         }
-    //         else
-    //         {
-    //             DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-    //                                                                             << "\'.");
-
-    //             AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-    //         }
-
-    //         // Initialize a matching display
-    //         initializeMediaDisplay(mediaType);
-    //     }
-
-    //     mediaDisplay->setupDisplay(URL(mediaFile));
-
-    //     lastLoadTime = Time::getCurrentTime();
-
-    //     playStopButton.setEnabled(true);
-
-    //     resized();
-    // }
 
     void openFileChooser()
     {
@@ -1454,14 +1162,13 @@ public:
 
         openFileBrowser->launchAsync(FileBrowserComponent::openMode
                                          | FileBrowserComponent::canSelectFiles,
-                                     [](const FileChooser& browser)
+                                     [this](const FileChooser& browser)
                                      {
-                                         File chosenFile = browser.getResult();
-                                         if (chosenFile != File {})
-                                         {
-                                             //  loadMediaDisplay(chosenFile, mediaDisplay);
-                                             // loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
-                                         }
+                                        File chosenFile = browser.getResult();
+                                        if (chosenFile != File {})
+                                        {
+                                            importNewFile(chosenFile);
+                                        }
                                      });
     }
 

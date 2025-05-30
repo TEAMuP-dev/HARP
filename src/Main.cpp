@@ -80,7 +80,7 @@ public:
             // Load the file 
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
             {
-                mainComp->loadMediaDisplay(inputMediaFile);
+                mainComp->importNewFile(inputMediaFile);
             }
         }
 
@@ -115,7 +115,7 @@ public:
         //     URL inputMediaURL = URL(inputMediaFile);
         //     if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
         //     {
-        //         mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
+        //         mainComp->importNewFile(inputMediaURL.getLocalFile());
         //     }
         // }
     }
@@ -258,7 +258,7 @@ public:
                 // Configure the window before making it visible
                 if (auto* mainComp = dynamic_cast<MainComponent*>(newWindow->getContentComponent()))
                 {
-                    mainComp->loadMediaDisplay(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile);
                 }
                 // Store the window and make it visible
                 additionalWindows.add(std::move(newWindow));
@@ -270,7 +270,7 @@ public:
                 if (auto* mainComp =
                         dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
                 {
-                    mainComp->loadMediaDisplay(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile);
                 }
                 break;
             }
