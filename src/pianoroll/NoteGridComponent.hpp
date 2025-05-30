@@ -44,14 +44,14 @@ public:
         {
             g.setColour(red.brighter());
 
-            const int maxVelocityWidth = getWidth() - 10;
-            const int verticalPosition = getHeight() * 0.5 - 2;
+            const float maxVelocityWidth = static_cast<float>(getWidth() - 10);
+            const float verticalPosition = static_cast<float>(getHeight()) * 0.5f - 2.0f;
 
-            g.drawLine(5,
+            g.drawLine(5.0f,
                        verticalPosition,
-                       maxVelocityWidth * (getVelocity() / 127.0),
+                       maxVelocityWidth * (getVelocity() / 127.0f),
                        verticalPosition,
-                       4);
+                       4.0f);
         }
     }
 
@@ -72,7 +72,7 @@ class NoteGridComponent : public KeyboardComponent
 public:
     NoteGridComponent();
 
-    ~NoteGridComponent();
+    ~NoteGridComponent() override;
 
     void setResolution(double pps);
 
@@ -84,7 +84,7 @@ public:
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
-    int getPixelsPerSecond() { return pixelsPerSecond; }
+    double getPixelsPerSecond() { return pixelsPerSecond; }
     double getLengthInSeconds() { return lengthInSeconds; }
 
     bool isKeyboardComponent() override { return false; }

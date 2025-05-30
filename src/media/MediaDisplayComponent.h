@@ -4,6 +4,7 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
+#include "../gui/MultiButton.h"
 #include "../utils.h"
 #include "OutputLabelComponent.h"
 
@@ -12,10 +13,7 @@ using namespace juce;
 class OverheadPanel : public Component
 {
 public:
-    void paint(Graphics& g) override
-    {
-        g.fillAll(Colours::darkgrey.darker());
-    }
+    void paint(Graphics& g) override { g.fillAll(Colours::darkgrey.darker()); }
 };
 
 class MediaDisplayComponent : public Component,
@@ -27,22 +25,37 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
+    enum IOMode
+    {
+        Input,
+        Output,
+        // Hybrid
+    };
+
     MediaDisplayComponent();
-    ~MediaDisplayComponent();
+    // MediaDisplayComponent(String trackName);
+    MediaDisplayComponent(String trackName, bool required = true);
+    ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-    virtual void repositionOverheadPanel();
-    Rectangle<int> getContentBounds();
-    virtual void repositionContent() {};
+    // virtual void repositionOverheadPanel();
+    // Rectangle<int> getContentBounds();
+    // virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
     virtual Component* getMediaComponent() { return this; }
     virtual float getMediaXPos() { return 0.0f; }
-    float getMediaHeight() { return getMediaComponent()->getHeight(); }
-    float getMediaWidth() { return getMediaComponent()->getWidth(); }
+
+    String getTrackName() { return trackName; }
+    void setTrackName(String name) { trackName = name; }
+    void setTrackId(juce::Uuid id) { trackID = id; }
+    juce::Uuid getTrackId() { return trackID; }
+
+    float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
+    float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
 
     void repositionLabels();
 
@@ -78,6 +91,14 @@ public:
 
     bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
 
+    void openFileChooser();
+
+    // Callback for the save button
+    void saveCallback();
+
+    bool displaysInput() { return ioMode == 0; }
+    bool displaysOutput() { return ioMode == 1; }
+
     void clearDroppedFile() { droppedFilePath = URL(); }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
@@ -101,6 +122,7 @@ public:
     virtual void updateVisibleRange(Range<double> r);
 
     String getMediaHandlerInstructions();
+    void setMediaHandlerInstructions(String instructions);
 
     void addLabels(LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
@@ -113,7 +135,20 @@ public:
 
     int getNumOverheadLabels();
 
+    std::function<void(const juce::String&)> instructionBoxWriter;
+
+    void setIOMode(IOMode mode) { ioMode = mode; }
+    IOMode getIOMode() { return ioMode; }
+
+    // void setRequired(bool required) { _required = required; }
+    bool isRequired() const { return _required; }
+
 protected:
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
+    {
+        return true;
+    }
+
     void setNewTarget(URL filePath);
 
     double mediaXToTime(const float x);
@@ -146,7 +181,43 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
+    std::unique_ptr<FileChooser> openFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
+
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
+    juce::SharedResourcePointer<StatusBox> statusBox;
+
+    // FlexBox for the whole track
+    juce::FlexBox mainFlexBox;
+    // FlexBox for the header area (track name and buttons)
+    juce::FlexBox headerFlexBox;
+    // FlexBox for the media + overhead area (if any)
+    juce::FlexBox mediaAreaFlexBox;
+    // FlexBox for the media area (audio or MIDI content)
+    juce::FlexBox mediaFlexBox;
+
+    // Track sub-components
+    // Left panel containing track name and buttons
+    juce::Component headerComponent;
+    // Media (audio or MIDI) content area
+    juce::Component mediaComponent;
+    // Media + overhead panel (if any)
+    juce::Component mediaAreaContainer;
+
+    // Header sub-components
+    juce::Label trackNameLabel;
+    MultiButton playStopButton;
+    MultiButton::Mode playButtonInfo;
+    MultiButton::Mode stopButtonInfo;
+    MultiButton chooseFileButton;
+    MultiButton::Mode chooseButtonInfo;
+    MultiButton saveFileButton;
+    MultiButton::Mode saveButtonActiveInfo;
+    MultiButton::Mode saveButtonInactiveInfo;
+
 private:
+    void populateTrackHeader();
+
     void resetPaths();
 
     virtual void resetDisplay() = 0;
@@ -163,6 +234,9 @@ private:
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
+    void mouseEnter(const juce::MouseEvent& /*event*/) override;
+    void mouseExit(const juce::MouseEvent& /*event*/) override;
+
     URL targetFilePath;
     URL droppedFilePath;
 
@@ -174,6 +248,14 @@ private:
 
     double currentHorizontalZoomFactor;
 
+    IOMode ioMode = IOMode::Input;
+    // It's const because we only set it in the constructor
+    // and never change it again
+    const bool _required = true;
+
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
+
+    juce::String trackName;
+    juce::Uuid trackID;
 };
