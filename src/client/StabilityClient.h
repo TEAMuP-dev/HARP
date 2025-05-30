@@ -50,14 +50,14 @@ public:
 private:
     
     juce::String getAuthorizationHeader() const;
-    juce::String getJsonContentTypeHeader() const;
+    juce::String getJsonContentTypeHeader(juce::String&) const;
     juce::String getAcceptHeader() const;
     juce::String createCommonHeaders() const;
-    juce::String createJsonHeaders() const;
-    juce::String buildPayload(juce::String&) const;
+    juce::String createJsonHeaders(juce::String&) const;
+    OpResult buildPayload(juce::String&, juce::String&, juce::String&) const;
 
     SpaceInfo spaceInfo;
-    juce::String token;
+    juce::String token = "TBD";
     // A bool flag that could be controlled by a checkbox
     bool tokenEnabled = true;
 };

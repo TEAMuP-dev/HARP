@@ -25,16 +25,61 @@ OpResult StabilityClient::processRequest(Error& error,
                                          LabelList& labels)
 {
     OpResult result = OpResult::ok();
+    juce::String processID = juce::Uuid().toString();
     juce::var parseData;
     juce::JSON::parse(processingPayload, parseData);
     juce::DynamicObject* obj = parseData.getDynamicObject();
     juce::Array<juce::var>* dataArray = obj->getProperty("data").getArray();
-    // juce::String prompt = dataArray->getReference(0);
-    juce::String prompt = "3/4 time signature";
+    juce::String prompt = dataArray->getReference(0).toString();
+    // juce::String prompt = juce::String("3/4 time signature");
 
-    juce::URL textToAudioUrl = juce::URL("https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio");
+    juce::URL textToAudioUrl = juce::URL(juce::String("https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio"));
 
-    juce::String payload = buildPayload(prompt);
+    juce::String payload;
+    result = buildPayload(prompt, processID, payload);
+
+    juce::URL postReq = textToAudioUrl.withPOSTData(payload);
+    juce::StringPairArray responseHeaders;
+    int statusCode = 0;
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                       .withExtraHeaders(createJsonHeaders(processID))
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withNumRedirectsToFollow(5)
+                       .withHttpRequestCmd("POST");
+                       
+    std::unique_ptr<juce::InputStream> stream(postReq.createInputStream(options));
+    if (stream == nullptr)
+    {
+        error.code = statusCode;
+        error.devMessage = "Failed to create input stream for POST request to stability/text-to-audio";
+        return OpResult::fail(error);
+    }
+
+    if (statusCode != 200) // TODO: load the error message from the response
+    {
+        juce::String responseJson = stream -> readEntireStreamAsString();
+        error.devMessage = "Request failed with status code: " + juce::String(statusCode) + ", " + responseJson;
+        return OpResult::fail(error);
+    }
+
+    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+    juce::String fileName = juce::Uuid().toString() + ".wav";
+    juce::File downloadedFile = tempDir.getChildFile(fileName);
+
+    std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());
+
+    if (fileOutput == nullptr || ! fileOutput->openedOk())
+    {
+        error.devMessage =
+            "Failed to create output stream for file: " + downloadedFile.getFullPathName();
+        return OpResult::fail(error);
+    }
+
+    // Copy data from the input stream to the output stream
+    fileOutput->writeFromInputStream(*stream, stream->getTotalLength());
+
+    outputFilePaths.push_back(URL(downloadedFile).toString(true));
 
     return result;
 }
@@ -132,21 +177,22 @@ juce::String StabilityClient::getAuthorizationHeader() const
     return "";
 }
 
-juce::String StabilityClient::getJsonContentTypeHeader() const
+juce::String StabilityClient::getJsonContentTypeHeader(juce::String& processID) const
 {
-    return "Content-Type: application/json\r\n";
+    juce::String boundary = "--------" + processID + "--------";
+    return "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
 }
 
-juce::String StabilityClient::getAcceptHeader() const { return "Accept: */*\r\n"; }
+juce::String StabilityClient::getAcceptHeader() const { return "Accept: audio/*\r\n"; }
 
 juce::String StabilityClient::createCommonHeaders() const
 {
     return getAcceptHeader() + getAuthorizationHeader();
 }
 
-juce::String StabilityClient::createJsonHeaders() const
+juce::String StabilityClient::createJsonHeaders(juce::String& processID) const
 {
-    return getJsonContentTypeHeader() + getAcceptHeader() + getAuthorizationHeader();
+    return getJsonContentTypeHeader(processID) + getAcceptHeader() + getAuthorizationHeader();
 }
 
 OpResult StabilityClient::validateToken(const juce::String& token) const
@@ -247,3 +293,33 @@ void StabilityClient::setToken(const juce::String& token) { this->token = token;
 juce::String StabilityClient::getToken() const { return token; }
 
 void StabilityClient::setTokenEnabled(bool enabled) { tokenEnabled = enabled; }
+
+OpResult StabilityClient::buildPayload(juce::String& prompt, juce::String& processID, juce::String& payload) const {
+    juce::String boundary = "--------" + processID + "--------";
+    payload = "--" + boundary + "\r\n";
+    payload += "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n";
+    payload += prompt + "\r\n";
+    payload += "--" + boundary + "\r\n";
+    payload += "Content-Disposition: form-data; name=\"output_format\"\r\n\r\n";
+    payload += "wav\r\n";
+    payload += "--" + boundary + "\r\n";
+    payload += "Content-Disposition: form-data; name=\"duration\"\r\n\r\n";
+    payload += "30\r\n";
+    payload += "--" + boundary + "\r\n";
+    payload += "Content-Disposition: form-data; name=\"steps\"\r\n\r\n";
+    payload += "30\r\n";
+    payload += "--" + boundary + "--\r\n";
+    /*
+    juce::DynamicObject::Ptr dataObject = new juce::DynamicObject();
+    dataObject->setProperty(juce::String("prompt"), juce::var(prompt));
+    dataObject->setProperty(juce::String("output_format"), juce::var(juce::String("wav")));
+    dataObject->setProperty(juce::String("duration"), juce::var(30));
+    dataObject->setProperty(juce::String("steps"), juce::var(30));
+    payload = juce::JSON::toString(juce::var(dataObject), true);
+    payload.set("prompt", prompt);
+    payload.set("outputformat", "wav");
+    payload.set("duration", "30");
+    payload.set("steps", "30");
+    */
+    return OpResult::ok();
+}
