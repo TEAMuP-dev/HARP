@@ -24,7 +24,7 @@
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
 
-#include "gradio/GradioClient.h"
+#include "client/Client.h"
 
 #include "HarpLogger.h"
 #include "external/magic_enum.hpp"
@@ -445,7 +445,7 @@ public:
                 // Set the token without validation to avoid network requests on startup
                 // TODO: IDeally, we should validate the token at some point
                 // because it might have expired or been revoked
-                model->getGradioClient().setToken(savedToken);
+                model->getClient().setToken(savedToken);
                 setStatus("Using saved authentication token");
             }
         }
@@ -479,7 +479,7 @@ public:
                         auto accessToken = prompt->getTextEditor("token")->getText().trim();
                         if (! accessToken.isEmpty())
                         {
-                            auto loginResult = model->getGradioClient().validateToken(accessToken);
+                            auto loginResult = model->getClient().validateToken(accessToken);
                             if (loginResult.failed())
                             {
                                 Error loginError = loginResult.getError();
@@ -496,7 +496,7 @@ public:
                             }
                             else
                             {
-                                model->getGradioClient().setToken(accessToken);
+                                model->getClient().setToken(accessToken);
                                 // Save token if checkbox is ticked
                                 if (rememberCheckboxPtr->getToggleState())
                                 {
@@ -664,23 +664,23 @@ public:
                         else if (chosen == "Open Space URL")
                         {
                             // get the spaceInfo
-                            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
                             if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                             {
-                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
+                                URL spaceUrl = this->model->getClient().getSpaceInfo().gradio;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
                                 URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
                                 URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
@@ -963,6 +963,7 @@ public:
             // "xribene/midi_pitch_shifter",
             "xribene/HARP-UI-TEST-v3",
             // "xribene/pitch_shifter_slow",
+            "stability/text-to-audio",
             "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
@@ -1797,7 +1798,7 @@ private:
             // addAndMakeVisible(trackAreaWidget);
             trackAreaWidget.populateTracks();
 
-            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
             // juce::String spaceUrlButtonText;
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
 
