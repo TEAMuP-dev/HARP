@@ -195,15 +195,15 @@ juce::String StabilityClient::createJsonHeaders(juce::String& processID) const
     return getJsonContentTypeHeader(processID) + getAcceptHeader() + getAuthorizationHeader();
 }
 
-OpResult StabilityClient::validateToken(const juce::String& token) const
+OpResult StabilityClient::validateToken(const juce::String& inToken) const
 {
     // Create the error here, in case we need it
     Error error;
     int statusCode = 0;
 
-    juce::URL url = juce::URL("https://huggingface.co/api/whoami-v2");
+    juce::URL url = juce::URL("https://api.stability.ai/v1/user/account");
 
-    // Create a GET request to whoami-v2 API with provided token 
+    // Create a GET request to account API with provided token 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                        .withExtraHeaders("Authorization: Bearer " + token + "\r\n")
                        .withConnectionTimeoutMs(5000)
@@ -234,61 +234,21 @@ OpResult StabilityClient::validateToken(const juce::String& token) const
     juce::var parsedResponse = juce::JSON::parse(response);
     if (! parsedResponse.isObject())
     {
-        error.devMessage = "Failed to parse JSON response from whoami-v2 API.";
+        error.devMessage = "Failed to parse JSON response from stability account API.";
         return OpResult::fail(error);
     }
 
     juce::DynamicObject* obj = parsedResponse.getDynamicObject();
     if (obj == nullptr)
     {
-        error.devMessage = "Parsed JSON is not an object from whoami-v2 API.";
+        error.devMessage = "Parsed JSON is not an object from stability account API.";
         return OpResult::fail(error);
-    }
-
-    auto* tokenJSON = obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
-
-    String role = tokenJSON->getProperty("role").toString();
-
-    if (!(role == "write" || role == "read"))
-    {
-        bool hasAllPermissions = false;
-
-        auto* scopedArray = tokenJSON->getProperty("fineGrained").getDynamicObject()->getProperty("scoped").getArray();
-
-        for (const auto& scopeEntry : *scopedArray)
-        {
-            if (!scopeEntry.isObject())
-                continue;
-    
-            var permissionsVar = scopeEntry.getDynamicObject()->getProperty("permissions");
-    
-            if (!permissionsVar.isArray())
-                continue;
-    
-            auto* permissionsArray = permissionsVar.getArray();
-            bool hasAll = permissionsArray->contains("repo.content.read") &&
-                          permissionsArray->contains("repo.write") &&
-                          permissionsArray->contains("inference.serverless.write") &&
-                          permissionsArray->contains("inference.endpoints.infer.write");
-    
-            if (hasAll)
-            {
-                hasAllPermissions = true;
-                break;
-            }
-        }
-    
-        if (!hasAllPermissions)
-        {
-            error.devMessage = "Provided token does not have suitable read/write permissions.";
-            return OpResult::fail(error);
-        }
     }
 
     return OpResult::ok();
 }
 
-void StabilityClient::setToken(const juce::String& token) { this->token = token; }
+void StabilityClient::setToken(const juce::String& inToken) { this->token = inToken; }
 
 juce::String StabilityClient::getToken() const { return token; }
 
@@ -309,17 +269,5 @@ OpResult StabilityClient::buildPayload(juce::String& prompt, juce::String& proce
     payload += "Content-Disposition: form-data; name=\"steps\"\r\n\r\n";
     payload += "30\r\n";
     payload += "--" + boundary + "--\r\n";
-    /*
-    juce::DynamicObject::Ptr dataObject = new juce::DynamicObject();
-    dataObject->setProperty(juce::String("prompt"), juce::var(prompt));
-    dataObject->setProperty(juce::String("output_format"), juce::var(juce::String("wav")));
-    dataObject->setProperty(juce::String("duration"), juce::var(30));
-    dataObject->setProperty(juce::String("steps"), juce::var(30));
-    payload = juce::JSON::toString(juce::var(dataObject), true);
-    payload.set("prompt", prompt);
-    payload.set("outputformat", "wav");
-    payload.set("duration", "30");
-    payload.set("steps", "30");
-    */
     return OpResult::ok();
 }

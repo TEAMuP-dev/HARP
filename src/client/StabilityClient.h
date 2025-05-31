@@ -11,7 +11,7 @@
 #include "../HarpLogger.h"
 #include "../errors.h"
 #include "../utils.h"
-#include "client.h"
+#include "Client.h"
 #include "juce_core/juce_core.h"
 class StabilityClient : public Client
 
