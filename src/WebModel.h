@@ -10,7 +10,9 @@
 
 #include "HarpLogger.h"
 #include "Model.h"
-#include "gradio/GradioClient.h"
+#include "client/Client.h"
+#include "client/GradioClient.h"
+#include "client/StabilityClient.h"
 #include "juce_core/juce_core.h"
 #include "utils.h"
 #include <fstream>
@@ -52,6 +54,178 @@ public:
         return nullptr;
     }
 
+    OpResult parseSpaceAddress(juce::String spaceAddress, SpaceInfo& spaceInfo) {
+            /***
+            We parse the space address given by the user
+            which can take 4 forms:
+                "http://localhost:7860", (gradio app)
+                "https://xribene-midi-pitch-shifter.hf.space/", (gradio app)
+                "https://huggingface.co/spaces/xribene/midi_pitch_shifter", (hf repo)
+                "xribene/midi_pitch_shifter",
+
+            and we store the parsed information in a SpaceInfo object
+            e.g
+            {
+                "huggingface":
+            "https://huggingface.co/spaces/xribene/midi_pitch_shifter", "gradio":
+            "https://xribene-midi-pitch-shifter.hf.space/", "userInput":
+            "xribene/midi_pitch_shifter", "modelName": "midi_pitch_shifter", "userName":
+            "xribene"
+            }
+            ***/
+        // Create an Error object in case we need it
+        Error error;
+        // All errors in this function are of type InvalidURL
+        error.type = ErrorType::InvalidURL;
+
+        spaceInfo.userInput = spaceAddress;
+        // Check if the URL is of Type 4 (localhost or gradio.live)
+        if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live")
+            || spaceAddress.matchesWildcard("*.*.*.*:*", true))
+        {
+            spaceInfo.gradio = spaceAddress;
+            spaceInfo.huggingface = spaceAddress;
+            spaceInfo.status = SpaceInfo::Status::LOCALHOST;
+            return OpResult::ok();
+        }
+        juce::String user;
+        juce::String model;
+
+        juce::String huggingFaceBaseUrl = "https://huggingface.co/spaces/";
+        if (spaceAddress.contains(huggingFaceBaseUrl))
+        {
+            // Remove the base URL part
+            auto spacePath = spaceAddress.fromFirstOccurrenceOf(huggingFaceBaseUrl, false, false);
+
+            // Split the path into user and model using '/'
+            auto parts = juce::StringArray::fromTokens(spacePath, "/", "");
+
+            if (parts.size() >= 2)
+            {
+                user = parts[0];
+                model = parts[1];
+                spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
+            }
+            else
+            {
+                // result.huggingface = spaceAddress;
+                spaceInfo.error = "Detected huggingface.co URL but could not parse user and "
+                                "model. Too few parts in "
+                                + spaceAddress;
+                spaceInfo.status = SpaceInfo::Status::FAILED;
+                error.devMessage = spaceInfo.error;
+                return OpResult::fail(error);
+            }
+        }
+        else if (spaceAddress.contains("hf.space"))
+        {
+            // Remove the protocol part (e.g., "https://")
+            auto withoutProtocol = spaceAddress.fromFirstOccurrenceOf("://", false, false);
+
+            // Extract the subdomain part before ".hf.space/"
+            auto subdomain = withoutProtocol.upToFirstOccurrenceOf(".hf.space", false, false);
+
+            // Split the subdomain at the first hyphen
+            auto firstHyphenIndex = subdomain.indexOfChar('-');
+            if (firstHyphenIndex != -1)
+            {
+                user = subdomain.substring(0, firstHyphenIndex);
+                model = subdomain.substring(firstHyphenIndex + 1);
+                spaceInfo.status = SpaceInfo::Status::GRADIO;
+            }
+            else
+            {
+                // DBG("No hyphen found in the subdomain." << subdomain);
+                // Even though the spaceAddress is supposed to be a gradio URL, we
+                // return it as the huggingface URL because result.huggingface is
+                // used for the  "Open Space URL" button in the error dialog box
+                // result.huggingface = spaceAddress;
+                spaceInfo.error = "Detected hf.space URL but could not parse user and model. No "
+                                "hyphen found in the subdomain: "
+                                + subdomain;
+                spaceInfo.status = SpaceInfo::Status::FAILED;
+                error.devMessage = spaceInfo.error;
+                return OpResult::fail(error);
+            }
+        }
+        // else if address is of the form user/model and doesn't contain http
+        else if (spaceAddress.contains("/") && ! spaceAddress.contains("http"))
+        {
+            // Extract user and model
+            auto parts = juce::StringArray::fromTokens(spaceAddress, "/", "");
+            if (parts.size() == 2)
+            {
+                if (parts[0].contains("stability")) {
+                    user = "stability";
+                    model = parts[1];
+                    spaceInfo.huggingface = "";
+                    spaceInfo.gradio = "";
+                    spaceInfo.status = SpaceInfo::Status::STABILITY;
+                }
+                else {
+                    user = parts[0];
+                    model = parts[1];
+                    spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
+                }
+            }
+            else
+            {
+                // DBG("Invalid URL: " << spaceAddress);
+                // result.huggingface = spaceAddress;
+                spaceInfo.error = "Detected user/model URL but could not parse user and model. "
+                                "Too many/few slashes in "
+                                + spaceAddress;
+                spaceInfo.status = SpaceInfo::Status::FAILED;
+                error.devMessage = spaceInfo.error;
+                return OpResult::fail(error);
+            }
+        }
+        else
+        {
+            spaceInfo.error =
+                "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
+            spaceInfo.status = SpaceInfo::Status::FAILED;
+            error.devMessage = spaceInfo.error;
+            return OpResult::fail(error);
+        }
+
+        // Construct the gradio and HF URLs
+        if (! user.isEmpty() && ! model.isEmpty())
+        {
+            // model = model.replace("-", "_");
+            if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+            {
+                // spaceInfo.huggingface = spaceAddress;
+                spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
+                // the embedded gradio app URL doesn't contain "_". So if the model name
+                // contains "_", we replace it with "-"
+                // model = model.replace("_", "-");
+                spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space";
+            }
+            else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
+            {
+                // If the user provided spaceAddress is an embedded gradio app URL,
+                // there is no way to get the huggingface URL from it, since we don't
+                // know if the "-" in the URL is a hyphen or an underscore that was
+                // replaced by a hyphen.
+                spaceInfo.gradio = spaceAddress;
+                spaceInfo.huggingface = "";
+            }
+            spaceInfo.userName = user;
+            // model name might have "-" instead of "_" if the user provided the embedded gradio app URL
+            spaceInfo.modelName = model;
+        }
+        else
+        {
+            spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
+            error.devMessage = spaceInfo.error;
+            return OpResult::fail(error);
+        }
+        LogAndDBG(spaceInfo.toString());
+        return OpResult::ok();
+    }
+
     OpResult load(const map<string, any>& params) override
     {
         // Create an Error object in case we need it
@@ -64,15 +238,24 @@ public:
 
         std::string userSpaceAddress = std::any_cast<std::string>(params.at("url"));
 
-        result = gradioClient.setSpaceInfo(userSpaceAddress);
-
+        SpaceInfo spaceInfo;
+        result = parseSpaceAddress(userSpaceAddress, spaceInfo);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
             return result;
         }
 
-        LogAndDBG(gradioClient.getSpaceInfo().toString());
+        if (spaceInfo.status == SpaceInfo::Status::STABILITY) {
+            client = std::make_unique<StabilityClient>();
+        }
+        else { // GRADIO, HUGGINFACE, LOCALHOST
+            client = std::make_unique<GradioClient>();
+        }
+
+        client->setSpaceInfo(spaceInfo);
+
+        LogAndDBG(client->getSpaceInfo().toString());
         
         // The input components defined in PyHARP include
         // both the input tracks (audio or midi) and the controls (sliders, text boxes, etc)
@@ -82,7 +265,7 @@ public:
 
         juce::DynamicObject cardDict;
         status2 = ModelStatus::GETTING_CONTROLS;
-        result = gradioClient.getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
+        result = client->getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -328,7 +511,7 @@ public:
         for (auto& tuple : localInputTrackFiles)
         {
             juce::String remoteTrackFilePath;
-            result = gradioClient.uploadFileRequest(std::get<2>(tuple), remoteTrackFilePath);
+            result = client->uploadFileRequest(std::get<2>(tuple), remoteTrackFilePath);
             if (result.failed())
             {
                 result.getError().userMessage = "Failed to upload file for track "
@@ -362,8 +545,6 @@ public:
             }
         }
 
-        juce::String eventId;
-        juce::String endpoint = "process";
         // the jsonBody is created by controlsToJson
         juce::String processingPayload;
         result = prepareProcessingPayload(processingPayload);
@@ -375,263 +556,9 @@ public:
         }
 
         status2 = ModelStatus::PROCESSING;
-        result = gradioClient.makePostRequestForEventID(endpoint, eventId, processingPayload);
-        if (result.failed())
-        {
-            result.getError().devMessage = "Failed to make post request.";
+        result = client->processRequest(error, processingPayload, outputFilePaths, labels);
+        if (result.failed()) {
             status2 = ModelStatus::ERROR;
-            return result;
-        }
-
-        juce::String response;
-        result = gradioClient.getResponseFromEventID(endpoint, eventId, response, -1);
-        if (result.failed())
-        {
-            result.getError().devMessage = "Failed to make get request";
-            status2 = ModelStatus::ERROR;
-            return result;
-        }
-
-        juce::String responseData;
-
-        juce::String key = "data: ";
-        result = gradioClient.extractKeyFromResponse(response, responseData, key);
-        if (result.failed())
-        {
-            result.getError().devMessage = "Failed to extract 'data:'";
-            status2 = ModelStatus::ERROR;
-            return result;
-        }
-
-        juce::var parsedData;
-        juce::JSON::parse(responseData, parsedData);
-        if (! parsedData.isObject())
-        {
-            error.devMessage = "Failed to parse the 'data' key of the received JSON.";
-            status2 = ModelStatus::ERROR;
-            return OpResult::fail(error);
-        }
-        if (! parsedData.isArray())
-        {
-            error.devMessage = "Parsed data field should be an array.";
-            status2 = ModelStatus::ERROR;
-            return OpResult::fail(error);
-        }
-        juce::Array<juce::var>* dataArray = parsedData.getArray();
-        if (dataArray == nullptr)
-        {
-            error.devMessage = "The data array is empty.";
-            status2 = ModelStatus::ERROR;
-            return OpResult::fail(error);
-        }
-
-        // Iterate through the array elements
-        for (int i = 0; i < dataArray->size(); i++)
-        {
-            juce::var procObj = dataArray->getReference(i);
-            if (! procObj.isObject())
-            {
-                status2 = ModelStatus::ERROR;
-                error.devMessage =
-                    "The " + juce::String(i)
-                    + "th returned element of the process_fn function in the gradio-app is not an object.";
-                return OpResult::fail(error);
-            }
-            // Make sure the object has a "meta" key
-            // Gradio output components like File and Audio store metadata in the "meta" key
-            // so we can use that to identify what kind of output it is
-            if (! procObj.getDynamicObject())
-            {
-                status2 = ModelStatus::ERROR;
-                error.devMessage =
-                    "The " + juce::String(i)
-                    + "th returned element of the process_fn function in the gradio-app is not a valid object. "
-                    + "Make sure you are using LabelList() and not just a python list, in process_fn, to return the output labels.";
-                return OpResult::fail(error);
-            }
-            if (! procObj.getDynamicObject()->hasProperty("meta"))
-            {
-                status2 = ModelStatus::ERROR;
-                error.type = ErrorType::MissingJsonKey;
-                error.devMessage =
-                    "The " + juce::String(i)
-                    + "th element of the array of processed outputs does not have a meta object. "
-                    + "Make sure you are using LabelList() in process_fn to return the output labels.";
-                return OpResult::fail(error);
-            }
-            juce::var meta = procObj.getDynamicObject()->getProperty("meta");
-            // meta should be an object
-            if (! meta.isObject())
-            {
-                status2 = ModelStatus::ERROR;
-                error.type = ErrorType::MissingJsonKey;
-                error.devMessage =
-                    "The " + juce::String(i)
-                    + "th element of the array of processed outputs does not have a valid meta object.";
-                return OpResult::fail(error);
-            }
-            juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
-
-            // procObjType could be "gradio.FileData" for file/midi/audio
-            // and "pyharp.LabelList" for labels
-            if (procObjType == "gradio.FileData")
-            {
-                juce::String outputFilePath;
-                juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
-
-                result = gradioClient.downloadFileFromURL(url, outputFilePath);
-                if (result.failed())
-                {
-                    status2 = ModelStatus::ERROR;
-                    return result;
-                }
-                // Make a juce::File from the path
-                juce::File downloadedFile(outputFilePath);
-                // auto aa = downloadedFile.getFileName();
-                // auto bb = downloadedFile.getFullPathName();
-                // auto cc = URL(downloadedFile).toString(true);
-                outputFilePaths.push_back(URL(downloadedFile).toString(true));
-            }
-            else if (procObjType == "pyharp.LabelList")
-            {
-                juce::Array<juce::var>* labelsPyharp =
-                    procObj.getDynamicObject()->getProperty("labels").getArray();
-
-                for (int j = 0; j < labelsPyharp->size(); j++)
-                {
-                    juce::DynamicObject* labelPyharp =
-                        labelsPyharp->getReference(j).getDynamicObject();
-                    juce::String labelType = labelPyharp->getProperty("label_type").toString();
-                    std::unique_ptr<OutputLabel> label;
-
-                    if (labelType == "AudioLabel")
-                    {
-                        auto audioLabel = std::make_unique<AudioLabel>();
-                        if (labelPyharp->hasProperty("amplitude"))
-                        {
-                            if (labelPyharp->getProperty("amplitude").isDouble()
-                                || labelPyharp->getProperty("amplitude").isInt())
-                            {
-                                audioLabel->amplitude =
-                                    static_cast<float>(labelPyharp->getProperty("amplitude"));
-                            }
-                        }
-                        label = std::move(audioLabel);
-                    }
-                    else if (labelType == "SpectrogramLabel")
-                    {
-                        auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
-                        if (labelPyharp->hasProperty("frequency"))
-                        {
-                            if (labelPyharp->getProperty("frequency").isDouble()
-                                || labelPyharp->getProperty("frequency").isInt())
-                            {
-                                spectrogramLabel->frequency =
-                                    static_cast<float>(labelPyharp->getProperty("frequency"));
-                            }
-                        }
-                        label = std::move(spectrogramLabel);
-                    }
-                    else if (labelType == "MidiLabel")
-                    {
-                        auto midiLabel = std::make_unique<MidiLabel>();
-                        if (labelPyharp->hasProperty("pitch"))
-                        {
-                            if (labelPyharp->getProperty("pitch").isDouble()
-                                || labelPyharp->getProperty("pitch").isInt())
-                            {
-                                midiLabel->pitch =
-                                    static_cast<float>(labelPyharp->getProperty("pitch"));
-                            }
-                        }
-                        label = std::move(midiLabel);
-                    }
-                    else if (labelType == "OutputLabel")
-                    {
-                        auto outputLabel = std::make_unique<OutputLabel>();
-                        label = std::move(outputLabel);
-                    }
-                    else
-                    {
-                        error.type = ErrorType::UnknownLabelType;
-                        error.devMessage = "Unknown label type: " + labelType;
-                        return OpResult::fail(error);
-                    }
-                    // All the labels, no matter their type, have some common properties
-                    // t: float
-                    // label: str
-                    // duration: float = 0.0
-                    // description: str = None
-                    // color: int = 0
-                    // first we'll check which of those exist and are not void or null
-                    // for those that exist, we fill the struct properties
-                    // the rest will be ignored
-                    if (labelPyharp->hasProperty("t"))
-                    {
-                        // now check if it's a float
-                        if (labelPyharp->getProperty("t").isDouble()
-                            || labelPyharp->getProperty("t").isInt())
-                        {
-                            label->t = static_cast<float>(labelPyharp->getProperty("t"));
-                        }
-                    }
-                    if (labelPyharp->hasProperty("label"))
-                    {
-                        // now check if it's a string
-                        if (labelPyharp->getProperty("label").isString())
-                        {
-                            label->label = labelPyharp->getProperty("label").toString();
-                            DBG("label: " + label->label);
-                        }
-                    }
-                    if (labelPyharp->hasProperty("duration"))
-                    {
-                        // now check if it's a float
-                        if (labelPyharp->getProperty("duration").isDouble()
-                            || labelPyharp->getProperty("duration").isInt())
-                        {
-                            label->duration =
-                                static_cast<float>(labelPyharp->getProperty("duration"));
-                        }
-                    }
-                    if (labelPyharp->hasProperty("description"))
-                    {
-                        // now check if it's a string
-                        if (labelPyharp->getProperty("description").isString())
-                        {
-                            label->description = labelPyharp->getProperty("description").toString();
-                        }
-                    }
-                    if (labelPyharp->hasProperty("color"))
-                    {
-                        // now check if it's an int
-                        if ((labelPyharp->getProperty("color").isInt64()
-                             || labelPyharp->getProperty("color").isInt()))
-                        {
-                            int color_val = static_cast<int>(labelPyharp->getProperty("color"));
-
-                            if (color_val != 0)
-                            {
-                                label->color = color_val;
-                            }
-                        }
-                    }
-                    if (labelPyharp->hasProperty("link"))
-                    {
-                        // now check if it's a string
-                        if (labelPyharp->getProperty("link").isString())
-                        {
-                            label->link = labelPyharp->getProperty("link").toString();
-                        }
-                    }
-                    labels.push_back(std::move(label));
-                }
-            }
-            else
-            {
-                LogAndDBG("The pyharp Gradio app returned a " + procObjType
-                          + " object, that we don't yet support in HARP.");
-            }
         }
         // Finished status will be set by the MainComponent.h
         // status2 = ModelStatus::FINISHED;
@@ -642,27 +569,9 @@ public:
     {
         // Create a successful result.
         // we'll update it to a failure result if something goes wrong
-        OpResult result = OpResult::ok();
-
-        juce::String eventId;
-        juce::String endpoint = "cancel";
-
-        // Perform a POST request to the cancel endpoint to get the event ID
-        juce::String jsonBody = R"({"data": []})"; // The body is empty in this case
-
         status2 = ModelStatus::CANCELLING;
-        result = gradioClient.makePostRequestForEventID(endpoint, eventId, jsonBody);
-        if (result.failed())
-        {
-            status2 = ModelStatus::ERROR;
-            return result;
-        }
-
-        // Use the event ID to make a GET request for the cancel response
-        juce::String response;
-        result = gradioClient.getResponseFromEventID(endpoint, eventId, response);
-        if (result.failed())
-        {
+        OpResult result = client->cancel();
+        if (result.failed()) {
             status2 = ModelStatus::ERROR;
             return result;
         }
@@ -677,7 +586,8 @@ public:
     ModelStatus getLastStatus() { return lastStatus; }
     void setLastStatus(ModelStatus status) { lastStatus = status; }
 
-    GradioClient& getGradioClient() { return gradioClient; }
+    Client& getClient() { return *client; }
+    // StabilityClient& getStabilityClient() { return stabilityClient; }
 
     LabelList& getLabels() { return labels; }
 
@@ -802,7 +712,9 @@ private:
     //    1. c++ had an ordered map (like python)
     //    2. the gradio server would accept key:value pairs instead of list
     std::vector<juce::Uuid> uuidsInOrder;
-    GradioClient gradioClient;
+    std::unique_ptr<Client> client;
+    // GradioClient gradioClient;
+    // StabilityClient stabilityClient;
 
     // A helper variable to store the status of the model
     // before loading a new model. If the new model fails to load,
