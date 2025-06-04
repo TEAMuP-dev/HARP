@@ -80,7 +80,7 @@ public:
             // Load the file 
             if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
             {
-                mainComp->loadMediaDisplay(inputMediaFile);
+                mainComp->importNewFile(inputMediaFile);
             }
         }
 
@@ -110,14 +110,14 @@ public:
     {
         File inputMediaFile(commandLine.unquoted().trim());
 
-        if (inputMediaFile.existsAsFile())
-        {
-            URL inputMediaURL = URL(inputMediaFile);
-            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-            {
-                mainComp->loadMediaDisplay(inputMediaURL.getLocalFile());
-            }
-        }
+        // if (inputMediaFile.existsAsFile())
+        // {
+        //     URL inputMediaURL = URL(inputMediaFile);
+        //     if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+        //     {
+        //         mainComp->importNewFile(inputMediaURL.getLocalFile());
+        //     }
+        // }
     }
 
     void anotherInstanceStarted(const juce::String& commandLine) override
@@ -258,7 +258,7 @@ public:
                 // Configure the window before making it visible
                 if (auto* mainComp = dynamic_cast<MainComponent*>(newWindow->getContentComponent()))
                 {
-                    mainComp->loadMediaDisplay(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile);
                 }
                 // Store the window and make it visible
                 additionalWindows.add(std::move(newWindow));
@@ -270,7 +270,7 @@ public:
                 if (auto* mainComp =
                         dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
                 {
-                    mainComp->loadMediaDisplay(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile);
                 }
                 break;
             }

@@ -1,8 +1,6 @@
 #pragma once
-
-#include <juce_audio_utils/juce_audio_utils.h>
-
 #include "MediaDisplayComponent.h"
+#include <juce_audio_utils/juce_audio_utils.h>
 
 class AudioThumbnailWrapper : public Component
 {
@@ -26,19 +24,30 @@ class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
     AudioDisplayComponent();
-    ~AudioDisplayComponent();
+    AudioDisplayComponent(String trackName, bool required = true);
+    ~AudioDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
-    StringArray getInstanceExtensions() { return AudioDisplayComponent::getSupportedExtensions(); }
+    StringArray getInstanceExtensions() override
+    {
+        return AudioDisplayComponent::getSupportedExtensions();
+    }
 
-    void repositionContent() override;
+    // void repositionContent() override;
 
-    Component* getMediaComponent() { return &thumbnailComponent; }
+    Component* getMediaComponent() override { return &thumbnailComponent; }
 
     void loadMediaFile(const URL& filePath) override;
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
     double getTimeAtOrigin() override { return visibleRange.getStart(); }
+
+    void resized() override;
+
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
+    {
+        return dynamic_cast<AudioLabel*>(label.get()) != nullptr;
+    }
 
 private:
     void resetDisplay() override;

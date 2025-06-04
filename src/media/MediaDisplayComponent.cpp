@@ -1,6 +1,9 @@
 #include "MediaDisplayComponent.h"
 
-MediaDisplayComponent::MediaDisplayComponent()
+MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
+
+MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
+    : _required(required), trackName(name)
 {
     resetPaths();
 
@@ -11,14 +14,26 @@ MediaDisplayComponent::MediaDisplayComponent()
 
     sourcePlayer.setSource(&transportSource);
 
-    addChildComponent(horizontalScrollBar);
-    horizontalScrollBar.setAutoHide(false);
-    horizontalScrollBar.addListener(this);
-
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
 
-    addAndMakeVisible(overheadPanel);
+    trackNameLabel.setText(trackName, juce::dontSendNotification);
+    addAndMakeVisible(headerComponent);
+    // addAndMakeVisible(mediaComponent);
+
+    // Add controls to headerComponent
+    headerComponent.addAndMakeVisible(trackNameLabel);
+
+    addAndMakeVisible(mediaAreaContainer);
+    mediaAreaContainer.addAndMakeVisible(mediaComponent);
+    mediaAreaContainer.addAndMakeVisible(overheadPanel); 
+    mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
+    horizontalScrollBar.setAutoHide(false);
+    horizontalScrollBar.addListener(this);
+    mediaAreaContainer.addMouseListener(this, true);
+    
+    populateTrackHeader();
+    // addAndMakeVisible(overheadPanel); // new from v2
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -46,49 +61,117 @@ void MediaDisplayComponent::paint(Graphics& g)
 
 void MediaDisplayComponent::resized()
 {
-    repositionOverheadPanel();
-    repositionContent();
-    repositionScrollBar();
+    auto totalBounds = getLocalBounds();
+
+    // Build trackRowBox items
+    mainFlexBox.items.clear();
+    mainFlexBox.items.add(
+        juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
+    // Media area takes remaining space
+    // mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));
+    mainFlexBox.items.add(juce::FlexItem(mediaAreaContainer).withFlex(8));
+
+    mainFlexBox.performLayout(totalBounds);
+
+    // Set up the media area container
+    // Set up the vertical layout within the media area container
+    mediaAreaFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    mediaAreaFlexBox.items.clear();
+    
+    // Add overhead panel if needed
+    if (getNumOverheadLabels() > 0) {
+        mediaAreaFlexBox.items.add(
+            juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing + 2));
+    } else {
+        overheadPanel.setBounds(0, 0, 0, 0); // Hide panel when not needed
+    }
+    
+    // Media component takes remaining space
+    mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
+
+    // Add horizontal scrollbar with fixed height
+    mediaAreaFlexBox.items.add(
+        juce::FlexItem(horizontalScrollBar).withHeight(scrollBarSize + 2 * controlSpacing));
+    
+    
+    
+    // Perform layout in media area
+    mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
+
+    // Set up headerFlexBox for the controls inside headerComponent
+    headerFlexBox.flexDirection = juce::FlexBox::Direction::row;
+    headerFlexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+    headerFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+
+    juce::FlexBox buttonsFlexBox;
+    buttonsFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    buttonsFlexBox.justifyContent = juce::FlexBox::JustifyContent::center;
+    buttonsFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
+    buttonsFlexBox.items.add(juce::FlexItem(playStopButton).withHeight(30));
+    buttonsFlexBox.items.add(juce::FlexItem(chooseFileButton).withHeight(30));
+    buttonsFlexBox.items.add(juce::FlexItem(saveFileButton).withHeight(30));
+
+    headerFlexBox.items.clear();
+    headerFlexBox.items.add(juce::FlexItem(trackNameLabel).withFlex(1));
+    headerFlexBox.items.add(juce::FlexItem(buttonsFlexBox).withFlex(1));
+
+    // Perform layout of controls inside headerComponent
+    headerFlexBox.performLayout(headerComponent.getLocalBounds());
+
+    // After layout, adjust the trackNameLabel
+    auto labelBounds = trackNameLabel.getBounds().toFloat();
+    auto labelCentre = labelBounds.getCentre();
+
+    // Apply rotation
+    trackNameLabel.setTransform(juce::AffineTransform::rotation(
+        -juce::MathConstants<float>::halfPi, labelCentre.x, labelCentre.y));
+
+    // Swap width and height
+    float newWidth = labelBounds.getHeight();
+    float newHeight = labelBounds.getWidth();
+
+    // Update label bounds and position
+    trackNameLabel.setBounds(labelBounds.withSize(newWidth, newHeight).toNearestInt());
+
+    // Reposition the label to center it within headerComponent
+    auto headerBounds = headerComponent.getLocalBounds();
+    float labelX = (static_cast<float>(headerBounds.getWidth()) - newWidth) / 2.0f;
+    float labelY = (static_cast<float>(headerBounds.getHeight()) - newHeight) / 2.0f;
+    trackNameLabel.setTopLeftPosition(static_cast<int>(labelX), static_cast<int>(labelY));
+
+    // Set text justification to centered
+    trackNameLabel.setJustificationType(juce::Justification::centred);
+
+    // repositionOverheadPanel();
+    // repositionContent();
+    // repositionScrollBar();
     repositionLabels();
 }
 
-void MediaDisplayComponent::repositionOverheadPanel()
-{
-    if (getNumOverheadLabels())
-    {
-        overheadPanel.setBounds(getLocalBounds()
-                                    .removeFromTop(labelHeight + 2 * controlSpacing + 2)
-                                    .reduced(controlSpacing));
-    }
-    else
-    {
-        overheadPanel.setBounds(getLocalBounds().removeFromTop(0));
-    }
-}
+// Rectangle<int> MediaDisplayComponent::getContentBounds() // new from v2
+// {
+//     Rectangle<int> contentBounds =
+//         mediaComponent.getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
+//             .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
 
-Rectangle<int> MediaDisplayComponent::getContentBounds()
-{
-    Rectangle<int> contentBounds = getLocalBounds()
-        .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
+//     if (getNumOverheadLabels())
+//     {
+//         contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
+//     }
 
-    if (getNumOverheadLabels())
-    {
-        contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
-    }
-
-    return contentBounds.reduced(controlSpacing);
-}
+//     return contentBounds.reduced(controlSpacing);
+// }
 
 void MediaDisplayComponent::repositionScrollBar()
 {
-    horizontalScrollBar.setBounds(getLocalBounds()
+    horizontalScrollBar.setBounds(mediaAreaContainer.getBounds()
                                       .removeFromBottom(scrollBarSize + 2 * controlSpacing)
                                       .reduced(controlSpacing));
 }
 
 void MediaDisplayComponent::repositionLabels()
 {
-    if (! visibleRange.getLength())
+    if (visibleRange.getLength() == 0.0)
     {
         return;
     }
@@ -96,12 +179,13 @@ void MediaDisplayComponent::repositionLabels()
     float mediaWidth = getMediaWidth();
     float mediaHeight = getMediaHeight();
 
-    float pixelsPerSecond = mediaWidth / visibleRange.getLength();
+    float pixelsPerSecond = mediaWidth / static_cast<float>(visibleRange.getLength());
 
-    float minLabelWidth = 0.1 * mediaWidth;
-    float maxLabelWidth = 0.10 * pixelsPerSecond;
+    float minLabelWidth = 0.1f * mediaWidth;
+    float maxLabelWidth = 0.1f * pixelsPerSecond;
 
-    float contentWidth = getContentBounds().getWidth();
+    //cb:TODO: check if mediaComponent.getBounds() is correct
+    float contentWidth = static_cast<float>(mediaComponent.getBounds().getWidth());
     float minVisibilityWidth = contentWidth / 200.0f;
     float maxVisibilityWidth = contentWidth / 3.0f;
 
@@ -109,44 +193,55 @@ void MediaDisplayComponent::repositionLabels()
     maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
 
     auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto& labels) {
-        for (auto* l : labels)
+        for (auto l : labels)
         {
             if (l == nullptr)
                 continue;
 
-            float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2 * textSpacing));
+            float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
 
-            float labelStartTime = l->getTime();
-            float labelStopTime = labelStartTime + l->getDuration();
+            float labelStartTime = static_cast<float>(l->getTime());
+            float labelStopTime = labelStartTime + static_cast<float>(l->getDuration());
 
-            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2) - labelWidth / 2.0f, labelWidth);
+            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2.0f)
+                                             - labelWidth / 2.0f,
+                                         labelWidth);
             float yPos = 1.0f;
 
             if (auto lo = dynamic_cast<LabelOverlayComponent*>(l))
             {
                 yPos = lo->getRelativeY() * mediaHeight;
-                yPos -= labelHeight / 2.0f;
-                yPos = jmin(mediaHeight - labelHeight, jmax(0.0f, yPos));
+                yPos -= static_cast<float>(labelHeight) / 2.0f;
+                yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
             }
-
-            l->setBounds(xPos, yPos, labelWidth, labelHeight);
+            juce::Rectangle<float> labelBounds(
+                xPos, yPos, labelWidth, static_cast<float>(labelHeight));
+            l->setBounds(labelBounds.toNearestInt());
             l->toFront(true);
 
-            float leftLabelMarkerPos = correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2);
-            l->setLeftMarkerBounds(Rectangle<float>(
-                leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
+            float leftLabelMarkerPos = static_cast<float>(
+                correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2.0f));
+            l->setLeftMarkerBounds(
+                Rectangle<float>(leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
-            float rightLabelMarkerPos = correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2);
-            l->setRightMarkerBounds(Rectangle<float>(
-                rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
+            float rightLabelMarkerPos = static_cast<float>(
+                correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2.0f));
+            l->setRightMarkerBounds(
+                Rectangle<float>(rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
-            float durationWidth = jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2);
-            l->setDurationFillBounds(Rectangle<float>(
-                leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight).toNearestInt());
+            float durationWidth =
+                jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2.0f);
+            l->setDurationFillBounds(
+                Rectangle<float>(
+                    leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight)
+                    .toNearestInt());
 
-            if (l->getIndex() == currentTempFileIdx) {
+            if (l->getIndex() == currentTempFileIdx)
+            {
                 l->setVisible(true);
-            } else {
+            }
+            else
+            {
                 l->setVisible(false);
             }
         }
@@ -174,6 +269,7 @@ void MediaDisplayComponent::resetMedia()
     horizontalScrollBar.setVisible(false);
 }
 
+// the function we need to call when we want to load a media file
 void MediaDisplayComponent::setupDisplay(const URL& filePath)
 {
     resetMedia();
@@ -200,24 +296,46 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 }
 
 void MediaDisplayComponent::addNewTempFile()
-{
+{ // either just before processing by processCallback, or when importing a new file
     clearFutureTempFiles();
 
     int numTempFiles = tempFilePaths.size();
+    // TODO: for outputMediaDisplays there might not be a
+    // targetFilePath yet, so we should handle that case
+    // "originalFile" is the first file that was displayed
+    // in this mediaDisplay (either the first input)
+    // or the first output)
+    // File originalFile;
+    // if (currentTempFileIdx == 0)
+    // {
+    //     originalFile = targetFilePath.getLocalFile();
+    // }
+    // else
+    // {
+    //     originalFile = tempFilePaths.getReference(currentTempFileIdx - 1).getLocalFile();
+    // }
 
+    // targetFilePath is of type URL
+    // for outputMediaDisplays, there isn't a targetFilePath.
+    // if (targetFilePath.isEmpty())
+    // {
+    //     DBG("MediaDisplayComponent::addNewTempFile: No target file path.");
+    //     return;
+    // }
+    // there might be past tempFiles
     File originalFile = targetFilePath.getLocalFile();
-
+    // in case of new import file, targetFilePath is already the new file, so the originalFile is always the latest imported file, and not the first imported file
     File targetFile;
-
-    if (! numTempFiles)
-    {
+    // targetFile is not always the targetFilePath.
+    if (! numTempFiles) // if zero past files.
+    { // when no temp files exist, the only available file is the original file which is the original targetFilePath
         targetFile = originalFile;
     }
     else
-    {
+    { // else we create a tempFile from the latest tempFile
         targetFile = getTempFilePath().getLocalFile();
     }
-
+    // the targetFile is the one we are going to create a new tempFile from
     String docsDirectory =
         File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory)
             .getFullPathName();
@@ -333,20 +451,102 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
     // TODO - warning or handling for additional files
 
     // Avoid self-dragging
-    if (getTargetFilePath() == URL(File(files[0]))) {
+    if (getTargetFilePath() == URL(File(files[0])))
+    {
         DBG("Won't self drag");
         return;
     }
 
     droppedFilePath = URL(File(files[0]));
-    sendChangeMessage();
+    auto mediaFile = droppedFilePath.getLocalFile();
+    // sendChangeMessage();
+    // loadMediaFile(droppedFilePath);
+    String extension = mediaFile.getFileExtension();
+
+    bool matchingDisplay = getInstanceExtensions().contains(extension);
+
+    if (! matchingDisplay)
+    {
+        AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                         "Wrong file extension",
+                                         "Please drop one of the following file types: "
+                                             + getInstanceExtensions().joinIntoString(", "),
+                                         "OK");
+    }
+    else
+    {
+        setupDisplay(URL(mediaFile));
+        saveFileButton.setMode(saveButtonActiveInfo.label);
+    }
+    droppedFilePath = URL();
+}
+
+void MediaDisplayComponent::openFileChooser()
+{
+    StringArray allExtensions = StringArray(getInstanceExtensions());
+    // allExtensions.mergeArray(midiExtensions);
+
+    String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
+
+    openFileBrowser =
+        std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
+
+    openFileBrowser->launchAsync(FileBrowserComponent::openMode
+                                     | FileBrowserComponent::canSelectFiles,
+                                 [this](const FileChooser& browser)
+                                 {
+                                     File chosenFile = browser.getResult();
+                                     if (chosenFile != File {})
+                                     {
+                                         setupDisplay(URL(chosenFile));
+                                         saveFileButton.setMode(saveButtonActiveInfo.label);
+                                     }
+                                 });
+}
+
+void MediaDisplayComponent::setNewTarget(URL filePath)
+{
+    targetFilePath = filePath;
+
+    addNewTempFile();
+}
+
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
+}
+
+void MediaDisplayComponent::resetPaths()
+{
+    clearDroppedFile();
+
+    targetFilePath = URL();
+
+    tempFilePaths.clear();
+    currentTempFileIdx = -1;
+}
+
+void MediaDisplayComponent::saveCallback()
+{
+    if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
+    {
+        overwriteTarget();
+        // saveFileButton.setEnabled(false);
+        saveFileButton.setMode(saveButtonInactiveInfo.label);
+        statusBox->setStatusMessage("File saved successfully");
+    }
+    else
+    {
+        statusBox->setStatusMessage("Nothing to save");
+    }
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
     {
-        if (!isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
+        if (! isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = (float) e.x;
 
@@ -359,9 +559,10 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             setPlaybackPosition(mediaXToTime(x_));
         }
 
-        if (!getLocalBounds().contains(getMouseXYRelative()))
+        if (! getLocalBounds().contains(getMouseXYRelative()))
         {
-            performExternalDragDropOfFiles(StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
+            performExternalDragDropOfFiles(
+                StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
 
             if (! isPlaying())
             {
@@ -377,7 +578,8 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // make sure playback position has been updated
 
-    if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true)) //Only start playback if we're still in this area
+    if (e.eventComponent == getMediaComponent() && isFileLoaded()
+        && isMouseOver(true)) //Only start playback if we're still in this area
     {
         start();
         sendChangeMessage();
@@ -389,6 +591,8 @@ void MediaDisplayComponent::start()
     startPlaying();
 
     startTimerHz(40);
+
+    playStopButton.setMode(stopButtonInfo.label);
 }
 
 void MediaDisplayComponent::stop()
@@ -399,11 +603,13 @@ void MediaDisplayComponent::stop()
 
     currentPositionMarker.setVisible(false);
     setPlaybackPosition(0.0);
+
+    playStopButton.setMode(playButtonInfo.label);
 }
 
 float MediaDisplayComponent::getPixelsPerSecond()
 {
-    return getMediaWidth() / visibleRange.getLength();
+    return getMediaWidth() / static_cast<float>(visibleRange.getLength());
 }
 
 void MediaDisplayComponent::updateVisibleRange(Range<double> r)
@@ -439,34 +645,51 @@ String MediaDisplayComponent::getMediaHandlerInstructions()
     return toolTipText;
 }
 
+void MediaDisplayComponent::setMediaHandlerInstructions(String instructions)
+{
+    mediaHandlerInstructions = instructions;
+}
+
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     for (const auto& l : labels)
     {
-        std::unique_ptr<OutputLabelComponent> lc = std::make_unique<OutputLabelComponent>((double)l->t, l->label);;
+        if (! shouldRenderLabel(l))
+        {
+            continue;
+        }
+        std::unique_ptr<OutputLabelComponent> lc =
+            std::make_unique<OutputLabelComponent>((double) l->t, l->label);
+        ;
 
-        if ((l->description).has_value()) {
+        if ((l->description).has_value())
+        {
             lc->setDescription((l->description).value());
         }
 
-        if ((l->duration).has_value()) {
+        if ((l->duration).has_value())
+        {
             lc->setDuration((double) (l->duration).value());
         }
 
-        if ((l->color).has_value()) {
-            lc->setColor(Colour((l->color).value()));
+        if ((l->color).has_value())
+        {
+            lc->setColor(Colour(static_cast<uint32_t>((l->color).value())));
         }
 
-        if ((l->link).has_value()) {
+        if ((l->link).has_value())
+        {
             lc->setLink((l->link).value());
         }
 
-        float y;
+        float y = 0.0f;
 
         bool isOverlay = false;
 
-        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get())) {
-            if ((audioLabel->amplitude).has_value()) {
+        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get()))
+        {
+            if ((audioLabel->amplitude).has_value())
+            {
                 isOverlay = true;
 
                 float amp = (audioLabel->amplitude).value();
@@ -475,8 +698,10 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
             }
         }
 
-        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get())) {
-            if ((midiLabel->pitch).has_value()) {
+        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get()))
+        {
+            if ((midiLabel->pitch).has_value())
+            {
                 isOverlay = true;
 
                 float p = (midiLabel->pitch).value();
@@ -499,14 +724,16 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
 {
-
     l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
     l->setIndex(currentTempFileIdx);
     labelOverlays.add(l);
 
-    Component* mediaComponent = getMediaComponent();
-    mediaComponent->addAndMakeVisible(l);
-    l->addMarkersTo(mediaComponent);
+    Component* mediaComponentPtr = getMediaComponent();
+    mediaComponentPtr->addAndMakeVisible(l);
+    l->addMarkersTo(mediaComponentPtr);
+
+    // mediaComponent.addAndMakeVisible(l);
+    // l->addMarkersTo(mediaComponent);
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
@@ -517,8 +744,8 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
 
     overheadPanel.addAndMakeVisible(l);
 
-    Component* mediaComponent = getMediaComponent();
-    l->addMarkersTo(mediaComponent);
+    Component* mediaComponentPtr = getMediaComponent();
+    l->addMarkersTo(mediaComponentPtr);
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
@@ -527,12 +754,14 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     {
         LabelOverlayComponent* l = labelOverlays[i];
 
-        if (l->getIndex() >= processingIdxCutoff) {
+        if (l->getIndex() >= processingIdxCutoff)
+        {
             removeLabelOverlay(l);
         }
     }
 
-    if (!processingIdxCutoff) {
+    if (! processingIdxCutoff)
+    {
         labelOverlays.clear();
     }
 
@@ -540,12 +769,14 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     {
         OverheadLabelComponent* l = overheadLabels[i];
 
-        if (l->getIndex() >= processingIdxCutoff) {
+        if (l->getIndex() >= processingIdxCutoff)
+        {
             removeOverheadLabel(l);
         }
     }
 
-    if (!processingIdxCutoff) {
+    if (! processingIdxCutoff)
+    {
         overheadLabels.clear();
     }
 
@@ -556,19 +787,19 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
 
 void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
 {
-    Component* mediaComponent = getMediaComponent();
+    Component* mediaComponentPtr = getMediaComponent();
 
-    l->removeMarkersFrom(mediaComponent);
-    mediaComponent->removeChildComponent(l);
+    l->removeMarkersFrom(mediaComponentPtr);
+    mediaComponentPtr->removeChildComponent(l);
     labelOverlays.removeObject(l);
 
 }
 
 void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
 {
-    Component* mediaComponent = getMediaComponent();
+    Component* mediaComponentPtr = getMediaComponent();
 
-    l->removeMarkersFrom(mediaComponent);
+    l->removeMarkersFrom(mediaComponentPtr);
     overheadPanel.removeChildComponent(l);
 
     overheadLabels.removeObject(l);
@@ -588,13 +819,6 @@ int MediaDisplayComponent::getNumOverheadLabels()
     }
 
     return nOverheadLabels;
-}
-
-void MediaDisplayComponent::setNewTarget(URL filePath)
-{
-    targetFilePath = filePath;
-
-    addNewTempFile();
 }
 
 double MediaDisplayComponent::mediaXToTime(const float x)
@@ -626,18 +850,12 @@ float MediaDisplayComponent::timeToMediaX(const double t)
 
 float MediaDisplayComponent::mediaXToDisplayX(const float mX)
 {
-    float visibleStartX = visibleRange.getStart() * getPixelsPerSecond();
-    float offsetX = ((float) getTimeAtOrigin()) * getPixelsPerSecond();
+    float visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
+    float offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
 
-    float dX = controlSpacing + getMediaXPos() + mX - (visibleStartX - offsetX);
+    float dX = static_cast<float>(controlSpacing) + getMediaXPos() + mX - (visibleStartX - offsetX);
 
     return dX;
-}
-
-void MediaDisplayComponent::resetTransport()
-{
-    transportSource.stop();
-    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::horizontalMove(float deltaX)
@@ -669,36 +887,89 @@ void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
     updateVisibleRange({ newStart, newEnd });
 }
 
-void MediaDisplayComponent::resetPaths()
+void MediaDisplayComponent::populateTrackHeader()
 {
-    clearDroppedFile();
+    playButtonInfo = MultiButton::Mode {
+        "Play",
+        [this] { start(); },
+        juce::Colours::limegreen,
+        "Click to start playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Play,
+    };
+    stopButtonInfo = MultiButton::Mode {
+        "Stop",
+        [this] { stop(); },
+        Colours::orangered,
+        "Click to stop playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Stop,
+    };
+    playStopButton.addMode(playButtonInfo);
+    playStopButton.addMode(stopButtonInfo);
+    playStopButton.setMode(playButtonInfo.label);
+    playStopButton.setEnabled(true);
+    headerComponent.addAndMakeVisible(playStopButton);
 
-    targetFilePath = URL();
+    chooseButtonInfo = MultiButton::Mode {
+        "Choose",
+        [this] { openFileChooser(); }, // chooseFile();
+        juce::Colours::lightblue,
+        "Click to choose a media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Folder,
+    };
+    chooseFileButton.addMode(chooseButtonInfo);
+    chooseFileButton.setMode(chooseButtonInfo.label);
+    headerComponent.addAndMakeVisible(chooseFileButton);
 
-    tempFilePaths.clear();
-    currentTempFileIdx = -1;
+    saveButtonActiveInfo = MultiButton::Mode {
+        "Save1",
+        [this] { saveCallback(); }, // saveFile();
+        juce::Colours::lightblue,
+        "Click to save the media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    // We can use a separate mode for the save button
+    // to be used when there is nothing to save
+    saveButtonInactiveInfo = MultiButton::Mode {
+        "Save2", // mode labels need to be unique for the button
+        [this] { saveCallback(); }, // saveFile();
+        juce::Colours::lightgrey,
+        "Nothing to save",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    saveFileButton.addMode(saveButtonActiveInfo);
+    saveFileButton.addMode(saveButtonInactiveInfo);
+    saveFileButton.setMode(saveButtonInactiveInfo.label);
+    headerComponent.addAndMakeVisible(saveFileButton);
 }
 
-int MediaDisplayComponent::correctToBounds(float x, float width) {
-
+int MediaDisplayComponent::correctToBounds(float x, float width)
+{
     x = jmax(timeToMediaX(0.0), x);
     x = jmin(timeToMediaX(getTotalLengthInSecs()) - width, x);
 
-    return x;
+    return static_cast<int>(x);
 }
 
 // TODO - may be able to simplify some of this logic by embedding cursor in media component
 void MediaDisplayComponent::updateCursorPosition()
 {
-    bool displayCursor =
-        isFileLoaded() && (isPlaying() || (getMediaComponent()->isMouseButtonDown(false) && getLocalBounds().contains(getMouseXYRelative())));
+    bool displayCursor = isFileLoaded()
+                         && (isPlaying()
+                             || (getMediaComponent()->isMouseButtonDown(false)
+                                 && getLocalBounds().contains(getMouseXYRelative())));
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
 
-    Rectangle<int> mediaBounds = getContentBounds();
-
-    float cursorBoundsStartX = mediaBounds.getX() + getMediaXPos();
-    float cursorBoundsWidth = visibleRange.getLength() * getPixelsPerSecond();
+    Rectangle<int> mediaBounds = mediaComponent.getBounds();
+    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
+    
+    float cursorBoundsStartX = static_cast<float>(mediaBounds.getX()) + getMediaXPos();
+    float cursorBoundsWidth = static_cast<float>(visibleRange.getLength() * getPixelsPerSecond());
 
     // TODO - due to very small differences, cursor may not be visible at media bounds when zoomed in
     if (cursorPositionX >= cursorBoundsStartX
@@ -712,9 +983,13 @@ void MediaDisplayComponent::updateCursorPosition()
     }
 
     cursorPositionX -= cursorWidth / 2.0f;
+    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
 
-    currentPositionMarker.setRectangle(Rectangle<float>(
-        cursorPositionX, mediaBounds.getY(), cursorWidth, mediaBounds.getHeight()));
+    currentPositionMarker.setRectangle(
+        Rectangle<float>(cursorPositionX,
+                         static_cast<float>(mediaBounds.getY()),
+                         cursorWidth,
+                         static_cast<float>(mediaBounds.getHeight())));
 }
 
 void MediaDisplayComponent::timerCallback()
@@ -741,25 +1016,22 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
-
     if (getTotalLengthInSecs() > 0.0)
     {
-        bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+        //         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
+        //         bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
+        //         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 
-#if JUCE_MAC
-        bool zoomMod = isCmdPressed;
-#else
-        bool zoomMod = isCtrlPressed;
-#endif
-
-        auto totalLength = visibleRange.getLength();
-        auto visibleStart = visibleRange.getStart();
-        auto scrollTime = mediaXToTime(evt.position.getX());
-        DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
-                               << ") Scrolled at time: " << scrollTime);
+        // #if JUCE_MAC
+        //         bool zoomMod = isCmdPressed;
+        // #else
+        //         bool zoomMod = isCtrlPressed;
+        // #endif
+        // auto totalLength = visibleRange.getLength();
+        // auto visibleStart = visibleRange.getStart();
+        auto scrollTime = static_cast<float>(mediaXToTime(evt.position.getX()));
+        // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
+        //                        << ") Scrolled at time: " << scrollTime);
 
         if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
         {
@@ -780,4 +1052,16 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
         repaint();
     }
+}
+
+void MediaDisplayComponent::mouseEnter(const juce::MouseEvent& /*event*/)
+{
+    if (instructionBoxWriter)
+        // instructionBoxWriter(mediaHandlerInstructions);
+        instructionBoxWriter(getMediaHandlerInstructions());
+}
+void MediaDisplayComponent::mouseExit(const juce::MouseEvent& /*event*/)
+{
+    if (instructionBoxWriter)
+        instructionBoxWriter("");
 }

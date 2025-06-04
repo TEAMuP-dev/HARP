@@ -6,7 +6,7 @@ void HoverHandler::attach() { component.addMouseListener(this, true); }
 
 void HoverHandler::detach() { component.removeMouseListener(this); }
 
-void HoverHandler::mouseEnter(const juce::MouseEvent& event)
+void HoverHandler::mouseEnter(const juce::MouseEvent& /*event*/)
 {
     if (onMouseEnter)
     {
@@ -14,7 +14,7 @@ void HoverHandler::mouseEnter(const juce::MouseEvent& event)
     }
 }
 
-void HoverHandler::mouseMove(const juce::MouseEvent& event)
+void HoverHandler::mouseMove(const juce::MouseEvent& /*event*/)
 {
     if (onMouseMove)
     {
@@ -22,7 +22,7 @@ void HoverHandler::mouseMove(const juce::MouseEvent& event)
     }
 }
 
-void HoverHandler::mouseExit(const juce::MouseEvent& event)
+void HoverHandler::mouseExit(const juce::MouseEvent& /*event*/)
 {
     if (onMouseExit)
     {
