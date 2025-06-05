@@ -1245,52 +1245,60 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds();
+        auto fullArea = getLocalBounds();
 
 #if not JUCE_MAC
         menuBar->setBounds(
-            area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
+            fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
+
+        auto mainArea = fullArea;
+
+        if (showMediaClipboard)
+        {
+            mainArea = fullArea.withWidth(static_cast<int>(fullArea.getWidth() / 1.4));
+        }
 
         auto margin = 2; // Adjusted margin value for top and bottom spacing
 
-        // Create a FlexBox container
-        juce::FlexBox flexBox;
-        flexBox.flexDirection = juce::FlexBox::Direction::column;
-        flexBox.alignContent = juce::FlexBox::AlignContent::flexStart;
-        flexBox.alignItems = juce::FlexBox::AlignItems::stretch;
-        flexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
+
+        juce::FlexBox fullWindow;
+        fullWindow.flexDirection = juce::FlexBox::Direction::row;
+
+        juce::FlexBox mainPanel;
+        mainPanel.flexDirection = juce::FlexBox::Direction::column;
+        mainPanel.alignContent = juce::FlexBox::AlignContent::flexStart;
+        mainPanel.alignItems = juce::FlexBox::AlignItems::stretch;
+        mainPanel.justifyContent = juce::FlexBox::JustifyContent::flexStart;
 
         // Row 1: Model Path ComboBox and Load Model Button
         juce::FlexBox row1;
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row1).withFlex(0.2f)); // is 0.4 in v2
+        mainPanel.items.add(juce::FlexItem(row1).withFlex(0.2f)); // is 0.4 in v2
 
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
         row2.flexDirection = juce::FlexBox::Direction::row;
         row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
         row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row2).withHeight(30).withMargin(margin));
-
-        flexBox.performLayout(area);
+        mainPanel.items.add(juce::FlexItem(row2).withHeight(30).withMargin(margin));
 
         // Row 3: Description
         auto font = Font(15.0f);
         descriptionLabel.setFont(font);
         // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = area.getWidth() - 2 * margin;
+        auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
         auto numberOfLines =
             font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
         float textHeight =
             (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
-        flexBox.items.add(
+        mainPanel.items.add(
             juce::FlexItem(descriptionLabel).withHeight(textHeight).withMargin(margin));
 
         // Row 4: Control Area Widget
-        flexBox.items.add(juce::FlexItem(controlAreaWidget).withFlex(1).withMargin(margin));
+        mainPanel.items.add(juce::FlexItem(controlAreaWidget).withFlex(1).withMargin(margin));
 
         // Row 5: Process Cancel Button
         // Row for Process Cancel Button
@@ -1299,12 +1307,12 @@ public:
         rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
         rowProcessCancelButton.items.add(
-            juce::FlexItem(processCancelButton).withWidth(area.getWidth() / 4).withMargin(margin));
+            juce::FlexItem(processCancelButton).withWidth(mainArea.getWidth() / 4).withMargin(margin));
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        flexBox.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.25));
+        mainPanel.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.25));
 
         // Row 6: Input and Output Tracks Area Widget
-        flexBox.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
+        mainPanel.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
 
         // Row 7: Play/Stop Button, Open File Button, and Save File Button
         // juce::FlexBox row7;
@@ -1319,22 +1327,18 @@ public:
         row8.flexDirection = juce::FlexBox::Direction::row;
         row8.items.add(juce::FlexItem(*instructionBox).withFlex(1).withMargin(margin));
         row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
-        flexBox.items.add(juce::FlexItem(row8).withFlex(0.4f));
+        mainPanel.items.add(juce::FlexItem(row8).withFlex(0.4f));
 
-        juce::FlexBox mediaClipboardPanel;
-
-        juce::FlexBox panels;
-        panels.flexDirection = juce::FlexBox::Direction::row;
-
-        panels.items.add(juce::FlexItem(flexBox).withFlex(1).withMargin(margin));
+        fullWindow.items.add(juce::FlexItem(mainPanel).withFlex(1));
 
         if (showMediaClipboard)
         {
-            panels.items.add(juce::FlexItem(mediaClipboardPanel).withFlex(0.4).withMargin(margin));
+            juce::FlexBox mediaClipboardPanel;
+            fullWindow.items.add(juce::FlexItem(mediaClipboardPanel).withFlex(0.4));
         }
 
-        // Apply the FlexBox layout to the main area
-        panels.performLayout(area);
+        // Apply the FlexBox layout to the full area
+        fullWindow.performLayout(fullArea);
     }
 
     void resetUI()
