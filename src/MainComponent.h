@@ -16,6 +16,7 @@
 #include "ThreadPoolJob.h"
 #include "TrackAreaWidget.h"
 #include "WebModel.h"
+#include "MediaClipboardWidget.h"
 
 #include "gui/CustomPathDialog.h"
 #include "gui/HoverHandler.h"
@@ -110,11 +111,21 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        login = 0x2006
+        login = 0x2006,
         // settings = 0x2007,
+        viewMediaClipboard = 0x3000
     };
 
-    StringArray getMenuBarNames() override { return { "File" }; }
+    StringArray getMenuBarNames() override
+    {
+        StringArray menuBarNames;
+
+        menuBarNames.add("File");
+        // menuBarNames.add("Edit");
+        menuBarNames.add("View");
+
+        return menuBarNames;
+    }
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
     // For now, this is not used, as the extra commands appear grayed out
@@ -142,11 +153,17 @@ public:
             menu.addCommandItem(&commandManager, CommandIDs::login);
             menu.addCommandItem(&commandManager, CommandIDs::about);
         }
+        else if (menuName == "View")
+        {
+            menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        }
+
         return menu;
     }
+
     void menuItemSelected(int menuItemID, int topLevelMenuIndex) override
     {
-        DBG("menuItemSelected: " << menuItemID);
+        DBG("menuItemID: " << menuItemID);
         DBG("topLevelMenuIndex: " << topLevelMenuIndex);
     }
 
@@ -158,7 +175,7 @@ public:
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
             CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
-            CommandIDs::about
+            CommandIDs::about, CommandIDs::viewMediaClipboard
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -199,10 +216,13 @@ public:
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
+            case CommandIDs::viewMediaClipboard:
+                result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
+                result.setTicked(showMediaClipboard);
+                break;
         }
     }
 
-    // Callback for the save and saveAs commands
     bool perform(const InvocationInfo& info) override
     {
         switch (info.commandID)
@@ -234,6 +254,10 @@ public:
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
+                break;
+            case CommandIDs::viewMediaClipboard:
+                DBG("ViewMediaClipboard command invoked");
+                viewMediaClipboardCallback();
                 break;
             default:
                 return false;
@@ -664,6 +688,42 @@ public:
             });
     }
 
+    void viewMediaClipboardCallback()
+    {
+        // Toggle media clipboard visibility state
+        showMediaClipboard = !showMediaClipboard;
+
+        // Find top-level window for resizing
+        if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
+        {
+            // Get current bounds of top-level window
+            Rectangle<int> windowBounds = window->getBounds();
+
+            if (showMediaClipboard)
+            {
+                // Scale bounds to extend window by 40% of main width
+                windowBounds.setWidth(static_cast<int>(1.4 * windowBounds.getWidth()));
+            }
+            else
+            {
+                // Scale bounds to reduce window to main width
+                windowBounds.setWidth(static_cast<int>(windowBounds.getWidth() / 1.4));
+            }
+
+            // Set extended or reduced bounds
+            window->setBounds(windowBounds);
+        }
+
+        // Add view preference to persistent settings
+        AppSettings::setValue("showMediaClipboard", showMediaClipboard ? "1" : "0");
+        AppSettings::saveIfNeeded();
+
+        // Send status message to add check to file menu
+        commandManager.commandStatusChanged();
+
+        resized();
+    }
+
     void resetModelPathComboBox()
     {
         // cb: why do we resetUI inside a function named resetModelPathComboBox ?
@@ -827,12 +887,14 @@ public:
     void initLoadModelButton()
     {
         loadButtonInfo = MultiButton::Mode {
-            "Load Model",
+            // "Load Model",
+            "Load",
             [this] { loadModelCallback(); },
             Colours::lightgrey,
             "Click to load the selected model path",
-            MultiButton::DrawingMode::IconOnly,
-            fontawesome::Download,
+            MultiButton::DrawingMode::TextOnly
+            // MultiButton::DrawingMode::IconOnly,
+            // fontawesome::Download,
         };
         loadModelButton.addMode(loadButtonInfo);
         loadModelButton.setMode(loadButtonInfo.label);
@@ -944,6 +1006,8 @@ public:
 
         initMenuBar();
 
+        showMediaClipboard = AppSettings::getBoolValue("showMediaClipboard", false);
+
         initProcessCancelButton();
 
         initLoadModelButton();
@@ -954,6 +1018,8 @@ public:
         mModelStatusTimer->startTimer(50); // 100 ms interval
 
         initModelPathComboBox();
+
+        addAndMakeVisible(mediaClipboardWidget);
 
         // model controls
         controlAreaWidget.setModel(model);
@@ -1255,9 +1321,22 @@ public:
         row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
         flexBox.items.add(juce::FlexItem(row8).withFlex(0.4f));
 
+        juce::FlexBox mediaClipboardPanel;
+
+        juce::FlexBox panels;
+        panels.flexDirection = juce::FlexBox::Direction::row;
+
+        panels.items.add(juce::FlexItem(flexBox).withFlex(1).withMargin(margin));
+
+        if (showMediaClipboard)
+        {
+            panels.items.add(juce::FlexItem(mediaClipboardPanel).withFlex(0.4).withMargin(margin));
+        }
+
         // Apply the FlexBox layout to the main area
-        flexBox.performLayout(area);
+        panels.performLayout(area);
     }
+
     void resetUI()
     {
         controlAreaWidget.resetUI();
@@ -1331,6 +1410,7 @@ private:
     std::string customPath;
     ControlAreaWidget controlAreaWidget;
     TrackAreaWidget trackAreaWidget;
+    MediaClipboardWidget mediaClipboardWidget;
 
     // model card
     // Label nameLabel, authorLabel,
@@ -1384,6 +1464,8 @@ private:
     ApplicationCommandManager commandManager;
     // MenuBar
     std::unique_ptr<MenuBarComponent> menuBar;
+
+    bool showMediaClipboard;
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
