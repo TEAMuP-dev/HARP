@@ -1333,8 +1333,7 @@ public:
 
         if (showMediaClipboard)
         {
-            juce::FlexBox mediaClipboardPanel;
-            fullWindow.items.add(juce::FlexItem(mediaClipboardPanel).withFlex(0.4));
+            fullWindow.items.add(juce::FlexItem(mediaClipboardWidget).withFlex(0.4));
         }
 
         // Apply the FlexBox layout to the full area
