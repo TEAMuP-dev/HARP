@@ -106,6 +106,7 @@ struct SpaceInfo
         GRADIO,
         HUGGINGFACE,
         LOCALHOST,
+        STABILITY,
         FAILED,
         EMPTY
     };
@@ -129,6 +130,8 @@ struct SpaceInfo
                 return "HuggingFace";
             case LOCALHOST:
                 return "Localhost";
+            case STABILITY:
+                return "Stability";
             case FAILED:
                 return "Error";
             case EMPTY:

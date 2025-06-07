@@ -78,7 +78,8 @@ target_sources(${PROJECT_NAME}
         src/errors.h
         src/utils.h
 
-        src/gradio/GradioClient.cpp
+        src/client/GradioClient.cpp
+        src/client/StabilityClient.cpp
         src/external/magic_enum.hpp
 
         src/external/fontaudio/src/FontAudio.h
