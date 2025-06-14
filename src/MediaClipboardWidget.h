@@ -5,6 +5,7 @@
  */
 
 #pragma once
+#include "gui/MultiButton.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 
 class MediaClipboardWidget : public juce::Component
@@ -14,7 +15,8 @@ public:
     {
         addFileInfo = MultiButton::Mode {
             "Add File",
-            [this] {
+            [this]
+            {
                 //TODO
             },
             juce::Colours::green,
@@ -28,7 +30,8 @@ public:
 
         removeFileActiveInfo = MultiButton::Mode {
             "Remove Selected File",
-            [this] {
+            [this]
+            {
                 //TODO
             },
             juce::Colours::green,
@@ -38,7 +41,8 @@ public:
         };
         removeFileInactiveInfo = MultiButton::Mode {
             "Remove Selected Track",
-            [this] {
+            [this]
+            {
                 //TODO
             },
             juce::Colours::lightgrey,
@@ -59,10 +63,7 @@ public:
 
     ~MediaClipboardWidget() {}
 
-    void paint(Graphics& g)
-    {
-        g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f));
-    }
+    void paint(Graphics& g) { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
 
     void resized() override
     {
@@ -79,9 +80,9 @@ public:
         controlBar.items.add(juce::FlexItem(selectedFileLabel).withFlex(10).withMargin(margin));
         controlBar.items.add(juce::FlexItem(addFileButton).withFlex(1).withMargin(margin));
         controlBar.items.add(juce::FlexItem(removeFileButton).withFlex(1).withMargin(margin));
-        mainBox.items.add(juce::FlexItem(controlBar).withFlex(2));
+        mainBox.items.add(juce::FlexItem(controlBar).withHeight(30));
 
-        mainBox.items.add(juce::FlexItem(trackAreaPlaceholder).withFlex(60).withMargin(margin));
+        mainBox.items.add(juce::FlexItem(trackAreaPlaceholder).withFlex(1).withMargin(margin));
 
         mainBox.performLayout(mainArea);
     }

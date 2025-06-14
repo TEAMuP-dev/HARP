@@ -13,10 +13,10 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "ControlAreaWidget.h"
+#include "MediaClipboardWidget.h"
 #include "ThreadPoolJob.h"
 #include "TrackAreaWidget.h"
 #include "WebModel.h"
-#include "MediaClipboardWidget.h"
 
 #include "gui/CustomPathDialog.h"
 #include "gui/HoverHandler.h"
@@ -33,8 +33,8 @@
 // #include "media/MediaDisplayComponent.h"
 // #include "media/MidiDisplayComponent.h"
 
-#include "windows/AboutWindow.h"
 #include "AppSettings.h"
+#include "windows/AboutWindow.h"
 
 using namespace juce;
 
@@ -172,11 +172,10 @@ public:
     // Fills the commands array with the commands that this component/target supports
     void getAllCommands(Array<CommandID>& commands) override
     {
-        const CommandID ids[] = {
-            CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
-            CommandIDs::about, CommandIDs::viewMediaClipboard
-        };
+        const CommandID ids[] = { CommandIDs::open,   CommandIDs::save,
+                                  CommandIDs::saveAs, CommandIDs::undo,
+                                  CommandIDs::redo,   CommandIDs::login,
+                                  CommandIDs::about,  CommandIDs::viewMediaClipboard };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
@@ -211,7 +210,8 @@ public:
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::login:
-                result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
+                result.setInfo(
+                    "Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
                 break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
@@ -361,7 +361,7 @@ public:
         if (AppSettings::containsKey("huggingFaceToken"))
         {
             juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
-            if (!savedToken.isEmpty())
+            if (! savedToken.isEmpty())
             {
                 // Set the token without validation to avoid network requests on startup
                 // TODO: IDeally, we should validate the token at some point
@@ -373,17 +373,16 @@ public:
     }
     void loginPromptCallback()
     {
-        auto* prompt =
-            new juce::AlertWindow("Login to Hugging Face",
-                                  "Paste your Hugging Face access token below.\n\n"
-                                  "Click 'Get Token' to open Hugging Face token page.",
-                                  juce::AlertWindow::NoIcon);
+        auto* prompt = new juce::AlertWindow("Login to Hugging Face",
+                                             "Paste your Hugging Face access token below.\n\n"
+                                             "Click 'Get Token' to open Hugging Face token page.",
+                                             juce::AlertWindow::NoIcon);
 
         prompt->addTextEditor("token", "", "Access Token:");
         prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
         prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
         prompt->addButton("Get Token", 2);
-        
+
         // Add "Remember Token" checkbox
         auto rememberCheckbox = std::make_unique<ToggleButton>("Remember this token");
         rememberCheckbox->setSize(200, 24);
@@ -413,7 +412,6 @@ public:
                                     "An error occurred while performing authentication: \n"
                                         + loginError.userMessage);
                                 setStatus("Invalid token. Please try again.");
-                                
                             }
                             else
                             {
@@ -680,7 +678,7 @@ public:
     void viewMediaClipboardCallback()
     {
         // Toggle media clipboard visibility state
-        showMediaClipboard = !showMediaClipboard;
+        showMediaClipboard = ! showMediaClipboard;
 
         // Find top-level window for resizing
         if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
@@ -898,7 +896,7 @@ public:
     {
         // model path textbox
         std::vector<std::string> modelPaths = {
-            "custom path...",          
+            "custom path...",
             // "hugggof/vampnet-music",  "lllindsey0615/pyharp_demucs",
             // "lllindsey0615/pyharp_AMT", "npruyne/timbre-trap",    "xribene/harmonic_percussive_v5",
             // "lllindsey0615/DEMUCS_GPU", "cwitkowitz/timbre-trap",
@@ -1117,7 +1115,6 @@ public:
         DBG("Set Process ID: " + processID);
         processMutex.unlock();
 
-      
         processCancelButton.setEnabled(true);
         processCancelButton.setMode(cancelButtonInfo.label);
         saveEnabled = false;
@@ -1131,7 +1128,7 @@ public:
         std::vector<std::tuple<Uuid, String, File>> localInputTrackFiles;
         for (auto& inputMediaDisplay : inputMediaDisplays)
         {
-            if (!inputMediaDisplay->isFileLoaded() && inputMediaDisplay->isRequired())
+            if (! inputMediaDisplay->isFileLoaded() && inputMediaDisplay->isRequired())
             {
                 AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                                  "Error",
@@ -1210,10 +1207,7 @@ public:
     /*
     Entry point for importing new files into the application.
     */
-    void importNewFile(File mediaFile)
-    {
-        return;
-    }
+    void importNewFile(File mediaFile) { return; }
 
     void openFileChooser()
     {
@@ -1229,11 +1223,11 @@ public:
                                          | FileBrowserComponent::canSelectFiles,
                                      [this](const FileChooser& browser)
                                      {
-                                        File chosenFile = browser.getResult();
-                                        if (chosenFile != File {})
-                                        {
-                                            importNewFile(chosenFile);
-                                        }
+                                         File chosenFile = browser.getResult();
+                                         if (chosenFile != File {})
+                                         {
+                                             importNewFile(chosenFile);
+                                         }
                                      });
     }
 
@@ -1260,7 +1254,6 @@ public:
 
         auto margin = 2; // Adjusted margin value for top and bottom spacing
 
-
         juce::FlexBox fullWindow;
         fullWindow.flexDirection = juce::FlexBox::Direction::row;
 
@@ -1275,7 +1268,7 @@ public:
         row1.flexDirection = juce::FlexBox::Direction::row;
         row1.items.add(juce::FlexItem(modelPathComboBox).withFlex(8).withMargin(margin));
         row1.items.add(juce::FlexItem(loadModelButton).withFlex(1).withMargin(margin));
-        mainPanel.items.add(juce::FlexItem(row1).withFlex(0.2f)); // is 0.4 in v2
+        mainPanel.items.add(juce::FlexItem(row1).withHeight(30));
 
         // Row 2: ModelName / AuthorName Labels
         juce::FlexBox row2;
@@ -1297,6 +1290,7 @@ public:
             juce::FlexItem(descriptionLabel).withHeight(textHeight).withMargin(margin));
 
         // Row 4: Control Area Widget
+        // TODO - set min/max height based on limits of control element scaling
         mainPanel.items.add(juce::FlexItem(controlAreaWidget).withFlex(1).withMargin(margin));
 
         // Row 5: Process Cancel Button
@@ -1304,33 +1298,54 @@ public:
         rowProcessCancelButton.flexDirection = juce::FlexBox::Direction::row;
         rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        rowProcessCancelButton.items.add(
-            juce::FlexItem(processCancelButton).withWidth(mainArea.getWidth() / 4).withMargin(margin));
+        rowProcessCancelButton.items.add(juce::FlexItem(processCancelButton)
+                                             .withWidth(mainArea.getWidth() / 4)
+                                             .withMargin(margin));
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        mainPanel.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.25));
+        mainPanel.items.add(juce::FlexItem(rowProcessCancelButton).withHeight(30).withMargin(margin));
 
         // Row 6: Input and Output Tracks Area Widget
+        float numInputTracks = inputTrackAreaWidget.getNumTracks();
+        float numOutputTracks = outputTrackAreaWidget.getNumTracks();
+        float totalTracks = numInputTracks + numOutputTracks;
+
         juce::FlexBox inputTracksBox;
+        float inputTrackAreaFlex = 2.0f;
         inputTracksBox.flexDirection = juce::FlexBox::Direction::column;
 
-        if (inputTrackAreaWidget.getNumTracks() > 0)
+        if (numInputTracks > 0)
         {
-            inputTracksBox.items.add(juce::FlexItem(inputTracksLabel).withFlex(0.25).withMinHeight(15));
+            inputTracksLabel.setVisible(true);
+            inputTrackAreaFlex = 4 * (numInputTracks / totalTracks);
         }
-        inputTracksBox.items.add(juce::FlexItem(inputTrackAreaWidget).withFlex(1.0));
+        else
+        {
+            inputTracksLabel.setVisible(false);
+        }
 
-        mainPanel.items.add(juce::FlexItem(inputTracksBox).withFlex(2).withMargin(margin));
+        inputTracksBox.items.add(juce::FlexItem(inputTrackAreaWidget).withFlex(1.0));
+        mainPanel.items.add(juce::FlexItem(inputTracksLabel).withHeight(20).withMargin(margin));
+        mainPanel.items.add(
+            juce::FlexItem(inputTracksBox).withFlex(inputTrackAreaFlex).withMargin(margin));
 
         juce::FlexBox outputTracksBox;
+        float outputTrackAreaFlex = 2.0f;
         outputTracksBox.flexDirection = juce::FlexBox::Direction::column;
 
-        if (outputTrackAreaWidget.getNumTracks() > 0)
+        if (numOutputTracks > 0)
         {
-            outputTracksBox.items.add(juce::FlexItem(outputTracksLabel).withFlex(0.25).withMinHeight(15));
+            outputTracksLabel.setVisible(true);
+            outputTrackAreaFlex = 4 * (numOutputTracks / totalTracks);
         }
-        outputTracksBox.items.add(juce::FlexItem(outputTrackAreaWidget).withFlex(1.0));
+        else
+        {
+            outputTracksLabel.setVisible(false);
+        }
 
-        mainPanel.items.add(juce::FlexItem(outputTracksBox).withFlex(2).withMargin(margin));
+        outputTracksBox.items.add(juce::FlexItem(outputTrackAreaWidget).withFlex(1.0));
+        mainPanel.items.add(juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
+        mainPanel.items.add(
+            juce::FlexItem(outputTracksBox).withFlex(outputTrackAreaFlex).withMargin(margin));
 
         // Row 7: Play/Stop Button, Open File Button, and Save File Button
         // juce::FlexBox row7;
@@ -1345,10 +1360,12 @@ public:
         row8.flexDirection = juce::FlexBox::Direction::row;
         row8.items.add(juce::FlexItem(*instructionBox).withFlex(1).withMargin(margin));
         row8.items.add(juce::FlexItem(*statusBox).withFlex(1).withMargin(margin));
+        // TODO - fix maximum height?
         mainPanel.items.add(juce::FlexItem(row8).withFlex(0.4f));
 
         fullWindow.items.add(juce::FlexItem(mainPanel).withFlex(1));
 
+        // Right Column: Media Clipboard Area
         if (showMediaClipboard)
         {
             fullWindow.items.add(juce::FlexItem(mediaClipboardWidget).withFlex(0.4));
@@ -1443,10 +1460,10 @@ private:
 
     ControlAreaWidget controlAreaWidget;
 
-    Label inputTracksLabel {"Input Tracks", "Input Tracks"};
+    Label inputTracksLabel { "Input Tracks", "Input Tracks" };
     TrackAreaWidget inputTrackAreaWidget;
 
-    Label outputTracksLabel {"Output Tracks", "Output Tracks"};
+    Label outputTracksLabel { "Output Tracks", "Output Tracks" };
     TrackAreaWidget outputTrackAreaWidget;
 
     MediaClipboardWidget mediaClipboardWidget;
@@ -1550,25 +1567,22 @@ private:
         // as the loadBroadcaster (see processLoadingResult)
         if (source == &processBroadcaster)
         {
-            
             // // refresh the display for the new updated file
             // URL tempFilePath = outputMediaDisplays[0]->getTempFilePath();
             // outputMediaDisplays[0]->updateDisplay(tempFilePath);
 
             // // extract generated labels from the model
-            
 
             // // add the labels to the display component
             // outputMediaDisplays[0]->addLabels(labels);
 
-            
             // The above commented code was for the case of a single output media display.
             // Now, we get from model all the outputPaths using model->getOutputPaths()
             // and we iterate over both outputMediaDisplays and outputPaths to update the display
 
             // Additionally, we filter the labels to only show the audio labels to audio output media displays
             // and midi labels to midi output media displays.
-            
+
             LabelList& labels = model->getLabels();
             auto outputProcessedPaths = model->getOutputFilePaths();
             auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
@@ -1580,7 +1594,7 @@ private:
             }
             // URL tempFilePath = outputProcessedPaths[0];
             // outputMediaDisplays[0]->setupDisplay(tempFilePath);
-            
+
             // now, we can enable the process button
             resetProcessingButtons();
             return;
