@@ -9,19 +9,22 @@
 #include "external/magic_enum.hpp"
 #include "juce_core/juce_core.h"
 
+using namespace juce;
+
 // A function to convert a boolean string to a c++ boolean value
 // JUCE doesn't have a built-in function to do this
-inline bool stringToBool(const juce::String& str) {
-    juce::String lowerStr = str.toLowerCase();
+inline bool stringToBool(const String& str)
+{
+    String lowerStr = str.toLowerCase();
     if (lowerStr == "true" || lowerStr == "1" || lowerStr == "yes" || lowerStr == "y")
         return true;
     return false;
 }
 
 template <typename EnumType>
-inline juce::String enumToString(EnumType enumValue)
+inline String enumToString(EnumType enumValue)
 {
-    return juce::String(magic_enum::enum_name(enumValue).data());
+    return String(magic_enum::enum_name(enumValue).data());
 }
 
 enum GradioEvents
@@ -52,7 +55,7 @@ enum ModelStatus
 
 struct PyHarpComponentInfo
 {
-    juce::Uuid id { "" };
+    Uuid id { "" };
     std::string label { "" };
     virtual ~PyHarpComponentInfo() = default; // virtual destructor
 };
@@ -109,17 +112,17 @@ struct SpaceInfo
         FAILED,
         EMPTY
     };
-    juce::String huggingface;
-    juce::String gradio;
-    juce::String userInput;
-    juce::String modelName;
-    juce::String userName;
-    juce::String error;
+    String huggingface;
+    String gradio;
+    String userInput;
+    String modelName;
+    String userName;
+    String error;
     Status status;
 
     SpaceInfo() : status(Status::EMPTY) {}
 
-    juce::String getStatusString() const
+    String getStatusString() const
     {
         switch (status)
         {
@@ -137,9 +140,9 @@ struct SpaceInfo
                 return "Unknown";
         }
     }
-    juce::String toString()
+    String toString()
     {
-        juce::String str = "SpaceInfo: \n";
+        String str = "SpaceInfo: \n";
         str += "Huggingface: " + huggingface + "\n";
         str += "Gradio: " + gradio + "\n";
         str += "UserInput: " + userInput + "\n";
@@ -150,7 +153,7 @@ struct SpaceInfo
         return str;
     }
 
-    juce::String getModelSlashUser() const
+    String getModelSlashUser() const
     {
         if (status == LOCALHOST)
         {
@@ -167,12 +170,12 @@ struct OutputLabel
 {
     // required on pyharp side
     float t;
-    juce::String label;
+    String label;
     // optional on pyharp side
-    std::optional<juce::String> description;
+    std::optional<String> description;
     std::optional<float> duration;
     std::optional<int> color;
-    std::optional<juce::String> link;
+    std::optional<String> link;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 
@@ -194,6 +197,8 @@ struct MidiLabel : public OutputLabel
     std::optional<float> pitch;
 };
 
-using ComponentInfoList = std::vector<std::pair<juce::Uuid, std::shared_ptr<PyHarpComponentInfo>>>;
-using ComponentInfoMap = std::map<juce::Uuid, std::shared_ptr<PyHarpComponentInfo>>;
+using ComponentInfo = std::pair<Uuid, std::shared_ptr<PyHarpComponentInfo>>;
+using ComponentInfoMap = std::map<Uuid, std::shared_ptr<PyHarpComponentInfo>>;
+using ComponentInfoList = std::vector<ComponentInfo>;
+
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;

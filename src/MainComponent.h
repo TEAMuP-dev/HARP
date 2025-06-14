@@ -301,19 +301,8 @@ public:
             return;
         }
 
-        // if (! mediaDisplay->iteratePreviousTempFile())
-        // {
-        //     DBG("Nothing to undo!");
-        //     juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
-        // }
-        // else
-        // {
-        //     saveEnabled = true;
-        //     DBG("Undo callback completed successfully");
-        // }
-
         // Iterate over all inputMediaDisplays and call the iteratePreviousTempFile()
-        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
+        auto& inputMediaDisplays = inputTrackAreaWidget.getMediaDisplays();
         for (auto& inputMediaDisplay : inputMediaDisplays)
         {
             if (! inputMediaDisplay->iteratePreviousTempFile())
@@ -351,7 +340,7 @@ public:
         }
 
         // Iterate over all inputMediaDisplays and call the iterateNextTempFile()
-        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
+        auto& inputMediaDisplays = inputTrackAreaWidget.getMediaDisplays();
         for (auto& inputMediaDisplay : inputMediaDisplays)
         {
             if (! inputMediaDisplay->iterateNextTempFile())
@@ -814,6 +803,7 @@ public:
         menuItemsChanged();
     }
 
+    /*
     void initPlayStopButton()
     {
         playButtonInfo = MultiButton::Mode {
@@ -838,6 +828,7 @@ public:
         playStopButton.setEnabled(false);
         addAndMakeVisible(playStopButton);
     }
+    */
 
     void initProcessCancelButton()
     {
@@ -988,7 +979,7 @@ public:
         fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
 
         // initSomeButtons();
-        initPlayStopButton();
+        // initPlayStopButton();
 
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
@@ -1026,9 +1017,17 @@ public:
         addAndMakeVisible(controlAreaWidget);
         controlAreaWidget.populateControls();
 
-        trackAreaWidget.setModel(model);
-        addAndMakeVisible(trackAreaWidget);
-        trackAreaWidget.populateTracks();
+        inputTracksLabel.setJustificationType(juce::Justification::centred);
+        inputTracksLabel.setFont(juce::Font(20.0f, juce::Font::bold));
+        addAndMakeVisible(inputTracksLabel);
+
+        outputTracksLabel.setJustificationType(juce::Justification::centred);
+        outputTracksLabel.setFont(juce::Font(20.0f, juce::Font::bold));
+        addAndMakeVisible(outputTracksLabel);
+
+        populateTracks();
+        addAndMakeVisible(inputTrackAreaWidget);
+        addAndMakeVisible(outputTrackAreaWidget);
 
         addAndMakeVisible(descriptionLabel);
         // addAndMakeVisible(tagsLabel);
@@ -1125,7 +1124,7 @@ public:
         isProcessing = true;
 
         // mediaDisplay->addNewTempFile();
-        auto& inputMediaDisplays = trackAreaWidget.getInputMediaDisplays();
+        auto& inputMediaDisplays = inputTrackAreaWidget.getMediaDisplays();
 
         // Get all the getTempFilePaths from the inputMediaDisplays
         // and store them in a map/dictionary with the track name as the key
@@ -1301,7 +1300,6 @@ public:
         mainPanel.items.add(juce::FlexItem(controlAreaWidget).withFlex(1).withMargin(margin));
 
         // Row 5: Process Cancel Button
-        // Row for Process Cancel Button
         juce::FlexBox rowProcessCancelButton;
         rowProcessCancelButton.flexDirection = juce::FlexBox::Direction::row;
         rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
@@ -1312,7 +1310,27 @@ public:
         mainPanel.items.add(juce::FlexItem(rowProcessCancelButton).withFlex(0.25));
 
         // Row 6: Input and Output Tracks Area Widget
-        mainPanel.items.add(juce::FlexItem(trackAreaWidget).withFlex(4).withMargin(margin));
+        juce::FlexBox inputTracksBox;
+        inputTracksBox.flexDirection = juce::FlexBox::Direction::column;
+
+        if (inputTrackAreaWidget.getNumTracks() > 0)
+        {
+            inputTracksBox.items.add(juce::FlexItem(inputTracksLabel).withFlex(0.25).withMinHeight(15));
+        }
+        inputTracksBox.items.add(juce::FlexItem(inputTrackAreaWidget).withFlex(1.0));
+
+        mainPanel.items.add(juce::FlexItem(inputTracksBox).withFlex(2).withMargin(margin));
+
+        juce::FlexBox outputTracksBox;
+        outputTracksBox.flexDirection = juce::FlexBox::Direction::column;
+
+        if (outputTrackAreaWidget.getNumTracks() > 0)
+        {
+            outputTracksBox.items.add(juce::FlexItem(outputTracksLabel).withFlex(0.25).withMinHeight(15));
+        }
+        outputTracksBox.items.add(juce::FlexItem(outputTrackAreaWidget).withFlex(1.0));
+
+        mainPanel.items.add(juce::FlexItem(outputTracksBox).withFlex(2).withMargin(margin));
 
         // Row 7: Play/Stop Button, Open File Button, and Save File Button
         // juce::FlexBox row7;
@@ -1343,7 +1361,8 @@ public:
     void resetUI()
     {
         controlAreaWidget.resetUI();
-        trackAreaWidget.resetUI();
+        inputTrackAreaWidget.resetUI();
+        outputTrackAreaWidget.resetUI();
         // Also clear the model card components
         ModelCard empty;
         setModelCard(empty);
@@ -1376,9 +1395,15 @@ public:
 
 private:
     // HARP UI
+
+    ApplicationCommandManager commandManager;
+    // MenuBar
+    std::unique_ptr<MenuBarComponent> menuBar;
+
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer { nullptr };
 
     ComboBox modelPathComboBox;
+    std::string customPath;
     // Two usefull variables to keep track of the selected item in the modelPathComboBox
     // and the item index of the last loaded model
     // These are used to restore the selected item in the modelPathComboBox
@@ -1397,29 +1422,35 @@ private:
     MultiButton loadModelButton;
     MultiButton::Mode loadButtonInfo;
 
+    // model card
+    // Label nameLabel, authorLabel,
+    Label descriptionLabel;
+    // Label tagsLabel;
+    // Label audioOrMidiLabel;
+
     MultiButton processCancelButton;
     MultiButton::Mode processButtonInfo;
     MultiButton::Mode cancelButtonInfo;
 
-    MultiButton playStopButton;
-    MultiButton::Mode playButtonInfo;
-    MultiButton::Mode stopButtonInfo;
+    //MultiButton playStopButton;
+    //MultiButton::Mode playButtonInfo;
+    //MultiButton::Mode stopButtonInfo;
 
     // Label statusLabel;
     // A flag that indicates if the audio file can be saved
     bool saveEnabled = true;
     bool isProcessing = false;
 
-    std::string customPath;
     ControlAreaWidget controlAreaWidget;
-    TrackAreaWidget trackAreaWidget;
+
+    Label inputTracksLabel {"Input Tracks", "Input Tracks"};
+    TrackAreaWidget inputTrackAreaWidget;
+
+    Label outputTracksLabel {"Output Tracks", "Output Tracks"};
+    TrackAreaWidget outputTrackAreaWidget;
+
     MediaClipboardWidget mediaClipboardWidget;
 
-    // model card
-    // Label nameLabel, authorLabel,
-    Label descriptionLabel;
-    // Label tagsLabel;
-    // Label audioOrMidiLabel;
     // StatusComponent statusBox { 15.0f, juce::Justification::centred };
     // InstructionStatus instructionBox { 13.0f, juce::Justification::centredLeft };
     // std::shared_ptr<InstructionBox> instructionBox;
@@ -1464,10 +1495,6 @@ private:
     ChangeBroadcaster loadBroadcaster;
     ChangeBroadcaster processBroadcaster;
 
-    ApplicationCommandManager commandManager;
-    // MenuBar
-    std::unique_ptr<MenuBarComponent> menuBar;
-
     bool showMediaClipboard;
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
@@ -1481,14 +1508,14 @@ private:
         //     playStopButton.setMode(stopButtonInfo.label);
         // }
         // visit all the mediaDisplays and check each of them
-        for (auto& display : trackAreaWidget.getInputMediaDisplays())
+        for (auto& display : inputTrackAreaWidget.getMediaDisplays())
         {
             if (! display->isPlaying())
             {
                 display->start();
             }
         }
-        playStopButton.setMode(stopButtonInfo.label);
+        // playStopButton.setMode(stopButtonInfo.label);
     }
 
     void stop()
@@ -1498,14 +1525,14 @@ private:
         //     mediaDisplay->stop();
         //     playStopButton.setMode(playButtonInfo.label);
         // }
-        for (auto& display : trackAreaWidget.getInputMediaDisplays())
+        for (auto& display : inputTrackAreaWidget.getMediaDisplays())
         {
             if (display->isPlaying())
             {
                 display->stop();
             }
         }
-        playStopButton.setMode(playButtonInfo.label);
+        // playStopButton.setMode(playButtonInfo.label);
     }
 
     void resetProcessingButtons()
@@ -1544,7 +1571,7 @@ private:
             
             LabelList& labels = model->getLabels();
             auto outputProcessedPaths = model->getOutputFilePaths();
-            auto& outputMediaDisplays = trackAreaWidget.getOutputMediaDisplays();
+            auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
             for (size_t i = 0; i < outputMediaDisplays.size(); ++i)
             {
                 URL tempFile = outputProcessedPaths[i];
@@ -1572,6 +1599,19 @@ private:
         return;
     }
 
+    void populateTracks()
+    {
+        for (const ComponentInfo& info : model->getInputTracksInfo())
+        {
+            inputTrackAreaWidget.addTrack(info);
+        }
+
+        for (const ComponentInfo& info : model->getOutputTracksInfo())
+        {
+            outputTrackAreaWidget.addTrack(info);
+        }
+    }
+
     void processLoadingResult(OpResult result)
     {
         // return;
@@ -1581,13 +1621,8 @@ private:
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
             controlAreaWidget.populateControls();
-            // inputTracksWidget.populateTracks();
-            // outputTracksWidget.populateTracks();
-            // trackAreaWidget.setModel(model);
-            // trackAreaWidget.populateTracks();
-            trackAreaWidget.setModel(model);
-            // addAndMakeVisible(trackAreaWidget);
-            trackAreaWidget.populateTracks();
+
+            populateTracks();
 
             SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
             // juce::String spaceUrlButtonText;
