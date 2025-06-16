@@ -5,6 +5,7 @@
  */
 
 #pragma once
+
 #include "WebModel.h"
 #include "gui/SliderWithLabel.h"
 #include "gui/TitledTextBox.h"
@@ -14,28 +15,30 @@
 #include "media/MidiDisplayComponent.h"
 #include "utils.h"
 
-class TrackAreaWidget : public juce::Component, public juce::ChangeListener
+using namespace juce;
+
+class TrackAreaWidget : public Component, public ChangeListener, public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget() {}
+    TrackAreaWidget(bool acceptDragDrop_ = false, int fixedHeight_ = 0)
+        : acceptDragDrop(acceptDragDrop_), fixedHeight(fixedHeight_)
+    {
+    }
 
     void addTrack(ComponentInfo info)
     {
         std::shared_ptr<PyHarpComponentInfo> trackInfo = info.second;
         std::unique_ptr<MediaDisplayComponent> m;
 
+        std::string label =
+            trackInfo->label.empty() ? "Track-" + std::to_string(getNumTracks()) : trackInfo->label;
+
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
-            std::string label = audioTrackInfo->label.empty()
-                                    ? "Audio-" + std::to_string(getNumTracks())
-                                    : audioTrackInfo->label;
             m = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
-            std::string label = midiTrackInfo->label.empty()
-                                    ? "Midi-" + std::to_string(getNumTracks())
-                                    : midiTrackInfo->label;
             m = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required);
         }
 
@@ -43,14 +46,50 @@ public:
         {
             m->setTrackId(trackInfo->id);
             m->addChangeListener(this);
-            m->instructionBoxWriter = [this](const juce::String& text)
-            { updateInstructionBox(text); };
+            m->instructionBoxWriter = [this](const String& text) { updateInstructionBox(text); };
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
         }
 
         repaint();
         resized();
+    }
+
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return acceptDragDrop; }
+
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
+    {
+        if (acceptDragDrop)
+        {
+            for (String f : files)
+            {
+                File droppedFile = File(f);
+                String ext = droppedFile.getFileExtension();
+
+                if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
+                {
+                    auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
+                    audioTrackInfo->id = Uuid();
+                    audioTrackInfo->required = false;
+                    ComponentInfo componentInfo { audioTrackInfo->id, audioTrackInfo };
+                    addTrack(componentInfo);
+                    mediaDisplays.back()->setupDisplay(URL(droppedFile));
+                }
+                else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
+                {
+                    auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
+                    midiTrackInfo->id = Uuid();
+                    midiTrackInfo->required = false;
+                    ComponentInfo componentInfo { midiTrackInfo->id, midiTrackInfo };
+                    addTrack(componentInfo);
+                    mediaDisplays.back()->setupDisplay(URL(droppedFile));
+                }
+                else
+                {
+                    DBG("Attempted adding track of unsupported file type: " << f);
+                }
+            }
+        }
     }
 
     void resetUI()
@@ -68,28 +107,39 @@ public:
         mediaDisplays.clear();
     }
 
+    void paint(Graphics& g) override
+    {
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+    }
+
     void resized() override
     {
         auto area = getLocalBounds();
 
-        juce::FlexBox mainBox;
-        mainBox.flexDirection =
-            juce::FlexBox::Direction::column; // Set the main flex direction to column
+        FlexBox mainBox;
+        mainBox.flexDirection = FlexBox::Direction::column; // Set the main flex direction to column
 
-        juce::FlexItem::Margin margin(2);
+        FlexItem::Margin margin(2);
 
         if (getNumTracks() > 0)
         {
-            // Input tracks
             for (auto& m : mediaDisplays)
             {
-                // auto row = area.removeFromTop(150).reduced(2);
-                // display->setBounds(row);
-                mainBox.items.add(juce::FlexItem(*m).withFlex(1).withMinHeight(50).withMargin(4));
+                FlexItem i = FlexItem(*m);
+
+                if (fixedHeight)
+                {
+                    i = i.withHeight(fixedHeight);
+                }
+                else
+                {
+                    i = i.withFlex(1).withMinHeight(50);
+                }
+
+                mainBox.items.add(i.withMargin(4));
             }
         }
 
-        // Perform Layout
         mainBox.performLayout(area);
     }
 
@@ -97,7 +147,7 @@ public:
     // It listens to events emmited from MediaDisplayComponents
     // using the sendChangeMessage() function
     // NOTE: not used, but might be useful in the future
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override
+    void changeListenerCallback(ChangeBroadcaster* source) override
     {
         for (auto& m : mediaDisplays)
         {
@@ -116,7 +166,7 @@ public:
     int getNumTracks() { return mediaDisplays.size(); }
 
 private:
-    void updateInstructionBox(const juce::String& text)
+    void updateInstructionBox(const String& text)
     {
         if (instructionBox != nullptr)
         {
@@ -126,5 +176,9 @@ private:
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 
-    juce::SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<InstructionBox> instructionBox;
+
+    const bool acceptDragDrop = false;
+
+    const int fixedHeight = 0;
 };

@@ -8,6 +8,7 @@
 
 #include "external/magic_enum.hpp"
 #include "juce_core/juce_core.h"
+#include "juce_gui_basics/juce_gui_basics.h"
 
 using namespace juce;
 
@@ -19,6 +20,16 @@ inline bool stringToBool(const String& str)
     if (lowerStr == "true" || lowerStr == "1" || lowerStr == "yes" || lowerStr == "y")
         return true;
     return false;
+}
+
+// TODO - move to gui/GUIUtils.h
+inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
+                                     Colour fallback = Colour(0xff4d4d4d)) noexcept
+{
+    if (auto* v4 = dynamic_cast<LookAndFeel_V4*>(&LookAndFeel::getDefaultLookAndFeel()))
+        return v4->getCurrentColourScheme().getUIColour(uiColour);
+
+    return fallback;
 }
 
 template <typename EnumType>

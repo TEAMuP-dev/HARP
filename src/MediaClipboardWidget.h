@@ -5,10 +5,14 @@
  */
 
 #pragma once
+
+#include "TrackAreaWidget.h"
 #include "gui/MultiButton.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 
-class MediaClipboardWidget : public juce::Component
+using namespace juce;
+
+class MediaClipboardWidget : public Component
 {
 public:
     MediaClipboardWidget()
@@ -19,7 +23,7 @@ public:
             {
                 //TODO
             },
-            juce::Colours::green,
+            Colours::green,
             "Click to add a file to the media clipboard",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::Plus,
@@ -34,7 +38,7 @@ public:
             {
                 //TODO
             },
-            juce::Colours::green,
+            Colours::green,
             "Click to add a file to the media clipboard",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::Minus,
@@ -45,7 +49,7 @@ public:
             {
                 //TODO
             },
-            juce::Colours::lightgrey,
+            Colours::lightgrey,
             "No file selected",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::Minus,
@@ -58,7 +62,9 @@ public:
         addAndMakeVisible(selectedFileLabel);
         addAndMakeVisible(addFileButton);
         addAndMakeVisible(removeFileButton);
-        addAndMakeVisible(trackAreaPlaceholder);
+
+        //trackArea.setViewedComponent(trackAreaWidget);
+        addAndMakeVisible(trackAreaWidget);
     }
 
     ~MediaClipboardWidget() {}
@@ -69,20 +75,20 @@ public:
     {
         auto mainArea = getLocalBounds();
 
-        juce::FlexBox mainBox;
-        mainBox.flexDirection = juce::FlexBox::Direction::column;
+        FlexBox mainBox;
+        mainBox.flexDirection = FlexBox::Direction::column;
 
-        juce::FlexItem::Margin margin(2);
+        FlexItem::Margin margin(2);
 
-        juce::FlexBox controlBar;
-        controlBar.flexDirection = juce::FlexBox::Direction::row;
+        FlexBox controlBar;
+        controlBar.flexDirection = FlexBox::Direction::row;
 
-        controlBar.items.add(juce::FlexItem(selectedFileLabel).withFlex(10).withMargin(margin));
-        controlBar.items.add(juce::FlexItem(addFileButton).withFlex(1).withMargin(margin));
-        controlBar.items.add(juce::FlexItem(removeFileButton).withFlex(1).withMargin(margin));
-        mainBox.items.add(juce::FlexItem(controlBar).withHeight(30));
+        controlBar.items.add(FlexItem(selectedFileLabel).withFlex(10).withMargin(margin));
+        controlBar.items.add(FlexItem(addFileButton).withFlex(1).withMargin(margin));
+        controlBar.items.add(FlexItem(removeFileButton).withFlex(1).withMargin(margin));
+        mainBox.items.add(FlexItem(controlBar).withHeight(30));
 
-        mainBox.items.add(juce::FlexItem(trackAreaPlaceholder).withFlex(1).withMargin(margin));
+        mainBox.items.add(FlexItem(trackAreaWidget).withFlex(1).withMargin(margin));
 
         mainBox.performLayout(mainArea);
     }
@@ -102,8 +108,9 @@ private:
     //MultiButton::Mode saveButtonActiveInfo;
     //MultiButton::Mode saveButtonInactiveInfo;
 
-    // TODO - TrackAreaWidget
-    Component trackAreaPlaceholder;
+    //Viewport trackArea;
+    TrackAreaWidget trackAreaWidget { true, 50 };
+    //TrackAreaWidget* trackAreaWidget;
 
     int selectedIdx = -1;
 };
