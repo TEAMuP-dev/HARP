@@ -8,7 +8,6 @@ MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
     mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);
     pianoRoll.addChangeListener(this);
-    // addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
@@ -31,35 +30,6 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
 
     return extensions;
 }
-
-// void MidiDisplayComponent::repositionOverheadPanel()
-// {
-//     Rectangle<int> overheadPanelArea =
-//         getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
-//     overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
-//                                                           - pianoRoll.getKeyboardWidth()
-//                                                           - pianoRoll.getPianoRollSpacing());
-//     overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
-//                                                          - 2 * pianoRoll.getScrollBarSize()
-//                                                          - 4 * pianoRoll.getScrollBarSpacing());
-
-//     overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
-// }
-
-// void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
-
-// void MidiDisplayComponent::repositionScrollBar()
-// {
-//     Rectangle<int> scrollBarArea =
-//         getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
-//     scrollBarArea = scrollBarArea.removeFromRight(
-//         scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-//     scrollBarArea =
-//         scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-//                                      - 4 * pianoRoll.getScrollBarSpacing());
-
-//     horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
-// }
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
@@ -173,6 +143,11 @@ void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
     pianoRoll.setBounds(mediaComponent.getBounds().withY(0));
+    horizontalScrollBar.setBounds(
+        horizontalScrollBar.getBounds()
+            .withTrimmedLeft(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing())
+            .withTrimmedRight(2 * pianoRoll.getScrollBarSize()
+                              + 4 * pianoRoll.getScrollBarSpacing()));
 }
 
 void MidiDisplayComponent::resetDisplay()

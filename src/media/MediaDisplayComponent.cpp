@@ -25,14 +25,13 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
 
     addAndMakeVisible(mediaAreaContainer);
     mediaAreaContainer.addAndMakeVisible(mediaComponent);
-    mediaAreaContainer.addAndMakeVisible(overheadPanel); 
+    mediaAreaContainer.addAndMakeVisible(overheadPanel);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
     mediaAreaContainer.addMouseListener(this, true);
-    
+
     populateTrackHeader();
-    // addAndMakeVisible(overheadPanel); // new from v2
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -77,11 +76,14 @@ void MediaDisplayComponent::resized()
     mediaAreaFlexBox.items.clear();
 
     // Add overhead panel if needed
-    if (getNumOverheadLabels() > 0) {
+    if (getNumOverheadLabels() > 0)
+    {
         mediaAreaFlexBox.items.add(
             juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing));
         mediaAreaFlexBox.items.add(juce::FlexItem().withHeight(controlSpacing));
-    } else {
+    }
+    else
+    {
         overheadPanel.setBounds(0, 0, 0, 0); // Hide panel when not needed
     }
 
@@ -140,25 +142,8 @@ void MediaDisplayComponent::resized()
     // Set text justification to centered
     trackNameLabel.setJustificationType(juce::Justification::centred);
 
-    // repositionOverheadPanel();
-    // repositionContent();
-    // repositionScrollBar();
     repositionLabels();
 }
-
-// Rectangle<int> MediaDisplayComponent::getContentBounds() // new from v2
-// {
-//     Rectangle<int> contentBounds =
-//         mediaComponent.getLocalBounds() // cb: replace with mediaComponent.getLocalBounds() ?
-//             .removeFromTop(getHeight() - (scrollBarSize + 2 * controlSpacing));
-
-//     if (getNumOverheadLabels())
-//     {
-//         contentBounds = contentBounds.withTrimmedTop(labelHeight + 2 * controlSpacing + 2);
-//     }
-
-//     return contentBounds.reduced(controlSpacing);
-// }
 
 void MediaDisplayComponent::repositionScrollBar()
 {
@@ -190,13 +175,16 @@ void MediaDisplayComponent::repositionLabels()
     minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
     maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
 
-    auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto& labels) {
+    auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto& labels)
+    {
         for (auto l : labels)
         {
             if (l == nullptr)
                 continue;
 
-            float labelWidth = jmax(minLabelWidth, jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
+            float labelWidth = jmax(
+                minLabelWidth,
+                jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
 
             float labelStartTime = static_cast<float>(l->getTime());
             float labelStopTime = labelStartTime + static_cast<float>(l->getDuration());
@@ -708,12 +696,15 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
             }
         }
 
-        if (isOverlay) {
+        if (isOverlay)
+        {
             auto* lo = new LabelOverlayComponent(*static_cast<LabelOverlayComponent*>(lc.get()));
             lo->setRelativeY(y);
 
             addLabelOverlay(lo);
-        } else {
+        }
+        else
+        {
             auto* ol = new OverheadLabelComponent(*static_cast<OverheadLabelComponent*>(lc.get()));
             addOverheadLabel(ol);
         }
@@ -778,7 +769,6 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
         overheadLabels.clear();
     }
 
-
     resized();
     repaint();
 }
@@ -790,7 +780,6 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
     l->removeMarkersFrom(mediaComponentPtr);
     mediaComponentPtr->removeChildComponent(l);
     labelOverlays.removeObject(l);
-
 }
 
 void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
@@ -801,7 +790,6 @@ void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
     overheadPanel.removeChildComponent(l);
 
     overheadLabels.removeObject(l);
-
 }
 
 int MediaDisplayComponent::getNumOverheadLabels()
@@ -965,7 +953,7 @@ void MediaDisplayComponent::updateCursorPosition()
 
     Rectangle<int> mediaBounds = mediaComponent.getBounds();
     Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
-    
+
     float cursorBoundsStartX = static_cast<float>(mediaBounds.getX()) + getMediaXPos();
     float cursorBoundsWidth = static_cast<float>(visibleRange.getLength() * getPixelsPerSecond());
 

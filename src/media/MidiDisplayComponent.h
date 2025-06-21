@@ -17,10 +17,6 @@ public:
         return MidiDisplayComponent::getSupportedExtensions();
     }
 
-    // void repositionOverheadPanel() override;
-    // void repositionContent() override; // new from v2
-    // void repositionScrollBar() override;
-
     Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
 
     float getMediaXPos() override

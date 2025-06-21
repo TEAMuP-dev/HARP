@@ -41,9 +41,6 @@ public:
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-    // virtual void repositionOverheadPanel();
-    // Rectangle<int> getContentBounds();
-    // virtual void repositionContent() {};
     virtual void repositionScrollBar();
 
     virtual Component* getMediaComponent() { return this; }
@@ -193,8 +190,6 @@ protected:
     juce::FlexBox headerFlexBox;
     // FlexBox for the media + overhead area (if any)
     juce::FlexBox mediaAreaFlexBox;
-    // FlexBox for the media area (audio or MIDI content)
-    juce::FlexBox mediaFlexBox;
 
     // Track sub-components
     // Left panel containing track name and buttons

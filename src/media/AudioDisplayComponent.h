@@ -33,8 +33,6 @@ public:
         return AudioDisplayComponent::getSupportedExtensions();
     }
 
-    // void repositionContent() override;
-
     Component* getMediaComponent() override { return &thumbnailComponent; }
 
     void loadMediaFile(const URL& filePath) override;

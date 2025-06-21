@@ -7,7 +7,6 @@ AudioDisplayComponent::AudioDisplayComponent(String trackName, bool required)
     thread.startThread(Thread::Priority::normal);
 
     thumbnailComponent.addMouseListener(this, true);
-    // addAndMakeVisible(thumbnailComponent);
 
     thumbnail.addChangeListener(this);
 
@@ -38,11 +37,6 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
 
     return extensions;
 }
-
-// void AudioDisplayComponent::repositionContent()
-// {
-//     // thumbnailComponent.setBounds(getContentBounds());
-// }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 {
