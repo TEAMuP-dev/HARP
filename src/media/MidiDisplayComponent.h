@@ -64,5 +64,5 @@ private:
     int medianMidi;
     float stdDevMidi;
 
-    PianoRollComponent pianoRoll { 70, 5, scrollBarSize, controlSpacing };
+    PianoRollComponent pianoRoll { 70, 5, scrollBarSize, controlSpacing, false };
 };

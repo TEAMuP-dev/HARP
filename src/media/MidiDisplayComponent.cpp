@@ -172,7 +172,7 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
 void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
-    pianoRoll.setBounds(mediaComponent.getBounds());
+    pianoRoll.setBounds(mediaComponent.getBounds().withY(0));
 }
 
 void MidiDisplayComponent::resetDisplay()

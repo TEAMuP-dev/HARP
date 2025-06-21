@@ -19,7 +19,8 @@ public:
     PianoRollComponent(int _keyboardWidth = 70,
                        int _pianoRollSpacing = 5,
                        int _scrollBarSize = 10,
-                       int _scrollBarSpacing = 2);
+                       int _scrollBarSpacing = 2,
+                       bool _hideKeys = false);
 
     ~PianoRollComponent() override;
 
@@ -29,6 +30,7 @@ public:
     NoteGridComponent* getNoteGrid() { return &noteGrid; }
 
     void setResolution(int pixelsPerSecond);
+    void setHideKeys(bool _hideKeys) { hideKeys = _hideKeys; }
 
     void resizeNoteGrid(double lengthInSecs);
 
@@ -48,23 +50,25 @@ public:
     void insertNote(MidiNoteComponent n);
     void resetNotes();
 
-    int getKeyboardWidth() { return keyboardWidth; }
+    int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
     int getPianoRollWidth();
-    int getPianoRollSpacing() { return pianoRollSpacing; }
+    int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }
     double getResolution() { return noteGrid.getPixelsPerSecond(); }
     int getMaxKeysVisible() { return maxKeysVisible; }
+    bool isHidingKeys() { return hideKeys; }
 
 private:
     double zoomToKeysVisible(double zoomFactor);
     double keysVisibleToZoom(double numKeysVisible);
 
     int keyboardWidth;
-    // int pianoRollWidth;
     int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
+
+    bool hideKeys;
 
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;

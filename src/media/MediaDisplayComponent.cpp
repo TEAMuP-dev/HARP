@@ -19,7 +19,6 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
 
     trackNameLabel.setText(trackName, juce::dontSendNotification);
     addAndMakeVisible(headerComponent);
-    // addAndMakeVisible(mediaComponent);
 
     // Add controls to headerComponent
     headerComponent.addAndMakeVisible(trackNameLabel);
@@ -73,28 +72,27 @@ void MediaDisplayComponent::resized()
 
     mainFlexBox.performLayout(totalBounds);
 
-    // Set up the media area container
     // Set up the vertical layout within the media area container
     mediaAreaFlexBox.flexDirection = juce::FlexBox::Direction::column;
     mediaAreaFlexBox.items.clear();
-    
+
     // Add overhead panel if needed
     if (getNumOverheadLabels() > 0) {
         mediaAreaFlexBox.items.add(
-            juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing + 2));
+            juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing));
+        mediaAreaFlexBox.items.add(juce::FlexItem().withHeight(controlSpacing));
     } else {
         overheadPanel.setBounds(0, 0, 0, 0); // Hide panel when not needed
     }
-    
+
     // Media component takes remaining space
     mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
 
     // Add horizontal scrollbar with fixed height
+    mediaAreaFlexBox.items.add(juce::FlexItem().withHeight(controlSpacing));
     mediaAreaFlexBox.items.add(
         juce::FlexItem(horizontalScrollBar).withHeight(scrollBarSize + 2 * controlSpacing));
-    
-    
-    
+
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
 
