@@ -158,6 +158,8 @@ protected:
 
     void horizontalZoom(float deltaZoom, float scrollPosX);
 
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
 
@@ -226,8 +228,6 @@ private:
     void timerCallback() override;
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
-
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     void mouseEnter(const juce::MouseEvent& /*event*/) override;
     void mouseExit(const juce::MouseEvent& /*event*/) override;

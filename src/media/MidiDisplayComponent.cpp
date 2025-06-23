@@ -169,43 +169,34 @@ void MidiDisplayComponent::verticalMove(float deltaY)
     pianoRoll.verticalMouseWheelMoveEvent(deltaY);
 }
 
-void MidiDisplayComponent::verticalZoom(float deltaZoom, float scrollPosY)
+void MidiDisplayComponent::verticalZoom(float deltaZoom)
 {
-    pianoRoll.verticalMouseWheelZoomEvent(deltaZoom, scrollPosY);
+    pianoRoll.verticalMouseWheelZoomEvent(deltaZoom);
 }
 
 void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
-
     if (getTotalLengthInSecs() > 0.0)
     {
-        bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        // bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
 #if (JUCE_MAC)
-        bool zoomMod = isCmdPressed;
+        bool commandMod = evt.mods.isCommandDown();
 #else
-        bool zoomMod = isCtrlPressed;
+        bool commandMod = evt.mods.isCtrlDown();
 #endif
+        bool shiftMod = evt.mods.isShiftDown();
 
-        auto totalLength = visibleRange.getLength();
-        auto visibleStart = visibleRange.getStart();
-        auto scrollTime = mediaXToTime(evt.position.getX());
-        DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
-                               << ") Scrolled at time: " << scrollTime);
-
-        if (zoomMod)
+        if (commandMod)
         {
-            if (std::abs(wheel.deltaX) > 1 * std::abs(wheel.deltaY))
+            if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
             {
-                // Horizontal scroll when using 2-finger swipe in macbook trackpad
-                horizontalZoom(wheel.deltaX, (float) scrollTime);
-            }
-            else if (std::abs(wheel.deltaY) > 1 * std::abs(wheel.deltaX))
-            {
-                // Vertical scroll
-                verticalZoom(wheel.deltaY, (float) scrollTime);
+                if (shiftMod)
+                {
+                    verticalMove(-wheel.deltaY);
+                }
+                else
+                {
+                    verticalZoom(wheel.deltaY / 2);
+                }
             }
             else
             {
@@ -214,15 +205,7 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
         }
         else
         {
-            if (std::abs(wheel.deltaX) > 0)
-            {
-                // Horizontal scroll when using 2-finger swipe in macbook trackpad
-                horizontalMove(wheel.deltaX);
-            }
-            if (std::abs(wheel.deltaY) > 0)
-            {
-                verticalMove(-wheel.deltaY);
-            }
+            MediaDisplayComponent::mouseWheelMove(evt, wheel);
         }
         repaint();
     }

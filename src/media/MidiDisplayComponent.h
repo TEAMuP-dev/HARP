@@ -49,7 +49,7 @@ private:
 
     void verticalMove(float deltaY);
 
-    void verticalZoom(float deltaZoom, float scrollPosY);
+    void verticalZoom(float deltaZoom);
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 

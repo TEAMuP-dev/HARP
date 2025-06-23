@@ -1004,36 +1004,37 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 {
     if (getTotalLengthInSecs() > 0.0)
     {
-        //         bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        //         bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        //         bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
+#if (JUCE_MAC)
+        bool commandMod = evt.mods.isCommandDown();
+#else
+        bool commandMod = evt.mods.isCtrlDown();
+#endif
+        bool shiftMod = evt.mods.isShiftDown();
 
-        // #if JUCE_MAC
-        //         bool zoomMod = isCmdPressed;
-        // #else
-        //         bool zoomMod = isCtrlPressed;
-        // #endif
-        // auto totalLength = visibleRange.getLength();
-        // auto visibleStart = visibleRange.getStart();
         auto scrollTime = static_cast<float>(mediaXToTime(evt.position.getX()));
-        // DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
-        //                        << ") Scrolled at time: " << scrollTime);
 
-        if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
-        {
-            // Horizontal scroll when using 2-finger swipe in macbook trackpad
-            horizontalMove(wheel.deltaX);
-        }
-        else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
-        {
-            // if (wheel.deltaY != 0) {
-            horizontalZoom(wheel.deltaY, scrollTime);
-
-            // }
-        }
-        else
-        {
-            // Do nothing
+        if (! commandMod)
+            {
+            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
+            {
+                // Horizontal scroll when using 2-finger swipe in macbook trackpad
+                horizontalMove(wheel.deltaX);
+            }
+            else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
+            {
+                if (shiftMod)
+                {
+                    horizontalMove(wheel.deltaY);
+                }
+                else
+                {
+                    horizontalZoom(wheel.deltaY, scrollTime);
+                }
+            }
+            else
+            {
+                // Do nothing
+            }
         }
 
         repaint();

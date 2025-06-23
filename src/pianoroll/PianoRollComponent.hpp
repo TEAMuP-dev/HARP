@@ -43,7 +43,7 @@ public:
 
     void verticalMouseWheelMoveEvent(float deltaY);
 
-    void verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY);
+    void verticalMouseWheelZoomEvent(float deltaZoom);
 
     void autoCenterViewBox(int medianMidi, float stdDevMidi);
 

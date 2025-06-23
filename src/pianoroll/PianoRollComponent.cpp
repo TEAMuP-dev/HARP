@@ -143,7 +143,7 @@ void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
     updateVisibleKeyRange(newRange);
 }
 
-void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float /*scrollPosY*/)
+void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom)
 {
     // get the current value of the verticalZoomSlider
     auto currentZoom = verticalZoomSlider.getValue();
