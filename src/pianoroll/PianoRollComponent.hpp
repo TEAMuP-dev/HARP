@@ -52,6 +52,7 @@ public:
 
     int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
     int getPianoRollWidth();
+    int getControlWidth() { return static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing; }
     int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
     int getScrollBarSize() { return scrollBarSize; }
     int getScrollBarSpacing() { return scrollBarSpacing; }

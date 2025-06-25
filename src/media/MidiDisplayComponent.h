@@ -24,6 +24,11 @@ public:
         return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
     }
 
+    float getVerticalControlWidth() override
+    {
+        return static_cast<float>(pianoRoll.getControlWidth());
+    }
+
     void loadMediaFile(const URL& filePath) override;
 
     void startPlaying() override;
@@ -60,5 +65,5 @@ private:
     int medianMidi;
     float stdDevMidi;
 
-    PianoRollComponent pianoRoll { 70, 5, scrollBarSize, controlSpacing, false };
+    PianoRollComponent pianoRoll { 70, 3, scrollBarSize, controlSpacing, false };
 };

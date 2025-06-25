@@ -79,21 +79,19 @@ void MediaDisplayComponent::resized()
     if (getNumOverheadLabels() > 0)
     {
         mediaAreaFlexBox.items.add(
-            juce::FlexItem(overheadPanel).withHeight(labelHeight + 2 * controlSpacing));
-        mediaAreaFlexBox.items.add(juce::FlexItem().withHeight(controlSpacing));
-    }
-    else
-    {
-        overheadPanel.setBounds(0, 0, 0, 0); // Hide panel when not needed
+            juce::FlexItem(overheadPanel)
+                .withHeight(labelHeight + 2 * controlSpacing)
+                .withMargin({ 0, getVerticalControlWidth(), controlSpacing, getMediaXPos() }));
     }
 
     // Media component takes remaining space
     mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
 
     // Add horizontal scrollbar with fixed height
-    mediaAreaFlexBox.items.add(juce::FlexItem().withHeight(controlSpacing));
     mediaAreaFlexBox.items.add(
-        juce::FlexItem(horizontalScrollBar).withHeight(scrollBarSize + 2 * controlSpacing));
+        juce::FlexItem(horizontalScrollBar)
+            .withHeight(scrollBarSize + 2 * controlSpacing)
+            .withMargin({ controlSpacing, getVerticalControlWidth(), 0, getMediaXPos() }));
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
@@ -167,8 +165,7 @@ void MediaDisplayComponent::repositionLabels()
     float minLabelWidth = 0.1f * mediaWidth;
     float maxLabelWidth = 0.1f * pixelsPerSecond;
 
-    //cb:TODO: check if mediaComponent.getBounds() is correct
-    float contentWidth = static_cast<float>(mediaComponent.getBounds().getWidth());
+    float contentWidth = static_cast<float>(mediaWidth);
     float minVisibilityWidth = contentWidth / 200.0f;
     float maxVisibilityWidth = contentWidth / 3.0f;
 
@@ -530,7 +527,7 @@ void MediaDisplayComponent::saveCallback()
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (isFileLoaded())
+    if (e.eventComponent == getMediaComponent() && isFileLoaded())
     {
         if (! isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
         {
@@ -1014,7 +1011,7 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
         auto scrollTime = static_cast<float>(mediaXToTime(evt.position.getX()));
 
         if (! commandMod)
-            {
+        {
             if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
             {
                 // Horizontal scroll when using 2-finger swipe in macbook trackpad

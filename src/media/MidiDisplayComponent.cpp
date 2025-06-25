@@ -143,11 +143,6 @@ void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
     pianoRoll.setBounds(mediaComponent.getBounds().withY(0));
-    horizontalScrollBar.setBounds(
-        horizontalScrollBar.getBounds()
-            .withTrimmedLeft(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing())
-            .withTrimmedRight(2 * pianoRoll.getScrollBarSize()
-                              + 4 * pianoRoll.getScrollBarSpacing()));
 }
 
 void MidiDisplayComponent::resetDisplay()

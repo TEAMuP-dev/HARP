@@ -45,6 +45,7 @@ public:
 
     virtual Component* getMediaComponent() { return this; }
     virtual float getMediaXPos() { return 0.0f; }
+    virtual float getVerticalControlWidth() { return 0.0f; }
 
     String getTrackName() { return trackName; }
     void setTrackName(String name) { trackName = name; }
