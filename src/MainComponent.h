@@ -36,6 +36,8 @@
 #include "AppSettings.h"
 #include "windows/AboutWindow.h"
 #include "utils.h"
+#include "settings/SettingsBox.h"
+
 
 using namespace juce;
 
@@ -112,22 +114,16 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        loginHF = 0x2006,
-        loginStability = 0x2008,
-        // settings = 0x2007,
+        login = 0x2006,
+        settings = 0x2007,
         viewMediaClipboard = 0x3000
     };
 
     StringArray getMenuBarNames() override
-    {
-        StringArray menuBarNames;
-
-        menuBarNames.add("File");
-        // menuBarNames.add("Edit");
-        menuBarNames.add("View");
-
-        return menuBarNames;
-    }
+{
+    //DBG("getMenuBarNames() called");
+    return { "File" };
+}
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
     // For now, this is not used, as the extra commands appear grayed out
@@ -135,6 +131,8 @@ public:
     {
         auto menu = std::make_unique<PopupMenu>();
         menu->addCommandItem(&commandManager, CommandIDs::about);
+        menu->addCommandItem(&commandManager, CommandIDs::settings);
+        menu->addCommandItem(&commandManager, CommandIDs::login);
         return menu;
     }
 
@@ -150,16 +148,18 @@ public:
             //menu.addCommandItem(&commandManager, CommandIDs::undo);
             //menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            // menu.addCommandItem (&commandManager, CommandIDs::settings);
-            // menu.addSeparator()
-            menu.addCommandItem(&commandManager, CommandIDs::about);
+            //menu.addCommandItem (&commandManager, CommandIDs::settings);
             menu.addSeparator();
-            menu.addCommandItem(&commandManager, CommandIDs::loginHF);
-            menu.addCommandItem(&commandManager, CommandIDs::loginStability);
+            //menu.addCommandItem(&commandManager, CommandIDs::login);
+            //menu.addCommandItem(&commandManager, CommandIDs::about);
         }
         else if (menuName == "View")
         {
             menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        }
+        else
+        {
+            DBG("Unknown menu name: " << menuName);
         }
 
         return menu;
@@ -177,9 +177,9 @@ public:
     void getAllCommands(Array<CommandID>& commands) override
     {
         const CommandID ids[] = {
-            CommandIDs::open,  CommandIDs::save,           CommandIDs::saveAs,
-            CommandIDs::undo,  CommandIDs::redo,           CommandIDs::loginHF,
-            CommandIDs::about, CommandIDs::loginStability, CommandIDs::viewMediaClipboard
+            CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
+            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
+            CommandIDs::about, CommandIDs::settings, CommandIDs::viewMediaClipboard
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -214,26 +214,24 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
-            case CommandIDs::loginHF:
-                result.setInfo(
-                    "Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
+            case CommandIDs::login:
+                result.setInfo("Login to Hugging Face and Stability", "Authenticate with a Hugging Face token or Stability token", "Login", 0);
                 break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
-            case CommandIDs::loginStability:
-                result.setInfo(
-                    "Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
-                break;
             case CommandIDs::viewMediaClipboard:
                 result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
                 result.setTicked(showMediaClipboard);
+            case CommandIDs::settings:
+                result.setInfo("Preferences...", "Open the settings window", "Settings", 0);
                 break;
         }
     }
 
     bool perform(const InvocationInfo& info) override
     {
+        DBG("perform() called");
         switch (info.commandID)
         {
             case CommandIDs::open:
@@ -256,21 +254,20 @@ public:
                 DBG("Redo command invoked");
                 redoCallback();
                 break;
-            case CommandIDs::loginHF:
+            case CommandIDs::login:
                 DBG("Login command invoked");
-                loginToProvider("huggingface");
+                loginToProvider("huggingface"); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! BUG TO FIX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
                 break;
-            case CommandIDs::loginStability:
-                DBG("Login to Stability command invoked");
-                loginToProvider("stability");
-                break;
             case CommandIDs::viewMediaClipboard:
                 DBG("ViewMediaClipboard command invoked");
                 viewMediaClipboardCallback();
+            case CommandIDs::settings:
+                DBG("Settings command invoked");
+                showSettingsDialog();  
                 break;
             default:
                 return false;
@@ -720,6 +717,21 @@ public:
                             MessageManager::callAsync([this, loadingError]
                                                       { loadModelButton.setEnabled(false); });
                         }
+                        if (loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                             MessageManager::callAsync([this] {
+                            addCustomPathToDropdown(customPath, true); // mark as sleeping
+                            });
+                        }
+                        //NEW: reopen custom path dialog if sleeping or 404
+                        if (loadingError.type == ErrorType::InvalidURL || 
+                            loadingError.devMessage.contains("404") ||
+                            loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                            MessageManager::callAsync([this] {
+                                openCustomPathDialog(customPath);
+                            });
+                        }
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
@@ -803,6 +815,31 @@ public:
         resized();
     }
 
+    void openCustomPathDialog(const std::string& prefillPath = "")
+    {
+        std::function<void(const juce::String&)> loadCallback =
+         [this](const juce::String& customPath2)
+        {
+             this->customPath = customPath2.toStdString();
+             loadModelButton.triggerClick(); // Trigger load
+         };
+
+        std::function<void()> cancelCallback = [this]()
+        {
+            if (lastLoadedModelItemIndex != -1)
+                 modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+            else if (lastSelectedItemIndex != -1)
+                 modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+            else
+                 resetModelPathComboBox();
+         };
+
+        CustomPathDialog* dialog = new CustomPathDialog(loadCallback, cancelCallback);
+        if (!prefillPath.empty())
+             dialog->setTextFieldValue(prefillPath); 
+        }
+
+
     void resetModelPathComboBox()
     {
         // cb: why do we resetUI inside a function named resetModelPathComboBox ?
@@ -830,6 +867,36 @@ public:
         }
         lastSelectedItemIndex = -1;
     }
+
+    // Adds a path to the model dropdown if it's not already present
+    void addCustomPathToDropdown(const std::string& path, bool wasSleeping = false)
+    {
+        juce::String displayStr(path);
+        if (wasSleeping)
+            displayStr += " (sleeping)";
+    
+        bool alreadyExists = false;
+        for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
+        {
+            if (modelPathComboBox.getItemText(i).startsWithIgnoreCase(path))
+            {
+                alreadyExists = true;
+                break;
+            }
+        }
+    
+        if (!alreadyExists)
+        {
+            int newID = modelPathComboBox.getNumItems() + 1;
+            modelPathComboBox.addItem(displayStr, newID);
+        }
+    
+        modelPathComboBox.setText(displayStr, juce::dontSendNotification);
+    }
+    
+    
+        
+
 
     void focusCallback()
     {
@@ -872,6 +939,20 @@ public:
         // }
     }
 
+    void showSettingsDialog()
+    {
+         DBG("Settings command invoked");
+
+        juce::DialogWindow::LaunchOptions options;
+        options.dialogTitle = "Settings";
+        options.content.setOwned(new SettingsBox());
+        options.useNativeTitleBar = true;
+        options.resizable = true;
+        options.escapeKeyTriggersCloseButton = true;
+        options.dialogBackgroundColour = juce::Colours::lightgrey;
+        options.launchAsync();
+    }
+
     void initMenuBar()
     {
         // init the menu bar
@@ -880,13 +961,17 @@ public:
         setApplicationCommandManagerToWatch(&commandManager);
         // Register commands
         commandManager.registerAllCommandsForTarget(this);
+        commandManager.setFirstCommandTarget(this);
+
         // commandManager.setFirstCommandTarget(this);
         addKeyListener(commandManager.getKeyMappings());
 
 #if JUCE_MAC
         // Not used for now
-        // auto extraMenu = getMacExtraMenu();
-        MenuBarModel::setMacMainMenu(this);
+        //auto extraMenu = getMacExtraMenu();
+       // MenuBarModel::setMacMainMenu(this);
+       macExtraMenu = getMacExtraMenu();
+       MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
 #endif
 
         menuBar->setVisible(true);
@@ -1147,6 +1232,7 @@ public:
         // set to full screen
         // setFullScreen(true);
         resized();
+        
     }
 
     ~MainComponent() override
@@ -1354,8 +1440,7 @@ public:
         menuBar->setBounds(
             mainArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
-
-        auto margin = 2; // Adjusted margin value for top and bottom spacing
+       auto margin = 2; // Adjusted margin value for top and bottom spacing
 
         juce::FlexBox fullWindow;
         fullWindow.flexDirection = juce::FlexBox::Direction::row;
@@ -1601,6 +1686,7 @@ private:
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
+    std::unique_ptr<PopupMenu> macExtraMenu;
 
     juce::String savedStabilityToken; //  used to save the Stability AI token
 

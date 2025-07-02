@@ -80,6 +80,12 @@ target_sources(${PROJECT_NAME}
 
         src/client/GradioClient.cpp
         src/client/StabilityClient.cpp
+        src/settings/SettingsBox.h       
+        src/settings/SettingsBox.cpp 
+        src/settings/GeneralSettingsTab.h
+        src/settings/GeneralSettingsTab.cpp
+        src/settings/AudioSettingsTab.h
+        src/settings/AudioSettingsTab.cpp
         src/external/magic_enum.hpp
 
         src/external/fontaudio/src/FontAudio.h
