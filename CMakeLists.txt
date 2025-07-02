@@ -106,7 +106,12 @@ target_sources(${PROJECT_NAME}
         src/HarpLogger.cpp
         src/errors.h
         src/utils.h
-
+        src/settings/SettingsBox.h       
+        src/settings/SettingsBox.cpp 
+        src/settings/GeneralSettingsTab.h
+        src/settings/GeneralSettingsTab.cpp
+        src/settings/AudioSettingsTab.h
+        src/settings/AudioSettingsTab.cpp
         src/gradio/GradioClient.cpp
         src/external/magic_enum.hpp
 

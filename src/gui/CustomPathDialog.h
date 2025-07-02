@@ -18,7 +18,7 @@ inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiCo
     return fallback;
 }
 
-class CustomPathComponent : public Component
+class CustomPathComponent : public Component, public juce::TextEditor::Listener
 {
 public:
     CustomPathComponent(std::function<void(const String&)> onLoadCallback,
@@ -30,6 +30,8 @@ public:
         customPathEditor.setReturnKeyStartsNewLine(false);
         customPathEditor.onTextChange = [this]()
         { loadButton.setEnabled(customPathEditor.getText().isNotEmpty()); };
+
+        customPathEditor.addListener(this); //listen for the enter key press
 
         // Set up the Load button
         addAndMakeVisible(loadButton);
@@ -69,9 +71,23 @@ public:
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
+    void textEditorReturnKeyPressed(juce::TextEditor&) override
+    {
+        if (loadButton.isEnabled())
+            loadButton.triggerClick();
+    }
+
+    void setTextFieldValue(const std::string& path)
+{
+    customPathEditor.setText(path, juce::dontSendNotification);
+    customPathEditor.selectAll(); 
+}
+
+
 private:
     TextEditor customPathEditor;
     TextButton loadButton, cancelButton;
+    CustomPathComponent* pathComponent = nullptr;
 };
 
 class CustomPathDialog : public DialogWindow
@@ -84,12 +100,18 @@ public:
           m_onCancelCallback(onCancelCallback)
     {
         // Create the content component
-        auto* content =
-            new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
-                                    [this]() { cancelButtonPressed(); });
+        //auto* content =
+           // new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
+                                    //[this]() { cancelButtonPressed(); });
+         pathComponent = new CustomPathComponent(
+                                        [this](const String& path) { loadButtonPressed(path); },
+                                        [this]() { cancelButtonPressed(); });
+                                    
+        setContentOwned(pathComponent, true);
+                                    
 
         // Add custom content
-        setContentOwned(content, true);
+        //setContentOwned(content, true);
 
         // Other dialog window options
         setUsingNativeTitleBar(false);
@@ -131,7 +153,15 @@ public:
         delete this;
     }
 
+    void setTextFieldValue(const std::string& path)
+    {
+        if (pathComponent != nullptr)
+            pathComponent->setTextFieldValue(path);
+    }
+
+
 private:
     std::function<void(const String&)> m_onLoadCallback;
     std::function<void()> m_onCancelCallback;
+    CustomPathComponent* pathComponent = nullptr;
 };

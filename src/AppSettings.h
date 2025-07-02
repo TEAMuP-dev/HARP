@@ -60,19 +60,32 @@ public:
         
         return defaultValue;
     }
-    
-    /** Set a value of any type that can be converted to string */
-    template <typename ValueType>
-    static void setValue(const juce::String& keyName, const ValueType& value, bool saveImmediately = false)
+
+    // Set value specific for boolean type
+    static void setValue(const juce::String& keyName, bool value, bool saveImmediately = false)
     {
         if (auto* settings = getUserSettings())
         {
+            settings->setValue(keyName, value ? "true" : "false");
+
+             if (saveImmediately)
+            settings->saveIfNeeded();
+    }
+}
+  
+ 
+   /** Set a value of any type that can be converted to string */
+    template <typename ValueType>
+    static void setValue(const juce::String& keyName, const ValueType& value, bool saveImmediately = false)
+    {   
+        if (auto* settings = getUserSettings())
+        {
             settings->setValue(keyName, juce::String(value));
-            
+
             if (saveImmediately)
                 settings->saveIfNeeded();
         }
-    }
+}
     
     /** Save settings to disk if needed */
     static void saveIfNeeded()

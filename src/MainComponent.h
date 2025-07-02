@@ -34,6 +34,8 @@
 
 #include "windows/AboutWindow.h"
 #include "AppSettings.h"
+#include "settings/SettingsBox.h"
+
 
 using namespace juce;
 
@@ -110,11 +112,15 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        login = 0x2006
-        // settings = 0x2007,
+        login = 0x2006,
+        settings = 0x2007 
     };
 
-    StringArray getMenuBarNames() override { return { "File" }; }
+    StringArray getMenuBarNames() override
+{
+    //DBG("getMenuBarNames() called");
+    return { "File" };
+}
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
     // For now, this is not used, as the extra commands appear grayed out
@@ -122,6 +128,8 @@ public:
     {
         auto menu = std::make_unique<PopupMenu>();
         menu->addCommandItem(&commandManager, CommandIDs::about);
+        menu->addCommandItem(&commandManager, CommandIDs::settings);
+        menu->addCommandItem(&commandManager, CommandIDs::login);
         return menu;
     }
 
@@ -137,10 +145,14 @@ public:
             menu.addCommandItem(&commandManager, CommandIDs::undo);
             menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            // menu.addCommandItem (&commandManager, CommandIDs::settings);
-            // menu.addSeparator();
-            menu.addCommandItem(&commandManager, CommandIDs::login);
-            menu.addCommandItem(&commandManager, CommandIDs::about);
+            //menu.addCommandItem (&commandManager, CommandIDs::settings);
+            menu.addSeparator();
+            //menu.addCommandItem(&commandManager, CommandIDs::login);
+            //menu.addCommandItem(&commandManager, CommandIDs::about);
+        }
+        else
+        {
+            DBG("Unknown menu name: " << menuName);
         }
         return menu;
     }
@@ -158,7 +170,7 @@ public:
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
             CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
-            CommandIDs::about
+            CommandIDs::about, CommandIDs::settings
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -199,12 +211,16 @@ public:
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
+            case CommandIDs::settings:
+                result.setInfo("Preferences...", "Open the settings window", "Settings", 0);
+                break;
         }
     }
 
     // Callback for the save and saveAs commands
     bool perform(const InvocationInfo& info) override
     {
+        DBG("perform() called");
         switch (info.commandID)
         {
             case CommandIDs::open:
@@ -234,6 +250,10 @@ public:
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
+                break;
+            case CommandIDs::settings:
+                DBG("Settings command invoked");
+                showSettingsDialog();  
                 break;
             default:
                 return false;
@@ -733,6 +753,21 @@ public:
                             MessageManager::callAsync([this, loadingError]
                                                       { loadModelButton.setEnabled(false); });
                         }
+                        if (loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                             MessageManager::callAsync([this] {
+                            addCustomPathToDropdown(customPath, true); // mark as sleeping
+                            });
+                        }
+                        //NEW: reopen custom path dialog if sleeping or 404
+                        if (loadingError.type == ErrorType::InvalidURL || 
+                            loadingError.devMessage.contains("404") ||
+                            loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                            MessageManager::callAsync([this] {
+                                openCustomPathDialog(customPath);
+                            });
+                        }
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
@@ -755,6 +790,31 @@ public:
                 }
             });
     }
+
+    void openCustomPathDialog(const std::string& prefillPath = "")
+    {
+        std::function<void(const juce::String&)> loadCallback =
+         [this](const juce::String& customPath2)
+        {
+             this->customPath = customPath2.toStdString();
+             loadModelButton.triggerClick(); // Trigger load
+         };
+
+        std::function<void()> cancelCallback = [this]()
+        {
+            if (lastLoadedModelItemIndex != -1)
+                 modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+            else if (lastSelectedItemIndex != -1)
+                 modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+            else
+                 resetModelPathComboBox();
+         };
+
+        CustomPathDialog* dialog = new CustomPathDialog(loadCallback, cancelCallback);
+        if (!prefillPath.empty())
+             dialog->setTextFieldValue(prefillPath); 
+        }
+
 
     void resetModelPathComboBox()
     {
@@ -783,6 +843,36 @@ public:
         }
         lastSelectedItemIndex = -1;
     }
+
+    // Adds a path to the model dropdown if it's not already present
+    void addCustomPathToDropdown(const std::string& path, bool wasSleeping = false)
+    {
+        juce::String displayStr(path);
+        if (wasSleeping)
+            displayStr += " (sleeping)";
+    
+        bool alreadyExists = false;
+        for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
+        {
+            if (modelPathComboBox.getItemText(i).startsWithIgnoreCase(path))
+            {
+                alreadyExists = true;
+                break;
+            }
+        }
+    
+        if (!alreadyExists)
+        {
+            int newID = modelPathComboBox.getNumItems() + 1;
+            modelPathComboBox.addItem(displayStr, newID);
+        }
+    
+        modelPathComboBox.setText(displayStr, juce::dontSendNotification);
+    }
+    
+    
+        
+
 
     void focusCallback()
     {
@@ -825,6 +915,20 @@ public:
         // }
     }
 
+    void showSettingsDialog()
+    {
+         DBG("Settings command invoked");
+
+        juce::DialogWindow::LaunchOptions options;
+        options.dialogTitle = "Settings";
+        options.content.setOwned(new SettingsBox());
+        options.useNativeTitleBar = true;
+        options.resizable = true;
+        options.escapeKeyTriggersCloseButton = true;
+        options.dialogBackgroundColour = juce::Colours::lightgrey;
+        options.launchAsync();
+    }
+
     void initMenuBar()
     {
         // init the menu bar
@@ -833,13 +937,17 @@ public:
         setApplicationCommandManagerToWatch(&commandManager);
         // Register commands
         commandManager.registerAllCommandsForTarget(this);
+        commandManager.setFirstCommandTarget(this);
+
         // commandManager.setFirstCommandTarget(this);
         addKeyListener(commandManager.getKeyMappings());
 
 #if JUCE_MAC
         // Not used for now
-        // auto extraMenu = getMacExtraMenu();
-        MenuBarModel::setMacMainMenu(this);
+        //auto extraMenu = getMacExtraMenu();
+       // MenuBarModel::setMacMainMenu(this);
+       macExtraMenu = getMacExtraMenu();
+       MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
 #endif
 
         menuBar->setVisible(true);
@@ -1116,6 +1224,7 @@ public:
         // set to full screen
         // setFullScreen(true);
         resized();
+        
     }
 
     ~MainComponent() override
@@ -1478,8 +1587,7 @@ public:
         menuBar->setBounds(
             area.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
-
-        auto margin = 2; // Adjusted margin value for top and bottom spacing
+       auto margin = 2; // Adjusted margin value for top and bottom spacing
 
         // Create a FlexBox container
         juce::FlexBox flexBox;
@@ -1590,6 +1698,7 @@ private:
     std::unique_ptr<ModelStatusTimer> mModelStatusTimer { nullptr };
 
     ComboBox modelPathComboBox;
+
     // Two usefull variables to keep track of the selected item in the modelPathComboBox
     // and the item index of the last loaded model
     // These are used to restore the selected item in the modelPathComboBox
@@ -1680,6 +1789,7 @@ private:
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
+    std::unique_ptr<PopupMenu> macExtraMenu;
 
     void play()
     {
