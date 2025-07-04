@@ -18,6 +18,7 @@ using namespace juce;
 class TitledTextBox : public juce::Component
 {
 public:
+
     TitledTextBox()
     {
         // Attach the label to the text box
@@ -66,6 +67,7 @@ public:
 
     juce::String getText() { return textBox.getText(); }
 
+    juce::TextEditor* getTextEditor() { return &textBox; } //getter for the text editor
 private:
     juce::TextEditor textBox;
     juce::Label titleLabel;

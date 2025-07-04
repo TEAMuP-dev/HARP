@@ -1284,7 +1284,10 @@ public:
 
         // processCancelButton.setEnabled(false); // this is the og v3
         resetProcessingButtons(); // This is the new way
+
+
     }
+
 
     void processCallback()
     {
@@ -1874,6 +1877,15 @@ private:
             
             // now, we can enable the process button
             resetProcessingButtons();
+            if (auto* editor = controlAreaWidget.getInputPromptEditor())
+            {
+                DBG("Attempting grabKeyboardFocus()");
+                editor->grabKeyboardFocus();  // focus the input prompt editor
+            }
+            else
+            {
+                DBG("Input prompt editor is null");
+            }
             return;
         }
 
@@ -1899,6 +1911,23 @@ private:
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
             controlAreaWidget.populateControls();
+
+            juce::Timer::callAfterDelay(100, [this]
+                {
+                    if (auto* editor = controlAreaWidget.getInputPromptEditor())
+                    {
+                        editor->grabKeyboardFocus();
+                        DBG("Delayed grabKeyboardFocus() after model load");
+                
+                        if (auto* comp = juce::Component::getCurrentlyFocusedComponent())
+                            DBG("Currently focused component: " + comp->getName());
+                        else
+                            DBG("No component has focus");
+                    }
+                });
+                
+
+    
             // inputTracksWidget.populateTracks();
             // outputTracksWidget.populateTracks();
             // trackAreaWidget.setModel(model);
