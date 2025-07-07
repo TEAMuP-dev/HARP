@@ -27,7 +27,7 @@ public:
     void paint(Graphics& g) override;
     void resized() override;
 
-    NoteGridComponent* getNoteGrid() { return &noteGrid; }
+    Component* getNoteGrid() { return &noteGridContainer; }
 
     void setResolution(int pixelsPerSecond);
     void setHideKeys(bool _hideKeys) { hideKeys = _hideKeys; }
@@ -73,7 +73,7 @@ private:
 
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;
-    Component noteGridContainer;
+    Viewport noteGridContainer;
 
     Range<double> fullKeyRange = { 0.0, 128.0 };
 

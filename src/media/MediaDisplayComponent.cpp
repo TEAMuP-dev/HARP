@@ -78,20 +78,24 @@ void MediaDisplayComponent::resized()
     // Add overhead panel if needed
     if (getNumOverheadLabels() > 0)
     {
-        mediaAreaFlexBox.items.add(
-            juce::FlexItem(overheadPanel)
-                .withHeight(labelHeight + 2 * controlSpacing)
-                .withMargin({ 0, getVerticalControlWidth(), controlSpacing, getMediaXPos() }));
+        mediaAreaFlexBox.items.add(juce::FlexItem(overheadPanel)
+                                       .withHeight(labelHeight + 2 * controlSpacing)
+                                       .withMargin({ 0,
+                                                     getVerticalControlWidth(),
+                                                     static_cast<float>(controlSpacing),
+                                                     getMediaXPos() }));
     }
 
     // Media component takes remaining space
     mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
 
     // Add horizontal scrollbar with fixed height
-    mediaAreaFlexBox.items.add(
-        juce::FlexItem(horizontalScrollBar)
-            .withHeight(scrollBarSize + 2 * controlSpacing)
-            .withMargin({ controlSpacing, getVerticalControlWidth(), 0, getMediaXPos() }));
+    mediaAreaFlexBox.items.add(juce::FlexItem(horizontalScrollBar)
+                                   .withHeight(scrollBarSize + 2 * controlSpacing)
+                                   .withMargin({ static_cast<float>(controlSpacing),
+                                                 getVerticalControlWidth(),
+                                                 0,
+                                                 getMediaXPos() }));
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());

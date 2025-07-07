@@ -38,8 +38,6 @@ public:
 
     void updateVisibleRange(Range<double> newRange) override;
 
-    // void addLabels(LabelList& labels) override; // was deleted in new v2
-
     void resized() override;
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override

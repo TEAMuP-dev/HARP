@@ -15,7 +15,10 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth,
 {
     addAndMakeVisible(keyboard);
     addAndMakeVisible(noteGridContainer);
-    noteGridContainer.addAndMakeVisible(noteGrid);
+    noteGridContainer.setViewedComponent(&noteGrid, false);
+    noteGridContainer.setScrollBarsShown(false, false);
+    noteGridContainer.setInterceptsMouseClicks(true, false);
+    noteGrid.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(verticalScrollBar);
     verticalScrollBar.setAutoHide(false);
@@ -57,11 +60,11 @@ void PianoRollComponent::paint(Graphics& /*g*/)
 
     noteGrid.setResolution(pixelsPerSecond);
 
-    double currYPosition = -visibleKeyRange.getStart() * keyHeight;
-    double currXPosition = -visibleMediaRange.getStart() * pixelsPerSecond;
+    int currYPosition = static_cast<int>(visibleKeyRange.getStart() * keyHeight);
+    int currXPosition = static_cast<int>(visibleMediaRange.getStart() * pixelsPerSecond);
 
-    keyboard.setTopLeftPosition(0, static_cast<int>(currYPosition));
-    noteGrid.setTopLeftPosition(static_cast<int>(currXPosition), static_cast<int>(currYPosition));
+    keyboard.setTopLeftPosition(0, -currYPosition);
+    noteGridContainer.setViewPosition(currXPosition, currYPosition);
 
     sendChangeMessage();
 }
@@ -75,14 +78,10 @@ void PianoRollComponent::resized()
     Rectangle<int> controlsArea = getLocalBounds().removeFromRight(getControlWidth());
 
     verticalScrollBar.setBounds(controlsArea.removeFromLeft(scrollBarSize + 2 * scrollBarSpacing)
-                                    //.reduced(scrollBarSpacing)
                                     .reduced(0, 2 * scrollBarSpacing)
                                     .withTrimmedLeft(2 * scrollBarSpacing));
     verticalZoomSlider.setBounds(
-        controlsArea.removeFromRight(static_cast<int>(1.5 * scrollBarSize)) // + scrollBarSpacing)
-            //.withTrimmedRight(scrollBarSpacing)
-            //.reduced(0, scrollBarSpacing)
-            );
+        controlsArea.removeFromRight(static_cast<int>(1.5 * scrollBarSize)));
 }
 
 void PianoRollComponent::setResolution(int pixelsPerSecond)

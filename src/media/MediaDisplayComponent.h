@@ -114,7 +114,7 @@ public:
     void stop();
 
     virtual double getTotalLengthInSecs() = 0;
-    virtual double getTimeAtOrigin() { return 0.0; }
+    virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
 
     virtual void updateVisibleRange(Range<double> r);

@@ -197,11 +197,12 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
             {
                 // Do nothing
             }
+
+            repaint();
         }
         else
         {
             MediaDisplayComponent::mouseWheelMove(evt, wheel);
         }
-        repaint();
     }
 }
