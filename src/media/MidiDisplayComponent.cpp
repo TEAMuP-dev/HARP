@@ -105,10 +105,10 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
             }
 
             // Create a component for each for each note
-            MidiNoteComponent n = MidiNoteComponent(static_cast<unsigned char>(noteNumber),
-                                                    static_cast<unsigned char>(velocity),
-                                                    startTime,
-                                                    duration);
+            MidiNote n = MidiNote(static_cast<unsigned char>(noteNumber),
+                                  startTime,
+                                  duration,
+                                  static_cast<unsigned char>(velocity));
             pianoRoll.insertNote(n);
         }
     }

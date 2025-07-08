@@ -47,7 +47,7 @@ public:
 
     void autoCenterViewBox(int medianMidi, float stdDevMidi);
 
-    void insertNote(MidiNoteComponent n);
+    void insertNote(MidiNote n);
     void resetNotes();
 
     int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }

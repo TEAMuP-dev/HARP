@@ -8,12 +8,6 @@ const char* KeyboardComponent::pitchNames[] = {
 
 const Array<int> KeyboardComponent::blackPitches = Array(1, 3, 6, 8, 10);
 
-KeyboardComponent::KeyboardComponent() {}
-
-KeyboardComponent::~KeyboardComponent() {}
-
-float KeyboardComponent::getKeyHeight() { return static_cast<float>(getHeight()) / 128.0f; }
-
 void KeyboardComponent::paint(Graphics& g)
 {
     const float keyHeight = getKeyHeight();
@@ -40,15 +34,19 @@ void KeyboardComponent::paint(Graphics& g)
         }
 
         g.setColour(blackPitches.contains(pitch) ? blackKeyColor : whiteKeyColor);
-        g.fillRect(0, (int) cumHeight, getWidth(), (int) keyHeight);
+        g.fillRect(0, static_cast<int>(cumHeight), getWidth(), static_cast<int>(keyHeight) - 1);
 
         if (isKeyboardComponent())
         {
             String noteName = String(i) + " (" + pitchNames[pitch] + String(octave) + ")";
 
             g.setColour(Colours::white);
-            g.drawText(
-                noteName, 5, (int) cumHeight, getWidth(), (int) keyHeight, Justification::left);
+            g.drawText(noteName,
+                       5,
+                       static_cast<int>(cumHeight),
+                       getWidth(),
+                       static_cast<int>(keyHeight - 1.0f),
+                       Justification::left);
         }
 
         cumHeight += keyHeight;
@@ -57,3 +55,5 @@ void KeyboardComponent::paint(Graphics& g)
         g.drawLine(0.0f, cumHeight, static_cast<float>(getWidth()), cumHeight);
     }
 }
+
+float KeyboardComponent::getKeyHeight() { return static_cast<float>(getHeight()) / 128.0f; }

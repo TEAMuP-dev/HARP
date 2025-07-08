@@ -9,16 +9,16 @@ using namespace juce;
 class KeyboardComponent : public Component
 {
 public:
-    KeyboardComponent();
+    KeyboardComponent() {};
 
-    ~KeyboardComponent();
-
-    float getKeyHeight();
-
-    void paint(Graphics& g);
+    ~KeyboardComponent() {};
 
     static const char* pitchNames[];
     static const Array<int> blackPitches;
+
+    void paint(Graphics& g);
+
+    float getKeyHeight();
 
     virtual bool isKeyboardComponent() { return true; }
 };

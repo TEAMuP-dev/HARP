@@ -91,7 +91,7 @@ void PianoRollComponent::setResolution(int pixelsPerSecond)
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
-    noteGrid.updateLength(lengthInSecs);
+    noteGrid.setLength(lengthInSecs);
 
     if (lengthInSecs > 0)
     {
@@ -165,7 +165,7 @@ void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
     double zoomAmount = keysVisibleToZoom(halfRange * 2);
     verticalZoomSlider.setValue(zoomAmount, dontSendNotification);
 }
-void PianoRollComponent::insertNote(MidiNoteComponent n) { noteGrid.insertNote(n); }
+void PianoRollComponent::insertNote(MidiNote n) { noteGrid.insertNote(n); }
 
 void PianoRollComponent::resetNotes() { noteGrid.resetNotes(); }
 
