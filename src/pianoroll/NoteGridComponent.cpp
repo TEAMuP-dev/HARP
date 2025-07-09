@@ -18,28 +18,17 @@ void NoteGridComponent::paint(Graphics& g)
     // Paint all notes
     for (auto n : midiNotes)
     {
+        const float noteWidth = static_cast<float>(n->duration * pixelsPerSecond);
         const float noteHeight = getKeyHeight();
 
         const float noteXPos = static_cast<float>(n->startTime * pixelsPerSecond);
         const float noteYPos = static_cast<float>(getHeight()) - ((n->noteNumber) * noteHeight);
 
-        const float noteWidth = static_cast<float>(n->duration * pixelsPerSecond);
-
         Rectangle<float> bounds(noteXPos, noteYPos, jmax(3.0f, noteWidth), noteHeight - 1.0f);
 
-        // Note border
-        //g.setColour(Colours::darkgrey);
+        // Note fill
         g.setColour(Colours::red.brighter().withAlpha(0.75f));
         g.fillRect(bounds.toNearestInt());
-
-        // Note fill
-        /*g.setColour(Colours::red.brighter());
-        g.fillRect(bounds.translated(1, 1)
-                       .withTrimmedLeft(1)
-                       .withTrimmedRight(1)
-                       .withTrimmedTop(1)
-                       .withTrimmedBottom(1)
-                       .toNearestInt());*/
 
         if ((noteWidth >= 5) & (noteHeight >= 8))
         {

@@ -241,7 +241,7 @@ void MediaDisplayComponent::repositionLabels()
 void MediaDisplayComponent::changeListenerCallback(ChangeBroadcaster*)
 {
     repaint();
-    resized();
+    //resized();
 }
 
 void MediaDisplayComponent::resetMedia()
@@ -736,6 +736,8 @@ void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
 
     Component* mediaComponentPtr = getMediaComponent();
     l->addMarkersTo(mediaComponentPtr);
+
+    resized();
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)

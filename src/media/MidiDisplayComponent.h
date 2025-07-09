@@ -26,7 +26,7 @@ public:
 
     float getVerticalControlWidth() override
     {
-        return static_cast<float>(pianoRoll.getControlWidth());
+        return static_cast<float>(pianoRoll.getControlsWidth());
     }
 
     void loadMediaFile(const URL& filePath) override;

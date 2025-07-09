@@ -13,52 +13,43 @@
  --------------------
  */
 
-class PianoRollComponent : public Component, public ChangeBroadcaster, private ScrollBar::Listener
+class PianoRollComponent : public Component, private ScrollBar::Listener
 {
 public:
-    PianoRollComponent(int _keyboardWidth = 70,
-                       int _pianoRollSpacing = 5,
-                       int _scrollBarSize = 10,
-                       int _scrollBarSpacing = 2,
-                       bool _hideKeys = false);
+    PianoRollComponent(int kbw = 70, int prs = 3, int sbsz = 8, int sbsp = 1, bool hk = false);
 
     ~PianoRollComponent() override;
 
-    void paint(Graphics& g) override;
     void resized() override;
 
-    Component* getNoteGrid() { return &noteGridContainer; }
+    void setResolution(int pps);
+    void setHideKeys(bool hk) { hideKeys = hk; }
 
-    void setResolution(int pixelsPerSecond);
-    void setHideKeys(bool _hideKeys) { hideKeys = _hideKeys; }
+    Component* getNoteGrid() { return &noteGridContainer; }
+    double getResolution() { return noteGrid.getPixelsPerSecond(); }
+    bool isHidingKeys() { return hideKeys; }
 
     void resizeNoteGrid(double lengthInSecs);
-
-    void updateVisibleKeyRange(Range<double> newRange);
-    void updateVisibleMediaRange(Range<double> newRange);
-
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
-
-    void visibleKeyRangeZoom(double amount);
-
-    void verticalMouseWheelMoveEvent(float deltaY);
-
-    void verticalMouseWheelZoomEvent(float deltaZoom);
-
-    void autoCenterViewBox(int medianMidi, float stdDevMidi);
 
     void insertNote(MidiNote n);
     void resetNotes();
 
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
+
+    void verticalMouseWheelMoveEvent(float deltaY);
+    void verticalMouseWheelZoomEvent(float deltaZoom);
+
+    void visibleKeyRangeZoom(double zoomFactor);
+    void updateVisibleKeyRange(Range<double> newRange);
+    void updateVisibleMediaRange(Range<double> newRange);
+
+    void autoCenterViewBox(int medianMidi, float stdDevMidi);
+
     int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
-    int getPianoRollWidth();
-    int getControlWidth() { return static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing; }
     int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
-    int getScrollBarSize() { return scrollBarSize; }
-    int getScrollBarSpacing() { return scrollBarSpacing; }
-    double getResolution() { return noteGrid.getPixelsPerSecond(); }
-    int getMaxKeysVisible() { return maxKeysVisible; }
-    bool isHidingKeys() { return hideKeys; }
+    double getKeyHeight();
+    int getPianoRollContainerWidth();
+    int getControlsWidth() { return static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing; }
 
 private:
     double zoomToKeysVisible(double zoomFactor);
@@ -73,15 +64,16 @@ private:
 
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;
+
+    Viewport keyboardContainer;
     Viewport noteGridContainer;
 
-    Range<double> fullKeyRange = { 0.0, 128.0 };
+    Range<double> visibleMediaRange;
 
     int minKeysVisible = 5;
     int maxKeysVisible = 16;
     Range<double> visibleKeyRange;
-
-    Range<double> visibleMediaRange;
+    Range<double> fullKeyRange = { 0.0, 128.0 };
 
     ScrollBar verticalScrollBar { true };
 
