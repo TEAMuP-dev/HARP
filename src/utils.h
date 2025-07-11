@@ -54,6 +54,7 @@ struct PyHarpComponentInfo
 {
     juce::Uuid id { "" };
     std::string label { "" };
+    std::string info { "" };
     virtual ~PyHarpComponentInfo() = default; // virtual destructor
 };
 
