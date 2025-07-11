@@ -17,28 +17,18 @@ public:
         return MidiDisplayComponent::getSupportedExtensions();
     }
 
-    Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
+    void resized() override;
 
-    float getMediaXPos() override
-    {
-        return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
-    }
-
-    float getVerticalControlWidth() override
-    {
-        return static_cast<float>(pianoRoll.getControlsWidth());
-    }
+    void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
 
     void loadMediaFile(const URL& filePath) override;
 
     void startPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
-    float getPixelsPerSecond() override { return (float) pianoRoll.getResolution(); }
+    float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
 
     void updateVisibleRange(Range<double> newRange) override;
-
-    void resized() override;
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
     {
@@ -46,6 +36,14 @@ public:
     }
 
 private:
+    Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
+
+    float getMediaHeight() override;
+    float getVerticalControlsWidth() override;
+
+    float getMediaXPos() override;
+    float mediaYToDisplayY(const float mY) override;
+
     void resetDisplay() override;
 
     void postLoadActions(const URL& filePath) override;

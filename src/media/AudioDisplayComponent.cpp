@@ -8,6 +8,7 @@ AudioDisplayComponent::AudioDisplayComponent(String trackName, bool required)
 
     thumbnailComponent.addMouseListener(this, true);
 
+    // Need to repaint when visible range changes
     thumbnail.addChangeListener(this);
 
     mediaHandlerInstructions =

@@ -13,7 +13,7 @@
  --------------------
  */
 
-class PianoRollComponent : public Component, private ScrollBar::Listener
+class PianoRollComponent : public Component, public ChangeBroadcaster, private ScrollBar::Listener
 {
 public:
     PianoRollComponent(int kbw = 70, int prs = 3, int sbsz = 8, int sbsp = 1, bool hk = false);
@@ -42,6 +42,9 @@ public:
     void visibleKeyRangeZoom(double zoomFactor);
     void updateVisibleKeyRange(Range<double> newRange);
     void updateVisibleMediaRange(Range<double> newRange);
+
+    //Range<double> getVisibleMediaRange() { return visibleMediaRange; }
+    Range<double> getVisibleKeyRange() { return visibleKeyRange; }
 
     void autoCenterViewBox(int medianMidi, float stdDevMidi);
 

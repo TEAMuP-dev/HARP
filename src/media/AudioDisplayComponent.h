@@ -17,6 +17,7 @@ public:
 
 private:
     AudioThumbnail& thumbnail;
+
     Range<double>& visibleRange;
 };
 
@@ -33,13 +34,11 @@ public:
         return AudioDisplayComponent::getSupportedExtensions();
     }
 
-    Component* getMediaComponent() override { return &thumbnailComponent; }
+    void resized() override;
 
     void loadMediaFile(const URL& filePath) override;
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
-
-    void resized() override;
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
     {
@@ -47,6 +46,8 @@ public:
     }
 
 private:
+    Component* getMediaComponent() override { return &thumbnailComponent; }
+
     void resetDisplay() override;
 
     void postLoadActions(const URL& filePath) override;

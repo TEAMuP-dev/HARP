@@ -29,35 +29,34 @@ public:
     {
         Input,
         Output,
-        // Hybrid
+        Thumbnail
     };
+
+    //bool isInputTrack() { return ioMode == 0; }
+    //bool isOutputTrack() { return ioMode == 1; }
+    //bool isThumbnailTrack() { return ioMode == 2; }
 
     MediaDisplayComponent();
     // MediaDisplayComponent(String trackName);
-    MediaDisplayComponent(String trackName, bool required = true);
+    MediaDisplayComponent(String name, bool req = true);
     ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-    virtual void repositionScrollBar();
-
-    virtual Component* getMediaComponent() { return this; }
-    virtual float getMediaXPos() { return 0.0f; }
-    virtual float getVerticalControlWidth() { return 0.0f; }
-
-    String getTrackName() { return trackName; }
-    void setTrackName(String name) { trackName = name; }
-    void setTrackId(juce::Uuid id) { trackID = id; }
-    juce::Uuid getTrackId() { return trackID; }
-
-    float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
-    float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
 
     void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override;
+    void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+
+    void setTrackName(String name) { trackName = name; }
+    String getTrackName() { return trackName; }
+
+    bool isRequired() const { return required; }
+
+    void setTrackId(juce::Uuid id) { trackID = id; }
+    juce::Uuid getTrackId() { return trackID; }
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
@@ -93,9 +92,6 @@ public:
 
     // Callback for the save button
     void saveCallback();
-
-    bool displaysInput() { return ioMode == 0; }
-    bool displaysOutput() { return ioMode == 1; }
 
     void clearDroppedFile() { droppedFilePath = URL(); }
 
@@ -138,9 +134,6 @@ public:
     void setIOMode(IOMode mode) { ioMode = mode; }
     IOMode getIOMode() { return ioMode; }
 
-    // void setRequired(bool required) { _required = required; }
-    bool isRequired() const { return _required; }
-
 protected:
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
     {
@@ -148,10 +141,6 @@ protected:
     }
 
     void setNewTarget(URL filePath);
-
-    double mediaXToTime(const float x);
-    float timeToMediaX(const double t);
-    float mediaXToDisplayX(const float mX);
 
     void resetTransport();
 
@@ -214,6 +203,18 @@ protected:
     MultiButton::Mode saveButtonInactiveInfo;
 
 private:
+    virtual Component* getMediaComponent() { return this; }
+
+    virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
+    virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
+    virtual float getVerticalControlsWidth() { return 0.0f; }
+
+    virtual float getMediaXPos() { return 0.0f; }
+    double mediaXToTime(const float x);
+    float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
+    virtual float mediaYToDisplayY(const float mY) { return mY; }
+
     void populateTrackHeader();
 
     void resetPaths();
@@ -247,7 +248,7 @@ private:
     IOMode ioMode = IOMode::Input;
     // It's const because we only set it in the constructor
     // and never change it again
-    const bool _required = true;
+    const bool required = true;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;

@@ -7,7 +7,8 @@ MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
 {
     mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);
-    //pianoRoll.addChangeListener(this);
+    // Need to reposition labels after vertical zoom or scroll
+    pianoRoll.addChangeListener(this);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
@@ -18,7 +19,7 @@ MidiDisplayComponent::~MidiDisplayComponent()
     resetTransport();
 
     pianoRoll.removeMouseListener(this);
-    //pianoRoll.removeChangeListener(this);
+    pianoRoll.removeChangeListener(this);
 }
 
 StringArray MidiDisplayComponent::getSupportedExtensions()
@@ -143,6 +144,30 @@ void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
     pianoRoll.setBounds(mediaComponent.getBounds().withY(0));
+}
+
+float MidiDisplayComponent::getMediaHeight()
+{
+    return 128.0f * static_cast<float>(pianoRoll.getKeyHeight());
+}
+
+float MidiDisplayComponent::getVerticalControlsWidth()
+{
+    return static_cast<float>(pianoRoll.getControlsWidth());
+}
+
+float MidiDisplayComponent::getMediaXPos()
+{
+    return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
+}
+
+float MidiDisplayComponent::mediaYToDisplayY(const float mY)
+{
+    float visibleStartY = static_cast<float>(pianoRoll.getVisibleKeyRange().getStart() * pianoRoll.getKeyHeight());
+
+    float dY = mY - visibleStartY;
+
+    return dY;
 }
 
 void MidiDisplayComponent::resetDisplay()

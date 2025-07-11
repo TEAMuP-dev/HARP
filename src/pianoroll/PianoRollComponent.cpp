@@ -141,6 +141,8 @@ void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
     verticalScrollBar.setCurrentRange(visibleKeyRange);
 
     resized();
+
+    sendChangeMessage();
 }
 
 void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)

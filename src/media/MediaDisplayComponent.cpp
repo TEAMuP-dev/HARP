@@ -2,8 +2,8 @@
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
-MediaDisplayComponent::MediaDisplayComponent(String name, bool required)
-    : _required(required), trackName(name)
+MediaDisplayComponent::MediaDisplayComponent(String name, bool req)
+    : trackName(name), required(req)
 {
     resetPaths();
 
@@ -81,7 +81,7 @@ void MediaDisplayComponent::resized()
         mediaAreaFlexBox.items.add(juce::FlexItem(overheadPanel)
                                        .withHeight(labelHeight + 2 * controlSpacing)
                                        .withMargin({ 0,
-                                                     getVerticalControlWidth(),
+                                                     getVerticalControlsWidth(),
                                                      static_cast<float>(controlSpacing),
                                                      getMediaXPos() }));
     }
@@ -93,7 +93,7 @@ void MediaDisplayComponent::resized()
     mediaAreaFlexBox.items.add(juce::FlexItem(horizontalScrollBar)
                                    .withHeight(scrollBarSize + 2 * controlSpacing)
                                    .withMargin({ static_cast<float>(controlSpacing),
-                                                 getVerticalControlWidth(),
+                                                 getVerticalControlsWidth(),
                                                  0,
                                                  getMediaXPos() }));
 
@@ -147,13 +147,6 @@ void MediaDisplayComponent::resized()
     repositionLabels();
 }
 
-void MediaDisplayComponent::repositionScrollBar()
-{
-    horizontalScrollBar.setBounds(mediaAreaContainer.getBounds()
-                                      .removeFromBottom(scrollBarSize + 2 * controlSpacing)
-                                      .reduced(controlSpacing));
-}
-
 void MediaDisplayComponent::repositionLabels()
 {
     if (visibleRange.getLength() == 0.0)
@@ -200,6 +193,7 @@ void MediaDisplayComponent::repositionLabels()
                 yPos = lo->getRelativeY() * mediaHeight;
                 yPos -= static_cast<float>(labelHeight) / 2.0f;
                 yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
+                yPos = mediaYToDisplayY(yPos);
             }
             juce::Rectangle<float> labelBounds(
                 xPos, yPos, labelWidth, static_cast<float>(labelHeight));
@@ -236,12 +230,6 @@ void MediaDisplayComponent::repositionLabels()
 
     positionLabels(overheadLabels);
     positionLabels(labelOverlays);
-}
-
-void MediaDisplayComponent::changeListenerCallback(ChangeBroadcaster*)
-{
-    repaint();
-    //resized();
 }
 
 void MediaDisplayComponent::resetMedia()
@@ -724,6 +712,8 @@ void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
 
     // mediaComponent.addAndMakeVisible(l);
     // l->addMarkersTo(mediaComponent);
+
+    repositionLabels();
 }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
@@ -773,7 +763,6 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     }
 
     resized();
-    repaint();
 }
 
 void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
