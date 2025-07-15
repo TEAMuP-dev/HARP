@@ -25,19 +25,8 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
-    enum IOMode
-    {
-        Input,
-        Output,
-        Thumbnail
-    };
-
-    //bool isInputTrack() { return ioMode == 0; }
-    //bool isOutputTrack() { return ioMode == 1; }
-    //bool isThumbnailTrack() { return ioMode == 2; }
-
     MediaDisplayComponent();
-    MediaDisplayComponent(String name, bool req = true);
+    MediaDisplayComponent(String name, bool req = true, DisplayMode mode = DisplayMode::Hybrid);
     ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
@@ -53,6 +42,12 @@ public:
 
     bool isRequired() const { return required; }
 
+    bool isInputTrack() { return (displayMode == 0) || isHybridTrack(); }
+    bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
+    bool isHybridTrack() { return displayMode == 2; }
+    bool isThumbnailTrack() { return displayMode == 3; }
+    //DisplayMode getDisplayMode() { return displayMode; }
+
     void setTrackId(juce::Uuid id) { trackID = id; }
     juce::Uuid getTrackId() { return trackID; }
 
@@ -61,6 +56,8 @@ public:
     void updateDisplay(const URL& filePath); // Add new file to existing display
 
     virtual void loadMediaFile(const URL& filePath) = 0;
+
+    //
 
     URL getTargetFilePath() { return targetFilePath; }
 
@@ -77,7 +74,7 @@ public:
 
     void overwriteTarget();
 
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
@@ -127,9 +124,6 @@ public:
     int getNumOverheadLabels();
 
     std::function<void(const juce::String&)> instructionBoxWriter;
-
-    void setIOMode(IOMode mode) { ioMode = mode; }
-    IOMode getIOMode() { return ioMode; }
 
 protected:
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
@@ -200,6 +194,8 @@ protected:
     MultiButton::Mode saveButtonInactiveInfo;
 
 private:
+    void populateTrackHeader();
+
     virtual Component* getMediaComponent() { return this; }
 
     virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
@@ -211,8 +207,6 @@ private:
     float timeToMediaX(const double t);
     float mediaXToDisplayX(const float mX);
     virtual float mediaYToDisplayY(const float mY) { return mY; }
-
-    void populateTrackHeader();
 
     virtual void resetMedia() = 0;
     void resetPaths();
@@ -242,7 +236,7 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    IOMode ioMode = IOMode::Input;
+    const DisplayMode displayMode;
     // It's const because we only set it in the constructor
     // and never change it again
     const bool required = true;

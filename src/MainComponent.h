@@ -35,6 +35,7 @@
 
 #include "AppSettings.h"
 #include "windows/AboutWindow.h"
+#include "utils.h"
 
 using namespace juce;
 
@@ -1461,10 +1462,10 @@ private:
     ControlAreaWidget controlAreaWidget;
 
     Label inputTracksLabel { "Input Tracks", "Input Tracks" };
-    TrackAreaWidget inputTrackAreaWidget;
+    TrackAreaWidget inputTrackAreaWidget { DisplayMode::Input };
 
     Label outputTracksLabel { "Output Tracks", "Output Tracks" };
-    TrackAreaWidget outputTrackAreaWidget;
+    TrackAreaWidget outputTrackAreaWidget { DisplayMode::Output };
 
     MediaClipboardWidget mediaClipboardWidget;
 

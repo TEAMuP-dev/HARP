@@ -2,8 +2,8 @@
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
-MediaDisplayComponent::MediaDisplayComponent(String name, bool req)
-    : trackName(name), required(req)
+MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode mode)
+    : trackName(name), required(req), displayMode(mode)
 {
     formatManager.registerBasicFormats();
 
@@ -56,7 +56,7 @@ void MediaDisplayComponent::paint(Graphics& g)
     }
 }
 
-void MediaDisplayComponent::resized()
+void MediaDisplayComponent::resized() //
 {
     auto totalBounds = getLocalBounds();
 
@@ -74,7 +74,7 @@ void MediaDisplayComponent::resized()
     mediaAreaFlexBox.flexDirection = juce::FlexBox::Direction::column;
     mediaAreaFlexBox.items.clear();
 
-    // Add overhead panel if needed
+    // Add overhead panel if there are labels to display
     if (getNumOverheadLabels() > 0)
     {
         mediaAreaFlexBox.items.add(juce::FlexItem(overheadPanel)
@@ -146,7 +146,7 @@ void MediaDisplayComponent::resized()
     repositionLabels();
 }
 
-void MediaDisplayComponent::repositionLabels()
+void MediaDisplayComponent::repositionLabels() //
 {
     if (visibleRange.getLength() == 0.0)
     {
@@ -846,10 +846,7 @@ void MediaDisplayComponent::horizontalMove(float deltaX)
     auto newStart = visibleStart - deltaX * totalLength / 10.0;
     newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
 
-    if (! isPlaying())
-    {
-        updateVisibleRange({ newStart, newStart + totalLength });
-    }
+    updateVisibleRange({ newStart, newStart + totalLength });
 }
 
 void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)

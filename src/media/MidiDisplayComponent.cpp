@@ -2,8 +2,8 @@
 
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
-    : MediaDisplayComponent(trackName, required)
+MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required, DisplayMode displayMode)
+    : MediaDisplayComponent(trackName, required, displayMode)
 {
     mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);

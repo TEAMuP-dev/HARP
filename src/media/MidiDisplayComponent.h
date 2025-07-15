@@ -8,7 +8,7 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
     MidiDisplayComponent();
-    MidiDisplayComponent(String trackName, bool required = true);
+    MidiDisplayComponent(String trackName, bool required = true, DisplayMode mode = DisplayMode::Hybrid);
     ~MidiDisplayComponent() override;
 
     static StringArray getSupportedExtensions();

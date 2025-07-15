@@ -9,6 +9,7 @@
 #include "TrackAreaWidget.h"
 #include "gui/MultiButton.h"
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "utils.h"
 
 using namespace juce;
 
@@ -109,7 +110,7 @@ private:
     //MultiButton::Mode saveButtonInactiveInfo;
 
     //Viewport trackArea;
-    TrackAreaWidget trackAreaWidget { true, 50 };
+    TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 50 };
     //TrackAreaWidget* trackAreaWidget;
 
     int selectedIdx = -1;

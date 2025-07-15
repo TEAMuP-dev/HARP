@@ -20,8 +20,13 @@ using namespace juce;
 class TrackAreaWidget : public Component, public ChangeListener, public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget(bool acceptDragDrop_ = false, int fixedHeight_ = 0)
-        : acceptDragDrop(acceptDragDrop_), fixedHeight(fixedHeight_)
+    bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }
+    bool isOutputWidget() { return (displayMode == 1) || isHybridWidget(); }
+    bool isHybridWidget() { return displayMode == 2; }
+    bool isThumbnailWidget() { return displayMode == 3; }
+
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
+        : displayMode(mode), fixedHeight(height)
     {
     }
 
@@ -35,11 +40,11 @@ public:
 
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
-            m = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required);
+            m = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required, displayMode);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
-            m = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required);
+            m = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required, displayMode);
         }
 
         if (m)
@@ -55,39 +60,36 @@ public:
         resized();
     }
 
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return acceptDragDrop; }
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isThumbnailWidget(); }
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
     {
-        if (acceptDragDrop)
+        for (String f : files)
         {
-            for (String f : files)
-            {
-                File droppedFile = File(f);
-                String ext = droppedFile.getFileExtension();
+            File droppedFile = File(f);
+            String ext = droppedFile.getFileExtension();
 
-                if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
-                {
-                    auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
-                    audioTrackInfo->id = Uuid();
-                    audioTrackInfo->required = false;
-                    ComponentInfo componentInfo { audioTrackInfo->id, audioTrackInfo };
-                    addTrack(componentInfo);
-                    mediaDisplays.back()->initializeDisplay(URL(droppedFile));
-                }
-                else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
-                {
-                    auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
-                    midiTrackInfo->id = Uuid();
-                    midiTrackInfo->required = false;
-                    ComponentInfo componentInfo { midiTrackInfo->id, midiTrackInfo };
-                    addTrack(componentInfo);
-                    mediaDisplays.back()->initializeDisplay(URL(droppedFile));
-                }
-                else
-                {
-                    DBG("Attempted adding track of unsupported file type: " << f);
-                }
+            if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
+            {
+                auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
+                audioTrackInfo->id = Uuid();
+                audioTrackInfo->required = false;
+                ComponentInfo componentInfo { audioTrackInfo->id, audioTrackInfo };
+                addTrack(componentInfo);
+                mediaDisplays.back()->initializeDisplay(URL(droppedFile));
+            }
+            else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
+            {
+                auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
+                midiTrackInfo->id = Uuid();
+                midiTrackInfo->required = false;
+                ComponentInfo componentInfo { midiTrackInfo->id, midiTrackInfo };
+                addTrack(componentInfo);
+                mediaDisplays.back()->initializeDisplay(URL(droppedFile));
+            }
+            else
+            {
+                DBG("Attempted adding track of unsupported file type: " << f);
             }
         }
     }
@@ -178,7 +180,6 @@ private:
 
     SharedResourcePointer<InstructionBox> instructionBox;
 
-    const bool acceptDragDrop = false;
-
+    const DisplayMode displayMode;
     const int fixedHeight = 0;
 };

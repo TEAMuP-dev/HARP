@@ -38,6 +38,14 @@ inline String enumToString(EnumType enumValue)
     return String(magic_enum::enum_name(enumValue).data());
 }
 
+enum DisplayMode
+{
+    Input,
+    Output,
+    Hybrid, // All functionality
+    Thumbnail // Reduced functionality
+};
+
 enum GradioEvents
 {
     complete,
