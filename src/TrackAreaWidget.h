@@ -73,7 +73,7 @@ public:
                     audioTrackInfo->required = false;
                     ComponentInfo componentInfo { audioTrackInfo->id, audioTrackInfo };
                     addTrack(componentInfo);
-                    mediaDisplays.back()->setupDisplay(URL(droppedFile));
+                    mediaDisplays.back()->initializeDisplay(URL(droppedFile));
                 }
                 else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
                 {
@@ -82,7 +82,7 @@ public:
                     midiTrackInfo->required = false;
                     ComponentInfo componentInfo { midiTrackInfo->id, midiTrackInfo };
                     addTrack(componentInfo);
-                    mediaDisplays.back()->setupDisplay(URL(droppedFile));
+                    mediaDisplays.back()->initializeDisplay(URL(droppedFile));
                 }
                 else
                 {

@@ -5,8 +5,6 @@ MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Tr
 MediaDisplayComponent::MediaDisplayComponent(String name, bool req)
     : trackName(name), required(req)
 {
-    resetPaths();
-
     formatManager.registerBasicFormats();
 
     deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
@@ -14,24 +12,25 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req)
 
     sourcePlayer.setSource(&transportSource);
 
+    trackNameLabel.setText(trackName, juce::dontSendNotification);
+    headerComponent.addAndMakeVisible(trackNameLabel);
+    populateTrackHeader();
+    addAndMakeVisible(headerComponent);
+
+    horizontalScrollBar.setAutoHide(false);
+    horizontalScrollBar.addListener(this);
+
+    mediaAreaContainer.addMouseListener(this, true);
+    mediaAreaContainer.addAndMakeVisible(overheadPanel);
+    mediaAreaContainer.addAndMakeVisible(mediaComponent);
+    mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
+    addAndMakeVisible(mediaAreaContainer);
+
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
 
-    trackNameLabel.setText(trackName, juce::dontSendNotification);
-    addAndMakeVisible(headerComponent);
-
-    // Add controls to headerComponent
-    headerComponent.addAndMakeVisible(trackNameLabel);
-
-    addAndMakeVisible(mediaAreaContainer);
-    mediaAreaContainer.addAndMakeVisible(mediaComponent);
-    mediaAreaContainer.addAndMakeVisible(overheadPanel);
-    mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
-    horizontalScrollBar.setAutoHide(false);
-    horizontalScrollBar.addListener(this);
-    mediaAreaContainer.addMouseListener(this, true);
-
-    populateTrackHeader();
+    resetPaths();
+    resetScrollBar();
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -232,22 +231,18 @@ void MediaDisplayComponent::repositionLabels()
     positionLabels(labelOverlays);
 }
 
-void MediaDisplayComponent::resetMedia()
+void MediaDisplayComponent::resetDisplay()
 {
-    resetPaths();
     clearLabels();
-    resetDisplay();
+    resetMedia();
+    resetPaths();
+    resetScrollBar();
     sendChangeMessage();
-
-    currentHorizontalZoomFactor = 1.0;
-    horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
-    horizontalScrollBar.setVisible(false);
 }
 
-// the function we need to call when we want to load a media file
-void MediaDisplayComponent::setupDisplay(const URL& filePath)
+void MediaDisplayComponent::initializeDisplay(const URL& filePath)
 {
-    resetMedia();
+    resetDisplay();
 
     setNewTarget(filePath);
     updateDisplay(filePath);
@@ -258,7 +253,7 @@ void MediaDisplayComponent::setupDisplay(const URL& filePath)
 
 void MediaDisplayComponent::updateDisplay(const URL& filePath)
 {
-    resetDisplay();
+    resetMedia();
 
     loadMediaFile(filePath);
     postLoadActions(filePath);
@@ -450,7 +445,7 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
     }
     else
     {
-        setupDisplay(URL(mediaFile));
+        initializeDisplay(URL(mediaFile));
         saveFileButton.setMode(saveButtonActiveInfo.label);
     }
     droppedFilePath = URL();
@@ -473,7 +468,7 @@ void MediaDisplayComponent::openFileChooser()
                                      File chosenFile = browser.getResult();
                                      if (chosenFile != File {})
                                      {
-                                         setupDisplay(URL(chosenFile));
+                                         initializeDisplay(URL(chosenFile));
                                          saveFileButton.setMode(saveButtonActiveInfo.label);
                                      }
                                  });
@@ -500,6 +495,13 @@ void MediaDisplayComponent::resetPaths()
 
     tempFilePaths.clear();
     currentTempFileIdx = -1;
+}
+
+void MediaDisplayComponent::resetScrollBar()
+{
+    currentHorizontalZoomFactor = 1.0;
+    horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
+    horizontalScrollBar.setVisible(false);
 }
 
 void MediaDisplayComponent::saveCallback()

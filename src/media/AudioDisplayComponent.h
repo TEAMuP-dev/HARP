@@ -48,7 +48,7 @@ public:
 private:
     Component* getMediaComponent() override { return &thumbnailComponent; }
 
-    void resetDisplay() override;
+    void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
 

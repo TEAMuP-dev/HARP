@@ -37,7 +37,6 @@ public:
     //bool isThumbnailTrack() { return ioMode == 2; }
 
     MediaDisplayComponent();
-    // MediaDisplayComponent(String trackName);
     MediaDisplayComponent(String name, bool req = true);
     ~MediaDisplayComponent() override;
 
@@ -45,7 +44,6 @@ public:
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-
     void repositionLabels();
 
     void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
@@ -58,12 +56,11 @@ public:
     void setTrackId(juce::Uuid id) { trackID = id; }
     juce::Uuid getTrackId() { return trackID; }
 
+    void resetDisplay(); // Reset all state and media
+    void initializeDisplay(const URL& filePath); // Initialize new display
+    void updateDisplay(const URL& filePath); // Add new file to existing display
+
     virtual void loadMediaFile(const URL& filePath) = 0;
-
-    void resetMedia();
-
-    void setupDisplay(const URL& filePath);
-    void updateDisplay(const URL& filePath);
 
     URL getTargetFilePath() { return targetFilePath; }
 
@@ -217,9 +214,9 @@ private:
 
     void populateTrackHeader();
 
+    virtual void resetMedia() = 0;
     void resetPaths();
-
-    virtual void resetDisplay() = 0;
+    void resetScrollBar();
 
     virtual void postLoadActions(const URL& filePath) = 0;
 

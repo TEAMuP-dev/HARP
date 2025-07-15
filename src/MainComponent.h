@@ -1589,7 +1589,7 @@ private:
             for (size_t i = 0; i < outputMediaDisplays.size(); ++i)
             {
                 URL tempFile = outputProcessedPaths[i];
-                outputMediaDisplays[i]->setupDisplay(tempFile);
+                outputMediaDisplays[i]->initializeDisplay(tempFile);
                 outputMediaDisplays[i]->addLabels(labels);
             }
             // URL tempFilePath = outputProcessedPaths[0];

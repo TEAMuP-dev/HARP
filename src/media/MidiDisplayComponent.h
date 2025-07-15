@@ -44,7 +44,7 @@ private:
     float getMediaXPos() override;
     float mediaYToDisplayY(const float mY) override;
 
-    void resetDisplay() override;
+    void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
 
@@ -54,7 +54,7 @@ private:
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
-    double totalLengthInSecs;
+    double totalLengthInSecs = 0.0;
 
     SynthAudioSource synthAudioSource;
 

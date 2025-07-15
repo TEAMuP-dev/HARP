@@ -111,7 +111,7 @@ void AudioDisplayComponent::resized()
     thumbnailComponent.setBounds(mediaComponent.getLocalBounds());
 }
 
-void AudioDisplayComponent::resetDisplay()
+void AudioDisplayComponent::resetMedia()
 {
     MediaDisplayComponent::resetTransport();
 

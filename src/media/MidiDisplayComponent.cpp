@@ -170,7 +170,7 @@ float MidiDisplayComponent::mediaYToDisplayY(const float mY)
     return dY;
 }
 
-void MidiDisplayComponent::resetDisplay()
+void MidiDisplayComponent::resetMedia()
 {
     MediaDisplayComponent::resetTransport();
 
@@ -196,36 +196,36 @@ void MidiDisplayComponent::verticalZoom(float deltaZoom)
 
 void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    if (getTotalLengthInSecs() > 0.0)
-    {
 #if (JUCE_MAC)
-        bool commandMod = evt.mods.isCommandDown();
+    bool commandMod = evt.mods.isCommandDown();
 #else
-        bool commandMod = evt.mods.isCtrlDown();
+    bool commandMod = evt.mods.isCtrlDown();
 #endif
-        bool shiftMod = evt.mods.isShiftDown();
+    bool shiftMod = evt.mods.isShiftDown();
 
-        if (commandMod)
+    if (commandMod)
+    {
+        if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
         {
-            if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
+            if (shiftMod)
             {
-                if (shiftMod)
-                {
-                    verticalMove(-wheel.deltaY);
-                }
-                else
-                {
-                    verticalZoom(wheel.deltaY / 2);
-                }
+                verticalMove(-wheel.deltaY);
             }
             else
             {
-                // Do nothing
+                verticalZoom(wheel.deltaY / 2);
             }
-
-            repaint();
         }
         else
+        {
+            // Do nothing
+        }
+
+        repaint();
+    }
+    else
+    {
+        if (getTotalLengthInSecs() > 0.0)
         {
             MediaDisplayComponent::mouseWheelMove(evt, wheel);
         }
