@@ -1,8 +1,9 @@
 #include "AudioDisplayComponent.h"
 
 AudioDisplayComponent::AudioDisplayComponent() : AudioDisplayComponent("Audio Track") {}
-AudioDisplayComponent::AudioDisplayComponent(String trackName, bool required, DisplayMode displayMode)
-    : MediaDisplayComponent(trackName, required, displayMode)
+
+AudioDisplayComponent::AudioDisplayComponent(String name, bool req, DisplayMode mode)
+    : MediaDisplayComponent(name, req, mode)
 {
     thread.startThread(Thread::Priority::normal);
 

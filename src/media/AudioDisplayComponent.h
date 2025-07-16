@@ -25,7 +25,7 @@ class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
     AudioDisplayComponent();
-    AudioDisplayComponent(String trackName, bool required = true, DisplayMode mode = DisplayMode::Hybrid);
+    AudioDisplayComponent(String name, bool req = true, DisplayMode mode = DisplayMode::Hybrid);
     ~AudioDisplayComponent() override;
 
     static StringArray getSupportedExtensions();

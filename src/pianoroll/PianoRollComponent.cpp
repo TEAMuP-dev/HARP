@@ -2,12 +2,13 @@
 
 #include "PianoRollComponent.hpp"
 
-PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, bool hk)
+PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, bool hk, bool hC)
     : keyboardWidth(kbw),
       pianoRollSpacing(prs),
       scrollBarSize(sbsz),
       scrollBarSpacing(sbsp),
-      hideKeys(hk)
+      hideKeys(hk),
+      hideControls(hC)
 {
     addAndMakeVisible(keyboardContainer);
     keyboardContainer.setViewedComponent(&keyboard, false);
@@ -177,6 +178,11 @@ double PianoRollComponent::getKeyHeight()
 int PianoRollComponent::getPianoRollContainerWidth()
 {
     return jmax(0, getWidth() - getKeyboardWidth() - getPianoRollSpacing() - getControlsWidth());
+}
+
+int PianoRollComponent::getControlsWidth()
+{
+    return ! isHidingControls() ? static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing : 0;
 }
 
 double PianoRollComponent::zoomToKeysVisible(double zoomFactor)

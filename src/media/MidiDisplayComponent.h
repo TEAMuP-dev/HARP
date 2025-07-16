@@ -8,7 +8,7 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
     MidiDisplayComponent();
-    MidiDisplayComponent(String trackName, bool required = true, DisplayMode mode = DisplayMode::Hybrid);
+    MidiDisplayComponent(String name, bool req = true, DisplayMode mode = DisplayMode::Hybrid);
     ~MidiDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
@@ -61,5 +61,7 @@ private:
     int medianMidi;
     float stdDevMidi;
 
-    PianoRollComponent pianoRoll { 70, 3, scrollBarSize, controlSpacing, false };
+    PianoRollComponent pianoRoll {
+        70, 3, scrollBarSize, controlSpacing, isThumbnailTrack(), isThumbnailTrack()
+    };
 };

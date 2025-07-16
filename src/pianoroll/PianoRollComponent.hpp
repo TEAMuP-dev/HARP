@@ -16,7 +16,12 @@
 class PianoRollComponent : public Component, public ChangeBroadcaster, private ScrollBar::Listener
 {
 public:
-    PianoRollComponent(int kbw = 70, int prs = 3, int sbsz = 8, int sbsp = 1, bool hk = false);
+    PianoRollComponent(int kbw = 70,
+                       int prs = 3,
+                       int sbsz = 8,
+                       int sbsp = 1,
+                       bool hk = false,
+                       bool hC = false);
 
     ~PianoRollComponent() override;
 
@@ -24,10 +29,12 @@ public:
 
     void setResolution(int pps);
     void setHideKeys(bool hk) { hideKeys = hk; }
+    void setHideControls(bool hC) { hideControls = hC; }
 
     Component* getNoteGrid() { return &noteGridContainer; }
     double getResolution() { return noteGrid.getPixelsPerSecond(); }
     bool isHidingKeys() { return hideKeys; }
+    bool isHidingControls() { return hideControls; }
 
     void resizeNoteGrid(double lengthInSecs);
 
@@ -52,7 +59,7 @@ public:
     int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
     double getKeyHeight();
     int getPianoRollContainerWidth();
-    int getControlsWidth() { return static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing; }
+    int getControlsWidth();
 
 private:
     double zoomToKeysVisible(double zoomFactor);
@@ -64,6 +71,7 @@ private:
     int scrollBarSpacing;
 
     bool hideKeys;
+    bool hideControls;
 
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;

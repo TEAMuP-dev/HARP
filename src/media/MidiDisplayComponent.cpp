@@ -2,8 +2,8 @@
 
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required, DisplayMode displayMode)
-    : MediaDisplayComponent(trackName, required, displayMode)
+MidiDisplayComponent::MidiDisplayComponent(String name, bool req, DisplayMode mode)
+    : MediaDisplayComponent(name, req, mode)
 {
     mediaComponent.addAndMakeVisible(pianoRoll);
     pianoRoll.addMouseListener(this, true);
@@ -163,7 +163,8 @@ float MidiDisplayComponent::getMediaXPos()
 
 float MidiDisplayComponent::mediaYToDisplayY(const float mY)
 {
-    float visibleStartY = static_cast<float>(pianoRoll.getVisibleKeyRange().getStart() * pianoRoll.getKeyHeight());
+    float visibleStartY =
+        static_cast<float>(pianoRoll.getVisibleKeyRange().getStart() * pianoRoll.getKeyHeight());
 
     float dY = mY - visibleStartY;
 
