@@ -188,6 +188,7 @@ private:
     virtual void resetMedia() = 0;
     void resetPaths();
     void resetScrollBar();
+    void resetButtonState();
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
@@ -219,7 +220,8 @@ private:
     // Header sub-components
     Label trackNameLabel;
     MultiButton playStopButton;
-    MultiButton::Mode playButtonInfo;
+    MultiButton::Mode playButtonActiveInfo;
+    MultiButton::Mode playButtonInactiveInfo;
     MultiButton::Mode stopButtonInfo;
     MultiButton chooseFileButton;
     MultiButton::Mode chooseButtonInfo;

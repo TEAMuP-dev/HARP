@@ -19,12 +19,9 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     addAndMakeVisible(headerComponent);
 
     headerFlexBox.flexDirection = FlexBox::Direction::row;
-    //headerFlexBox.alignContent = FlexBox::AlignContent::center;
     headerFlexBox.alignItems = FlexBox::AlignItems::stretch;
-    //headerFlexBox.justifyContent = FlexBox::JustifyContent::center;
 
     buttonsFlexBox.flexDirection = FlexBox::Direction::column;
-    //buttonsFlexBox.alignContent = FlexBox::AlignContent::center;
     buttonsFlexBox.alignItems = FlexBox::AlignItems::center;
     buttonsFlexBox.justifyContent = FlexBox::JustifyContent::center;
 
@@ -46,16 +43,27 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     resetScrollBar();
 }
 
-void MediaDisplayComponent::initializeButtons() //
+void MediaDisplayComponent::initializeButtons()
 {
-    playButtonInfo = MultiButton::Mode {
-        "Play",
+    // Mode when a playable file is loaded
+    playButtonActiveInfo = MultiButton::Mode {
+        "Play-Active",
         [this] { start(); },
         Colours::limegreen,
         "Click to start playback",
         MultiButton::DrawingMode::IconOnly,
         fontaudio::Play,
     };
+    // Mode when there is nothing to play
+    playButtonInactiveInfo = MultiButton::Mode {
+        "Play-Inactive",
+        [this] {},
+        Colours::lightgrey,
+        "Nothing to play",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Play,
+    };
+    // Mode during playback
     stopButtonInfo = MultiButton::Mode {
         "Stop",
         [this] { stop(); },
@@ -64,46 +72,42 @@ void MediaDisplayComponent::initializeButtons() //
         MultiButton::DrawingMode::IconOnly,
         fontaudio::Stop,
     };
-    playStopButton.addMode(playButtonInfo);
+    playStopButton.addMode(playButtonActiveInfo);
+    playStopButton.addMode(playButtonInactiveInfo);
     playStopButton.addMode(stopButtonInfo);
-    playStopButton.setMode(playButtonInfo.label);
-    playStopButton.setEnabled(true);
     headerComponent.addAndMakeVisible(playStopButton);
 
     chooseButtonInfo = MultiButton::Mode {
-        "Choose",
-        [this] { openFileChooser(); }, // chooseFile();
+        "ChooseFile",
+        [this] { openFileChooser(); },
         Colours::lightblue,
         "Click to choose a media file",
         MultiButton::DrawingMode::IconOnly,
         fontawesome::Folder,
     };
     chooseFileButton.addMode(chooseButtonInfo);
-    chooseFileButton.setMode(chooseButtonInfo.label);
     headerComponent.addAndMakeVisible(chooseFileButton);
 
+    // Mode when an unsaved file is loaded
     saveButtonActiveInfo = MultiButton::Mode {
-        "Save1",
-        [this] { saveCallback(); }, // saveFile();
+        "Save-Active",
+        [this] { saveCallback(); },
         Colours::lightblue,
         "Click to save the media file",
         MultiButton::DrawingMode::IconOnly,
         fontawesome::Save,
     };
-    // We can use a separate mode for the save button
-    // to be used when there is nothing to save
+    // Mode when there is nothing to save
     saveButtonInactiveInfo = MultiButton::Mode {
-        "Save2", // mode labels need to be unique for the button
-        [this] { saveCallback(); }, // saveFile();
-        Colours::lightgrey,
-        "Nothing to save",
-        MultiButton::DrawingMode::IconOnly,
+        "Save-Inactive",    [this] { saveCallback(); }, // TODO - why is saveCallback() needed here?
+        Colours::lightgrey, "Nothing to save",          MultiButton::DrawingMode::IconOnly,
         fontawesome::Save,
     };
     saveFileButton.addMode(saveButtonActiveInfo);
     saveFileButton.addMode(saveButtonInactiveInfo);
-    saveFileButton.setMode(saveButtonInactiveInfo.label);
     headerComponent.addAndMakeVisible(saveFileButton);
+
+    resetButtonState();
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -215,8 +219,6 @@ void MediaDisplayComponent::resized()
             FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
     }
 
-    //buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
-
     // Remove existing items in media flex
     mediaAreaFlexBox.items.clear();
 
@@ -253,7 +255,7 @@ void MediaDisplayComponent::resized()
 
 void MediaDisplayComponent::repositionLabels() //
 {
-    if (visibleRange.getLength() == 0.0)
+    if (! isFileLoaded())
     {
         return;
     }
@@ -341,6 +343,7 @@ void MediaDisplayComponent::resetDisplay()
     resetMedia();
     resetPaths();
     resetScrollBar();
+    resetButtonState();
     sendChangeMessage();
 }
 
@@ -367,6 +370,9 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     Range<double> range(0.0, getTotalLengthInSecs());
 
     horizontalScrollBar.setRangeLimits(range);
+
+    playStopButton.setMode(playButtonActiveInfo.label);
+    saveFileButton.setMode(saveButtonActiveInfo.label);
 }
 
 void MediaDisplayComponent::addNewTempFile()
@@ -608,12 +614,18 @@ void MediaDisplayComponent::resetScrollBar()
     horizontalScrollBar.setVisible(false);
 }
 
+void MediaDisplayComponent::resetButtonState()
+{
+    playStopButton.setMode(playButtonInactiveInfo.label);
+    chooseFileButton.setMode(chooseButtonInfo.label);
+    saveFileButton.setMode(saveButtonInactiveInfo.label);
+}
+
 void MediaDisplayComponent::saveCallback()
 {
     if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
     {
         overwriteTarget();
-        // saveFileButton.setEnabled(false);
         saveFileButton.setMode(saveButtonInactiveInfo.label);
         statusBox->setStatusMessage("File saved successfully");
     }
@@ -685,7 +697,7 @@ void MediaDisplayComponent::stop()
     currentPositionMarker.setVisible(false);
     setPlaybackPosition(0.0);
 
-    playStopButton.setMode(playButtonInfo.label);
+    playStopButton.setMode(playButtonActiveInfo.label);
 }
 
 float MediaDisplayComponent::getPixelsPerSecond()
