@@ -110,7 +110,7 @@ private:
     //MultiButton::Mode saveButtonInactiveInfo;
 
     //Viewport trackArea;
-    TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 50 };
+    TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
     //TrackAreaWidget* trackAreaWidget;
 
     int selectedIdx = -1;

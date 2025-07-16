@@ -48,8 +48,8 @@ public:
     bool isThumbnailTrack() { return displayMode == 3; }
     //DisplayMode getDisplayMode() { return displayMode; }
 
-    void setTrackId(juce::Uuid id) { trackID = id; }
-    juce::Uuid getTrackId() { return trackID; }
+    void setTrackId(Uuid id) { trackID = id; }
+    Uuid getTrackId() { return trackID; }
 
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display
@@ -123,7 +123,7 @@ public:
 
     int getNumOverheadLabels();
 
-    std::function<void(const juce::String&)> instructionBoxWriter;
+    std::function<void(const String&)> instructionBoxWriter;
 
 protected:
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
@@ -140,6 +140,9 @@ protected:
     void horizontalZoom(float deltaZoom, float scrollPosX);
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+
+    // Media (audio or MIDI) content area
+    Component mediaComponent;
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
@@ -164,37 +167,11 @@ protected:
     std::unique_ptr<FileChooser> openFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
 
-    juce::SharedResourcePointer<InstructionBox> instructionBox;
-    juce::SharedResourcePointer<StatusBox> statusBox;
-
-    // FlexBox for the whole track
-    juce::FlexBox mainFlexBox;
-    // FlexBox for the header area (track name and buttons)
-    juce::FlexBox headerFlexBox;
-    // FlexBox for the media + overhead area (if any)
-    juce::FlexBox mediaAreaFlexBox;
-
-    // Track sub-components
-    // Left panel containing track name and buttons
-    juce::Component headerComponent;
-    // Media (audio or MIDI) content area
-    juce::Component mediaComponent;
-    // Media + overhead panel (if any)
-    juce::Component mediaAreaContainer;
-
-    // Header sub-components
-    juce::Label trackNameLabel;
-    MultiButton playStopButton;
-    MultiButton::Mode playButtonInfo;
-    MultiButton::Mode stopButtonInfo;
-    MultiButton chooseFileButton;
-    MultiButton::Mode chooseButtonInfo;
-    MultiButton saveFileButton;
-    MultiButton::Mode saveButtonActiveInfo;
-    MultiButton::Mode saveButtonInactiveInfo;
+    SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<StatusBox> statusBox;
 
 private:
-    void populateTrackHeader();
+    void initializeButtons();
 
     virtual Component* getMediaComponent() { return this; }
 
@@ -222,8 +199,38 @@ private:
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
-    void mouseEnter(const juce::MouseEvent& /*event*/) override;
-    void mouseExit(const juce::MouseEvent& /*event*/) override;
+    void mouseEnter(const MouseEvent& /*event*/) override;
+    void mouseExit(const MouseEvent& /*event*/) override;
+
+    // Flex for whole display
+    FlexBox mainFlexBox;
+    // Flex for header area (label and buttons)
+    FlexBox headerFlexBox;
+    // Flex for header buttons
+    FlexBox buttonsFlexBox;
+    // Flex for media / overhead panel (if any)
+    FlexBox mediaAreaFlexBox;
+
+    // Panel with labels / buttons
+    Component headerComponent;
+    // Media + overhead panel (if any)
+    Component mediaAreaContainer;
+
+    // Header sub-components
+    Label trackNameLabel;
+    MultiButton playStopButton;
+    MultiButton::Mode playButtonInfo;
+    MultiButton::Mode stopButtonInfo;
+    MultiButton chooseFileButton;
+    MultiButton::Mode chooseButtonInfo;
+    MultiButton saveFileButton;
+    MultiButton::Mode saveButtonActiveInfo;
+    MultiButton::Mode saveButtonInactiveInfo;
+
+    Uuid trackID;
+    String trackName;
+    const bool required = true;
+    const DisplayMode displayMode;
 
     URL targetFilePath;
     URL droppedFilePath;
@@ -236,14 +243,6 @@ private:
 
     double currentHorizontalZoomFactor;
 
-    const DisplayMode displayMode;
-    // It's const because we only set it in the constructor
-    // and never change it again
-    const bool required = true;
-
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
-
-    juce::String trackName;
-    juce::Uuid trackID;
 };

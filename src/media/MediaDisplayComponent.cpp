@@ -12,10 +12,21 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
 
     sourcePlayer.setSource(&transportSource);
 
-    trackNameLabel.setText(trackName, juce::dontSendNotification);
+    trackNameLabel.setText(trackName, dontSendNotification);
+    trackNameLabel.setJustificationType(Justification::centred);
     headerComponent.addAndMakeVisible(trackNameLabel);
-    populateTrackHeader();
+    initializeButtons();
     addAndMakeVisible(headerComponent);
+
+    headerFlexBox.flexDirection = FlexBox::Direction::row;
+    //headerFlexBox.alignContent = FlexBox::AlignContent::center;
+    headerFlexBox.alignItems = FlexBox::AlignItems::stretch;
+    //headerFlexBox.justifyContent = FlexBox::JustifyContent::center;
+
+    buttonsFlexBox.flexDirection = FlexBox::Direction::column;
+    //buttonsFlexBox.alignContent = FlexBox::AlignContent::center;
+    buttonsFlexBox.alignItems = FlexBox::AlignItems::center;
+    buttonsFlexBox.justifyContent = FlexBox::JustifyContent::center;
 
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
@@ -26,11 +37,73 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     addAndMakeVisible(mediaAreaContainer);
 
+    mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
+
     currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
     addAndMakeVisible(currentPositionMarker);
 
     resetPaths();
     resetScrollBar();
+}
+
+void MediaDisplayComponent::initializeButtons() //
+{
+    playButtonInfo = MultiButton::Mode {
+        "Play",
+        [this] { start(); },
+        Colours::limegreen,
+        "Click to start playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Play,
+    };
+    stopButtonInfo = MultiButton::Mode {
+        "Stop",
+        [this] { stop(); },
+        Colours::orangered,
+        "Click to stop playback",
+        MultiButton::DrawingMode::IconOnly,
+        fontaudio::Stop,
+    };
+    playStopButton.addMode(playButtonInfo);
+    playStopButton.addMode(stopButtonInfo);
+    playStopButton.setMode(playButtonInfo.label);
+    playStopButton.setEnabled(true);
+    headerComponent.addAndMakeVisible(playStopButton);
+
+    chooseButtonInfo = MultiButton::Mode {
+        "Choose",
+        [this] { openFileChooser(); }, // chooseFile();
+        Colours::lightblue,
+        "Click to choose a media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Folder,
+    };
+    chooseFileButton.addMode(chooseButtonInfo);
+    chooseFileButton.setMode(chooseButtonInfo.label);
+    headerComponent.addAndMakeVisible(chooseFileButton);
+
+    saveButtonActiveInfo = MultiButton::Mode {
+        "Save1",
+        [this] { saveCallback(); }, // saveFile();
+        Colours::lightblue,
+        "Click to save the media file",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    // We can use a separate mode for the save button
+    // to be used when there is nothing to save
+    saveButtonInactiveInfo = MultiButton::Mode {
+        "Save2", // mode labels need to be unique for the button
+        [this] { saveCallback(); }, // saveFile();
+        Colours::lightgrey,
+        "Nothing to save",
+        MultiButton::DrawingMode::IconOnly,
+        fontawesome::Save,
+    };
+    saveFileButton.addMode(saveButtonActiveInfo);
+    saveFileButton.addMode(saveButtonInactiveInfo);
+    saveFileButton.setMode(saveButtonInactiveInfo.label);
+    headerComponent.addAndMakeVisible(saveFileButton);
 }
 
 MediaDisplayComponent::~MediaDisplayComponent()
@@ -56,28 +129,101 @@ void MediaDisplayComponent::paint(Graphics& g)
     }
 }
 
-void MediaDisplayComponent::resized() //
+void MediaDisplayComponent::resized()
 {
-    auto totalBounds = getLocalBounds();
+    Rectangle<int> totalBounds = getLocalBounds();
 
-    // Build trackRowBox items
+    // Remove existing items in main flex
     mainFlexBox.items.clear();
-    mainFlexBox.items.add(
-        juce::FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
+
+    if (isThumbnailTrack())
+    {
+        // Place header over media
+        mainFlexBox.flexDirection = FlexBox::Direction::column;
+        // Fixed area for track label and buttons
+        mainFlexBox.items.add(FlexItem(headerComponent)
+                                  .withHeight(trackNameLabel.getFont().getHeight())
+                                  .withMargin(1));
+    }
+    else
+    {
+        // Place header beside media
+        mainFlexBox.flexDirection = FlexBox::Direction::row;
+        // Fixed area for track label and buttons
+        mainFlexBox.items.add(FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
+    }
+
     // Media area takes remaining space
-    // mainFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(8));
-    mainFlexBox.items.add(juce::FlexItem(mediaAreaContainer).withFlex(8));
+    mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
 
     mainFlexBox.performLayout(totalBounds);
 
-    // Set up the vertical layout within the media area container
-    mediaAreaFlexBox.flexDirection = juce::FlexBox::Direction::column;
+    // Remove existing items in header flex
+    headerFlexBox.items.clear();
+
+    // Add track label to header flex
+    headerFlexBox.items.add(FlexItem(trackNameLabel).withFlex(1).withMargin({ 0, 2, 0, 0 }));
+
+    if (! isThumbnailTrack())
+    {
+        // Add buttons to header flex
+        headerFlexBox.items.add(FlexItem(buttonsFlexBox).withFlex(2).withMargin({ 0, 0, 0, 1 }));
+    }
+
+    // Perform layout of controls inside header
+    headerFlexBox.performLayout(headerComponent.getLocalBounds());
+
+    Rectangle<float> labelBounds = trackNameLabel.getBounds().toFloat();
+    float trackNameLabelWidth = labelBounds.getWidth();
+    float trackNameLabelHeight = labelBounds.getHeight();
+
+    if (! isThumbnailTrack())
+    {
+        Point<float> labelCenter = labelBounds.getCentre();
+        // Rotate track name label 90 degrees
+        trackNameLabel.setTransform(
+            AffineTransform::rotation(-MathConstants<float>::halfPi, labelCenter.x, labelCenter.y));
+
+        // Swap width and height
+        trackNameLabelWidth = labelBounds.getHeight();
+        trackNameLabelHeight = labelBounds.getWidth();
+
+        // Update track name label bounds and position
+        trackNameLabel.setBounds(
+            labelBounds.withSize(trackNameLabelWidth, trackNameLabelHeight).toNearestInt());
+    }
+
+    // Center track name label within header
+    float labelX = (labelBounds.getWidth() - trackNameLabelWidth) / 2.0f;
+    float labelY = (labelBounds.getHeight() - trackNameLabelHeight) / 2.0f;
+    trackNameLabel.setTopLeftPosition(static_cast<int>(labelX), static_cast<int>(labelY));
+
+    // Remove existing items in button flex
+    buttonsFlexBox.items.clear();
+
+    // Add buttons to flex with equal height
+    buttonsFlexBox.items.add(
+        FlexItem(playStopButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+    if (isInputTrack())
+    {
+        buttonsFlexBox.items.add(
+            FlexItem(chooseFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+    }
+    if (isOutputTrack())
+    {
+        buttonsFlexBox.items.add(
+            FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+    }
+
+    //buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+
+    // Remove existing items in media flex
     mediaAreaFlexBox.items.clear();
 
-    // Add overhead panel if there are labels to display
     if (getNumOverheadLabels() > 0)
     {
-        mediaAreaFlexBox.items.add(juce::FlexItem(overheadPanel)
+        // Add overhead panel if there are labels to display
+        mediaAreaFlexBox.items.add(FlexItem(overheadPanel)
                                        .withHeight(labelHeight + 2 * controlSpacing)
                                        .withMargin({ 0,
                                                      getVerticalControlsWidth(),
@@ -86,62 +232,21 @@ void MediaDisplayComponent::resized() //
     }
 
     // Media component takes remaining space
-    mediaAreaFlexBox.items.add(juce::FlexItem(mediaComponent).withFlex(1));
+    mediaAreaFlexBox.items.add(FlexItem(mediaComponent).withFlex(1));
 
-    // Add horizontal scrollbar with fixed height
-    mediaAreaFlexBox.items.add(juce::FlexItem(horizontalScrollBar)
-                                   .withHeight(scrollBarSize + 2 * controlSpacing)
-                                   .withMargin({ static_cast<float>(controlSpacing),
-                                                 getVerticalControlsWidth(),
-                                                 0,
-                                                 getMediaXPos() }));
+    if (! isThumbnailTrack() & horizontalScrollBar.isVisible())
+    {
+        // Add horizontal scrollbar with fixed height
+        mediaAreaFlexBox.items.add(FlexItem(horizontalScrollBar)
+                                       .withHeight(scrollBarSize + 2 * controlSpacing)
+                                       .withMargin({ static_cast<float>(controlSpacing),
+                                                     getVerticalControlsWidth(),
+                                                     0,
+                                                     getMediaXPos() }));
+    }
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
-
-    // Set up headerFlexBox for the controls inside headerComponent
-    headerFlexBox.flexDirection = juce::FlexBox::Direction::row;
-    headerFlexBox.justifyContent = juce::FlexBox::JustifyContent::flexStart;
-    headerFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
-
-    juce::FlexBox buttonsFlexBox;
-    buttonsFlexBox.flexDirection = juce::FlexBox::Direction::column;
-    buttonsFlexBox.justifyContent = juce::FlexBox::JustifyContent::center;
-    buttonsFlexBox.alignItems = juce::FlexBox::AlignItems::stretch;
-    buttonsFlexBox.items.add(juce::FlexItem(playStopButton).withHeight(30));
-    buttonsFlexBox.items.add(juce::FlexItem(chooseFileButton).withHeight(30));
-    buttonsFlexBox.items.add(juce::FlexItem(saveFileButton).withHeight(30));
-
-    headerFlexBox.items.clear();
-    headerFlexBox.items.add(juce::FlexItem(trackNameLabel).withFlex(1));
-    headerFlexBox.items.add(juce::FlexItem(buttonsFlexBox).withFlex(1));
-
-    // Perform layout of controls inside headerComponent
-    headerFlexBox.performLayout(headerComponent.getLocalBounds());
-
-    // After layout, adjust the trackNameLabel
-    auto labelBounds = trackNameLabel.getBounds().toFloat();
-    auto labelCentre = labelBounds.getCentre();
-
-    // Apply rotation
-    trackNameLabel.setTransform(juce::AffineTransform::rotation(
-        -juce::MathConstants<float>::halfPi, labelCentre.x, labelCentre.y));
-
-    // Swap width and height
-    float newWidth = labelBounds.getHeight();
-    float newHeight = labelBounds.getWidth();
-
-    // Update label bounds and position
-    trackNameLabel.setBounds(labelBounds.withSize(newWidth, newHeight).toNearestInt());
-
-    // Reposition the label to center it within headerComponent
-    auto headerBounds = headerComponent.getLocalBounds();
-    float labelX = (static_cast<float>(headerBounds.getWidth()) - newWidth) / 2.0f;
-    float labelY = (static_cast<float>(headerBounds.getHeight()) - newHeight) / 2.0f;
-    trackNameLabel.setTopLeftPosition(static_cast<int>(labelX), static_cast<int>(labelY));
-
-    // Set text justification to centered
-    trackNameLabel.setJustificationType(juce::Justification::centred);
 
     repositionLabels();
 }
@@ -194,8 +299,7 @@ void MediaDisplayComponent::repositionLabels() //
                 yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
                 yPos = mediaYToDisplayY(yPos);
             }
-            juce::Rectangle<float> labelBounds(
-                xPos, yPos, labelWidth, static_cast<float>(labelHeight));
+            Rectangle<float> labelBounds(xPos, yPos, labelWidth, static_cast<float>(labelHeight));
             l->setBounds(labelBounds.toNearestInt());
             l->toFront(true);
 
@@ -864,66 +968,6 @@ void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
     updateVisibleRange({ newStart, newEnd });
 }
 
-void MediaDisplayComponent::populateTrackHeader()
-{
-    playButtonInfo = MultiButton::Mode {
-        "Play",
-        [this] { start(); },
-        juce::Colours::limegreen,
-        "Click to start playback",
-        MultiButton::DrawingMode::IconOnly,
-        fontaudio::Play,
-    };
-    stopButtonInfo = MultiButton::Mode {
-        "Stop",
-        [this] { stop(); },
-        Colours::orangered,
-        "Click to stop playback",
-        MultiButton::DrawingMode::IconOnly,
-        fontaudio::Stop,
-    };
-    playStopButton.addMode(playButtonInfo);
-    playStopButton.addMode(stopButtonInfo);
-    playStopButton.setMode(playButtonInfo.label);
-    playStopButton.setEnabled(true);
-    headerComponent.addAndMakeVisible(playStopButton);
-
-    chooseButtonInfo = MultiButton::Mode {
-        "Choose",
-        [this] { openFileChooser(); }, // chooseFile();
-        juce::Colours::lightblue,
-        "Click to choose a media file",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Folder,
-    };
-    chooseFileButton.addMode(chooseButtonInfo);
-    chooseFileButton.setMode(chooseButtonInfo.label);
-    headerComponent.addAndMakeVisible(chooseFileButton);
-
-    saveButtonActiveInfo = MultiButton::Mode {
-        "Save1",
-        [this] { saveCallback(); }, // saveFile();
-        juce::Colours::lightblue,
-        "Click to save the media file",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Save,
-    };
-    // We can use a separate mode for the save button
-    // to be used when there is nothing to save
-    saveButtonInactiveInfo = MultiButton::Mode {
-        "Save2", // mode labels need to be unique for the button
-        [this] { saveCallback(); }, // saveFile();
-        juce::Colours::lightgrey,
-        "Nothing to save",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Save,
-    };
-    saveFileButton.addMode(saveButtonActiveInfo);
-    saveFileButton.addMode(saveButtonInactiveInfo);
-    saveFileButton.setMode(saveButtonInactiveInfo.label);
-    headerComponent.addAndMakeVisible(saveFileButton);
-}
-
 int MediaDisplayComponent::correctToBounds(float x, float width)
 {
     x = jmax(timeToMediaX(0.0), x);
@@ -1032,13 +1076,13 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
     }
 }
 
-void MediaDisplayComponent::mouseEnter(const juce::MouseEvent& /*event*/)
+void MediaDisplayComponent::mouseEnter(const MouseEvent& /*event*/)
 {
     if (instructionBoxWriter)
         // instructionBoxWriter(mediaHandlerInstructions);
         instructionBoxWriter(getMediaHandlerInstructions());
 }
-void MediaDisplayComponent::mouseExit(const juce::MouseEvent& /*event*/)
+void MediaDisplayComponent::mouseExit(const MouseEvent& /*event*/)
 {
     if (instructionBoxWriter)
         instructionBoxWriter("");

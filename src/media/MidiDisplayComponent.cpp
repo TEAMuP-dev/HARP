@@ -38,7 +38,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
     // Create the local file this URL points to
     File file = filePath.getLocalFile();
     DBG("Loading MIDI file: " << file.getFullPathName());
-    std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
+    std::unique_ptr<FileInputStream> fileStream(file.createInputStream());
 
     // Read the MIDI file from the File object
     MidiFile midiFile;
@@ -56,11 +56,11 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
-    juce::MidiMessageSequence allTracks;
+    MidiMessageSequence allTracks;
 
     for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx)
     {
-        const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
+        const MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
 
         if (constTrack != nullptr)
         {
