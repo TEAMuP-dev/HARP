@@ -46,10 +46,9 @@ public:
     bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == 2; }
     bool isThumbnailTrack() { return displayMode == 3; }
-    //DisplayMode getDisplayMode() { return displayMode; }
 
-    void setTrackId(Uuid id) { trackID = id; }
-    Uuid getTrackId() { return trackID; }
+    void setDisplayID(Uuid id) { displayID = id; }
+    Uuid getDisplayID() { return displayID; }
 
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display
@@ -57,37 +56,25 @@ public:
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
-    //
+    URL getOriginalFilePath() { return originalFilePath; }
 
-    URL getTargetFilePath() { return targetFilePath; }
-
-    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
-
-    void addNewTempFile();
-
-    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
-
+    void addNewTempFile(); // Create working temp file to modify instead of current or original
     bool iteratePreviousTempFile();
     bool iterateNextTempFile();
 
-    void clearFutureTempFiles();
+    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
-    void overwriteTarget();
+    void clearFutureTempFiles(); // Prune temp files after currently selected index
+    void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
-
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
-    URL getDroppedFilePath() { return droppedFilePath; }
+    void chooseFileCallback();
+    void saveFileCallback();
 
-    bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
-
-    void openFileChooser();
-
-    // Callback for the save button
-    void saveCallback();
-
-    void clearDroppedFile() { droppedFilePath = URL(); }
+    //
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -131,8 +118,6 @@ protected:
         return true;
     }
 
-    void setNewTarget(URL filePath);
-
     void resetTransport();
 
     void horizontalMove(float deltaX);
@@ -164,14 +149,20 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
-    std::unique_ptr<FileChooser> openFileBrowser;
-    std::unique_ptr<FileChooser> saveFileBrowser;
-
     SharedResourcePointer<InstructionBox> instructionBox;
     SharedResourcePointer<StatusBox> statusBox;
 
 private:
     void initializeButtons();
+
+    virtual void resetMedia() = 0;
+    void resetPaths();
+    void resetScrollBar();
+    void resetButtonState();
+
+    void setOriginalFilePath(URL filePath);
+
+    virtual void postLoadActions(const URL& filePath) = 0;
 
     virtual Component* getMediaComponent() { return this; }
 
@@ -185,12 +176,7 @@ private:
     float mediaXToDisplayX(const float mX);
     virtual float mediaYToDisplayY(const float mY) { return mY; }
 
-    virtual void resetMedia() = 0;
-    void resetPaths();
-    void resetScrollBar();
-    void resetButtonState();
-
-    virtual void postLoadActions(const URL& filePath) = 0;
+    //
 
     int correctToBounds(float x, float width);
 
@@ -229,21 +215,24 @@ private:
     MultiButton::Mode saveButtonActiveInfo;
     MultiButton::Mode saveButtonInactiveInfo;
 
-    Uuid trackID;
+    Uuid displayID;
     String trackName;
     const bool required = true;
     const DisplayMode displayMode;
 
-    URL targetFilePath;
-    URL droppedFilePath;
-
+    URL originalFilePath;
     int currentTempFileIdx;
     Array<URL> tempFilePaths;
 
-    const float cursorWidth = 1.5f;
-    DrawableRectangle currentPositionMarker;
+    std::unique_ptr<FileChooser> chooseFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
 
-    double currentHorizontalZoomFactor;
+    //
+
+    const float cursorWidth = 1.5f;
+    DrawableRectangle currentPositionMarker; // cursor
+
+    double currentHorizontalZoomFactor; // horizontalZoomFactor
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;

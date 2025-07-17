@@ -79,7 +79,7 @@ void MediaDisplayComponent::initializeButtons()
 
     chooseButtonInfo = MultiButton::Mode {
         "ChooseFile",
-        [this] { openFileChooser(); },
+        [this] { chooseFileCallback(); },
         Colours::lightblue,
         "Click to choose a media file",
         MultiButton::DrawingMode::IconOnly,
@@ -91,7 +91,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when an unsaved file is loaded
     saveButtonActiveInfo = MultiButton::Mode {
         "Save-Active",
-        [this] { saveCallback(); },
+        [this] { saveFileCallback(); },
         Colours::lightblue,
         "Click to save the media file",
         MultiButton::DrawingMode::IconOnly,
@@ -99,8 +99,11 @@ void MediaDisplayComponent::initializeButtons()
     };
     // Mode when there is nothing to save
     saveButtonInactiveInfo = MultiButton::Mode {
-        "Save-Inactive",    [this] { saveCallback(); }, // TODO - why is saveCallback() needed here?
-        Colours::lightgrey, "Nothing to save",          MultiButton::DrawingMode::IconOnly,
+        "Save-Inactive",
+        [this] {},
+        Colours::lightgrey,
+        "Nothing to save",
+        MultiButton::DrawingMode::IconOnly,
         fontawesome::Save,
     };
     saveFileButton.addMode(saveButtonActiveInfo);
@@ -351,11 +354,12 @@ void MediaDisplayComponent::initializeDisplay(const URL& filePath)
 {
     resetDisplay();
 
-    setNewTarget(filePath);
+    setOriginalFilePath(filePath);
     updateDisplay(filePath);
 
     horizontalScrollBar.setVisible(true);
     updateVisibleRange({ 0.0, getTotalLengthInSecs() });
+    resized(); // Needed to display scrollbar after loading
 }
 
 void MediaDisplayComponent::updateDisplay(const URL& filePath)
@@ -375,55 +379,43 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     saveFileButton.setMode(saveButtonActiveInfo.label);
 }
 
+void MediaDisplayComponent::setOriginalFilePath(URL filePath)
+{
+    originalFilePath = filePath;
+
+    addNewTempFile();
+}
+
 void MediaDisplayComponent::addNewTempFile()
-{ // either just before processing by processCallback, or when importing a new file
+{
+    // Prune any future files in chain before adding new temp file
     clearFutureTempFiles();
 
     int numTempFiles = tempFilePaths.size();
-    // TODO: for outputMediaDisplays there might not be a
-    // targetFilePath yet, so we should handle that case
-    // "originalFile" is the first file that was displayed
-    // in this mediaDisplay (either the first input)
-    // or the first output)
-    // File originalFile;
-    // if (currentTempFileIdx == 0)
-    // {
-    //     originalFile = targetFilePath.getLocalFile();
-    // }
-    // else
-    // {
-    //     originalFile = tempFilePaths.getReference(currentTempFileIdx - 1).getLocalFile();
-    // }
 
-    // targetFilePath is of type URL
-    // for outputMediaDisplays, there isn't a targetFilePath.
-    // if (targetFilePath.isEmpty())
-    // {
-    //     DBG("MediaDisplayComponent::addNewTempFile: No target file path.");
-    //     return;
-    // }
-    // there might be past tempFiles
-    File originalFile = targetFilePath.getLocalFile();
-    // in case of new import file, targetFilePath is already the new file, so the originalFile is always the latest imported file, and not the first imported file
-    File targetFile;
-    // targetFile is not always the targetFilePath.
-    if (! numTempFiles) // if zero past files.
-    { // when no temp files exist, the only available file is the original file which is the original targetFilePath
+    // Obtain original file used to initialize display
+    File originalFile = originalFilePath.getLocalFile();
+
+    File targetFile; // File to copy to new temp file
+
+    if (! numTempFiles)
+    {
+        // Copy original file if no temp files
         targetFile = originalFile;
     }
     else
-    { // else we create a tempFile from the latest tempFile
+    {
+        // Otherwise copy most recent temp file
         targetFile = getTempFilePath().getLocalFile();
     }
-    // the targetFile is the one we are going to create a new tempFile from
-    String docsDirectory =
-        File::getSpecialLocation(File::SpecialLocationType::userDocumentsDirectory)
-            .getFullPathName();
+
+    String tempDirectory =
+        File::getSpecialLocation(File::SpecialLocationType::tempDirectory).getFullPathName();
 
     String targetFileName = originalFile.getFileNameWithoutExtension();
     String targetFileExtension = originalFile.getFileExtension();
 
-    URL tempFilePath = URL(File(docsDirectory + "/HARP/" + targetFileName + "_"
+    URL tempFilePath = URL(File(tempDirectory + "/HARP/" + targetFileName + "_"
                                 + String(numTempFiles) + targetFileExtension));
 
     File tempFile = tempFilePath.getLocalFile();
@@ -432,15 +424,12 @@ void MediaDisplayComponent::addNewTempFile()
 
     if (! targetFile.copyFileTo(tempFile))
     {
-        DBG("MediaDisplayComponent::generateTempFile: Failed to copy file "
+        DBG("MediaDisplayComponent::addNewTempFile: Failed to copy file "
             << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
-
-        AlertWindow(
-            "Error", "Failed to create temporary file for processing.", AlertWindow::WarningIcon);
     }
     else
     {
-        DBG("MediaDisplayComponent::generateTempFile: Copied file "
+        DBG("MediaDisplayComponent::addNewTempFile: Copied file "
             << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
     }
 
@@ -489,11 +478,9 @@ void MediaDisplayComponent::clearFutureTempFiles()
     clearLabels(currentTempFileIdx + 1);
 }
 
-void MediaDisplayComponent::overwriteTarget()
+void MediaDisplayComponent::overwriteOriginalFile()
 {
-    // Overwrite the original file - necessary for seamless sample editing integration
-
-    File targetFile = targetFilePath.getLocalFile();
+    File targetFile = originalFilePath.getLocalFile();
     File tempFile = getTempFilePath().getLocalFile();
 
     String parentDirectory = targetFile.getParentDirectory().getFullPathName();
@@ -505,90 +492,85 @@ void MediaDisplayComponent::overwriteTarget()
 
     if (targetFile.copyFileTo(backupFile))
     {
-        DBG("MediaDisplayComponent::overwriteTarget: Created backup of file"
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file"
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::overwriteTarget: Failed to create backup of file"
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file"
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
 
     if (tempFile.copyFileTo(targetFile))
     {
-        DBG("MediaDisplayComponent::overwriteTarget: Overwriting file "
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Overwriting file "
             << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::overwriteTarget: Failed to overwrite file "
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to overwrite file "
             << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
     }
 }
 
 void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, int /*y*/)
 {
-    // TODO - warning or handling for additional files
-
-    // Avoid self-dragging
-    if (getTargetFilePath() == URL(File(files[0])))
+    for (int i = 1; i < files.size(); i++)
     {
-        DBG("Won't self drag");
+        DBG("MediaDisplayComponent::filesDropped: Ignoring additional file " << files[i] << ".");
+    }
+
+    File mediaFile = File(files[0]);
+
+    if (getOriginalFilePath() == URL(mediaFile)
+        || (isFileLoaded() && getTempFilePath() == URL(mediaFile)))
+    {
+        DBG("MediaDisplayComponent::filesDropped: Ignoring self-drag.");
         return;
     }
 
-    droppedFilePath = URL(File(files[0]));
-    auto mediaFile = droppedFilePath.getLocalFile();
-    // sendChangeMessage();
-    // loadMediaFile(droppedFilePath);
-    String extension = mediaFile.getFileExtension();
-
-    bool matchingDisplay = getInstanceExtensions().contains(extension);
-
-    if (! matchingDisplay)
+    if (! getInstanceExtensions().contains(mediaFile.getFileExtension()))
     {
         AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                         "Wrong file extension",
-                                         "Please drop one of the following file types: "
-                                             + getInstanceExtensions().joinIntoString(", "),
+                                         "Invalid File",
+                                         "This display supports the following file types: "
+                                             + getInstanceExtensions().joinIntoString(", ") + ".",
                                          "OK");
     }
     else
     {
         initializeDisplay(URL(mediaFile));
-        saveFileButton.setMode(saveButtonActiveInfo.label);
     }
-    droppedFilePath = URL();
 }
 
-void MediaDisplayComponent::openFileChooser()
+void MediaDisplayComponent::chooseFileCallback()
 {
-    StringArray allExtensions = StringArray(getInstanceExtensions());
-    // allExtensions.mergeArray(midiExtensions);
+    StringArray validExtensions = StringArray(getInstanceExtensions());
+    String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
 
-    String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
-
-    openFileBrowser =
+    chooseFileBrowser =
         std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
 
-    openFileBrowser->launchAsync(FileBrowserComponent::openMode
-                                     | FileBrowserComponent::canSelectFiles,
-                                 [this](const FileChooser& browser)
-                                 {
-                                     File chosenFile = browser.getResult();
-                                     if (chosenFile != File {})
-                                     {
-                                         initializeDisplay(URL(chosenFile));
-                                         saveFileButton.setMode(saveButtonActiveInfo.label);
-                                     }
-                                 });
+    chooseFileBrowser->launchAsync(FileBrowserComponent::openMode
+                                       | FileBrowserComponent::canSelectFiles,
+                                   [this](const FileChooser& fc)
+                                   {
+                                       File chosenFile = fc.getResult();
+                                       if (chosenFile != File {})
+                                       {
+                                           initializeDisplay(URL(chosenFile));
+                                       }
+                                   });
 }
 
-void MediaDisplayComponent::setNewTarget(URL filePath)
+void MediaDisplayComponent::saveFileCallback()
 {
-    targetFilePath = filePath;
-
-    addNewTempFile();
+    if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
+    {
+        overwriteOriginalFile();
+        saveFileButton.setMode(saveButtonInactiveInfo.label);
+        statusBox->setStatusMessage("File saved successfully");
+    }
 }
 
 void MediaDisplayComponent::resetTransport()
@@ -599,9 +581,7 @@ void MediaDisplayComponent::resetTransport()
 
 void MediaDisplayComponent::resetPaths()
 {
-    clearDroppedFile();
-
-    targetFilePath = URL();
+    originalFilePath = URL();
 
     tempFilePaths.clear();
     currentTempFileIdx = -1;
@@ -619,20 +599,6 @@ void MediaDisplayComponent::resetButtonState()
     playStopButton.setMode(playButtonInactiveInfo.label);
     chooseFileButton.setMode(chooseButtonInfo.label);
     saveFileButton.setMode(saveButtonInactiveInfo.label);
-}
-
-void MediaDisplayComponent::saveCallback()
-{
-    if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
-    {
-        overwriteTarget();
-        saveFileButton.setMode(saveButtonInactiveInfo.label);
-        statusBox->setStatusMessage("File saved successfully");
-    }
-    else
-    {
-        statusBox->setStatusMessage("Nothing to save");
-    }
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)

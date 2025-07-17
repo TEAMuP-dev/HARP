@@ -1145,7 +1145,7 @@ public:
             {
                 inputMediaDisplay->addNewTempFile();
                 localInputTrackFiles.push_back(
-                    std::make_tuple(inputMediaDisplay->getTrackId(),
+                    std::make_tuple(inputMediaDisplay->getDisplayID(),
                                     inputMediaDisplay->getTrackName(),
                                     inputMediaDisplay->getTempFilePath().getLocalFile()));
             }

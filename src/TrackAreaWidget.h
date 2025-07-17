@@ -40,7 +40,8 @@ public:
 
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
-            m = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required, displayMode);
+            m = std::make_unique<AudioDisplayComponent>(
+                label, audioTrackInfo->required, displayMode);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
@@ -49,7 +50,7 @@ public:
 
         if (m)
         {
-            m->setTrackId(trackInfo->id);
+            m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
             m->instructionBoxWriter = [this](const String& text) { updateInstructionBox(text); };
             addAndMakeVisible(m.get());
@@ -60,7 +61,10 @@ public:
         resized();
     }
 
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isThumbnailWidget(); }
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override
+    {
+        return isThumbnailWidget();
+    }
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
     {
