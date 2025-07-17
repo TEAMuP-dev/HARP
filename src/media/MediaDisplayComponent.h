@@ -18,7 +18,7 @@ public:
 
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
-                              public ChangeBroadcaster,
+                              //public ChangeBroadcaster,
                               public FileDragAndDropTarget,
                               public DragAndDropContainer,
                               private Timer,
@@ -74,25 +74,25 @@ public:
     void chooseFileCallback();
     void saveFileCallback();
 
-    //
-
-    virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
-    virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
+    virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
+    virtual float getPixelsPerSecond();
 
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
 
-    virtual bool isPlaying() { return transportSource.isPlaying(); }
-    virtual void startPlaying() { transportSource.start(); }
-    virtual void stopPlaying() { transportSource.stop(); }
+    virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
+    virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
     void start();
     void stop();
 
-    virtual double getTotalLengthInSecs() = 0;
-    virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
-    virtual float getPixelsPerSecond();
+    virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
+
+    //
 
     virtual void updateVisibleRange(Range<double> r);
 
@@ -113,12 +113,14 @@ public:
     std::function<void(const String&)> instructionBoxWriter;
 
 protected:
+    void resetTransport();
+
+    //
+
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
     {
-        return true;
+        return true; // TODO - is this necessary? if (! isThumbnailTrack())?
     }
-
-    void resetTransport();
 
     void horizontalMove(float deltaX);
 
@@ -178,11 +180,11 @@ private:
 
     //
 
+    void timerCallback() override;
+
     int correctToBounds(float x, float width);
 
-    void updateCursorPosition();
-
-    void timerCallback() override;
+    void updateCursorPosition(); // before mouseDrag
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
@@ -232,7 +234,7 @@ private:
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionMarker; // cursor
 
-    double currentHorizontalZoomFactor; // horizontalZoomFactor
+    double horizontalZoomFactor;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;

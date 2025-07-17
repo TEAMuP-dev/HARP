@@ -5,10 +5,11 @@ MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track
 MidiDisplayComponent::MidiDisplayComponent(String name, bool req, DisplayMode mode)
     : MediaDisplayComponent(name, req, mode)
 {
-    mediaComponent.addAndMakeVisible(pianoRoll);
+    // Support for drag and drop
     pianoRoll.addMouseListener(this, true);
     // Need to reposition labels after vertical zoom or scroll
     pianoRoll.addChangeListener(this);
+    mediaComponent.addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
@@ -173,7 +174,7 @@ float MidiDisplayComponent::mediaYToDisplayY(const float mY)
 
 void MidiDisplayComponent::resetMedia()
 {
-    MediaDisplayComponent::resetTransport();
+    resetTransport();
 
     pianoRoll.resetNotes();
     pianoRoll.resizeNoteGrid(0.0);

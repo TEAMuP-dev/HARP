@@ -114,7 +114,7 @@ void AudioDisplayComponent::resized()
 
 void AudioDisplayComponent::resetMedia()
 {
-    MediaDisplayComponent::resetTransport();
+    resetTransport();
 
     audioFileSource.reset();
     thumbnail.clear();

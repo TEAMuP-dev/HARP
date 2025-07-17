@@ -28,7 +28,6 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
 
-    mediaAreaContainer.addMouseListener(this, true);
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
     mediaAreaContainer.addAndMakeVisible(mediaComponent);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
@@ -347,7 +346,35 @@ void MediaDisplayComponent::resetDisplay()
     resetPaths();
     resetScrollBar();
     resetButtonState();
-    sendChangeMessage();
+    //sendChangeMessage();
+}
+
+void MediaDisplayComponent::resetPaths()
+{
+    originalFilePath = URL();
+
+    tempFilePaths.clear();
+    currentTempFileIdx = -1;
+}
+
+void MediaDisplayComponent::resetScrollBar()
+{
+    horizontalZoomFactor = 1.0;
+    horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
+    horizontalScrollBar.setVisible(false);
+}
+
+void MediaDisplayComponent::resetButtonState()
+{
+    playStopButton.setMode(playButtonInactiveInfo.label);
+    chooseFileButton.setMode(chooseButtonInfo.label);
+    saveFileButton.setMode(saveButtonInactiveInfo.label);
+}
+
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -573,32 +600,60 @@ void MediaDisplayComponent::saveFileCallback()
     }
 }
 
-void MediaDisplayComponent::resetTransport()
+float MediaDisplayComponent::getPixelsPerSecond()
 {
-    transportSource.stop();
-    transportSource.setSource(nullptr);
+    if (visibleRange.getLength())
+    {
+        return getMediaWidth() / static_cast<float>(visibleRange.getLength());
+    }
+    else
+    {
+        return 0.0f;
+    }
 }
 
-void MediaDisplayComponent::resetPaths()
+double MediaDisplayComponent::mediaXToTime(const float x)
 {
-    originalFilePath = URL();
+    float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
 
-    tempFilePaths.clear();
-    currentTempFileIdx = -1;
+    if (visibleRange.getLength())
+    {
+        return static_cast<double>(x_ / getPixelsPerSecond()) + getTimeAtOrigin();
+    }
+    else
+    {
+        return 0.0;
+    }
 }
 
-void MediaDisplayComponent::resetScrollBar()
+float MediaDisplayComponent::timeToMediaX(const double t)
 {
-    currentHorizontalZoomFactor = 1.0;
-    horizontalScrollBar.setRangeLimits({ 0.0, 1.0 });
-    horizontalScrollBar.setVisible(false);
+    double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
+
+    if (visibleRange.getLength())
+    {
+        return static_cast<float>(t_ - getTimeAtOrigin()) * getPixelsPerSecond();
+    }
+    else
+    {
+        return 0.0f;
+    }
 }
 
-void MediaDisplayComponent::resetButtonState()
+float MediaDisplayComponent::mediaXToDisplayX(const float mX)
 {
-    playStopButton.setMode(playButtonInactiveInfo.label);
-    chooseFileButton.setMode(chooseButtonInfo.label);
-    saveFileButton.setMode(saveButtonInactiveInfo.label);
+    float offsetX = 0;
+    float visibleStartX = 0;
+
+    if (visibleRange.getLength())
+    {
+        offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
+        visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
+    }
+
+    float dX = static_cast<float>(controlSpacing) + getMediaXPos() + mX - (visibleStartX - offsetX);
+
+    return dX;
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
@@ -607,7 +662,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
     {
         if (! isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
         {
-            float x_ = (float) e.x;
+            float x_ = static_cast<float>(e.x);
 
             double visibleStart = visibleRange.getStart();
             double visibleStop = visibleStart + visibleRange.getLength();
@@ -635,13 +690,13 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
 void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
-    mouseDrag(e); // make sure playback position has been updated
+    mouseDrag(e); // Make sure playback position has been updated
 
     if (e.eventComponent == getMediaComponent() && isFileLoaded()
-        && isMouseOver(true)) //Only start playback if we're still in this area
+        && isMouseOver(true)) // Only start playback if still within this area
     {
         start();
-        sendChangeMessage();
+        //sendChangeMessage();
     }
 }
 
@@ -664,11 +719,6 @@ void MediaDisplayComponent::stop()
     setPlaybackPosition(0.0);
 
     playStopButton.setMode(playButtonActiveInfo.label);
-}
-
-float MediaDisplayComponent::getPixelsPerSecond()
-{
-    return getMediaWidth() / static_cast<float>(visibleRange.getLength());
 }
 
 void MediaDisplayComponent::updateVisibleRange(Range<double> r)
@@ -883,43 +933,6 @@ int MediaDisplayComponent::getNumOverheadLabels()
     return nOverheadLabels;
 }
 
-double MediaDisplayComponent::mediaXToTime(const float x)
-{
-    float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
-
-    double t = ((double) (x_ / getPixelsPerSecond())) + getTimeAtOrigin();
-
-    return t;
-}
-
-float MediaDisplayComponent::timeToMediaX(const double t)
-{
-    float x;
-
-    if (visibleRange.getLength() <= 0)
-    {
-        x = 0;
-    }
-    else
-    {
-        double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
-
-        x = ((float) (t_ - getTimeAtOrigin())) * getPixelsPerSecond();
-    }
-
-    return x;
-}
-
-float MediaDisplayComponent::mediaXToDisplayX(const float mX)
-{
-    float visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
-    float offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
-
-    float dX = static_cast<float>(controlSpacing) + getMediaXPos() + mX - (visibleStartX - offsetX);
-
-    return dX;
-}
-
 void MediaDisplayComponent::horizontalMove(float deltaX)
 {
     auto totalLength = visibleRange.getLength();
@@ -936,9 +949,9 @@ void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
     auto totalLength = visibleRange.getLength();
     auto visibleStart = visibleRange.getStart();
     // auto scrollTime = mediaXToTime(evt.position.getX());
-    currentHorizontalZoomFactor = jlimit(1.0, 1.99, currentHorizontalZoomFactor + deltaZoom);
+    horizontalZoomFactor = jlimit(1.0, 1.99, horizontalZoomFactor + deltaZoom);
 
-    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - currentHorizontalZoomFactor));
+    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - horizontalZoomFactor));
 
     auto newStart = scrollPosX - newScale * (scrollPosX - visibleStart) / totalLength;
     auto newEnd = scrollPosX + newScale * (visibleStart + totalLength - scrollPosX) / totalLength;
@@ -1000,7 +1013,7 @@ void MediaDisplayComponent::timerCallback()
     else
     {
         stop();
-        sendChangeMessage();
+        //sendChangeMessage();
     }
 }
 
