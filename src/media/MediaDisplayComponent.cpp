@@ -29,14 +29,14 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     horizontalScrollBar.addListener(this);
 
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
-    mediaAreaContainer.addAndMakeVisible(mediaComponent);
+    mediaAreaContainer.addAndMakeVisible(contentComponent);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     addAndMakeVisible(mediaAreaContainer);
 
     mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
 
-    currentPositionMarker.setFill(Colours::white.withAlpha(0.85f));
-    addAndMakeVisible(currentPositionMarker);
+    currentPositionCursor.setFill(Colours::white.withAlpha(0.85f));
+    addAndMakeVisible(currentPositionCursor);
 
     resetPaths();
     resetScrollBar();
@@ -236,9 +236,9 @@ void MediaDisplayComponent::resized()
     }
 
     // Media component takes remaining space
-    mediaAreaFlexBox.items.add(FlexItem(mediaComponent).withFlex(1));
+    mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1));
 
-    if (! isThumbnailTrack() & horizontalScrollBar.isVisible())
+    if (horizontalScrollBar.isVisible())
     {
         // Add horizontal scrollbar with fixed height
         mediaAreaFlexBox.items.add(FlexItem(horizontalScrollBar)
@@ -346,7 +346,6 @@ void MediaDisplayComponent::resetDisplay()
     resetPaths();
     resetScrollBar();
     resetButtonState();
-    //sendChangeMessage();
 }
 
 void MediaDisplayComponent::resetPaths()
@@ -384,7 +383,10 @@ void MediaDisplayComponent::initializeDisplay(const URL& filePath)
     setOriginalFilePath(filePath);
     updateDisplay(filePath);
 
-    horizontalScrollBar.setVisible(true);
+    if (! isThumbnailTrack())
+    {
+        horizontalScrollBar.setVisible(true);
+    }
     updateVisibleRange({ 0.0, getTotalLengthInSecs() });
     resized(); // Needed to display scrollbar after loading
 }
@@ -396,7 +398,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     loadMediaFile(filePath);
     postLoadActions(filePath);
 
-    currentPositionMarker.toFront(true);
+    currentPositionCursor.toFront(true);
 
     Range<double> range(0.0, getTotalLengthInSecs());
 
@@ -651,16 +653,69 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
         visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
     }
 
-    float dX = static_cast<float>(controlSpacing) + getMediaXPos() + mX - (visibleStartX - offsetX);
+    float dX = getMediaXPos() + mX - (visibleStartX - offsetX);
 
     return dX;
+}
+
+void MediaDisplayComponent::updateVisibleRange(Range<double> r)
+{
+    visibleRange = r;
+
+    horizontalScrollBar.setCurrentRange(visibleRange);
+    updateCursorPosition();
+    repositionLabels();
+    repaint();
+}
+
+void MediaDisplayComponent::updateCursorPosition()
+{
+    float mediaWidth = getMediaWidth();
+    float mediaXOffset = mediaXToDisplayX(0.0f);
+    float minCursorXPos = mediaXToDisplayX(timeToMediaX(visibleRange.getStart()));
+    float maxCursorXPos = mediaXOffset + mediaWidth; // - cursorWidth;
+
+    float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
+    float cursorPositionY = 0;
+
+    if (isPlaying() && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
+    {
+        currentPositionCursor.setVisible(! isThumbnailTrack());
+    }
+    else if (isFileLoaded() && ! isPlaying()
+             && (getMediaComponent()->isMouseButtonDown(false)
+                 && getLocalBounds().contains(getMouseXYRelative())))
+    {
+        currentPositionCursor.setVisible(! isThumbnailTrack());
+    }
+    else
+    {
+        currentPositionCursor.setVisible(false);
+    }
+
+    cursorPositionX = jmin(maxCursorXPos, jmax(minCursorXPos, cursorPositionX));
+
+    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
+    Rectangle<int> mediaBounds = contentComponent.getBounds();
+
+    // Include offset(s) for track header
+    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
+    cursorPositionY += static_cast<float>(mediaAreaBounds.getY());
+    // Include offset for label overlay header
+    cursorPositionY += static_cast<float>(mediaBounds.getY());
+    // Offset by half of width
+    cursorPositionX -= cursorWidth / 2.0f;
+
+    currentPositionCursor.setRectangle(
+        Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (e.eventComponent == getMediaComponent() && isFileLoaded())
     {
-        if (! isPlaying() && getLocalBounds().contains(getMouseXYRelative()))
+        if (! isThumbnailTrack() && ! isPlaying()
+            && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = static_cast<float>(e.x);
 
@@ -678,7 +733,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             performExternalDragDropOfFiles(
                 StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
 
-            if (! isPlaying())
+            if (! isThumbnailTrack() && ! isPlaying())
             {
                 setPlaybackPosition(0.0);
             }
@@ -692,11 +747,14 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // Make sure playback position has been updated
 
-    if (e.eventComponent == getMediaComponent() && isFileLoaded()
+    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
         && isMouseOver(true)) // Only start playback if still within this area
     {
         start();
-        //sendChangeMessage();
+    }
+    else
+    {
+        setPlaybackPosition(0.0);
     }
 }
 
@@ -715,20 +773,10 @@ void MediaDisplayComponent::stop()
 
     stopTimer();
 
-    currentPositionMarker.setVisible(false);
+    currentPositionCursor.setVisible(false);
     setPlaybackPosition(0.0);
 
     playStopButton.setMode(playButtonActiveInfo.label);
-}
-
-void MediaDisplayComponent::updateVisibleRange(Range<double> r)
-{
-    visibleRange = r;
-
-    horizontalScrollBar.setCurrentRange(visibleRange);
-    updateCursorPosition();
-    repositionLabels();
-    repaint();
 }
 
 String MediaDisplayComponent::getMediaHandlerInstructions()
@@ -967,43 +1015,6 @@ int MediaDisplayComponent::correctToBounds(float x, float width)
     return static_cast<int>(x);
 }
 
-// TODO - may be able to simplify some of this logic by embedding cursor in media component
-void MediaDisplayComponent::updateCursorPosition()
-{
-    bool displayCursor = isFileLoaded()
-                         && (isPlaying()
-                             || (getMediaComponent()->isMouseButtonDown(false)
-                                 && getLocalBounds().contains(getMouseXYRelative())));
-
-    float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
-
-    Rectangle<int> mediaBounds = mediaComponent.getBounds();
-    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
-
-    float cursorBoundsStartX = static_cast<float>(mediaBounds.getX()) + getMediaXPos();
-    float cursorBoundsWidth = static_cast<float>(visibleRange.getLength() * getPixelsPerSecond());
-
-    // TODO - due to very small differences, cursor may not be visible at media bounds when zoomed in
-    if (cursorPositionX >= cursorBoundsStartX
-        && cursorPositionX <= (cursorBoundsStartX + cursorBoundsWidth))
-    {
-        currentPositionMarker.setVisible(displayCursor);
-    }
-    else
-    {
-        currentPositionMarker.setVisible(false);
-    }
-
-    cursorPositionX -= cursorWidth / 2.0f;
-    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
-
-    currentPositionMarker.setRectangle(
-        Rectangle<float>(cursorPositionX,
-                         static_cast<float>(mediaBounds.getY()),
-                         cursorWidth,
-                         static_cast<float>(mediaBounds.getHeight())));
-}
-
 void MediaDisplayComponent::timerCallback()
 {
     if (isPlaying())
@@ -1013,7 +1024,6 @@ void MediaDisplayComponent::timerCallback()
     else
     {
         stop();
-        //sendChangeMessage();
     }
 }
 

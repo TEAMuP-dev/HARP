@@ -9,7 +9,7 @@ MidiDisplayComponent::MidiDisplayComponent(String name, bool req, DisplayMode mo
     pianoRoll.addMouseListener(this, true);
     // Need to reposition labels after vertical zoom or scroll
     pianoRoll.addChangeListener(this);
-    mediaComponent.addAndMakeVisible(pianoRoll);
+    contentComponent.addAndMakeVisible(pianoRoll);
 
     mediaHandlerInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
@@ -144,7 +144,7 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
 void MidiDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
-    pianoRoll.setBounds(mediaComponent.getBounds().withY(0));
+    pianoRoll.setBounds(contentComponent.getBounds().withY(0));
 }
 
 float MidiDisplayComponent::getMediaHeight()

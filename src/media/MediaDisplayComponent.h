@@ -18,7 +18,6 @@ public:
 
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
-                              //public ChangeBroadcaster,
                               public FileDragAndDropTarget,
                               public DragAndDropContainer,
                               private Timer,
@@ -78,6 +77,8 @@ public:
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
 
+    virtual void updateVisibleRange(Range<double> r);
+
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
@@ -93,8 +94,6 @@ public:
     virtual void stopPlaying() { transportSource.stop(); }
 
     //
-
-    virtual void updateVisibleRange(Range<double> r);
 
     String getMediaHandlerInstructions();
     void setMediaHandlerInstructions(String instructions);
@@ -129,7 +128,7 @@ protected:
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     // Media (audio or MIDI) content area
-    Component mediaComponent;
+    Component contentComponent;
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
@@ -178,13 +177,13 @@ private:
     float mediaXToDisplayX(const float mX);
     virtual float mediaYToDisplayY(const float mY) { return mY; }
 
+    void updateCursorPosition();
+
     //
 
     void timerCallback() override;
 
     int correctToBounds(float x, float width);
-
-    void updateCursorPosition(); // before mouseDrag
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
@@ -229,12 +228,10 @@ private:
     std::unique_ptr<FileChooser> chooseFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
 
-    //
+    double horizontalZoomFactor;
 
     const float cursorWidth = 1.5f;
-    DrawableRectangle currentPositionMarker; // cursor
-
-    double horizontalZoomFactor;
+    DrawableRectangle currentPositionCursor;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;

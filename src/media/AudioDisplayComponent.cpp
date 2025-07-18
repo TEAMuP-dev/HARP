@@ -15,7 +15,7 @@ AudioDisplayComponent::AudioDisplayComponent(String name, bool req, DisplayMode 
     mediaHandlerInstructions =
         "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 
-    mediaComponent.addAndMakeVisible(thumbnailComponent);
+    contentComponent.addAndMakeVisible(thumbnailComponent);
 }
 
 AudioDisplayComponent::~AudioDisplayComponent()
@@ -109,7 +109,7 @@ void AudioDisplayComponent::resized()
 {
     MediaDisplayComponent::resized();
     // Set thumbnailComponent to fill mediaComponent
-    thumbnailComponent.setBounds(mediaComponent.getLocalBounds());
+    thumbnailComponent.setBounds(contentComponent.getLocalBounds());
 }
 
 void AudioDisplayComponent::resetMedia()

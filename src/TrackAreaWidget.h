@@ -18,7 +18,6 @@
 using namespace juce;
 
 class TrackAreaWidget : public Component,
-                        // public ChangeListener,
                         public FileDragAndDropTarget
 {
 public:
@@ -53,7 +52,6 @@ public:
         if (m)
         {
             m->setDisplayID(trackInfo->id);
-            //m->addChangeListener(this);
             m->instructionBoxWriter = [this](const String& text) { updateInstructionBox(text); };
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
@@ -108,7 +106,6 @@ public:
         // TODO: also, does this need to go to the destructor ?
         for (auto& m : mediaDisplays)
         {
-            //m->removeChangeListener(this);
             removeChildComponent(m.get());
         }
 
@@ -150,21 +147,6 @@ public:
 
         mainBox.performLayout(area);
     }
-
-    // Implement the listener callback
-    // It listens to events emmited from MediaDisplayComponents
-    // using the sendChangeMessage() function
-    // NOTE: not used, but might be useful in the future
-    /*void changeListenerCallback(ChangeBroadcaster* source) override
-    {
-        for (auto& m : mediaDisplays)
-        {
-            if (source == m.get())
-            {
-                return;
-            }
-        }
-    }*/
 
     std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
     {
