@@ -109,14 +109,14 @@ void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
     }
 }
 
-void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
+void PianoRollComponent::verticalMouseWheelMoveEvent(double deltaY)
 {
     double newStart = visibleKeyRange.getStart() + deltaY * visibleKeyRange.getLength();
 
     updateVisibleKeyRange(Range<double>(newStart, newStart + visibleKeyRange.getLength()));
 }
 
-void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom)
+void PianoRollComponent::verticalMouseWheelZoomEvent(double deltaZoom)
 {
     double currentZoomFactor = verticalZoomSlider.getValue();
 

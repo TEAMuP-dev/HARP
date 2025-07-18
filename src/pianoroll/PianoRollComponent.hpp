@@ -43,8 +43,8 @@ public:
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
-    void verticalMouseWheelMoveEvent(float deltaY);
-    void verticalMouseWheelZoomEvent(float deltaZoom);
+    void verticalMouseWheelMoveEvent(double deltaY);
+    void verticalMouseWheelZoomEvent(double deltaZoom);
 
     void visibleKeyRangeZoom(double zoomFactor);
     void updateVisibleKeyRange(Range<double> newRange);

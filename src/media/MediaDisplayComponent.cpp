@@ -665,7 +665,83 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     horizontalScrollBar.setCurrentRange(visibleRange);
     updateCursorPosition();
     repositionLabels();
-    repaint();
+
+    visibleRangeCallback();
+}
+
+void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
+                                           double scrollBarRangeStart)
+{
+    if (scrollBarThatHasMoved == &horizontalScrollBar)
+    {
+        updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
+    }
+}
+
+void MediaDisplayComponent::horizontalMove(double deltaT)
+{
+    double visibleStart = visibleRange.getStart();
+    double visibleLength = visibleRange.getLength();
+
+    double newStart = visibleStart - deltaT * visibleLength / 10.0;
+    newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - visibleLength), newStart);
+
+    updateVisibleRange({ newStart, newStart + visibleLength });
+}
+
+void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
+{
+    horizontalZoomFactor = jlimit(1.0, 2.0, horizontalZoomFactor + deltaZoom);
+
+    double newScale = jmax(0.05, getTotalLengthInSecs() * (2.0 - horizontalZoomFactor));
+
+    double visibleStart = visibleRange.getStart();
+    double visibleEnd = visibleRange.getEnd();
+    double visibleLength = visibleRange.getLength();
+
+    double newStart = scrollPosT - newScale * (scrollPosT - visibleStart) / visibleLength;
+    double newEnd = scrollPosT + newScale * (visibleEnd - scrollPosT) / visibleLength;
+
+    updateVisibleRange({ newStart, newEnd });
+}
+
+void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
+{
+    if (! isThumbnailTrack() && isFileLoaded())
+    {
+#if (JUCE_MAC)
+        bool commandMod = evt.mods.isCommandDown();
+#else
+        bool commandMod = evt.mods.isCtrlDown();
+#endif
+        bool shiftMod = evt.mods.isShiftDown();
+
+        double scrollTime = mediaXToTime(evt.position.getX());
+
+        if (! commandMod)
+        {
+            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
+            {
+                // Horizontal scroll when using 2-finger swipe in macbook trackpad
+                horizontalMove(static_cast<double>(wheel.deltaX));
+            }
+            else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
+            {
+                if (shiftMod)
+                {
+                    horizontalMove(static_cast<double>(wheel.deltaY));
+                }
+                else
+                {
+                    horizontalZoom(static_cast<double>(wheel.deltaY), scrollTime);
+                }
+            }
+            else
+            {
+                // Do nothing
+            }
+        }
+    }
 }
 
 void MediaDisplayComponent::updateCursorPosition()
@@ -673,7 +749,7 @@ void MediaDisplayComponent::updateCursorPosition()
     float mediaWidth = getMediaWidth();
     float mediaXOffset = mediaXToDisplayX(0.0f);
     float minCursorXPos = mediaXToDisplayX(timeToMediaX(visibleRange.getStart()));
-    float maxCursorXPos = mediaXOffset + mediaWidth; // - cursorWidth;
+    float maxCursorXPos = mediaXOffset + mediaWidth;
 
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
     float cursorPositionY = 0;
@@ -708,6 +784,27 @@ void MediaDisplayComponent::updateCursorPosition()
 
     currentPositionCursor.setRectangle(
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
+}
+
+void MediaDisplayComponent::start()
+{
+    startPlaying();
+
+    startTimerHz(40);
+
+    playStopButton.setMode(stopButtonInfo.label);
+}
+
+void MediaDisplayComponent::stop()
+{
+    stopPlaying();
+
+    stopTimer();
+
+    currentPositionCursor.setVisible(false);
+    setPlaybackPosition(0.0);
+
+    playStopButton.setMode(playButtonActiveInfo.label);
 }
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
@@ -756,27 +853,6 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     {
         setPlaybackPosition(0.0);
     }
-}
-
-void MediaDisplayComponent::start()
-{
-    startPlaying();
-
-    startTimerHz(40);
-
-    playStopButton.setMode(stopButtonInfo.label);
-}
-
-void MediaDisplayComponent::stop()
-{
-    stopPlaying();
-
-    stopTimer();
-
-    currentPositionCursor.setVisible(false);
-    setPlaybackPosition(0.0);
-
-    playStopButton.setMode(playButtonActiveInfo.label);
 }
 
 String MediaDisplayComponent::getMediaHandlerInstructions()
@@ -981,32 +1057,6 @@ int MediaDisplayComponent::getNumOverheadLabels()
     return nOverheadLabels;
 }
 
-void MediaDisplayComponent::horizontalMove(float deltaX)
-{
-    auto totalLength = visibleRange.getLength();
-    auto visibleStart = visibleRange.getStart();
-    // auto scrollTime = mediaXToTime(evt.position.getX());
-    auto newStart = visibleStart - deltaX * totalLength / 10.0;
-    newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - totalLength), newStart);
-
-    updateVisibleRange({ newStart, newStart + totalLength });
-}
-
-void MediaDisplayComponent::horizontalZoom(float deltaZoom, float scrollPosX)
-{
-    auto totalLength = visibleRange.getLength();
-    auto visibleStart = visibleRange.getStart();
-    // auto scrollTime = mediaXToTime(evt.position.getX());
-    horizontalZoomFactor = jlimit(1.0, 1.99, horizontalZoomFactor + deltaZoom);
-
-    auto newScale = jmax(0.01, getTotalLengthInSecs() * (2 - horizontalZoomFactor));
-
-    auto newStart = scrollPosX - newScale * (scrollPosX - visibleStart) / totalLength;
-    auto newEnd = scrollPosX + newScale * (visibleStart + totalLength - scrollPosX) / totalLength;
-
-    updateVisibleRange({ newStart, newEnd });
-}
-
 int MediaDisplayComponent::correctToBounds(float x, float width)
 {
     x = jmax(timeToMediaX(0.0), x);
@@ -1024,56 +1074,6 @@ void MediaDisplayComponent::timerCallback()
     else
     {
         stop();
-    }
-}
-
-void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
-                                           double scrollBarRangeStart)
-{
-    if (scrollBarThatHasMoved == &horizontalScrollBar)
-    {
-        updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
-    }
-}
-
-void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
-{
-    if (getTotalLengthInSecs() > 0.0)
-    {
-#if (JUCE_MAC)
-        bool commandMod = evt.mods.isCommandDown();
-#else
-        bool commandMod = evt.mods.isCtrlDown();
-#endif
-        bool shiftMod = evt.mods.isShiftDown();
-
-        auto scrollTime = static_cast<float>(mediaXToTime(evt.position.getX()));
-
-        if (! commandMod)
-        {
-            if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
-            {
-                // Horizontal scroll when using 2-finger swipe in macbook trackpad
-                horizontalMove(wheel.deltaX);
-            }
-            else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
-            {
-                if (shiftMod)
-                {
-                    horizontalMove(wheel.deltaY);
-                }
-                else
-                {
-                    horizontalZoom(wheel.deltaY, scrollTime);
-                }
-            }
-            else
-            {
-                // Do nothing
-            }
-        }
-
-        repaint();
     }
 }
 

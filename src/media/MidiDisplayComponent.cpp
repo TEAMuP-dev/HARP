@@ -186,12 +186,12 @@ void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
     pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
 }
 
-void MidiDisplayComponent::verticalMove(float deltaY)
+void MidiDisplayComponent::verticalMove(double deltaY)
 {
     pianoRoll.verticalMouseWheelMoveEvent(deltaY);
 }
 
-void MidiDisplayComponent::verticalZoom(float deltaZoom)
+void MidiDisplayComponent::verticalZoom(double deltaZoom)
 {
     pianoRoll.verticalMouseWheelZoomEvent(deltaZoom);
 }
@@ -205,25 +205,23 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
 #endif
     bool shiftMod = evt.mods.isShiftDown();
 
-    if (commandMod)
+    if (! isThumbnailTrack() && commandMod)
     {
         if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
         {
             if (shiftMod)
             {
-                verticalMove(-wheel.deltaY);
+                verticalMove(-static_cast<double>(wheel.deltaY));
             }
             else
             {
-                verticalZoom(wheel.deltaY / 2);
+                verticalZoom(static_cast<double>(wheel.deltaY) / 2.0);
             }
         }
         else
         {
             // Do nothing
         }
-
-        repaint();
     }
     else
     {

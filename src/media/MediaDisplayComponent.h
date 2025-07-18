@@ -34,7 +34,8 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+    virtual void visibleRangeCallback() { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
     void setTrackName(String name) { trackName = name; }
     String getTrackName() { return trackName; }
@@ -79,10 +80,6 @@ public:
 
     virtual void updateVisibleRange(Range<double> r);
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
-    void mouseDrag(const MouseEvent& e) override;
-    void mouseUp(const MouseEvent& e) override;
-
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
@@ -92,6 +89,10 @@ public:
     virtual bool isPlaying() { return transportSource.isPlaying(); }
     virtual void startPlaying() { transportSource.start(); }
     virtual void stopPlaying() { transportSource.stop(); }
+
+    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
+    void mouseDrag(const MouseEvent& e) override;
+    void mouseUp(const MouseEvent& e) override;
 
     //
 
@@ -114,21 +115,12 @@ public:
 protected:
     void resetTransport();
 
-    //
-
-    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
-    {
-        return true; // TODO - is this necessary? if (! isThumbnailTrack())?
-    }
-
-    void horizontalMove(float deltaX);
-
-    void horizontalZoom(float deltaZoom, float scrollPosX);
-
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     // Media (audio or MIDI) content area
     Component contentComponent;
+
+    //
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
@@ -165,6 +157,9 @@ private:
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
+    void horizontalMove(double deltaT);
+    void horizontalZoom(double deltaZoom, double scrollPosT);
+
     virtual Component* getMediaComponent() { return this; }
 
     virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
@@ -177,15 +172,17 @@ private:
     float mediaXToDisplayX(const float mX);
     virtual float mediaYToDisplayY(const float mY) { return mY; }
 
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
+
     void updateCursorPosition();
+
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
     //
 
     void timerCallback() override;
 
     int correctToBounds(float x, float width);
-
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
     void mouseEnter(const MouseEvent& /*event*/) override;
     void mouseExit(const MouseEvent& /*event*/) override;

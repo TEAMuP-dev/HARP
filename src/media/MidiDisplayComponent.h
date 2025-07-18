@@ -19,6 +19,7 @@ public:
 
     void resized() override;
 
+    void visibleRangeCallback() override {}
     void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
 
     void loadMediaFile(const URL& filePath) override;
@@ -29,11 +30,6 @@ public:
     float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
 
     void updateVisibleRange(Range<double> newRange) override;
-
-    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
-    {
-        return dynamic_cast<MidiLabel*>(label.get()) != nullptr;
-    }
 
 private:
     Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
@@ -48,9 +44,14 @@ private:
 
     void postLoadActions(const URL& filePath) override;
 
-    void verticalMove(float deltaY);
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
+    {
+        return dynamic_cast<MidiLabel*>(l.get()) != nullptr;
+    }
 
-    void verticalZoom(float deltaZoom);
+    void verticalMove(double deltaY);
+
+    void verticalZoom(double deltaZoom);
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 

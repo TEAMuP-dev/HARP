@@ -40,17 +40,17 @@ public:
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
 
-    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
-    {
-        return dynamic_cast<AudioLabel*>(label.get()) != nullptr;
-    }
-
 private:
     Component* getMediaComponent() override { return &thumbnailComponent; }
 
     void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
+
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
+    {
+        return dynamic_cast<AudioLabel*>(l.get()) != nullptr;
+    }
 
     TimeSliceThread thread { "Audio File Thread" };
 
