@@ -34,9 +34,6 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
-    virtual void visibleRangeCallback() { repaint(); }
-    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
-
     void setTrackName(String name) { trackName = name; }
     String getTrackName() { return trackName; }
 
@@ -49,6 +46,8 @@ public:
 
     void setDisplayID(Uuid id) { displayID = id; }
     Uuid getDisplayID() { return displayID; }
+
+    String getMediaInstructions();
 
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display
@@ -69,16 +68,10 @@ public:
     void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
-
-    void chooseFileCallback();
-    void saveFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
-
-    virtual void updateVisibleRange(Range<double> r);
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -90,14 +83,7 @@ public:
     virtual void startPlaying() { transportSource.start(); }
     virtual void stopPlaying() { transportSource.stop(); }
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
-    void mouseDrag(const MouseEvent& e) override;
-    void mouseUp(const MouseEvent& e) override;
-
     //
-
-    String getMediaHandlerInstructions();
-    void setMediaHandlerInstructions(String instructions);
 
     void addLabels(LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
@@ -110,15 +96,17 @@ public:
 
     int getNumOverheadLabels();
 
-    std::function<void(const String&)> instructionBoxWriter;
-
 protected:
     void resetTransport();
 
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+    virtual void updateVisibleRange(Range<double> r);
+
+    virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     // Media (audio or MIDI) content area
     Component contentComponent;
+
+    String mediaInstructions;
 
     //
 
@@ -134,19 +122,17 @@ protected:
     OverheadPanel overheadPanel;
     ScrollBar horizontalScrollBar { false };
 
-    String mediaHandlerInstructions;
-
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
 
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
-    SharedResourcePointer<InstructionBox> instructionBox;
-    SharedResourcePointer<StatusBox> statusBox;
-
 private:
     void initializeButtons();
+
+    virtual void visibleRangeCallback() { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
     virtual void resetMedia() = 0;
     void resetPaths();
@@ -159,6 +145,11 @@ private:
 
     void horizontalMove(double deltaT);
     void horizontalZoom(double deltaZoom, double scrollPosT);
+
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
+
+    void chooseFileCallback();
+    void saveFileCallback();
 
     virtual Component* getMediaComponent() { return this; }
 
@@ -176,6 +167,13 @@ private:
 
     void updateCursorPosition();
 
+    void mouseEnter(const MouseEvent& /*e*/) override;
+    void mouseExit(const MouseEvent& /*e*/) override;
+
+    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
+    void mouseDrag(const MouseEvent& e) override;
+    void mouseUp(const MouseEvent& e) override;
+
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
     //
@@ -183,9 +181,6 @@ private:
     void timerCallback() override;
 
     int correctToBounds(float x, float width);
-
-    void mouseEnter(const MouseEvent& /*event*/) override;
-    void mouseExit(const MouseEvent& /*event*/) override;
 
     // Flex for whole display
     FlexBox mainFlexBox;
@@ -232,4 +227,7 @@ private:
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
+
+    SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<StatusBox> statusBox;
 };

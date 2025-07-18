@@ -12,7 +12,7 @@ AudioDisplayComponent::AudioDisplayComponent(String name, bool req, DisplayMode 
     // Need to repaint when visible range changes
     thumbnail.addChangeListener(this);
 
-    mediaHandlerInstructions =
+    mediaInstructions =
         "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 
     contentComponent.addAndMakeVisible(thumbnailComponent);

@@ -339,6 +339,29 @@ void MediaDisplayComponent::repositionLabels() //
     positionLabels(labelOverlays);
 }
 
+String MediaDisplayComponent::getMediaInstructions()
+{
+    String instructions = mediaInstructions;
+
+    for (OverheadLabelComponent* label : overheadLabels)
+    {
+        if (label->isMouseOver())
+        {
+            instructions = label->getDescription();
+        }
+    }
+
+    for (LabelOverlayComponent* label : labelOverlays)
+    {
+        if (label->isMouseOver())
+        {
+            instructions = label->getDescription();
+        }
+    }
+
+    return instructions;
+}
+
 void MediaDisplayComponent::resetDisplay()
 {
     clearLabels();
@@ -598,7 +621,11 @@ void MediaDisplayComponent::saveFileCallback()
     {
         overwriteOriginalFile();
         saveFileButton.setMode(saveButtonInactiveInfo.label);
-        statusBox->setStatusMessage("File saved successfully");
+
+        if (statusBox != nullptr)
+        {
+            statusBox->setStatusMessage("File saved successfully");
+        }
     }
 }
 
@@ -807,6 +834,22 @@ void MediaDisplayComponent::stop()
     playStopButton.setMode(playButtonActiveInfo.label);
 }
 
+void MediaDisplayComponent::mouseEnter(const MouseEvent& /*e*/)
+{
+    if (! isThumbnailTrack() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage(getMediaInstructions());
+    }
+}
+
+void MediaDisplayComponent::mouseExit(const MouseEvent& /*e*/)
+{
+    if (! isThumbnailTrack() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage("");
+    }
+}
+
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (e.eventComponent == getMediaComponent() && isFileLoaded())
@@ -853,34 +896,6 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     {
         setPlaybackPosition(0.0);
     }
-}
-
-String MediaDisplayComponent::getMediaHandlerInstructions()
-{
-    String toolTipText = mediaHandlerInstructions;
-
-    for (OverheadLabelComponent* label : overheadLabels)
-    {
-        if (label->isMouseOver())
-        {
-            toolTipText = label->getDescription();
-        }
-    }
-
-    for (LabelOverlayComponent* label : labelOverlays)
-    {
-        if (label->isMouseOver())
-        {
-            toolTipText = label->getDescription();
-        }
-    }
-
-    return toolTipText;
-}
-
-void MediaDisplayComponent::setMediaHandlerInstructions(String instructions)
-{
-    mediaHandlerInstructions = instructions;
 }
 
 void MediaDisplayComponent::addLabels(LabelList& labels)
@@ -1075,16 +1090,4 @@ void MediaDisplayComponent::timerCallback()
     {
         stop();
     }
-}
-
-void MediaDisplayComponent::mouseEnter(const MouseEvent& /*event*/)
-{
-    if (instructionBoxWriter)
-        // instructionBoxWriter(mediaHandlerInstructions);
-        instructionBoxWriter(getMediaHandlerInstructions());
-}
-void MediaDisplayComponent::mouseExit(const MouseEvent& /*event*/)
-{
-    if (instructionBoxWriter)
-        instructionBoxWriter("");
 }

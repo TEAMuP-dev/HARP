@@ -52,7 +52,6 @@ public:
         if (m)
         {
             m->setDisplayID(trackInfo->id);
-            m->instructionBoxWriter = [this](const String& text) { updateInstructionBox(text); };
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
         }
@@ -156,17 +155,7 @@ public:
     int getNumTracks() { return mediaDisplays.size(); }
 
 private:
-    void updateInstructionBox(const String& text)
-    {
-        if (instructionBox != nullptr)
-        {
-            instructionBox->setStatusMessage(text);
-        }
-    }
-
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
-
-    SharedResourcePointer<InstructionBox> instructionBox;
 
     const DisplayMode displayMode;
     const int fixedHeight = 0;
