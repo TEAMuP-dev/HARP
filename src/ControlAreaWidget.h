@@ -343,14 +343,6 @@ public:
         }
     }
 
-    juce::TextEditor* getInputPromptEditor()
-    {
-        if (textCtrls.empty())
-             return nullptr;
-
-        return textCtrls.front()->getTextEditor();  // getter for the first text control
-    }
-
 private:
     // ToolbarSliderStyle toolbarSliderStyle;
     std::shared_ptr<WebModel> mModel { nullptr };

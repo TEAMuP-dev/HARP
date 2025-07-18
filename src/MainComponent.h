@@ -632,6 +632,10 @@ public:
                                 lastLoadedModelItemIndex = modelPathComboBox.getSelectedItemIndex();
                             }
                             processLoadingResult(loadingResult);
+
+                            //debugging
+                            Component* comp = Component::getCurrentlyFocusedComponent();
+                            DBG("Currently focused component: " + (comp ? comp->getName() : "none"));
                         });
                 }
                 catch (Error& loadingError)
@@ -1877,15 +1881,6 @@ private:
             
             // now, we can enable the process button
             resetProcessingButtons();
-            if (auto* editor = controlAreaWidget.getInputPromptEditor())
-            {
-                DBG("Attempting grabKeyboardFocus()");
-                editor->grabKeyboardFocus();  // focus the input prompt editor
-            }
-            else
-            {
-                DBG("Input prompt editor is null");
-            }
             return;
         }
 
@@ -1912,20 +1907,6 @@ private:
             mModelStatusTimer->setModel(model);
             controlAreaWidget.populateControls();
 
-            juce::Timer::callAfterDelay(100, [this]
-                {
-                    if (auto* editor = controlAreaWidget.getInputPromptEditor())
-                    {
-                        editor->grabKeyboardFocus();
-                        DBG("Delayed grabKeyboardFocus() after model load");
-                
-                        if (auto* comp = juce::Component::getCurrentlyFocusedComponent())
-                            DBG("Currently focused component: " + comp->getName());
-                        else
-                            DBG("No component has focus");
-                    }
-                });
-                
 
     
             // inputTracksWidget.populateTracks();

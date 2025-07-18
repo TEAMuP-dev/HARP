@@ -26,7 +26,7 @@ public:
     }
 
     void resized() override
-    {
+    {     
         auto area = getLocalBounds();
         // DBG("My bounds are " + getBounds().toString());
         auto topArea = area.removeFromTop((int) (area.getHeight() * 0.25f));
@@ -46,6 +46,8 @@ public:
         textBox.setMouseClickGrabsKeyboardFocus(true);
         addAndMakeVisible(titleLabel);
         addAndMakeVisible(textBox);
+    
+
     }
 
     void setName(const juce::String& nameId) override
@@ -66,8 +68,6 @@ public:
     void addListener(juce::TextEditor::Listener* listener) { textBox.addListener(listener); }
 
     juce::String getText() { return textBox.getText(); }
-
-    juce::TextEditor* getTextEditor() { return &textBox; } //getter for the text editor
 private:
     juce::TextEditor textBox;
     juce::Label titleLabel;
