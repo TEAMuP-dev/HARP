@@ -83,18 +83,16 @@ public:
     virtual void startPlaying() { transportSource.start(); }
     virtual void stopPlaying() { transportSource.stop(); }
 
-    //
-
-    void addLabels(LabelList& labels);
-    void clearLabels(int processingIdxCutoff = 0);
-
-    void addLabelOverlay(LabelOverlayComponent* l);
-    void removeLabelOverlay(LabelOverlayComponent* l);
+    int getNumOverheadLabels();
 
     void addOverheadLabel(OverheadLabelComponent* l);
     void removeOverheadLabel(OverheadLabelComponent* l);
 
-    int getNumOverheadLabels();
+    void addLabelOverlay(LabelOverlayComponent* l);
+    void removeLabelOverlay(LabelOverlayComponent* l);
+
+    void addLabels(LabelList& labels);
+    void clearLabels(int processingIdxCutoff = 0);
 
 protected:
     void resetTransport();
@@ -103,24 +101,15 @@ protected:
 
     virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
+    const int controlSpacing = 1;
+    const int scrollBarSize = 8;
+
     // Media (audio or MIDI) content area
     Component contentComponent;
 
     String mediaInstructions;
 
-    //
-
-    const int controlSpacing = 1;
-    const int scrollBarSize = 8;
-
-    const int textSpacing = 2;
-    const int minFontSize = 10;
-    const int labelHeight = 20;
-
     Range<double> visibleRange;
-
-    OverheadPanel overheadPanel;
-    ScrollBar horizontalScrollBar { false };
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -131,6 +120,7 @@ protected:
 private:
     void initializeButtons();
 
+    void timerCallback() override;
     virtual void visibleRangeCallback() { repaint(); }
     virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
@@ -142,9 +132,6 @@ private:
     void setOriginalFilePath(URL filePath);
 
     virtual void postLoadActions(const URL& filePath) = 0;
-
-    void horizontalMove(double deltaT);
-    void horizontalZoom(double deltaZoom, double scrollPosT);
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
@@ -158,10 +145,14 @@ private:
     virtual float getVerticalControlsWidth() { return 0.0f; }
 
     virtual float getMediaXPos() { return 0.0f; }
-    double mediaXToTime(const float x);
+    double mediaXToTime(const float mX);
     float timeToMediaX(const double t);
     float mediaXToDisplayX(const float mX);
     virtual float mediaYToDisplayY(const float mY) { return mY; }
+    int correctMediaXBounds(float mX, float width);
+
+    void horizontalMove(double deltaT);
+    void horizontalZoom(double deltaZoom, double scrollPosT);
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
@@ -176,20 +167,9 @@ private:
 
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
-    //
-
-    void timerCallback() override;
-
-    int correctToBounds(float x, float width);
-
-    // Flex for whole display
-    FlexBox mainFlexBox;
-    // Flex for header area (label and buttons)
-    FlexBox headerFlexBox;
-    // Flex for header buttons
-    FlexBox buttonsFlexBox;
-    // Flex for media / overhead panel (if any)
-    FlexBox mediaAreaFlexBox;
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
 
     // Panel with labels / buttons
     Component headerComponent;
@@ -208,6 +188,18 @@ private:
     MultiButton::Mode saveButtonActiveInfo;
     MultiButton::Mode saveButtonInactiveInfo;
 
+    // Panel displaying overhead labels
+    OverheadPanel overheadPanel;
+
+    // Flex for whole display
+    FlexBox mainFlexBox;
+    // Flex for header area (label and buttons)
+    FlexBox headerFlexBox;
+    // Flex for header buttons
+    FlexBox buttonsFlexBox;
+    // Flex for media / overhead panel (if any)
+    FlexBox mediaAreaFlexBox;
+
     Uuid displayID;
     String trackName;
     const bool required = true;
@@ -221,12 +213,15 @@ private:
     std::unique_ptr<FileChooser> saveFileBrowser;
 
     double horizontalZoomFactor;
+    ScrollBar horizontalScrollBar { false };
 
     const float cursorWidth = 1.5f;
     DrawableRectangle currentPositionCursor;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
+
+    bool isLabelRepositioningScheduled = false;
 
     SharedResourcePointer<InstructionBox> instructionBox;
     SharedResourcePointer<StatusBox> statusBox;

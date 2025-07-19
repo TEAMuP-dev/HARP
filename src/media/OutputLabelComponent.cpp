@@ -58,6 +58,28 @@ void OutputLabelComponent::setColor(Colour clr)
 
 float OutputLabelComponent::getTextWidth() { return getFont().getStringWidthFloat(getText()); }
 
+void OutputLabelComponent::addMarkersTo(Component* c)
+{
+    c->addChildComponent(leftMarker);
+    c->addChildComponent(rightMarker);
+    c->addChildComponent(durationFill);
+}
+
+void OutputLabelComponent::removeMarkersFrom(Component* c)
+{
+    c->removeChildComponent(&leftMarker);
+    c->removeChildComponent(&rightMarker);
+    c->removeChildComponent(&durationFill);
+}
+
+void OutputLabelComponent::setMarkerVisibility(bool v)
+{
+    leftMarker.setVisible(v);
+    rightMarker.setVisible(v);
+}
+
+void OutputLabelComponent::setFillVisibility(bool v) { durationFill.setVisible(v); }
+
 juce::MouseCursor OutputLabelComponent::getMouseCursor()
 {
     if (link.isNotEmpty())
@@ -101,28 +123,6 @@ void OutputLabelComponent::mouseExit(const juce::MouseEvent& /*e*/)
     setMarkerVisibility(false);
 }
 
-void OutputLabelComponent::addMarkersTo(Component* c)
-{
-    c->addChildComponent(leftMarker);
-    c->addChildComponent(rightMarker);
-    c->addChildComponent(durationFill);
-}
-
-void OutputLabelComponent::removeMarkersFrom(Component* c)
-{
-    c->removeChildComponent(&leftMarker);
-    c->removeChildComponent(&rightMarker);
-    c->removeChildComponent(&durationFill);
-}
-
-void OutputLabelComponent::setMarkerVisibility(bool v)
-{
-    leftMarker.setVisible(v);
-    rightMarker.setVisible(v);
-}
-
-void OutputLabelComponent::setFillVisibility(bool v) { durationFill.setVisible(v); }
-
 OverheadLabelComponent::OverheadLabelComponent(double t,
                                                String lbl,
                                                double dur,
@@ -159,11 +159,6 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
     return jmin(1.0f, jmax(0.0f, 1 - (amplitude + 1) / 2));
-}
-
-float LabelOverlayComponent::frequencyToRelativeY(float /*frequency*/)
-{
-    return 0.0f; // TODO
 }
 
 float LabelOverlayComponent::pitchToRelativeY(float pitch)

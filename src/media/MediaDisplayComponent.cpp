@@ -252,10 +252,22 @@ void MediaDisplayComponent::resized()
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
 
-    repositionLabels();
+    if (! isLabelRepositioningScheduled)
+    {
+        isLabelRepositioningScheduled = true;
+
+        // Defer label repositioning until all layout passes are complete
+        juce::MessageManager::callAsync(
+            [this]()
+            {
+                isLabelRepositioningScheduled = false;
+
+                repositionLabels();
+            });
+    }
 }
 
-void MediaDisplayComponent::repositionLabels() //
+void MediaDisplayComponent::repositionLabels()
 {
     if (! isFileLoaded())
     {
@@ -265,17 +277,8 @@ void MediaDisplayComponent::repositionLabels() //
     float mediaWidth = getMediaWidth();
     float mediaHeight = getMediaHeight();
 
-    float pixelsPerSecond = mediaWidth / static_cast<float>(visibleRange.getLength());
-
     float minLabelWidth = 0.1f * mediaWidth;
-    float maxLabelWidth = 0.1f * pixelsPerSecond;
-
-    float contentWidth = static_cast<float>(mediaWidth);
-    float minVisibilityWidth = contentWidth / 200.0f;
-    float maxVisibilityWidth = contentWidth / 3.0f;
-
-    minLabelWidth = jmin(minLabelWidth, maxVisibilityWidth);
-    maxLabelWidth = jmax(maxLabelWidth, minVisibilityWidth);
+    float maxLabelWidth = 0.2f * mediaWidth;
 
     auto positionLabels = [this, minLabelWidth, maxLabelWidth, mediaHeight](auto& labels)
     {
@@ -288,40 +291,40 @@ void MediaDisplayComponent::repositionLabels() //
                 minLabelWidth,
                 jmin(maxLabelWidth, l->getTextWidth() + 2.0f * static_cast<float>(textSpacing)));
 
-            float labelStartTime = static_cast<float>(l->getTime());
-            float labelStopTime = labelStartTime + static_cast<float>(l->getDuration());
+            double labelStartTime = l->getTime();
+            double labelStopTime = labelStartTime + l->getDuration();
+            double labelCenterTime = labelStartTime + l->getDuration() / 2.0;
 
-            float xPos = correctToBounds(timeToMediaX(labelStartTime + l->getDuration() / 2.0f)
-                                             - labelWidth / 2.0f,
-                                         labelWidth);
+            float xPos =
+                correctMediaXBounds(timeToMediaX(labelCenterTime) - labelWidth / 2.0f, labelWidth);
             float yPos = 1.0f;
 
             if (auto lo = dynamic_cast<LabelOverlayComponent*>(l))
             {
-                yPos = lo->getRelativeY() * mediaHeight;
-                yPos -= static_cast<float>(labelHeight) / 2.0f;
+                yPos = lo->getRelativeY() * mediaHeight - static_cast<float>(labelHeight) / 2.0f;
                 yPos = jmin(mediaHeight - static_cast<float>(labelHeight), jmax(0.0f, yPos));
                 yPos = mediaYToDisplayY(yPos);
             }
+
             Rectangle<float> labelBounds(xPos, yPos, labelWidth, static_cast<float>(labelHeight));
             l->setBounds(labelBounds.toNearestInt());
-            l->toFront(true);
+            //l->toFront(true);
+
+            float cursorRadius = cursorWidth / 2.0f;
 
             float leftLabelMarkerPos = static_cast<float>(
-                correctToBounds(timeToMediaX(labelStartTime), cursorWidth / 2.0f));
+                correctMediaXBounds(timeToMediaX(labelStartTime) - cursorRadius, cursorWidth));
             l->setLeftMarkerBounds(
                 Rectangle<float>(leftLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
             float rightLabelMarkerPos = static_cast<float>(
-                correctToBounds(timeToMediaX(labelStopTime), cursorWidth / 2.0f));
+                correctMediaXBounds(timeToMediaX(labelStopTime) - cursorRadius, cursorWidth));
             l->setRightMarkerBounds(
                 Rectangle<float>(rightLabelMarkerPos, 0, cursorWidth, mediaHeight).toNearestInt());
 
-            float durationWidth =
-                jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos - cursorWidth / 2.0f);
+            float durationWidth = jmax(0.0f, rightLabelMarkerPos - leftLabelMarkerPos);
             l->setDurationFillBounds(
-                Rectangle<float>(
-                    leftLabelMarkerPos + cursorWidth / 2, 0, durationWidth, mediaHeight)
+                Rectangle<float>(leftLabelMarkerPos + cursorRadius, 0, durationWidth, mediaHeight)
                     .toNearestInt());
 
             if (l->getIndex() == currentTempFileIdx)
@@ -337,6 +340,18 @@ void MediaDisplayComponent::repositionLabels() //
 
     positionLabels(overheadLabels);
     positionLabels(labelOverlays);
+}
+
+void MediaDisplayComponent::timerCallback()
+{
+    if (isPlaying())
+    {
+        updateCursorPosition();
+    }
+    else
+    {
+        stop();
+    }
 }
 
 String MediaDisplayComponent::getMediaInstructions()
@@ -379,6 +394,12 @@ void MediaDisplayComponent::resetPaths()
     currentTempFileIdx = -1;
 }
 
+void MediaDisplayComponent::resetTransport()
+{
+    transportSource.stop();
+    transportSource.setSource(nullptr);
+}
+
 void MediaDisplayComponent::resetScrollBar()
 {
     horizontalZoomFactor = 1.0;
@@ -391,12 +412,6 @@ void MediaDisplayComponent::resetButtonState()
     playStopButton.setMode(playButtonInactiveInfo.label);
     chooseFileButton.setMode(chooseButtonInfo.label);
     saveFileButton.setMode(saveButtonInactiveInfo.label);
-}
-
-void MediaDisplayComponent::resetTransport()
-{
-    transportSource.stop();
-    transportSource.setSource(nullptr);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -641,13 +656,11 @@ float MediaDisplayComponent::getPixelsPerSecond()
     }
 }
 
-double MediaDisplayComponent::mediaXToTime(const float x)
+double MediaDisplayComponent::mediaXToTime(const float mX)
 {
-    float x_ = jmin(getMediaWidth(), jmax(0.0f, x));
-
     if (visibleRange.getLength())
     {
-        return static_cast<double>(x_ / getPixelsPerSecond()) + getTimeAtOrigin();
+        return static_cast<double>(mX / getPixelsPerSecond()) + getTimeAtOrigin();
     }
     else
     {
@@ -685,6 +698,14 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
     return dX;
 }
 
+int MediaDisplayComponent::correctMediaXBounds(float mX, float width)
+{
+    mX = jmax(timeToMediaX(0.0), mX);
+    mX = jmin(timeToMediaX(getTotalLengthInSecs()) - width, mX);
+
+    return static_cast<int>(mX);
+}
+
 void MediaDisplayComponent::updateVisibleRange(Range<double> r)
 {
     visibleRange = r;
@@ -694,15 +715,6 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     repositionLabels();
 
     visibleRangeCallback();
-}
-
-void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
-                                           double scrollBarRangeStart)
-{
-    if (scrollBarThatHasMoved == &horizontalScrollBar)
-    {
-        updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
-    }
 }
 
 void MediaDisplayComponent::horizontalMove(double deltaT)
@@ -730,6 +742,15 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     double newEnd = scrollPosT + newScale * (visibleEnd - scrollPosT) / visibleLength;
 
     updateVisibleRange({ newStart, newEnd });
+}
+
+void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
+                                           double scrollBarRangeStart)
+{
+    if (scrollBarThatHasMoved == &horizontalScrollBar)
+    {
+        updateVisibleRange(visibleRange.movedToStartAt(scrollBarRangeStart));
+    }
 }
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
@@ -898,6 +919,67 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
 }
 
+int MediaDisplayComponent::getNumOverheadLabels()
+{
+    int nOverheadLabels = 0;
+
+    for (auto l : overheadLabels)
+    {
+        if (l->getIndex() == currentTempFileIdx)
+        {
+            nOverheadLabels++;
+        }
+    }
+
+    return nOverheadLabels;
+}
+
+void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
+{
+    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    l->setIndex(currentTempFileIdx);
+    overheadLabels.add(l);
+
+    Component* mediaComponentPtr = getMediaComponent();
+    l->addMarkersTo(mediaComponentPtr);
+    overheadPanel.addAndMakeVisible(l);
+
+    resized(); // Needed to make panel and labels visible
+}
+
+void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
+{
+    Component* mediaComponentPtr = getMediaComponent();
+
+    l->removeMarkersFrom(mediaComponentPtr);
+    overheadPanel.removeChildComponent(l);
+
+    overheadLabels.removeObject(l);
+}
+
+void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
+{
+    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
+    l->setIndex(currentTempFileIdx);
+    labelOverlays.add(l);
+
+    Component* mediaComponentPtr = getMediaComponent();
+    l->addMarkersTo(mediaComponentPtr);
+    mediaComponentPtr->addAndMakeVisible(l);
+
+    repositionLabels(); // Needed to make labels visible
+}
+
+void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
+{
+    Component* mediaComponentPtr = getMediaComponent();
+
+    l->removeMarkersFrom(mediaComponentPtr);
+    mediaComponentPtr->removeChildComponent(l);
+
+    labelOverlays.removeObject(l);
+}
+
 void MediaDisplayComponent::addLabels(LabelList& labels)
 {
     for (const auto& l : labels)
@@ -906,9 +988,9 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
         {
             continue;
         }
+
         std::unique_ptr<OutputLabelComponent> lc =
             std::make_unique<OutputLabelComponent>((double) l->t, l->label);
-        ;
 
         if ((l->description).has_value())
         {
@@ -917,7 +999,7 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
 
         if ((l->duration).has_value())
         {
-            lc->setDuration((double) (l->duration).value());
+            lc->setDuration(static_cast<double>((l->duration).value()));
         }
 
         if ((l->color).has_value())
@@ -973,36 +1055,6 @@ void MediaDisplayComponent::addLabels(LabelList& labels)
     }
 }
 
-void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
-{
-    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    l->setIndex(currentTempFileIdx);
-    labelOverlays.add(l);
-
-    Component* mediaComponentPtr = getMediaComponent();
-    mediaComponentPtr->addAndMakeVisible(l);
-    l->addMarkersTo(mediaComponentPtr);
-
-    // mediaComponent.addAndMakeVisible(l);
-    // l->addMarkersTo(mediaComponent);
-
-    repositionLabels();
-}
-
-void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
-{
-    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    l->setIndex(currentTempFileIdx);
-    overheadLabels.add(l);
-
-    overheadPanel.addAndMakeVisible(l);
-
-    Component* mediaComponentPtr = getMediaComponent();
-    l->addMarkersTo(mediaComponentPtr);
-
-    resized();
-}
-
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
 {
     for (int i = labelOverlays.size() - 1; i >= 0; --i)
@@ -1036,58 +1088,4 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     }
 
     resized();
-}
-
-void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
-{
-    Component* mediaComponentPtr = getMediaComponent();
-
-    l->removeMarkersFrom(mediaComponentPtr);
-    mediaComponentPtr->removeChildComponent(l);
-    labelOverlays.removeObject(l);
-}
-
-void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
-{
-    Component* mediaComponentPtr = getMediaComponent();
-
-    l->removeMarkersFrom(mediaComponentPtr);
-    overheadPanel.removeChildComponent(l);
-
-    overheadLabels.removeObject(l);
-}
-
-int MediaDisplayComponent::getNumOverheadLabels()
-{
-    int nOverheadLabels = 0;
-
-    for (auto l : overheadLabels)
-    {
-        if (l->getIndex() == currentTempFileIdx)
-        {
-            nOverheadLabels++;
-        }
-    }
-
-    return nOverheadLabels;
-}
-
-int MediaDisplayComponent::correctToBounds(float x, float width)
-{
-    x = jmax(timeToMediaX(0.0), x);
-    x = jmin(timeToMediaX(getTotalLengthInSecs()) - width, x);
-
-    return static_cast<int>(x);
-}
-
-void MediaDisplayComponent::timerCallback()
-{
-    if (isPlaying())
-    {
-        updateVisibleRange(visibleRange);
-    }
-    else
-    {
-        stop();
-    }
 }
