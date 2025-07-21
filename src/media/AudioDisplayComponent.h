@@ -1,4 +1,5 @@
 #pragma once
+
 #include "MediaDisplayComponent.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
@@ -41,11 +42,11 @@ public:
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
 
 private:
-    Component* getMediaComponent() override { return &thumbnailComponent; }
-
     void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
+
+    Component* getMediaComponent() override { return &thumbnailComponent; }
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
     {

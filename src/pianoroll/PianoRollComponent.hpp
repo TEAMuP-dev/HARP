@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
@@ -27,43 +25,47 @@ public:
 
     void resized() override;
 
-    void setResolution(int pps);
-    void setHideKeys(bool hk) { hideKeys = hk; }
-    void setHideControls(bool hC) { hideControls = hC; }
-
-    Component* getNoteGrid() { return &noteGridContainer; }
+    void setResolution(int pps) { noteGrid.setResolution(pps); }
     double getResolution() { return noteGrid.getPixelsPerSecond(); }
+
+    void setHideKeys(bool hk) { hideKeys = hk; }
     bool isHidingKeys() { return hideKeys; }
+
+    void setHideControls(bool hC) { hideControls = hC; }
     bool isHidingControls() { return hideControls; }
 
-    void resizeNoteGrid(double lengthInSecs);
+    Component* getNoteGrid() { return &noteGridContainer; }
 
-    void insertNote(MidiNote n);
-    void resetNotes();
-
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
-
-    void verticalMouseWheelMoveEvent(double deltaY);
-    void verticalMouseWheelZoomEvent(double deltaZoom);
-
-    void visibleKeyRangeZoom(double zoomFactor);
-    void updateVisibleKeyRange(Range<double> newRange);
-    void updateVisibleMediaRange(Range<double> newRange);
+    int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
+    int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
+    int getPianoRollContainerWidth();
+    int getControlsWidth();
+    float getKeyHeight();
 
     //Range<double> getVisibleMediaRange() { return visibleMediaRange; }
     Range<double> getVisibleKeyRange() { return visibleKeyRange; }
 
+    void resizeNoteGrid(double lengthInSecs);
+
+    void insertNote(MidiNote n) { noteGrid.insertNote(n); }
+    void resetNotes() { noteGrid.resetNotes(); }
+
+    void updateVisibleMediaRange(Range<double> newRange);
+
+    void verticalMouseWheelMoveEvent(double deltaY);
+    void verticalMouseWheelZoomEvent(double deltaZoom);
+
     void autoCenterViewBox(int medianMidi, float stdDevMidi);
 
-    int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
-    int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
-    double getKeyHeight();
-    int getPianoRollContainerWidth();
-    int getControlsWidth();
-
 private:
-    double zoomToKeysVisible(double zoomFactor);
-    double keysVisibleToZoom(double numKeysVisible);
+    float zoomToKeysVisible(double zoomFactor);
+    double keysVisibleToZoom(float numKeysVisible);
+
+    void updateVisibleKeyRange(Range<double> newRange);
+
+    void visibleKeyRangeZoom(double zoomFactor);
+
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
     int keyboardWidth;
     int pianoRollSpacing;

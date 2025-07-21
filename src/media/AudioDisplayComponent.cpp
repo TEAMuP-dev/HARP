@@ -7,15 +7,14 @@ AudioDisplayComponent::AudioDisplayComponent(String name, bool req, DisplayMode 
 {
     thread.startThread(Thread::Priority::normal);
 
-    thumbnailComponent.addMouseListener(this, true);
-
     // Need to repaint when visible range changes
     thumbnail.addChangeListener(this);
 
+    thumbnailComponent.addMouseListener(this, true);
+    contentComponent.addAndMakeVisible(thumbnailComponent);
+
     mediaInstructions =
         "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
-
-    contentComponent.addAndMakeVisible(thumbnailComponent);
 }
 
 AudioDisplayComponent::~AudioDisplayComponent()
@@ -40,26 +39,16 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
+void AudioDisplayComponent::resized()
+{
+    MediaDisplayComponent::resized();
+
+    // Set thumbnail to fill entire media content area
+    thumbnailComponent.setBounds(contentComponent.getLocalBounds());
+}
+
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 {
-    // const auto source = std::make_unique<URLInputSource>(filePath);
-
-    // if (source == nullptr)
-    // {
-    //     DBG("AudioDisplayComponent::loadMediaFile: Failed to create source for " << filePath.toString(true));
-    //     jassertfalse;
-    //     return;
-    // }
-
-    // auto stream = rawToUniquePtr(source->createInputStream());
-
-    // if (stream == nullptr)
-    // {
-    //     DBG("AudioDisplayComponent::loadMediaFile: Failed to create input stream for " << filePath.toString(true));
-    //     jassertfalse;
-    //     return;
-    // }
-
     const auto source = std::make_unique<URLInputSource>(filePath);
 
     File audioFile = filePath.getLocalFile();
@@ -97,19 +86,11 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 
     audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
 
-    // ..and plug it into our transport source
     transportSource.setSource(
         audioFileSource.get(),
-        32768, // tells it to buffer this many samples ahead
-        &thread, // this is the background thread to use for reading-ahead
-        audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
-}
-
-void AudioDisplayComponent::resized()
-{
-    MediaDisplayComponent::resized();
-    // Set thumbnailComponent to fill mediaComponent
-    thumbnailComponent.setBounds(contentComponent.getLocalBounds());
+        32768, // Amount of samples to buffer ahead
+        &thread, // Thread to use for reading-ahead
+        audioFileSource->getAudioFormatReader()->sampleRate); // Allows for sample rate correction
 }
 
 void AudioDisplayComponent::resetMedia()

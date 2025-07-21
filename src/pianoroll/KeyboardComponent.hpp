@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -18,7 +16,7 @@ public:
 
     void paint(Graphics& g);
 
-    float getKeyHeight();
-
     virtual bool isKeyboardComponent() { return true; }
+
+    float getKeyHeight();
 };

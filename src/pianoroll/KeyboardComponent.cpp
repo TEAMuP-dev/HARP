@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "KeyboardComponent.hpp"
 
 const char* KeyboardComponent::pitchNames[] = {

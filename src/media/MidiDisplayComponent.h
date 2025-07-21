@@ -19,48 +19,47 @@ public:
 
     void resized() override;
 
-    void visibleRangeCallback() override {}
-    void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
-
     void loadMediaFile(const URL& filePath) override;
-
-    void startPlaying() override;
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
     float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
 
-    void updateVisibleRange(Range<double> newRange) override;
+    void startPlaying() override;
 
 private:
+    void visibleRangeCallback() override {}
+    void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
+
+    void resetMedia() override;
+
+    void postLoadActions(const URL& filePath) override;
+
     Component* getMediaComponent() override { return pianoRoll.getNoteGrid(); }
 
-    float getMediaHeight() override;
+    float getMediaHeight() override { return 128.0f * pianoRoll.getKeyHeight(); }
     float getVerticalControlsWidth() override;
 
     float getMediaXPos() override;
     float mediaYToDisplayY(const float mY) override;
 
-    void resetMedia() override;
+    void updateVisibleRange(Range<double> newRange) override;
 
-    void postLoadActions(const URL& filePath) override;
+    void verticalMove(double deltaY);
+    void verticalZoom(double deltaZoom);
+
+    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
     {
         return dynamic_cast<MidiLabel*>(l.get()) != nullptr;
     }
 
-    void verticalMove(double deltaY);
-
-    void verticalZoom(double deltaZoom);
-
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+    int medianMidi;
+    float stdDevMidi;
 
     double totalLengthInSecs = 0.0;
 
     SynthAudioSource synthAudioSource;
-
-    int medianMidi;
-    float stdDevMidi;
 
     PianoRollComponent pianoRoll {
         70, 3, scrollBarSize, controlSpacing, isThumbnailTrack(), isThumbnailTrack()

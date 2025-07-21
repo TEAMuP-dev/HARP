@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "NoteGridComponent.hpp"
 
 NoteGridComponent::NoteGridComponent()

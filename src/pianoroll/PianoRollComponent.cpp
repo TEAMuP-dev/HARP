@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "PianoRollComponent.hpp"
 
 PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, bool hk, bool hC)
@@ -78,7 +76,38 @@ void PianoRollComponent::resized()
     noteGridContainer.setViewPosition(currXPosition, currYPosition);
 }
 
-void PianoRollComponent::setResolution(int pps) { noteGrid.setResolution(pps); }
+int PianoRollComponent::getPianoRollContainerWidth()
+{
+    return jmax(0, getWidth() - getKeyboardWidth() - getPianoRollSpacing() - getControlsWidth());
+}
+
+int PianoRollComponent::getControlsWidth()
+{
+    return ! isHidingControls() ? static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing : 0;
+}
+
+float PianoRollComponent::getKeyHeight()
+{
+    // Determine key height based off of desired amount of keys visible
+    double keysVisible = zoomToKeysVisible(verticalZoomSlider.getValue());
+    double keyHeight = static_cast<double>(keyboardContainer.getHeight()) / keysVisible;
+
+    return keyHeight;
+}
+
+float PianoRollComponent::zoomToKeysVisible(double zoomFactor)
+{
+    return static_cast<float>(minKeysVisible)
+           + static_cast<float>(1.0 - zoomFactor)
+                 * static_cast<float>(maxKeysVisible - minKeysVisible);
+}
+
+double PianoRollComponent::keysVisibleToZoom(float numKeysVisible)
+{
+    return 1.0
+           - static_cast<double>(numKeysVisible - static_cast<float>(minKeysVisible))
+                 / static_cast<double>(maxKeysVisible - minKeysVisible);
+}
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
@@ -92,21 +121,36 @@ void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
     {
         noteGrid.setResolution(0);
     }
-
-    // resized();
 }
 
-void PianoRollComponent::insertNote(MidiNote n) { noteGrid.insertNote(n); }
-
-void PianoRollComponent::resetNotes() { noteGrid.resetNotes(); }
-
-void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
-                                        double scrollBarRangeStart)
+void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
 {
-    if (scrollBarThatHasMoved == &verticalScrollBar)
-    {
-        updateVisibleKeyRange(visibleKeyRange.movedToStartAt(scrollBarRangeStart));
-    }
+    visibleMediaRange = newRange;
+
+    resized();
+}
+
+void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
+{
+    visibleKeyRange = fullKeyRange.constrainRange(newRange);
+    verticalScrollBar.setCurrentRange(visibleKeyRange);
+
+    resized();
+
+    sendChangeMessage();
+}
+
+void PianoRollComponent::visibleKeyRangeZoom(double zoomFactor)
+{
+    double visibilityCenter = visibleKeyRange.getStart() + visibleKeyRange.getLength() / 2.0;
+
+    double keysVisible = zoomToKeysVisible(zoomFactor);
+    double visibilityRadius = keysVisible / 2.0;
+
+    Range<double> newRange = { visibilityCenter - visibilityRadius,
+                               visibilityCenter + visibilityRadius };
+
+    updateVisibleKeyRange(newRange);
 }
 
 void PianoRollComponent::verticalMouseWheelMoveEvent(double deltaY)
@@ -123,74 +167,24 @@ void PianoRollComponent::verticalMouseWheelZoomEvent(double deltaZoom)
     verticalZoomSlider.setValue(jlimit(0.0, 1.0, currentZoomFactor + deltaZoom));
 }
 
-void PianoRollComponent::visibleKeyRangeZoom(double zoomFactor)
+void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
+                                        double scrollBarRangeStart)
 {
-    double visibilityCenter = visibleKeyRange.getStart() + visibleKeyRange.getLength() / 2.0;
-
-    double keysVisible = zoomToKeysVisible(zoomFactor);
-    double visibilityRadius = keysVisible / 2.0;
-
-    Range<double> newRange = { visibilityCenter - visibilityRadius,
-                               visibilityCenter + visibilityRadius };
-
-    updateVisibleKeyRange(newRange);
-}
-
-void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
-{
-    visibleKeyRange = fullKeyRange.constrainRange(newRange);
-    verticalScrollBar.setCurrentRange(visibleKeyRange);
-
-    resized();
-
-    sendChangeMessage();
-}
-
-void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
-{
-    visibleMediaRange = newRange;
-
-    resized();
+    if (scrollBarThatHasMoved == &verticalScrollBar)
+    {
+        updateVisibleKeyRange(visibleKeyRange.movedToStartAt(scrollBarRangeStart));
+    }
 }
 
 void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
 {
     // Make sure vertical range is less than maximum keys visible
-    double halfRange = jmin(2 * stdDevMidi, static_cast<float>(maxKeysVisible / 2));
+    float halfRange = jmin(2.0f * stdDevMidi, static_cast<float>(maxKeysVisible / 2.0f));
 
-    double zoomAmount = keysVisibleToZoom(2 * halfRange);
+    double zoomAmount = keysVisibleToZoom(2.0f * halfRange);
 
     verticalZoomSlider.setValue(zoomAmount, dontSendNotification);
 
-    updateVisibleKeyRange(
-        Range<double>((127.0 - medianMidi) - halfRange, (127.0 - medianMidi) + halfRange));
-}
-
-double PianoRollComponent::getKeyHeight()
-{
-    // Determine key height based off of desired amount of keys visible
-    double keysVisible = zoomToKeysVisible(verticalZoomSlider.getValue());
-    double keyHeight = static_cast<double>(keyboardContainer.getHeight()) / keysVisible;
-
-    return keyHeight;
-}
-
-int PianoRollComponent::getPianoRollContainerWidth()
-{
-    return jmax(0, getWidth() - getKeyboardWidth() - getPianoRollSpacing() - getControlsWidth());
-}
-
-int PianoRollComponent::getControlsWidth()
-{
-    return ! isHidingControls() ? static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing : 0;
-}
-
-double PianoRollComponent::zoomToKeysVisible(double zoomFactor)
-{
-    return minKeysVisible + (1.0 - zoomFactor) * (maxKeysVisible - minKeysVisible);
-}
-
-double PianoRollComponent::keysVisibleToZoom(double numKeysVisible)
-{
-    return 1.0 - (numKeysVisible - minKeysVisible) / (maxKeysVisible - minKeysVisible);
+    updateVisibleKeyRange(Range<double>((127.0 - medianMidi) - static_cast<double>(halfRange),
+                                        (127.0 - medianMidi) + static_cast<double>(halfRange)));
 }

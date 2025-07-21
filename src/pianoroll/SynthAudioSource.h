@@ -140,7 +140,7 @@ public:
                 if (currVoices > maxVoices)
                 {
                     maxVoices = currVoices;
-                    DBG("Max voices now " << maxVoices);
+                    //DBG("Max voices now " << maxVoices);
                 }
             }
 

@@ -5,10 +5,10 @@ MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track
 MidiDisplayComponent::MidiDisplayComponent(String name, bool req, DisplayMode mode)
     : MediaDisplayComponent(name, req, mode)
 {
-    // Support for drag and drop
-    pianoRoll.addMouseListener(this, true);
     // Need to reposition labels after vertical zoom or scroll
     pianoRoll.addChangeListener(this);
+    // Support for drag and drop
+    pianoRoll.addMouseListener(this, true);
     contentComponent.addAndMakeVisible(pianoRoll);
 
     mediaInstructions =
@@ -33,27 +33,35 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
+void MidiDisplayComponent::resized()
+{
+    MediaDisplayComponent::resized();
+
+    pianoRoll.setBounds(contentComponent.getBounds().withY(0));
+}
+
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
-    DBG("Loading MIDI filePath: " << filePath.toString(true));
-    // Create the local file this URL points to
     File file = filePath.getLocalFile();
-    DBG("Loading MIDI file: " << file.getFullPathName());
+
     std::unique_ptr<FileInputStream> fileStream(file.createInputStream());
 
-    // Read the MIDI file from the File object
     MidiFile midiFile;
 
     if (! midiFile.readFrom(*fileStream))
     {
-        DBG("Failed to read MIDI data from file.");
+        DBG("MidiDisplayComponent::loadMediaFile: Error reading MIDI from file "
+            << file.getFullPathName() << ".");
+        // TODO - better error handing
+        //jassertfalse;
+        //return;
     }
 
     midiFile.convertTimestampTicksToSeconds();
 
     totalLengthInSecs = midiFile.getLastTimestamp();
 
-    DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+    //DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
@@ -70,8 +78,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
         }
     }
 
-    // A vector to keep all the midi numbers
-    // we'll use that find the median note
+    // Keep track of note MIDI numbers
     std::vector<int> midiNumbers;
 
     for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx)
@@ -81,22 +88,23 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
         double startTime = midiEvent->message.getTimeStamp();
 
-        DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+        //DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
 
         if (midiMessage.isNoteOn())
         {
+            int noteChannel = midiMessage.getChannel();
             int noteNumber = midiMessage.getNoteNumber();
             int velocity = midiMessage.getVelocity();
-            int noteChannel = midiMessage.getChannel();
 
             midiNumbers.push_back(noteNumber);
+
             double duration = 0;
 
             for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx)
             {
                 const auto offEvent = allTracks.getEventPointer(offIdx);
 
-                // Find the matching note off event
+                // Find matching note offset event
                 if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber
                     && offEvent->message.getChannel() == noteChannel)
                 {
@@ -106,7 +114,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
                 }
             }
 
-            // Create a component for each for each note
+            // Create component for each for each note and add to pianoroll
             MidiNote n = MidiNote(static_cast<unsigned char>(noteNumber),
                                   startTime,
                                   duration,
@@ -115,15 +123,25 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
         }
     }
 
-    // Find the median note
+    // Compute median and standard deviation of MIDI numbers
     std::sort(midiNumbers.begin(), midiNumbers.end());
-    medianMidi = midiNumbers[midiNumbers.size() / 2];
-    // Find std
+
+    int numNotes = midiNumbers.size();
+
+    medianMidi = midiNumbers[numNotes / 2];
+
+    if (! numNotes % 2)
+    {
+        medianMidi += midiNumbers[numNotes / 2 - 1];
+        medianMidi /= 2;
+    }
+
     float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
-    float mean = sum / static_cast<float>(midiNumbers.size());
+    float mean = sum / static_cast<float>(numNotes);
     float sq_sum =
         std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
-    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(midiNumbers.size()) - mean * mean);
+
+    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(numNotes) - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
@@ -135,21 +153,20 @@ void MidiDisplayComponent::startPlaying()
     transportSource.start();
 }
 
-void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
+void MidiDisplayComponent::resetMedia()
 {
-    pianoRoll.updateVisibleMediaRange(newRange);
-    MediaDisplayComponent::updateVisibleRange(newRange);
+    resetTransport();
+
+    pianoRoll.resetNotes();
+    pianoRoll.resizeNoteGrid(0.0);
+
+    totalLengthInSecs = 0.0;
 }
 
-void MidiDisplayComponent::resized()
+void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
 {
-    MediaDisplayComponent::resized();
-    pianoRoll.setBounds(contentComponent.getBounds().withY(0));
-}
-
-float MidiDisplayComponent::getMediaHeight()
-{
-    return 128.0f * static_cast<float>(pianoRoll.getKeyHeight());
+    // Auto-center pianoRoll vertically about median note
+    pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
 }
 
 float MidiDisplayComponent::getVerticalControlsWidth()
@@ -165,25 +182,18 @@ float MidiDisplayComponent::getMediaXPos()
 float MidiDisplayComponent::mediaYToDisplayY(const float mY)
 {
     float visibleStartY =
-        static_cast<float>(pianoRoll.getVisibleKeyRange().getStart() * pianoRoll.getKeyHeight());
+        static_cast<float>(pianoRoll.getVisibleKeyRange().getStart()) * pianoRoll.getKeyHeight();
 
     float dY = mY - visibleStartY;
 
     return dY;
 }
 
-void MidiDisplayComponent::resetMedia()
+void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
 {
-    resetTransport();
+    MediaDisplayComponent::updateVisibleRange(newRange);
 
-    pianoRoll.resetNotes();
-    pianoRoll.resizeNoteGrid(0.0);
-}
-
-void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
-{
-    // Auto-center the pianoRoll viewbox on the median note
-    pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
+    pianoRoll.updateVisibleMediaRange(newRange);
 }
 
 void MidiDisplayComponent::verticalMove(double deltaY)

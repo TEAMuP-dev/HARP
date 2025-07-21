@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -40,17 +38,17 @@ public:
     void paint(Graphics& g) override;
 
     void setResolution(double pps);
-    void setLength(double len);
-
     double getPixelsPerSecond() { return pixelsPerSecond; }
+
+    void setLength(double len);
     double getLengthInSeconds() { return lengthInSeconds; }
+
+    bool isKeyboardComponent() override { return false; }
 
     void updateSize();
 
     void insertNote(MidiNote n);
     void resetNotes();
-
-    bool isKeyboardComponent() override { return false; }
 
 private:
     Array<MidiNote*> midiNotes;
