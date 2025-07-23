@@ -2,8 +2,8 @@
 
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String name, bool req, DisplayMode mode)
-    : MediaDisplayComponent(name, req, mode)
+MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
+    : MediaDisplayComponent(name, req, fromDAW, mode)
 {
     // Need to reposition labels after vertical zoom or scroll
     pianoRoll.addChangeListener(this);
@@ -61,7 +61,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     totalLengthInSecs = midiFile.getLastTimestamp();
 
-    //DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+    //DBG("MidiDisplayComponent::loadMediaFile: Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
@@ -88,7 +88,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
         double startTime = midiEvent->message.getTimeStamp();
 
-        //DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+        //DBG("MidiDisplayComponent::loadMediaFile: Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
 
         if (midiMessage.isNoteOn())
         {
@@ -145,12 +145,6 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
-}
-
-void MidiDisplayComponent::startPlaying()
-{
-    synthAudioSource.resetNotes();
-    transportSource.start();
 }
 
 void MidiDisplayComponent::resetMedia()
@@ -240,4 +234,10 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
             MediaDisplayComponent::mouseWheelMove(evt, wheel);
         }
     }
+}
+
+void MidiDisplayComponent::startPlaying()
+{
+    synthAudioSource.resetNotes();
+    transportSource.start();
 }

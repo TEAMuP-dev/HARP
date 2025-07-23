@@ -6,7 +6,10 @@ NoteGridComponent::NoteGridComponent()
     lengthInSeconds = 0.0;
 }
 
-NoteGridComponent::~NoteGridComponent() { resetNotes(); }
+NoteGridComponent::~NoteGridComponent()
+{
+    //resetNotes();
+}
 
 void NoteGridComponent::paint(Graphics& g)
 {

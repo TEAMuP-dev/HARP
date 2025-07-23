@@ -8,7 +8,10 @@ class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
     MidiDisplayComponent();
-    MidiDisplayComponent(String name, bool req = true, DisplayMode mode = DisplayMode::Hybrid);
+    MidiDisplayComponent(String name,
+                         bool req = true,
+                         bool fromDAW = false,
+                         DisplayMode mode = DisplayMode::Hybrid);
     ~MidiDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
@@ -23,8 +26,6 @@ public:
 
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
     float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
-
-    void startPlaying() override;
 
 private:
     void visibleRangeCallback() override {}
@@ -48,6 +49,8 @@ private:
     void verticalZoom(double deltaZoom);
 
     void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+
+    void startPlaying() override;
 
     bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
     {

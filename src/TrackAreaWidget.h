@@ -17,8 +17,7 @@
 
 using namespace juce;
 
-class TrackAreaWidget : public Component,
-                        public FileDragAndDropTarget
+class TrackAreaWidget : public Component, public ChangeListener, public FileDragAndDropTarget
 {
 public:
     bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }
@@ -42,16 +41,18 @@ public:
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
             m = std::make_unique<AudioDisplayComponent>(
-                label, audioTrackInfo->required, displayMode);
+                label, audioTrackInfo->required, false, displayMode);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
-            m = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required, displayMode);
+            m = std::make_unique<MidiDisplayComponent>(
+                label, midiTrackInfo->required, false, displayMode);
         }
 
         if (m)
         {
             m->setDisplayID(trackInfo->id);
+            m->addChangeListener(this);
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
         }
@@ -106,6 +107,7 @@ public:
         for (auto& m : mediaDisplays)
         {
             removeChildComponent(m.get());
+            m->removeChangeListener(this);
         }
 
         mediaDisplays.clear();
@@ -150,6 +152,17 @@ public:
     std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
     {
         return mediaDisplays;
+    }
+
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override
+    {
+        for (auto& m : mediaDisplays)
+        {
+            if (source != m.get())
+            {
+                m->deselectTrack();
+            }
+        }
     }
 
     int getNumTracks() { return mediaDisplays.size(); }

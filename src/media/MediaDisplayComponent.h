@@ -10,14 +10,33 @@
 
 using namespace juce;
 
-class OverheadPanel : public Component
+class ColorablePanel : public Component
 {
 public:
-    void paint(Graphics& g) override { g.fillAll(Colours::darkgrey.darker()); }
+    ColorablePanel(Colour color = Colours::darkgrey)
+        : defaultColor(color), backgroundColor(color) {};
+
+    void paint(Graphics& g) override { g.fillAll(backgroundColor); }
+
+    void setColor()
+    {
+        setColor(defaultColor);
+    }
+
+    void setColor(Colour newColor)
+    {
+        backgroundColor = newColor;
+        repaint();
+    }
+
+private:
+    Colour defaultColor;
+    Colour backgroundColor;
 };
 
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
+                              public ChangeBroadcaster,
                               public FileDragAndDropTarget,
                               public DragAndDropContainer,
                               private Timer,
@@ -25,7 +44,10 @@ class MediaDisplayComponent : public Component,
 {
 public:
     MediaDisplayComponent();
-    MediaDisplayComponent(String name, bool req = true, DisplayMode mode = DisplayMode::Hybrid);
+    MediaDisplayComponent(String name,
+                          bool req = true,
+                          bool fromDAW = false,
+                          DisplayMode mode = DisplayMode::Hybrid);
     ~MediaDisplayComponent() override;
 
     virtual StringArray getInstanceExtensions() = 0;
@@ -38,6 +60,7 @@ public:
     String getTrackName() { return trackName; }
 
     bool isRequired() const { return required; }
+    bool isLinkedToDAW() const { return linkedToDAW; }
 
     bool isInputTrack() { return (displayMode == 0) || isHybridTrack(); }
     bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
@@ -76,12 +99,14 @@ public:
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
+    void selectTrack();
+    void deselectTrack();
+    bool isCurrentlySelected() { return isSelected; }
+
     void start();
     void stop();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
-    virtual void startPlaying() { transportSource.start(); }
-    virtual void stopPlaying() { transportSource.stop(); }
 
     int getNumOverheadLabels();
 
@@ -156,6 +181,9 @@ private:
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
+
     void updateCursorPosition();
 
     void mouseEnter(const MouseEvent& /*e*/) override;
@@ -164,6 +192,7 @@ private:
     void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
+    void mouseDoubleClick(const MouseEvent& e) override;
 
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
@@ -171,8 +200,17 @@ private:
     const int minFontSize = 10;
     const int labelHeight = 20;
 
+    Colour defaultColor = Colours::darkgrey;
+    Colour graphicsColor = Colours::lightblue;
+    Colour cursorColor = Colours::white.withAlpha(0.85f);
+    Colour selectionColor = Colours::darkblue.brighter();
+    Colour linkedToDAWColor = Colours::purple.withAlpha(0.5f);
+    Colour overheadPanelColor = Colours::darkgrey.darker();
+
     // Panel with labels / buttons
-    Component headerComponent;
+    ColorablePanel headerComponent { defaultColor };
+    // Buttons area subcomponent
+    Component buttonsComponent;
     // Media + overhead panel (if any)
     Component mediaAreaContainer;
 
@@ -189,7 +227,7 @@ private:
     MultiButton::Mode saveButtonInactiveInfo;
 
     // Panel displaying overhead labels
-    OverheadPanel overheadPanel;
+    ColorablePanel overheadPanel { overheadPanelColor };
 
     // Flex for whole display
     FlexBox mainFlexBox;
@@ -203,7 +241,10 @@ private:
     Uuid displayID;
     String trackName;
     const bool required = true;
+    const bool linkedToDAW = false;
     const DisplayMode displayMode;
+
+    bool isSelected = false;
 
     URL originalFilePath;
     int currentTempFileIdx;

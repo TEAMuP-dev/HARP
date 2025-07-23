@@ -2,8 +2,8 @@
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
-MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode mode)
-    : trackName(name), required(req), displayMode(mode)
+MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
+    : trackName(name), required(req), linkedToDAW(fromDAW), displayMode(mode)
 {
     formatManager.registerBasicFormats();
 
@@ -11,6 +11,11 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
     deviceManager.addAudioCallback(&sourcePlayer);
 
     sourcePlayer.setSource(&transportSource);
+
+    if (isLinkedToDAW())
+    {
+        headerComponent.setColor(linkedToDAWColor);
+    }
 
     trackNameLabel.setText(trackName, dontSendNotification);
     trackNameLabel.setJustificationType(Justification::centred);
@@ -35,7 +40,7 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, DisplayMode 
 
     mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
 
-    currentPositionCursor.setFill(Colours::white.withAlpha(0.85f));
+    currentPositionCursor.setFill(cursorColor);
     addAndMakeVisible(currentPositionCursor);
 
     resetPaths();
@@ -120,13 +125,21 @@ MediaDisplayComponent::~MediaDisplayComponent()
 
     horizontalScrollBar.removeListener(this);
 
-    clearLabels();
+    //clearLabels(); // Seems to cause problems when re-loading model
 }
 
 void MediaDisplayComponent::paint(Graphics& g)
 {
-    g.fillAll(Colours::darkgrey);
-    g.setColour(Colours::lightblue);
+    if (isThumbnailTrack() && isCurrentlySelected())
+    {
+        g.fillAll(selectionColor);
+    }
+    else
+    {
+        g.fillAll(defaultColor);
+    }
+
+    g.setColour(graphicsColor);
 
     if (! isFileLoaded())
     {
@@ -173,7 +186,7 @@ void MediaDisplayComponent::resized()
     if (! isThumbnailTrack())
     {
         // Add buttons to header flex
-        headerFlexBox.items.add(FlexItem(buttonsFlexBox).withFlex(2).withMargin({ 0, 0, 0, 1 }));
+        headerFlexBox.items.add(FlexItem(buttonsComponent).withFlex(2).withMargin({ 0, 0, 0, 1 }));
     }
 
     // Perform layout of controls inside header
@@ -221,6 +234,8 @@ void MediaDisplayComponent::resized()
             FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
     }
 
+    buttonsFlexBox.performLayout(buttonsComponent.getBounds());
+
     // Remove existing items in media flex
     mediaAreaFlexBox.items.clear();
 
@@ -233,6 +248,10 @@ void MediaDisplayComponent::resized()
                                                      getVerticalControlsWidth(),
                                                      static_cast<float>(controlSpacing),
                                                      getMediaXPos() }));
+    }
+    else
+    {
+        overheadPanel.setBounds(0, 0, 0, 0);
     }
 
     // Media component takes remaining space
@@ -792,6 +811,53 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
     }
 }
 
+void MediaDisplayComponent::selectTrack()
+{
+    isSelected = true;
+
+    if (! isLinkedToDAW())
+    {
+        headerComponent.setColor(selectionColor);
+    }
+
+    repaint();
+
+    sendChangeMessage();
+}
+
+void MediaDisplayComponent::deselectTrack()
+{
+    isSelected = false;
+
+    if (! isLinkedToDAW())
+    {
+        headerComponent.setColor();
+    }
+
+    repaint();
+}
+
+void MediaDisplayComponent::start()
+{
+    startPlaying();
+
+    startTimerHz(40);
+
+    playStopButton.setMode(stopButtonInfo.label);
+}
+
+void MediaDisplayComponent::stop()
+{
+    stopPlaying();
+
+    stopTimer();
+
+    currentPositionCursor.setVisible(false);
+    setPlaybackPosition(0.0);
+
+    playStopButton.setMode(playButtonActiveInfo.label);
+}
+
 void MediaDisplayComponent::updateCursorPosition()
 {
     float mediaWidth = getMediaWidth();
@@ -832,27 +898,6 @@ void MediaDisplayComponent::updateCursorPosition()
 
     currentPositionCursor.setRectangle(
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
-}
-
-void MediaDisplayComponent::start()
-{
-    startPlaying();
-
-    startTimerHz(40);
-
-    playStopButton.setMode(stopButtonInfo.label);
-}
-
-void MediaDisplayComponent::stop()
-{
-    stopPlaying();
-
-    stopTimer();
-
-    currentPositionCursor.setVisible(false);
-    setPlaybackPosition(0.0);
-
-    playStopButton.setMode(playButtonActiveInfo.label);
 }
 
 void MediaDisplayComponent::mouseEnter(const MouseEvent& /*e*/)
@@ -908,14 +953,30 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // Make sure playback position has been updated
 
-    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
-        && isMouseOver(true)) // Only start playback if still within this area
+    if (isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
+        && isMouseOver(true))
     {
+        selectTrack();
+    }
+    else if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
+    {
+        // Only start playback if still within this area
         start();
     }
     else
     {
         setPlaybackPosition(0.0);
+    }
+}
+
+void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
+{
+    // TODO - mouseUp (selectTrack()) is still called before this
+
+    if (isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
+        && isMouseOver(true))
+    {
+        deselectTrack();
     }
 }
 
@@ -1087,5 +1148,5 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
         overheadLabels.clear();
     }
 
-    resized();
+    resized(); // Remove overhead label panel
 }

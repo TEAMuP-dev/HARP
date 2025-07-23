@@ -34,7 +34,10 @@ PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, boo
     resizeNoteGrid(0.0);
 }
 
-PianoRollComponent::~PianoRollComponent() { resetNotes(); }
+PianoRollComponent::~PianoRollComponent()
+{
+    //resetNotes();
+}
 
 void PianoRollComponent::resized()
 {

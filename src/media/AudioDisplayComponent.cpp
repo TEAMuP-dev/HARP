@@ -2,8 +2,8 @@
 
 AudioDisplayComponent::AudioDisplayComponent() : AudioDisplayComponent("Audio Track") {}
 
-AudioDisplayComponent::AudioDisplayComponent(String name, bool req, DisplayMode mode)
-    : MediaDisplayComponent(name, req, mode)
+AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
+    : MediaDisplayComponent(name, req, fromDAW, mode)
 {
     thread.startThread(Thread::Priority::normal);
 
