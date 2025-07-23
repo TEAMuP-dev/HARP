@@ -80,15 +80,16 @@ public:
 
     URL getOriginalFilePath() { return originalFilePath; }
 
-    void addNewTempFile(); // Create working temp file to modify instead of current or original
-    bool iteratePreviousTempFile();
-    bool iterateNextTempFile();
+    //void addNewTempFile(); // Create working temp file to modify instead of current or original
+    //bool iteratePreviousTempFile();
+    //bool iterateNextTempFile();
 
-    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
-    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
+    //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
+    //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
-    void clearFutureTempFiles(); // Prune temp files after currently selected index
-    void overwriteOriginalFile(); // Necessary for seamless sample editing integration
+    //void clearFutureTempFiles(); // Prune temp files after currently selected index
+    //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 

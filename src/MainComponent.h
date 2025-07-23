@@ -304,7 +304,8 @@ public:
 
         // Iterate over all inputMediaDisplays and call the iteratePreviousTempFile()
         auto& inputMediaDisplays = inputTrackAreaWidget.getMediaDisplays();
-        for (auto& inputMediaDisplay : inputMediaDisplays)
+
+        /*for (auto& inputMediaDisplay : inputMediaDisplays)
         {
             if (! inputMediaDisplay->iteratePreviousTempFile())
             {
@@ -316,7 +317,7 @@ public:
                 saveEnabled = true;
                 DBG("Undo callback completed successfully");
             }
-        }
+        }*/
     }
 
     void redoCallback()
@@ -342,7 +343,8 @@ public:
 
         // Iterate over all inputMediaDisplays and call the iterateNextTempFile()
         auto& inputMediaDisplays = inputTrackAreaWidget.getMediaDisplays();
-        for (auto& inputMediaDisplay : inputMediaDisplays)
+
+        /*for (auto& inputMediaDisplay : inputMediaDisplays)
         {
             if (! inputMediaDisplay->iterateNextTempFile())
             {
@@ -354,7 +356,7 @@ public:
                 saveEnabled = true;
                 DBG("Redo callback completed successfully");
             }
-        }
+        }*/
     }
 
     void tryLoadSavedToken()
@@ -1143,11 +1145,12 @@ public:
             }
             if (inputMediaDisplay->isFileLoaded())
             {
-                inputMediaDisplay->addNewTempFile();
+                //inputMediaDisplay->addNewTempFile();
                 localInputTrackFiles.push_back(
                     std::make_tuple(inputMediaDisplay->getDisplayID(),
                                     inputMediaDisplay->getTrackName(),
-                                    inputMediaDisplay->getTempFilePath().getLocalFile()));
+                                    //inputMediaDisplay->getTempFilePath().getLocalFile()));
+                                    inputMediaDisplay->getOriginalFilePath().getLocalFile()));
             }
         }
 

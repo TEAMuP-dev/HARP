@@ -476,10 +476,10 @@ void MediaDisplayComponent::setOriginalFilePath(URL filePath)
 {
     originalFilePath = filePath;
 
-    addNewTempFile();
+    //addNewTempFile();
 }
 
-void MediaDisplayComponent::addNewTempFile()
+/*void MediaDisplayComponent::addNewTempFile()
 {
     // Prune any future files in chain before adding new temp file
     clearFutureTempFiles();
@@ -604,11 +604,12 @@ void MediaDisplayComponent::overwriteOriginalFile()
         DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to overwrite file "
             << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
     }
-}
+}*/
 
 bool MediaDisplayComponent::isDuplicateFile(const URL& filePath)
 {
-    return getOriginalFilePath() == filePath || (isFileLoaded() && getTempFilePath() == filePath);
+    return getOriginalFilePath()
+           == filePath; //|| (isFileLoaded() && getTempFilePath() == filePath);
 }
 
 void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, int /*y*/)
@@ -664,12 +665,80 @@ void MediaDisplayComponent::saveFileCallback()
 {
     if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
     {
-        overwriteOriginalFile();
-        saveFileButton.setMode(saveButtonInactiveInfo.label);
+        //overwriteOriginalFile();
+        //saveFileButton.setMode(saveButtonInactiveInfo.label);
 
-        if (statusBox != nullptr)
+        /*if (statusBox != nullptr)
         {
             statusBox->setStatusMessage("File saved successfully");
+        }*/
+
+        if (isFileLoaded())
+        {
+            StringArray validExtensions = StringArray(getInstanceExtensions());
+            String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
+
+            saveFileBrowser = std::make_unique<FileChooser>(
+                "Select a save path...", getOriginalFilePath().getLocalFile(), filePatternsAllowed);
+
+            saveFileBrowser->launchAsync(
+                FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
+                [this, validExtensions](const FileChooser& fc)
+                {
+                    File chosenFile = fc.getResult();
+                    if (chosenFile != File {})
+                    {
+                        if (chosenFile.getFileExtension().compare("") == 0)
+                        {
+                            // Add default extension in none provided
+                            chosenFile = chosenFile.withFileExtension(validExtensions[0]);
+                        }
+
+                        if (validExtensions.contains(chosenFile.getFileExtension()))
+                        {
+                            //URL tempFilePath = mediaDisplay->getTempFilePath();
+
+                            // Attempt to save file contained within media display to chosen location
+                            //bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
+                            if (getOriginalFilePath().getLocalFile().copyFileTo(chosenFile))
+                            {
+                                //loadMediaDisplay(newFile);
+
+                                // Update path associated with media display
+                                setOriginalFilePath(URL(chosenFile));
+
+                                //saveFileButton.setMode(saveButtonInactiveInfo.label);
+
+                                if (statusBox != nullptr)
+                                {
+                                    statusBox->setStatusMessage("File successfully saved to "
+                                                                + chosenFile.getFullPathName());
+                                }
+                            }
+                            else
+                            {
+                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                                 "Save Failed",
+                                                                 "Failed to save file to "
+                                                                     + chosenFile.getFullPathName() + ".",
+                                                                 "OK");
+                            }
+                        }
+                        else
+                        {
+                            AlertWindow::showMessageBoxAsync(
+                                AlertWindow::WarningIcon,
+                                "Invalid Extension",
+                                "File must be saved with one of the following file extensions: "
+                                    + validExtensions.joinIntoString(", ") + ".",
+                                "OK");
+                        }
+                    }
+                    else
+                    {
+                        //DBG("MediaDisplayComponent::saveFileCallback: Save operation canceled.");
+                    }
+                });
         }
     }
 }
@@ -947,8 +1016,10 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
         if (! getLocalBounds().contains(getMouseXYRelative()))
         {
+            //performExternalDragDropOfFiles(
+            //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
             performExternalDragDropOfFiles(
-                StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
+                StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
 
             if (! isThumbnailTrack() && ! isPlaying())
             {
