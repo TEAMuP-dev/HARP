@@ -6,9 +6,6 @@
 
 #pragma once
 
-#include "WebModel.h"
-#include "gui/SliderWithLabel.h"
-#include "gui/TitledTextBox.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
@@ -20,14 +17,73 @@ using namespace juce;
 class TrackAreaWidget : public Component, public ChangeListener, public FileDragAndDropTarget
 {
 public:
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
+        : displayMode(mode), fixedHeight(height)
+    {
+    }
+
+    void paint(Graphics& g) override
+    {
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+    }
+
+    void resized() override
+    {
+        FlexBox mainBox;
+
+        mainBox.flexDirection = FlexBox::Direction::column;
+
+        if (getNumTracks() > 0)
+        {
+            for (auto& m : mediaDisplays)
+            {
+                FlexItem i = FlexItem(*m);
+
+                if (fixedHeight)
+                {
+                    i = i.withHeight(fixedHeight);
+                }
+                else
+                {
+                    i = i.withFlex(1).withMinHeight(50);
+                }
+
+                mainBox.items.add(i.withMargin(4));
+            }
+        }
+
+        mainBox.performLayout(getLocalBounds());
+    }
+
+    std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
+    {
+        return mediaDisplays;
+    }
+
+    int getNumTracks() { return mediaDisplays.size(); }
+
     bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }
     bool isOutputWidget() { return (displayMode == 1) || isHybridWidget(); }
     bool isHybridWidget() { return displayMode == 2; }
     bool isThumbnailWidget() { return displayMode == 3; }
 
-    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
-        : displayMode(mode), fixedHeight(height)
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override
     {
+        return isThumbnailWidget();
+    }
+
+    void resetUI()
+    {
+        // TODO - is this necessary?
+        // TODO - does this need to go in the destructor?
+
+        for (auto& m : mediaDisplays)
+        {
+            removeChildComponent(m.get());
+            m->removeChangeListener(this);
+        }
+
+        mediaDisplays.clear();
     }
 
     void addTrack(ComponentInfo info)
@@ -54,106 +110,87 @@ public:
             m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
             addAndMakeVisible(m.get());
+
+            if (m->isThumbnailTrack())
+            {
+                m->selectTrack();
+            }
+
             mediaDisplays.push_back(std::move(m));
         }
 
-        repaint();
         resized();
-    }
-
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override
-    {
-        return isThumbnailWidget();
     }
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
     {
+        bool duplicateDetected = false; // Global duplicate flag
+
         for (String f : files)
         {
             File droppedFile = File(f);
-            String ext = droppedFile.getFileExtension();
+            URL droppedFilePath = URL(droppedFile);
 
-            if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
-            {
-                auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
-                audioTrackInfo->id = Uuid();
-                audioTrackInfo->required = false;
-                ComponentInfo componentInfo { audioTrackInfo->id, audioTrackInfo };
-                addTrack(componentInfo);
-                mediaDisplays.back()->initializeDisplay(URL(droppedFile));
-            }
-            else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
-            {
-                auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
-                midiTrackInfo->id = Uuid();
-                midiTrackInfo->required = false;
-                ComponentInfo componentInfo { midiTrackInfo->id, midiTrackInfo };
-                addTrack(componentInfo);
-                mediaDisplays.back()->initializeDisplay(URL(droppedFile));
-            }
-            else
-            {
-                DBG("Attempted adding track of unsupported file type: " << f);
-            }
-        }
-    }
+            bool isTrackDuplicate = false; // Track-level duplicate flag
 
-    void resetUI()
-    {
-        DBG("TrackAreaWidget::resetUI called");
-
-        // TODO: do I need this  ?
-        // TODO: also, does this need to go to the destructor ?
-        for (auto& m : mediaDisplays)
-        {
-            removeChildComponent(m.get());
-            m->removeChangeListener(this);
-        }
-
-        mediaDisplays.clear();
-    }
-
-    void paint(Graphics& g) override
-    {
-        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
-    }
-
-    void resized() override
-    {
-        auto area = getLocalBounds();
-
-        FlexBox mainBox;
-        mainBox.flexDirection = FlexBox::Direction::column; // Set the main flex direction to column
-
-        FlexItem::Margin margin(2);
-
-        if (getNumTracks() > 0)
-        {
             for (auto& m : mediaDisplays)
             {
-                FlexItem i = FlexItem(*m);
-
-                if (fixedHeight)
+                if (m->isDuplicateFile(droppedFilePath))
                 {
-                    i = i.withHeight(fixedHeight);
+                    if (! duplicateDetected)
+                    {
+                        m->selectTrack();
+                    }
+
+                    duplicateDetected = true; // Select first duplicate (only)
+                    isTrackDuplicate = true; // Don't reload track
+
+                    DBG("TrackAreaWidget::filesDropped: Selecting existing track containing "
+                        << f << " instead of creating new track.");
+                }
+            }
+
+            if (! isTrackDuplicate)
+            {
+                String ext = droppedFile.getFileExtension();
+
+                bool validExt = true;
+
+                ComponentInfo componentInfo;
+
+                if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
+                {
+                    auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
+                    audioTrackInfo->id = Uuid();
+                    audioTrackInfo->required = false;
+                    componentInfo = ComponentInfo(audioTrackInfo->id, audioTrackInfo);
+                }
+                else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
+                {
+                    auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
+                    midiTrackInfo->id = Uuid();
+                    midiTrackInfo->required = false;
+                    componentInfo = ComponentInfo(midiTrackInfo->id, midiTrackInfo);
                 }
                 else
                 {
-                    i = i.withFlex(1).withMinHeight(50);
+                    DBG("TrackAreaWidget::filesDropped: Tried to add file "
+                        << f << " with unsupported type.");
+
+                    validExt = false;
                 }
 
-                mainBox.items.add(i.withMargin(4));
+                if (validExt)
+                {
+                    addTrack(componentInfo);
+                    mediaDisplays.back()->initializeDisplay(droppedFilePath);
+                    mediaDisplays.back()->setTrackName(droppedFilePath.getFileName());
+                }
             }
         }
-
-        mainBox.performLayout(area);
     }
 
-    std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
-    {
-        return mediaDisplays;
-    }
-
+private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
     {
         for (auto& m : mediaDisplays)
@@ -165,11 +202,8 @@ public:
         }
     }
 
-    int getNumTracks() { return mediaDisplays.size(); }
-
-private:
-    std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
-
-    const DisplayMode displayMode;
     const int fixedHeight = 0;
+    const DisplayMode displayMode;
+
+    std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };

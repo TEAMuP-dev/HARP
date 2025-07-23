@@ -373,6 +373,13 @@ void MediaDisplayComponent::timerCallback()
     }
 }
 
+void MediaDisplayComponent::setTrackName(String name)
+{
+    trackName = name;
+
+    trackNameLabel.setText(trackName, dontSendNotification);
+}
+
 String MediaDisplayComponent::getMediaInstructions()
 {
     String instructions = mediaInstructions;
@@ -578,12 +585,12 @@ void MediaDisplayComponent::overwriteOriginalFile()
 
     if (targetFile.copyFileTo(backupFile))
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file"
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file "
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file"
+        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file "
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
 
@@ -599,6 +606,11 @@ void MediaDisplayComponent::overwriteOriginalFile()
     }
 }
 
+bool MediaDisplayComponent::isDuplicateFile(const URL& filePath)
+{
+    return getOriginalFilePath() == filePath || (isFileLoaded() && getTempFilePath() == filePath);
+}
+
 void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, int /*y*/)
 {
     for (int i = 1; i < files.size(); i++)
@@ -608,8 +620,7 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 
     File mediaFile = File(files[0]);
 
-    if (getOriginalFilePath() == URL(mediaFile)
-        || (isFileLoaded() && getTempFilePath() == URL(mediaFile)))
+    if (isDuplicateFile(URL(mediaFile)))
     {
         DBG("MediaDisplayComponent::filesDropped: Ignoring self-drag.");
         return;
@@ -822,7 +833,7 @@ void MediaDisplayComponent::selectTrack()
 
     repaint();
 
-    sendChangeMessage();
+    sendSynchronousChangeMessage();
 }
 
 void MediaDisplayComponent::deselectTrack()
@@ -953,15 +964,13 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // Make sure playback position has been updated
 
-    if (isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
-        && isMouseOver(true))
+    if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
     {
         selectTrack();
     }
     else if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
     {
-        // Only start playback if still within this area
-        start();
+        start(); // Only start playback if still within this area
     }
     else
     {

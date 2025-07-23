@@ -56,7 +56,7 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
-    void setTrackName(String name) { trackName = name; }
+    void setTrackName(String name);
     String getTrackName() { return trackName; }
 
     bool isRequired() const { return required; }
@@ -91,6 +91,8 @@ public:
     void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
+
+    bool isDuplicateFile(const URL& fileParth);
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
