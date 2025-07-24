@@ -1616,12 +1616,12 @@ private:
     {
         for (const ComponentInfo& info : model->getInputTracksInfo())
         {
-            inputTrackAreaWidget.addTrack(info);
+            inputTrackAreaWidget.addTrackFromComponentInfo(info);
         }
 
         for (const ComponentInfo& info : model->getOutputTracksInfo())
         {
-            outputTrackAreaWidget.addTrack(info);
+            outputTrackAreaWidget.addTrackFromComponentInfo(info);
         }
     }
 

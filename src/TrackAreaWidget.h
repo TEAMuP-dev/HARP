@@ -102,7 +102,7 @@ public:
         mediaDisplays.clear();
     }
 
-    void addTrack(ComponentInfo info)
+    void addTrackFromComponentInfo(ComponentInfo info)
     {
         std::shared_ptr<PyHarpComponentInfo> trackInfo = info.second;
         std::unique_ptr<MediaDisplayComponent> m;
@@ -137,14 +137,53 @@ public:
         resized();
     }
 
+    void addTrackFromFilePath(URL filePath)
+    {
+        File f = filePath.getLocalFile();
+
+        String ext = f.getFileExtension();
+
+        bool validExt = true;
+
+        ComponentInfo componentInfo;
+
+        if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
+        {
+            auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
+            audioTrackInfo->id = Uuid();
+            audioTrackInfo->required = false;
+            componentInfo = ComponentInfo(audioTrackInfo->id, audioTrackInfo);
+        }
+        else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
+        {
+            auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
+            midiTrackInfo->id = Uuid();
+            midiTrackInfo->required = false;
+            componentInfo = ComponentInfo(midiTrackInfo->id, midiTrackInfo);
+        }
+        else
+        {
+            DBG("TrackAreaWidget::addTrackFromFilePath: Tried to add file "
+                << f.getFullPathName() << " with unsupported type.");
+
+            validExt = false;
+        }
+
+        if (validExt)
+        {
+            addTrackFromComponentInfo(componentInfo);
+            mediaDisplays.back()->initializeDisplay(filePath);
+            mediaDisplays.back()->setTrackName(filePath.getFileName());
+        }
+    }
+
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
     {
         bool duplicateDetected = false; // Global duplicate flag
 
         for (String f : files)
         {
-            File droppedFile = File(f);
-            URL droppedFilePath = URL(droppedFile);
+            URL droppedFilePath = URL(File(f));
 
             bool isTrackDuplicate = false; // Track-level duplicate flag
 
@@ -167,40 +206,7 @@ public:
 
             if (! isTrackDuplicate)
             {
-                String ext = droppedFile.getFileExtension();
-
-                bool validExt = true;
-
-                ComponentInfo componentInfo;
-
-                if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
-                {
-                    auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
-                    audioTrackInfo->id = Uuid();
-                    audioTrackInfo->required = false;
-                    componentInfo = ComponentInfo(audioTrackInfo->id, audioTrackInfo);
-                }
-                else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
-                {
-                    auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
-                    midiTrackInfo->id = Uuid();
-                    midiTrackInfo->required = false;
-                    componentInfo = ComponentInfo(midiTrackInfo->id, midiTrackInfo);
-                }
-                else
-                {
-                    DBG("TrackAreaWidget::filesDropped: Tried to add file "
-                        << f << " with unsupported type.");
-
-                    validExt = false;
-                }
-
-                if (validExt)
-                {
-                    addTrack(componentInfo);
-                    mediaDisplays.back()->initializeDisplay(droppedFilePath);
-                    mediaDisplays.back()->setTrackName(droppedFilePath.getFileName());
-                }
+                addTrackFromFilePath(droppedFilePath);
             }
         }
     }

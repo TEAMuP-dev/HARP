@@ -233,17 +233,16 @@ public:
         chooseFileBrowser =
             std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
 
-        chooseFileBrowser->launchAsync(FileBrowserComponent::openMode
-                                           | FileBrowserComponent::canSelectFiles,
-                                       [this](const FileChooser& fc)
-                                       {
-                                           File chosenFile = fc.getResult();
-                                           if (chosenFile != File {})
-                                           {
-                                               // TODO
-                                               //initializeDisplay(URL(chosenFile));
-                                           }
-                                       });
+        chooseFileBrowser->launchAsync(
+            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+            [this](const FileChooser& fc)
+            {
+                File chosenFile = fc.getResult();
+                if (chosenFile != File {})
+                {
+                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile));
+                }
+            });
     }
 
     void saveFileCallback() {}
