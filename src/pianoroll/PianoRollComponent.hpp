@@ -25,7 +25,7 @@ public:
 
     void resized() override;
 
-    void setResolution(int pps) { noteGrid.setResolution(pps); }
+    void setResolution(double pps) { noteGrid.setResolution(pps); }
     double getResolution() { return noteGrid.getPixelsPerSecond(); }
 
     void setHideKeys(bool hk) { hideKeys = hk; }

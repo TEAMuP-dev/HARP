@@ -14,7 +14,10 @@
 
 using namespace juce;
 
-class TrackAreaWidget : public Component, public ChangeListener, public FileDragAndDropTarget
+class TrackAreaWidget : public Component,
+                        public ChangeListener,
+                        public ChangeBroadcaster,
+                        public FileDragAndDropTarget
 {
 public:
     TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
@@ -58,6 +61,19 @@ public:
     std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
     {
         return mediaDisplays;
+    }
+
+    MediaDisplayComponent* getCurrentlySelectedDisplay()
+    {
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isCurrentlySelected())
+            {
+                return m.get();
+            }
+        }
+
+        return nullptr;
     }
 
     int getNumTracks() { return mediaDisplays.size(); }
@@ -110,13 +126,12 @@ public:
             m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
             addAndMakeVisible(m.get());
-
-            if (m->isThumbnailTrack())
-            {
-                m->selectTrack();
-            }
-
             mediaDisplays.push_back(std::move(m));
+
+            if (isThumbnailWidget())
+            {
+                mediaDisplays.back()->selectTrack();
+            }
         }
 
         resized();
@@ -191,14 +206,21 @@ public:
     }
 
 private:
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override
+    void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        for (auto& m : mediaDisplays)
+        if (auto sourceDisplay = dynamic_cast<MediaDisplayComponent*>(source))
         {
-            if (source != m.get())
+            bool wasTrackSelected = sourceDisplay->isCurrentlySelected();
+
+            for (auto& m : mediaDisplays)
             {
-                m->deselectTrack();
+                if (source != m.get() && wasTrackSelected)
+                {
+                    m->deselectTrack();
+                }
             }
+
+            sendSynchronousChangeMessage();
         }
     }
 

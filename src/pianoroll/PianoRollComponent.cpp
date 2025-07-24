@@ -118,7 +118,7 @@ void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 
     if (lengthInSecs > 0)
     {
-        noteGrid.setResolution(getPianoRollContainerWidth() / lengthInSecs);
+        noteGrid.setResolution(static_cast<double>(getPianoRollContainerWidth()) / lengthInSecs);
     }
     else
     {

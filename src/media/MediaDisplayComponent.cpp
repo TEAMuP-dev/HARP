@@ -1,4 +1,6 @@
 #include "MediaDisplayComponent.h"
+#include "AudioDisplayComponent.h"
+#include "MidiDisplayComponent.h"
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
@@ -20,6 +22,7 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     trackNameLabel.setText(trackName, dontSendNotification);
     trackNameLabel.setJustificationType(Justification::centred);
     headerComponent.addAndMakeVisible(trackNameLabel);
+    headerComponent.addMouseListener(this, true);
     initializeButtons();
     addAndMakeVisible(headerComponent);
 
@@ -81,7 +84,7 @@ void MediaDisplayComponent::initializeButtons()
     playStopButton.addMode(stopButtonInfo);
     headerComponent.addAndMakeVisible(playStopButton);
 
-    chooseButtonInfo = MultiButton::Mode {
+    chooseFileButtonInfo = MultiButton::Mode {
         "ChooseFile",
         [this] { chooseFileCallback(); },
         Colours::lightblue,
@@ -89,11 +92,11 @@ void MediaDisplayComponent::initializeButtons()
         MultiButton::DrawingMode::IconOnly,
         fontawesome::Folder,
     };
-    chooseFileButton.addMode(chooseButtonInfo);
+    chooseFileButton.addMode(chooseFileButtonInfo);
     headerComponent.addAndMakeVisible(chooseFileButton);
 
     // Mode when an unsaved file is loaded
-    saveButtonActiveInfo = MultiButton::Mode {
+    saveFileButtonActiveInfo = MultiButton::Mode {
         "Save-Active",
         [this] { saveFileCallback(); },
         Colours::lightblue,
@@ -102,7 +105,7 @@ void MediaDisplayComponent::initializeButtons()
         fontawesome::Save,
     };
     // Mode when there is nothing to save
-    saveButtonInactiveInfo = MultiButton::Mode {
+    saveFileButtonInactiveInfo = MultiButton::Mode {
         "Save-Inactive",
         [this] {},
         Colours::lightgrey,
@@ -110,8 +113,8 @@ void MediaDisplayComponent::initializeButtons()
         MultiButton::DrawingMode::IconOnly,
         fontawesome::Save,
     };
-    saveFileButton.addMode(saveButtonActiveInfo);
-    saveFileButton.addMode(saveButtonInactiveInfo);
+    saveFileButton.addMode(saveFileButtonActiveInfo);
+    saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
 
     resetButtonState();
@@ -123,9 +126,21 @@ MediaDisplayComponent::~MediaDisplayComponent()
 
     sourcePlayer.setSource(nullptr);
 
+    headerComponent.removeMouseListener(this);
     horizontalScrollBar.removeListener(this);
 
     //clearLabels(); // Seems to cause problems when re-loading model
+}
+
+StringArray MediaDisplayComponent::getSupportedExtensions()
+{
+    StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
+    StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
+
+    StringArray allExtensions = StringArray(audioExtensions);
+    allExtensions.mergeArray(midiExtensions);
+
+    return allExtensions;
 }
 
 void MediaDisplayComponent::paint(Graphics& g)
@@ -276,7 +291,7 @@ void MediaDisplayComponent::resized()
         isLabelRepositioningScheduled = true;
 
         // Defer label repositioning until all layout passes are complete
-        juce::MessageManager::callAsync(
+        MessageManager::callAsync(
             [this]()
             {
                 isLabelRepositioningScheduled = false;
@@ -436,8 +451,8 @@ void MediaDisplayComponent::resetScrollBar()
 void MediaDisplayComponent::resetButtonState()
 {
     playStopButton.setMode(playButtonInactiveInfo.label);
-    chooseFileButton.setMode(chooseButtonInfo.label);
-    saveFileButton.setMode(saveButtonInactiveInfo.label);
+    chooseFileButton.setMode(chooseFileButtonInfo.label);
+    saveFileButton.setMode(saveFileButtonInactiveInfo.label);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -469,7 +484,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
     horizontalScrollBar.setRangeLimits(range);
 
     playStopButton.setMode(playButtonActiveInfo.label);
-    saveFileButton.setMode(saveButtonActiveInfo.label);
+    saveFileButton.setMode(saveFileButtonActiveInfo.label);
 }
 
 void MediaDisplayComponent::setOriginalFilePath(URL filePath)
@@ -663,7 +678,7 @@ void MediaDisplayComponent::chooseFileCallback()
 
 void MediaDisplayComponent::saveFileCallback()
 {
-    if (saveFileButton.getModeName() == saveButtonActiveInfo.label)
+    if (saveFileButton.getModeName() == saveFileButtonActiveInfo.label)
     {
         //overwriteOriginalFile();
         //saveFileButton.setMode(saveButtonInactiveInfo.label);
@@ -717,11 +732,11 @@ void MediaDisplayComponent::saveFileCallback()
                             }
                             else
                             {
-                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                                 "Save Failed",
-                                                                 "Failed to save file to "
-                                                                     + chosenFile.getFullPathName() + ".",
-                                                                 "OK");
+                                AlertWindow::showMessageBoxAsync(
+                                    AlertWindow::WarningIcon,
+                                    "Save Failed",
+                                    "Failed to save file to " + chosenFile.getFullPathName() + ".",
+                                    "OK");
                             }
                         }
                         else
@@ -915,6 +930,8 @@ void MediaDisplayComponent::deselectTrack()
     }
 
     repaint();
+
+    sendSynchronousChangeMessage();
 }
 
 void MediaDisplayComponent::start()
@@ -998,7 +1015,7 @@ void MediaDisplayComponent::mouseExit(const MouseEvent& /*e*/)
 
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
-    if (e.eventComponent == getMediaComponent() && isFileLoaded())
+    if (isFileLoaded())
     {
         if (! isThumbnailTrack() && ! isPlaying()
             && getLocalBounds().contains(getMouseXYRelative()))
@@ -1041,7 +1058,7 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
     else if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
     {
-        start(); // Only start playback if still within this area
+        start(); // Only start playback if still within media area
     }
     else
     {
@@ -1053,8 +1070,7 @@ void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
 {
     // TODO - mouseUp (selectTrack()) is still called before this
 
-    if (isThumbnailTrack() && e.eventComponent == getMediaComponent() && isFileLoaded()
-        && isMouseOver(true))
+    if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
     {
         deselectTrack();
     }

@@ -50,6 +50,7 @@ public:
                           DisplayMode mode = DisplayMode::Hybrid);
     ~MediaDisplayComponent() override;
 
+    static StringArray getSupportedExtensions();
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
@@ -224,10 +225,10 @@ private:
     MultiButton::Mode playButtonInactiveInfo;
     MultiButton::Mode stopButtonInfo;
     MultiButton chooseFileButton;
-    MultiButton::Mode chooseButtonInfo;
+    MultiButton::Mode chooseFileButtonInfo;
     MultiButton saveFileButton;
-    MultiButton::Mode saveButtonActiveInfo;
-    MultiButton::Mode saveButtonInactiveInfo;
+    MultiButton::Mode saveFileButtonActiveInfo;
+    MultiButton::Mode saveFileButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };

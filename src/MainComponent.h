@@ -1215,10 +1215,8 @@ public:
 
     void openFileChooser()
     {
-        StringArray allExtensions = StringArray(audioExtensions);
-        allExtensions.mergeArray(midiExtensions);
-
-        String filePatternsAllowed = "*" + allExtensions.joinIntoString(";*");
+        StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
+        String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
 
         openFileBrowser =
             std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
@@ -1497,9 +1495,6 @@ private:
     // std::unique_ptr<HoverHandler> mediaDisplayHandler;
     // std::unique_ptr<HoverHandler> outputMediaDisplayHandler;
 
-    StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
-    StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
-
     String currentProcessID;
     std::mutex processMutex;
 
@@ -1521,7 +1516,7 @@ private:
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
 
-    void play()
+    /*void play()
     {
         // if (! mediaDisplay->isPlaying())
         // {
@@ -1554,7 +1549,7 @@ private:
             }
         }
         // playStopButton.setMode(playButtonInfo.label);
-    }
+    }*/
 
     void resetProcessingButtons()
     {

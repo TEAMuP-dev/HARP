@@ -21,6 +21,7 @@ AudioDisplayComponent::~AudioDisplayComponent()
 {
     resetTransport();
 
+    thumbnailComponent.removeMouseListener(this);
     thumbnail.removeChangeListener(this);
 }
 
