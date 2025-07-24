@@ -19,7 +19,7 @@ public:
     MediaClipboardWidget()
     {
         initializeButtons();
-        resetControlState();
+        resetState();
 
         controlsComponent.addAndMakeVisible(selectionTextBox);
         controlsComponent.addAndMakeVisible(buttonsComponent);
@@ -79,9 +79,9 @@ public:
         // Mode when a track is selected (remove enabled)
         removeSelectionButtonActiveInfo = MultiButton::Mode {
             "RemoveSelection-Active",
-            [this] {}, // TODO
+            [this] { removeSelectionCallback(); },
             Colours::orangered,
-            "Remove the currently selected track from the media clipboard",
+            "Click to remove the currently selected track from the media clipboard",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::Remove,
         };
@@ -101,7 +101,7 @@ public:
         // Mode when a playable track is selected (play enabled)
         playButtonActiveInfo = MultiButton::Mode {
             "Play-Active",
-            [this] {}, // TODO
+            [this] { playCallback(); },
             Colours::limegreen,
             "Click to start playback",
             MultiButton::DrawingMode::IconOnly,
@@ -119,7 +119,7 @@ public:
         // Mode during playback (stop enabled)
         stopButtonInfo = MultiButton::Mode {
             "Stop",
-            [this] {}, // TODO
+            [this] { stopCallback(); },
             Colours::orangered,
             "Click to stop playback",
             MultiButton::DrawingMode::IconOnly,
@@ -135,7 +135,7 @@ public:
             "Save-Active",
             [this] { saveFileCallback(); },
             Colours::lightblue,
-            "Click to save the media file",
+            "Click to save the currently selected media file",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::Save,
         };
@@ -213,7 +213,7 @@ public:
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
     }
 
-    void resetControlState()
+    void resetState()
     {
         selectionTextBox.clear();
         selectionTextBox.setEnabled(false);
@@ -223,6 +223,21 @@ public:
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.label);
         playStopButton.setMode(playButtonInactiveInfo.label);
         saveFileButton.setMode(saveFileButtonInactiveInfo.label);
+
+        currentlySelectedDisplay = nullptr;
+    }
+
+    void selectTrack(MediaDisplayComponent* mediaDisplay)
+    {
+        selectionTextBox.setText(mediaDisplay->getTrackName());
+        selectionTextBox.setEnabled(true);
+
+        //renameSelectionButton.setMode(renameSelectionButtonActiveInfo.label);
+        removeSelectionButton.setMode(removeSelectionButtonActiveInfo.label);
+        playStopButton.setMode(playButtonActiveInfo.label);
+        saveFileButton.setMode(saveFileButtonActiveInfo.label);
+
+        currentlySelectedDisplay = mediaDisplay;
     }
 
     void addFileCallback()
@@ -245,16 +260,41 @@ public:
             });
     }
 
-    void saveFileCallback() {}
+    void removeSelectionCallback()
+    {
+        // TODO
+    }
+
+    void playCallback()
+    {
+        // TODO
+    }
+
+    void stopCallback()
+    {
+        // TODO
+    }
+
+    void saveFileCallback()
+    {
+        // TODO
+    }
 
 private:
     void changeListenerCallback(juce::ChangeBroadcaster* source) override
     {
         MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        if (mediaDisplay && mediaDisplay != currentlySelectedDisplay)
+        if (mediaDisplay)
         {
-            // TODO
+            if (mediaDisplay != currentlySelectedDisplay)
+            {
+                selectTrack(mediaDisplay);
+            }
+        }
+        else
+        {
+            resetState();
         }
     }
 
@@ -269,9 +309,9 @@ private:
     Component buttonsComponent;
 
     // Button components
-    MultiButton renameSelectionButton;
+    /*MultiButton renameSelectionButton;
     MultiButton::Mode renameSelectionButtonActiveInfo;
-    MultiButton::Mode renameSelectionButtonInactiveInfo;
+    MultiButton::Mode renameSelectionButtonInactiveInfo;*/
 
     MultiButton addFileButton;
     MultiButton::Mode addFileButtonInfo;

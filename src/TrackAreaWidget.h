@@ -140,8 +140,8 @@ public:
     void addTrackFromFilePath(URL filePath)
     {
         File f = filePath.getLocalFile();
-
         String ext = f.getFileExtension();
+        String label = filePath.getFileName();
 
         bool validExt = true;
 
@@ -152,6 +152,7 @@ public:
             auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
             audioTrackInfo->id = Uuid();
             audioTrackInfo->required = false;
+            audioTrackInfo->label = label.toStdString();
             componentInfo = ComponentInfo(audioTrackInfo->id, audioTrackInfo);
         }
         else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
@@ -159,6 +160,7 @@ public:
             auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
             midiTrackInfo->id = Uuid();
             midiTrackInfo->required = false;
+            midiTrackInfo->label = label.toStdString();
             componentInfo = ComponentInfo(midiTrackInfo->id, midiTrackInfo);
         }
         else
