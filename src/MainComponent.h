@@ -855,6 +855,7 @@ public:
             "xribene/HARP-UI-TEST-v3",
             // "xribene/pitch_shifter_slow",
             "stability/text-to-audio",
+            "stability/audio-to-audio",
             "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
@@ -1493,6 +1494,7 @@ private:
         // return;
         if (result.wasOk())
         {
+
             setModelCard(model->card());
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);

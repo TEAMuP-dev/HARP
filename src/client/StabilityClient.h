@@ -50,11 +50,21 @@ public:
 private:
     
     juce::String getAuthorizationHeader() const;
-    juce::String getJsonContentTypeHeader(juce::String&) const;
+    juce::String getJsonContentTypeHeader(const juce::String&) const;
     juce::String getAcceptHeader() const;
     juce::String createCommonHeaders() const;
-    juce::String createJsonHeaders(juce::String&) const;
-    OpResult buildPayload(juce::String&, juce::String&, juce::String&) const;
+    juce::String createJsonHeaders(const juce::String&) const;
+    OpResult buildPayload(const juce::String& prompt,
+                          const juce::String& processID,
+                          juce::String& payload) const;
+
+    OpResult processTextToAudio(const juce::String& prompt,
+                                Error& error,
+                                std::vector<juce::String>& outputFilePaths);
+
+    OpResult processAudioToAudio(const juce::String& inputFileURL,
+                                 Error& error,
+                                 std::vector<juce::String>& outputFilePaths);
 
     SpaceInfo spaceInfo;
     juce::String token = "TBD";
