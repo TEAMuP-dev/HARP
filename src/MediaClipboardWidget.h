@@ -18,12 +18,13 @@ class MediaClipboardWidget : public Component, public ChangeListener
 public:
     MediaClipboardWidget()
     {
-        initializeButtons();
-        resetState();
-
+        selectionTextBox.onReturnKey = [this] { renameSelectionCallback(); };
         controlsComponent.addAndMakeVisible(selectionTextBox);
+        initializeButtons();
         controlsComponent.addAndMakeVisible(buttonsComponent);
         addAndMakeVisible(controlsComponent);
+
+        resetState();
 
         controlsFlexBox.flexDirection = FlexBox::Direction::row;
         controlsFlexBox.alignItems = FlexBox::AlignItems::stretch;
@@ -39,6 +40,97 @@ public:
         mainFlexBox.flexDirection = FlexBox::Direction::column;
     }
 
+    ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
+
+    void paint(Graphics& g) { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
+
+    void resized() override
+    {
+        Rectangle<int> totalBounds = getLocalBounds();
+
+        // Remove existing items in main flex
+        mainFlexBox.items.clear();
+
+        // Add control bar and track area to flex
+        mainFlexBox.items.add(
+            FlexItem(controlsComponent)
+                .withHeight(30)
+                .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
+        mainFlexBox.items.add(FlexItem(trackAreaWidget)
+                                  .withFlex(10)
+                                  .withMargin({ 0, marginSize, marginSize, marginSize }));
+
+        mainFlexBox.performLayout(totalBounds);
+
+        // Remove existing items in main flex
+        controlsFlexBox.items.clear();
+
+        // Add control elements to control flex
+        controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
+        controlsFlexBox.items.add(
+            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
+
+        controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
+
+        // Remove existing items in button flex
+        buttonsFlexBox.items.clear();
+
+        // Add buttons to flex with equal width
+        /*buttonsFlexBox.items.add(FlexItem(renameSelectionButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));*/
+        buttonsFlexBox.items.add(FlexItem(addFileButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));
+        buttonsFlexBox.items.add(FlexItem(removeSelectionButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));
+        buttonsFlexBox.items.add(FlexItem(playStopButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));
+        buttonsFlexBox.items.add(FlexItem(saveFileButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));
+
+        buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+    }
+
+    void addFileCallback()
+    {
+        StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
+        String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
+
+        chooseFileBrowser =
+            std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
+
+        chooseFileBrowser->launchAsync(
+            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
+            [this](const FileChooser& fc)
+            {
+                File chosenFile = fc.getResult();
+                if (chosenFile != File {})
+                {
+                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile));
+                }
+            });
+    }
+
+    void saveFileCallback()
+    {
+        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
+
+        if (mediaDisplay)
+        {
+            mediaDisplay->saveFileCallback();
+        }
+    }
+
+private:
     void initializeButtons()
     {
         /*
@@ -153,64 +245,87 @@ public:
         buttonsComponent.addAndMakeVisible(saveFileButton);
     }
 
-    ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
-
-    void paint(Graphics& g) { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
-
-    void resized() override
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override
     {
-        Rectangle<int> totalBounds = getLocalBounds();
+        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        // Remove existing items in main flex
-        mainFlexBox.items.clear();
+        if (currentlySelectedDisplay)
+        {
+            if (currentlySelectedDisplay->isPlaying())
+            {
+                // Cancel playback and reset play/stop button state for select and stop events
+                stopCallback(currentlySelectedDisplay);
+            }
+            else
+            {
+                // Just reset play/stop button state for select and stop events (avoid infinite messages)
+                playStopButton.setMode(playButtonActiveInfo.label);
+            }
+        }
 
-        // Add control bar and track area to flex
-        mainFlexBox.items.add(
-            FlexItem(controlsComponent)
-                .withHeight(30)
-                .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
-        mainFlexBox.items.add(FlexItem(trackAreaWidget)
-                                  .withFlex(10)
-                                  .withMargin({ 0, marginSize, marginSize, marginSize }));
+        if (mediaDisplay)
+        {
+            if (mediaDisplay != currentlySelectedDisplay)
+            {
+                // Handle select events if selected display changes
+                selectTrack(mediaDisplay);
+            }
+        }
+        else
+        {
+            // Handle deselect events
+            resetState();
+        }
+    }
 
-        mainFlexBox.performLayout(totalBounds);
+    void renameSelectionCallback()
+    {
+        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        // Remove existing items in main flex
-        controlsFlexBox.items.clear();
+        String currentText = selectionTextBox.getText();
 
-        // Add control elements to control flex
-        controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
-        controlsFlexBox.items.add(
-            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
+        if (mediaDisplay && ! currentText.isEmpty())
+        {
+            mediaDisplay->setTrackName(currentText);
+        }
+    }
 
-        controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
+    void removeSelectionCallback()
+    {
+        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        // Remove existing items in button flex
-        buttonsFlexBox.items.clear();
+        if (mediaDisplay)
+        {
+            trackAreaWidget.removeTrack(mediaDisplay);
+            resetState();
+        }
+    }
 
-        // Add buttons to flex with equal width
-        /*buttonsFlexBox.items.add(FlexItem(renameSelectionButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));*/
-        buttonsFlexBox.items.add(FlexItem(addFileButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
-        buttonsFlexBox.items.add(FlexItem(removeSelectionButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
-        buttonsFlexBox.items.add(FlexItem(playStopButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
-        buttonsFlexBox.items.add(FlexItem(saveFileButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
+    void playCallback()
+    {
+        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+        if (mediaDisplay)
+        {
+            mediaDisplay->start();
+
+            playStopButton.setMode(stopButtonInfo.label);
+        }
+    }
+
+    void stopCallback(MediaDisplayComponent* mediaDisplay = nullptr)
+    {
+        if (! mediaDisplay)
+        {
+            mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
+        }
+
+        if (mediaDisplay)
+        {
+            mediaDisplay->stop();
+
+            playStopButton.setMode(playButtonActiveInfo.label);
+        }
     }
 
     void resetState()
@@ -238,64 +353,6 @@ public:
         saveFileButton.setMode(saveFileButtonActiveInfo.label);
 
         currentlySelectedDisplay = mediaDisplay;
-    }
-
-    void addFileCallback()
-    {
-        StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
-        String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
-
-        chooseFileBrowser =
-            std::make_unique<FileChooser>("Select a media file...", File(), filePatternsAllowed);
-
-        chooseFileBrowser->launchAsync(
-            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
-            [this](const FileChooser& fc)
-            {
-                File chosenFile = fc.getResult();
-                if (chosenFile != File {})
-                {
-                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile));
-                }
-            });
-    }
-
-    void removeSelectionCallback()
-    {
-        // TODO
-    }
-
-    void playCallback()
-    {
-        // TODO
-    }
-
-    void stopCallback()
-    {
-        // TODO
-    }
-
-    void saveFileCallback()
-    {
-        // TODO
-    }
-
-private:
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override
-    {
-        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-
-        if (mediaDisplay)
-        {
-            if (mediaDisplay != currentlySelectedDisplay)
-            {
-                selectTrack(mediaDisplay);
-            }
-        }
-        else
-        {
-            resetState();
-        }
     }
 
     const int marginSize = 2;

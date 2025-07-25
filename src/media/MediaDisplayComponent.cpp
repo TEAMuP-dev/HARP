@@ -908,30 +908,36 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
 void MediaDisplayComponent::selectTrack()
 {
-    isSelected = true;
-
-    if (! isLinkedToDAW())
+    if (! isCurrentlySelected())
     {
-        headerComponent.setColor(selectionColor);
+        isSelected = true;
+
+        if (! isLinkedToDAW())
+        {
+            headerComponent.setColor(selectionColor);
+        }
+
+        repaint();
+
+        sendSynchronousChangeMessage();
     }
-
-    repaint();
-
-    sendSynchronousChangeMessage();
 }
 
 void MediaDisplayComponent::deselectTrack()
 {
-    isSelected = false;
-
-    if (! isLinkedToDAW())
+    if (isCurrentlySelected())
     {
-        headerComponent.setColor();
+        isSelected = false;
+
+        if (! isLinkedToDAW())
+        {
+            headerComponent.setColor();
+        }
+
+        repaint();
+
+        sendSynchronousChangeMessage();
     }
-
-    repaint();
-
-    sendSynchronousChangeMessage();
 }
 
 void MediaDisplayComponent::start()
@@ -953,6 +959,8 @@ void MediaDisplayComponent::stop()
     setPlaybackPosition(0.0);
 
     playStopButton.setMode(playButtonActiveInfo.label);
+
+    sendChangeMessage();
 }
 
 void MediaDisplayComponent::updateCursorPosition()
@@ -1013,11 +1021,21 @@ void MediaDisplayComponent::mouseExit(const MouseEvent& /*e*/)
     }
 }
 
+void MediaDisplayComponent::mouseDown(const MouseEvent& e)
+{
+    mouseDrag(e); // Make sure playback position has been updated
+
+    if (isThumbnailTrack() && isFileLoaded())
+    {
+        selectTrack();
+    }
+}
+
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
     {
-        if (! isThumbnailTrack() && ! isPlaying()
+        if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && ! isPlaying()
             && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = static_cast<float>(e.x);
@@ -1037,11 +1055,6 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
             performExternalDragDropOfFiles(
                 StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
-
-            if (! isThumbnailTrack() && ! isPlaying())
-            {
-                setPlaybackPosition(0.0);
-            }
         }
 
         updateCursorPosition();
@@ -1052,23 +1065,25 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
 {
     mouseDrag(e); // Make sure playback position has been updated
 
-    if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
+    if (! isThumbnailTrack())
     {
-        selectTrack();
-    }
-    else if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
-    {
-        start(); // Only start playback if still within media area
-    }
-    else
-    {
-        setPlaybackPosition(0.0);
+        if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
+        {
+            start(); // Only start playback if still within media area
+        }
+        else
+        {
+            if (! isPlaying())
+            {
+                setPlaybackPosition(0.0);
+            }
+        }
     }
 }
 
 void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
 {
-    // TODO - mouseUp (selectTrack()) is still called before this
+    // TODO - mouseUp/Down (selectTrack()) is still called before this
 
     if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
     {

@@ -18,10 +18,7 @@ public:
 
     void paint(Graphics& g) override { g.fillAll(backgroundColor); }
 
-    void setColor()
-    {
-        setColor(defaultColor);
-    }
+    void setColor() { setColor(defaultColor); }
 
     void setColor(Colour newColor)
     {
@@ -96,6 +93,8 @@ public:
 
     bool isDuplicateFile(const URL& fileParth);
 
+    void saveFileCallback();
+
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
@@ -165,7 +164,6 @@ private:
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
     void chooseFileCallback();
-    void saveFileCallback();
 
     virtual Component* getMediaComponent() { return this; }
 
@@ -193,7 +191,7 @@ private:
     void mouseEnter(const MouseEvent& /*e*/) override;
     void mouseExit(const MouseEvent& /*e*/) override;
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
+    void mouseDown(const MouseEvent& e) override;
     void mouseDrag(const MouseEvent& e) override;
     void mouseUp(const MouseEvent& e) override;
     void mouseDoubleClick(const MouseEvent& e) override;

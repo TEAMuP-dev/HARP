@@ -95,8 +95,8 @@ public:
 
         for (auto& m : mediaDisplays)
         {
-            removeChildComponent(m.get());
             m->removeChangeListener(this);
+            removeChildComponent(m.get());
         }
 
         mediaDisplays.clear();
@@ -177,6 +177,20 @@ public:
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(filePath.getFileName());
         }
+    }
+
+    void removeTrack(MediaDisplayComponent* mediaDisplay)
+    {
+        mediaDisplay->removeChangeListener(this);
+        removeChildComponent(mediaDisplay);
+
+        auto it =
+            std::remove_if(mediaDisplays.begin(),
+                           mediaDisplays.end(),
+                           [mediaDisplay](const auto& ptr) { return ptr.get() == mediaDisplay; });
+        mediaDisplays.erase(it, mediaDisplays.end());
+
+        resized();
     }
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
