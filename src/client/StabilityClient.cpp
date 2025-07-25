@@ -188,12 +188,12 @@ OpResult StabilityClient::processRequest(Error& error,
     }
 
     // Dispatch to correct model endpoint
-    if (spaceInfo.modelName == "audio-to-audio")
+    if (spaceInfo.modelName == "stability/audio-to-audio")
     {
         juce::String inputAudioUrl = dataArray->getReference(0).toString();
         return processAudioToAudio(inputAudioUrl, error, outputFilePaths);
     }
-    else if (spaceInfo.modelName == "text-to-audio")
+    else if (spaceInfo.modelName == "stability/text-to-audio")
     {
         juce::String prompt = dataArray->getReference(0).toString();
         return processTextToAudio(prompt, error, outputFilePaths);
@@ -207,84 +207,114 @@ OpResult StabilityClient::processRequest(Error& error,
 
 
 OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
-                                   juce::Array<juce::var>& outputComponents,
-                                   juce::DynamicObject& cardDict)
+                                      juce::Array<juce::var>& outputComponents,
+                                      juce::DynamicObject& cardDict)
 {
-    juce::String callID = "controls";
-    juce::String eventID;
-
-    // Initialize a positive result
     OpResult result = OpResult::ok();
-    juce::String responseData = "[{\"card\": {\"name\": \"Text to Audio\", \"description\": \"Integrated stability text to audio\", \"author\": \"Stability\", \"tags\": [\"example\", \"stability\", \"test\"]}, \"inputs\": [{\"label\": \"Input Text Prompt\", \"value\": \"happy song\", \"type\": \"text_box\"}], \"outputs\": [{\"label\": \"Output Audio\", \"required\": true, \"type\": \"audio_track\"}]}]";
+    juce::String modelName = spaceInfo.modelName.trim();
+    DBG("DEBUG: StabilityClient::getControls() - modelName = " + modelName);
 
-    // Create an Error object in case we need it for the next steps
-    Error error;
-    error.type = ErrorType::JsonParseError;
-    // Parse the extracted JSON string
+    // JSON template depending on the model
+    juce::String responseData;
+
+    if (spaceInfo.modelName == "stability/text-to-audio")
+    {
+    responseData = R"(
+        [{
+        "card": {
+        "name": "Text to Audio",
+        "description": "Integrated stability text-to-audio",
+        "author": "Stability",
+        "tags": ["text", "audio", "generation"]
+        },
+        "inputs": [{
+        "label": "Input Text Prompt",
+        "value": "3/4 time signature",
+        "type": "text_box"
+        }],
+        "outputs": [{
+        "label": "Output Audio",
+        "required": true,
+        "type": "audio_track"
+        }]
+        }]
+        )";
+    }
+    else if (spaceInfo.modelName == "stability/audio-to-audio")
+    {
+    responseData = R"(
+        [{
+        "card": {
+        "name": "Audio to Audio",
+        "description": "Integrated stability audio-to-audio",
+        "author": "Stability",
+        "tags": ["audio", "transformation"]
+        },
+        "inputs": [{
+        "label": "Input Audio",
+        "required": true,
+        "type": "audio_track"
+        }],
+        "outputs": [{
+        "label": "Output Audio",
+        "required": true,
+        "type": "audio_track"
+        }]
+        }]
+        )";
+    }
+    else
+    {
+        Error error;
+        error.devMessage = "Unsupported model in getControls(): " + spaceInfo.modelName;
+        return OpResult::fail(error);
+    }
+
+    // Parse the generated JSON
     juce::var parsedData;
     juce::JSON::parse(responseData, parsedData);
 
-    if (! parsedData.isObject())
+    if (!parsedData.isArray())
     {
-        error.devMessage = "Failed to parse the data portion of the received controls JSON.";
+        Error error;
+        error.devMessage = "Failed to parse controls JSON: Not an array.";
         return OpResult::fail(error);
     }
 
-    if (! parsedData.isArray())
-    {
-        error.devMessage = "Parsed JSON is not an array.";
-        return OpResult::fail(error);
-    }
     juce::Array<juce::var>* dataArray = parsedData.getArray();
-    if (dataArray == nullptr)
+    if (dataArray == nullptr || dataArray->isEmpty())
     {
-        error.devMessage = "Parsed JSON is not an array 2.";
+        Error error;
+        error.devMessage = "Controls JSON array is empty or null.";
         return OpResult::fail(error);
     }
-    // Check if the first element in the array is a dict
+
     juce::DynamicObject* obj = dataArray->getFirst().getDynamicObject();
     if (obj == nullptr)
     {
-        error.devMessage = "First element in the array is not a dict.";
+        Error error;
+        error.devMessage = "First item in controls JSON is not a valid object.";
         return OpResult::fail(error);
     }
 
-    // Get the card and controls objects from the parsed data
-    juce::DynamicObject* cardObj = obj->getProperty("card").getDynamicObject();
-
-    if (cardObj == nullptr)
+    // Copy card dictionary
+    if (auto* cardObj = obj->getProperty("card").getDynamicObject())
     {
-        error.devMessage = "Couldn't load the modelCard dict from the controls response.";
-        return OpResult::fail(error);
-    }
-
-    // Clear the existing properties in cardDict
-    cardDict.clear();
-
-    // Copy all properties from cardObj to cardDict
-    for (auto& key : cardObj->getProperties())
-    {
+        cardDict.clear();
+        for (const auto& key : cardObj->getProperties())
         cardDict.setProperty(key.name, key.value);
     }
 
-    juce::Array<juce::var>* inputsArray = obj->getProperty("inputs").getArray();
-    if (inputsArray == nullptr)
-    {
-        error.devMessage = "Couldn't load the controls array/list from the controls response.";
-        return OpResult::fail(error);
-    }
-    inputComponents = *inputsArray;
+    // Copy input and output arrays
+    if (auto* inputs = obj->getProperty("inputs").getArray())
+    inputComponents = *inputs;
 
-    juce::Array<juce::var>* outputsArray = obj->getProperty("outputs").getArray();
-    if (outputsArray == nullptr)
-    {
-        error.devMessage = "Couldn't load the controls array/list from the controls response.";
-        return OpResult::fail(error);
-    }
-    outputComponents = *outputsArray;
+    if (auto* outputs = obj->getProperty("outputs").getArray())
+    outputComponents = *outputs;
 
     return result;
 }
+
 
 OpResult StabilityClient::cancel() {
 
