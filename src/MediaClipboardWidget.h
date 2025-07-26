@@ -355,8 +355,8 @@ private:
         currentlySelectedDisplay = mediaDisplay;
     }
 
-    const int marginSize = 2;
-    const int buttonWidth = 26;
+    const float marginSize = 2;
+    const float buttonWidth = 26;
 
     // Main controls component
     Component controlsComponent;
