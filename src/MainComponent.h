@@ -1370,7 +1370,12 @@ public:
         // Right Column: Media Clipboard Area
         if (showMediaClipboard)
         {
+            mediaClipboardWidget.setVisible(true);
             fullWindow.items.add(juce::FlexItem(mediaClipboardWidget).withFlex(0.4));
+        }
+        else
+        {
+            mediaClipboardWidget.setVisible(false);
         }
 
         // Apply the FlexBox layout to the full area
