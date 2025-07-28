@@ -5,8 +5,9 @@
 
 OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 {
-    OpResult result = OpResult::ok();
-    return result;
+    spaceInfo = inSpaceInfo;
+    
+    return OpResult::ok();
 }
 
 SpaceInfo StabilityClient::getSpaceInfo() const { return spaceInfo; }
@@ -217,51 +218,60 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
     // JSON template depending on the model
     juce::String responseData;
 
-    if (spaceInfo.modelName == "stability/text-to-audio")
+
+    if (modelName == "stability/audio-to-audio" || modelName == "audio-to-audio")
     {
-    responseData = R"(
-        [{
-        "card": {
-        "name": "Text to Audio",
-        "description": "Integrated stability text-to-audio",
-        "author": "Stability",
-        "tags": ["text", "audio", "generation"]
-        },
-        "inputs": [{
-        "label": "Input Text Prompt",
-        "value": "3/4 time signature",
-        "type": "text_box"
-        }],
-        "outputs": [{
-        "label": "Output Audio",
-        "required": true,
-        "type": "audio_track"
-        }]
-        }]
+        responseData = R"(
+            [{
+            "card": {
+            "name": "Audio to Audio",
+            "description": "Stability AI audio-to-audio with prompt",
+            "author": "Stability",
+            "tags": ["audio", "transformation"]
+            },
+            "inputs": [
+                {
+                    "label": "Input Audio",
+                    "required": true,
+                    "type": "audio_track"
+                },
+                {
+                    "label": "Text Prompt",
+                    "value": "happy",
+                    "type": "text_box"
+                }
+            ],
+            "outputs": [{
+                "label": "Output Audio",
+                "required": true,
+                "type": "audio_track"
+            }]
+            }]
         )";
     }
-    else if (spaceInfo.modelName == "stability/audio-to-audio")
+    else if (modelName == "stability/text-to-audio" || modelName == "text-to-audio")
     {
-    responseData = R"(
-        [{
-        "card": {
-        "name": "Audio to Audio",
-        "description": "Integrated stability audio-to-audio",
-        "author": "Stability",
-        "tags": ["audio", "transformation"]
-        },
-        "inputs": [{
-        "label": "Input Audio",
-        "required": true,
-        "type": "audio_track"
-        }],
-        "outputs": [{
-        "label": "Output Audio",
-        "required": true,
-        "type": "audio_track"
-        }]
-        }]
-        )";
+
+        responseData = R"(
+            [{
+            "card": {
+            "name": "Text to Audio",
+            "description": "Integrated stability text-to-audio",
+            "author": "Stability",
+            "tags": ["text", "audio", "generation"]
+            },
+            "inputs": [{
+            "label": "Input Text Prompt",
+            "value": "happy",
+            "type": "text_box"
+            }],
+            "outputs": [{
+            "label": "Output Audio",
+            "required": true,
+            "type": "audio_track"
+            }]
+            }]
+            )";
     }
     else
     {
