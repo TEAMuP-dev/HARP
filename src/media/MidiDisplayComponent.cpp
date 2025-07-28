@@ -203,7 +203,7 @@ void MidiDisplayComponent::verticalZoom(double deltaZoom)
 void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
 #if (JUCE_MAC)
-    bool commandMod = evt.mods.isCommandDown();
+    bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
 #else
     bool commandMod = evt.mods.isCtrlDown();
 #endif

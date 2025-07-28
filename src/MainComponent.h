@@ -686,18 +686,42 @@ public:
         // Find top-level window for resizing
         if (auto* window = findParentComponentOfClass<juce::DocumentWindow>())
         {
+            // Determine which display contains HARP
+            auto* currentDisplay =
+                juce::Desktop::getInstance().getDisplays().getDisplayForRect(getScreenBounds());
+
+            int currentDisplayWidth;
+
+            if (currentDisplay != nullptr)
+            {
+                if (window->isFullScreen())
+                {
+                    currentDisplayWidth = currentDisplay->totalArea.getWidth();
+                }
+                else
+                {
+                    currentDisplayWidth = currentDisplay->userArea.getWidth();
+                }
+            }
+
+            //int totalDesktopWidth = juce::Desktop::getInstance().getDisplays().getDisplayForRect(getBounds())->totalArea.getWidth();
+
             // Get current bounds of top-level window
             Rectangle<int> windowBounds = window->getBounds();
 
             if (showMediaClipboard)
             {
                 // Scale bounds to extend window by 40% of main width
-                windowBounds.setWidth(static_cast<int>(1.4 * windowBounds.getWidth()));
+                windowBounds.setWidth(
+                    jmin(currentDisplayWidth, static_cast<int>(1.4 * windowBounds.getWidth())));
             }
             else
             {
-                // Scale bounds to reduce window to main width
-                windowBounds.setWidth(static_cast<int>(windowBounds.getWidth() / 1.4));
+                if (! window->isFullScreen())
+                {
+                    // Scale bounds to reduce window to main width
+                    windowBounds.setWidth(static_cast<int>(windowBounds.getWidth() / 1.4));
+                }
             }
 
             // Set extended or reduced bounds
@@ -1240,19 +1264,12 @@ public:
 
     void resized() override
     {
-        auto fullArea = getLocalBounds();
+        auto mainArea = getLocalBounds();
 
 #if not JUCE_MAC
         menuBar->setBounds(
-            fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
+            mainArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
-
-        auto mainArea = fullArea;
-
-        if (showMediaClipboard)
-        {
-            mainArea = fullArea.withWidth(static_cast<int>(fullArea.getWidth() / 1.4));
-        }
 
         auto margin = 2; // Adjusted margin value for top and bottom spacing
 
@@ -1300,11 +1317,11 @@ public:
         rowProcessCancelButton.flexDirection = juce::FlexBox::Direction::row;
         rowProcessCancelButton.justifyContent = juce::FlexBox::JustifyContent::center;
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        rowProcessCancelButton.items.add(juce::FlexItem(processCancelButton)
-                                             .withWidth(mainArea.getWidth() / 4)
-                                             .withMargin(margin));
+        rowProcessCancelButton.items.add(
+            juce::FlexItem(processCancelButton).withWidth(150).withMargin(margin));
         rowProcessCancelButton.items.add(juce::FlexItem().withFlex(1));
-        mainPanel.items.add(juce::FlexItem(rowProcessCancelButton).withHeight(30).withMargin(margin));
+        mainPanel.items.add(
+            juce::FlexItem(rowProcessCancelButton).withHeight(30).withMargin(margin));
 
         // Row 6: Input and Output Tracks Area Widget
         float numInputTracks = inputTrackAreaWidget.getNumTracks();
@@ -1370,16 +1387,15 @@ public:
         // Right Column: Media Clipboard Area
         if (showMediaClipboard)
         {
-            mediaClipboardWidget.setVisible(true);
             fullWindow.items.add(juce::FlexItem(mediaClipboardWidget).withFlex(0.4));
         }
         else
         {
-            mediaClipboardWidget.setVisible(false);
+            mediaClipboardWidget.setBounds(0, 0, 0, 0);
         }
 
         // Apply the FlexBox layout to the full area
-        fullWindow.performLayout(fullArea);
+        fullWindow.performLayout(mainArea);
     }
 
     void resetUI()
@@ -1686,7 +1702,7 @@ private:
 
         loadModelButton.setEnabled(true);
         modelPathComboBox.setEnabled(true);
-        loadModelButton.setButtonText("load");
+        loadModelButton.setButtonText("Load");
 
         // Set the focus to the process button
         // so that the user can press SPACE to trigger the playback

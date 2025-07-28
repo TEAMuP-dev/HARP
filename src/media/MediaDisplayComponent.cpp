@@ -872,7 +872,7 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
     if (! isThumbnailTrack() && isFileLoaded())
     {
 #if (JUCE_MAC)
-        bool commandMod = evt.mods.isCommandDown();
+        bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
 #else
         bool commandMod = evt.mods.isCtrlDown();
 #endif
