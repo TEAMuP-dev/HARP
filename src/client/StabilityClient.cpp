@@ -6,7 +6,6 @@
 OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 {
     spaceInfo = inSpaceInfo;
-    
     return OpResult::ok();
 }
 
