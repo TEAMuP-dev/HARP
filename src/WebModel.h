@@ -538,6 +538,7 @@ public:
             if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
             {
                 audioTrackInfo->value = remoteTrackFilePath.toStdString();
+                DBG("WebModel: audioTrackInfo->value = " + juce::String(audioTrackInfo->value));
             }
             else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
             {

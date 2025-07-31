@@ -13,6 +13,7 @@
 #include "../utils.h"
 #include "Client.h"
 #include "juce_core/juce_core.h"
+
 class StabilityClient : public Client
 
 {
