@@ -102,7 +102,7 @@ public:
         mediaDisplays.clear();
     }
 
-    void addTrackFromComponentInfo(ComponentInfo info)
+    void addTrackFromComponentInfo(ComponentInfo info, bool fromDAW = false)
     {
         std::shared_ptr<PyHarpComponentInfo> trackInfo = info.second;
         std::unique_ptr<MediaDisplayComponent> m;
@@ -113,12 +113,16 @@ public:
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
             m = std::make_unique<AudioDisplayComponent>(
-                label, audioTrackInfo->required, false, displayMode);
+                label, audioTrackInfo->required, fromDAW, displayMode);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
             m = std::make_unique<MidiDisplayComponent>(
-                label, midiTrackInfo->required, false, displayMode);
+                label, midiTrackInfo->required, fromDAW, displayMode);
+        }
+        else
+        {
+            DBG("TrackAreaWidget::addTrackFromComponentInfo: Invalid ComponentInfo received.");
         }
 
         if (m)
@@ -137,7 +141,7 @@ public:
         resized();
     }
 
-    void addTrackFromFilePath(URL filePath)
+    void addTrackFromFilePath(URL filePath, bool fromDAW = false)
     {
         File f = filePath.getLocalFile();
         String ext = f.getFileExtension();
@@ -173,7 +177,7 @@ public:
 
         if (validExt)
         {
-            addTrackFromComponentInfo(componentInfo);
+            addTrackFromComponentInfo(componentInfo, fromDAW);
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(filePath.getFileName());
         }

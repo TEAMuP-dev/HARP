@@ -100,6 +100,12 @@ public:
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
     }
 
+    void addExternalTrackFromFilePath(URL filePath)
+    {
+        // TODO - is there an explicit way to check how HARP was invoked?
+        trackAreaWidget.addTrackFromFilePath(filePath, true);
+    }
+
     void addFileCallback()
     {
         StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
@@ -115,7 +121,7 @@ public:
                 File chosenFile = fc.getResult();
                 if (chosenFile != File {})
                 {
-                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile));
+                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile), false);
                 }
             });
     }

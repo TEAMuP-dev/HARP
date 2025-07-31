@@ -18,7 +18,7 @@ public:
         options.folderName = getApplicationName();
         options.commonToAllUsers = false;
         applicationProperties.setStorageParameters(options);
-        
+
         // Initialize the AppSettings singleton with our application properties
         AppSettings::initialize(&applicationProperties);
     }
@@ -48,8 +48,8 @@ public:
         // MacOS: ~/Library/Logs/HARP/launch.log
         // Linux: ~/.config/HARP/launch.log
         // Windows: C:\Users\<username>\AppData\Roaming\HARP\launch.log
-        File logsDir = juce::FileLogger::getSystemLogFileFolder()
-                           .getChildFile(getApplicationName());
+        File logsDir =
+            juce::FileLogger::getSystemLogFileFolder().getChildFile(getApplicationName());
         logsDir.createDirectory(); // Ensure directory exists
         // Create the debug log file
         File debugFile = logsDir.getChildFile("launch.log");
@@ -61,10 +61,14 @@ public:
     {
         appJustLaunched = true;
         originalCommandLine = commandLine;
-        writeDebugLog("commandLine: " + commandLine);
-        writeDebugLog("getCommandLineParameters(): " + getCommandLineParameters());
 
-        File inputMediaFile(commandLine.unquoted().trim());
+        writeDebugLog("GuiAppApplication::initialise: Invoked with command line \"" + commandLine
+                      + "\".");
+        writeDebugLog("GuiAppApplication::getCommandLineParameters(): \""
+                      + getCommandLineParameters() + "\".");
+
+        StringArray args;
+        args.addTokens(commandLine.unquoted().trim(), " ", "");
 
         juce::String windowTitle = getApplicationName();
         windowCounter++;
@@ -75,12 +79,18 @@ public:
 
         mainWindow.reset(new MainWindow(windowTitle));
 
-        if (inputMediaFile.existsAsFile())
+        for (auto arg : args)
         {
-            // Load the file 
-            if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+            File inputMediaFile(arg);
+
+            if (inputMediaFile.existsAsFile())
             {
-                mainComp->importNewFile(inputMediaFile);
+                // Load the file
+                if (auto* mainComp =
+                        dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                {
+                    mainComp->importNewFile(inputMediaFile);
+                }
             }
         }
 
@@ -138,103 +148,117 @@ public:
         {
             if (! commandLine.isEmpty() && originalCommandLine.isEmpty())
             {
-                // DBG("Replacing original window (empty commandLine) with " + commandLine);
-                writeDebugLog("Replacing original window (empty commandLine) with " + commandLine);
+                writeDebugLog(
+                    "GuiAppApplication::anotherInstanceStarted: Replacing original window (empty command line) with \""
+                    + commandLine + "\".");
                 resetWindow(commandLine);
+
                 return;
             }
-            writeDebugLog("Ignoring spurious anotherInstanceStarted during startup: "
-                          + commandLine);
+
+            writeDebugLog(
+                "GuiAppApplication::anotherInstanceStarted: Ignoring spurious invocation during startup with command line \""
+                + commandLine + "\".");
+
             return;
         }
 
-        DBG("Another instance started with command line: " + commandLine);
+        writeDebugLog(
+            "GuiAppApplication::anotherInstanceStarted: Another instance started with command line \""
+            + commandLine + "\".");
 
-        // First check if it's a valid file
-        File inputMediaFile(commandLine.unquoted().trim());
+        StringArray args;
+        args.addTokens(commandLine.unquoted().trim(), " ", "");
 
-        writeDebugLog("Another instance started with command line: " + commandLine + "\n");
-
-        if (inputMediaFile.existsAsFile())
+        for (auto arg : args)
         {
-            // We deal with UI stuff so it's safer to work on the message thread
-            MessageManager::callAsync(
-                [this, inputMediaFile]()
-                {
-                    // Check if the user made a choice before
-                    bool hasPreference = AppSettings::containsKey("newInstancePreference");
-                    int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
+            File inputMediaFile(arg);
 
-                    if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
+            if (inputMediaFile.existsAsFile())
+            {
+                // We deal with UI stuff so it's safer to work on the message thread
+                MessageManager::callAsync(
+                    [this, inputMediaFile]()
                     {
-                        handleFileOpenChoice(preferenceValue, inputMediaFile);
-                    }
-                    else
-                    {
-                        // show dialog with "Remember my choice" option
-                        auto options = MessageBoxOptions()
-                                           .withTitle("Open File")
-                                           .withMessage("How would you like to open \""
-                                                        + inputMediaFile.getFileName() + "\"?")
-                                           .withIconType(MessageBoxIconType::QuestionIcon)
-                                           .withButton("New Window")
-                                           .withButton("Current Window")
-                                           .withButton("Cancel");
+                        // Check if the user made a choice before
+                        bool hasPreference = AppSettings::containsKey("newInstancePreference");
+                        int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
 
-                        // Create a custom AlertWindow to add the checkbox
-                        // I don't use AlertWindow::showAsync() because I couldn't find a way
-                        // to add a checkbox to it. MessageBoxOptions doesn't have a .withCustomComponent() method
-                        std::unique_ptr<AlertWindow> alertWindow = std::make_unique<AlertWindow>(
-                            options.getTitle(), options.getMessage(), options.getIconType());
+                        if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
+                        {
+                            handleFileOpenChoice(preferenceValue, inputMediaFile);
+                        }
+                        else
+                        {
+                            // show dialog with "Remember my choice" option
+                            auto options = MessageBoxOptions()
+                                               .withTitle("Open File")
+                                               .withMessage("How would you like to open \""
+                                                            + inputMediaFile.getFileName() + "\"?")
+                                               .withIconType(MessageBoxIconType::QuestionIcon)
+                                               .withButton("New Window")
+                                               .withButton("Current Window")
+                                               .withButton("Cancel");
 
-                        alertWindow->addButton(options.getButtonText(0), 1); // New Window
-                        alertWindow->addButton(options.getButtonText(1), 2); // Current Window
-                        alertWindow->addButton(options.getButtonText(2), 0); // Cancel
+                            // Create a custom AlertWindow to add the checkbox
+                            // I don't use AlertWindow::showAsync() because I couldn't find a way
+                            // to add a checkbox to it. MessageBoxOptions doesn't have a .withCustomComponent() method
+                            std::unique_ptr<AlertWindow> alertWindow =
+                                std::make_unique<AlertWindow>(options.getTitle(),
+                                                              options.getMessage(),
+                                                              options.getIconType());
 
-                        // I had to make the checkbox a raw pointer because it couldn't be passed
-                        // to the lambda as a unique_ptr.
-                        // We also need to manually delete it because AlertWindow doesn't take
-                        // ownership of the customComponents
-                        // auto* rememberCheckbox = new ToggleButton("Remember my choice");
-                        auto rememberCheckbox =
-                            std::make_unique<ToggleButton>("Remember my choice");
-                        rememberCheckbox->setSize(200, 24);
-                        rememberCheckbox->setName("");
+                            alertWindow->addButton(options.getButtonText(0), 1); // New Window
+                            alertWindow->addButton(options.getButtonText(1), 2); // Current Window
+                            alertWindow->addButton(options.getButtonText(2), 0); // Cancel
 
-                        // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
-                        // So we need to delete it manually when the alertWindow is closed
-                        alertWindow->addCustomComponent(rememberCheckbox.get());
+                            // I had to make the checkbox a raw pointer because it couldn't be passed
+                            // to the lambda as a unique_ptr.
+                            // We also need to manually delete it because AlertWindow doesn't take
+                            // ownership of the customComponents
+                            // auto* rememberCheckbox = new ToggleButton("Remember my choice");
+                            auto rememberCheckbox =
+                                std::make_unique<ToggleButton>("Remember my choice");
+                            rememberCheckbox->setSize(200, 24);
+                            rememberCheckbox->setName("");
 
-                        // Show the window asynchronously
-                        alertWindow->enterModalState(
-                            true,
-                            ModalCallbackFunction::create(
-                                [this,
-                                 alertWindow = alertWindow.release(),
-                                 inputMediaFile,
-                                 rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
-                                {
-                                    if (result != 0) // 0 is Cancel in this case
+                            // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
+                            // So we need to delete it manually when the alertWindow is closed
+                            alertWindow->addCustomComponent(rememberCheckbox.get());
+
+                            // Show the window asynchronously
+                            alertWindow->enterModalState(
+                                true,
+                                ModalCallbackFunction::create(
+                                    [this,
+                                     alertWindow = alertWindow.release(),
+                                     inputMediaFile,
+                                     rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
                                     {
-                                        int choice = result - 1;
-
-                                        bool rememberChoice = rememberCheckboxPtr->getToggleState();
-
-                                        // Save preference if requested
-                                        // Don't save the Cancel choice
-                                        if (rememberChoice && choice <= 1)
+                                        if (result != 0) // 0 is Cancel in this case
                                         {
-                                            AppSettings::setValue("newInstancePreference", choice);
-                                            AppSettings::saveIfNeeded();
-                                        }
+                                            int choice = result - 1;
 
-                                        // Handle the choice
-                                        handleFileOpenChoice(choice, inputMediaFile);
-                                    }
-                                }),
-                            true);
-                    }
-                });
+                                            bool rememberChoice =
+                                                rememberCheckboxPtr->getToggleState();
+
+                                            // Save preference if requested
+                                            // Don't save the Cancel choice
+                                            if (rememberChoice && choice <= 1)
+                                            {
+                                                AppSettings::setValue("newInstancePreference",
+                                                                      choice);
+                                                AppSettings::saveIfNeeded();
+                                            }
+
+                                            // Handle the choice
+                                            handleFileOpenChoice(choice, inputMediaFile);
+                                        }
+                                    }),
+                                true);
+                        }
+                    });
+            }
         }
     }
 
@@ -252,7 +276,7 @@ public:
                 {
                     windowTitle += " (" + juce::String(windowCounter - 1) + ")";
                 }
-                
+
                 std::unique_ptr<MainWindow> newWindow = std::make_unique<MainWindow>(windowTitle);
 
                 // Configure the window before making it visible
@@ -297,10 +321,9 @@ public:
             setUsingNativeTitleBar(true);
             setContentOwned(new MainComponent(), true);
             setResizable(true, true);
-            
+
             // Try to restore saved position and size
             restoreWindowPosition();
-// #endif
 
             setVisible(true);
         }
@@ -318,7 +341,7 @@ public:
         {
             // Save window position and size before closing
             saveWindowPosition();
-            
+
             if (this
                 == dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance())
                        ->getMainWindowPtr())
@@ -363,52 +386,51 @@ public:
 
     private:
         juce::String windowIdentifier;
-        
+
         void saveWindowPosition()
         {
             // Don't save if minimized
             if (isMinimised())
                 return;
-                
+
             auto bounds = getBounds();
-            
+
             // Create property names using the window identifier to avoid conflicts
             juce::String prefix = "window." + windowIdentifier + ".";
             AppSettings::setValue(prefix + "x", bounds.getX());
             AppSettings::setValue(prefix + "y", bounds.getY());
             AppSettings::setValue(prefix + "width", bounds.getWidth());
             AppSettings::setValue(prefix + "height", bounds.getHeight());
-            
+
             AppSettings::saveIfNeeded();
         }
-        
+
         void restoreWindowPosition()
         {
             juce::String prefix = "window." + windowIdentifier + ".";
-            
+
             // Check if we have saved position data
-            if (AppSettings::containsKey(prefix + "x") && 
-                AppSettings::containsKey(prefix + "y") &&
-                AppSettings::containsKey(prefix + "width") &&
-                AppSettings::containsKey(prefix + "height"))
+            if (AppSettings::containsKey(prefix + "x") && AppSettings::containsKey(prefix + "y")
+                && AppSettings::containsKey(prefix + "width")
+                && AppSettings::containsKey(prefix + "height"))
             {
                 // Get the stored position and size
                 int x = AppSettings::getIntValue(prefix + "x");
                 int y = AppSettings::getIntValue(prefix + "y");
                 int width = AppSettings::getIntValue(prefix + "width");
                 int height = AppSettings::getIntValue(prefix + "height");
-                
+
                 // Validate size
                 width = juce::jmax(100, width);
                 height = juce::jmax(100, height);
-                
+
                 // Create a rectangle with the stored bounds
                 juce::Rectangle<int> bounds(x, y, width, height);
-                
+
                 // Check if the position is on any display
                 auto displays = Desktop::getInstance().getDisplays();
                 auto* display = displays.getDisplayForRect(bounds);
-                
+
                 if (display != nullptr)
                 {
                     // Position is valid
@@ -426,7 +448,7 @@ public:
                 centreWithSize(getWidth(), getHeight());
             }
         }
-        
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
     };
 
