@@ -79,25 +79,51 @@ public:
         error.type = ErrorType::InvalidURL;
 
         spaceInfo.userInput = spaceAddress;
+        juce::String user;
+        juce::String model;
         // Check if the URL is of Type 4 (localhost or gradio.live)
         if (spaceAddress.contains("localhost") || spaceAddress.contains("gradio.live")
             || spaceAddress.matchesWildcard("*.*.*.*:*", true))
         {
             spaceInfo.gradio = spaceAddress;
-            spaceInfo.huggingface = spaceAddress;
+            spaceInfo.apiEndpointURL = spaceAddress;
             spaceInfo.status = SpaceInfo::Status::LOCALHOST;
-            return OpResult::ok();
+            spaceInfo.userName = "localhost";
+            spaceInfo.modelName = "localhost";
         }
-        juce::String user;
-        juce::String model;
-
-        juce::String huggingFaceBaseUrl = "https://huggingface.co/spaces/";
-        if (spaceAddress.contains(huggingFaceBaseUrl))
+        // 2. Stability AI: "stability/service_type"
+        else if (spaceAddress.startsWith("stability/"))
         {
-            // Remove the base URL part
-            auto spacePath = spaceAddress.fromFirstOccurrenceOf(huggingFaceBaseUrl, false, false);
+            auto parts = juce::StringArray::fromTokens(spaceAddress, "/", "");
+            if (parts.size() == 2)
+            {
+                user = parts[0]; // "stability"
+                model = parts[1]; // serviceType e.g., "text-to-audio"
+                spaceInfo.status = SpaceInfo::Status::STABILITY;
+                spaceInfo.userName = user;
+                spaceInfo.modelName = model;
+                spaceInfo.stabilityServiceType = model;
 
-            // Split the path into user and model using '/'
+                if (model.equalsIgnoreCase("text-to-audio")) {
+                    spaceInfo.apiEndpointURL = "https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio";
+                } else if (model.equalsIgnoreCase("audio-to-audio")) {
+                    spaceInfo.apiEndpointURL = "https://api.stability.ai/v2beta/audio/stable-audio-2/audio-to-audio";
+                } else {
+                    spaceInfo.error = "Unsupported Stability AI service type: " + model;
+                    spaceInfo.status = SpaceInfo::Status::FAILED;
+                    error.devMessage = spaceInfo.error;
+                    return OpResult::fail(error);
+                }
+            } else {
+                spaceInfo.error = "Invalid Stability AI format. Expected 'stability/service_type'. Got: " + spaceAddress;
+                spaceInfo.status = SpaceInfo::Status::FAILED;
+                error.devMessage = spaceInfo.error;
+                return OpResult::fail(error);
+            }
+        }
+        else if (spaceAddress.contains("https://huggingface.co/spaces/"))
+        {
+            auto spacePath = spaceAddress.fromFirstOccurrenceOf("https://huggingface.co/spaces/", false, false);
             auto parts = juce::StringArray::fromTokens(spacePath, "/", "");
 
             if (parts.size() >= 2)
@@ -105,6 +131,12 @@ public:
                 user = parts[0];
                 model = parts[1];
                 spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
+                spaceInfo.huggingface = spaceAddress; // The full HF space URL
+                // For Gradio apps hosted on HF, the Gradio API endpoint is usually the hf.space URL
+                spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space/";
+                spaceInfo.apiEndpointURL = spaceInfo.gradio; // Assuming Gradio client uses this
+                spaceInfo.userName = user;
+                spaceInfo.modelName = model;
             }
             else
             {
@@ -119,6 +151,7 @@ public:
         }
         else if (spaceAddress.contains("hf.space"))
         {
+            spaceInfo.apiEndpointURL = spaceAddress;
             // Remove the protocol part (e.g., "https://")
             auto withoutProtocol = spaceAddress.fromFirstOccurrenceOf("://", false, false);
 
@@ -132,6 +165,11 @@ public:
                 user = subdomain.substring(0, firstHyphenIndex);
                 model = subdomain.substring(firstHyphenIndex + 1);
                 spaceInfo.status = SpaceInfo::Status::GRADIO;
+                spaceInfo.userName = user;
+                spaceInfo.modelName = model.replace("-", "_");
+                spaceInfo.gradio = spaceAddress;
+                
+                spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + spaceInfo.modelName;
             }
             else
             {
@@ -155,23 +193,19 @@ public:
             auto parts = juce::StringArray::fromTokens(spaceAddress, "/", "");
             if (parts.size() == 2)
             {
-                if (parts[0].contains("stability")) {
-                    user = "stability";
-                    model = parts[1];
-                    spaceInfo.huggingface = "";
-                    spaceInfo.gradio = "";
-                    spaceInfo.status = SpaceInfo::Status::STABILITY;
-                }
-                else {
-                    user = parts[0];
-                    model = parts[1];
-                    spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
-                }
+                user = parts[0];
+                model = parts[1];
+                // Defaulting to HuggingFace for shorthand user/model if not 'stability'
+                spaceInfo.status = SpaceInfo::Status::HUGGINGFACE;
+                spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
+                spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space/";
+                spaceInfo.apiEndpointURL = spaceInfo.gradio; // Assuming Gradio client
+                spaceInfo.userName = user;
+                spaceInfo.modelName = model;
+                // }
             }
             else
             {
-                // DBG("Invalid URL: " << spaceAddress);
-                // result.huggingface = spaceAddress;
                 spaceInfo.error = "Detected user/model URL but could not parse user and model. "
                                 "Too many/few slashes in "
                                 + spaceAddress;
@@ -189,39 +223,6 @@ public:
             return OpResult::fail(error);
         }
 
-        // Construct the gradio and HF URLs
-        if (! user.isEmpty() && ! model.isEmpty())
-        {
-            // model = model.replace("-", "_");
-            if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
-            {
-                // spaceInfo.huggingface = spaceAddress;
-                spaceInfo.huggingface = "https://huggingface.co/spaces/" + user + "/" + model;
-                // the embedded gradio app URL doesn't contain "_". So if the model name
-                // contains "_", we replace it with "-"
-                // model = model.replace("_", "-");
-                spaceInfo.gradio = "https://" + user + "-" + model.replace("_", "-") + ".hf.space";
-            }
-            else if (spaceInfo.status == SpaceInfo::Status::GRADIO)
-            {
-                // If the user provided spaceAddress is an embedded gradio app URL,
-                // there is no way to get the huggingface URL from it, since we don't
-                // know if the "-" in the URL is a hyphen or an underscore that was
-                // replaced by a hyphen.
-                spaceInfo.gradio = spaceAddress;
-                spaceInfo.huggingface = "";
-            }
-            spaceInfo.userName = user;
-            // model name might have "-" instead of "_" if the user provided the embedded gradio app URL
-            spaceInfo.modelName = model;
-        }
-        else
-        {
-            spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
-            spaceInfo.status = SpaceInfo::Status::FAILED;
-            error.devMessage = spaceInfo.error;
-            return OpResult::fail(error);
-        }
         LogAndDBG(spaceInfo.toString());
         return OpResult::ok();
     }

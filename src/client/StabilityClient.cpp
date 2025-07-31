@@ -232,7 +232,9 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
     // Create an Error object in case we need it for the next steps
     Error error;
     error.type = ErrorType::JsonParseError;
-
+    
+    // Fetch the controls JSON from the URL. It's an array of 2 dicts.
+    // The first is for text-to-audio, the second is for audio-to-audio.
     const juce::String controlsJsonUrl = "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
     
     juce::URL url(controlsJsonUrl);
@@ -269,8 +271,15 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
         error.devMessage = "Parsed JSON is not an array 2.";
         return OpResult::fail(error);
     }
-    // Check if the first element in the array is a dict
-    juce::DynamicObject* obj = dataArray->getFirst().getDynamicObject();
+
+    juce::DynamicObject* obj = nullptr;
+    if (spaceInfo.modelName == "text-to-audio")
+        // Check if the first element in the array is a dict
+        obj = dataArray->getReference(0).getDynamicObject();
+    else if (spaceInfo.modelName == "audio-to-audio")
+        // Check if the first element in the array is a dict
+        obj = dataArray->getReference(1).getDynamicObject();
+
     if (obj == nullptr)
     {
         error.devMessage = "First element in the array is not a dict.";
