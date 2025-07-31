@@ -91,106 +91,147 @@ OpResult StabilityClient::processTextToAudio(const juce::String& prompt,
     return result;
 }
 
+
 OpResult StabilityClient::processAudioToAudio(const juce::String& inputFilePath,
                                               Error& error,
                                               std::vector<juce::String>& outputFilePaths)
 {
-    OpResult result = OpResult::ok();
-
-    // Open the audio file
+    // Validate input file
     juce::File file(inputFilePath);
     if (!file.existsAsFile())
     {
-    error.devMessage = "Input audio file does not exist: " + inputFilePath;
-    return OpResult::fail(error);
+        error.devMessage = "Input audio file does not exist: " + inputFilePath;
+        return OpResult::fail(error);
     }
 
-    std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
-    if (!fileStream || !fileStream->openedOk())
+    // Build multipart body (binary-safe)
+    const juce::String boundary = "--------------------------" + juce::Uuid().toString().replace("-", "");
+    juce::MemoryOutputStream body;
+
+    auto crlf = [&](const juce::String& s){ body << s << "\r\n"; };
+
+    // File part (field name MUST be "audio")
+    crlf("--" + boundary);
+    crlf("Content-Disposition: form-data; name=\"audio\"; filename=\"input.wav\"");
+    crlf("Content-Type: audio/wav");
+    crlf(""); // blank line before binary
     {
-    error.devMessage = "Failed to open audio file for reading: " + inputFilePath;
-    return OpResult::fail(error);
+        std::unique_ptr<juce::FileInputStream> in(file.createInputStream());
+        if (!in || !in->openedOk())
+        {
+            error.devMessage = "Failed to open input WAV for reading.";
+            return OpResult::fail(error);
+        }
+
+        constexpr int bufSz = 16384;
+        juce::HeapBlock<char> buf(bufSz);
+        for (;;)
+        {
+            const int n = in->read(buf.getData(), bufSz);
+            if (n <= 0) break;
+            body.write(buf.getData(), (size_t)n);
+        }
+    }
+    crlf(""); // end of file part
+
+    // Helper for text fields
+    auto addField = [&](const juce::String& name, const juce::String& val)
+    {
+        crlf("--" + boundary);
+        crlf("Content-Disposition: form-data; name=\"" + name + "\"");
+        crlf("");
+        crlf(val);
+    };
+
+    //Required/optional parameters
+    const juce::String prompt = "happy";  // TODO: pass from UI/processingPayload
+    addField("prompt", prompt);
+    addField("output_format", "wav");
+    // Optional:
+    // addField("steps", "30");
+    // addField("duration", "30");
+    // addField("cfg_scale", "3.5");
+    // addField("seed", "0");
+
+    // Closing boundary
+    crlf("--" + boundary + "--");
+
+    juce::MemoryBlock blob = body.getMemoryBlock();
+
+    // DEBUG: peek ASCII header region (helps verify Field names and CRLF)
+    {
+        const size_t peek = juce::jmin<size_t>(blob.getSize(), 512);
+        DBG("Multipart preview (first " + juce::String((int)peek) + " bytes):\n"
+        + juce::String::fromUTF8((const char*)blob.getData(), (int)peek));
     }
 
-    juce::MemoryBlock audioData;
-    fileStream->readIntoMemoryBlock(audioData);
+    // Build request (binary POST)
+    juce::URL url("https://api.stability.ai/v2beta/audio/stable-audio-2/audio-to-audio");
+    url = url.withPOSTData(blob); // IMPORTANT: binary-safe, do NOT convert to String
 
-    // Generate unique boundary for multipart/form-data
-    juce::String boundary = "--------" + juce::Uuid().toString() + "--------";
+    // Choose your Accept:
+    //   "audio/*"           -> raw audio bytes (wav)
+    //   "application/json"  -> JSON (base64) for fast error visibility
+    const juce::String acceptLine = "Accept: audio/*\r\n"; // or "Accept: application/json\r\n"
 
-    // Construct the multipart body
-    juce::MemoryOutputStream requestBody;
-
-    // Part 1: audio file
-    requestBody << "--" << boundary << "\r\n";
-    requestBody << "Content-Disposition: form-data; name=\"audio_file\"; filename=\"input.wav\"\r\n";
-    requestBody << "Content-Type: audio/wav\r\n\r\n";
-    requestBody.write(audioData.getData(), audioData.getSize());
-    requestBody << "\r\n";
-
-    // Part 2: prompt
-    requestBody << "--" << boundary << "\r\n";
-    requestBody << "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n";
-    requestBody << "happy\r\n";  // TODO: make this dynamic if you want to support user prompt
-
-    // Part 3: output_format
-    requestBody << "--" << boundary << "\r\n";
-    requestBody << "Content-Disposition: form-data; name=\"output_format\"\r\n\r\n";
-    requestBody << "wav\r\n";
-
-    // Final boundary
-    requestBody << "--" << boundary << "--\r\n";
-
-    // Convert body to a MemoryBlock
-    juce::MemoryBlock requestBlock = requestBody.getMemoryBlock();
-    juce::String postBodyString(static_cast<const char*>(requestBlock.getData()), (int)requestBlock.getSize());
-
-    // Create the request
-    juce::URL audioToAudioURL("https://api.stability.ai/v2beta/audio/stable-audio-2/audio-to-audio");
-    juce::URL postURL = audioToAudioURL.withPOSTData(postBodyString);
+    const juce::String headers =
+    "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n"
+                                                   + acceptLine
+                                                   + getAuthorizationHeader(); // "Authorization: Bearer <token>\r\n"
 
     int statusCode = 0;
+    juce::StringPairArray responseHeaders;
 
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                                                 .withHttpRequestCmd("POST")
-                                                 .withExtraHeaders("Content-Type: multipart/form-data; boundary=" + boundary + "\r\n"
-                                                 + getAcceptHeader()
-                                                 + getAuthorizationHeader())
-                                                 .withStatusCode(&statusCode)
-                                                 .withConnectionTimeoutMs(10000);
+    auto opts = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                                             .withHttpRequestCmd("POST")
+                                             .withExtraHeaders(headers)
+                                             .withResponseHeaders(&responseHeaders)
+                                             .withStatusCode(&statusCode)
+                                             .withNumRedirectsToFollow(0)      // avoid losing body on 30x
+                                             .withConnectionTimeoutMs(60000);  // 60s
 
-    std::unique_ptr<juce::InputStream> stream = postURL.createInputStream(options);
-
-    if (stream == nullptr)
+    std::unique_ptr<juce::InputStream> stream = url.createInputStream(opts);
+    if (!stream)
     {
+        DBG("createInputStream nullptr. statusCode=" + juce::String(statusCode));
+        for (int i = 0; i < responseHeaders.size(); ++i)
+        DBG(responseHeaders.getAllKeys()[i] + ": " + responseHeaders.getAllValues()[i]);
+
         error.code = statusCode;
-        error.devMessage = "Failed to create input stream for POST request to stability/audio-to-audio.";
+        error.devMessage = "Failed to open POST stream (manual multipart).";
         return OpResult::fail(error);
     }
 
+    // ---- 5) Handle non-200 (read as text for diagnostics)
     if (statusCode != 200)
     {
-        juce::String response = stream->readEntireStreamAsString();
+        const juce::String resp = stream->readEntireStreamAsString();
         error.code = statusCode;
-        error.devMessage = "Audio-to-audio request failed: " + response;
+        error.devMessage = "Audio-to-audio request failed: " + resp;
         return OpResult::fail(error);
     }
 
-    // Save the response audio as a .wav file
-    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    juce::String fileName = juce::Uuid().toString() + ".wav";
-    juce::File downloadedFile = tempDir.getChildFile(fileName);
-
-    std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());
-    if (fileOutput == nullptr || !fileOutput->openedOk())
+    // ---- 6) Persist returned audio
+    juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
+    .getChildFile(juce::Uuid().toString() + ".wav");
+    std::unique_ptr<juce::FileOutputStream> f(out.createOutputStream());
+    if (!f || !f->openedOk())
     {
-        error.devMessage = "Failed to write audio-to-audio result to: " + downloadedFile.getFullPathName();
+        error.devMessage = "Failed to write output file: " + out.getFullPathName();
         return OpResult::fail(error);
     }
 
-    fileOutput->writeFromInputStream(*stream, stream->getTotalLength());
-    outputFilePaths.push_back(juce::URL(downloadedFile).toString(true));
+    constexpr int bufSz = 8192;
+    juce::HeapBlock<char> buf(bufSz);
+    for (;;)
+    {
+        const int n = stream->read(buf.getData(), bufSz);
+        if (n <= 0) break;
+            f->write(buf.getData(), (size_t)n);
+    }
+    f->flush();
 
+    outputFilePaths.push_back(juce::URL(out).toString(true));
     return OpResult::ok();
 }
 
