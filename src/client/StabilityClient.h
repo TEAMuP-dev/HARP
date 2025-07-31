@@ -54,11 +54,12 @@ private:
     juce::String getAcceptHeader() const;
     juce::String createCommonHeaders() const;
     juce::String createJsonHeaders(const juce::String&) const;
-    OpResult buildPayload(const juce::String& prompt,
-                          const juce::String& processID,
-                          juce::String& payload) const;
+    OpResult buildPayload(juce::StringPairArray& args, juce::String& processID, juce::String& payload) const;
+    // OpResult buildPayload(const juce::String& prompt,
+    //                       const juce::String& processID,
+    //                       juce::String& payload) const;
 
-    OpResult processTextToAudio(const juce::String& prompt,
+    OpResult processTextToAudio(const juce::Array<juce::var>* dataArray,
                                 Error& error,
                                 std::vector<juce::String>& outputFilePaths);
 
