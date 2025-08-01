@@ -144,6 +144,20 @@ public:
     void addTrackFromFilePath(URL filePath, bool fromDAW = false)
     {
         File f = filePath.getLocalFile();
+
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isDuplicateFile(filePath))
+            {
+                m->selectTrack();
+
+                DBG("TrackAreaWidget::addTrackFromFilePath: Selecting existing track containing "
+                    << f.getFullPathName() << " instead of creating new track.");
+
+                return;
+            }
+        }
+
         String ext = f.getFileExtension();
         String label = filePath.getFileName();
 
@@ -197,37 +211,13 @@ public:
         resized();
     }
 
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
-        bool duplicateDetected = false; // Global duplicate flag
-
         for (String f : files)
         {
             URL droppedFilePath = URL(File(f));
 
-            bool isTrackDuplicate = false; // Track-level duplicate flag
-
-            for (auto& m : mediaDisplays)
-            {
-                if (m->isDuplicateFile(droppedFilePath))
-                {
-                    if (! duplicateDetected)
-                    {
-                        m->selectTrack();
-                    }
-
-                    duplicateDetected = true; // Select first duplicate (only)
-                    isTrackDuplicate = true; // Don't reload track
-
-                    DBG("TrackAreaWidget::filesDropped: Selecting existing track containing "
-                        << f << " instead of creating new track.");
-                }
-            }
-
-            if (! isTrackDuplicate)
-            {
-                addTrackFromFilePath(droppedFilePath);
-            }
+            addTrackFromFilePath(droppedFilePath);
         }
     }
 

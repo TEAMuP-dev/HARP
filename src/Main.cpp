@@ -67,9 +67,6 @@ public:
         writeDebugLog("GuiAppApplication::getCommandLineParameters(): \""
                       + getCommandLineParameters() + "\".");
 
-        StringArray args;
-        args.addTokens(commandLine.unquoted().trim(), " ", "");
-
         juce::String windowTitle = getApplicationName();
         windowCounter++;
         if (windowCounter > 1)
@@ -79,20 +76,7 @@ public:
 
         mainWindow.reset(new MainWindow(windowTitle));
 
-        for (auto arg : args)
-        {
-            File inputMediaFile(arg);
-
-            if (inputMediaFile.existsAsFile())
-            {
-                // Load the file
-                if (auto* mainComp =
-                        dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-                {
-                    mainComp->importNewFile(inputMediaFile);
-                }
-            }
-        }
+        resetWindow(commandLine);
 
         // An ugly solution for an ugy problem
         // Described here https://github.com/juce-framework/JUCE/issues/607
@@ -118,16 +102,23 @@ public:
 
     void resetWindow(const juce::String& commandLine)
     {
-        File inputMediaFile(commandLine.unquoted().trim());
+        StringArray args;
+        args.addTokens(commandLine.unquoted().trim(), " ", "");
 
-        // if (inputMediaFile.existsAsFile())
-        // {
-        //     URL inputMediaURL = URL(inputMediaFile);
-        //     if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-        //     {
-        //         mainComp->importNewFile(inputMediaURL.getLocalFile());
-        //     }
-        // }
+        for (auto arg : args)
+        {
+            File inputMediaFile(arg);
+
+            if (inputMediaFile.existsAsFile())
+            {
+                // Load the file
+                if (auto* mainComp =
+                        dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                {
+                    mainComp->importNewFile(inputMediaFile);
+                }
+            }
+        }
     }
 
     void anotherInstanceStarted(const juce::String& commandLine) override
@@ -176,90 +167,107 @@ public:
 
             if (inputMediaFile.existsAsFile())
             {
-                // We deal with UI stuff so it's safer to work on the message thread
-                MessageManager::callAsync(
-                    [this, inputMediaFile]()
-                    {
-                        // Check if the user made a choice before
-                        bool hasPreference = AppSettings::containsKey("newInstancePreference");
-                        int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
-
-                        if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
-                        {
-                            handleFileOpenChoice(preferenceValue, inputMediaFile);
-                        }
-                        else
-                        {
-                            // show dialog with "Remember my choice" option
-                            auto options = MessageBoxOptions()
-                                               .withTitle("Open File")
-                                               .withMessage("How would you like to open \""
-                                                            + inputMediaFile.getFileName() + "\"?")
-                                               .withIconType(MessageBoxIconType::QuestionIcon)
-                                               .withButton("New Window")
-                                               .withButton("Current Window")
-                                               .withButton("Cancel");
-
-                            // Create a custom AlertWindow to add the checkbox
-                            // I don't use AlertWindow::showAsync() because I couldn't find a way
-                            // to add a checkbox to it. MessageBoxOptions doesn't have a .withCustomComponent() method
-                            std::unique_ptr<AlertWindow> alertWindow =
-                                std::make_unique<AlertWindow>(options.getTitle(),
-                                                              options.getMessage(),
-                                                              options.getIconType());
-
-                            alertWindow->addButton(options.getButtonText(0), 1); // New Window
-                            alertWindow->addButton(options.getButtonText(1), 2); // Current Window
-                            alertWindow->addButton(options.getButtonText(2), 0); // Cancel
-
-                            // I had to make the checkbox a raw pointer because it couldn't be passed
-                            // to the lambda as a unique_ptr.
-                            // We also need to manually delete it because AlertWindow doesn't take
-                            // ownership of the customComponents
-                            // auto* rememberCheckbox = new ToggleButton("Remember my choice");
-                            auto rememberCheckbox =
-                                std::make_unique<ToggleButton>("Remember my choice");
-                            rememberCheckbox->setSize(200, 24);
-                            rememberCheckbox->setName("");
-
-                            // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
-                            // So we need to delete it manually when the alertWindow is closed
-                            alertWindow->addCustomComponent(rememberCheckbox.get());
-
-                            // Show the window asynchronously
-                            alertWindow->enterModalState(
-                                true,
-                                ModalCallbackFunction::create(
-                                    [this,
-                                     alertWindow = alertWindow.release(),
-                                     inputMediaFile,
-                                     rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
-                                    {
-                                        if (result != 0) // 0 is Cancel in this case
-                                        {
-                                            int choice = result - 1;
-
-                                            bool rememberChoice =
-                                                rememberCheckboxPtr->getToggleState();
-
-                                            // Save preference if requested
-                                            // Don't save the Cancel choice
-                                            if (rememberChoice && choice <= 1)
-                                            {
-                                                AppSettings::setValue("newInstancePreference",
-                                                                      choice);
-                                                AppSettings::saveIfNeeded();
-                                            }
-
-                                            // Handle the choice
-                                            handleFileOpenChoice(choice, inputMediaFile);
-                                        }
-                                    }),
-                                true);
-                        }
-                    });
+                tryOpenChoiceWindow(inputMediaFile);
             }
         }
+    }
+
+    void tryOpenChoiceWindow(File inputMediaFile)
+    {
+        if (blockNewModalWindows)
+        {
+            Timer::callAfterDelay(100, // milliseconds
+                                  [this, inputMediaFile]() { tryOpenChoiceWindow(inputMediaFile); });
+            return;
+        }
+
+        // Wait until current modal window is closed to continue
+        openChoiceWindow(inputMediaFile);
+    }
+
+    void openChoiceWindow(File inputMediaFile)
+    {
+        // We deal with UI stuff so it's safer to work on the message thread
+        MessageManager::callAsync(
+            [this, inputMediaFile]()
+            {
+                // Check if the user made a choice before
+                bool hasPreference = AppSettings::containsKey("newInstancePreference");
+                int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
+
+                if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
+                {
+                    handleFileOpenChoice(preferenceValue, inputMediaFile);
+                }
+                else
+                {
+                    blockNewModalWindows = true;
+
+                    // show dialog with "Remember my choice" option
+                    auto options = MessageBoxOptions()
+                                       .withTitle("Open File")
+                                       .withMessage("How would you like to open \""
+                                                    + inputMediaFile.getFileName() + "\"?")
+                                       .withIconType(MessageBoxIconType::QuestionIcon)
+                                       .withButton("New Window")
+                                       .withButton("Current Window")
+                                       .withButton("Cancel");
+
+                    // Create a custom AlertWindow to add the checkbox
+                    // I don't use AlertWindow::showAsync() because I couldn't find a way
+                    // to add a checkbox to it. MessageBoxOptions doesn't have a .withCustomComponent() method
+                    std::unique_ptr<AlertWindow> alertWindow = std::make_unique<AlertWindow>(
+                        options.getTitle(), options.getMessage(), options.getIconType());
+
+                    alertWindow->addButton(options.getButtonText(0), 1); // New Window
+                    alertWindow->addButton(options.getButtonText(1), 2); // Current Window
+                    alertWindow->addButton(options.getButtonText(2), 0); // Cancel
+
+                    // I had to make the checkbox a raw pointer because it couldn't be passed
+                    // to the lambda as a unique_ptr.
+                    // We also need to manually delete it because AlertWindow doesn't take
+                    // ownership of the customComponents
+                    // auto* rememberCheckbox = new ToggleButton("Remember my choice");
+                    auto rememberCheckbox = std::make_unique<ToggleButton>("Remember my choice");
+                    rememberCheckbox->setSize(200, 24);
+                    rememberCheckbox->setName("");
+
+                    // As stated in the JUCE documentation, alertWindow doesn't take ownership of the customComponents
+                    // So we need to delete it manually when the alertWindow is closed
+                    alertWindow->addCustomComponent(rememberCheckbox.get());
+
+                    // Show the window asynchronously
+                    alertWindow->enterModalState(
+                        true,
+                        ModalCallbackFunction::create(
+                            [this,
+                             alertWindow = alertWindow.release(),
+                             inputMediaFile,
+                             rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
+                            {
+                                blockNewModalWindows = false;
+
+                                if (result != 0) // 0 is Cancel in this case
+                                {
+                                    int choice = result - 1;
+
+                                    bool rememberChoice = rememberCheckboxPtr->getToggleState();
+
+                                    // Save preference if requested
+                                    // Don't save the Cancel choice
+                                    if (rememberChoice && choice <= 1)
+                                    {
+                                        AppSettings::setValue("newInstancePreference", choice);
+                                        AppSettings::saveIfNeeded();
+                                    }
+
+                                    // Handle the choice
+                                    handleFileOpenChoice(choice, inputMediaFile);
+                                }
+                            }),
+                        true);
+                }
+            });
     }
 
     // method to handle the file opening choice
@@ -483,6 +491,7 @@ private:
     juce::Array<std::unique_ptr<MainWindow>> additionalWindows;
     ApplicationProperties applicationProperties;
     bool appJustLaunched;
+    std::atomic<bool> blockNewModalWindows { false };
     juce::String originalCommandLine;
     int windowCounter = 0;
 };
