@@ -76,4 +76,5 @@ private:
     juce::String token = "TBD";
     // A bool flag that could be controlled by a checkbox
     bool tokenEnabled = true;
+    std::atomic<bool> shouldCancel { false };
 };

@@ -70,13 +70,17 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
                                              Error& error,
                                              std::vector<juce::String>& outputFilePaths)
 {
+
     juce::String processID = juce::Uuid().toString();
+    shouldCancel.store(false);  // Reset cancel flag 
 
     juce::String prompt = "happy";
     juce::String duration = "30";
     juce::String steps = "30";
     juce::String outputFormat = "wav";
     juce::String cfg = "3.0";
+
+
 
     for (const auto& item : *dataArray)
     {
@@ -119,6 +123,13 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
                                                  .withConnectionTimeoutMs(30000);
 
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+
+    if (shouldCancel.load())
+    {
+        error.devMessage = "Cancelled before receiving response.";
+        return OpResult::fail(error);
+    }
+
     if (!stream || statusCode != 200)
     {
         juce::String response = stream ? stream->readEntireStreamAsString() : "";
@@ -137,7 +148,23 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
         return OpResult::fail(error);
     }
 
-    f->writeFromInputStream(*stream, stream->getTotalLength());
+    constexpr int bufSz = 16384;
+    juce::HeapBlock<char> buf(bufSz);
+
+    for (;;)
+    {
+        if (shouldCancel.load())
+        {
+            error.devMessage = "Cancelled while downloading audio.";
+            return OpResult::fail(error);
+        }
+
+        const int n = stream->read(buf.getData(), bufSz);
+        if (n <= 0) break;
+        f->write(buf.getData(), (size_t)n);
+    }
+
+    f->flush();
     outputFilePaths.push_back(juce::URL(out).toString(true));
     return OpResult::ok();
 }
@@ -146,6 +173,8 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
                                               Error& error,
                                               std::vector<juce::String>& outputFilePaths)
 {
+    shouldCancel.store(false); // reset cancel flag
+
     if (dataArray == nullptr || dataArray->isEmpty())
     {
         error.devMessage = "dataArray is null or empty in processAudioToAudio.";
@@ -275,6 +304,12 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
                                               .withResponseHeaders(&responseHeaders)
                                               .withStatusCode(&statusCode)
                                               .withConnectionTimeoutMs(60000);
+    
+     if (shouldCancel.load())
+     {
+         error.devMessage = "Cancelled before sending request.";
+         return OpResult::fail(error);
+    }
 
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(opts);
 
@@ -305,6 +340,12 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
 
     for (;;)
     {
+        if (shouldCancel.load())
+        {
+            error.devMessage = "Cancelled while downloading output audio.";
+            return OpResult::fail(error);
+        }
+
         const int n = stream->read(buf.getData(), bufSz);
         if (n <= 0) break;
         f->write(buf.getData(), (size_t)n);
@@ -485,7 +526,9 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
 
 
 OpResult StabilityClient::cancel() {
-
+    DBG("[StabilityClient] Cancel request received.");
+    shouldCancel.store(true);
+    return OpResult::ok();
 }
 
 juce::String StabilityClient::getAuthorizationHeader() const
