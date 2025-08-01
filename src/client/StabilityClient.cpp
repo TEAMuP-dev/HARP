@@ -128,7 +128,7 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
     }
 
     juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
-    .getChildFile(juce::Uuid().toString() + "." + outputFormat);
+                                .getChildFile(juce::Uuid().toString() + "." + outputFormat);
 
     std::unique_ptr<juce::FileOutputStream> f(out.createOutputStream());
     if (!f || !f->openedOk())
@@ -156,8 +156,16 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     juce::String inputAudioPath;
     if (auto* obj = dataArray->getReference(0).getDynamicObject())
     {
-        if (obj->hasProperty("path"))
-            inputAudioPath = obj->getProperty("path").toString();
+        if (obj->hasProperty("value"))
+        {
+            juce::var value = obj->getProperty("value");
+            if (value.isObject())
+            {
+                juce::DynamicObject* valueObj = value.getDynamicObject();
+                if (valueObj->hasProperty("path"))
+                    inputAudioPath = valueObj->getProperty("path").toString();
+            }
+        }
     }
 
     if (inputAudioPath.isEmpty())
@@ -174,11 +182,20 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     }
 
     // --- Step 2: Extract controls by index ---
-    juce::String duration      = dataArray->size() > 1 ? juce::String((int)dataArray->getReference(1)) : "30";
-    juce::String steps         = dataArray->size() > 2 ? juce::String((int)dataArray->getReference(2)) : "50";
-    juce::String cfg_scale     = dataArray->size() > 3 ? juce::String((int)dataArray->getReference(3)) : "7";
-    juce::String outputFormat  = dataArray->size() > 4 ? dataArray->getReference(4).toString() : "wav";
-    juce::String prompt        = dataArray->size() > 5 ? dataArray->getReference(5).toString() : "";
+    auto getVal = [&](int idx) -> juce::var {
+        if (idx >= dataArray->size()) return {};
+        auto* obj = dataArray->getReference(idx).getDynamicObject();
+        if (obj && obj->hasProperty("value"))
+            return obj->getProperty("value");
+        return {};
+    };
+    
+    juce::String duration      = juce::String((double)getVal(1));
+    juce::String steps         = juce::String((double)getVal(2));
+    juce::String cfg_scale     = juce::String((double)getVal(3));
+    juce::String outputFormat  = getVal(4).toString();
+    juce::String prompt        = getVal(5).toString();
+   
 
     //if (prompt.isEmpty())
     //  {
