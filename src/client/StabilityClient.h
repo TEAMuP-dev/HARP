@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief A StabilityClient class for making http requests to the Gradio API
+ * @brief A StabilityClient class for making http requests to the Stability AI's API
  * @author  xribene, huiranyu
  */
 
@@ -13,7 +13,6 @@
 #include "../utils.h"
 #include "Client.h"
 #include "juce_core/juce_core.h"
-
 class StabilityClient : public Client
 
 {
@@ -55,17 +54,23 @@ private:
     juce::String getAcceptHeader() const;
     juce::String createCommonHeaders() const;
     juce::String createJsonHeaders(const juce::String&) const;
-    OpResult buildPayload(const juce::String& prompt,
-                          const juce::String& processID,
-                          juce::String& payload) const;
+    static juce::String getControlValue(const juce::String& label, const juce::Array<juce::var>* dataArray);
 
-    OpResult processTextToAudio(const juce::String& prompt,
+
+    OpResult buildPayload(juce::StringPairArray& args, juce::String& processID, juce::String& payload) const;
+    // OpResult buildPayload(const juce::String& prompt,
+    //                       const juce::String& processID,
+    //                       juce::String& payload) const;
+
+    OpResult processTextToAudio(const juce::Array<juce::var>* dataArray,
                                 Error& error,
                                 std::vector<juce::String>& outputFilePaths);
 
-    OpResult processAudioToAudio(const juce::String& inputFileURL,
-                                 Error& error,
-                                 std::vector<juce::String>& outputFilePaths);
+    OpResult processAudioToAudio(const juce::Array<juce::var>* dataArray,
+                                    Error& error,
+                                    std::vector<juce::String>& outputFilePaths);
+       
+
 
     SpaceInfo spaceInfo;
     juce::String token = "TBD";
