@@ -168,7 +168,10 @@ public:
 
                 for (uint i = 0; i < linkedDisplays.size(); i++)
                 {
-                    linkedTracksDropdown->addItem(linkedDisplays[i]->getTrackName(), i + 1);
+                    if (linkedDisplays[i] != selectedTrack)
+                    {
+                        linkedTracksDropdown->addItem(linkedDisplays[i]->getTrackName(), i + 1);
+                    }
                 }
 
                 if (linkedDisplays.size() > 0)
@@ -198,9 +201,13 @@ public:
                                         linkedDisplays[selectedIndex];
 
                                     DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
-                                        << originalTrack->getOriginalFilePath().getFileName()
+                                        << originalTrack->getOriginalFilePath()
+                                               .getLocalFile()
+                                               .getFullPathName()
                                         << " with "
-                                        << selectedTrack->getOriginalFilePath().getFileName()
+                                        << selectedTrack->getOriginalFilePath()
+                                               .getLocalFile()
+                                               .getFullPathName()
                                         << ".");
 
                                     // TODO - overwrite selected track

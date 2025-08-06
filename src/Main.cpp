@@ -65,7 +65,7 @@ public:
         StringArray args;
 
         // Split command line arguments at spaces
-        args.addTokens(commandLine.unquoted().trim(), " ", "");
+        args.addTokens(commandLine.trim(), " ", "\"");
 
         importInitialFiles(args);
 
@@ -77,7 +77,7 @@ public:
     {
         for (auto f : files)
         {
-            File inputMediaFile(f);
+            File inputMediaFile(f.unquoted());
 
             // Check if argument is valid file
             if (inputMediaFile.existsAsFile())
@@ -98,7 +98,7 @@ public:
         StringArray args;
 
         // Split command line arguments at spaces
-        args.addTokens(commandLine.unquoted().trim(), " ", "");
+        args.addTokens(commandLine.trim(), " ", "\"");
 
         /*
           With moreThanOneInstanceAllowed() returning false, HARP is actually launched more
@@ -140,7 +140,7 @@ public:
 
         for (auto arg : args)
         {
-            File inputMediaFile(arg);
+            File inputMediaFile(arg.unquoted());
 
             // Check if argument is valid file
             if (inputMediaFile.existsAsFile())
