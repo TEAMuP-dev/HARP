@@ -76,6 +76,21 @@ public:
         return nullptr;
     }
 
+    std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()
+    {
+        std::vector<MediaDisplayComponent*> linkedDisplays;
+
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isLinkedToDAW())
+            {
+                linkedDisplays.push_back(m.get());
+            }
+        }
+
+        return linkedDisplays;
+    }
+
     int getNumTracks() { return mediaDisplays.size(); }
 
     bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }

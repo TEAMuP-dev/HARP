@@ -504,7 +504,7 @@ private:
 
     int windowCounter = 0;
 
-    juce::String originalCommandLine;
+    String originalCommandLine;
 
     std::atomic<bool> appJustLaunched { false };
     std::atomic<bool> blockNewModalWindows { false };
