@@ -166,7 +166,7 @@ public:
                 linkedTracksDropdown->setSize(275, 24);
                 linkedTracksDropdown->setName("");
 
-                for (uint i = 0; i < linkedDisplays.size(); i++)
+                for (unsigned int i = 0; i < linkedDisplays.size(); i++)
                 {
                     if (linkedDisplays[i] != selectedTrack)
                     {
@@ -193,7 +193,8 @@ public:
                         {
                             if (result == 0) // Overwrite
                             {
-                                uint selectedIndex = linkedTracksDropdown->getSelectedId() - 1;
+                                unsigned int selectedIndex =
+                                    linkedTracksDropdown->getSelectedId() - 1;
 
                                 if (selectedIndex >= 0 && selectedIndex < linkedDisplays.size())
                                 {
