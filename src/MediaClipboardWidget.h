@@ -160,7 +160,7 @@ public:
                     options.getTitle(), options.getMessage(), options.getIconType());
 
                 alertWindow->addButton(options.getButtonText(0), 0); // Overwrite
-                alertWindow->addButton(options.getButtonText(1), 0); // Cancel
+                alertWindow->addButton(options.getButtonText(1), 1); // Cancel
 
                 auto linkedTracksDropdown = std::make_unique<ComboBox>("DAW-Linked Tracks");
                 linkedTracksDropdown->setSize(275, 24);
@@ -200,22 +200,33 @@ public:
                                     MediaDisplayComponent* originalTrack =
                                         linkedDisplays[selectedIndex];
 
-                                    DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
-                                        << originalTrack->getOriginalFilePath()
-                                               .getLocalFile()
-                                               .getFullPathName()
-                                        << " with "
-                                        << selectedTrack->getOriginalFilePath()
-                                               .getLocalFile()
-                                               .getFullPathName()
-                                        << ".");
+                                    File originalFile =
+                                        originalTrack->getOriginalFilePath().getLocalFile();
+                                    File selectedFile =
+                                        selectedTrack->getOriginalFilePath().getLocalFile();
 
-                                    // TODO - overwrite selected track
+                                    if (selectedFile.copyFileTo(originalFile))
+                                    {
+                                        DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
+                                            << originalFile.getFullPathName() << " with "
+                                            << selectedFile.getFullPathName() << ".");
 
-                                    // Remove currently selected track
-                                    //removeSelectionCallback();
+                                        // Update display with overwritten media
+                                        linkedDisplays[selectedIndex]->initializeDisplay(
+                                            URL(originalFile));
 
-                                    // TODO - select overwritten track (2 calls)
+                                        // Remove selected track
+                                        removeSelectionCallback();
+
+                                        // Select overwritten track
+                                        linkedDisplays[selectedIndex]->selectTrack();
+                                    }
+                                    else
+                                    {
+                                        DBG("MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file "
+                                            << originalFile.getFullPathName() << " with "
+                                            << selectedFile.getFullPathName() << ".");
+                                    }
                                 }
                             }
                         }),
