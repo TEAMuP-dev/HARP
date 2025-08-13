@@ -55,6 +55,7 @@ private:
     juce::String createCommonHeaders() const;
     juce::String createJsonHeaders(const juce::String&) const;
     static juce::String getControlValue(const juce::String& label, const juce::Array<juce::var>* dataArray);
+    static juce::String mimeForAudioFile(const juce::File& f);
 
 
     OpResult buildPayload(juce::StringPairArray& args, juce::String& processID, juce::String& payload) const;

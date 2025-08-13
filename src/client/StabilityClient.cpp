@@ -3,9 +3,20 @@
 #include "../external/magic_enum.hpp"
 
 
+juce::String StabilityClient::mimeForAudioFile(const juce::File& f)
+{
+    auto ext = f.getFileExtension().toLowerCase(); // includes the dot
+    if (ext == ".wav" || ext == ".wave") return "audio/wav";
+    if (ext == ".mp3")                    return "audio/mpeg";
+    return {};
+}
+
+
 OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 {
     spaceInfo = inSpaceInfo;
+    this->tokenEnabled = true;
+
     if (spaceInfo.status != SpaceInfo::Status::STABILITY)
     {
         return OpResult::fail(Error{ErrorType::InvalidURL, -1, "Invalid space info for StabilityClient"});
@@ -242,9 +253,23 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     auto crlf = [&](const juce::String& s) { body << s << "\r\n"; };
 
     // Audio file part
+    //crlf("--" + boundary);
+    //crlf("Content-Disposition: form-data; name=\"audio\"; filename=\"input.wav\"");
+    //crlf("Content-Type: audio/wav");
+    //crlf("");
+    // --- Determine content type & use original filename ---
+    const juce::String contentType = mimeForAudioFile(inputFile);
+    if (contentType.isEmpty())
+    {
+        error.devMessage = "Unsupported audio format. Please use WAV or MP3.";
+        return OpResult::fail(error);
+    }
+    const juce::String filename = inputFile.getFileName();
+
+    // Audio file part
     crlf("--" + boundary);
-    crlf("Content-Disposition: form-data; name=\"audio\"; filename=\"input.wav\"");
-    crlf("Content-Type: audio/wav");
+    crlf("Content-Disposition: form-data; name=\"audio\"; filename=\"" + filename + "\"");
+    crlf("Content-Type: " + contentType);
     crlf("");
 
     std::unique_ptr<juce::FileInputStream> in(inputFile.createInputStream());
@@ -254,9 +279,9 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
         return OpResult::fail(error);
     }
 
-    constexpr int bufSz = 16384;
-    juce::HeapBlock<char> buf(bufSz);
-    for (;;)
+    constexpr int bufSz = 16384;  
+    juce::HeapBlock<char> buf(bufSz); 
+    for (;;) 
     {
         const int n = in->read(buf.getData(), bufSz);
         if (n <= 0) break;
@@ -328,8 +353,12 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     }
 
     // --- Step 5: Save returned audio to temp file ---
+   // juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
+    //           .getChildFile(juce::Uuid().toString() + ".wav");
+    juce::String outExt = outputFormat.isNotEmpty() ? "." + outputFormat : ".wav";
     juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
-    .getChildFile(juce::Uuid().toString() + ".wav");
+                  .getChildFile(juce::Uuid().toString() + outExt);
+
     std::unique_ptr<juce::FileOutputStream> f(out.createOutputStream());
 
     if (!f || !f->openedOk())
@@ -546,7 +575,7 @@ juce::String StabilityClient::getJsonContentTypeHeader(const juce::String& proce
     return "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
 }
 
-juce::String StabilityClient::getAcceptHeader() const { return "Accept: audio/*\r\n"; }
+juce::String StabilityClient::getAcceptHeader() const {  return "Accept: audio/*,application/json\r\n"; }
 
 juce::String StabilityClient::createCommonHeaders() const
 {
@@ -568,7 +597,7 @@ OpResult StabilityClient::validateToken(const juce::String& inToken) const
 
     // Create a GET request to account API with provided token 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                       .withExtraHeaders("Authorization: Bearer " + token + "\r\n")
+                       .withExtraHeaders("Authorization: Bearer " + inToken + "\r\n")
                        .withConnectionTimeoutMs(5000)
                        .withStatusCode(&statusCode);
 

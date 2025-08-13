@@ -110,7 +110,8 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        login = 0x2006
+        login = 0x2006,
+        loginStability = 0x2008,
         // settings = 0x2007,
     };
 
@@ -141,6 +142,8 @@ public:
             // menu.addSeparator();
             menu.addCommandItem(&commandManager, CommandIDs::login);
             menu.addCommandItem(&commandManager, CommandIDs::about);
+            menu.addCommandItem(&commandManager, CommandIDs::loginStability);
+
         }
         return menu;
     }
@@ -158,7 +161,7 @@ public:
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
             CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
-            CommandIDs::about
+            CommandIDs::about, CommandIDs::loginStability
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -199,6 +202,10 @@ public:
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
+            case CommandIDs::loginStability:
+                result.setInfo("Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
+                break;
+            
         }
     }
 
@@ -234,6 +241,10 @@ public:
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
+                break;
+            case CommandIDs::loginStability:
+                DBG("Login to Stability command invoked");
+                loginStabilityCallback();
                 break;
             default:
                 return false;
@@ -350,14 +361,19 @@ public:
             juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
             if (!savedToken.isEmpty())
             {
-                // Set the token without validation to avoid network requests on startup
-                // TODO: IDeally, we should validate the token at some point
-                // because it might have expired or been revoked
                 model->getClient().setToken(savedToken);
-                setStatus("Using saved authentication token");
+                setStatus("Using saved Hugging Face token");
             }
         }
+    
+        if (AppSettings::containsKey("stabilityToken"))
+        {
+            juce::String token = AppSettings::getString("stabilityToken", "");
+            savedStabilityToken = token; 
+        }
     }
+    
+    
     void loginPromptCallback()
     {
         auto* prompt =
@@ -440,6 +456,93 @@ public:
                 }),
             false);
     };
+
+    void loginStabilityCallback()
+    {
+        auto* prompt = new juce::AlertWindow(
+            "Login to Stability AI",
+            "Paste your Stability AI API token below.\n\n"
+            "Click 'Get Token' to open the Stability AI API page.",
+            juce::AlertWindow::NoIcon);
+    
+        prompt->addTextEditor("token", "", "API Token:");
+        prompt->addButton("OK", 1);
+        prompt->addButton("Cancel", 0);
+        prompt->addButton("Get Token", 2);
+    
+        auto rememberCheckbox = std::make_unique<juce::ToggleButton>("Remember this token");
+        rememberCheckbox->setSize(200, 24);
+        prompt->addCustomComponent(rememberCheckbox.get());
+    
+        prompt->enterModalState(
+            true,
+            juce::ModalCallbackFunction::create(
+                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+                {
+                    if (choice == 1)  //OK
+                    {
+                        auto token = prompt->getTextEditor("token")->getText().trim();
+                        if (token.isNotEmpty())
+                        {
+                            StabilityClient validator;
+                            OpResult result = validator.validateToken(token);
+                            if (result.failed())
+                            {
+                                Error err = result.getError();
+                                Error::fillUserMessage(err);
+                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                    "Invalid Token",
+                                    "The provided Stability AI token is invalid:\n" + err.userMessage);
+                                setStatus("Invalid Stability token");
+                            }
+                            else
+                            {
+                                // Valid token
+                                if (rememberCheckboxPtr->getToggleState())
+                                {
+                                    AppSettings::setValue("stabilityToken", token);
+                                    AppSettings::saveIfNeeded();
+                                    setStatus("Stability token saved.");
+                                }
+                                else
+                                {
+                                    AppSettings::removeValue("stabilityToken");
+                                    setStatus("Token accepted (not saved).");
+                                }
+    
+                                if (model != nullptr && model->getStatus() != ModelStatus::INITIALIZED)
+                                {
+                                    auto& client = model->getClient();
+                                    const auto spaceInfo = client.getSpaceInfo();
+                                    if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+                                    {
+                                        client.setToken(token);
+                                        setStatus("Stability token applied to loaded model.");
+                                    }
+                                }
+                                
+                            }
+                        }
+                        else
+                        {
+                            setStatus("No token entered.");
+                        }
+                    }
+                    else if (choice == 2)
+                    {
+                        juce::URL("https://platform.stability.ai/account/keys").launchInDefaultBrowser();
+                        loginStabilityCallback(); // Reopen prompt
+                    }
+                    else
+                    {
+                        setStatus("Login cancelled.");
+                    }
+    
+                    delete prompt;
+                }),
+            false);
+    }
+    
 
     void loadModelCallback()
     {
@@ -1390,6 +1493,8 @@ private:
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
 
+    juce::String savedStabilityToken; //  used to save the Stability AI token
+
     void play()
     {
         // if (! mediaDisplay->isPlaying())
@@ -1507,7 +1612,14 @@ private:
             // addAndMakeVisible(trackAreaWidget);
             trackAreaWidget.populateTracks();
 
+            //Apply saved Stability token
             SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
+            if (spaceInfo.status == SpaceInfo::Status::STABILITY && !savedStabilityToken.isEmpty())
+            {
+                model->getClient().setToken(savedStabilityToken);
+                setStatus("Applied saved Stability AI token to loaded model.");
+            }
+
             // juce::String spaceUrlButtonText;
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
 
