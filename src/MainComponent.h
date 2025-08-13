@@ -24,7 +24,7 @@
 #include "gui/StatusComponent.h"
 #include "gui/TitledTextBox.h"
 
-#include "gradio/GradioClient.h"
+#include "client/Client.h"
 
 #include "HarpLogger.h"
 #include "external/magic_enum.hpp"
@@ -113,7 +113,8 @@ public:
         undo = 0x2004,
         redo = 0x2005,
         login = 0x2006,
-        settings = 0x2007 
+        settings = 0x2007,
+        loginStability = 0x2008
     };
 
     StringArray getMenuBarNames() override
@@ -130,6 +131,7 @@ public:
         menu->addCommandItem(&commandManager, CommandIDs::about);
         menu->addCommandItem(&commandManager, CommandIDs::settings);
         menu->addCommandItem(&commandManager, CommandIDs::login);
+        menu->addCommandItem(&commandManager, CommandIDs::loginStability);
         return menu;
     }
 
@@ -145,14 +147,12 @@ public:
             menu.addCommandItem(&commandManager, CommandIDs::undo);
             menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            //menu.addCommandItem (&commandManager, CommandIDs::settings);
-            menu.addSeparator();
-            //menu.addCommandItem(&commandManager, CommandIDs::login);
-            //menu.addCommandItem(&commandManager, CommandIDs::about);
-        }
-        else
-        {
-            DBG("Unknown menu name: " << menuName);
+            // menu.addCommandItem (&commandManager, CommandIDs::settings);
+            // menu.addSeparator();
+            menu.addCommandItem(&commandManager, CommandIDs::login);
+            menu.addCommandItem(&commandManager, CommandIDs::about);
+            menu.addCommandItem(&commandManager, CommandIDs::loginStability);
+
         }
         return menu;
     }
@@ -170,7 +170,7 @@ public:
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
             CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
-            CommandIDs::about, CommandIDs::settings
+            CommandIDs::about, CommandIDs::settings, CommandIDs::loginStability
         };
         commands.addArray(ids, numElementsInArray(ids));
     }
@@ -208,6 +208,9 @@ public:
             case CommandIDs::login:
                 result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
                 break;
+            case CommandIDs::loginStability:
+                result.setInfo("Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
+                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
@@ -227,14 +230,14 @@ public:
                 DBG("Open command invoked");
                 openFileChooser();
                 break;
-            case CommandIDs::save:
-                DBG("Save command invoked");
-                saveCallback();
-                break;
-            case CommandIDs::saveAs:
-                DBG("Save As command invoked");
-                saveAsCallback();
-                break;
+            // case CommandIDs::save:
+            //     DBG("Save command invoked");
+            //     saveCallback();
+            //     break;
+            // case CommandIDs::saveAs:
+            //     DBG("Save As command invoked");
+            //     saveAsCallback();
+            //     break;
             case CommandIDs::undo:
                 DBG("Undo command invoked");
                 undoCallback();
@@ -253,7 +256,11 @@ public:
                 break;
             case CommandIDs::settings:
                 DBG("Settings command invoked");
-                showSettingsDialog();  
+                showSettingsDialog();
+                break;
+            case CommandIDs::loginStability:
+                DBG("Login to Stability AI command invoked");
+                loginStabilityCallback();
                 break;
             default:
                 return false;
@@ -274,98 +281,6 @@ public:
         dialog.resizable = false;
 
         dialog.launchAsync();
-    }
-
-    void saveCallback()
-    {
-        // if (saveEnabled)
-        // {
-        //     DBG("HARPProcessorEditor::buttonClicked save button listener activated");
-        //     mediaDisplay->overwriteTarget();
-
-        //     saveEnabled = false;
-        //     setStatus("File saved successfully");
-        // }
-        // else
-        // {
-        //     DBG("save button is disabled");
-        //     setStatus("Nothing to save");
-        // }
-    }
-
-    void saveAsCallback()
-    {
-        // if (mediaDisplay->isFileLoaded())
-        // {
-        //     StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-        //     String filePatternsAllowed = "*" + validExtensions.joinIntoString(";*");
-        //     saveFileBrowser = std::make_unique<FileChooser>(
-        //         "Select a media file...", File(), filePatternsAllowed);
-        //     // Launch the file chooser dialog asynchronously
-        //     saveFileBrowser->launchAsync(
-        //         FileBrowserComponent::saveMode | FileBrowserComponent::canSelectFiles,
-        //         [this](const FileChooser& browser) {
-        //             StringArray validExtensions = mediaDisplay->getInstanceExtensions();
-        //             File newFile = browser.getResult();
-        //             if (newFile != File {})
-        //             {
-        //                 if (newFile.getFileExtension().compare("") == 0)
-        //                 {
-        //                     newFile = newFile.withFileExtension(validExtensions[0]);
-        //                 }
-        //                 if (validExtensions.contains(newFile.getFileExtension()))
-        //                 {
-        //                     URL tempFilePath = mediaDisplay->getTempFilePath();
-
-        //                     // Attempt to save the file to the new location
-        //                     bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
-        //                     if (saveSuccessful)
-        //                     {
-        //                         // Inform the user of success
-        //                         AlertWindow::showMessageBoxAsync(AlertWindow::InfoIcon,
-        //                                                          "Save As",
-        //                                                          "File successfully saved as:\n"
-        //                                                              + newFile.getFullPathName(),
-        //                                                          "OK");
-
-        //                         // Update any necessary internal state
-        //                         // currentAudioFile = AudioFile(newFile); // Assuming a wrapper, adjust accordingly
-        //                         DBG("File successfully saved as " << newFile.getFullPathName());
-        //                         loadMediaDisplay(newFile);
-        //                     }
-        //                     else
-        //                     {
-        //                         // Inform the user of failure
-        //                         AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-        //                                                          "Save As Failed",
-        //                                                          "Failed to save file as:\n"
-        //                                                              + newFile.getFullPathName(),
-        //                                                          "OK");
-        //                         DBG("Failed to save file as " << newFile.getFullPathName());
-        //                     }
-        //                 }
-        //                 else
-        //                 {
-        //                     // Inform the user of failure
-        //                     AlertWindow::showMessageBoxAsync(
-        //                         AlertWindow::WarningIcon,
-        //                         "Save As Failed",
-        //                         "Can't save file with extension " + newFile.getFileExtension()
-        //                             + " \n Valid extensions are: "
-        //                             + validExtensions.joinIntoString(";"),
-        //                         "OK");
-        //                 }
-        //             }
-        //             else
-        //             {
-        //                 DBG("Save As operation was cancelled by the user.");
-        //             }
-        //         });
-        // }
-        // else
-        // {
-        //     setStatus("Nothing to save. Please load an audio file first.");
-        // }
     }
 
     void undoCallback()
@@ -462,14 +377,20 @@ public:
             juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
             if (!savedToken.isEmpty())
             {
-                // Set the token without validation to avoid network requests on startup
-                // TODO: IDeally, we should validate the token at some point
-                // because it might have expired or been revoked
-                model->getGradioClient().setToken(savedToken);
-                setStatus("Using saved authentication token");
+                model->getClient().setToken(savedToken);
+                setStatus("Using saved Hugging Face token");
             }
         }
+    
+        if (AppSettings::containsKey("stabilityToken"))
+        {
+            juce::String token = AppSettings::getString("stabilityToken", "");
+            savedStabilityToken = token; 
+        }
     }
+    
+    
+    
     void loginPromptCallback()
     {
         auto* prompt =
@@ -499,7 +420,7 @@ public:
                         auto accessToken = prompt->getTextEditor("token")->getText().trim();
                         if (! accessToken.isEmpty())
                         {
-                            auto loginResult = model->getGradioClient().validateToken(accessToken);
+                            auto loginResult = model->getClient().validateToken(accessToken);
                             if (loginResult.failed())
                             {
                                 Error loginError = loginResult.getError();
@@ -516,7 +437,7 @@ public:
                             }
                             else
                             {
-                                model->getGradioClient().setToken(accessToken);
+                                model->getClient().setToken(accessToken);
                                 // Save token if checkbox is ticked
                                 if (rememberCheckboxPtr->getToggleState())
                                 {
@@ -552,6 +473,93 @@ public:
                 }),
             false);
     };
+
+    void loginStabilityCallback()
+    {
+        auto* prompt = new juce::AlertWindow(
+            "Login to Stability AI",
+            "Paste your Stability AI API token below.\n\n"
+            "Click 'Get Token' to open the Stability AI API page.",
+            juce::AlertWindow::NoIcon);
+    
+        prompt->addTextEditor("token", "", "API Token:");
+        prompt->addButton("OK", 1);
+        prompt->addButton("Cancel", 0);
+        prompt->addButton("Get Token", 2);
+    
+        auto rememberCheckbox = std::make_unique<juce::ToggleButton>("Remember this token");
+        rememberCheckbox->setSize(200, 24);
+        prompt->addCustomComponent(rememberCheckbox.get());
+    
+        prompt->enterModalState(
+            true,
+            juce::ModalCallbackFunction::create(
+                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+                {
+                    if (choice == 1)  //OK
+                    {
+                        auto token = prompt->getTextEditor("token")->getText().trim();
+                        if (token.isNotEmpty())
+                        {
+                            StabilityClient validator;
+                            OpResult result = validator.validateToken(token);
+                            if (result.failed())
+                            {
+                                Error err = result.getError();
+                                Error::fillUserMessage(err);
+                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                    "Invalid Token",
+                                    "The provided Stability AI token is invalid:\n" + err.userMessage);
+                                setStatus("Invalid Stability token");
+                            }
+                            else
+                            {
+                                // Valid token
+                                if (rememberCheckboxPtr->getToggleState())
+                                {
+                                    AppSettings::setValue("stabilityToken", token);
+                                    AppSettings::saveIfNeeded();
+                                    setStatus("Stability token saved.");
+                                }
+                                else
+                                {
+                                    AppSettings::removeValue("stabilityToken");
+                                    setStatus("Token accepted (not saved).");
+                                }
+    
+                                if (model != nullptr && model->getStatus() != ModelStatus::INITIALIZED)
+                                {
+                                    auto& client = model->getClient();
+                                    const auto spaceInfo = client.getSpaceInfo();
+                                    if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+                                    {
+                                        client.setToken(token);
+                                        setStatus("Stability token applied to loaded model.");
+                                    }
+                                }
+                                
+                            }
+                        }
+                        else
+                        {
+                            setStatus("No token entered.");
+                        }
+                    }
+                    else if (choice == 2)
+                    {
+                        juce::URL("https://platform.stability.ai/account/keys").launchInDefaultBrowser();
+                        loginStabilityCallback(); // Reopen prompt
+                    }
+                    else
+                    {
+                        setStatus("Login cancelled.");
+                    }
+    
+                    delete prompt;
+                }),
+            false);
+    }
+    
 
     void loadModelCallback()
     {
@@ -688,23 +696,23 @@ public:
                         else if (chosen == "Open Space URL")
                         {
                             // get the spaceInfo
-                            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+                            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
                             if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                             {
-                                URL spaceUrl = this->model->getGradioClient().getSpaceInfo().gradio;
+                                URL spaceUrl = this->model->getClient().getSpaceInfo().gradio;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
                                 URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
                                 URL spaceUrl =
-                                    this->model->getGradioClient().getSpaceInfo().huggingface;
+                                    this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
@@ -950,30 +958,13 @@ public:
         // Not used for now
         //auto extraMenu = getMacExtraMenu();
        // MenuBarModel::setMacMainMenu(this);
-       macExtraMenu = getMacExtraMenu();
+       auto macExtraMenu = getMacExtraMenu();
        MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
 #endif
 
         menuBar->setVisible(true);
         menuItemsChanged();
     }
-
-    // void initSomeButtons()
-    // {
-    //     addAndMakeVisible(chooseFileButton);
-    //     chooseFileButton.onClick = [this] { openFileChooser(); };
-    //     chooseFileButtonHandler.onMouseEnter = [this]()
-    //     { setInstructions("Click to choose an audio file"); };
-    //     chooseFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-    //     chooseFileButtonHandler.attach();
-
-    //     addAndMakeVisible(saveFileButton);
-    //     saveFileButton.onClick = [this] { saveCallback(); };
-    //     saveFileButtonHandler.onMouseEnter = [this]()
-    //     { setInstructions("Click to save results to original audio file"); };
-    //     saveFileButtonHandler.onMouseExit = [this]() { clearInstructions(); };
-    //     saveFileButtonHandler.attach();
-    // }
 
     void initPlayStopButton()
     {
@@ -1075,6 +1066,8 @@ public:
             // "xribene/midi_pitch_shifter",
             "xribene/HARP-UI-TEST-v3",
             // "xribene/pitch_shifter_slow",
+            "stability/text-to-audio",
+            "stability/audio-to-audio",
             "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
@@ -1149,29 +1142,6 @@ public:
         // initSomeButtons();
         initPlayStopButton();
 
-        // Initialize default media display
-        // initializeMediaDisplay(0, mediaDisplay);
-        // Create a new mediaDisplay and add it in the inputMediaDisplays vector
-        // inputMediaDisplays.push_back(std::make_unique<AudioDisplayComponent>());
-        // outputMediaDisplays.push_back(std::make_unique<MidiDisplayComponent>());
-        // Initialize all the inputMediaDisplays
-        // for (int i = 0; i < inputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(0, inputMediaDisplays[i]);
-        // }
-        // for (int i = 0; i < outputMediaDisplays.size(); ++i)
-        // {
-        //     initializeMediaDisplay(1, outputMediaDisplays[i]);
-        // }
-
-        // TODO: check how it behaves when running with a file as input
-        // if (initialFilePath.isLocalFile())
-        // {
-        //     // TODO - it seems command line args are handled through Main.cpp and this is never hit
-        //     // Load initial file into matching media display
-        //     loadMediaDisplay(initialFilePath.getLocalFile(), mediaDisplay);
-        // }
-
         // initialize HARP UI
         // TODO: what happens if the model is nullptr rn?
         if (model == nullptr)
@@ -1233,16 +1203,6 @@ public:
 
     ~MainComponent() override
     {
-        // mediaDisplay->removeChangeListener(this);
-        // for (auto& inputMediaDisplay : inputMediaDisplays)
-        // {
-        //     inputMediaDisplay->removeChangeListener(this);
-        // }
-        // for (auto& outputMediaDisplay : outputMediaDisplays)
-        // {
-        //     outputMediaDisplay->removeChangeListener(this);
-        // }
-
         // remove listeners
         mModelStatusTimer->removeChangeListener(this);
         loadBroadcaster.removeChangeListener(this);
@@ -1295,33 +1255,6 @@ public:
 
     void processCallback()
     {
-        // return;
-        // if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
-        // // check if the file is loaded
-        // if (! mediaDisplay->isFileLoaded())
-        // {
-        //     String fileTypeString;
-
-        //     if (model->card().midi_in)
-        //     {
-        //         fileTypeString = "midi";
-        //     }
-        //     else
-        //     {
-        //         fileTypeString = "audio";
-        //     }
-
-        //     AlertWindow::showMessageBoxAsync(
-        //         AlertWindow::WarningIcon,
-        //         "Error",
-        //         fileTypeString.substring(0, 1).toUpperCase()
-        //         + fileTypeString.substring(1).toLowerCase()
-        //         + " file is not loaded. Please load "
-        //         + fileTypeString + " file first.");
-        //     return;
-        // }
-
-
         if (model == nullptr)
         {
             AlertWindow("Error",
@@ -1427,136 +1360,13 @@ public:
         DBG("NumThrds: " + std::to_string(jobProcessorThread.getNumThreads()));
     }
 
-    // void initializeMediaDisplay(int mediaType, std::unique_ptr<MediaDisplayComponent>& cur_mediaDisplay)
-    // {
-    //     if (mediaType == 1)
-    //     {
-    //         cur_mediaDisplay = std::make_unique<MidiDisplayComponent>();
-    //     }
-    //     else
-    //     {
-    //         // Default to audio display
-    //         cur_mediaDisplay = std::make_unique<AudioDisplayComponent>();
-    //     }
-    //     addAndMakeVisible(cur_mediaDisplay.get());
-    //     cur_mediaDisplay->addChangeListener(this);
-    //     // mediaDisplayHandler = std::make_unique<HoverHandler>(*mediaDisplay);
-    //     // mediaDisplayHandler->onMouseEnter = [this]() { mediaDisplayHandler->onMouseMove(); };
-    //     // mediaDisplayHandler->onMouseMove = [this]()
-    //     // { setInstructions(mediaDisplay->getMediaHandlerInstructions()); };
-    //     // mediaDisplayHandler->onMouseExit = [this]() { clearInstructions(); };
-    //     // mediaDisplayHandler->attach();
-    // }
-
-    void loadMediaDisplay(File mediaFile)
+    /*
+    Entry point for importing new files into the application.
+    */
+    void importNewFile(File mediaFile)
     {
         return;
     }
-        // // Check the file extension to determine type
-        // String extension = mediaFile.getFileExtension();
-
-        // bool matchingDisplay = true;
-
-        // if (dynamic_cast<AudioDisplayComponent*>(cur_mediaDisplay.get()))
-        // {
-        //     matchingDisplay = audioExtensions.contains(extension);
-        // }
-        // else
-        // {
-        //     matchingDisplay = midiExtensions.contains(extension);
-        // }
-
-        // if (! matchingDisplay)
-        // {
-        //     // Remove the existing media display
-        //     removeChildComponent(cur_mediaDisplay.get());
-        //     cur_mediaDisplay->removeChangeListener(this);
-        //     // mediaDisplayHandler->detach();
-
-        //     int mediaType = 0;
-
-        //     if (audioExtensions.contains(extension))
-        //     {
-        //     }
-        //     else if (midiExtensions.contains(extension))
-        //     {
-        //         mediaType = 1;
-        //     }
-        //     else
-        //     {
-        //         DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-        //                                                                         << "\'.");
-
-        //         AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-        //     }
-
-        //     // Initialize a matching display
-        //     initializeMediaDisplay(mediaType, cur_mediaDisplay);
-        // }
-
-        // cur_mediaDisplay->setupDisplay(URL(mediaFile));
-
-        // lastLoadTime = Time::getCurrentTime();
-
-        // playStopButton.setEnabled(true);
-
-        // resized();
-    // }
-
-    // TODO: ignore that for now. Load files using drag n drop which works fine
-    // for multiple mediaDisplays
-    // void loadMediaDisplay3(File mediaFile)
-    // {
-    //     // Check the file extension to determine type
-    //     String extension = mediaFile.getFileExtension();
-
-    //     bool matchingDisplay = true;
-
-    //     if (dynamic_cast<AudioDisplayComponent*>(mediaDisplay.get()))
-    //     {
-    //         matchingDisplay = audioExtensions.contains(extension);
-    //     }
-    //     else
-    //     {
-    //         matchingDisplay = midiExtensions.contains(extension);
-    //     }
-
-    //     if (! matchingDisplay)
-    //     {
-    //         // Remove the existing media display
-    //         removeChildComponent(mediaDisplay.get());
-    //         mediaDisplay->removeChangeListener(this);
-    //         mediaDisplayHandler->detach();
-
-    //         int mediaType = 0;
-
-    //         if (audioExtensions.contains(extension))
-    //         {
-    //         }
-    //         else if (midiExtensions.contains(extension))
-    //         {
-    //             mediaType = 1;
-    //         }
-    //         else
-    //         {
-    //             DBG("MainComponent::loadMediaDisplay: Unsupported file type \'" << extension
-    //                                                                             << "\'.");
-
-    //             AlertWindow("Error", "Unsupported file type.", AlertWindow::WarningIcon);
-    //         }
-
-    //         // Initialize a matching display
-    //         initializeMediaDisplay(mediaType);
-    //     }
-
-    //     mediaDisplay->setupDisplay(URL(mediaFile));
-
-    //     lastLoadTime = Time::getCurrentTime();
-
-    //     playStopButton.setEnabled(true);
-
-    //     resized();
-    // }
 
     void openFileChooser()
     {
@@ -1570,14 +1380,13 @@ public:
 
         openFileBrowser->launchAsync(FileBrowserComponent::openMode
                                          | FileBrowserComponent::canSelectFiles,
-                                     [](const FileChooser& browser)
+                                     [this](const FileChooser& browser)
                                      {
-                                         File chosenFile = browser.getResult();
-                                         if (chosenFile != File {})
-                                         {
-                                             //  loadMediaDisplay(chosenFile, mediaDisplay);
-                                             // loadMediaDisplay(chosenFile, inputMediaDisplays[0]);
-                                         }
+                                        File chosenFile = browser.getResult();
+                                        if (chosenFile != File {})
+                                        {
+                                            importNewFile(chosenFile);
+                                        }
                                      });
     }
 
@@ -1796,7 +1605,7 @@ private:
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
-    std::unique_ptr<PopupMenu> macExtraMenu;
+    juce::String savedStabilityToken;
 
     void play()
     {
@@ -1902,6 +1711,7 @@ private:
         // return;
         if (result.wasOk())
         {
+
             setModelCard(model->card());
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
@@ -1917,7 +1727,14 @@ private:
             // addAndMakeVisible(trackAreaWidget);
             trackAreaWidget.populateTracks();
 
-            SpaceInfo spaceInfo = model->getGradioClient().getSpaceInfo();
+            //Apply saved Stability token
+            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
+            if (spaceInfo.status == SpaceInfo::Status::STABILITY && !savedStabilityToken.isEmpty())
+            {
+                model->getClient().setToken(savedStabilityToken);
+                setStatus("Applied saved Stability AI token to loaded model.");
+            }
+
             // juce::String spaceUrlButtonText;
             if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
 

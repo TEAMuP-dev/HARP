@@ -1,5 +1,5 @@
 # Commits that should be ignored by git blame
-# Used for commits where the formating was changed
+# Used for commits where the formatting was changed
 # either by clang-format or manually
 # so that the git-blame is not polluted by these changes
 91283c34d8a215f2c5fa84b5830dc09f716a2034

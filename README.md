@@ -163,9 +163,15 @@ While any algorithm or deep learning model can be deployed to HARP using the PyH
 
 <!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
 
+* Text-Guided Music Generation and Editing: [hugggof/melodyflow](https://huggingface.co/spaces/hugggof/melodyflow) (ZeroGPU)
+
+<!--
 * Stem-Wise Source Separation:
   * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
   * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
+-->
+
+* Stem-Wise Source Separation: [cwitkowitz/demucs-cpu](https://huggingface.co/spaces/cwitkowitz/demucs-cpu)
 
 * Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
 
@@ -325,11 +331,11 @@ TODO
 ## Citations
 [ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
 ```
-@article{benetatos2025harp,
+@article{benetatos2024harp,
     title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
     author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
-    year      = 2025
-    journal   = {ISMIR Late Breaking and Demo Papers}
+    year      = 2024
+    journal   = {ISMIR Late Breaking Demo Papers}
 }
 ```
 

@@ -36,8 +36,8 @@
       members.value = contributors.map((githubUser) => ({
         avatar: githubUser.avatar_url,
         name: githubUser.login,
-        title: 'optional title',
-        desc: 'optional description',
+        // title: 'optional title',
+        // desc: 'optional description',
         links: [{ icon: 'github', link: githubUser.html_url }],
       }));
     } catch (error) {
