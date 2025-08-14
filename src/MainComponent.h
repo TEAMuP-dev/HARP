@@ -378,84 +378,77 @@ public:
     {
         auto* prompt =
             new juce::AlertWindow("Login to Hugging Face",
-                                  "Paste your Hugging Face access token below.\n\n"
-                                  "Click 'Get Token' to open Hugging Face token page.",
-                                  juce::AlertWindow::NoIcon);
+                                "Paste your Hugging Face access token below.\n\n"
+                                "Click 'Get Token' to open Hugging Face token page.",
+                                juce::AlertWindow::NoIcon);
 
         prompt->addTextEditor("token", "", "Access Token:");
         prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
         prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
         prompt->addButton("Get Token", 2);
-        
-        // Add "Remember Token" checkbox
+
         auto rememberCheckbox = std::make_unique<ToggleButton>("Remember this token");
         rememberCheckbox->setSize(200, 24);
-        rememberCheckbox->setName("");
         prompt->addCustomComponent(rememberCheckbox.get());
 
-        prompt->enterModalState(
-            true,
-            juce::ModalCallbackFunction::create(
-                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+        prompt->enterModalState(true, juce::ModalCallbackFunction::create(
+            [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+            {
+                if (choice == 1)
                 {
-                    if (choice == 1)
+                    auto accessToken = prompt->getTextEditor("token")->getText().trim();
+                    if (!accessToken.isEmpty())
                     {
-                        auto accessToken = prompt->getTextEditor("token")->getText().trim();
-                        if (! accessToken.isEmpty())
+                        GradioClient validator;
+                        auto result = validator.validateToken(accessToken);
+
+                        if (result.failed())
                         {
-                            auto loginResult = model->getClient().validateToken(accessToken);
-                            if (loginResult.failed())
-                            {
-                                Error loginError = loginResult.getError();
-                                Error::fillUserMessage(loginError);
-                                LogAndDBG("Error during authentication:\n"
-                                          + loginError.devMessage.toStdString());
-                                AlertWindow::showMessageBoxAsync(
-                                    AlertWindow::WarningIcon,
-                                    "Login Error",
-                                    "An error occurred while performing authentication: \n"
-                                        + loginError.userMessage);
-                                setStatus("Invalid token. Please try again.");
-                                
-                            }
-                            else
-                            {
-                                model->getClient().setToken(accessToken);
-                                // Save token if checkbox is ticked
-                                if (rememberCheckboxPtr->getToggleState())
-                                {
-                                    AppSettings::setValue("huggingFaceToken", accessToken);
-                                    AppSettings::saveIfNeeded();
-                                    setStatus("Authentication successful. Token saved.");
-                                }
-                                else
-                                {
-                                    // Clear the token from settings if not saved
-                                    AppSettings::removeValue("huggingFaceToken");
-                                    setStatus("Authentication successful. Token not saved.");
-                                }
-                            }
+                            Error err = result.getError();
+                            Error::fillUserMessage(err);
+                            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                                            "Login Error",
+                                                            "An error occurred: \n" + err.userMessage);
+                            setStatus("Invalid token. Please try again.");
                         }
                         else
                         {
-                            setStatus("No token entered.");
+                            if (rememberCheckboxPtr->getToggleState())
+                            {
+                                AppSettings::setValue("huggingFaceToken", accessToken);
+                                AppSettings::saveIfNeeded();
+                                setStatus("Authentication successful. Token saved.");
+                            }
+                            else
+                            {
+                                AppSettings::removeValue("huggingFaceToken");
+                                setStatus("Token accepted but not saved.");
+                            }
+
+                            // Apply to model if possible
+                            //if (model != nullptr)
+                              //  model->getClient().setToken(accessToken);
                         }
-                    }
-                    else if (choice == 2)
-                    {
-                        juce::URL("https://huggingface.co/settings/tokens")
-                            .launchInDefaultBrowser();
-                        // Reopen the prompt
-                        loginPromptCallback(); // reopen after redirecting
                     }
                     else
                     {
-                        setStatus("Login cancelled.");
+                        setStatus("No token entered.");
                     }
-                    delete prompt;
-                }),
-            false);
-    };
+                }
+                else if (choice == 2)
+                {
+                    juce::URL("https://huggingface.co/settings/tokens").launchInDefaultBrowser();
+                    loginPromptCallback(); // Reopen dialog
+                }
+                else
+                {
+                    setStatus("Login cancelled.");
+                }
+
+                delete prompt;
+            }), false);
+    }
+
 
     void loginStabilityCallback()
     {
@@ -1082,7 +1075,7 @@ public:
         setModelCard(card);
 
         // jobProcessorThread.startThread();
-        tryLoadSavedToken();
+        //tryLoadSavedToken();
 
         setOpaque(true);
         setSize(800, 2000);
@@ -1659,6 +1652,7 @@ private:
         {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(processButtonInfo.label);
+            tryLoadSavedToken(); 
         }
 
         loadModelButton.setEnabled(true);
