@@ -110,7 +110,7 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        login = 0x2006,
+        loginHF = 0x2006,
         loginStability = 0x2008,
         // settings = 0x2007,
     };
@@ -139,9 +139,10 @@ public:
             menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
-            // menu.addSeparator();
-            menu.addCommandItem(&commandManager, CommandIDs::login);
+            // menu.addSeparator()
             menu.addCommandItem(&commandManager, CommandIDs::about);
+            menu.addSeparator();
+            menu.addCommandItem(&commandManager, CommandIDs::loginHF);
             menu.addCommandItem(&commandManager, CommandIDs::loginStability);
 
         }
@@ -160,7 +161,7 @@ public:
     {
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
+            CommandIDs::undo, CommandIDs::redo, CommandIDs::loginHF,
             CommandIDs::about, CommandIDs::loginStability
         };
         commands.addArray(ids, numElementsInArray(ids));
@@ -196,7 +197,7 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
-            case CommandIDs::login:
+            case CommandIDs::loginHF:
                 result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
                 break;
             case CommandIDs::about:
@@ -234,9 +235,9 @@ public:
                 DBG("Redo command invoked");
                 redoCallback();
                 break;
-            case CommandIDs::login:
+            case CommandIDs::loginHF:
                 DBG("Login command invoked");
-                loginPromptCallback();
+                loginToProvider("huggingface");
                 break;
             case CommandIDs::about:
                 DBG("About command invoked");
@@ -244,7 +245,7 @@ public:
                 break;
             case CommandIDs::loginStability:
                 DBG("Login to Stability command invoked");
-                loginStabilityCallback();
+                loginToProvider("stability");
                 break;
             default:
                 return false;
@@ -353,167 +354,121 @@ public:
             }
         }
     }
-
+   
     void tryLoadSavedToken()
     {
-        if (AppSettings::containsKey("huggingFaceToken"))
+        if (model == nullptr || model->getStatus() == ModelStatus::INITIALIZED)
+            return;
+
+        auto& client = model->getClient();
+        const auto spaceInfo = client.getSpaceInfo();
+
+        if (spaceInfo.status == SpaceInfo::Status::GRADIO || spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
         {
-            juce::String savedToken = AppSettings::getString("huggingFaceToken", "");
-            if (!savedToken.isEmpty())
+            auto token = AppSettings::getString("huggingFaceToken", "");
+            if (!token.isEmpty())
             {
-                model->getClient().setToken(savedToken);
-                setStatus("Using saved Hugging Face token");
+                client.setToken(token);
+                setStatus("Applied saved Hugging Face token.");
             }
         }
-    
-        if (AppSettings::containsKey("stabilityToken"))
+        else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
         {
-            juce::String token = AppSettings::getString("stabilityToken", "");
-            savedStabilityToken = token; 
+            auto token = AppSettings::getString("stabilityToken", "");
+            if (!token.isEmpty())
+            {
+                client.setToken(token);
+                setStatus("Applied saved Stability token.");
+            }
         }
     }
-    
-    
-    void loginPromptCallback()
-    {
-        auto* prompt =
-            new juce::AlertWindow("Login to Hugging Face",
-                                "Paste your Hugging Face access token below.\n\n"
-                                "Click 'Get Token' to open Hugging Face token page.",
-                                juce::AlertWindow::NoIcon);
 
-        prompt->addTextEditor("token", "", "Access Token:");
+    
+    
+    void loginToProvider(const juce::String& providerName)
+    {
+        bool isHuggingFace = (providerName == "huggingface");
+        bool isStability = (providerName == "stability");
+    
+        if (!isHuggingFace && !isStability)
+        {
+            DBG("Invalid provider name passed to loginToProvider()");
+            return;
+        }
+    
+        // Set provider-specific values
+        juce::String title = "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
+        juce::String message = "Paste your " + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token") +
+                               " below.\n\nClick 'Get Token' to open the token page.";
+        juce::String tokenLabel = isHuggingFace ? "Access Token:" : "API Token:";
+        juce::String tokenURL = isHuggingFace
+                                    ? "https://huggingface.co/settings/tokens"
+                                    : "https://platform.stability.ai/account/keys";
+        juce::String storageKey = isHuggingFace ? "huggingFaceToken" : "stabilityToken";
+    
+        // Create token prompt window
+        auto* prompt = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
+        prompt->addTextEditor("token", "", tokenLabel);
         prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
         prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
         prompt->addButton("Get Token", 2);
-
-        auto rememberCheckbox = std::make_unique<ToggleButton>("Remember this token");
+    
+        auto rememberCheckbox = std::make_unique<juce::ToggleButton>();
+        rememberCheckbox->setButtonText("Remember this token");  
         rememberCheckbox->setSize(200, 24);
         prompt->addCustomComponent(rememberCheckbox.get());
-
-        prompt->enterModalState(true, juce::ModalCallbackFunction::create(
-            [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
-            {
-                if (choice == 1)
-                {
-                    auto accessToken = prompt->getTextEditor("token")->getText().trim();
-                    if (!accessToken.isEmpty())
-                    {
-                        GradioClient validator;
-                        auto result = validator.validateToken(accessToken);
-
-                        if (result.failed())
-                        {
-                            Error err = result.getError();
-                            Error::fillUserMessage(err);
-                            AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                            "Login Error",
-                                                            "An error occurred: \n" + err.userMessage);
-                            setStatus("Invalid token. Please try again.");
-                        }
-                        else
-                        {
-                            if (rememberCheckboxPtr->getToggleState())
-                            {
-                                AppSettings::setValue("huggingFaceToken", accessToken);
-                                AppSettings::saveIfNeeded();
-                                setStatus("Authentication successful. Token saved.");
-                            }
-                            else
-                            {
-                                AppSettings::removeValue("huggingFaceToken");
-                                setStatus("Token accepted but not saved.");
-                            }
-
-                            // Apply to model if possible
-                            //if (model != nullptr)
-                              //  model->getClient().setToken(accessToken);
-                        }
-                    }
-                    else
-                    {
-                        setStatus("No token entered.");
-                    }
-                }
-                else if (choice == 2)
-                {
-                    juce::URL("https://huggingface.co/settings/tokens").launchInDefaultBrowser();
-                    loginPromptCallback(); // Reopen dialog
-                }
-                else
-                {
-                    setStatus("Login cancelled.");
-                }
-
-                delete prompt;
-            }), false);
-    }
-
-
-    void loginStabilityCallback()
-    {
-        auto* prompt = new juce::AlertWindow(
-            "Login to Stability AI",
-            "Paste your Stability AI API token below.\n\n"
-            "Click 'Get Token' to open the Stability AI API page.",
-            juce::AlertWindow::NoIcon);
-    
-        prompt->addTextEditor("token", "", "API Token:");
-        prompt->addButton("OK", 1);
-        prompt->addButton("Cancel", 0);
-        prompt->addButton("Get Token", 2);
-    
-        auto rememberCheckbox = std::make_unique<juce::ToggleButton>("Remember this token");
-        rememberCheckbox->setSize(200, 24);
-        prompt->addCustomComponent(rememberCheckbox.get());
-    
+       
         prompt->enterModalState(
             true,
             juce::ModalCallbackFunction::create(
-                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox)](int choice)
+                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox), isHuggingFace, isStability, storageKey, tokenURL](int choice)
                 {
-                    if (choice == 1)  //OK
+                    if (choice == 1)
                     {
                         auto token = prompt->getTextEditor("token")->getText().trim();
                         if (token.isNotEmpty())
                         {
-                            StabilityClient validator;
-                            OpResult result = validator.validateToken(token);
+                            // Validate token
+                            OpResult result = isHuggingFace
+                                ? GradioClient().validateToken(token)
+                                : StabilityClient().validateToken(token);
+    
                             if (result.failed())
                             {
                                 Error err = result.getError();
                                 Error::fillUserMessage(err);
                                 AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                    "Invalid Token",
-                                    "The provided Stability AI token is invalid:\n" + err.userMessage);
-                                setStatus("Invalid Stability token");
+                                                                 "Invalid Token",
+                                                                 "The provided token is invalid:\n" + err.userMessage);
+                                setStatus("Invalid token.");
                             }
                             else
                             {
-                                // Valid token
                                 if (rememberCheckboxPtr->getToggleState())
                                 {
-                                    AppSettings::setValue("stabilityToken", token);
+                                    AppSettings::setValue(storageKey, token);
                                     AppSettings::saveIfNeeded();
-                                    setStatus("Stability token saved.");
+                                    setStatus(juce::String(isHuggingFace ? "Hugging Face" : "Stability") + " token saved.");
                                 }
                                 else
                                 {
-                                    AppSettings::removeValue("stabilityToken");
-                                    setStatus("Token accepted (not saved).");
+                                    AppSettings::removeValue(storageKey);
+                                    setStatus("Token accepted but not saved.");
                                 }
     
+                                // Apply to model if appropriate model is already loaded
                                 if (model != nullptr && model->getStatus() != ModelStatus::INITIALIZED)
                                 {
                                     auto& client = model->getClient();
                                     const auto spaceInfo = client.getSpaceInfo();
-                                    if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+    
+                                    if ((isHuggingFace && spaceInfo.status == SpaceInfo::Status::GRADIO) ||
+                                        (isStability && spaceInfo.status == SpaceInfo::Status::STABILITY))
                                     {
                                         client.setToken(token);
-                                        setStatus("Stability token applied to loaded model.");
+                                        setStatus("Token applied to loaded model.");
                                     }
                                 }
-                                
                             }
                         }
                         else
@@ -523,8 +478,8 @@ public:
                     }
                     else if (choice == 2)
                     {
-                        juce::URL("https://platform.stability.ai/account/keys").launchInDefaultBrowser();
-                        loginStabilityCallback(); // Reopen prompt
+                        juce::URL(tokenURL).launchInDefaultBrowser();
+                        loginToProvider(isHuggingFace ? "huggingface" : "stability"); // Reopen prompt
                     }
                     else
                     {
@@ -536,7 +491,6 @@ public:
             false);
     }
     
-
     void loadModelCallback()
     {
         // Get the URL/path the user provided in the comboBox
