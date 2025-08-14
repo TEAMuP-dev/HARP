@@ -34,8 +34,8 @@ public:
         buttonsFlexBox.justifyContent = FlexBox::JustifyContent::center;
 
         trackAreaWidget.addChangeListener(this);
-        //trackArea.setViewedComponent(trackAreaWidget);
-        addAndMakeVisible(trackAreaWidget);
+        trackArea.setViewedComponent(&trackAreaWidget, false);
+        addAndMakeVisible(trackArea);
 
         mainFlexBox.flexDirection = FlexBox::Direction::column;
     }
@@ -56,9 +56,8 @@ public:
             FlexItem(controlsComponent)
                 .withHeight(30)
                 .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
-        mainFlexBox.items.add(FlexItem(trackAreaWidget)
-                                  .withFlex(10)
-                                  .withMargin({ 0, marginSize, marginSize, marginSize }));
+        mainFlexBox.items.add(
+            FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -102,6 +101,19 @@ public:
                                      .withMargin({ 0, 0, 0, marginSize }));
 
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+
+        trackAreaWidget.setFixedTotalWidth(trackArea.getMaximumVisibleWidth());
+        trackAreaWidget.setMinTotalHeight(trackArea.getMaximumVisibleHeight());
+
+        /*if (trackAreaWidget.getNumTracks()
+            && trackAreaWidget.getHeight() > trackArea.getMaximumVisibleHeight())
+        {
+            trackArea.setScrollBarsShown(true, false);
+        }
+        else
+        {
+            trackArea.setScrollBarsShown(false, false);
+        }*/
     }
 
     void addExternalTrackFromFilePath(URL filePath)
@@ -150,7 +162,7 @@ public:
             {
                 // Show dialog with dropdown of available tracks
                 auto options = MessageBoxOptions()
-                                   .withTitle("Send To DAW")
+                                   .withTitle("Send to DAW")
                                    .withMessage("Select a track to overwrite")
                                    .withIconType(MessageBoxIconType::NoIcon)
                                    .withButton("Overwrite")
@@ -530,8 +542,7 @@ private:
     MultiButton::Mode sendToDAWButtonActiveInfo;
     MultiButton::Mode sendToDAWButtonInactiveInfo;
 
-    //Viewport trackArea;
-    //TrackAreaWidget* trackAreaWidget;
+    Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
     // Flex for whole media clipboard

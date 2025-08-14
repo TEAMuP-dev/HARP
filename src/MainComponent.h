@@ -1238,6 +1238,11 @@ public:
     void importNewFile(File mediaFile)
     {
         mediaClipboardWidget.addExternalTrackFromFilePath(URL(mediaFile));
+
+        if (! showMediaClipboard)
+        {
+            viewMediaClipboardCallback();
+        }
     }
 
     void openFileChooser()

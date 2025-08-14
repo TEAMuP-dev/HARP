@@ -875,7 +875,11 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    if (! isThumbnailTrack() && isFileLoaded())
+    if (isThumbnailTrack())
+    {
+        Component::mouseWheelMove(evt, wheel);
+    }
+    else if (isFileLoaded())
     {
 #if (JUCE_MAC)
         bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
@@ -909,6 +913,10 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 // Do nothing
             }
         }
+    }
+    else
+    {
+        // Ignore mouse wheel events
     }
 }
 

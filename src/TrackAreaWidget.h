@@ -20,8 +20,8 @@ class TrackAreaWidget : public Component,
                         public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
-        : displayMode(mode), fixedHeight(height)
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
+        : displayMode(mode), fixedTrackHeight(trackHeight)
     {
     }
 
@@ -36,24 +36,68 @@ public:
 
         mainBox.flexDirection = FlexBox::Direction::column;
 
+        //int totalTrackAreaHeight;
+
+        if (fixedTotalWidth)
+        {
+            setSize(fixedTotalWidth, getHeight());
+        }
+
         if (getNumTracks() > 0)
         {
             for (auto& m : mediaDisplays)
             {
                 FlexItem i = FlexItem(*m);
 
-                if (fixedHeight)
+                if (fixedTrackHeight)
                 {
-                    i = i.withHeight(fixedHeight);
+                    i = i.withHeight(fixedTrackHeight);
                 }
                 else
                 {
                     i = i.withFlex(1).withMinHeight(50);
                 }
 
-                mainBox.items.add(i.withMargin(4));
+                mainBox.items.add(i.withMargin(marginSize));
+                //mainBox.items.add(i.withMargin({ marginSize, marginSize, 0, marginSize }));
             }
+
+            if (fixedTrackHeight)
+            {
+                int individualTrackHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+
+                int totalTrackAreaHeight = getNumTracks() * individualTrackHeight;
+
+                if (totalTrackAreaHeight > minTotalHeight)
+                {
+                    setSize(getWidth(), totalTrackAreaHeight);
+                }
+                else
+                {
+                    setSize(getWidth(), minTotalHeight);
+                }
+            }
+            /*else
+            {
+                totalTrackAreaHeight = getHeight();
+            }*/
         }
+        else
+        {
+            setSize(getWidth(), minTotalHeight);
+        }
+
+        /*if (minTotalWidth > getWidth())
+        {
+            setSize(minTotalWidth, getHeight());
+        }
+
+        if (minTotalHeight > getHeight())
+        {
+            setSize(getWidth(), minTotalHeight);
+        }*/
+
+        //setSize(getWidth(), jmax(minTotalHeight, totalTrackAreaHeight));
 
         mainBox.performLayout(getLocalBounds());
     }
@@ -101,6 +145,20 @@ public:
     bool isInterestedInFileDrag(const StringArray& /*files*/) override
     {
         return isThumbnailWidget();
+    }
+
+    void setFixedTotalWidth(int totalWidth)
+    {
+        fixedTotalWidth = totalWidth;
+
+        resized();
+    }
+
+    void setMinTotalHeight(int totalHeight)
+    {
+        minTotalHeight = totalHeight;
+
+        resized();
     }
 
     void resetUI()
@@ -255,8 +313,12 @@ private:
         }
     }
 
-    const int fixedHeight = 0;
     const DisplayMode displayMode;
+    const int fixedTrackHeight = 0;
+    const float marginSize = 4;
+
+    int fixedTotalWidth = 0;
+    int minTotalHeight = 0;
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
