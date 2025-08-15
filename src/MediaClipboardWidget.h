@@ -102,8 +102,27 @@ public:
 
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
 
-        trackAreaWidget.setFixedTotalDimensions(trackArea.getMaximumVisibleWidth(),
-                                                trackArea.getMaximumVisibleHeight());
+        int visibleWidthBeforeResize = trackArea.getMaximumVisibleWidth();
+        int visibleHeightBeforeResize = trackArea.getMaximumVisibleHeight();
+
+        trackAreaWidget.setFixedTotalDimensions(visibleWidthBeforeResize,
+                                                visibleHeightBeforeResize);
+
+        int visibleWidthAfterResize = trackArea.getMaximumVisibleWidth();
+        int visibleHeightAfterResize = trackArea.getMaximumVisibleHeight();
+
+        if (visibleWidthBeforeResize != visibleWidthAfterResize
+            || visibleHeightBeforeResize != visibleHeightAfterResize)
+        {
+            /*
+              Correct track area dimensions after the initial resize. This is
+              needed for situations where the track area widget is resized as a
+              result of the media clipboard being resized, in order to properly
+              register changes to viewport scroll bar visibility.
+            */
+            trackAreaWidget.setFixedTotalDimensions(visibleWidthAfterResize,
+                                                    visibleHeightAfterResize);
+        }
     }
 
     void addExternalTrackFromFilePath(URL filePath)
