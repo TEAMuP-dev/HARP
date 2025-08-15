@@ -102,18 +102,13 @@ public:
 
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
 
-        trackAreaWidget.setFixedTotalWidth(trackArea.getMaximumVisibleWidth());
-        trackAreaWidget.setMinTotalHeight(trackArea.getMaximumVisibleHeight());
+        trackAreaWidget.setFixedTotalDimensions(trackArea.getMaximumVisibleWidth(),
+                                                trackArea.getMaximumVisibleHeight());
 
-        /*if (trackAreaWidget.getNumTracks()
-            && trackAreaWidget.getHeight() > trackArea.getMaximumVisibleHeight())
-        {
-            trackArea.setScrollBarsShown(true, false);
-        }
-        else
-        {
-            trackArea.setScrollBarsShown(false, false);
-        }*/
+        bool widthOverflow = trackAreaWidget.getWidth() > trackArea.getMaximumVisibleWidth();
+        bool heightOverflow = trackAreaWidget.getHeight() > trackArea.getMaximumVisibleHeight();
+
+        trackArea.setScrollBarsShown(heightOverflow, widthOverflow);
     }
 
     void addExternalTrackFromFilePath(URL filePath)
@@ -408,6 +403,8 @@ private:
             {
                 // Handle select events if selected display changes
                 selectTrack(mediaDisplay);
+                // Handle track area resizing when track added
+                resized(); // TODO - decouple from track selection
             }
         }
         else
@@ -437,6 +434,9 @@ private:
         {
             trackAreaWidget.removeTrack(mediaDisplay);
             resetState();
+
+            // Handle track area resizing
+            resized();
         }
     }
 

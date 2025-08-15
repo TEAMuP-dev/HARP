@@ -36,12 +36,8 @@ public:
 
         mainBox.flexDirection = FlexBox::Direction::column;
 
-        //int totalTrackAreaHeight;
-
-        if (fixedTotalWidth)
-        {
-            setSize(fixedTotalWidth, getHeight());
-        }
+        int totalWidth = getWidth();
+        int totalHeight = getHeight();
 
         if (getNumTracks() > 0)
         {
@@ -59,7 +55,6 @@ public:
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
-                //mainBox.items.add(i.withMargin({ marginSize, marginSize, 0, marginSize }));
             }
 
             if (fixedTrackHeight)
@@ -70,34 +65,28 @@ public:
 
                 if (totalTrackAreaHeight > minTotalHeight)
                 {
-                    setSize(getWidth(), totalTrackAreaHeight);
+                    totalHeight = totalTrackAreaHeight;
                 }
                 else
                 {
-                    setSize(getWidth(), minTotalHeight);
+                    totalHeight = minTotalHeight;
                 }
             }
-            /*else
-            {
-                totalTrackAreaHeight = getHeight();
-            }*/
         }
         else
         {
-            setSize(getWidth(), minTotalHeight);
+            totalHeight = minTotalHeight;
         }
 
-        /*if (minTotalWidth > getWidth())
+        if (fixedTotalWidth)
         {
-            setSize(minTotalWidth, getHeight());
+            totalWidth = fixedTotalWidth;
         }
 
-        if (minTotalHeight > getHeight())
+        if (totalWidth != getWidth() || totalHeight != getHeight())
         {
-            setSize(getWidth(), minTotalHeight);
-        }*/
-
-        //setSize(getWidth(), jmax(minTotalHeight, totalTrackAreaHeight));
+            setSize(totalWidth, totalHeight);
+        }
 
         mainBox.performLayout(getLocalBounds());
     }
@@ -147,15 +136,9 @@ public:
         return isThumbnailWidget();
     }
 
-    void setFixedTotalWidth(int totalWidth)
+    void setFixedTotalDimensions(int totalWidth, int totalHeight)
     {
         fixedTotalWidth = totalWidth;
-
-        resized();
-    }
-
-    void setMinTotalHeight(int totalHeight)
-    {
         minTotalHeight = totalHeight;
 
         resized();
@@ -315,8 +298,8 @@ private:
 
     const DisplayMode displayMode;
     const int fixedTrackHeight = 0;
-    const float marginSize = 4;
 
+    const float marginSize = 4;
     int fixedTotalWidth = 0;
     int minTotalHeight = 0;
 
