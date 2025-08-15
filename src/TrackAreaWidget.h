@@ -188,13 +188,13 @@ public:
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
 
+            resized();
+
             if (isThumbnailWidget())
             {
                 mediaDisplays.back()->selectTrack();
             }
         }
-
-        resized();
     }
 
     void addTrackFromFilePath(URL filePath, bool fromDAW = false)

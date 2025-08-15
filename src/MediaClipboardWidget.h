@@ -104,11 +104,6 @@ public:
 
         trackAreaWidget.setFixedTotalDimensions(trackArea.getMaximumVisibleWidth(),
                                                 trackArea.getMaximumVisibleHeight());
-
-        bool widthOverflow = trackAreaWidget.getWidth() > trackArea.getMaximumVisibleWidth();
-        bool heightOverflow = trackAreaWidget.getHeight() > trackArea.getMaximumVisibleHeight();
-
-        trackArea.setScrollBarsShown(heightOverflow, widthOverflow);
     }
 
     void addExternalTrackFromFilePath(URL filePath)
@@ -392,7 +387,7 @@ private:
             }
             else
             {
-                // Just reset play/stop button state for select and stop events (avoid infinite messages)
+                // Reset play/stop button state for select and stop events (avoid infinite messages)
                 playStopButton.setMode(playButtonActiveInfo.label);
             }
         }
@@ -403,8 +398,8 @@ private:
             {
                 // Handle select events if selected display changes
                 selectTrack(mediaDisplay);
-                // Handle track area resizing when track added
-                resized(); // TODO - decouple from track selection
+                // Handle track area resizing after adding a track
+                resized(); // TODO - decouple from track selection?
             }
         }
         else
@@ -435,7 +430,7 @@ private:
             trackAreaWidget.removeTrack(mediaDisplay);
             resetState();
 
-            // Handle track area resizing
+            // Handle track area resizing after removing a track
             resized();
         }
     }
