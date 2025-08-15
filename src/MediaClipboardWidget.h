@@ -34,8 +34,8 @@ public:
         buttonsFlexBox.justifyContent = FlexBox::JustifyContent::center;
 
         trackAreaWidget.addChangeListener(this);
-        //trackArea.setViewedComponent(trackAreaWidget);
-        addAndMakeVisible(trackAreaWidget);
+        trackArea.setViewedComponent(&trackAreaWidget, false);
+        addAndMakeVisible(trackArea);
 
         mainFlexBox.flexDirection = FlexBox::Direction::column;
     }
@@ -56,9 +56,8 @@ public:
             FlexItem(controlsComponent)
                 .withHeight(30)
                 .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
-        mainFlexBox.items.add(FlexItem(trackAreaWidget)
-                                  .withFlex(10)
-                                  .withMargin({ 0, marginSize, marginSize, marginSize }));
+        mainFlexBox.items.add(
+            FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -68,7 +67,7 @@ public:
         // Add control elements to control flex
         controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
         controlsFlexBox.items.add(
-            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
+            FlexItem(buttonsComponent).withWidth(5 * (buttonWidth + marginSize)));
 
         controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
 
@@ -96,8 +95,26 @@ public:
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
                                      .withMargin({ 0, 0, 0, marginSize }));
+        buttonsFlexBox.items.add(FlexItem(sendToDAWButton)
+                                     .withWidth(buttonWidth)
+                                     .withHeight(buttonWidth)
+                                     .withMargin({ 0, 0, 0, marginSize }));
 
         buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+
+        trackAreaWidget.setFixedTotalDimensions(trackArea.getMaximumVisibleWidth(),
+                                                trackArea.getMaximumVisibleHeight());
+
+        bool widthOverflow = trackAreaWidget.getWidth() > trackArea.getMaximumVisibleWidth();
+        bool heightOverflow = trackAreaWidget.getHeight() > trackArea.getMaximumVisibleHeight();
+
+        trackArea.setScrollBarsShown(heightOverflow, widthOverflow);
+    }
+
+    void addExternalTrackFromFilePath(URL filePath)
+    {
+        // TODO - is there an explicit way to check how HARP was invoked?
+        trackAreaWidget.addTrackFromFilePath(filePath, true);
     }
 
     void addFileCallback()
@@ -115,7 +132,7 @@ public:
                 File chosenFile = fc.getResult();
                 if (chosenFile != File {})
                 {
-                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile));
+                    trackAreaWidget.addTrackFromFilePath(URL(chosenFile), false);
                 }
             });
     }
@@ -128,6 +145,101 @@ public:
         {
             mediaDisplay->saveFileCallback();
         }
+    }
+
+    void sendToDAWCallback()
+    {
+        MediaDisplayComponent* selectedTrack = trackAreaWidget.getCurrentlySelectedDisplay();
+        std::vector<MediaDisplayComponent*> linkedDisplays = trackAreaWidget.getDAWLinkedDisplays();
+
+        MessageManager::callAsync(
+            [this, selectedTrack, linkedDisplays]()
+            {
+                // Show dialog with dropdown of available tracks
+                auto options = MessageBoxOptions()
+                                   .withTitle("Send to DAW")
+                                   .withMessage("Select a track to overwrite")
+                                   .withIconType(MessageBoxIconType::NoIcon)
+                                   .withButton("Overwrite")
+                                   .withButton("Cancel");
+
+                std::unique_ptr<AlertWindow> alertWindow = std::make_unique<AlertWindow>(
+                    options.getTitle(), options.getMessage(), options.getIconType());
+
+                alertWindow->addButton(options.getButtonText(0), 0); // Overwrite
+                alertWindow->addButton(options.getButtonText(1), 1); // Cancel
+
+                auto linkedTracksDropdown = std::make_unique<ComboBox>("DAW-Linked Tracks");
+                linkedTracksDropdown->setSize(275, 24);
+                linkedTracksDropdown->setName("");
+
+                for (unsigned int i = 0; i < linkedDisplays.size(); i++)
+                {
+                    if (linkedDisplays[i] != selectedTrack)
+                    {
+                        linkedTracksDropdown->addItem(linkedDisplays[i]->getTrackName(), i + 1);
+                    }
+                }
+
+                if (linkedDisplays.size() > 0)
+                {
+                    linkedTracksDropdown->setSelectedItemIndex(0);
+                }
+
+                alertWindow->addCustomComponent(linkedTracksDropdown.get());
+
+                // Open window asynchronously
+                alertWindow->enterModalState(
+                    true,
+                    ModalCallbackFunction::create(
+                        [this,
+                         alertWindow = alertWindow.release(),
+                         selectedTrack,
+                         linkedDisplays,
+                         linkedTracksDropdown = std::move(linkedTracksDropdown)](int result)
+                        {
+                            if (result == 0) // Overwrite
+                            {
+                                unsigned int selectedIndex =
+                                    linkedTracksDropdown->getSelectedId() - 1;
+
+                                if (selectedIndex >= 0 && selectedIndex < linkedDisplays.size())
+                                {
+                                    MediaDisplayComponent* originalTrack =
+                                        linkedDisplays[selectedIndex];
+
+                                    File originalFile =
+                                        originalTrack->getOriginalFilePath().getLocalFile();
+                                    File selectedFile =
+                                        selectedTrack->getOriginalFilePath().getLocalFile();
+
+                                    if (selectedFile.copyFileTo(originalFile))
+                                    {
+                                        DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
+                                            << originalFile.getFullPathName() << " with "
+                                            << selectedFile.getFullPathName() << ".");
+
+                                        // Update display with overwritten media
+                                        linkedDisplays[selectedIndex]->initializeDisplay(
+                                            URL(originalFile));
+
+                                        // Remove selected track
+                                        removeSelectionCallback();
+
+                                        // Select overwritten track
+                                        linkedDisplays[selectedIndex]->selectTrack();
+                                    }
+                                    else
+                                    {
+                                        DBG("MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file "
+                                            << originalFile.getFullPathName() << " with "
+                                            << selectedFile.getFullPathName() << ".");
+                                    }
+                                }
+                            }
+                        }),
+                    true);
+            });
     }
 
 private:
@@ -243,9 +355,31 @@ private:
         saveFileButton.addMode(saveFileButtonActiveInfo);
         saveFileButton.addMode(saveFileButtonInactiveInfo);
         buttonsComponent.addAndMakeVisible(saveFileButton);
+
+        // Mode when DAW-linked tracks are available
+        sendToDAWButtonActiveInfo = MultiButton::Mode {
+            "SendToDAW-Active",
+            [this] { sendToDAWCallback(); },
+            Colours::orange,
+            "Click to overwrite an existing DAW-linked file with the selected media file",
+            MultiButton::DrawingMode::IconOnly,
+            fontawesome::ArrowCircleORight,
+        };
+        // Mode when DAW-linked tracks are unavailable
+        sendToDAWButtonInactiveInfo = MultiButton::Mode {
+            "SendToDAW-Inactive",
+            [this] {},
+            Colours::lightgrey,
+            "No DAW-linked files in media clipboard",
+            MultiButton::DrawingMode::IconOnly,
+            fontawesome::ArrowCircleORight,
+        };
+        sendToDAWButton.addMode(sendToDAWButtonActiveInfo);
+        sendToDAWButton.addMode(sendToDAWButtonInactiveInfo);
+        buttonsComponent.addAndMakeVisible(sendToDAWButton);
     }
 
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override
+    void changeListenerCallback(ChangeBroadcaster* source) override
     {
         MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
@@ -269,6 +403,8 @@ private:
             {
                 // Handle select events if selected display changes
                 selectTrack(mediaDisplay);
+                // Handle track area resizing when track added
+                resized(); // TODO - decouple from track selection
             }
         }
         else
@@ -298,6 +434,9 @@ private:
         {
             trackAreaWidget.removeTrack(mediaDisplay);
             resetState();
+
+            // Handle track area resizing
+            resized();
         }
     }
 
@@ -338,6 +477,7 @@ private:
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.label);
         playStopButton.setMode(playButtonInactiveInfo.label);
         saveFileButton.setMode(saveFileButtonInactiveInfo.label);
+        sendToDAWButton.setMode(sendToDAWButtonInactiveInfo.label);
 
         currentlySelectedDisplay = nullptr;
     }
@@ -351,6 +491,18 @@ private:
         removeSelectionButton.setMode(removeSelectionButtonActiveInfo.label);
         playStopButton.setMode(playButtonActiveInfo.label);
         saveFileButton.setMode(saveFileButtonActiveInfo.label);
+
+        int nOtherDAWLinkedTracks =
+            trackAreaWidget.getDAWLinkedDisplays().size() - mediaDisplay->isLinkedToDAW();
+
+        if (nOtherDAWLinkedTracks > 0)
+        {
+            sendToDAWButton.setMode(sendToDAWButtonActiveInfo.label);
+        }
+        else
+        {
+            sendToDAWButton.setMode(sendToDAWButtonInactiveInfo.label);
+        }
 
         currentlySelectedDisplay = mediaDisplay;
     }
@@ -386,8 +538,11 @@ private:
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
 
-    //Viewport trackArea;
-    //TrackAreaWidget* trackAreaWidget;
+    MultiButton sendToDAWButton;
+    MultiButton::Mode sendToDAWButtonActiveInfo;
+    MultiButton::Mode sendToDAWButtonInactiveInfo;
+
+    Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
     // Flex for whole media clipboard

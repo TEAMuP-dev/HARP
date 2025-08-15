@@ -1235,7 +1235,15 @@ public:
     /*
     Entry point for importing new files into the application.
     */
-    void importNewFile(File mediaFile) { return; }
+    void importNewFile(File mediaFile)
+    {
+        mediaClipboardWidget.addExternalTrackFromFilePath(URL(mediaFile));
+
+        if (! showMediaClipboard)
+        {
+            viewMediaClipboardCallback();
+        }
+    }
 
     void openFileChooser()
     {

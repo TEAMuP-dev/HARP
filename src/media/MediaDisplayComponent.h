@@ -183,6 +183,8 @@ private:
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
+    void unlinkFromDAW();
+
     virtual void startPlaying() { transportSource.start(); }
     virtual void stopPlaying() { transportSource.stop(); }
 
@@ -243,7 +245,7 @@ private:
     Uuid displayID;
     String trackName;
     const bool required = true;
-    const bool linkedToDAW = false;
+    bool linkedToDAW = false;
     const DisplayMode displayMode;
 
     bool isSelected = false;

@@ -20,8 +20,8 @@ class TrackAreaWidget : public Component,
                         public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int height = 0)
-        : displayMode(mode), fixedHeight(height)
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
+        : displayMode(mode), fixedTrackHeight(trackHeight)
     {
     }
 
@@ -36,23 +36,56 @@ public:
 
         mainBox.flexDirection = FlexBox::Direction::column;
 
+        int totalWidth = getWidth();
+        int totalHeight = getHeight();
+
         if (getNumTracks() > 0)
         {
             for (auto& m : mediaDisplays)
             {
                 FlexItem i = FlexItem(*m);
 
-                if (fixedHeight)
+                if (fixedTrackHeight)
                 {
-                    i = i.withHeight(fixedHeight);
+                    i = i.withHeight(fixedTrackHeight);
                 }
                 else
                 {
                     i = i.withFlex(1).withMinHeight(50);
                 }
 
-                mainBox.items.add(i.withMargin(4));
+                mainBox.items.add(i.withMargin(marginSize));
             }
+
+            if (fixedTrackHeight)
+            {
+                int individualTrackHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+
+                int totalTrackAreaHeight = getNumTracks() * individualTrackHeight;
+
+                if (totalTrackAreaHeight > minTotalHeight)
+                {
+                    totalHeight = totalTrackAreaHeight;
+                }
+                else
+                {
+                    totalHeight = minTotalHeight;
+                }
+            }
+        }
+        else
+        {
+            totalHeight = minTotalHeight;
+        }
+
+        if (fixedTotalWidth)
+        {
+            totalWidth = fixedTotalWidth;
+        }
+
+        if (totalWidth != getWidth() || totalHeight != getHeight())
+        {
+            setSize(totalWidth, totalHeight);
         }
 
         mainBox.performLayout(getLocalBounds());
@@ -76,6 +109,21 @@ public:
         return nullptr;
     }
 
+    std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()
+    {
+        std::vector<MediaDisplayComponent*> linkedDisplays;
+
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isLinkedToDAW())
+            {
+                linkedDisplays.push_back(m.get());
+            }
+        }
+
+        return linkedDisplays;
+    }
+
     int getNumTracks() { return mediaDisplays.size(); }
 
     bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }
@@ -86,6 +134,14 @@ public:
     bool isInterestedInFileDrag(const StringArray& /*files*/) override
     {
         return isThumbnailWidget();
+    }
+
+    void setFixedTotalDimensions(int totalWidth, int totalHeight)
+    {
+        fixedTotalWidth = totalWidth;
+        minTotalHeight = totalHeight;
+
+        resized();
     }
 
     void resetUI()
@@ -102,7 +158,7 @@ public:
         mediaDisplays.clear();
     }
 
-    void addTrackFromComponentInfo(ComponentInfo info)
+    void addTrackFromComponentInfo(ComponentInfo info, bool fromDAW = false)
     {
         std::shared_ptr<PyHarpComponentInfo> trackInfo = info.second;
         std::unique_ptr<MediaDisplayComponent> m;
@@ -113,12 +169,16 @@ public:
         if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
             m = std::make_unique<AudioDisplayComponent>(
-                label, audioTrackInfo->required, false, displayMode);
+                label, audioTrackInfo->required, fromDAW, displayMode);
         }
         else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
         {
             m = std::make_unique<MidiDisplayComponent>(
-                label, midiTrackInfo->required, false, displayMode);
+                label, midiTrackInfo->required, fromDAW, displayMode);
+        }
+        else
+        {
+            DBG("TrackAreaWidget::addTrackFromComponentInfo: Invalid ComponentInfo received.");
         }
 
         if (m)
@@ -137,9 +197,23 @@ public:
         resized();
     }
 
-    void addTrackFromFilePath(URL filePath)
+    void addTrackFromFilePath(URL filePath, bool fromDAW = false)
     {
         File f = filePath.getLocalFile();
+
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isDuplicateFile(filePath))
+            {
+                m->selectTrack();
+
+                DBG("TrackAreaWidget::addTrackFromFilePath: Selecting existing track containing "
+                    << f.getFullPathName() << " instead of creating new track.");
+
+                return;
+            }
+        }
+
         String ext = f.getFileExtension();
         String label = filePath.getFileName();
 
@@ -173,7 +247,7 @@ public:
 
         if (validExt)
         {
-            addTrackFromComponentInfo(componentInfo);
+            addTrackFromComponentInfo(componentInfo, fromDAW);
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(filePath.getFileName());
         }
@@ -193,37 +267,13 @@ public:
         resized();
     }
 
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/)
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
-        bool duplicateDetected = false; // Global duplicate flag
-
         for (String f : files)
         {
             URL droppedFilePath = URL(File(f));
 
-            bool isTrackDuplicate = false; // Track-level duplicate flag
-
-            for (auto& m : mediaDisplays)
-            {
-                if (m->isDuplicateFile(droppedFilePath))
-                {
-                    if (! duplicateDetected)
-                    {
-                        m->selectTrack();
-                    }
-
-                    duplicateDetected = true; // Select first duplicate (only)
-                    isTrackDuplicate = true; // Don't reload track
-
-                    DBG("TrackAreaWidget::filesDropped: Selecting existing track containing "
-                        << f << " instead of creating new track.");
-                }
-            }
-
-            if (! isTrackDuplicate)
-            {
-                addTrackFromFilePath(droppedFilePath);
-            }
+            addTrackFromFilePath(droppedFilePath);
         }
     }
 
@@ -246,8 +296,12 @@ private:
         }
     }
 
-    const int fixedHeight = 0;
     const DisplayMode displayMode;
+    const int fixedTrackHeight = 0;
+
+    const float marginSize = 4;
+    int fixedTotalWidth = 0;
+    int minTotalHeight = 0;
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
