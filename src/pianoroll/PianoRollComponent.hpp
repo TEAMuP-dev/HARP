@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
@@ -16,67 +14,79 @@
 class PianoRollComponent : public Component, public ChangeBroadcaster, private ScrollBar::Listener
 {
 public:
-    PianoRollComponent(int _keyboardWidth = 70,
-                       int _pianoRollSpacing = 5,
-                       int _scrollBarSize = 10,
-                       int _scrollBarSpacing = 2);
+    PianoRollComponent(int kbw = 70,
+                       int prs = 3,
+                       int sbsz = 8,
+                       int sbsp = 1,
+                       bool hk = false,
+                       bool hC = false);
 
     ~PianoRollComponent() override;
 
-    void paint(Graphics& g) override;
     void resized() override;
 
-    NoteGridComponent* getNoteGrid() { return &noteGrid; }
+    void setResolution(double pps) { noteGrid.setResolution(pps); }
+    double getResolution() { return noteGrid.getPixelsPerSecond(); }
 
-    void setResolution(int pixelsPerSecond);
+    void setHideKeys(bool hk) { hideKeys = hk; }
+    bool isHidingKeys() { return hideKeys; }
+
+    void setHideControls(bool hC) { hideControls = hC; }
+    bool isHidingControls() { return hideControls; }
+
+    Component* getNoteGrid() { return &noteGridContainer; }
+
+    int getKeyboardWidth() { return ! isHidingKeys() ? keyboardWidth : 0; }
+    int getPianoRollSpacing() { return ! isHidingKeys() ? pianoRollSpacing : 0; }
+    int getPianoRollContainerWidth();
+    int getControlsWidth();
+    float getKeyHeight();
+
+    //Range<double> getVisibleMediaRange() { return visibleMediaRange; }
+    Range<double> getVisibleKeyRange() { return visibleKeyRange; }
 
     void resizeNoteGrid(double lengthInSecs);
 
-    void updateVisibleKeyRange(Range<double> newRange);
+    void insertNote(MidiNote n) { noteGrid.insertNote(n); }
+    void resetNotes() { noteGrid.resetNotes(); }
+
     void updateVisibleMediaRange(Range<double> newRange);
 
-    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
-
-    void visibleKeyRangeZoom(double amount);
-
-    void verticalMouseWheelMoveEvent(float deltaY);
-
-    void verticalMouseWheelZoomEvent(float deltaZoom, float scrollPosY);
+    void verticalMouseWheelMoveEvent(double deltaY);
+    void verticalMouseWheelZoomEvent(double deltaZoom);
 
     void autoCenterViewBox(int medianMidi, float stdDevMidi);
 
-    void insertNote(MidiNoteComponent n);
-    void resetNotes();
-
-    int getKeyboardWidth() { return keyboardWidth; }
-    int getPianoRollWidth();
-    int getPianoRollSpacing() { return pianoRollSpacing; }
-    int getScrollBarSize() { return scrollBarSize; }
-    int getScrollBarSpacing() { return scrollBarSpacing; }
-    double getResolution() { return noteGrid.getPixelsPerSecond(); }
-    int getMaxKeysVisible() { return maxKeysVisible; }
-
 private:
-    double zoomToKeysVisible(double zoomFactor);
-    double keysVisibleToZoom(double numKeysVisible);
+    float zoomToKeysVisible(double zoomFactor);
+    double keysVisibleToZoom(float numKeysVisible);
+
+    void updateVisibleKeyRange(Range<double> newRange);
+
+    void visibleKeyRangeZoom(double zoomFactor);
+
+    void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
     int keyboardWidth;
-    // int pianoRollWidth;
     int pianoRollSpacing;
     int scrollBarSize;
     int scrollBarSpacing;
 
+    bool hideKeys;
+    bool hideControls;
+
     KeyboardComponent keyboard;
     NoteGridComponent noteGrid;
-    Component noteGridContainer;
 
-    Range<double> fullKeyRange = { 0.0, 128.0 };
+    Viewport keyboardContainer;
+    Viewport noteGridContainer;
+
+    Range<double> visibleMediaRange;
 
     int minKeysVisible = 5;
     int maxKeysVisible = 16;
     Range<double> visibleKeyRange;
-
-    Range<double> visibleMediaRange;
+    Range<double> fullKeyRange = { 0.0, 128.0 };
 
     ScrollBar verticalScrollBar { true };
 

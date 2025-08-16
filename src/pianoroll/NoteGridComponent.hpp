@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -8,63 +6,26 @@
 
 using namespace juce;
 
-class MidiNoteComponent : public Component
+struct MidiNote
 {
 public:
-    MidiNoteComponent(unsigned char n, unsigned char v, double s, double d)
-    {
-        noteNumber = n;
-        velocity = v;
-        startTime = s;
-        duration = d;
-    }
-
-    MidiNoteComponent(const MidiNoteComponent& other)
-    {
-        noteNumber = other.noteNumber;
-        velocity = other.velocity;
-        startTime = other.startTime;
-        duration = other.duration;
-    }
-
-    void paint(Graphics& g)
-    {
-        g.fillAll(Colours::darkgrey);
-
-        Colour red(252, 97, 92);
-
-        if (getWidth() > 2)
-        {
-            g.setColour(red);
-
-            g.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
-        }
-
-        if (getWidth() > 10)
-        {
-            g.setColour(red.brighter());
-
-            const float maxVelocityWidth = static_cast<float>(getWidth() - 10);
-            const float verticalPosition = static_cast<float>(getHeight()) * 0.5f - 2.0f;
-
-            g.drawLine(5.0f,
-                       verticalPosition,
-                       maxVelocityWidth * (getVelocity() / 127.0f),
-                       verticalPosition,
-                       4.0f);
-        }
-    }
-
-    unsigned char getNoteNumber() { return noteNumber; }
-    unsigned char getVelocity() { return velocity; }
-    double getStartTime() { return startTime; }
-    double getNoteLength() { return duration; }
-
-private:
     unsigned char noteNumber;
-    unsigned char velocity;
     double startTime;
     double duration;
+    unsigned char velocity;
+
+    MidiNote(unsigned char n, double s, double d, unsigned char v)
+        : noteNumber(n), startTime(s), duration(d), velocity(v)
+    {
+    }
+
+    MidiNote(const MidiNote& other)
+    {
+        noteNumber = other.noteNumber;
+        startTime = other.startTime;
+        duration = other.duration;
+        velocity = other.velocity;
+    }
 };
 
 class NoteGridComponent : public KeyboardComponent
@@ -74,23 +35,23 @@ public:
 
     ~NoteGridComponent() override;
 
+    void paint(Graphics& g) override;
+
     void setResolution(double pps);
-
-    void updateLength(double l);
-
-    void updateSize();
-    void resized() override;
-
-    void insertNote(MidiNoteComponent n);
-    void resetNotes();
-
     double getPixelsPerSecond() { return pixelsPerSecond; }
+
+    void setLength(double len);
     double getLengthInSeconds() { return lengthInSeconds; }
 
     bool isKeyboardComponent() override { return false; }
 
+    void updateSize();
+
+    void insertNote(MidiNote n);
+    void resetNotes();
+
 private:
-    Array<MidiNoteComponent*> midiNotes;
+    Array<MidiNote*> midiNotes;
 
     double pixelsPerSecond;
     double lengthInSeconds;

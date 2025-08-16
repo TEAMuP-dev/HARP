@@ -1,268 +1,307 @@
-/**
+/*
  * @file TrackAreaWidget.h
- * @brief The component that displays the input and output tracks in the GUI.
- * @author xribene
- * 
+ * @brief The component that displays a group of tracks in the GUI.
+ * @author xribene, cwitkowitz
  */
+
 #pragma once
-#include "WebModel.h"
-#include "gui/SliderWithLabel.h"
-#include "gui/TitledTextBox.h"
+
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "media/AudioDisplayComponent.h"
 #include "media/MediaDisplayComponent.h"
 #include "media/MidiDisplayComponent.h"
 #include "utils.h"
 
-class TrackAreaWidget : public juce::Component, public juce::ChangeListener
+using namespace juce;
+
+class TrackAreaWidget : public Component,
+                        public ChangeListener,
+                        public ChangeBroadcaster,
+                        public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget() {}
-
-    void setModel(std::shared_ptr<WebModel> model) { mModel = model; }
-
-    void populateTracks()
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
+        : displayMode(mode), fixedTrackHeight(trackHeight)
     {
-        // headerLabel.setText("No model loaded", juce::dontSendNotification);
-        // headerLabel.setJustificationType(juce::Justification::centred);
-        // addAndMakeVisible(headerLabel);
+    }
 
-        if (mModel == nullptr)
+    void paint(Graphics& g) override
+    {
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+    }
+
+    void resized() override
+    {
+        FlexBox mainBox;
+
+        mainBox.flexDirection = FlexBox::Direction::column;
+
+        int totalWidth = getWidth();
+        int totalHeight = getHeight();
+
+        if (getNumTracks() > 0)
         {
-            DBG("populate gui called, but model is null");
-            return;
-        }
-
-        auto& inputTracksInfo = mModel->getInputTracksInfo();
-        inputTracksCounter = 0;
-
-        for (const auto& pair : inputTracksInfo)
-        {
-            inputTracksCounter++;
-            auto trackInfo = pair.second;
-            std::unique_ptr<MediaDisplayComponent> display;
-
-            if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
+            for (auto& m : mediaDisplays)
             {
-                std::string label = audioTrackInfo->label.empty()
-                                        ? "InputAudio-" + std::to_string(inputTracksCounter)
-                                        : audioTrackInfo->label;
-                display = std::make_unique<AudioDisplayComponent>(label, audioTrackInfo->required);
-            }
-            else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
-            {
-                std::string label = midiTrackInfo->label.empty()
-                                        ? "InputMidi-" + std::to_string(inputTracksCounter)
-                                        : midiTrackInfo->label;
-                display = std::make_unique<MidiDisplayComponent>(label, midiTrackInfo->required);
+                FlexItem i = FlexItem(*m);
+
+                if (fixedTrackHeight)
+                {
+                    i = i.withHeight(fixedTrackHeight);
+                }
+                else
+                {
+                    i = i.withFlex(1).withMinHeight(50);
+                }
+
+                mainBox.items.add(i.withMargin(marginSize));
             }
 
-            if (display)
+            if (fixedTrackHeight)
             {
-                display->setTrackId(trackInfo->id);
-                display->addChangeListener(this);
-                display->instructionBoxWriter = [this](const juce::String& text)
-                { updateInstructionBox(text); };
-                addAndMakeVisible(display.get());
-                inputMediaDisplays.push_back(std::move(display));
-            }
-        }
+                int individualTrackHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
 
-        auto& outputTracksInfo = mModel->getOutputTracksInfo();
-        outputTracksCounter = 0;
+                int totalTrackAreaHeight = getNumTracks() * individualTrackHeight;
 
-        for (const auto& pair : outputTracksInfo)
-        {
-            outputTracksCounter++;
-            auto trackInfo = pair.second;
-            std::unique_ptr<MediaDisplayComponent> display;
-
-            if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
-            {
-                std::string label = audioTrackInfo->label.empty()
-                                        ? "OutputAudio-" + std::to_string(outputTracksCounter)
-                                        : audioTrackInfo->label;
-                display = std::make_unique<AudioDisplayComponent>(label);
-            }
-            else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
-            {
-                std::string label = midiTrackInfo->label.empty()
-                                        ? "OutputMidi-" + std::to_string(outputTracksCounter)
-                                        : midiTrackInfo->label;
-                display = std::make_unique<MidiDisplayComponent>(label);
-            }
-
-            if (display)
-            {
-                display->setTrackId(trackInfo->id);
-                display->addChangeListener(this);
-                display->instructionBoxWriter = [this](const juce::String& text)
-                { updateInstructionBox(text); };
-                addAndMakeVisible(display.get());
-                outputMediaDisplays.push_back(std::move(display));
+                if (totalTrackAreaHeight > minTotalHeight)
+                {
+                    totalHeight = totalTrackAreaHeight;
+                }
+                else
+                {
+                    totalHeight = minTotalHeight;
+                }
             }
         }
-
-        if (inputTracksCounter > 0)
+        else
         {
-            // inputTracksLabel->setText("Input Tracks", juce::dontSendNotification);
-            inputTracksLabel->setJustificationType(juce::Justification::centred);
-            inputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
-            addAndMakeVisible(inputTracksLabel.get());
+            totalHeight = minTotalHeight;
         }
 
-        if (outputTracksCounter > 0)
+        if (fixedTotalWidth)
         {
-            // outputTracksLabel->setText("Output Tracks", juce::dontSendNotification);
-            outputTracksLabel->setJustificationType(juce::Justification::centred);
-            outputTracksLabel->setFont(juce::Font(20.0f, juce::Font::bold));
-            addAndMakeVisible(outputTracksLabel.get());
+            totalWidth = fixedTotalWidth;
         }
 
-        repaint();
+        if (totalWidth != getWidth() || totalHeight != getHeight())
+        {
+            setSize(totalWidth, totalHeight);
+        }
+
+        mainBox.performLayout(getLocalBounds());
+    }
+
+    std::vector<std::unique_ptr<MediaDisplayComponent>>& getMediaDisplays()
+    {
+        return mediaDisplays;
+    }
+
+    MediaDisplayComponent* getCurrentlySelectedDisplay()
+    {
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isCurrentlySelected())
+            {
+                return m.get();
+            }
+        }
+
+        return nullptr;
+    }
+
+    std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()
+    {
+        std::vector<MediaDisplayComponent*> linkedDisplays;
+
+        for (auto& m : mediaDisplays)
+        {
+            if (m->isLinkedToDAW())
+            {
+                linkedDisplays.push_back(m.get());
+            }
+        }
+
+        return linkedDisplays;
+    }
+
+    int getNumTracks() { return mediaDisplays.size(); }
+
+    bool isInputWidget() { return (displayMode == 0) || isHybridWidget(); }
+    bool isOutputWidget() { return (displayMode == 1) || isHybridWidget(); }
+    bool isHybridWidget() { return displayMode == 2; }
+    bool isThumbnailWidget() { return displayMode == 3; }
+
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override
+    {
+        return isThumbnailWidget();
+    }
+
+    void setFixedTotalDimensions(int totalWidth, int totalHeight)
+    {
+        fixedTotalWidth = totalWidth;
+        minTotalHeight = totalHeight;
+
         resized();
     }
 
     void resetUI()
     {
-        DBG("ControlAreaWidget::resetUI called");
-        mModel.reset();
+        // TODO - is this necessary?
+        // TODO - does this need to go in the destructor?
 
-        // TODO: do I need this  ?
-        // TODO: also, does this need to go to the destructor ?
-        for (auto& inputMediaDisplay : inputMediaDisplays)
+        for (auto& m : mediaDisplays)
         {
-            inputMediaDisplay->removeChangeListener(this);
-            removeChildComponent(inputMediaDisplay.get());
+            m->removeChangeListener(this);
+            removeChildComponent(m.get());
         }
 
-        for (auto& outputMediaDisplay : outputMediaDisplays)
-        {
-            outputMediaDisplay->removeChangeListener(this);
-            removeChildComponent(outputMediaDisplay.get());
-        }
-
-        inputMediaDisplays.clear();
-        outputMediaDisplays.clear();
-
-        inputTracksCounter = 0;
-        outputTracksCounter = 0;
-        // remove input and output TracksLabel
-        removeChildComponent(inputTracksLabel.get());
-        removeChildComponent(outputTracksLabel.get());
+        mediaDisplays.clear();
     }
 
-    void resized() override
+    void addTrackFromComponentInfo(ComponentInfo info, bool fromDAW = false)
     {
-        auto area = getLocalBounds();
+        std::shared_ptr<PyHarpComponentInfo> trackInfo = info.second;
+        std::unique_ptr<MediaDisplayComponent> m;
 
-        // headerLabel.setBounds(area.removeFromTop(30));  // Adjust height to your preference
+        std::string label =
+            trackInfo->label.empty() ? "Track-" + std::to_string(getNumTracks()) : trackInfo->label;
 
-        juce::FlexBox mainBox;
-        mainBox.flexDirection =
-            juce::FlexBox::Direction::column; // Set the main flex direction to column
-
-        juce::FlexItem::Margin margin(2);
-
-        if (inputTracksCounter > 0)
+        if (auto audioTrackInfo = dynamic_cast<AudioTrackInfo*>(trackInfo.get()))
         {
-            // Before input tracks, add a centered label for the input tracks
-            mainBox.items.add(juce::FlexItem(*inputTracksLabel).withFlex(0.25).withMinHeight(15));
+            m = std::make_unique<AudioDisplayComponent>(
+                label, audioTrackInfo->required, fromDAW, displayMode);
+        }
+        else if (auto midiTrackInfo = dynamic_cast<MidiTrackInfo*>(trackInfo.get()))
+        {
+            m = std::make_unique<MidiDisplayComponent>(
+                label, midiTrackInfo->required, fromDAW, displayMode);
+        }
+        else
+        {
+            DBG("TrackAreaWidget::addTrackFromComponentInfo: Invalid ComponentInfo received.");
+        }
 
-            // Input tracks
-            for (auto& display : inputMediaDisplays)
+        if (m)
+        {
+            m->setDisplayID(trackInfo->id);
+            m->addChangeListener(this);
+            addAndMakeVisible(m.get());
+            mediaDisplays.push_back(std::move(m));
+
+            resized();
+
+            if (isThumbnailWidget())
             {
-                // auto row = area.removeFromTop(150).reduced(2);
-                // display->setBounds(row);
-                mainBox.items.add(
-                    juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
+                mediaDisplays.back()->selectTrack();
             }
         }
+    }
 
-        if (outputTracksCounter > 0)
+    void addTrackFromFilePath(URL filePath, bool fromDAW = false)
+    {
+        File f = filePath.getLocalFile();
+
+        for (auto& m : mediaDisplays)
         {
-            // Before output tracks, add a centered label for the output tracks
-            mainBox.items.add(juce::FlexItem(*outputTracksLabel).withFlex(0.25).withMinHeight(15));
-
-            // Output tracks
-            for (auto& display : outputMediaDisplays)
+            if (m->isDuplicateFile(filePath))
             {
-                // auto row = area.removeFromTop(150).reduced(2);
-                // display->setBounds(row);
-                mainBox.items.add(
-                    juce::FlexItem(*display).withFlex(1).withMinHeight(50).withMargin(4));
-            }
-        }
+                m->selectTrack();
 
-        // Perform Layout
-        mainBox.performLayout(area);
-    }
+                DBG("TrackAreaWidget::addTrackFromFilePath: Selecting existing track containing "
+                    << f.getFullPathName() << " instead of creating new track.");
 
-    // Getter for inputMediaDisplays
-    std::vector<std::unique_ptr<MediaDisplayComponent>>& getInputMediaDisplays()
-    {
-        return inputMediaDisplays;
-    }
-
-    std::vector<std::unique_ptr<MediaDisplayComponent>>& getOutputMediaDisplays()
-    {
-        return outputMediaDisplays;
-    }
-
-    // Implement the listener callback
-    // It listens to events emmited from MediaDisplayComponents
-    // using the sendChangeMessage() function
-    // NOTE: not used, but might be useful in the future
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override
-    {
-        // Check if the source is one of the inputMediaDisplays
-        for (auto& display : inputMediaDisplays)
-        {
-            if (source == display.get())
-            {
-                // Do something
                 return;
             }
         }
-        for (auto& display : outputMediaDisplays)
+
+        String ext = f.getFileExtension();
+        String label = filePath.getFileName();
+
+        bool validExt = true;
+
+        ComponentInfo componentInfo;
+
+        if (AudioDisplayComponent::getSupportedExtensions().contains(ext))
         {
-            if (source == display.get())
-            {
-                // Do something
-                return;
-            }
+            auto audioTrackInfo = std::make_shared<AudioTrackInfo>();
+            audioTrackInfo->id = Uuid();
+            audioTrackInfo->required = false;
+            audioTrackInfo->label = label.toStdString();
+            componentInfo = ComponentInfo(audioTrackInfo->id, audioTrackInfo);
+        }
+        else if (MidiDisplayComponent::getSupportedExtensions().contains(ext))
+        {
+            auto midiTrackInfo = std::make_shared<MidiTrackInfo>();
+            midiTrackInfo->id = Uuid();
+            midiTrackInfo->required = false;
+            midiTrackInfo->label = label.toStdString();
+            componentInfo = ComponentInfo(midiTrackInfo->id, midiTrackInfo);
+        }
+        else
+        {
+            DBG("TrackAreaWidget::addTrackFromFilePath: Tried to add file "
+                << f.getFullPathName() << " with unsupported type.");
+
+            validExt = false;
+        }
+
+        if (validExt)
+        {
+            addTrackFromComponentInfo(componentInfo, fromDAW);
+            mediaDisplays.back()->initializeDisplay(filePath);
+            mediaDisplays.back()->setTrackName(filePath.getFileName());
+        }
+    }
+
+    void removeTrack(MediaDisplayComponent* mediaDisplay)
+    {
+        mediaDisplay->removeChangeListener(this);
+        removeChildComponent(mediaDisplay);
+
+        auto it =
+            std::remove_if(mediaDisplays.begin(),
+                           mediaDisplays.end(),
+                           [mediaDisplay](const auto& ptr) { return ptr.get() == mediaDisplay; });
+        mediaDisplays.erase(it, mediaDisplays.end());
+
+        resized();
+    }
+
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
+    {
+        for (String f : files)
+        {
+            URL droppedFilePath = URL(File(f));
+
+            addTrackFromFilePath(droppedFilePath);
         }
     }
 
 private:
-    juce::SharedResourcePointer<InstructionBox> instructionBox;
-
-    // ToolbarSliderStyle toolbarSliderStyle;
-    std::shared_ptr<WebModel> mModel { nullptr };
-
-    juce::Label headerLabel;
-    // HARPLookAndFeel mHARPLookAndFeel;
-
-    // A list of input media displays
-    std::vector<std::unique_ptr<MediaDisplayComponent>> inputMediaDisplays;
-    // A list of output media displays
-    std::vector<std::unique_ptr<MediaDisplayComponent>> outputMediaDisplays;
-
-    // A label for the input tracks
-    std::unique_ptr<juce::Label> inputTracksLabel { std::make_unique<juce::Label>("Input Tracks",
-                                                                                  "Input Tracks") };
-    // A label for the output tracks
-    std::unique_ptr<juce::Label> outputTracksLabel {
-        std::make_unique<juce::Label>("Output Tracks", "Output Tracks")
-    };
-    int inputTracksCounter = 0;
-    int outputTracksCounter = 0;
-
-    void updateInstructionBox(const juce::String& text)
+    void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        if (instructionBox != nullptr)
+        if (auto sourceDisplay = dynamic_cast<MediaDisplayComponent*>(source))
         {
-            instructionBox->setStatusMessage(text);
+            bool wasTrackSelected = sourceDisplay->isCurrentlySelected();
+
+            for (auto& m : mediaDisplays)
+            {
+                if (source != m.get() && wasTrackSelected)
+                {
+                    m->deselectTrack();
+                }
+            }
+
+            sendSynchronousChangeMessage();
         }
     }
+
+    const DisplayMode displayMode;
+    const int fixedTrackHeight = 0;
+
+    const float marginSize = 4;
+    int fixedTotalWidth = 0;
+    int minTotalHeight = 0;
+
+    std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
