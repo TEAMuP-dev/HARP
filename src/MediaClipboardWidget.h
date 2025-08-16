@@ -227,27 +227,57 @@ public:
                                     File selectedFile =
                                         selectedTrack->getOriginalFilePath().getLocalFile();
 
-                                    if (selectedFile.copyFileTo(originalFile))
+                                    /*StringArray validExtensions =
+                                        originalTrack->getInstanceExtensions();
+
+                                    if (! validExtensions.contains(selectedFile.getFileExtension()))
                                     {
-                                        DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
-                                            << originalFile.getFullPathName() << " with "
-                                            << selectedFile.getFullPathName() << ".");
+                                        AlertWindow::showMessageBoxAsync(
+                                            AlertWindow::WarningIcon,
+                                            "Invalid File",
+                                            "This track can only be overwritten with data of the following file types: "
+                                                + validExtensions.joinIntoString(", ") + ".",
+                                            "OK");
+                                    }*/
 
-                                        // Update display with overwritten media
-                                        linkedDisplays[selectedIndex]->initializeDisplay(
-                                            URL(originalFile));
+                                    if (originalFile.getFileExtension()
+                                        != selectedFile.getFileExtension())
+                                    {
+                                        AlertWindow::showMessageBoxAsync(
+                                            AlertWindow::WarningIcon,
+                                            "File Type Mismatch",
+                                            "Cannot overwrite file of type \""
+                                                + originalFile.getFileExtension()
+                                                + "\" with file of type \""
+                                                + selectedFile.getFileExtension() + "\".",
+                                            "OK");
 
-                                        // Remove selected track
-                                        removeSelectionCallback();
-
-                                        // Select overwritten track
-                                        linkedDisplays[selectedIndex]->selectTrack();
+                                        // TODO - perform conversion if possible
                                     }
                                     else
                                     {
-                                        DBG("MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file "
-                                            << originalFile.getFullPathName() << " with "
-                                            << selectedFile.getFullPathName() << ".");
+                                        if (selectedFile.copyFileTo(originalFile))
+                                        {
+                                            DBG("MediaClipboardWidget::sendToDAWCallback: Overwriting file "
+                                                << originalFile.getFullPathName() << " with "
+                                                << selectedFile.getFullPathName() << ".");
+
+                                            // Update display with overwritten media
+                                            linkedDisplays[selectedIndex]->initializeDisplay(
+                                                URL(originalFile));
+
+                                            // Remove selected track
+                                            removeSelectionCallback();
+
+                                            // Select overwritten track
+                                            linkedDisplays[selectedIndex]->selectTrack();
+                                        }
+                                        else
+                                        {
+                                            DBG("MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file "
+                                                << originalFile.getFullPathName() << " with "
+                                                << selectedFile.getFullPathName() << ".");
+                                        }
                                     }
                                 }
                             }
