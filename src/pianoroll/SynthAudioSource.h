@@ -1,6 +1,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 
-struct SineWaveSound : public juce::SynthesiserSound
+struct SineWaveSound : public SynthesiserSound
 {
     SineWaveSound() {}
 
@@ -8,28 +8,28 @@ struct SineWaveSound : public juce::SynthesiserSound
     bool appliesToChannel(int) override { return true; }
 };
 
-struct SineWaveVoice : public juce::SynthesiserVoice
+struct SineWaveVoice : public SynthesiserVoice
 {
     SineWaveVoice() {}
 
-    bool canPlaySound(juce::SynthesiserSound* sound) override
+    bool canPlaySound(SynthesiserSound* sound) override
     {
         return dynamic_cast<SineWaveSound*>(sound) != nullptr;
     }
 
     void startNote(int midiNoteNumber,
                    float velocity,
-                   juce::SynthesiserSound*,
+                   SynthesiserSound*,
                    int /*currentPitchWheelPosition*/) override
     {
         currentAngle = 0.0;
         level = velocity * 0.15;
         tailOff = 0.0;
 
-        auto cyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        auto cyclesPerSecond = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         auto cyclesPerSample = cyclesPerSecond / getSampleRate();
 
-        angleDelta = cyclesPerSample * 2.0 * juce::MathConstants<double>::pi;
+        angleDelta = cyclesPerSample * 2.0 * MathConstants<double>::pi;
     }
 
     void stopNote(float /*velocity*/, bool allowTailOff) override
@@ -49,9 +49,7 @@ struct SineWaveVoice : public juce::SynthesiserVoice
     void pitchWheelMoved(int) override {}
     void controllerMoved(int, int) override {}
 
-    void renderNextBlock(juce::AudioSampleBuffer& outputBuffer,
-                         int startSample,
-                         int numSamples) override
+    void renderNextBlock(AudioSampleBuffer& outputBuffer, int startSample, int numSamples) override
     {
         if (angleDelta != 0.0)
         {
@@ -98,7 +96,7 @@ private:
     double currentAngle = 0.0, angleDelta = 0.0, level = 0.0, tailOff = 0.0;
 };
 
-class SynthAudioSource : public juce::PositionableAudioSource
+class SynthAudioSource : public PositionableAudioSource
 {
 public:
     SynthAudioSource()
@@ -119,7 +117,7 @@ public:
 
     void releaseResources() override {}
 
-    void useSequence(juce::MidiMessageSequence midiSequence)
+    void useSequence(MidiMessageSequence midiSequence)
     {
         sequence = midiSequence;
 
@@ -142,7 +140,7 @@ public:
                 if (currVoices > maxVoices)
                 {
                     maxVoices = currVoices;
-                    DBG("Max voices now " << maxVoices);
+                    //DBG("Max voices now " << maxVoices);
                 }
             }
 
@@ -159,13 +157,13 @@ public:
             synth.addVoice(new SineWaveVoice());
     }
 
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override
+    void getNextAudioBlock(const AudioSourceChannelInfo& bufferToFill) override
     {
         bufferToFill.clearActiveBufferRegion();
 
-        juce::MidiBuffer incomingMidi;
+        MidiBuffer incomingMidi;
 
-        int lastSample = readPosition + samplesPerBlock;
+        int64 lastSample = readPosition + samplesPerBlock;
 
         for (int eventIdx = 0; eventIdx < sequence.getNumEvents(); ++eventIdx)
         {
@@ -176,7 +174,8 @@ public:
 
             if (startTimeSamples >= readPosition && startTimeSamples <= lastSample)
             {
-                incomingMidi.addEvent(midiMessage, startTimeSamples - readPosition);
+                incomingMidi.addEvent(midiMessage,
+                                      static_cast<int>(startTimeSamples - readPosition));
 
                 // DBG("Event " << eventIdx << " at " << startTimeSamples << ": " << midiMessage.getDescription());
             }
@@ -206,7 +205,7 @@ public:
         return 0;
     }
 
-    void setLooping(bool shouldLoop) override
+    void setLooping(bool /*shouldLoop*/) override
     {
         // TODO
     }
@@ -214,8 +213,8 @@ public:
     void resetNotes() { synth.allNotesOff(0, false); }
 
 private:
-    juce::Synthesiser synth;
-    juce::MidiMessageSequence sequence;
+    Synthesiser synth;
+    MidiMessageSequence sequence;
 
     double mySampleRate;
     int samplesPerBlock;

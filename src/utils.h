@@ -8,12 +8,43 @@
 
 #include "external/magic_enum.hpp"
 #include "juce_core/juce_core.h"
+#include "juce_gui_basics/juce_gui_basics.h"
+
+using namespace juce;
+
+// A function to convert a boolean string to a c++ boolean value
+// JUCE doesn't have a built-in function to do this
+inline bool stringToBool(const String& str)
+{
+    String lowerStr = str.toLowerCase();
+    if (lowerStr == "true" || lowerStr == "1" || lowerStr == "yes" || lowerStr == "y")
+        return true;
+    return false;
+}
+
+// TODO - move to gui/GUIUtils.h
+inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
+                                     Colour fallback = Colour(0xff4d4d4d)) noexcept
+{
+    if (auto* v4 = dynamic_cast<LookAndFeel_V4*>(&LookAndFeel::getDefaultLookAndFeel()))
+        return v4->getCurrentColourScheme().getUIColour(uiColour);
+
+    return fallback;
+}
 
 template <typename EnumType>
-inline juce::String enumToString(EnumType enumValue)
+inline String enumToString(EnumType enumValue)
 {
-    return juce::String(magic_enum::enum_name(enumValue).data());
+    return String(magic_enum::enum_name(enumValue).data());
 }
+
+enum DisplayMode
+{
+    Input,
+    Output,
+    Hybrid, // All functionality
+    Thumbnail // Reduced functionality
+};
 
 enum GradioEvents
 {
@@ -41,14 +72,14 @@ enum ModelStatus
     ERROR
 };
 
-struct Ctrl
+struct PyHarpComponentInfo
 {
-    juce::Uuid id { "" };
+    Uuid id { "" };
     std::string label { "" };
-    virtual ~Ctrl() = default; // virtual destructor
+    virtual ~PyHarpComponentInfo() = default; // virtual destructor
 };
 
-struct SliderCtrl : public Ctrl
+struct SliderInfo : public PyHarpComponentInfo
 {
     double minimum;
     double maximum;
@@ -56,34 +87,36 @@ struct SliderCtrl : public Ctrl
     double value;
 };
 
-struct TextBoxCtrl : public Ctrl
+struct TextBoxInfo : public PyHarpComponentInfo
 {
     std::string value;
 };
 
-struct AudioInCtrl : public Ctrl
+struct AudioTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
+    bool required;
 };
 
-struct MidiInCtrl : public Ctrl
+struct MidiTrackInfo : public PyHarpComponentInfo
 {
     std::string value;
+    bool required;
 };
 
-struct NumberBoxCtrl : public Ctrl
+struct NumberBoxInfo : public PyHarpComponentInfo
 {
     double min;
     double max;
     double value;
 };
 
-struct ToggleCtrl : public Ctrl
+struct ToggleInfo : public PyHarpComponentInfo
 {
     bool value;
 };
 
-struct ComboBoxCtrl : public Ctrl
+struct ComboBoxInfo : public PyHarpComponentInfo
 {
     std::vector<std::string> options;
     std::string value;
@@ -95,20 +128,20 @@ struct SpaceInfo
         GRADIO,
         HUGGINGFACE,
         LOCALHOST,
-        ERROR,
+        FAILED,
         EMPTY
     };
-    juce::String huggingface;
-    juce::String gradio;
-    juce::String userInput;
-    juce::String modelName;
-    juce::String userName;
-    juce::String error;
+    String huggingface;
+    String gradio;
+    String userInput;
+    String modelName;
+    String userName;
+    String error;
     Status status;
 
     SpaceInfo() : status(Status::EMPTY) {}
 
-    juce::String getStatusString() const
+    String getStatusString() const
     {
         switch (status)
         {
@@ -118,7 +151,7 @@ struct SpaceInfo
                 return "HuggingFace";
             case LOCALHOST:
                 return "Localhost";
-            case ERROR:
+            case FAILED:
                 return "Error";
             case EMPTY:
                 return "Empty";
@@ -126,9 +159,9 @@ struct SpaceInfo
                 return "Unknown";
         }
     }
-    juce::String toString()
+    String toString()
     {
-        juce::String str = "SpaceInfo: \n";
+        String str = "SpaceInfo: \n";
         str += "Huggingface: " + huggingface + "\n";
         str += "Gradio: " + gradio + "\n";
         str += "UserInput: " + userInput + "\n";
@@ -138,18 +171,30 @@ struct SpaceInfo
         str += "Error: " + error + "\n";
         return str;
     }
+
+    String getModelSlashUser() const
+    {
+        if (status == LOCALHOST)
+        {
+            return "localhost";
+        }
+        else
+        {
+            return userName + "/" + modelName;
+        }
+    }
 };
 
 struct OutputLabel
 {
     // required on pyharp side
     float t;
-    juce::String label;
+    String label;
     // optional on pyharp side
-    std::optional<juce::String> description;
+    std::optional<String> description;
     std::optional<float> duration;
     std::optional<int> color;
-    std::optional<juce::String> link;
+    std::optional<String> link;
     virtual ~OutputLabel() = default; // virtual destructor
 };
 
@@ -171,5 +216,8 @@ struct MidiLabel : public OutputLabel
     std::optional<float> pitch;
 };
 
-using CtrlList = std::vector<std::pair<juce::Uuid, std::shared_ptr<Ctrl>>>;
+using ComponentInfo = std::pair<Uuid, std::shared_ptr<PyHarpComponentInfo>>;
+using ComponentInfoMap = std::map<Uuid, std::shared_ptr<PyHarpComponentInfo>>;
+using ComponentInfoList = std::vector<ComponentInfo>;
+
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;

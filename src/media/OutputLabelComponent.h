@@ -7,10 +7,7 @@ using namespace juce;
 class TimeMarkerComponent : public Component
 {
 public:
-    TimeMarkerComponent(Colour clr = Colours::purple.withAlpha(0.8f))
-    {
-        color = clr;
-    }
+    TimeMarkerComponent(Colour clr = Colours::purple.withAlpha(0.8f)) { color = clr; }
 
     void setColor(Colour clr) { color = clr; }
 
@@ -27,9 +24,14 @@ private:
 class OutputLabelComponent : public Label
 {
 public:
-    OutputLabelComponent(double t, String lbl, double dur = 0.0, String dsc = "", Colour clr = Colours::purple.withAlpha(0.8f), String lnk = "");
+    OutputLabelComponent(double t,
+                         String lbl,
+                         double dur = 0.0,
+                         String dsc = "",
+                         Colour clr = Colours::purple.withAlpha(0.8f),
+                         String lnk = "");
     OutputLabelComponent(const OutputLabelComponent& other);
-    ~OutputLabelComponent();
+    ~OutputLabelComponent() override;
 
     void setDefaultAttributes();
 
@@ -38,8 +40,8 @@ public:
     void setDuration(double dur) { duration = dur; }
     void setDescription(String d) { description = d; }
     void setColor(Colour clr);
-    void setLink(String lnk) {link = lnk; }
-    void setIndex(int i) {processingIndex = i; }
+    void setLink(String lnk) { link = lnk; }
+    void setIndex(int i) { processingIndex = i; }
 
     double getTime() const { return time; }
     String getLabel() const { return label; }
@@ -51,13 +53,8 @@ public:
 
     float getTextWidth();
 
-    juce::MouseCursor getMouseCursor() override;
-    void mouseUp(const MouseEvent& e) override;
-    void mouseEnter(const MouseEvent& e) override;
-    void mouseExit(const MouseEvent& e) override;
-
     void setLeftMarkerBounds(Rectangle<int> b) { leftMarker.setBounds(b); }
-    void setRightMarkerBounds(Rectangle<int> b)  { rightMarker.setBounds(b); }
+    void setRightMarkerBounds(Rectangle<int> b) { rightMarker.setBounds(b); }
     void setDurationFillBounds(Rectangle<int> b) { durationFill.setBounds(b); }
 
     void addMarkersTo(Component* c);
@@ -76,6 +73,11 @@ protected:
     String link;
 
 private:
+    juce::MouseCursor getMouseCursor() override;
+    void mouseUp(const MouseEvent& e) override;
+    void mouseEnter(const MouseEvent& e) override;
+    void mouseExit(const MouseEvent& e) override;
+
     int processingIndex = 0;
 
     TimeMarkerComponent leftMarker;
@@ -93,11 +95,17 @@ public:
 class LabelOverlayComponent : public OutputLabelComponent
 {
 public:
-    LabelOverlayComponent(double t, String lbl, float y, double dur, String dsc, Colour clr, String lnk);
+    LabelOverlayComponent(double t,
+                          String lbl,
+                          float y,
+                          double dur,
+                          String dsc,
+                          Colour clr,
+                          String lnk);
     LabelOverlayComponent(const LabelOverlayComponent& other);
 
     static float amplitudeToRelativeY(float amplitude);
-    static float frequencyToRelativeY(float frequency);
+    //static float frequencyToRelativeY(float frequency);
     static float pitchToRelativeY(float pitch);
 
     void setRelativeY(float y) { relativeY = y; }

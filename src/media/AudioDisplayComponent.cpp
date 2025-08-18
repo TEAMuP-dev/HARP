@@ -1,15 +1,19 @@
 #include "AudioDisplayComponent.h"
 
-AudioDisplayComponent::AudioDisplayComponent()
+AudioDisplayComponent::AudioDisplayComponent() : AudioDisplayComponent("Audio Track") {}
+
+AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
+    : MediaDisplayComponent(name, req, fromDAW, mode)
 {
     thread.startThread(Thread::Priority::normal);
 
-    thumbnailComponent.addMouseListener(this, true);
-    addAndMakeVisible(thumbnailComponent);
-
+    // Need to repaint when visible range changes
     thumbnail.addChangeListener(this);
 
-    mediaHandlerInstructions =
+    thumbnailComponent.addMouseListener(this, true);
+    contentComponent.addAndMakeVisible(thumbnailComponent);
+
+    mediaInstructions =
         "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
 }
 
@@ -17,6 +21,7 @@ AudioDisplayComponent::~AudioDisplayComponent()
 {
     resetTransport();
 
+    thumbnailComponent.removeMouseListener(this);
     thumbnail.removeChangeListener(this);
 }
 
@@ -35,9 +40,12 @@ StringArray AudioDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-void AudioDisplayComponent::repositionContent()
+void AudioDisplayComponent::resized()
 {
-    thumbnailComponent.setBounds(getContentBounds());
+    MediaDisplayComponent::resized();
+
+    // Set thumbnail to fill entire media content area
+    thumbnailComponent.setBounds(contentComponent.getLocalBounds());
 }
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
@@ -79,17 +87,16 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 
     audioFileSource = std::make_unique<AudioFormatReaderSource>(reader.release(), true);
 
-    // ..and plug it into our transport source
     transportSource.setSource(
         audioFileSource.get(),
-        32768, // tells it to buffer this many samples ahead
-        &thread, // this is the background thread to use for reading-ahead
-        audioFileSource->getAudioFormatReader()->sampleRate); // allows for sample rate correction
+        32768, // Amount of samples to buffer ahead
+        &thread, // Thread to use for reading-ahead
+        audioFileSource->getAudioFormatReader()->sampleRate); // Allows for sample rate correction
 }
 
-void AudioDisplayComponent::resetDisplay()
+void AudioDisplayComponent::resetMedia()
 {
-    MediaDisplayComponent::resetTransport();
+    resetTransport();
 
     audioFileSource.reset();
     thumbnail.clear();

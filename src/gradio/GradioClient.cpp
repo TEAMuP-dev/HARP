@@ -65,7 +65,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected huggingface.co URL but could not parse user and "
                               "model. Too few parts in "
                               + spaceAddress;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -96,7 +96,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected hf.space URL but could not parse user and model. No "
                               "hyphen found in the subdomain: "
                               + subdomain;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -119,7 +119,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
             spaceInfo.error = "Detected user/model URL but could not parse user and model. "
                               "Too many/few slashes in "
                               + spaceAddress;
-            spaceInfo.status = SpaceInfo::Status::ERROR;
+            spaceInfo.status = SpaceInfo::Status::FAILED;
             error.devMessage = spaceInfo.error;
             return OpResult::fail(error);
         }
@@ -128,7 +128,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     {
         spaceInfo.error =
             "Invalid URL: " + spaceAddress + ". URL does not match any of the expected patterns.";
-        spaceInfo.status = SpaceInfo::Status::ERROR;
+        spaceInfo.status = SpaceInfo::Status::FAILED;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }
@@ -162,7 +162,7 @@ OpResult GradioClient::parseSpaceAddress(juce::String spaceAddress, SpaceInfo& s
     else
     {
         spaceInfo.error = "Unkown error while parsing the space address: " + spaceAddress;
-        spaceInfo.status = SpaceInfo::Status::ERROR;
+        spaceInfo.status = SpaceInfo::Status::FAILED;
         error.devMessage = spaceInfo.error;
         return OpResult::fail(error);
     }
@@ -389,7 +389,9 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     return OpResult::ok();
 }
 
-OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict)
+OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
+                                   juce::Array<juce::var>& outputComponents,
+                                   juce::DynamicObject& cardDict)
 {
     juce::String callID = "controls";
     juce::String eventID;
@@ -470,13 +472,21 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& ctrlList, juce::Dynam
         cardDict.setProperty(key.name, key.value);
     }
 
-    juce::Array<juce::var>* ctrlArray = obj->getProperty("ctrls").getArray();
-    if (ctrlArray == nullptr)
+    juce::Array<juce::var>* inputsArray = obj->getProperty("inputs").getArray();
+    if (inputsArray == nullptr)
     {
         error.devMessage = "Couldn't load the controls array/list from the controls response.";
         return OpResult::fail(error);
     }
-    ctrlList = *ctrlArray;
+    inputComponents = *inputsArray;
+
+    juce::Array<juce::var>* outputsArray = obj->getProperty("outputs").getArray();
+    if (outputsArray == nullptr)
+    {
+        error.devMessage = "Couldn't load the controls array/list from the controls response.";
+        return OpResult::fail(error);
+    }
+    outputComponents = *outputsArray;
 
     return result;
 }
@@ -492,6 +502,12 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     // Determine the local temporary directory for storing the downloaded file
     juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
     juce::String fileName = fileURL.getFileName();
+    // // Add a timestamp to the file name to avoid overwriting
+    // // Insert timestamp before the file extension using juce::File operations
+    // juce::String baseName = juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    // juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
+    // juce::String timestamp = "_" + juce::String(juce::Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
+    // fileName = baseName + timestamp + extension;
     juce::File downloadedFile = tempDir.getChildFile(fileName);
 
     // Create input stream to download the file

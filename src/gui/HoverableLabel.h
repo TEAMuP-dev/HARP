@@ -54,17 +54,17 @@ public:
         // setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack); // Reset background color
         // Call the exit callback if set
         if (onExit)
-            onExit(); 
+            onExit();
         repaint();
         // Call base class
-        Label::mouseExit(event); 
+        Label::mouseExit(event);
     }
 
     void mouseDown(const juce::MouseEvent& event) override
     {
         // Check if clicking over the text
         // and call the click callback if set
-        if (hitTest(event.x, event.y) && onClick) 
+        if (hitTest(event.x, event.y) && onClick)
             onClick();
         Label::mouseDown(event);
     }
@@ -89,7 +89,10 @@ private:
         auto x_offset = (getBounds().getWidth() - textWidth) / 2;
         auto y_offset = (getBounds().getHeight() - textHeight) / 2;
 
-        return juce::Rectangle<int>(getX() + x_offset, getY() + y_offset, textWidth, textHeight);
+        return juce::Rectangle<int>(getX() + static_cast<int>(x_offset), 
+                                    getY() + static_cast<int>(y_offset), 
+                                    static_cast<int>(textWidth), 
+                                    static_cast<int>(textHeight));
     }
 
     juce::Colour originalTextColor;

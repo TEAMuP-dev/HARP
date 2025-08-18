@@ -4,18 +4,31 @@
 #include "juce_gui_basics/juce_gui_basics.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
+#include "../gui/MultiButton.h"
 #include "../utils.h"
 #include "OutputLabelComponent.h"
 
 using namespace juce;
 
-class OverheadPanel : public Component
+class ColorablePanel : public Component
 {
 public:
-    void paint(Graphics& g) override
+    ColorablePanel(Colour color = Colours::darkgrey)
+        : defaultColor(color), backgroundColor(color) {};
+
+    void paint(Graphics& g) override { g.fillAll(backgroundColor); }
+
+    void setColor() { setColor(defaultColor); }
+
+    void setColor(Colour newColor)
     {
-        g.fillAll(Colours::darkgrey.darker());
+        backgroundColor = newColor;
+        repaint();
     }
+
+private:
+    Colour defaultColor;
+    Colour backgroundColor;
 };
 
 class MediaDisplayComponent : public Component,
@@ -28,117 +41,103 @@ class MediaDisplayComponent : public Component,
 {
 public:
     MediaDisplayComponent();
-    ~MediaDisplayComponent();
+    MediaDisplayComponent(String name,
+                          bool req = true,
+                          bool fromDAW = false,
+                          DisplayMode mode = DisplayMode::Hybrid);
+    ~MediaDisplayComponent() override;
 
+    static StringArray getSupportedExtensions();
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-    virtual void repositionOverheadPanel();
-    Rectangle<int> getContentBounds();
-    virtual void repositionContent() {};
-    virtual void repositionScrollBar();
-
-    virtual Component* getMediaComponent() { return this; }
-    virtual float getMediaXPos() { return 0.0f; }
-    float getMediaHeight() { return getMediaComponent()->getHeight(); }
-    float getMediaWidth() { return getMediaComponent()->getWidth(); }
-
     void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override;
+    void setTrackName(String name);
+    String getTrackName() { return trackName; }
+
+    bool isRequired() const { return required; }
+    bool isLinkedToDAW() const { return linkedToDAW; }
+
+    bool isInputTrack() { return (displayMode == 0) || isHybridTrack(); }
+    bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
+    bool isHybridTrack() { return displayMode == 2; }
+    bool isThumbnailTrack() { return displayMode == 3; }
+
+    void setDisplayID(Uuid id) { displayID = id; }
+    Uuid getDisplayID() { return displayID; }
+
+    String getMediaInstructions();
+
+    void resetDisplay(); // Reset all state and media
+    void initializeDisplay(const URL& filePath); // Initialize new display
+    void updateDisplay(const URL& filePath); // Add new file to existing display
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
-    void resetMedia();
+    URL getOriginalFilePath() { return originalFilePath; }
 
-    void setupDisplay(const URL& filePath);
-    void updateDisplay(const URL& filePath);
+    //void addNewTempFile(); // Create working temp file to modify instead of current or original
+    //bool iteratePreviousTempFile();
+    //bool iterateNextTempFile();
 
-    URL getTargetFilePath() { return targetFilePath; }
+    //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
+    //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
-    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    //void clearFutureTempFiles(); // Prune temp files after currently selected index
+    //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
-    void addNewTempFile();
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
-    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
+    bool isDuplicateFile(const URL& fileParth);
 
-    bool iteratePreviousTempFile();
-    bool iterateNextTempFile();
+    void saveFileCallback();
 
-    void clearFutureTempFiles();
-
-    void overwriteTarget();
-
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
-
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
-
-    URL getDroppedFilePath() { return droppedFilePath; }
-
-    bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
-
-    void clearDroppedFile() { droppedFilePath = URL(); }
+    virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
+    virtual float getPixelsPerSecond();
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
-    void mouseDrag(const MouseEvent& e) override;
-    void mouseUp(const MouseEvent& e) override;
-
-    virtual bool isPlaying() { return transportSource.isPlaying(); }
-    virtual void startPlaying() { transportSource.start(); }
-    virtual void stopPlaying() { transportSource.stop(); }
+    void selectTrack();
+    void deselectTrack();
+    bool isCurrentlySelected() { return isSelected; }
 
     void start();
     void stop();
 
-    virtual double getTotalLengthInSecs() = 0;
-    virtual double getTimeAtOrigin() { return 0.0; }
-    virtual float getPixelsPerSecond();
+    virtual bool isPlaying() { return transportSource.isPlaying(); }
 
-    virtual void updateVisibleRange(Range<double> r);
-
-    String getMediaHandlerInstructions();
-
-    void addLabels(LabelList& labels);
-    void clearLabels(int processingIdxCutoff = 0);
-
-    void addLabelOverlay(LabelOverlayComponent* l);
-    void removeLabelOverlay(LabelOverlayComponent* l);
+    int getNumOverheadLabels();
 
     void addOverheadLabel(OverheadLabelComponent* l);
     void removeOverheadLabel(OverheadLabelComponent* l);
 
-    int getNumOverheadLabels();
+    void addLabelOverlay(LabelOverlayComponent* l);
+    void removeLabelOverlay(LabelOverlayComponent* l);
+
+    void addLabels(LabelList& labels);
+    void clearLabels(int processingIdxCutoff = 0);
 
 protected:
-    void setNewTarget(URL filePath);
-
-    double mediaXToTime(const float x);
-    float timeToMediaX(const double t);
-    float mediaXToDisplayX(const float mX);
-
     void resetTransport();
 
-    void horizontalMove(float deltaX);
+    virtual void updateVisibleRange(Range<double> r);
 
-    void horizontalZoom(float deltaZoom, float scrollPosX);
+    virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
 
-    const int textSpacing = 2;
-    const int minFontSize = 10;
-    const int labelHeight = 20;
+    // Media (audio or MIDI) content area
+    Component contentComponent;
+
+    String mediaInstructions;
 
     Range<double> visibleRange;
-
-    OverheadPanel overheadPanel;
-    ScrollBar horizontalScrollBar { false };
-
-    String mediaHandlerInstructions;
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -147,33 +146,128 @@ protected:
     AudioTransportSource transportSource;
 
 private:
-    void resetPaths();
+    void initializeButtons();
 
-    virtual void resetDisplay() = 0;
+    void timerCallback() override;
+    virtual void visibleRangeCallback() { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+
+    virtual void resetMedia() = 0;
+    void resetPaths();
+    void resetScrollBar();
+    void resetButtonState();
+
+    void setOriginalFilePath(URL filePath);
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
-    int correctToBounds(float x, float width);
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
-    void updateCursorPosition();
+    void chooseFileCallback();
 
-    void timerCallback() override;
+    virtual Component* getMediaComponent() { return this; }
+
+    virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
+    virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
+    virtual float getVerticalControlsWidth() { return 0.0f; }
+
+    virtual float getMediaXPos() { return 0.0f; }
+    double mediaXToTime(const float mX);
+    float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
+    virtual float mediaYToDisplayY(const float mY) { return mY; }
+    int correctMediaXBounds(float mX, float width);
+
+    void horizontalMove(double deltaT);
+    void horizontalZoom(double deltaZoom, double scrollPosT);
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+    void unlinkFromDAW();
 
-    URL targetFilePath;
-    URL droppedFilePath;
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
 
+    void updateCursorPosition();
+
+    void mouseEnter(const MouseEvent& /*e*/) override;
+    void mouseExit(const MouseEvent& /*e*/) override;
+
+    void mouseDown(const MouseEvent& e) override;
+    void mouseDrag(const MouseEvent& e) override;
+    void mouseUp(const MouseEvent& e) override;
+    void mouseDoubleClick(const MouseEvent& e) override;
+
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
+
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
+
+    Colour defaultColor = Colours::darkgrey;
+    Colour graphicsColor = Colours::lightblue;
+    Colour cursorColor = Colours::white.withAlpha(0.85f);
+    Colour selectionColor = Colours::darkblue.brighter();
+    Colour linkedToDAWColor = Colours::purple.withAlpha(0.5f);
+    Colour overheadPanelColor = Colours::darkgrey.darker();
+
+    // Panel with labels / buttons
+    ColorablePanel headerComponent { defaultColor };
+    // Buttons area subcomponent
+    Component buttonsComponent;
+    // Media + overhead panel (if any)
+    Component mediaAreaContainer;
+
+    // Header sub-components
+    Label trackNameLabel;
+    MultiButton playStopButton;
+    MultiButton::Mode playButtonActiveInfo;
+    MultiButton::Mode playButtonInactiveInfo;
+    MultiButton::Mode stopButtonInfo;
+    MultiButton chooseFileButton;
+    MultiButton::Mode chooseFileButtonInfo;
+    MultiButton saveFileButton;
+    MultiButton::Mode saveFileButtonActiveInfo;
+    MultiButton::Mode saveFileButtonInactiveInfo;
+
+    // Panel displaying overhead labels
+    ColorablePanel overheadPanel { overheadPanelColor };
+
+    // Flex for whole display
+    FlexBox mainFlexBox;
+    // Flex for header area (label and buttons)
+    FlexBox headerFlexBox;
+    // Flex for header buttons
+    FlexBox buttonsFlexBox;
+    // Flex for media / overhead panel (if any)
+    FlexBox mediaAreaFlexBox;
+
+    Uuid displayID;
+    String trackName;
+    const bool required = true;
+    bool linkedToDAW = false;
+    const DisplayMode displayMode;
+
+    bool isSelected = false;
+
+    URL originalFilePath;
     int currentTempFileIdx;
     Array<URL> tempFilePaths;
 
-    const float cursorWidth = 1.5f;
-    DrawableRectangle currentPositionMarker;
+    std::unique_ptr<FileChooser> chooseFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
 
-    double currentHorizontalZoomFactor;
+    double horizontalZoomFactor;
+    ScrollBar horizontalScrollBar { false };
+
+    const float cursorWidth = 1.5f;
+    DrawableRectangle currentPositionCursor;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
+
+    bool isLabelRepositioningScheduled = false;
+
+    SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<StatusBox> statusBox;
 };
