@@ -323,6 +323,7 @@
                      auto audio_in = std::make_shared<AudioTrackInfo>();
                      audio_in->id = juce::Uuid();
                      audio_in->label = pyharpComponent["label"].toString().toStdString();
+                     audio_in->info = pyharpComponent["info"].toString().toStdString();
                      audio_in->required = stringToBool(pyharpComponent["required"].toString());
                      inputTracksInfo.push_back({ audio_in->id, audio_in });
                      uuidsInOrder.push_back(audio_in->id);
@@ -333,6 +334,7 @@
                      auto midi_in = std::make_shared<MidiTrackInfo>();
                      midi_in->id = juce::Uuid();
                      midi_in->label = pyharpComponent["label"].toString().toStdString();
+                     midi_in->info = pyharpComponent["info"].toString().toStdString();
                      midi_in->required = stringToBool(pyharpComponent["required"].toString());
                      inputTracksInfo.push_back({ midi_in->id, midi_in });
                      uuidsInOrder.push_back(midi_in->id);
@@ -343,6 +345,7 @@
                      auto slider = std::make_shared<SliderInfo>();
                      slider->id = juce::Uuid();
                      slider->label = pyharpComponent["label"].toString().toStdString();
+                     slider->info = pyharpComponent["info"].toString().toStdString();
                      slider->minimum = pyharpComponent["minimum"].toString().getFloatValue();
                      slider->maximum = pyharpComponent["maximum"].toString().getFloatValue();
                      slider->step = pyharpComponent["step"].toString().getFloatValue();
@@ -357,6 +360,7 @@
                      auto text = std::make_shared<TextBoxInfo>();
                      text->id = juce::Uuid();
                      text->label = pyharpComponent["label"].toString().toStdString();
+                     text->info = pyharpComponent["info"].toString().toStdString();
                      text->value = pyharpComponent["value"].toString().toStdString();
  
                      controlsInfo.push_back({ text->id, text });
@@ -368,6 +372,7 @@
                      auto number_box = std::make_shared<NumberBoxInfo>();
                      number_box->id = juce::Uuid();
                      number_box->label = pyharpComponent["label"].toString().toStdString();
+                     number_box->info = pyharpComponent["info"].toString().toStdString();
                      number_box->min = pyharpComponent["min"].toString().getFloatValue();
                      number_box->max = pyharpComponent["max"].toString().getFloatValue();
                      number_box->value = pyharpComponent["value"].toString().getFloatValue();
@@ -381,6 +386,7 @@
                      auto toggle = std::make_shared<ToggleInfo>();
                      toggle->id = juce::Uuid();
                      toggle->label = pyharpComponent["label"].toString().toStdString();
+                     toggle->info = pyharpComponent["info"].toString().toStdString();
                      toggle->value = ("1" == pyharpComponent["value"].toString().toStdString());
                      controlsInfo.push_back({ toggle->id, toggle });
                      uuidsInOrder.push_back(toggle->id);
@@ -391,6 +397,7 @@
                      auto dropdown = std::make_shared<ComboBoxInfo>();
                      dropdown->id = juce::Uuid();
                      dropdown->label = pyharpComponent["label"].toString().toStdString();
+                     dropdown->info = pyharpComponent["info"].toString().toStdString();
                      juce::Array<juce::var>* choices = pyharpComponent["choices"].getArray();
                      if (choices == nullptr)
                      {
