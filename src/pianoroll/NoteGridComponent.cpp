@@ -1,5 +1,3 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "NoteGridComponent.hpp"
 
 NoteGridComponent::NoteGridComponent()
@@ -8,7 +6,46 @@ NoteGridComponent::NoteGridComponent()
     lengthInSeconds = 0.0;
 }
 
-NoteGridComponent::~NoteGridComponent() { resetNotes(); }
+NoteGridComponent::~NoteGridComponent()
+{
+    //resetNotes();
+}
+
+void NoteGridComponent::paint(Graphics& g)
+{
+    // Paint key background
+    KeyboardComponent::paint(g);
+
+    // Paint all notes
+    for (auto n : midiNotes)
+    {
+        const float noteWidth = static_cast<float>(n->duration * pixelsPerSecond);
+        const float noteHeight = getKeyHeight();
+
+        const float noteXPos = static_cast<float>(n->startTime * pixelsPerSecond);
+        const float noteYPos = static_cast<float>(getHeight()) - ((n->noteNumber) * noteHeight);
+
+        Rectangle<float> bounds(noteXPos, noteYPos, jmax(3.0f, noteWidth), noteHeight - 1.0f);
+
+        // Note fill
+        g.setColour(Colours::red.brighter().withAlpha(0.75f));
+        g.fillRect(bounds.toNearestInt());
+
+        if ((noteWidth >= 5) & (noteHeight >= 8))
+        {
+            const float maxVelocityWidth = static_cast<float>(noteWidth - 4);
+            const float verticalOffset = static_cast<float>(noteHeight) * 0.5f - 2.0f;
+            const float velocityHeight = 4.0f;
+
+            // Velocity fill
+            g.setColour(Colours::red.brighter().brighter());
+            g.fillRect(bounds.translated(2, verticalOffset)
+                           .withWidth(maxVelocityWidth * n->velocity / 127.0f)
+                           .withHeight(velocityHeight)
+                           .toNearestInt());
+        }
+    }
+}
 
 void NoteGridComponent::setResolution(double pps)
 {
@@ -17,9 +54,9 @@ void NoteGridComponent::setResolution(double pps)
     updateSize();
 }
 
-void NoteGridComponent::updateLength(double l)
+void NoteGridComponent::setLength(double len)
 {
-    lengthInSeconds = l;
+    lengthInSeconds = len;
 
     updateSize();
 }
@@ -29,32 +66,11 @@ void NoteGridComponent::updateSize()
     setSize(static_cast<int>(pixelsPerSecond * lengthInSeconds), getHeight());
 }
 
-void NoteGridComponent::resized()
+void NoteGridComponent::insertNote(MidiNote n)
 {
-    const float keyHeight = getKeyHeight();
-
-    for (auto n : midiNotes)
-    {
-        const float xPos = static_cast<float>(n->getStartTime() * pixelsPerSecond);
-        const float width = static_cast<float>(n->getNoteLength() * pixelsPerSecond);
-
-        const float yPos =
-            static_cast<float>(getHeight()) - ((1.0f + n->getNoteNumber()) * keyHeight);
-        juce::Rectangle<float> bounds(xPos, yPos, jmax(3.0f, width), keyHeight);
-        n->setBounds(bounds.toNearestInt());
-        // n->setBounds(xPos, yPos, jmax(3.0f, width), keyHeight);
-    }
-}
-
-void NoteGridComponent::insertNote(MidiNoteComponent n)
-{
-    MidiNoteComponent* note = new MidiNoteComponent(n);
-    note->setInterceptsMouseClicks(false, false);
+    MidiNote* note = new MidiNote(n);
     midiNotes.add(note);
 
-    addAndMakeVisible(note);
-
-    resized();
     repaint();
 }
 
@@ -62,14 +78,11 @@ void NoteGridComponent::resetNotes()
 {
     for (int i = 0; i < midiNotes.size(); i++)
     {
-        MidiNoteComponent* note = midiNotes.getReference(i);
-        removeChildComponent(note);
-
+        MidiNote* note = midiNotes.getReference(i);
         delete note;
     }
 
     midiNotes.clear();
 
-    resized();
     repaint();
 }

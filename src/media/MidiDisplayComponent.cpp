@@ -2,15 +2,16 @@
 
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
-MidiDisplayComponent::MidiDisplayComponent(String trackName, bool required)
-    : MediaDisplayComponent(trackName, required)
+MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
+    : MediaDisplayComponent(name, req, fromDAW, mode)
 {
-    mediaComponent.addAndMakeVisible(pianoRoll);
-    pianoRoll.addMouseListener(this, true);
+    // Need to reposition labels after vertical zoom or scroll
     pianoRoll.addChangeListener(this);
-    // addAndMakeVisible(pianoRoll);
+    // Support for drag and drop
+    pianoRoll.addMouseListener(this, true);
+    contentComponent.addAndMakeVisible(pianoRoll);
 
-    mediaHandlerInstructions =
+    mediaInstructions =
         "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
 }
 
@@ -32,64 +33,43 @@ StringArray MidiDisplayComponent::getSupportedExtensions()
     return extensions;
 }
 
-// void MidiDisplayComponent::repositionOverheadPanel()
-// {
-//     Rectangle<int> overheadPanelArea =
-//         getLocalBounds().removeFromTop(labelHeight + 2 * controlSpacing + 2);
-//     overheadPanelArea = overheadPanelArea.removeFromRight(overheadPanelArea.getWidth()
-//                                                           - pianoRoll.getKeyboardWidth()
-//                                                           - pianoRoll.getPianoRollSpacing());
-//     overheadPanelArea = overheadPanelArea.removeFromLeft(overheadPanelArea.getWidth()
-//                                                          - 2 * pianoRoll.getScrollBarSize()
-//                                                          - 4 * pianoRoll.getScrollBarSpacing());
+void MidiDisplayComponent::resized()
+{
+    MediaDisplayComponent::resized();
 
-//     overheadPanel.setBounds(overheadPanelArea.reduced(controlSpacing));
-// }
-
-// void MidiDisplayComponent::repositionContent() { pianoRoll.setBounds(getContentBounds()); }
-
-// void MidiDisplayComponent::repositionScrollBar()
-// {
-//     Rectangle<int> scrollBarArea =
-//         getLocalBounds().removeFromBottom(scrollBarSize + 2 * controlSpacing);
-//     scrollBarArea = scrollBarArea.removeFromRight(
-//         scrollBarArea.getWidth() - pianoRoll.getKeyboardWidth() - pianoRoll.getPianoRollSpacing());
-//     scrollBarArea =
-//         scrollBarArea.removeFromLeft(scrollBarArea.getWidth() - 2 * pianoRoll.getScrollBarSize()
-//                                      - 4 * pianoRoll.getScrollBarSpacing());
-
-//     horizontalScrollBar.setBounds(scrollBarArea.reduced(controlSpacing));
-// }
+    pianoRoll.setBounds(contentComponent.getBounds().withY(0));
+}
 
 void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 {
-    DBG("Loading MIDI filePath: " << filePath.toString(true));
-    // Create the local file this URL points to
     File file = filePath.getLocalFile();
-    DBG("Loading MIDI file: " << file.getFullPathName());
-    std::unique_ptr<juce::FileInputStream> fileStream(file.createInputStream());
 
-    // Read the MIDI file from the File object
+    std::unique_ptr<FileInputStream> fileStream(file.createInputStream());
+
     MidiFile midiFile;
 
     if (! midiFile.readFrom(*fileStream))
     {
-        DBG("Failed to read MIDI data from file.");
+        DBG("MidiDisplayComponent::loadMediaFile: Error reading MIDI from file "
+            << file.getFullPathName() << ".");
+        // TODO - better error handing
+        //jassertfalse;
+        //return;
     }
 
     midiFile.convertTimestampTicksToSeconds();
 
     totalLengthInSecs = midiFile.getLastTimestamp();
 
-    DBG("Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+    //DBG("MidiDisplayComponent::loadMediaFile: Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
-    juce::MidiMessageSequence allTracks;
+    MidiMessageSequence allTracks;
 
     for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx)
     {
-        const juce::MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
+        const MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
 
         if (constTrack != nullptr)
         {
@@ -98,8 +78,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
         }
     }
 
-    // A vector to keep all the midi numbers
-    // we'll use that find the median note
+    // Keep track of note MIDI numbers
     std::vector<int> midiNumbers;
 
     for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx)
@@ -109,22 +88,23 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
         double startTime = midiEvent->message.getTimeStamp();
 
-        DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+        //DBG("MidiDisplayComponent::loadMediaFile: Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
 
         if (midiMessage.isNoteOn())
         {
+            int noteChannel = midiMessage.getChannel();
             int noteNumber = midiMessage.getNoteNumber();
             int velocity = midiMessage.getVelocity();
-            int noteChannel = midiMessage.getChannel();
 
             midiNumbers.push_back(noteNumber);
+
             double duration = 0;
 
             for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx)
             {
                 const auto offEvent = allTracks.getEventPointer(offIdx);
 
-                // Find the matching note off event
+                // Find matching note offset event
                 if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber
                     && offEvent->message.getChannel() == noteChannel)
                 {
@@ -134,121 +114,130 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
                 }
             }
 
-            // Create a component for each for each note
-            MidiNoteComponent n = MidiNoteComponent(static_cast<unsigned char>(noteNumber),
-                                                    static_cast<unsigned char>(velocity),
-                                                    startTime,
-                                                    duration);
+            // Create component for each for each note and add to pianoroll
+            MidiNote n = MidiNote(static_cast<unsigned char>(noteNumber),
+                                  startTime,
+                                  duration,
+                                  static_cast<unsigned char>(velocity));
             pianoRoll.insertNote(n);
         }
     }
 
-    // Find the median note
+    // Compute median and standard deviation of MIDI numbers
     std::sort(midiNumbers.begin(), midiNumbers.end());
-    medianMidi = midiNumbers[midiNumbers.size() / 2];
-    // Find std
+
+    int numNotes = midiNumbers.size();
+
+    medianMidi = midiNumbers[numNotes / 2];
+
+    if (! numNotes % 2)
+    {
+        medianMidi += midiNumbers[numNotes / 2 - 1];
+        medianMidi /= 2;
+    }
+
     float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
-    float mean = sum / static_cast<float>(midiNumbers.size());
+    float mean = sum / static_cast<float>(numNotes);
     float sq_sum =
         std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
-    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(midiNumbers.size()) - mean * mean);
+
+    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(numNotes) - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
+}
+
+void MidiDisplayComponent::resetMedia()
+{
+    resetTransport();
+
+    pianoRoll.resetNotes();
+    pianoRoll.resizeNoteGrid(0.0);
+
+    totalLengthInSecs = 0.0;
+}
+
+void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
+{
+    // Auto-center pianoRoll vertically about median note
+    pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
+}
+
+float MidiDisplayComponent::getVerticalControlsWidth()
+{
+    return static_cast<float>(pianoRoll.getControlsWidth());
+}
+
+float MidiDisplayComponent::getMediaXPos()
+{
+    return static_cast<float>(pianoRoll.getKeyboardWidth() + pianoRoll.getPianoRollSpacing());
+}
+
+float MidiDisplayComponent::mediaYToDisplayY(const float mY)
+{
+    float visibleStartY =
+        static_cast<float>(pianoRoll.getVisibleKeyRange().getStart()) * pianoRoll.getKeyHeight();
+
+    float dY = mY - visibleStartY;
+
+    return dY;
+}
+
+void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
+{
+    MediaDisplayComponent::updateVisibleRange(newRange);
+
+    pianoRoll.updateVisibleMediaRange(newRange);
+}
+
+void MidiDisplayComponent::verticalMove(double deltaY)
+{
+    pianoRoll.verticalMouseWheelMoveEvent(deltaY);
+}
+
+void MidiDisplayComponent::verticalZoom(double deltaZoom)
+{
+    pianoRoll.verticalMouseWheelZoomEvent(deltaZoom);
+}
+
+void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
+{
+#if (JUCE_MAC)
+    bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
+#else
+    bool commandMod = evt.mods.isCtrlDown();
+#endif
+    bool shiftMod = evt.mods.isShiftDown();
+
+    if (! isThumbnailTrack() && commandMod)
+    {
+        if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
+        {
+            if (shiftMod)
+            {
+                verticalMove(-static_cast<double>(wheel.deltaY));
+            }
+            else
+            {
+                verticalZoom(static_cast<double>(wheel.deltaY) / 2.0);
+            }
+        }
+        else
+        {
+            // Do nothing
+        }
+    }
+    else
+    {
+        if (getTotalLengthInSecs() > 0.0)
+        {
+            MediaDisplayComponent::mouseWheelMove(evt, wheel);
+        }
+    }
 }
 
 void MidiDisplayComponent::startPlaying()
 {
     synthAudioSource.resetNotes();
     transportSource.start();
-}
-
-void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
-{
-    pianoRoll.updateVisibleMediaRange(newRange);
-    MediaDisplayComponent::updateVisibleRange(newRange);
-}
-
-void MidiDisplayComponent::resized()
-{
-    MediaDisplayComponent::resized();
-    pianoRoll.setBounds(mediaComponent.getBounds());
-}
-
-void MidiDisplayComponent::resetDisplay()
-{
-    MediaDisplayComponent::resetTransport();
-
-    pianoRoll.resetNotes();
-    pianoRoll.resizeNoteGrid(0.0);
-}
-
-void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
-{
-    // Auto-center the pianoRoll viewbox on the median note
-    pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
-}
-
-void MidiDisplayComponent::verticalMove(float deltaY)
-{
-    pianoRoll.verticalMouseWheelMoveEvent(deltaY);
-}
-
-void MidiDisplayComponent::verticalZoom(float deltaZoom, float scrollPosY)
-{
-    pianoRoll.verticalMouseWheelZoomEvent(deltaZoom, scrollPosY);
-}
-
-void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
-{
-    // DBG("Mouse wheel moved: deltaX=" << wheel.deltaX << ", deltaY=" << wheel.deltaY << ", scrollPos:" << evt.position.getX());
-
-    if (getTotalLengthInSecs() > 0.0)
-    {
-        bool isCmdPressed = evt.mods.isCommandDown(); // Command key
-        // bool isShiftPressed = evt.mods.isShiftDown(); // Shift key
-        bool isCtrlPressed = evt.mods.isCtrlDown(); // Control key
-#if (JUCE_MAC)
-        bool zoomMod = isCmdPressed;
-#else
-        bool zoomMod = isCtrlPressed;
-#endif
-
-        auto totalLength = visibleRange.getLength();
-        auto visibleStart = visibleRange.getStart();
-        auto scrollTime = mediaXToTime(evt.position.getX());
-        DBG("Visible range: (" << visibleStart << ", " << visibleStart + totalLength
-                               << ") Scrolled at time: " << scrollTime);
-
-        if (zoomMod)
-        {
-            if (std::abs(wheel.deltaX) > 1 * std::abs(wheel.deltaY))
-            {
-                // Horizontal scroll when using 2-finger swipe in macbook trackpad
-                horizontalZoom(wheel.deltaX, (float) scrollTime);
-            }
-            else if (std::abs(wheel.deltaY) > 1 * std::abs(wheel.deltaX))
-            {
-                // Vertical scroll
-                verticalZoom(wheel.deltaY, (float) scrollTime);
-            }
-            else
-            {
-                // Do nothing
-            }
-        }
-        else
-        {
-            if (std::abs(wheel.deltaX) > 0)
-            {
-                // Horizontal scroll when using 2-finger swipe in macbook trackpad
-                horizontalMove(wheel.deltaX);
-            }
-            if (std::abs(wheel.deltaY) > 0)
-            {
-                verticalMove(-wheel.deltaY);
-            }
-        }
-        repaint();
-    }
 }

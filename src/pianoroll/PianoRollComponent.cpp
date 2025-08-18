@@ -1,31 +1,32 @@
-// Adapted from https://github.com/Sjhunt93/Piano-Roll-Editor
-
 #include "PianoRollComponent.hpp"
 
-PianoRollComponent::PianoRollComponent(int _keyboardWidth,
-                                       int _pianoRollSpacing,
-                                       int _scrollBarSize,
-                                       int _scrollBarSpacing)
+PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, bool hk, bool hC)
+    : keyboardWidth(kbw),
+      pianoRollSpacing(prs),
+      scrollBarSize(sbsz),
+      scrollBarSpacing(sbsp),
+      hideKeys(hk),
+      hideControls(hC)
 {
-    keyboardWidth = _keyboardWidth;
-    pianoRollSpacing = _pianoRollSpacing;
-    scrollBarSize = _scrollBarSize;
-    scrollBarSpacing = _scrollBarSpacing;
+    addAndMakeVisible(keyboardContainer);
+    keyboardContainer.setViewedComponent(&keyboard, false);
+    keyboardContainer.setScrollBarsShown(false, false);
 
-    addAndMakeVisible(keyboard);
     addAndMakeVisible(noteGridContainer);
-    noteGridContainer.addAndMakeVisible(noteGrid);
+    noteGridContainer.setViewedComponent(&noteGrid, false);
+    noteGridContainer.setScrollBarsShown(false, false);
+    noteGridContainer.setInterceptsMouseClicks(true, false);
+    noteGrid.setInterceptsMouseClicks(false, false);
 
     addAndMakeVisible(verticalScrollBar);
     verticalScrollBar.setAutoHide(false);
     verticalScrollBar.addListener(this);
-
     verticalScrollBar.setRangeLimits(fullKeyRange);
-    updateVisibleKeyRange({ 0.0, (double) minKeysVisible });
+    updateVisibleKeyRange({ 0.0, static_cast<double>(minKeysVisible) });
 
     addAndMakeVisible(verticalZoomSlider);
     verticalZoomSlider.setRange(0.0, 1.0, 0.0);
-    verticalZoomSlider.setSkewFactor(2);
+    verticalZoomSlider.setSkewFactor(2.0);
     verticalZoomSlider.setValue(1.0);
     verticalZoomSlider.onValueChange = [this]
     { visibleKeyRangeZoom(verticalZoomSlider.getValue()); };
@@ -33,65 +34,91 @@ PianoRollComponent::PianoRollComponent(int _keyboardWidth,
     resizeNoteGrid(0.0);
 }
 
-PianoRollComponent::~PianoRollComponent() { resetNotes(); }
-
-void PianoRollComponent::paint(Graphics& /*g*/)
+PianoRollComponent::~PianoRollComponent()
 {
-    double keysVisible = zoomToKeysVisible(verticalZoomSlider.getValue());
-    double keyHeight = getHeight() / keysVisible;
-
-    keyboard.setSize(keyboard.getWidth(), static_cast<int>(128.0 * keyHeight));
-    noteGrid.setSize(noteGrid.getWidth(), static_cast<int>(128.0 * keyHeight));
-
-    double pixelsPerSecond;
-
-    if (visibleMediaRange.getLength() > 0)
-    {
-        pixelsPerSecond = getPianoRollWidth() / visibleMediaRange.getLength();
-    }
-    else
-    {
-        pixelsPerSecond = 0;
-    }
-
-    noteGrid.setResolution(pixelsPerSecond);
-
-    double currYPosition = -visibleKeyRange.getStart() * keyHeight;
-    double currXPosition = -visibleMediaRange.getStart() * pixelsPerSecond;
-
-    keyboard.setTopLeftPosition(0, static_cast<int>(currYPosition));
-    noteGrid.setTopLeftPosition(static_cast<int>(currXPosition), static_cast<int>(currYPosition));
-
-    sendChangeMessage();
+    //resetNotes();
 }
 
 void PianoRollComponent::resized()
 {
-    keyboard.setBounds(0, 0, keyboardWidth, getHeight());
-    noteGridContainer.setBounds(
-        keyboardWidth + pianoRollSpacing, 0, getPianoRollWidth(), getHeight());
+    // Perform component resizing
+    keyboardContainer.setBounds(getLocalBounds().removeFromLeft(getKeyboardWidth()));
+    noteGridContainer.setBounds(getLocalBounds()
+                                    .withTrimmedLeft(getKeyboardWidth() + getPianoRollSpacing())
+                                    .removeFromLeft(getPianoRollContainerWidth()));
 
-    Rectangle<int> controlsArea =
-        getLocalBounds().removeFromRight(2 * scrollBarSize + 4 * scrollBarSpacing);
+    Rectangle<int> controlsArea = getLocalBounds().removeFromRight(getControlsWidth());
 
     verticalScrollBar.setBounds(controlsArea.removeFromLeft(scrollBarSize + 2 * scrollBarSpacing)
-                                    .reduced(scrollBarSpacing));
-    verticalZoomSlider.setBounds(controlsArea.removeFromRight(scrollBarSize + 2 * scrollBarSpacing)
-                                     .reduced(scrollBarSpacing));
+                                    .reduced(0, 2 * scrollBarSpacing)
+                                    .withTrimmedLeft(2 * scrollBarSpacing));
+    verticalZoomSlider.setBounds(
+        controlsArea.removeFromRight(static_cast<int>(1.5 * scrollBarSize)));
+
+    double keyHeight = getKeyHeight();
+
+    // Set size of keyboard and note grid according to key height
+    keyboard.setSize(getKeyboardWidth(), static_cast<int>(128.0 * keyHeight));
+    noteGrid.setSize(getPianoRollContainerWidth(), static_cast<int>(128.0 * keyHeight));
+
+    double pixelsPerSecond = 0.0;
+
+    if (visibleMediaRange.getLength() > 0)
+    {
+        // Compute current horizontal resolution based off of expected visible range
+        pixelsPerSecond = getPianoRollContainerWidth() / visibleMediaRange.getLength();
+    }
+
+    // Update horizontal pianoroll resolution
+    setResolution(pixelsPerSecond);
+
+    int currYPosition = static_cast<int>(visibleKeyRange.getStart() * getKeyHeight());
+    int currXPosition = static_cast<int>(visibleMediaRange.getStart() * getResolution());
+
+    keyboardContainer.setViewPosition(0, currYPosition);
+    noteGridContainer.setViewPosition(currXPosition, currYPosition);
 }
 
-void PianoRollComponent::setResolution(int pixelsPerSecond)
+int PianoRollComponent::getPianoRollContainerWidth()
 {
-    noteGrid.setResolution(pixelsPerSecond);
+    return jmax(0, getWidth() - getKeyboardWidth() - getPianoRollSpacing() - getControlsWidth());
+}
+
+int PianoRollComponent::getControlsWidth()
+{
+    return ! isHidingControls() ? static_cast<int>(2.5f * scrollBarSize) + 2 * scrollBarSpacing : 0;
+}
+
+float PianoRollComponent::getKeyHeight()
+{
+    // Determine key height based off of desired amount of keys visible
+    double keysVisible = zoomToKeysVisible(verticalZoomSlider.getValue());
+    double keyHeight = static_cast<double>(keyboardContainer.getHeight()) / keysVisible;
+
+    return keyHeight;
+}
+
+float PianoRollComponent::zoomToKeysVisible(double zoomFactor)
+{
+    return static_cast<float>(minKeysVisible)
+           + static_cast<float>(1.0 - zoomFactor)
+                 * static_cast<float>(maxKeysVisible - minKeysVisible);
+}
+
+double PianoRollComponent::keysVisibleToZoom(float numKeysVisible)
+{
+    return 1.0
+           - static_cast<double>(numKeysVisible - static_cast<float>(minKeysVisible))
+                 / static_cast<double>(maxKeysVisible - minKeysVisible);
 }
 
 void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
 {
-    noteGrid.updateLength(lengthInSecs);
+    noteGrid.setLength(lengthInSecs);
 
     if (lengthInSecs > 0)
     {
-        noteGrid.setResolution(getPianoRollWidth() / lengthInSecs);
+        noteGrid.setResolution(static_cast<double>(getPianoRollContainerWidth()) / lengthInSecs);
     }
     else
     {
@@ -99,17 +126,48 @@ void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
     }
 }
 
+void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
+{
+    visibleMediaRange = newRange;
+
+    resized();
+}
+
 void PianoRollComponent::updateVisibleKeyRange(Range<double> newRange)
 {
     visibleKeyRange = fullKeyRange.constrainRange(newRange);
     verticalScrollBar.setCurrentRange(visibleKeyRange);
-    DBG("visibleKeyRange=" << visibleKeyRange.getStart() << ", " << visibleKeyRange.getEnd());
-    // verticalScrollBar.
+
+    resized();
+
+    sendChangeMessage();
 }
 
-void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
+void PianoRollComponent::visibleKeyRangeZoom(double zoomFactor)
 {
-    visibleMediaRange = newRange;
+    double visibilityCenter = visibleKeyRange.getStart() + visibleKeyRange.getLength() / 2.0;
+
+    double keysVisible = zoomToKeysVisible(zoomFactor);
+    double visibilityRadius = keysVisible / 2.0;
+
+    Range<double> newRange = { visibilityCenter - visibilityRadius,
+                               visibilityCenter + visibilityRadius };
+
+    updateVisibleKeyRange(newRange);
+}
+
+void PianoRollComponent::verticalMouseWheelMoveEvent(double deltaY)
+{
+    double newStart = visibleKeyRange.getStart() + deltaY * visibleKeyRange.getLength();
+
+    updateVisibleKeyRange(Range<double>(newStart, newStart + visibleKeyRange.getLength()));
+}
+
+void PianoRollComponent::verticalMouseWheelZoomEvent(double deltaZoom)
+{
+    double currentZoomFactor = verticalZoomSlider.getValue();
+
+    verticalZoomSlider.setValue(jlimit(0.0, 1.0, currentZoomFactor + deltaZoom));
 }
 
 void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
@@ -121,63 +179,15 @@ void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
     }
 }
 
-void PianoRollComponent::visibleKeyRangeZoom(double amount)
-{
-    double visibilityCenter = visibleKeyRange.getStart() + visibleKeyRange.getLength() / 2.0;
-
-    double keysVisible = zoomToKeysVisible(amount);
-    double visibilityRadius = keysVisible / 2.0;
-
-    Range<double> newRange = { visibilityCenter - visibilityRadius,
-                               visibilityCenter + visibilityRadius };
-
-    updateVisibleKeyRange(newRange);
-}
-
-void PianoRollComponent::verticalMouseWheelMoveEvent(float deltaY)
-{
-    DBG("PianoRollComponent::verticalMouseWheelMoveEvent: deltaY=" << deltaY);
-    double newStart = visibleKeyRange.getStart() + deltaY * visibleKeyRange.getLength() / 1.0;
-    auto newRange = Range<double>(newStart, newStart + visibleKeyRange.getLength());
-    updateVisibleKeyRange(newRange);
-}
-
-void PianoRollComponent::verticalMouseWheelZoomEvent(float deltaZoom, float /*scrollPosY*/)
-{
-    // get the current value of the verticalZoomSlider
-    auto currentZoom = verticalZoomSlider.getValue();
-    // update the value of the verticalZoomSlider by the deltaZoom. jlimit ensures the value stays between 0 and 1
-    verticalZoomSlider.setValue(jlimit(0.0, 1.0, currentZoom + deltaZoom), dontSendNotification);
-}
-
 void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
 {
-    // make sure the range is less than pianoRoll.maxKeysVisible
-    // halfRange should be the minimum of stdDevMidi and maxKeysVisible/2
-    double halfRange = jmin(2 * stdDevMidi, (float) maxKeysVisible / 2);
-    double invertedMedian = 127.0 - medianMidi;
-    auto initialKeyRange = Range<double>(invertedMedian - halfRange, invertedMedian + halfRange);
-    updateVisibleKeyRange(initialKeyRange);
-    double zoomAmount = keysVisibleToZoom(halfRange * 2);
+    // Make sure vertical range is less than maximum keys visible
+    float halfRange = jmin(2.0f * stdDevMidi, static_cast<float>(maxKeysVisible / 2.0f));
+
+    double zoomAmount = keysVisibleToZoom(2.0f * halfRange);
+
     verticalZoomSlider.setValue(zoomAmount, dontSendNotification);
-}
-void PianoRollComponent::insertNote(MidiNoteComponent n) { noteGrid.insertNote(n); }
 
-void PianoRollComponent::resetNotes() { noteGrid.resetNotes(); }
-
-int PianoRollComponent::getPianoRollWidth()
-{
-    return jmax(0,
-                getWidth() - keyboardWidth - pianoRollSpacing
-                    - (2 * scrollBarSize + 4 * scrollBarSpacing));
-}
-
-double PianoRollComponent::zoomToKeysVisible(double zoomFactor)
-{
-    return minKeysVisible + (1.0 - zoomFactor) * (maxKeysVisible - minKeysVisible);
-}
-
-double PianoRollComponent::keysVisibleToZoom(double numKeysVisible)
-{
-    return 1.0 - (numKeysVisible - minKeysVisible) / (maxKeysVisible - minKeysVisible);
+    updateVisibleKeyRange(Range<double>((127.0 - medianMidi) - static_cast<double>(halfRange),
+                                        (127.0 - medianMidi) + static_cast<double>(halfRange)));
 }
