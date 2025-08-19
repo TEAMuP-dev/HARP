@@ -125,10 +125,10 @@ public:
         }
     }
 
-    void addExternalTrackFromFilePath(URL filePath)
+    void addTrackFromFilePath(URL filePath, bool fromDAW = false)
     {
         // TODO - is there an explicit way to check how HARP was invoked?
-        trackAreaWidget.addTrackFromFilePath(filePath, true);
+        trackAreaWidget.addTrackFromFilePath(filePath, fromDAW);
     }
 
     void addFileCallback()

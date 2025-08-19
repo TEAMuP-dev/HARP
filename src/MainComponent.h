@@ -145,10 +145,10 @@ public:
         if (menuName == "File")
         {
             menu.addCommandItem(&commandManager, CommandIDs::open);
-            menu.addCommandItem(&commandManager, CommandIDs::save);
+            //menu.addCommandItem(&commandManager, CommandIDs::save);
             menu.addCommandItem(&commandManager, CommandIDs::saveAs);
-            menu.addCommandItem(&commandManager, CommandIDs::undo);
-            menu.addCommandItem(&commandManager, CommandIDs::redo);
+            //menu.addCommandItem(&commandManager, CommandIDs::undo);
+            //menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
             // menu.addCommandItem (&commandManager, CommandIDs::settings);
             // menu.addSeparator()
@@ -156,7 +156,6 @@ public:
             menu.addSeparator();
             menu.addCommandItem(&commandManager, CommandIDs::loginHF);
             menu.addCommandItem(&commandManager, CommandIDs::loginStability);
-
         }
         else if (menuName == "View")
         {
@@ -178,9 +177,10 @@ public:
     void getAllCommands(Array<CommandID>& commands) override
     {
         const CommandID ids[] = {
-            CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::loginHF,
-            CommandIDs::about, CommandIDs::loginStability, CommandIDs::viewMediaClipboard };
+            CommandIDs::open,  CommandIDs::save,           CommandIDs::saveAs,
+            CommandIDs::undo,  CommandIDs::redo,           CommandIDs::loginHF,
+            CommandIDs::about, CommandIDs::loginStability, CommandIDs::viewMediaClipboard
+        };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
@@ -215,13 +215,15 @@ public:
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
             case CommandIDs::loginHF:
-                result.setInfo("Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
+                result.setInfo(
+                    "Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
                 break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
             case CommandIDs::loginStability:
-                result.setInfo("Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
+                result.setInfo(
+                    "Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
                 break;
             case CommandIDs::viewMediaClipboard:
                 result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
@@ -238,14 +240,14 @@ public:
                 DBG("Open command invoked");
                 openFileChooser();
                 break;
-            // case CommandIDs::save:
-            //     DBG("Save command invoked");
-            //     saveCallback();
-            //     break;
-            // case CommandIDs::saveAs:
-            //     DBG("Save As command invoked");
-            //     saveAsCallback();
-            //     break;
+            /*case CommandIDs::save:
+                DBG("Save command invoked");
+                saveCallback();
+                break;*/
+            case CommandIDs::saveAs:
+                DBG("Save As command invoked");
+                mediaClipboardWidget.saveFileCallback();
+                break;
             case CommandIDs::undo:
                 DBG("Undo command invoked");
                 undoCallback();
@@ -265,6 +267,7 @@ public:
             case CommandIDs::loginStability:
                 DBG("Login to Stability command invoked");
                 loginToProvider("stability");
+                break;
             case CommandIDs::viewMediaClipboard:
                 DBG("ViewMediaClipboard command invoked");
                 viewMediaClipboardCallback();
@@ -367,7 +370,7 @@ public:
             }
         }*/
     }
-   
+
     void tryLoadSavedToken()
     {
         if (model == nullptr || model->getStatus() == ModelStatus::INITIALIZED)
@@ -376,10 +379,11 @@ public:
         auto& client = model->getClient();
         const auto spaceInfo = client.getSpaceInfo();
 
-        if (spaceInfo.status == SpaceInfo::Status::GRADIO || spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+        if (spaceInfo.status == SpaceInfo::Status::GRADIO
+            || spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
         {
             auto token = AppSettings::getString("huggingFaceToken", "");
-            if (!token.isEmpty())
+            if (! token.isEmpty())
             {
                 client.setToken(token);
                 setStatus("Applied saved Hugging Face token.");
@@ -388,51 +392,59 @@ public:
         else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
         {
             auto token = AppSettings::getString("stabilityToken", "");
-            if (!token.isEmpty())
+            if (! token.isEmpty())
             {
                 client.setToken(token);
                 setStatus("Applied saved Stability token.");
             }
         }
     }
-    
+
     void loginToProvider(const juce::String& providerName)
     {
         bool isHuggingFace = (providerName == "huggingface");
         bool isStability = (providerName == "stability");
-    
-        if (!isHuggingFace && !isStability)
+
+        if (! isHuggingFace && ! isStability)
         {
             DBG("Invalid provider name passed to loginToProvider()");
             return;
         }
-    
+
         // Set provider-specific values
-        juce::String title = "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
-        juce::String message = "Paste your " + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token") +
-                               " below.\n\nClick 'Get Token' to open the token page.";
+        juce::String title =
+            "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
+        juce::String message =
+            "Paste your "
+            + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token")
+            + " below.\n\nClick 'Get Token' to open the token page.";
         juce::String tokenLabel = isHuggingFace ? "Access Token:" : "API Token:";
-        juce::String tokenURL = isHuggingFace
-                                    ? "https://huggingface.co/settings/tokens"
-                                    : "https://platform.stability.ai/account/keys";
+        juce::String tokenURL = isHuggingFace ? "https://huggingface.co/settings/tokens"
+                                              : "https://platform.stability.ai/account/keys";
         juce::String storageKey = isHuggingFace ? "huggingFaceToken" : "stabilityToken";
-    
+
         // Create token prompt window
         auto* prompt = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
         prompt->addTextEditor("token", "", tokenLabel);
         prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
         prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
         prompt->addButton("Get Token", 2);
-    
+
         auto rememberCheckbox = std::make_unique<juce::ToggleButton>();
         rememberCheckbox->setButtonText("Remember this token");
         rememberCheckbox->setSize(200, 24);
         prompt->addCustomComponent(rememberCheckbox.get());
-       
+
         prompt->enterModalState(
             true,
             juce::ModalCallbackFunction::create(
-                [this, prompt, rememberCheckboxPtr = std::move(rememberCheckbox), isHuggingFace, isStability, storageKey, tokenURL](int choice)
+                [this,
+                 prompt,
+                 rememberCheckboxPtr = std::move(rememberCheckbox),
+                 isHuggingFace,
+                 isStability,
+                 storageKey,
+                 tokenURL](int choice)
                 {
                     if (choice == 1)
                     {
@@ -441,18 +453,18 @@ public:
                         {
                             // Validate token
                             OpResult result = isHuggingFace
-                                ? GradioClient().validateToken(token)
-                                : StabilityClient().validateToken(token);
-    
+                                                  ? GradioClient().validateToken(token)
+                                                  : StabilityClient().validateToken(token);
+
                             if (result.failed())
                             {
                                 Error err = result.getError();
                                 Error::fillUserMessage(err);
-                                LogAndDBG("Invalid token:\n"
-                                          + err.devMessage.toStdString());
+                                LogAndDBG("Invalid token:\n" + err.devMessage.toStdString());
                                 AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                                                  "Invalid Token",
-                                                                 "The provided token is invalid:\n" + err.userMessage);
+                                                                 "The provided token is invalid:\n"
+                                                                     + err.userMessage);
                                 setStatus("Invalid token.");
                             }
                             else
@@ -461,22 +473,27 @@ public:
                                 {
                                     AppSettings::setValue(storageKey, token);
                                     AppSettings::saveIfNeeded();
-                                    setStatus(juce::String(isHuggingFace ? "Hugging Face" : "Stability") + " token saved.");
+                                    setStatus(
+                                        juce::String(isHuggingFace ? "Hugging Face" : "Stability")
+                                        + " token saved.");
                                 }
                                 else
                                 {
                                     AppSettings::removeValue(storageKey);
                                     setStatus("Token accepted but not saved.");
                                 }
-    
+
                                 // Apply to model if appropriate model is already loaded
-                                if (model != nullptr && model->getStatus() != ModelStatus::INITIALIZED)
+                                if (model != nullptr
+                                    && model->getStatus() != ModelStatus::INITIALIZED)
                                 {
                                     auto& client = model->getClient();
                                     const auto spaceInfo = client.getSpaceInfo();
-    
-                                    if ((isHuggingFace && spaceInfo.status == SpaceInfo::Status::GRADIO) ||
-                                        (isStability && spaceInfo.status == SpaceInfo::Status::STABILITY))
+
+                                    if ((isHuggingFace
+                                         && spaceInfo.status == SpaceInfo::Status::GRADIO)
+                                        || (isStability
+                                            && spaceInfo.status == SpaceInfo::Status::STABILITY))
                                     {
                                         client.setToken(token);
                                         setStatus("Token applied to loaded model.");
@@ -492,18 +509,19 @@ public:
                     else if (choice == 2)
                     {
                         juce::URL(tokenURL).launchInDefaultBrowser();
-                        loginToProvider(isHuggingFace ? "huggingface" : "stability"); // Reopen prompt
+                        loginToProvider(isHuggingFace ? "huggingface"
+                                                      : "stability"); // Reopen prompt
                     }
                     else
                     {
                         setStatus("Login cancelled.");
                     }
-    
+
                     delete prompt;
                 }),
             false);
     }
-    
+
     void loadModelCallback()
     {
         // Get the URL/path the user provided in the comboBox
@@ -643,15 +661,13 @@ public:
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
-                                URL spaceUrl =
-                                    this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
-                                URL spaceUrl =
-                                    this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
@@ -1286,9 +1302,9 @@ public:
     /*
     Entry point for importing new files into the application.
     */
-    void importNewFile(File mediaFile)
+    void importNewFile(File mediaFile, bool fromDAW = false)
     {
-        mediaClipboardWidget.addExternalTrackFromFilePath(URL(mediaFile));
+        mediaClipboardWidget.addTrackFromFilePath(URL(mediaFile), fromDAW);
 
         if (! showMediaClipboard)
         {
@@ -1712,7 +1728,6 @@ private:
         // return;
         if (result.wasOk())
         {
-
             setModelCard(model->card());
             controlAreaWidget.setModel(model);
             mModelStatusTimer->setModel(model);
@@ -1722,7 +1737,7 @@ private:
 
             //Apply saved Stability token
             SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
-            if (spaceInfo.status == SpaceInfo::Status::STABILITY && !savedStabilityToken.isEmpty())
+            if (spaceInfo.status == SpaceInfo::Status::STABILITY && ! savedStabilityToken.isEmpty())
             {
                 model->getClient().setToken(savedStabilityToken);
                 setStatus("Applied saved Stability AI token to loaded model.");
@@ -1767,7 +1782,7 @@ private:
         {
             processCancelButton.setEnabled(true);
             processCancelButton.setMode(processButtonInfo.label);
-            tryLoadSavedToken(); 
+            tryLoadSavedToken();
         }
 
         loadModelButton.setEnabled(true);

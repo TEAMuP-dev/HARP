@@ -86,7 +86,7 @@ public:
                         dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
                 {
                     // Import file into initialized window
-                    mainComp->importNewFile(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile, true);
                 }
             }
         }
@@ -476,7 +476,7 @@ private:
                 if (auto* mainComp = dynamic_cast<MainComponent*>(newWindow->getContentComponent()))
                 {
                     // Import file into new window
-                    mainComp->importNewFile(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile, true);
                 }
 
                 // Store window and make it visible
@@ -490,7 +490,7 @@ private:
                         dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
                 {
                     // Import file into current window
-                    mainComp->importNewFile(inputMediaFile);
+                    mainComp->importNewFile(inputMediaFile, true);
                 }
                 break;
             }
