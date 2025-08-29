@@ -159,7 +159,23 @@ void MediaDisplayComponent::paint(Graphics& g)
     if (! isFileLoaded())
     {
         g.setFont(14.0f);
-        g.drawFittedText("No media file selected...", getLocalBounds(), Justification::centred, 2);
+
+        String text;
+
+        if (isInputTrack())
+        {
+            text = "No media file selected...";
+        }
+        else if (isOutputTrack())
+        {
+            text = "Track is currently empty...";
+        }
+        else
+        {
+            text = "";
+        }
+
+        g.drawFittedText(text, getLocalBounds(), Justification::centred, 2);
     }
 }
 
