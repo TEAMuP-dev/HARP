@@ -414,7 +414,7 @@ private:
             "SendToDAW-Selected",
             [this] {},
             Colours::lightgrey,
-            "This file is DAW-linked - select another file to overwrite it",
+            "This track is already DAW-linked - select another one",
             MultiButton::DrawingMode::IconOnly,
             fontawesome::ArrowCircleORight,
         };
