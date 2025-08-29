@@ -409,9 +409,27 @@ private:
             MultiButton::DrawingMode::IconOnly,
             fontawesome::ArrowCircleORight,
         };
+        // Mode when the only DAW-linked track is selected
+        sendToDAWButtonSelectedInfo = MultiButton::Mode {
+            "SendToDAW-Selected",
+            [this] {},
+            Colours::lightgrey,
+            "This track is already DAW-linked - select another one",
+            MultiButton::DrawingMode::IconOnly,
+            fontawesome::ArrowCircleORight,
+        };
+        // Mode no track is selected
+        sendToDAWButtonInactiveInfo1 = MultiButton::Mode {
+            "SendToDAW-Inactive1",
+            [this] {},
+            Colours::lightgrey,
+            "No track selected",
+            MultiButton::DrawingMode::IconOnly,
+            fontawesome::ArrowCircleORight,
+        };
         // Mode when DAW-linked tracks are unavailable
-        sendToDAWButtonInactiveInfo = MultiButton::Mode {
-            "SendToDAW-Inactive",
+        sendToDAWButtonInactiveInfo2 = MultiButton::Mode {
+            "SendToDAW-Inactive2",
             [this] {},
             Colours::lightgrey,
             "No DAW-linked files in media clipboard",
@@ -419,7 +437,9 @@ private:
             fontawesome::ArrowCircleORight,
         };
         sendToDAWButton.addMode(sendToDAWButtonActiveInfo);
-        sendToDAWButton.addMode(sendToDAWButtonInactiveInfo);
+        sendToDAWButton.addMode(sendToDAWButtonSelectedInfo);
+        sendToDAWButton.addMode(sendToDAWButtonInactiveInfo1);
+        sendToDAWButton.addMode(sendToDAWButtonInactiveInfo2);
         buttonsComponent.addAndMakeVisible(sendToDAWButton);
     }
 
@@ -521,7 +541,7 @@ private:
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.label);
         playStopButton.setMode(playButtonInactiveInfo.label);
         saveFileButton.setMode(saveFileButtonInactiveInfo.label);
-        sendToDAWButton.setMode(sendToDAWButtonInactiveInfo.label);
+        sendToDAWButton.setMode(sendToDAWButtonInactiveInfo1.label);
 
         currentlySelectedDisplay = nullptr;
     }
@@ -543,9 +563,13 @@ private:
         {
             sendToDAWButton.setMode(sendToDAWButtonActiveInfo.label);
         }
+        else if (mediaDisplay->isLinkedToDAW())
+        {
+            sendToDAWButton.setMode(sendToDAWButtonSelectedInfo.label);
+        }
         else
         {
-            sendToDAWButton.setMode(sendToDAWButtonInactiveInfo.label);
+            sendToDAWButton.setMode(sendToDAWButtonInactiveInfo2.label);
         }
 
         currentlySelectedDisplay = mediaDisplay;
@@ -584,7 +608,9 @@ private:
 
     MultiButton sendToDAWButton;
     MultiButton::Mode sendToDAWButtonActiveInfo;
-    MultiButton::Mode sendToDAWButtonInactiveInfo;
+    MultiButton::Mode sendToDAWButtonSelectedInfo;
+    MultiButton::Mode sendToDAWButtonInactiveInfo1;
+    MultiButton::Mode sendToDAWButtonInactiveInfo2;
 
     Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };

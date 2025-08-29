@@ -995,11 +995,17 @@ public:
             // "npruyne/audio_similarity",
             // "xribene/pitch_shifter",
             // "xribene/midi_pitch_shifter",
-            "xribene/HARP-UI-TEST-v3",
             // "xribene/pitch_shifter_slow",
             "stability/text-to-audio",
             "stability/audio-to-audio",
-            "http://localhost:7860",
+            "lllindsey0615/text2midi-HARP3",
+            "lllindsey0615/demucs-gen-input-output-harp-v3",
+            "lllindsey0615/solo-piano-audio-to-midi-transcription",
+            "lllindsey0615/AMT_HARP3",
+            "lllindsey0615/vampnet-music-HARP-V3",
+            "lllindsey0615/harmonic-percussive-HARP-3",
+            "xribene/HARP-UI-TEST-v3"
+            //"http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
@@ -1398,56 +1404,37 @@ public:
         mainPanel.items.add(
             juce::FlexItem(rowProcessCancelButton).withHeight(30).withMargin(margin));
 
-        // Row 6: Input and Output Tracks Area Widget
+        // Row 6: Input Tracks Area Widget
         float numInputTracks = inputTrackAreaWidget.getNumTracks();
         float numOutputTracks = outputTrackAreaWidget.getNumTracks();
         float totalTracks = numInputTracks + numOutputTracks;
 
-        juce::FlexBox inputTracksBox;
-        float inputTrackAreaFlex = 2.0f;
-        inputTracksBox.flexDirection = juce::FlexBox::Direction::column;
-
         if (numInputTracks > 0)
         {
-            inputTracksLabel.setVisible(true);
-            inputTrackAreaFlex = 4 * (numInputTracks / totalTracks);
+            float inputTrackAreaFlex = 4 * (numInputTracks / totalTracks);
+            mainPanel.items.add(juce::FlexItem(inputTracksLabel).withHeight(20).withMargin(margin));
+            mainPanel.items.add(
+                juce::FlexItem(inputTrackAreaWidget).withFlex(inputTrackAreaFlex).withMargin(margin));
         }
         else
         {
-            inputTracksLabel.setVisible(false);
+            inputTracksLabel.setBounds(0, 0, 0, 0);
+            inputTrackAreaWidget.setBounds(0, 0, 0, 0);
         }
 
-        inputTracksBox.items.add(juce::FlexItem(inputTrackAreaWidget).withFlex(1.0));
-        mainPanel.items.add(juce::FlexItem(inputTracksLabel).withHeight(20).withMargin(margin));
-        mainPanel.items.add(
-            juce::FlexItem(inputTracksBox).withFlex(inputTrackAreaFlex).withMargin(margin));
-
-        juce::FlexBox outputTracksBox;
-        float outputTrackAreaFlex = 2.0f;
-        outputTracksBox.flexDirection = juce::FlexBox::Direction::column;
-
+        // Row 7: Output Tracks Area Widget
         if (numOutputTracks > 0)
         {
-            outputTracksLabel.setVisible(true);
-            outputTrackAreaFlex = 4 * (numOutputTracks / totalTracks);
+            float outputTrackAreaFlex = 4 * (numOutputTracks / totalTracks);
+            mainPanel.items.add(juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
+            mainPanel.items.add(
+                juce::FlexItem(outputTrackAreaWidget).withFlex(outputTrackAreaFlex).withMargin(margin));
         }
         else
         {
-            outputTracksLabel.setVisible(false);
+            outputTracksLabel.setBounds(0, 0, 0, 0);
+            outputTrackAreaWidget.setBounds(0, 0, 0, 0);
         }
-
-        outputTracksBox.items.add(juce::FlexItem(outputTrackAreaWidget).withFlex(1.0));
-        mainPanel.items.add(juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
-        mainPanel.items.add(
-            juce::FlexItem(outputTracksBox).withFlex(outputTrackAreaFlex).withMargin(margin));
-
-        // Row 7: Play/Stop Button, Open File Button, and Save File Button
-        // juce::FlexBox row7;
-        // row7.flexDirection = juce::FlexBox::Direction::row;
-        // row7.items.add(juce::FlexItem(playStopButton).withFlex(1).withMargin(margin));
-        // row7.items.add(juce::FlexItem(chooseFileButton).withFlex(1).withMargin(margin));
-        // row7.items.add(juce::FlexItem(saveFileButton).withFlex(1).withMargin(margin));
-        // flexBox.items.add(juce::FlexItem(row7).withFlex(1));
 
         // Row 8: Instructions Area and Status Area
         juce::FlexBox row8;

@@ -401,7 +401,7 @@ private:
                                                     + inputMediaFile.getFileName() + "\"?")
                                        .withIconType(MessageBoxIconType::QuestionIcon)
                                        .withButton("New Window")
-                                       .withButton("Current Window")
+                                       .withButton("Existing Window")
                                        .withButton("Cancel");
 
                     /*
