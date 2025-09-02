@@ -68,6 +68,7 @@ public:
     void setDisplayID(Uuid id) { displayID = id; }
     Uuid getDisplayID() { return displayID; }
 
+    void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
     String getMediaInstructions();
 
     void resetDisplay(); // Reset all state and media

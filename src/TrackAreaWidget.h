@@ -183,6 +183,11 @@ public:
 
         if (m)
         {
+            if (!trackInfo->info.empty())
+            {
+                m->setMediaInstructions(trackInfo->info);
+            }
+
             m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
             addAndMakeVisible(m.get());
