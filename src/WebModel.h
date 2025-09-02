@@ -466,8 +466,9 @@
                  if (type == "audio_track")
                  {
                      auto audio_out = std::make_shared<AudioTrackInfo>();
-                     audio_out->label = pyharpComponent["label"].toString().toStdString();
                      audio_out->id = juce::Uuid();
+                     audio_out->label = pyharpComponent["label"].toString().toStdString();
+                     audio_out->info = pyharpComponent["info"].toString().toStdString();
  
                      outputTracksInfo.push_back({ audio_out->id, audio_out });
                      LogAndDBG("Audio Out: " + audio_out->label + " added");
@@ -475,8 +476,9 @@
                  else if (type == "midi_track")
                  {
                      auto midi_out = std::make_shared<MidiTrackInfo>();
-                     midi_out->label = pyharpComponent["label"].toString().toStdString();
                      midi_out->id = juce::Uuid();
+                     midi_out->label = pyharpComponent["label"].toString().toStdString();
+                     midi_out->info = pyharpComponent["info"].toString().toStdString();
  
                      outputTracksInfo.push_back({ midi_out->id, midi_out });
                      LogAndDBG("MIDI Out: " + midi_out->label + " added");
