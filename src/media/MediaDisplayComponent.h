@@ -69,7 +69,6 @@ public:
     Uuid getDisplayID() { return displayID; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
-    String getMediaInstructions();
 
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display

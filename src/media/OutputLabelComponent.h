@@ -2,6 +2,8 @@
 
 #include "juce_gui_basics/juce_gui_basics.h"
 
+#include "../gui/StatusComponent.h"
+
 using namespace juce;
 
 class TimeMarkerComponent : public Component
@@ -83,6 +85,8 @@ private:
     TimeMarkerComponent leftMarker;
     TimeMarkerComponent rightMarker;
     TimeMarkerComponent durationFill;
+
+    SharedResourcePointer<InstructionBox> instructionBox;
 };
 
 class OverheadLabelComponent : public OutputLabelComponent

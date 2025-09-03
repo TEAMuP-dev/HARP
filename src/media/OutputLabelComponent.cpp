@@ -115,12 +115,26 @@ void OutputLabelComponent::mouseEnter(const juce::MouseEvent& /*e*/)
 {
     setFillVisibility(true);
     setMarkerVisibility(true);
+
+    String desc = getDescription();
+
+    if (desc.isNotEmpty() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage(desc);
+    }
 }
 
 void OutputLabelComponent::mouseExit(const juce::MouseEvent& /*e*/)
 {
     setFillVisibility(false);
     setMarkerVisibility(false);
+
+    String desc = getDescription();
+
+    if (desc.isNotEmpty() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage("");
+    }
 }
 
 OverheadLabelComponent::OverheadLabelComponent(double t,

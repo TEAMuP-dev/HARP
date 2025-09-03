@@ -411,29 +411,6 @@ void MediaDisplayComponent::setTrackName(String name)
     trackNameLabel.setText(trackName, dontSendNotification);
 }
 
-String MediaDisplayComponent::getMediaInstructions()
-{
-    String instructions = mediaInstructions;
-
-    for (OverheadLabelComponent* label : overheadLabels)
-    {
-        if (label->isMouseOver())
-        {
-            instructions = label->getDescription();
-        }
-    }
-
-    for (LabelOverlayComponent* label : labelOverlays)
-    {
-        if (label->isMouseOver())
-        {
-            instructions = label->getDescription();
-        }
-    }
-
-    return instructions;
-}
-
 void MediaDisplayComponent::resetDisplay()
 {
     clearLabels();
@@ -1054,17 +1031,17 @@ void MediaDisplayComponent::updateCursorPosition()
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
 }
 
-void MediaDisplayComponent::mouseEnter(const MouseEvent& /*e*/)
+void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
 {
-    if (! isThumbnailTrack() && instructionBox != nullptr)
+    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && instructionBox != nullptr)
     {
-        instructionBox->setStatusMessage(getMediaInstructions());
+        instructionBox->setStatusMessage(mediaInstructions);
     }
 }
 
-void MediaDisplayComponent::mouseExit(const MouseEvent& /*e*/)
+void MediaDisplayComponent::mouseExit(const MouseEvent& e)
 {
-    if (! isThumbnailTrack() && instructionBox != nullptr)
+    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && instructionBox != nullptr)
     {
         instructionBox->setStatusMessage("");
     }
