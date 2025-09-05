@@ -41,11 +41,72 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Content',
+        text: 'Docs',
         items: [
           { text: 'Intro', link: '/content/intro' },
-          { text: 'HARP Readme', link: '/content/HARP/README' },
-          { text: 'pyHARP Readme', link: '/content/pyHARP/README' },
+          {
+            text: "Installing HARP",
+            items: [
+              { text: 'Supported Operating Systems', link: '/content/supported_os' },
+              { text: 'Mac OS', link: '/content/install/macos' },
+              { text: 'Windows', link: '/content/install/windows' },
+              { text: 'Linux', link: '/content/install/linux' },
+            ]
+          },
+          {
+            text: "Setup",
+            items: [
+              { text: 'Standalone', link: '/content/setup/standalone' },
+              { text: 'Logic Pro X', link: '/content/setup/logic' },
+              { text: 'Reaper', link: '/content/setup/reaper' },
+              { text: 'Mixcraft', link: '/content/setup/mixcraft' },
+              { text: 'Ableton Live', link: '/content/setup/ableton' },
+
+            ]
+          },
+
+          {
+            text: "Using HARP",
+            items: [
+              { text: 'Workflow', link: '/content/usage/workflow' },
+              { text: 'Editing a Partial Region', link: '/content/usage/partial_track' },
+              { text: 'Available Models', link: '/content/usage/models' },
+              { text: 'Warnings', link: '/content/usage/warnings' },
+
+            ]
+          },
+
+          {
+             text: "Deploy Your Own Models with PyHARP",
+             items: [
+              { text: 'About PyHARP', link: '/content/pyharp_docs/overview' },
+              { text: 'Installing PyHARP', link: '/content/pyharp_docs/install' },
+              { text: 'HARP / PyHARP Compatibility', link: '/content/contributing/version_compat' },
+              { text: 'PyHARP Essentials', link: '/content/pyharp_docs/pyharp_app' },
+              { text: 'Example: Speech Separation with TIGER', link: '/content/pyharp_docs/example' },
+              { text: 'Hosting Apps in the Cloud', link: '/content/pyharp_docs/host' },
+             ]
+          },
+
+          {
+            text: "Contributing to HARP",
+            items: [
+              { text: 'Overview', link: '/content/contributing/overview' },
+              { text: 'Building HARP', link: '/content/contributing/build_source' },
+              { text: 'Debugging', link: '/content/contributing/debug' },
+              { text: 'Distribution', link: '/content/contributing/dist' },
+            ]
+          },
+
+          /*{
+            text: "ReadMe Pages",
+            items: [
+              { text: 'HARP Readme', link: '/content/HARP/README' },
+              { text: 'pyHARP Readme', link: '/content/pyHARP/README' },
+            ]
+          },*/
+         
+          
         ]
       }
     ],

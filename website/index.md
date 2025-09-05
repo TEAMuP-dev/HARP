@@ -21,13 +21,13 @@ features:
   - icon:
       src: /logos/python-logo-only.svg
     title: Develop in Python
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    details: Wrap audio and MIDI processing applications – from simple effects to state-of-the-art neural network models – in a few lines of Python
   - icon:
       src: /logos/hf-logo.svg
-    title: Deploy in a server
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    title: Deploy on a server
+    details: Host your applications locally or on a remote server to meet your compute needs
   - icon:
       src:  /logos/reaper-logo.png
     title: Use in your DAW
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    details: Point HARP at your audio processing application to pull it into your DAW!
 ---
