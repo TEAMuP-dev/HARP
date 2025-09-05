@@ -2,7 +2,6 @@
 
 To link HARP to REAPER as an external sample editor, do the following:
 
-
 * Select _REAPER > Preferences_ (Mac) or press _control+p_ (Windows).
 
 * Select _External Editors_, click _Add_, then click _Browse_ by _Primary Editor_.

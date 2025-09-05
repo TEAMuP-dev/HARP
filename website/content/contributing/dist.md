@@ -1,4 +1,5 @@
 # Distribution
+
 ### MacOS
 Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
 You'll need to set up a developer account with Apple and create a certificate in order to sign the plugin.

@@ -19,5 +19,3 @@ Now that we have linked HARP to Logic as an external sample editor, we can proce
 * Select the (bounced) region and press _Shift+W_ to open HARP. The region should be automatically loaded into HARP and ready for processing.
 
 For more instructions on how to use HARP, see our [Workflow](/content/usage/workflow.html) documentation.
-
-

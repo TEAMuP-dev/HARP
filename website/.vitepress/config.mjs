@@ -33,7 +33,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the BSD 3-Clause License.',
-      copyright: 'Copyright © 2023-present TEAMuP-dev'
+      copyright: 'Copyright © 2025-present TEAMuP-dev'
     },
     search: {
       provider: 'local'
@@ -60,8 +60,7 @@ export default defineConfig({
               { text: 'Logic Pro X', link: '/content/setup/logic' },
               { text: 'Reaper', link: '/content/setup/reaper' },
               { text: 'Mixcraft', link: '/content/setup/mixcraft' },
-              { text: 'Ableton Live', link: '/content/setup/ableton' },
-
+              //{ text: 'Ableton Live', link: '/content/setup/ableton' },
             ]
           },
 

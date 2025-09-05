@@ -1,6 +1,6 @@
 # Basic HARP Workflow
 
-HARP supports a simple workflow: pick an existing model for processing or provide a URL to your own, load the model and a corresponding interface, tweak controls to taste, and process.
+HARP supports a simple workflow: pick an existing model for processing or provide a URL to your own, load the model and it's corresponding interface, tweak controls to your liking, and process.
 
 To get started:
 

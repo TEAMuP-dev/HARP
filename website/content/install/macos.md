@@ -2,7 +2,7 @@
 
 To install HARP on Mac OS (`arm` or `x86`):
 
-* Download the ZIP file for your operating system version from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page
+* Download the ZIP file for your operating system version from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
 * Unzip and open the DMG file:
   <p align="center">

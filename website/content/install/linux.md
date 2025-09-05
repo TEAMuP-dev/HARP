@@ -6,4 +6,4 @@ To install HARP on Linux:
 
 * Extract the contents of the ZIP file. 
 
-* From these contents, move the directory containing `HARP` to your chosen location (_e.g._ `/usr/local/bin/`)
+* From these contents, move the directory containing `HARP` to your chosen location (_e.g._ `/usr/local/bin/`).

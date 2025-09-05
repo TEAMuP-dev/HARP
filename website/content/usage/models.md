@@ -1,5 +1,7 @@
 # Available Models for HARP
 
+<!-- TODO - needs update -->
+
 The following models are always available for use within HARP, and can be found in the `choose a model` drop-down menu at the top of the screen:
 
 - **VampNet** \([hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music)\) generates variations or "vamps" on music audio, and offers a variety of controls for determining how the vamps diverge from the original input audio.

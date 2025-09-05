@@ -1,6 +1,7 @@
 # Building HARP from Source
 
 HARP can be built from scratch with the following steps:
+
 ### 1. Clone Repository
 ```bash
 git clone --recurse-submodules https://github.com/TEAMuP-dev/HARP
@@ -10,6 +11,7 @@ git clone --recurse-submodules https://github.com/TEAMuP-dev/HARP
 ```bash
 cd HARP/
 ```
+
 ### 3. Configure
 ```bash
 mkdir build
@@ -22,6 +24,7 @@ The OSX architecture for the build can be specified explicitly by setting `CMAKE
 ```bash
 cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
+
 #### Linux
 Ensure your system satisfies all [JUCE dependencies](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md).
 
@@ -30,6 +33,7 @@ Ensure your system satisfies all [JUCE dependencies](https://github.com/juce-fra
 ```bash
 make -j <NUM_PROCESSORS>
 ```
+
 #### Windows
 ```bash
 cmake --build . --config Debug -j <NUM_PROCESSORS>
