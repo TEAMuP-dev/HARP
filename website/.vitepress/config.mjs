@@ -98,13 +98,13 @@ export default defineConfig({
             ]
           },
 
-          {
+          /*{
             text: "ReadMe Pages",
             items: [
               { text: 'HARP Readme', link: '/content/HARP/README' },
               { text: 'pyHARP Readme', link: '/content/pyHARP/README' },
             ]
-          },
+          },*/
          
           
         ]
