@@ -85,8 +85,7 @@ To get started:
 - Click `Process` to run the model; outputs will automatically be rendered in HARP
 - To save your outputs, click the `Save` button or select `Save As` from the `File` menu
 
-<!-- TODO - Update this screenshot -->
-<img width="787" alt="Screenshot 2024-06-04 at 4 31 05 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/79dcaaa8-fa55-4ae9-b37b-7924fffd2331">
+<img width="1819" height="1042" alt="text-to-audio" src="https://github.com/user-attachments/assets/a5579d82-3955-46a1-84a6-22f7632a9d51" />
 
 
 <!-- content/contributing/overview.md -->
