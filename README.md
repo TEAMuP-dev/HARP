@@ -13,7 +13,6 @@ HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocess
 
 ## Table of Contents
 * **[Installation](#installation)**
-* **[Setup](#setup)**
 * **[Usage](#usage)**
     * **[Warning!](#warning)**
     * **[Models](#models)**
@@ -40,13 +39,8 @@ HARP has been tested on the following operating systems:
 | Versions | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
 
 <!-- content/install/ -->
-Please visit [our website](https://harp-plugin.netlify.app/content/install/macos.html) for instructions on installing HARP.
-
-
-# Setup
-
 <!-- content/setup/ -->
-Please visit [our website](https://harp-plugin.netlify.app/content/setup/logic.html) for instructions on setting up HARP as an external sample editor.
+Please visit [our website](https://harp-plugin.netlify.app/content/install/macos.html) for instructions on installing HARP for different operating systems and setting it up as an external sample editor for different DAWs.
 
 
 # Usage
@@ -91,7 +85,8 @@ To get started:
 - Click `Process` to run the model; outputs will automatically be rendered in HARP
 - To save your outputs, click the `Save` button or select `Save As` from the `File` menu
 
-<img width="1819" height="1042" alt="text-to-audio" src="https://github.com/user-attachments/assets/a5579d82-3955-46a1-84a6-22f7632a9d51" />
+<!-- TODO - Update this screenshot -->
+<img width="787" alt="Screenshot 2024-06-04 at 4 31 05 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/79dcaaa8-fa55-4ae9-b37b-7924fffd2331">
 
 
 <!-- content/contributing/overview.md -->
@@ -170,7 +165,7 @@ cmake --build . --config Debug -j <NUM_PROCESSORS>
 
 We provide instructions for debugging your HARP build in [Visual Studio Code](https://code.visualstudio.com/):
 
-1. Download [Visual Studio Code](https://code.visualstudio.com/).
+1. Download [Visual Studio Code](https://code.visualstudio.com/Download).
 2. Install the C/C++ extension from Microsoft.
 3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using _CMake Debugger_.
 4. Create a configuration to attach to the process (see the following example code to be placed in `launch.json`).
