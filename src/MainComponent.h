@@ -1004,8 +1004,8 @@ public:
             "lllindsey0615/AMT_HARP3",
             "lllindsey0615/vampnet-music-HARP-V3",
             "lllindsey0615/harmonic-percussive-HARP-3",
-            "xribene/HARP-UI-TEST-v3"
-            //"http://localhost:7860",
+            // "xribene/HARP-UI-TEST-v3"
+            // "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
             // "https://huggingface.co/spaces/xribene/midi_pitch_shifter",
             // "xribene/midi_pitch_shifter",
@@ -1217,6 +1217,8 @@ public:
 
         processCancelButton.setEnabled(true);
         processCancelButton.setMode(cancelButtonInfo.label);
+        loadModelButton.setEnabled(false);
+        modelPathComboBox.setEnabled(false);
         saveEnabled = false;
         isProcessing = true;
 
@@ -1238,6 +1240,8 @@ public:
                 processCancelButton.setMode(processButtonInfo.label);
                 isProcessing = false;
                 saveEnabled = true;
+                loadModelButton.setEnabled(true);
+                modelPathComboBox.setEnabled(true);
                 return;
             }
             if (inputMediaDisplay->isFileLoaded())
@@ -1297,7 +1301,6 @@ public:
                     model->setStatus(ModelStatus::FINISHED);
                     processBroadcaster.sendChangeMessage();
                     processMutex.unlock();
-
                 },
                 processID),
             true);
@@ -1642,6 +1645,8 @@ private:
         processCancelButton.setEnabled(true);
         saveEnabled = true;
         isProcessing = false;
+        loadModelButton.setEnabled(true);
+        modelPathComboBox.setEnabled(true);
         repaint();
     }
 

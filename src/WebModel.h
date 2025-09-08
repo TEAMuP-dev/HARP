@@ -24,7 +24,7 @@
  
      ~WebModel() {}
  
-     bool ready() const override { return status2 == ModelStatus::LOADED; }
+     bool ready() const override { return m_loaded; }
  
      ComponentInfoList& getControlsInfo() { return controlsInfo; }
      ComponentInfoList& getInputTracksInfo() { return inputTracksInfo; }
@@ -246,19 +246,21 @@
              status2 = ModelStatus::ERROR;
              return result;
          }
- 
+
+         std::unique_ptr<Client> newClient;
+
          if (spaceInfo.status == SpaceInfo::Status::STABILITY) {
-             client = std::make_unique<StabilityClient>();
+             newClient = std::make_unique<StabilityClient>();
              isStabilityModel = true;
          }
          else { // GRADIO, HUGGINFACE, LOCALHOST
-             client = std::make_unique<GradioClient>();
+             newClient = std::make_unique<GradioClient>();
              isStabilityModel = false;
          }
  
-         client->setSpaceInfo(spaceInfo);
+         newClient->setSpaceInfo(spaceInfo);
  
-         LogAndDBG(client->getSpaceInfo().toString());
+         LogAndDBG(newClient->getSpaceInfo().toString());
          
          // The input components defined in PyHARP include
          // both the input tracks (audio or midi) and the controls (sliders, text boxes, etc)
@@ -268,7 +270,7 @@
  
          juce::DynamicObject cardDict;
          status2 = ModelStatus::GETTING_CONTROLS;
-         result = client->getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
+         result = newClient->getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
          if (result.failed())
          {
              status2 = ModelStatus::ERROR;
@@ -491,7 +493,9 @@
                  return OpResult::fail(error);
              }
          }
+         client = std::move(newClient);
          status2 = ModelStatus::LOADED;
+         m_loaded = true;
          return OpResult::ok();
      }
  
