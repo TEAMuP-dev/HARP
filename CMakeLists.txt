@@ -20,8 +20,20 @@ file(STRINGS VERSION CURRENT_VERSION)
 # directories, and the current project version. This is a standard CMake command.
 
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
+
+# Add these lines to suppress warnings for JUCE 
+# ------------------------------------------
+# For macOS Xcode deprecation warnings
+set(JUCE_SILENCE_XCODE_DEPRECATION_WARNINGS ON)
+
 add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
 
+# Reset warning levels
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+    add_compile_options(-Wall -Wextra)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_options(/W4)
+endif()
 
 # `juce_add_gui_app` adds an executable target with the name passed as the first argument
 # (${PROJECT_NAME} here). This target is a normal CMake target, but has a lot of extra properties set
@@ -45,7 +57,7 @@ juce_add_gui_app(${PROJECT_NAME}
 # include all your JUCE module headers; if you're happy to include module headers directly, you
 # probably don't need to call this.
 
-# juce_generate_juce_header(${PROJECT_NAME})
+juce_generate_juce_header(${PROJECT_NAME})
 
 # `target_sources` adds source files to a target. We pass the target that needs the sources as the
 # first argument, then a visibility parameter for the sources which should normally be PRIVATE.
@@ -56,7 +68,8 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
         src/MainComponent.h
-        src/CtrlComponent.h
+        src/ControlAreaWidget.h
+        src/TrackAreaWidget.h
         src/Model.h 
         src/WebModel.h
         src/AppSettings.h
@@ -65,8 +78,21 @@ target_sources(${PROJECT_NAME}
         src/errors.h
         src/utils.h
 
-        src/gradio/GradioClient.cpp
+        src/client/GradioClient.cpp
+        src/client/StabilityClient.cpp
         src/external/magic_enum.hpp
+
+        src/external/fontaudio/src/FontAudio.h
+        src/external/fontaudio/src/FontAudio.cpp
+        src/external/fontaudio/data/FontAudioData.h
+        src/external/fontaudio/data/FontAudioData.cpp
+        src/external/fontaudio/data/FontAudioIcons.h
+
+        src/external/fontawesome/src/FontAwesome.h
+        src/external/fontawesome/src/FontAwesome.cpp
+        src/external/fontawesome/data/FontAwesomeData.h
+        src/external/fontawesome/data/FontAwesomeData.cpp
+        src/external/fontawesome/data/FontAwesomeIcons.h
         
         src/gui/MultiButton.cpp
         src/gui/StatusComponent.cpp
@@ -76,6 +102,7 @@ target_sources(${PROJECT_NAME}
         src/gui/CustomPathDialog.h
         src/gui/ModelAuthorLabel.h
         src/gui/HoverableLabel.h
+        src/gui/ComboBoxWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp

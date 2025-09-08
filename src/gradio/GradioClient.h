@@ -37,7 +37,9 @@ public:
                                     juce::String& response,
                                     const int timeoutMs = 10000) const;
 
-    OpResult getControls(juce::Array<juce::var>& ctrlList, juce::DynamicObject& cardDict);
+    OpResult getControls(juce::Array<juce::var>& inputComponents,
+                         juce::Array<juce::var>& outputComponents,
+                         juce::DynamicObject& cardDict);
 
     OpResult setSpaceInfo(const juce::String url);
 

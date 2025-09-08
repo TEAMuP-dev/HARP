@@ -1,6 +1,11 @@
 #include "OutputLabelComponent.h"
 
-OutputLabelComponent::OutputLabelComponent(double t, String lbl, double dur, String dsc, Colour clr, String lnk)
+OutputLabelComponent::OutputLabelComponent(double t,
+                                           String lbl,
+                                           double dur,
+                                           String dsc,
+                                           Colour clr,
+                                           String lnk)
 {
     setTime(t);
     setLabel(lbl);
@@ -51,48 +56,7 @@ void OutputLabelComponent::setColor(Colour clr)
     durationFill.setColor(clr.withAlpha(0.5f));
 }
 
-float OutputLabelComponent::getTextWidth()
-{
-    return getFont().getStringWidthFloat(getText());
-}
-
-juce::MouseCursor OutputLabelComponent::getMouseCursor()
-{
-    if (link.isNotEmpty())
-        return juce::MouseCursor::PointingHandCursor;
-    else
-        return juce::MouseCursor::NormalCursor;
-}
-
-void OutputLabelComponent::mouseUp(const juce::MouseEvent& e)
-{
-    if (isMouseOver(true))
-    {
-        String lnk = getLink();
-
-        if (lnk.isNotEmpty()) {
-            URL url = URL(lnk);
-
-            if (url.isWellFormed()) {
-                url.launchInDefaultBrowser();
-            } else {
-                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk << "\' appears malformed.");
-            }
-        }
-    }
-}
-
-void OutputLabelComponent::mouseEnter(const juce::MouseEvent& e)
-{
-    setFillVisibility(true);
-    setMarkerVisibility(true);
-}
-
-void OutputLabelComponent::mouseExit(const juce::MouseEvent& e)
-{
-    setFillVisibility(false);
-    setMarkerVisibility(false);
-}
+float OutputLabelComponent::getTextWidth() { return getFont().getStringWidthFloat(getText()); }
 
 void OutputLabelComponent::addMarkersTo(Component* c)
 {
@@ -114,21 +78,79 @@ void OutputLabelComponent::setMarkerVisibility(bool v)
     rightMarker.setVisible(v);
 }
 
-void OutputLabelComponent::setFillVisibility(bool v)
+void OutputLabelComponent::setFillVisibility(bool v) { durationFill.setVisible(v); }
+
+juce::MouseCursor OutputLabelComponent::getMouseCursor()
 {
-    durationFill.setVisible(v);
+    if (link.isNotEmpty())
+        return juce::MouseCursor::PointingHandCursor;
+    else
+        return juce::MouseCursor::NormalCursor;
+}
+
+void OutputLabelComponent::mouseUp(const juce::MouseEvent& /*e*/)
+{
+    if (isMouseOver(true))
+    {
+        String lnk = getLink();
+
+        if (lnk.isNotEmpty())
+        {
+            URL url = URL(lnk);
+
+            if (url.isWellFormed())
+            {
+                url.launchInDefaultBrowser();
+            }
+            else
+            {
+                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk
+                                                                   << "\' appears malformed.");
+            }
+        }
+    }
+}
+
+void OutputLabelComponent::mouseEnter(const juce::MouseEvent& /*e*/)
+{
+    setFillVisibility(true);
+    setMarkerVisibility(true);
+
+    String desc = getDescription();
+
+    if (desc.isNotEmpty() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage(desc);
+    }
+}
+
+void OutputLabelComponent::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    setFillVisibility(false);
+    setMarkerVisibility(false);
+
+    String desc = getDescription();
+
+    if (desc.isNotEmpty() && instructionBox != nullptr)
+    {
+        instructionBox->setStatusMessage("");
+    }
 }
 
 OverheadLabelComponent::OverheadLabelComponent(double t,
-                                             String lbl,
-                                             double dur,
-                                             String dsc,
-                                             Colour clr,
-                                             String lnk)
-    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk) {}
+                                               String lbl,
+                                               double dur,
+                                               String dsc,
+                                               Colour clr,
+                                               String lnk)
+    : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk)
+{
+}
 
 OverheadLabelComponent::OverheadLabelComponent(const OverheadLabelComponent& other)
-    : OutputLabelComponent(other) {}
+    : OutputLabelComponent(other)
+{
+}
 
 LabelOverlayComponent::LabelOverlayComponent(double t,
                                              String lbl,
@@ -151,11 +173,6 @@ LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)
 {
     return jmin(1.0f, jmax(0.0f, 1 - (amplitude + 1) / 2));
-}
-
-float LabelOverlayComponent::frequencyToRelativeY(float frequency)
-{
-    return 0.0f; // TODO
 }
 
 float LabelOverlayComponent::pitchToRelativeY(float pitch)
