@@ -12,11 +12,10 @@ public:
     void paint(juce::Graphics& g) override;
 
 private:
-    juce::ToggleButton rememberTokenToggle;
+    juce::TextButton openSettingsButton;
     juce::TextButton openLogFolderButton;
-
-    void handleToggleChanged();
     void handleOpenLogFolder();
+    void handleOpenSettings();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GeneralSettingsTab)
 };

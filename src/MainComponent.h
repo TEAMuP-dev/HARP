@@ -114,16 +114,22 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        login = 0x2006,
+        // login = 0x2006,
         settings = 0x2007,
         viewMediaClipboard = 0x3000
     };
 
     StringArray getMenuBarNames() override
-{
-    //DBG("getMenuBarNames() called");
-    return { "File" };
-}
+    {
+        //DBG("getMenuBarNames() called");
+        StringArray menuBarNames;
+
+        menuBarNames.add("File");
+        // menuBarNames.add("Edit");
+        menuBarNames.add("View");
+
+        return menuBarNames;
+    }
 
     // In mac, we want the "about" command to be in the application menu ("HARP" tab)
     // For now, this is not used, as the extra commands appear grayed out
@@ -132,7 +138,7 @@ public:
         auto menu = std::make_unique<PopupMenu>();
         menu->addCommandItem(&commandManager, CommandIDs::about);
         menu->addCommandItem(&commandManager, CommandIDs::settings);
-        menu->addCommandItem(&commandManager, CommandIDs::login);
+        // menu->addCommandItem(&commandManager, CommandIDs::login);
         return menu;
     }
 
@@ -148,10 +154,10 @@ public:
             //menu.addCommandItem(&commandManager, CommandIDs::undo);
             //menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            //menu.addCommandItem (&commandManager, CommandIDs::settings);
+            menu.addCommandItem (&commandManager, CommandIDs::settings);
             menu.addSeparator();
-            //menu.addCommandItem(&commandManager, CommandIDs::login);
-            //menu.addCommandItem(&commandManager, CommandIDs::about);
+            // menu.addCommandItem(&commandManager, CommandIDs::login);
+            menu.addCommandItem(&commandManager, CommandIDs::about);
         }
         else if (menuName == "View")
         {
@@ -178,7 +184,7 @@ public:
     {
         const CommandID ids[] = {
             CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo, CommandIDs::login,
+            CommandIDs::undo, CommandIDs::redo,
             CommandIDs::about, CommandIDs::settings, CommandIDs::viewMediaClipboard
         };
         commands.addArray(ids, numElementsInArray(ids));
@@ -214,15 +220,13 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
-            case CommandIDs::login:
-                result.setInfo("Login to Hugging Face and Stability", "Authenticate with a Hugging Face token or Stability token", "Login", 0);
-                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
                 break;
             case CommandIDs::viewMediaClipboard:
                 result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
                 result.setTicked(showMediaClipboard);
+                break;
             case CommandIDs::settings:
                 result.setInfo("Preferences...", "Open the settings window", "Settings", 0);
                 break;
@@ -254,10 +258,6 @@ public:
                 DBG("Redo command invoked");
                 redoCallback();
                 break;
-            case CommandIDs::login:
-                DBG("Login command invoked");
-                loginToProvider("huggingface"); // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! BUG TO FIX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                break;
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
@@ -265,6 +265,7 @@ public:
             case CommandIDs::viewMediaClipboard:
                 DBG("ViewMediaClipboard command invoked");
                 viewMediaClipboardCallback();
+                break;
             case CommandIDs::settings:
                 DBG("Settings command invoked");
                 showSettingsDialog();  
@@ -395,128 +396,6 @@ public:
                 setStatus("Applied saved Stability token.");
             }
         }
-    }
-
-    void loginToProvider(const juce::String& providerName)
-    {
-        bool isHuggingFace = (providerName == "huggingface");
-        bool isStability = (providerName == "stability");
-
-        if (! isHuggingFace && ! isStability)
-        {
-            DBG("Invalid provider name passed to loginToProvider()");
-            return;
-        }
-
-        // Set provider-specific values
-        juce::String title =
-            "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
-        juce::String message =
-            "Paste your "
-            + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token")
-            + " below.\n\nClick 'Get Token' to open the token page.";
-        juce::String tokenLabel = isHuggingFace ? "Access Token:" : "API Token:";
-        juce::String tokenURL = isHuggingFace ? "https://huggingface.co/settings/tokens"
-                                              : "https://platform.stability.ai/account/keys";
-        juce::String storageKey = isHuggingFace ? "huggingFaceToken" : "stabilityToken";
-
-        // Create token prompt window
-        auto* prompt = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
-        prompt->addTextEditor("token", "", tokenLabel);
-        prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-        prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-        prompt->addButton("Get Token", 2);
-
-        auto rememberCheckbox = std::make_unique<juce::ToggleButton>();
-        rememberCheckbox->setButtonText("Remember this token");
-        rememberCheckbox->setSize(200, 24);
-        prompt->addCustomComponent(rememberCheckbox.get());
-
-        prompt->enterModalState(
-            true,
-            juce::ModalCallbackFunction::create(
-                [this,
-                 prompt,
-                 rememberCheckboxPtr = std::move(rememberCheckbox),
-                 isHuggingFace,
-                 isStability,
-                 storageKey,
-                 tokenURL](int choice)
-                {
-                    if (choice == 1)
-                    {
-                        auto token = prompt->getTextEditor("token")->getText().trim();
-                        if (token.isNotEmpty())
-                        {
-                            // Validate token
-                            OpResult result = isHuggingFace
-                                                  ? GradioClient().validateToken(token)
-                                                  : StabilityClient().validateToken(token);
-
-                            if (result.failed())
-                            {
-                                Error err = result.getError();
-                                Error::fillUserMessage(err);
-                                LogAndDBG("Invalid token:\n" + err.devMessage.toStdString());
-                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                                 "Invalid Token",
-                                                                 "The provided token is invalid:\n"
-                                                                     + err.userMessage);
-                                setStatus("Invalid token.");
-                            }
-                            else
-                            {
-                                if (rememberCheckboxPtr->getToggleState())
-                                {
-                                    AppSettings::setValue(storageKey, token);
-                                    AppSettings::saveIfNeeded();
-                                    setStatus(
-                                        juce::String(isHuggingFace ? "Hugging Face" : "Stability")
-                                        + " token saved.");
-                                }
-                                else
-                                {
-                                    AppSettings::removeValue(storageKey);
-                                    setStatus("Token accepted but not saved.");
-                                }
-
-                                // Apply to model if appropriate model is already loaded
-                                if (model != nullptr
-                                    && model->getStatus() != ModelStatus::INITIALIZED)
-                                {
-                                    auto& client = model->getClient();
-                                    const auto spaceInfo = client.getSpaceInfo();
-
-                                    if ((isHuggingFace
-                                         && spaceInfo.status == SpaceInfo::Status::GRADIO)
-                                        || (isStability
-                                            && spaceInfo.status == SpaceInfo::Status::STABILITY))
-                                    {
-                                        client.setToken(token);
-                                        setStatus("Token applied to loaded model.");
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            setStatus("No token entered.");
-                        }
-                    }
-                    else if (choice == 2)
-                    {
-                        juce::URL(tokenURL).launchInDefaultBrowser();
-                        loginToProvider(isHuggingFace ? "huggingface"
-                                                      : "stability"); // Reopen prompt
-                    }
-                    else
-                    {
-                        setStatus("Login cancelled.");
-                    }
-
-                    delete prompt;
-                }),
-            false);
     }
 
     void loadModelCallback()
@@ -949,7 +828,7 @@ public:
         options.useNativeTitleBar = true;
         options.resizable = true;
         options.escapeKeyTriggersCloseButton = true;
-        options.dialogBackgroundColour = juce::Colours::lightgrey;
+        options.dialogBackgroundColour = juce::Colours::darkgrey;
         options.launchAsync();
     }
 

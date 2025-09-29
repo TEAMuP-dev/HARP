@@ -86,8 +86,10 @@ target_sources(${PROJECT_NAME}
         src/settings/GeneralSettingsTab.cpp
         src/settings/AudioSettingsTab.h
         src/settings/AudioSettingsTab.cpp
-        src/external/magic_enum.hpp
+        src/settings/LoginTab.h
+        src/settings/LoginTab.cpp
 
+        src/external/magic_enum.hpp
         src/external/fontaudio/src/FontAudio.h
         src/external/fontaudio/src/FontAudio.cpp
         src/external/fontaudio/data/FontAudioData.h
