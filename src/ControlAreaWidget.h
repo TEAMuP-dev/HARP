@@ -2,6 +2,8 @@
 #include "gui/SliderWithLabel.h"
 #include "gui/TitledTextBox.h"
 #include "gui/ComboBoxWithLabel.h"
+#include "gui/StatusComponent.h"
+#include "gui/HoverHandler.h"
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "utils.h"
 
@@ -53,6 +55,15 @@ public:
                 slider.addListener(this);
                 addAndMakeVisible(*sliderWithLabel);
                 sliders.push_back(std::move(sliderWithLabel));
+                auto sliderHandler = std::make_unique<HoverHandler>(slider);
+                juce::String infoString(sliderCtrl->info);
+                sliderHandler->onMouseEnter = [this, infoString]()
+                {
+                    updateInstructionBox(infoString);
+                };
+                sliderHandler->onMouseExit = [this]() { updateInstructionBox(""); };
+                sliderHandler->attach();
+                handlers.push_back(std::move(sliderHandler));
                 DBG("Slider: " + sliderCtrl->label + " added");
 
                 // ToggleCtrl
@@ -66,6 +77,15 @@ public:
                 toggle->setToggleState(toggleCtrl->value, juce::dontSendNotification);
                 toggle->addListener(this);
                 addAndMakeVisible(*toggle);
+                auto toggleHandler = std::make_unique<HoverHandler>(*toggle);
+                juce::String infoString(toggleCtrl->info);
+                toggleHandler->onMouseEnter = [this, infoString]()
+                {
+                    updateInstructionBox(infoString);
+                };
+                toggleHandler->onMouseExit = [this]() { updateInstructionBox(""); };
+                toggleHandler->attach();
+                handlers.push_back(std::move(toggleHandler));
                 toggles.push_back(std::move(toggle));
                 DBG("Toggle: " + toggleCtrl->label + " added");
 
@@ -79,6 +99,15 @@ public:
                 textCtrl->setText(textBoxCtrl->value);
                 textCtrl->addListener(this);
                 addAndMakeVisible(*textCtrl);
+                auto textHandler = std::make_unique<HoverHandler>(*textCtrl);
+                juce::String infoString(textBoxCtrl->info);
+                textHandler->onMouseEnter = [this, infoString]()
+                {
+                    updateInstructionBox(infoString);
+                };
+                textHandler->onMouseExit = [this]() { updateInstructionBox(""); };
+                textHandler->attach();
+                handlers.push_back(std::move(textHandler));
                 textCtrls.push_back(std::move(textCtrl));
                 DBG("Text Box: " + textBoxCtrl->label + " added");
 
@@ -110,6 +139,15 @@ public:
                 comboBox.addListener(this);
                 comboBox.setTextWhenNoChoicesAvailable("No choices");
                 addAndMakeVisible(*comboBoxWithLabel);
+                auto comboHandler = std::make_unique<HoverHandler>(*comboBoxWithLabel);
+                juce::String infoString(comboBoxCtrl->info);
+                comboHandler->onMouseEnter = [this, infoString]()
+                {
+                    updateInstructionBox(infoString);
+                };
+                comboHandler->onMouseExit = [this]() { updateInstructionBox(""); };
+                comboHandler->attach();
+                handlers.push_back(std::move(comboHandler));
                 optionCtrls.push_back(std::move(comboBoxWithLabel));
                 DBG("Combo Box: " + comboBoxCtrl->label + " added");
             }
@@ -345,6 +383,7 @@ public:
 
 private:
     // ToolbarSliderStyle toolbarSliderStyle;
+    juce::SharedResourcePointer<InstructionBox> instructionBox;
     std::shared_ptr<WebModel> mModel { nullptr };
 
     juce::Label headerLabel;
@@ -354,4 +393,14 @@ private:
     std::vector<std::unique_ptr<juce::ToggleButton>> toggles;
     std::vector<std::unique_ptr<ComboBoxWithLabel>> optionCtrls;
     std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
+
+    std::vector<std::unique_ptr<HoverHandler>> handlers;
+
+    void updateInstructionBox(const juce::String& text)
+    {
+        if (instructionBox != nullptr)
+        {
+            instructionBox->setStatusMessage(text);
+        }
+    }
 };

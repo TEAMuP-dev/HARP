@@ -645,7 +645,9 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     // juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
     // juce::String timestamp = "_" + juce::String(juce::Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
     // fileName = baseName + timestamp + extension;
-    juce::File downloadedFile = tempDir.getChildFile(fileName);
+    juce::String baseName = juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
+    juce::File downloadedFile = tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
 
     // Create input stream to download the file
     juce::StringPairArray responseHeaders;
@@ -671,6 +673,11 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
         error.devMessage = "Request failed with status code: " + juce::String(statusCode);
         return OpResult::fail(error);
     }
+
+    // Remove file at target path if one already exists
+    // Before adding this, the new file did not replace the old file
+    // TODO - make file path unique (timestamp or Uuid)
+    downloadedFile.deleteFile();
 
     // Create output stream to save the file locally
     std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());

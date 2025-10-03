@@ -1,4 +1,5 @@
 #pragma once
+
 #include "MediaDisplayComponent.h"
 #include <juce_audio_utils/juce_audio_utils.h>
 
@@ -17,6 +18,7 @@ public:
 
 private:
     AudioThumbnail& thumbnail;
+
     Range<double>& visibleRange;
 };
 
@@ -24,7 +26,10 @@ class AudioDisplayComponent : public MediaDisplayComponent
 {
 public:
     AudioDisplayComponent();
-    AudioDisplayComponent(String trackName, bool required = true);
+    AudioDisplayComponent(String name,
+                          bool req = true,
+                          bool fromDAW = false,
+                          DisplayMode mode = DisplayMode::Hybrid);
     ~AudioDisplayComponent() override;
 
     static StringArray getSupportedExtensions();
@@ -33,26 +38,23 @@ public:
         return AudioDisplayComponent::getSupportedExtensions();
     }
 
-    // void repositionContent() override;
-
-    Component* getMediaComponent() override { return &thumbnailComponent; }
+    void resized() override;
 
     void loadMediaFile(const URL& filePath) override;
 
     double getTotalLengthInSecs() override { return thumbnail.getTotalLength(); }
-    double getTimeAtOrigin() override { return visibleRange.getStart(); }
-
-    void resized() override;
-
-    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& label) const override
-    {
-        return dynamic_cast<AudioLabel*>(label.get()) != nullptr;
-    }
 
 private:
-    void resetDisplay() override;
+    void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
+
+    Component* getMediaComponent() override { return &thumbnailComponent; }
+
+    bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& l) const override
+    {
+        return dynamic_cast<AudioLabel*>(l.get()) != nullptr;
+    }
 
     TimeSliceThread thread { "Audio File Thread" };
 

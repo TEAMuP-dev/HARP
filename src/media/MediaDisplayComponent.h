@@ -10,10 +10,25 @@
 
 using namespace juce;
 
-class OverheadPanel : public Component
+class ColorablePanel : public Component
 {
 public:
-    void paint(Graphics& g) override { g.fillAll(Colours::darkgrey.darker()); }
+    ColorablePanel(Colour color = Colours::darkgrey)
+        : defaultColor(color), backgroundColor(color) {};
+
+    void paint(Graphics& g) override { g.fillAll(backgroundColor); }
+
+    void setColor() { setColor(defaultColor); }
+
+    void setColor(Colour newColor)
+    {
+        backgroundColor = newColor;
+        repaint();
+    }
+
+private:
+    Colour defaultColor;
+    Colour backgroundColor;
 };
 
 class MediaDisplayComponent : public Component,
@@ -25,155 +40,104 @@ class MediaDisplayComponent : public Component,
                               private ScrollBar::Listener
 {
 public:
-    enum IOMode
-    {
-        Input,
-        Output,
-        // Hybrid
-    };
-
     MediaDisplayComponent();
-    // MediaDisplayComponent(String trackName);
-    MediaDisplayComponent(String trackName, bool required = true);
+    MediaDisplayComponent(String name,
+                          bool req = true,
+                          bool fromDAW = false,
+                          DisplayMode mode = DisplayMode::Hybrid);
     ~MediaDisplayComponent() override;
 
+    static StringArray getSupportedExtensions();
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
     virtual void resized() override;
-    // virtual void repositionOverheadPanel();
-    // Rectangle<int> getContentBounds();
-    // virtual void repositionContent() {};
-    virtual void repositionScrollBar();
-
-    virtual Component* getMediaComponent() { return this; }
-    virtual float getMediaXPos() { return 0.0f; }
-
-    String getTrackName() { return trackName; }
-    void setTrackName(String name) { trackName = name; }
-    void setTrackId(juce::Uuid id) { trackID = id; }
-    juce::Uuid getTrackId() { return trackID; }
-
-    float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
-    float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
-
     void repositionLabels();
 
-    void changeListenerCallback(ChangeBroadcaster*) override;
+    void setTrackName(String name);
+    String getTrackName() { return trackName; }
+
+    bool isRequired() const { return required; }
+    bool isLinkedToDAW() const { return linkedToDAW; }
+
+    bool isInputTrack() { return (displayMode == 0) || isHybridTrack(); }
+    bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
+    bool isHybridTrack() { return displayMode == 2; }
+    bool isThumbnailTrack() { return displayMode == 3; }
+
+    void setDisplayID(Uuid id) { displayID = id; }
+    Uuid getDisplayID() { return displayID; }
+
+    void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
+
+    void resetDisplay(); // Reset all state and media
+    void initializeDisplay(const URL& filePath); // Initialize new display
+    void updateDisplay(const URL& filePath); // Add new file to existing display
 
     virtual void loadMediaFile(const URL& filePath) = 0;
 
-    void resetMedia();
+    URL getOriginalFilePath() { return originalFilePath; }
 
-    void setupDisplay(const URL& filePath);
-    void updateDisplay(const URL& filePath);
+    //void addNewTempFile(); // Create working temp file to modify instead of current or original
+    //bool iteratePreviousTempFile();
+    //bool iterateNextTempFile();
 
-    URL getTargetFilePath() { return targetFilePath; }
+    //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
+    //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
-    bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
+    //void clearFutureTempFiles(); // Prune temp files after currently selected index
+    //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
-    void addNewTempFile();
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
-    URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
+    bool isDuplicateFile(const URL& fileParth);
 
-    bool iteratePreviousTempFile();
-    bool iterateNextTempFile();
+    void saveFileCallback();
 
-    void clearFutureTempFiles();
-
-    void overwriteTarget();
-
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return true; }
-
-    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
-
-    URL getDroppedFilePath() { return droppedFilePath; }
-
-    bool isFileDropped() { return ! droppedFilePath.isEmpty(); }
-
-    void openFileChooser();
-
-    // Callback for the save button
-    void saveCallback();
-
-    bool displaysInput() { return ioMode == 0; }
-    bool displaysOutput() { return ioMode == 1; }
-
-    void clearDroppedFile() { droppedFilePath = URL(); }
+    virtual double getTotalLengthInSecs() = 0;
+    virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
+    virtual float getPixelsPerSecond();
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
 
-    void mouseDown(const MouseEvent& e) override { mouseDrag(e); }
-    void mouseDrag(const MouseEvent& e) override;
-    void mouseUp(const MouseEvent& e) override;
-
-    virtual bool isPlaying() { return transportSource.isPlaying(); }
-    virtual void startPlaying() { transportSource.start(); }
-    virtual void stopPlaying() { transportSource.stop(); }
+    void selectTrack();
+    void deselectTrack();
+    bool isCurrentlySelected() { return isSelected; }
 
     void start();
     void stop();
 
-    virtual double getTotalLengthInSecs() = 0;
-    virtual double getTimeAtOrigin() { return 0.0; }
-    virtual float getPixelsPerSecond();
+    virtual bool isPlaying() { return transportSource.isPlaying(); }
 
-    virtual void updateVisibleRange(Range<double> r);
-
-    String getMediaHandlerInstructions();
-    void setMediaHandlerInstructions(String instructions);
-
-    void addLabels(LabelList& labels);
-    void clearLabels(int processingIdxCutoff = 0);
-
-    void addLabelOverlay(LabelOverlayComponent* l);
-    void removeLabelOverlay(LabelOverlayComponent* l);
+    int getNumOverheadLabels();
 
     void addOverheadLabel(OverheadLabelComponent* l);
     void removeOverheadLabel(OverheadLabelComponent* l);
 
-    int getNumOverheadLabels();
+    void addLabelOverlay(LabelOverlayComponent* l);
+    void removeLabelOverlay(LabelOverlayComponent* l);
 
-    std::function<void(const juce::String&)> instructionBoxWriter;
-
-    void setIOMode(IOMode mode) { ioMode = mode; }
-    IOMode getIOMode() { return ioMode; }
-
-    // void setRequired(bool required) { _required = required; }
-    bool isRequired() const { return _required; }
+    void addLabels(LabelList& labels);
+    void clearLabels(int processingIdxCutoff = 0);
 
 protected:
-    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*label*/) const
-    {
-        return true;
-    }
-
-    void setNewTarget(URL filePath);
-
-    double mediaXToTime(const float x);
-    float timeToMediaX(const double t);
-    float mediaXToDisplayX(const float mX);
-
     void resetTransport();
 
-    void horizontalMove(float deltaX);
+    virtual void updateVisibleRange(Range<double> r);
 
-    void horizontalZoom(float deltaZoom, float scrollPosX);
+    virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
 
-    const int textSpacing = 2;
-    const int minFontSize = 10;
-    const int labelHeight = 20;
+    // Media (audio or MIDI) content area
+    Component contentComponent;
+
+    String mediaInstructions;
 
     Range<double> visibleRange;
-
-    OverheadPanel overheadPanel;
-    ScrollBar horizontalScrollBar { false };
-
-    String mediaHandlerInstructions;
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -181,81 +145,129 @@ protected:
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
 
-    std::unique_ptr<FileChooser> openFileBrowser;
-    std::unique_ptr<FileChooser> saveFileBrowser;
-
-    juce::SharedResourcePointer<InstructionBox> instructionBox;
-    juce::SharedResourcePointer<StatusBox> statusBox;
-
-    // FlexBox for the whole track
-    juce::FlexBox mainFlexBox;
-    // FlexBox for the header area (track name and buttons)
-    juce::FlexBox headerFlexBox;
-    // FlexBox for the media + overhead area (if any)
-    juce::FlexBox mediaAreaFlexBox;
-    // FlexBox for the media area (audio or MIDI content)
-    juce::FlexBox mediaFlexBox;
-
-    // Track sub-components
-    // Left panel containing track name and buttons
-    juce::Component headerComponent;
-    // Media (audio or MIDI) content area
-    juce::Component mediaComponent;
-    // Media + overhead panel (if any)
-    juce::Component mediaAreaContainer;
-
-    // Header sub-components
-    juce::Label trackNameLabel;
-    MultiButton playStopButton;
-    MultiButton::Mode playButtonInfo;
-    MultiButton::Mode stopButtonInfo;
-    MultiButton chooseFileButton;
-    MultiButton::Mode chooseButtonInfo;
-    MultiButton saveFileButton;
-    MultiButton::Mode saveButtonActiveInfo;
-    MultiButton::Mode saveButtonInactiveInfo;
-
 private:
-    void populateTrackHeader();
+    void initializeButtons();
 
+    void timerCallback() override;
+    virtual void visibleRangeCallback() { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+
+    virtual void resetMedia() = 0;
     void resetPaths();
+    void resetScrollBar();
+    void resetButtonState();
 
-    virtual void resetDisplay() = 0;
+    void setOriginalFilePath(URL filePath);
 
     virtual void postLoadActions(const URL& filePath) = 0;
 
-    int correctToBounds(float x, float width);
+    void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
-    void updateCursorPosition();
+    void chooseFileCallback();
 
-    void timerCallback() override;
+    virtual Component* getMediaComponent() { return this; }
+
+    virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
+    virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
+    virtual float getVerticalControlsWidth() { return 0.0f; }
+
+    virtual float getMediaXPos() { return 0.0f; }
+    double mediaXToTime(const float mX);
+    float timeToMediaX(const double t);
+    float mediaXToDisplayX(const float mX);
+    virtual float mediaYToDisplayY(const float mY) { return mY; }
+    int correctMediaXBounds(float mX, float width);
+
+    void horizontalMove(double deltaT);
+    void horizontalZoom(double deltaZoom, double scrollPosT);
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
-    void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
+    void unlinkFromDAW();
 
-    void mouseEnter(const juce::MouseEvent& /*event*/) override;
-    void mouseExit(const juce::MouseEvent& /*event*/) override;
+    virtual void startPlaying() { transportSource.start(); }
+    virtual void stopPlaying() { transportSource.stop(); }
 
-    URL targetFilePath;
-    URL droppedFilePath;
+    void updateCursorPosition();
 
+    void mouseEnter(const MouseEvent& /*e*/) override;
+    void mouseExit(const MouseEvent& /*e*/) override;
+
+    void mouseDown(const MouseEvent& e) override;
+    void mouseDrag(const MouseEvent& e) override;
+    void mouseUp(const MouseEvent& e) override;
+    void mouseDoubleClick(const MouseEvent& e) override;
+
+    virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
+
+    const int textSpacing = 2;
+    const int minFontSize = 10;
+    const int labelHeight = 20;
+
+    Colour defaultColor = Colours::darkgrey;
+    Colour graphicsColor = Colours::lightblue;
+    Colour cursorColor = Colours::white.withAlpha(0.85f);
+    Colour selectionColor = Colours::darkblue.brighter();
+    Colour linkedToDAWColor = Colours::purple.withAlpha(0.5f);
+    Colour overheadPanelColor = Colours::darkgrey.darker();
+
+    // Panel with labels / buttons
+    ColorablePanel headerComponent { defaultColor };
+    // Buttons area subcomponent
+    Component buttonsComponent;
+    // Media + overhead panel (if any)
+    Component mediaAreaContainer;
+
+    // Header sub-components
+    Label trackNameLabel;
+    MultiButton playStopButton;
+    MultiButton::Mode playButtonActiveInfo;
+    MultiButton::Mode playButtonInactiveInfo;
+    MultiButton::Mode stopButtonInfo;
+    MultiButton chooseFileButton;
+    MultiButton::Mode chooseFileButtonInfo;
+    MultiButton saveFileButton;
+    MultiButton::Mode saveFileButtonActiveInfo;
+    MultiButton::Mode saveFileButtonInactiveInfo;
+
+    // Panel displaying overhead labels
+    ColorablePanel overheadPanel { overheadPanelColor };
+
+    // Flex for whole display
+    FlexBox mainFlexBox;
+    // Flex for header area (label and buttons)
+    FlexBox headerFlexBox;
+    // Flex for header buttons
+    FlexBox buttonsFlexBox;
+    // Flex for media / overhead panel (if any)
+    FlexBox mediaAreaFlexBox;
+
+    Uuid displayID;
+    String trackName;
+    const bool required = true;
+    bool linkedToDAW = false;
+    const DisplayMode displayMode;
+
+    bool isSelected = false;
+
+    URL originalFilePath;
     int currentTempFileIdx;
     Array<URL> tempFilePaths;
 
+    std::unique_ptr<FileChooser> chooseFileBrowser;
+    std::unique_ptr<FileChooser> saveFileBrowser;
+
+    double horizontalZoomFactor;
+    ScrollBar horizontalScrollBar { false };
+
     const float cursorWidth = 1.5f;
-    DrawableRectangle currentPositionMarker;
-
-    double currentHorizontalZoomFactor;
-
-    IOMode ioMode = IOMode::Input;
-    // It's const because we only set it in the constructor
-    // and never change it again
-    const bool _required = true;
+    DrawableRectangle currentPositionCursor;
 
     OwnedArray<LabelOverlayComponent> labelOverlays;
     OwnedArray<OverheadLabelComponent> overheadLabels;
 
-    juce::String trackName;
-    juce::Uuid trackID;
+    bool isLabelRepositioningScheduled = false;
+
+    SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<StatusBox> statusBox;
 };

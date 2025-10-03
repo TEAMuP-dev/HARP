@@ -2,6 +2,8 @@
 
 #include "juce_gui_basics/juce_gui_basics.h"
 
+#include "../gui/StatusComponent.h"
+
 using namespace juce;
 
 class TimeMarkerComponent : public Component
@@ -53,11 +55,6 @@ public:
 
     float getTextWidth();
 
-    juce::MouseCursor getMouseCursor() override;
-    void mouseUp(const MouseEvent& e) override;
-    void mouseEnter(const MouseEvent& e) override;
-    void mouseExit(const MouseEvent& e) override;
-
     void setLeftMarkerBounds(Rectangle<int> b) { leftMarker.setBounds(b); }
     void setRightMarkerBounds(Rectangle<int> b) { rightMarker.setBounds(b); }
     void setDurationFillBounds(Rectangle<int> b) { durationFill.setBounds(b); }
@@ -78,11 +75,18 @@ protected:
     String link;
 
 private:
+    juce::MouseCursor getMouseCursor() override;
+    void mouseUp(const MouseEvent& e) override;
+    void mouseEnter(const MouseEvent& e) override;
+    void mouseExit(const MouseEvent& e) override;
+
     int processingIndex = 0;
 
     TimeMarkerComponent leftMarker;
     TimeMarkerComponent rightMarker;
     TimeMarkerComponent durationFill;
+
+    SharedResourcePointer<InstructionBox> instructionBox;
 };
 
 class OverheadLabelComponent : public OutputLabelComponent
@@ -105,7 +109,7 @@ public:
     LabelOverlayComponent(const LabelOverlayComponent& other);
 
     static float amplitudeToRelativeY(float amplitude);
-    static float frequencyToRelativeY(float frequency);
+    //static float frequencyToRelativeY(float frequency);
     static float pitchToRelativeY(float pitch);
 
     void setRelativeY(float y) { relativeY = y; }

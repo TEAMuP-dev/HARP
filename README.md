@@ -1,33 +1,18 @@
-# [Harp v3.alpha] Current View of UI
-To test the current stage of HARP v3 locally, build the HARP branch `cb/gen-inputs`.
-
-To run a compatible model, you will need to execute the [`examples/pitch_shifter/app.py`](https://github.com/TEAMuP-dev/pyharp/blob/cb/gen-inputs/examples/pitch_shifter/app.py)
-from the `pyHarp` repository on the `cb/gen-inputs` branch.
-![Screenshot 2025-01-10 at 12 59 45 PM](https://github.com/user-attachments/assets/ecb2bdbc-c5d7-4528-bc39-24381d080f3f)
-
----
+<!-- content/intro.md -->
 # HARP
 
+<!-- TODO - Update this figure! -->
 ![herofig_revised](https://github.com/TEAMuP-dev/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
-![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys)
+<!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main) -->
+<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys) -->
+<!-- TODO - Replaced with HARP 3.0 paper link -->
+<!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
 
-HARP is a sample editor that allows for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP works by routing audio through [Gradio](https://www.gradio.app) endpoints. Since Gradio applications can be hosted locally or in the cloud (e.g. with [HuggingFace Spaces](https://huggingface.co/spaces)), HARP lets users of Digital Audio Workstations (DAWs) capable of connecting with external sample editors (_e.g._ [REAPER](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-pro/), or [Ableton Live](https://www.ableton.com/en/live/)) access large state-of-the-art models using cloud-based services, without breaking the within-DAW workflow.
-
-For a more formal introduction, please see our [NeurIPS paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf) presenting an earlier version of HARP.
+HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with machine learning. HARP operates as a standalone application or a plugin-like editor within your DAW, and routes audio, MIDI, and metadata through [Gradio](https://www.gradio.app) endpoints for processing. Gradio apps can be hosted locally or remotely (_e.g._, [HuggingFace Spaces](https://huggingface.co/spaces)), allowing users of DAWs (_e.g._ [REAPER](https://www.reaper.fm), [Logic Pro X](https://www.apple.com/logic-pro/), [Ableton Live](https://www.ableton.com/en/live/)) to access powerful cloud-based models seamlessly from within their DAW.
 
 ## Table of Contents
 * **[Installation](#installation)**
-    * **[MacOS](#macos)**
-    * **[Windows](#windows)**
-    * **[Linux](#linux)**
-* **[Setup](#setup)**
-    * **[Standalone](#standalone)**
-    * **[REAPER](#reaper)**
-    * **[Logic Pro X](#logic-pro-x)**
-    * **[Acoustica Mixcraft](#acoustica-mixcraft)**
-    <!--* **[Ableton Live](#ableton-live)**-->
 * **[Usage](#usage)**
     * **[Warning!](#warning)**
     * **[Models](#models)**
@@ -40,210 +25,110 @@ For a more formal introduction, please see our [NeurIPS paper](https://neuripscr
     * **[Distribution](#distribution)**
 * **[Citations](#citations)**
 
+<!-- TODO - add link to HARP 3.0 paper -->
+For more information on HARP, please see [our website](https://harp-plugin.netlify.app), our [NeurIPS workshop paper](https://neuripscreativityworkshop.github.io/2023/papers/ml4cd2023_paper23.pdf), or our [ISMIR Late Breaking Demo](https://arxiv.org/abs/2503.02977).
 
 
+<!-- content/supported_os.md -->
 # Installation
+
 HARP has been tested on the following operating systems:
-| OS | ![macOS](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) |  ![macOS](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
+
+| OS | ![macOS ARM](https://img.shields.io/badge/mac%20os%20(ARM)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![macOS x86](https://img.shields.io/badge/mac%20os%20(x86)-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0) | ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white) | ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white) |
 | :-: | :-: | :-: | :-: | :-: |
-| Version(s) | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
+| Versions | 13.0, 13.4, 14.2.1, 14.5 | 10.15 | 10, 11 | 22.04 |
 
-## MacOS
-* Download the macOS ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
+<!-- content/install/ -->
+<!-- content/setup/ -->
+Please visit [our website](https://harp-plugin.netlify.app/content/install/macos.html) for instructions on installing HARP for different operating systems and setting it up as an external sample editor for different DAWs.
 
-* Unzip and double click on the DMG file. This will open the window shown below.
-<p align="center">
-   <img width="528" alt="HARP_DMG" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/3f0278b2-8ace-41a1-8383-9c4aed894d56">
-</p>
-
-* Drag `HARP.app` to the `Applications/` folder to install HARP.
-
-* Do NOT run  harp from the installation window above. It will not run correctly if you do so.
-
-## Windows
-* Download the Windows ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
-
-* Extract the contents of the ZIP file and move the directory containing `HARP.exe` to a location of your choice, _e.g._ `C:\Program Files`.
-
-## Linux
-* Download the Linux ZIP file for HARP from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
-
-* Extract the contents of the ZIP file and move the directory containing `HARP` to a location of your choice, _e.g._ `/usr/local/bin/`.
-
-
-# Setup
-## Standalone
-To work as a standalone application, you just need to open HARP and start using it.    
-### Opening HARP
-#### MacOS
-Run `HARP.app` to start the application.
-
-#### Windows
-Run `HARP.exe` to start the application.
-
-#### Linux
-Run `HARP` to start the application.
-
-## [REAPER](https://www.reaper.fm)
-To set up HARP for use from within Reaper, do the following.
-### Setting Up HARP
-* Choose _REAPER > Preferences_ on the file menu for MacOS. OR hit keyboard command *control+p* on Windows
-
-* Scroll down to _External Editors_ and click _Add_.
-
-* Click _Browse_ to the right of the _Primary Editor_ field.
-
-* Navigate to your HARP installation (*e.g.* `HARP.app`) and select "OK".
-<p align="center">
-   <img width="1023" alt="REAPER_Setup" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/b828a2fd-5378-490c-be37-11f7404eb127">
-</p>
-
-### Opening HARP
-* (Optional) Right click the audio for the track you want to process and select _Render items as new take_.
-
-* Right click the audio and select _Open items in editor > Open items in 'HARP.app'_.
-<p align="center">
-   <img width="1531" alt="REAPER_Opening" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/7f26857f-61de-4765-9671-fb69c4264dc4">
-</p>
-
-## [Logic Pro X](https://www.apple.com/logic-pro/)
-To set up HARP for use from within Logic Pro, do the following.
-
-### Setting Up HARP
-* Set `HARP.app` as an external sample editor following [this guide](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac).
-
-### Opening HARP
-
-* (Optional) Right click the audio for the track you want to process and select _Bounce in Place_.
-
-* Select any audio region and press _Shift+W_ to open the corresponding audio file in HARP.
-
-<!--
-## [Ableton Live](https://www.ableton.com/en/live/)
-### Setting Up HARP
-TODO
-
-### Opening HARP
-TODO
--->
-
-## [Acoustica Mixcraft](https://acoustica.com/products/mixcraft)
-To set up HARP for use from within Mixcraft, do the following.
-
-### Setting Up HARP
-* Set `HARP.exe` as an external wave editor following "Configuring an External Wave Editor" on [this manual page](https://acoustica.com/mixcraft-10-manual/audio-clips).
-
-### Opening HARP
-
-* Right click the audio for the track you want to process and select _Edit In External Editor..._, or via _Sound > Edit In External Editor..._.
-
-* On the dialog that appears, choose _Edit A Copy Of The Sound_, and click _Edit_ to open HARP.
-
-* After editing, close HARP and select _Done_ in the Mixcraft dialog box to update the track.
 
 # Usage
+
 HARP can be used to apply deep learning models to your audio either as a stand-alone or within any DAW (e.g. Logic Pro) that supports external sample editors.
 
 If you use it stand-alone, just load a file, load a model and apply the model to the audio file. When you're happy with the result, save the output.
 
 In a DAW, you select the exceprt you want to process, open it in HARP, process it, and select _Save_ from the  _File_ menu in HARP. This will return the processed file back to the DAW.
 
+<!-- content/usage/warnings.md -->
 ## Warning!
-**HARP is a *destructive* file editor.**
-When you select _Save_, HARP overwrites the existing audio. After recording or loading audio into a track within your preferred DAW, it is recommended that you *bounce-in-place* (on Logic) or _Render items as new take_ (on Reaper) the audio before processing it with HARP. In this way, you will avoid overwriting the original audio file and will be able to undo any changes introuced by HARP. Alternatively, overwriting can be circumvented by using the _Save As_ functionality from the _File_ menu in HARP.
 
+**HARP is a _destructive_ file editor.** When operating HARP as a standalone application, use _Save As_ to avoid overwriting input files. If you save your outputs while operating in the DAW, HARP will overwrite input regions. By creating a duplicate / bounce / alternate take of the region you want to edit with HARP, you can ensure the original region remains unaffected.
+
+<!-- content/usage/partial_track.md -->
 ### Processing just a portion of a track
-If you would like to process only an excerpt of a track, first trim the exceprt to the portion you want to process. Then, perform a *bounce-in-place* of the excerpt. This will make a new file that contains only the audio you want to process with HARP. Then, open the new file in HARP. 
 
+HARP processes full regions in the DAW. Therefore, to edit a portion of an audio or MIDI region:
+
+- Split the region to obtain the excerpt you want to edit as a separate region
+- (Optional) Create a duplicate / bounce / alternate take of the region you want to edit
+- Open with HARP to process
+
+<!-- content/usage/models.md -->
 ## Models
 
-While any algorithm or deep learning model can be deployed to HARP using the PyHARP API, at present, the following models have been made available:
+Please visit [our website](https://harp-plugin.netlify.app/content/usage/models.html) for a full list of supported models.
 
-* VampNet Music Audio Generation Suite: [hugggof/vampnet-music](https://huggingface.co/spaces/hugggof/vampnet-music) (ZeroGPU)
-
-<!--* Music Audio Generation: [hugggof/MusicGen](https://huggingface.co/spaces/hugggof/MusicGen)-->
-
-* Text-Guided Music Generation and Editing: [hugggof/melodyflow](https://huggingface.co/spaces/hugggof/melodyflow) (ZeroGPU)
-
-<!--
-* Stem-Wise Source Separation:
-  * [lllindsey0615/DEMUCS_GPU](https://huggingface.co/spaces/lllindsey0615/DEMUCS_GPU) (ZeroGPU)
-  * [lllindsey0615/pyharp_demucs](https://huggingface.co/spaces/lllindsey0615/pyharp_demucs)
--->
-
-* Stem-Wise Source Separation: [cwitkowitz/demucs-cpu](https://huggingface.co/spaces/cwitkowitz/demucs-cpu)
-
-* Anticipitory Music Transformer (Harmonization): [lllindsey0615/pyharp_AMT](https://huggingface.co/spaces/lllindsey0615/pyharp_AMT) (ZeroGPU)
-
-* Pitch-Preserving Timbre-Removal:
-  * [npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap) (ZeroGPU)
-  * [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)
-
-* Harmonic/Percussive Source Separation: [xribene/harmonic_percussive](https://huggingface.co/spaces/xribene/harmonic_percussive_v5)
-
-<!--* Pitch Shifting (Audio): [xribene/pitch_shifter](https://huggingface.co/spaces/xribene/pitch_shifter)-->
-
-<!--* Pitch Shifting (MIDI): [xribene/midi_pitch_shifter](https://huggingface.co/spaces/xribene/midi_pitch_shifter)-->
-
+<!-- content/usage/workflow.md -->
 ## Workflow
-* After opening HARP as an external sample editor or standalone application, the following window will appear.
 
-<!-- <img width="799" alt="Screenshot 2024-03-14 at 11 15 07 AM" src="https://github.com/TEAMuP-dev/HARP/assets/55194054/5fe8a28b-a612-4b08-9857-fe3df84afa20"> -->
-<!-- <img width="798" alt="Screenshot 2024-06-04 at 3 11 35 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/35f22685-d4f3-451b-9051-321d139ffd59"> -->
-<img width="791" alt="Screenshot 2024-06-04 at 4 29 03 AM (1)" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/fa1d100c-519b-4eff-9296-c2900d05005c">
+HARP supports a simple workflow: pick an existing model for processing or provide a URL to your own, load the model and it's corresponding interface, tweak controls to your liking, and process.
 
-* Select or type the [Gradio](https://www.gradio.app) endpoint of an available HARP-ready model (_e.g._ "hugggof/harmonic_percussive") in the field at the top of the application.
+To get started:
 
-  * This will populate the window with controls for the model.
+- Open HARP as a standalone application or within your DAW
+- Select an existing model using the drop-down menu at the top of the screen, or select `custom path...` and provide a URL to any HARP-compatible Gradio endpoint 
+- Load the selected model (and its corresponding interface) using the `Load` button.
+- Import audio or MIDI data to process with the model either via the `Open File` button or by dragging and dropping a file into HARP
+- Adjust controls to taste in the interface
+- Click `Process` to run the model; outputs will automatically be rendered in HARP
+- To save your outputs, click the `Save` button or select `Save As` from the `File` menu
 
-  * Loading can take some time if the [HuggingFace Space](https://huggingface.co/spaces) is asleep.
-
-<!-- ![harmonic_percussive](https://github.com/TEAMuP-dev/HARP/assets/33099118/20937933-01d1-402e-aab8-3253de0134c0) -->
-<!-- <img width="797" alt="Screenshot 2024-06-04 at 3 12 31 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/eeb7be3e-f6a4-4d07-a8dc-33f8bf5fcb77"> -->
-<img width="787" alt="Screenshot 2024-06-04 at 4 31 05 AM" src="https://github.com/TEAMuP-dev/HARP/assets/15819935/79dcaaa8-fa55-4ae9-b37b-7924fffd2331">
-
-* Adjust the model controls to your liking and click _process_.
-
-* The resulting audio can be played by pressing the space bar or by clicking _Play/Stop_.
-
-* You can save the audio at any time using the _Save_ and _Save As_ features located in the _File_ menu.
-
-* Any changes made in HARP will be automatically reflected in your DAW.
+<img width="1819" height="1042" alt="text-to-audio" src="https://github.com/user-attachments/assets/a5579d82-3955-46a1-84a6-22f7632a9d51" />
 
 
-
+<!-- content/contributing/overview.md -->
 # Contributing
-To make a model that you can use in HARP, see [Adding Models with PyHARP](#adding-models-with-pyharp). To modify the HARP app, see [Building Harp](#building-harp). 
 
+To get started building and deploying models for others to use in HARP, see [Adding Models with PyHARP](#adding-models-with-pyharp). To get started developing the HARP app itself, see [Building Harp](#building-harp). 
+
+<!-- content/contributing/version_compat.md -->
 ## Version Compatibility
-The current versions of HARP and PyHARP are shown below. They are fully compatible.
+
+The currently available versions of HARP and PyHARP are mutually compatible.
 
 | HARP | PyHARP |
 | :-: | :-: |
+| 3.0.0 | 0.3.0 |
 | 2.2.0 | 0.2.1 |
-| 2.1.x | 0.2.0 |
-| 2.0.0 | 0.2.0 |
-| 1.3.0 | 0.1.1 |
-| 1.2.0 | 0.1.0 |
 
-## Adding Models with PyHARP
+<!-- content/contributing/add_model.md -->
+# Adding Models with PyHARP
+
 [![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
 
-We provide PyHARP, a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps with optional interactive controls. PyHARP allows machine learning researchers to create DAW-friendly user interfaces for virtually any audio processing code using a minimal Python wrapper.
+PyHARP provides a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps. It allows researchers to easily create DAW-friendly interfaces for any audio processing code with minimal Python wrappers.
 
+<!-- content/contributing/build_source.md -->
+# Building HARP
 
-## Building HARP
 HARP can be built from scratch with the following steps:
+
 ### 1. Clone Repository
+
 ```bash
 git clone --recurse-submodules https://github.com/TEAMuP-dev/HARP
 ```
 
 ### 2. Enter Project
+
 ```bash
 cd HARP/
 ```
+
 ### 3. Configure
+
 ```bash
 mkdir build
 cd build
@@ -251,27 +136,35 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 ```
 
 #### ARM vs. x86 MacOS
+
 The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
 ```bash
 cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
+
 #### Linux
+
 Ensure your system satisfies all [JUCE dependencies](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md).
 
 ### 4. Build
 #### MacOS/Linux
+
 ```bash
 make -j <NUM_PROCESSORS>
 ```
+
 #### Windows
+
 ```bash
 cmake --build . --config Debug -j <NUM_PROCESSORS>
 ```
 
+<!-- content/contributing/debug.md -->
 ## Debugging
-To debug your HARP build in [Visual Studio Code](https://code.visualstudio.com/) it is helpful to do the following. 
-### Visual Studio Code
-1. Download [Visual Studio Code](https://code.visualstudio.com/).
+
+We provide instructions for debugging your HARP build in [Visual Studio Code](https://code.visualstudio.com/):
+
+1. Download [Visual Studio Code](https://code.visualstudio.com/Download).
 2. Install the C/C++ extension from Microsoft.
 3. Open the _Run and Debug_ tab in VS Code and click _create a launch.json file_ using _CMake Debugger_.
 4. Create a configuration to attach to the process (see the following example code to be placed in `launch.json`).
@@ -281,25 +174,49 @@ To debug your HARP build in [Visual Studio Code](https://code.visualstudio.com/)
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(lldb) Standalone",
+            "name": "Standalone HARP",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app", // macOS
-            // "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.exe", // Windows
-            // "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP", // Linux
-            "args": ["../test.wav"],
+            //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.exe", // Windows
+            //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP", // Linux
+            "args": ["../test/test.wav", "../test/test.mid"],
             "cwd": "${fileDirname}",
+            "MIMode": "lldb" // macOS
+        },
+        {
+            "name": "Attach to HARP",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app", // macOS
+            //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.exe", // Windows
+            //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP", // Linux
+            "processId": "${command:pickProcess}",
             "MIMode": "lldb" // macOS
         }
     ]
 }
 ```
 
-5. Build the plugin using the flag `-DCMAKE_BUILD_TYPE=Debug`.
+5. Build the plugin using the flag `-DCMAKE_BUILD_TYPE=Debug` (see the following configure / build commands for macOS).
+
+```bash
+# CMake Configure Command:
+/opt/homebrew/bin/cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++ --no-warn-unused-cli -S /Users/<USER>/Projects/HARP -B /Users/<USER>/Projects/HARP/build -G Ninja
+```
+
+```bash
+# CMake Build Command:
+/opt/homebrew/bin/cmake --build /Users/<USER>/Projects/HARP/build --config Debug --target all --
+```
+
 6. Add break points and run the debugger.
 
+<!-- content/contributing/dist.md -->
 ## Distribution
+
 ### MacOS
+
 Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
 You'll need to set up a developer account with Apple and create a certificate in order to sign the plugin.
 For more information on codesigning and notarization for macOS, please refer to the [pamplejuce](https://github.com/sudara/pamplejuce) template.
@@ -323,18 +240,16 @@ Usage:
 
 After running `package.sh`, you should have a signed and notarized dmg file in the `packaging/` directory.
 
-<!--
-### Windows
-TODO
--->
-
 ## Citations
+
+<!-- TODO - HARP 3.0 paper citation -->
+
 [ISMIR 2024 Late Breaking Demo](https://ismir2024program.ismir.net/lbd_497.html):
 ```
 @article{benetatos2024harp,
     title     = {{HARP} 2.0: Expanding Hosted, Asynchronous, Remote Processing for Deep Learning in the {DAW}},
     author    = {Benetatos, Christodoulos and Cwitkowitz, Frank and Pruyne, Nathan and Garcia, Hugo Flores and O'Reilly, Patrick and Duan, Zhiyao and Pardo, Bryan},
-    year      = 2024
+    year      = 2024,
     journal   = {ISMIR Late Breaking Demo Papers}
 }
 ```
