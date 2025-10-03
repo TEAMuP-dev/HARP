@@ -85,8 +85,16 @@ target_sources(${PROJECT_NAME}
         src/settings/AudioSettingsTab.cpp
         src/client/GradioClient.cpp
         src/client/StabilityClient.cpp
-        src/external/magic_enum.hpp
+        src/settings/SettingsBox.h       
+        src/settings/SettingsBox.cpp 
+        src/settings/GeneralSettingsTab.h
+        src/settings/GeneralSettingsTab.cpp
+        src/settings/AudioSettingsTab.h
+        src/settings/AudioSettingsTab.cpp
+        src/settings/LoginTab.h
+        src/settings/LoginTab.cpp
 
+        src/external/magic_enum.hpp
         src/external/fontaudio/src/FontAudio.h
         src/external/fontaudio/src/FontAudio.cpp
         src/external/fontaudio/data/FontAudioData.h

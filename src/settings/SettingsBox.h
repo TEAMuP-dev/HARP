@@ -1,6 +1,9 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "GeneralSettingsTab.h"
+#include "AudioSettingsTab.h"
+#include "LoginTab.h"
 
 class SettingsBox : public juce::Component
 {
