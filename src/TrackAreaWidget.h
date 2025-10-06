@@ -183,7 +183,7 @@ public:
 
         if (m)
         {
-            if (!trackInfo->info.empty())
+            if (! trackInfo->info.empty())
             {
                 m->setMediaInstructions(trackInfo->info);
             }

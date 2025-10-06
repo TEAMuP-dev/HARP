@@ -58,9 +58,7 @@ public:
                 auto sliderHandler = std::make_unique<HoverHandler>(slider);
                 juce::String infoString(sliderCtrl->info);
                 sliderHandler->onMouseEnter = [this, infoString]()
-                {
-                    updateInstructionBox(infoString);
-                };
+                { updateInstructionBox(infoString); };
                 sliderHandler->onMouseExit = [this]() { updateInstructionBox(""); };
                 sliderHandler->attach();
                 handlers.push_back(std::move(sliderHandler));
@@ -80,9 +78,7 @@ public:
                 auto toggleHandler = std::make_unique<HoverHandler>(*toggle);
                 juce::String infoString(toggleCtrl->info);
                 toggleHandler->onMouseEnter = [this, infoString]()
-                {
-                    updateInstructionBox(infoString);
-                };
+                { updateInstructionBox(infoString); };
                 toggleHandler->onMouseExit = [this]() { updateInstructionBox(""); };
                 toggleHandler->attach();
                 handlers.push_back(std::move(toggleHandler));
@@ -102,9 +98,7 @@ public:
                 auto textHandler = std::make_unique<HoverHandler>(*textCtrl);
                 juce::String infoString(textBoxCtrl->info);
                 textHandler->onMouseEnter = [this, infoString]()
-                {
-                    updateInstructionBox(infoString);
-                };
+                { updateInstructionBox(infoString); };
                 textHandler->onMouseExit = [this]() { updateInstructionBox(""); };
                 textHandler->attach();
                 handlers.push_back(std::move(textHandler));
@@ -124,16 +118,19 @@ public:
                 }
 
                 // Set initial selection if value is present
-                if (!comboBoxCtrl->value.empty())
+                if (! comboBoxCtrl->value.empty())
                 {
                     comboBox.setSelectedItemIndex(
                         std::distance(comboBoxCtrl->options.begin(),
-                                    std::find(comboBoxCtrl->options.begin(), comboBoxCtrl->options.end(), comboBoxCtrl->value)),
+                                      std::find(comboBoxCtrl->options.begin(),
+                                                comboBoxCtrl->options.end(),
+                                                comboBoxCtrl->value)),
                         juce::dontSendNotification);
                 }
                 else
                 {
-                    comboBox.setSelectedItemIndex(0, juce::dontSendNotification); // fallback to first item
+                    comboBox.setSelectedItemIndex(
+                        0, juce::dontSendNotification); // fallback to first item
                 }
 
                 comboBox.addListener(this);
@@ -142,9 +139,7 @@ public:
                 auto comboHandler = std::make_unique<HoverHandler>(*comboBoxWithLabel);
                 juce::String infoString(comboBoxCtrl->info);
                 comboHandler->onMouseEnter = [this, infoString]()
-                {
-                    updateInstructionBox(infoString);
-                };
+                { updateInstructionBox(infoString); };
                 comboHandler->onMouseExit = [this]() { updateInstructionBox(""); };
                 comboHandler->attach();
                 handlers.push_back(std::move(comboHandler));

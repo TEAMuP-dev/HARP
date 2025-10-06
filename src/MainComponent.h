@@ -1416,8 +1416,9 @@ public:
         {
             float inputTrackAreaFlex = 4 * (numInputTracks / totalTracks);
             mainPanel.items.add(juce::FlexItem(inputTracksLabel).withHeight(20).withMargin(margin));
-            mainPanel.items.add(
-                juce::FlexItem(inputTrackAreaWidget).withFlex(inputTrackAreaFlex).withMargin(margin));
+            mainPanel.items.add(juce::FlexItem(inputTrackAreaWidget)
+                                    .withFlex(inputTrackAreaFlex)
+                                    .withMargin(margin));
         }
         else
         {
@@ -1429,9 +1430,11 @@ public:
         if (numOutputTracks > 0)
         {
             float outputTrackAreaFlex = 4 * (numOutputTracks / totalTracks);
-            mainPanel.items.add(juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
             mainPanel.items.add(
-                juce::FlexItem(outputTrackAreaWidget).withFlex(outputTrackAreaFlex).withMargin(margin));
+                juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
+            mainPanel.items.add(juce::FlexItem(outputTrackAreaWidget)
+                                    .withFlex(outputTrackAreaFlex)
+                                    .withMargin(margin));
         }
         else
         {
