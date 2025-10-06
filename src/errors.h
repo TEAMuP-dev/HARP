@@ -1,4 +1,3 @@
-
 /**
  * @file
  * @brief classes and functions for handling errors in the application

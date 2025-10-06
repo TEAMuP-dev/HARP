@@ -27,17 +27,14 @@ public:
     OpResult uploadFileRequest(const juce::File& fileToUpload,
                                juce::String& uploadedFilePath,
                                const int timeoutMs = 10000) const override;
-    OpResult processRequest(Error&,
-                            juce::String&,
-                            std::vector<juce::String>&,
-                            LabelList&) override;
+    OpResult processRequest(Error&, juce::String&, std::vector<juce::String>&, LabelList&) override;
     OpResult getControls(juce::Array<juce::var>& inputComponents,
                          juce::Array<juce::var>& outputComponents,
                          juce::DynamicObject& cardDict) override;
 
     OpResult cancel() override;
 
-    // Authorization    
+    // Authorization
     void setToken(const juce::String& token) override;
 
     juce::String getToken() const override;
@@ -47,7 +44,6 @@ public:
     OpResult validateToken(const juce::String& token) const override;
 
 private:
-
     OpResult extractKeyFromResponse(const juce::String& response,
                                     juce::String& responseKey,
                                     const juce::String& key) const;
@@ -62,11 +58,10 @@ private:
                                     juce::String& response,
                                     const int timeoutMs = 10000) const;
 
-
     OpResult downloadFileFromURL(const juce::URL& fileURL,
                                  juce::String& downloadedFilePath,
                                  const int timeoutMs = 10000) const;
-    
+
     juce::String getAuthorizationHeader() const;
     juce::String getJsonContentTypeHeader() const;
     juce::String getAcceptHeader() const;

@@ -2,15 +2,15 @@
 #include "../errors.h"
 #include "../external/magic_enum.hpp"
 
-
 juce::String StabilityClient::mimeForAudioFile(const juce::File& f)
 {
     auto ext = f.getFileExtension().toLowerCase(); // includes the dot
-    if (ext == ".wav" || ext == ".wave") return "audio/wav";
-    if (ext == ".mp3")                    return "audio/mpeg";
+    if (ext == ".wav" || ext == ".wave")
+        return "audio/wav";
+    if (ext == ".mp3")
+        return "audio/mpeg";
     return {};
 }
-
 
 OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 {
@@ -19,11 +19,12 @@ OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 
     if (spaceInfo.status != SpaceInfo::Status::STABILITY)
     {
-        return OpResult::fail(Error{ErrorType::InvalidURL, -1, "Invalid space info for StabilityClient"});
+        return OpResult::fail(
+            Error { ErrorType::InvalidURL, -1, "Invalid space info for StabilityClient" });
     }
     if (! spaceInfo.apiEndpointURL.isNotEmpty())
     {
-        return OpResult::fail(Error{ErrorType::InvalidURL, -1, "API endpoint URL is empty"});
+        return OpResult::fail(Error { ErrorType::InvalidURL, -1, "API endpoint URL is empty" });
     }
     return OpResult::ok();
 }
@@ -31,12 +32,12 @@ OpResult StabilityClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 SpaceInfo StabilityClient::getSpaceInfo() const { return spaceInfo; }
 
 OpResult StabilityClient::uploadFileRequest(const juce::File& fileToUpload,
-                                         juce::String& uploadedFilePath,
-                                         const int timeoutMs) const
+                                            juce::String& uploadedFilePath,
+                                            const int timeoutMs) const
 {
     // TBD. We need the original path of the file.
 
-    if (!fileToUpload.existsAsFile())
+    if (! fileToUpload.existsAsFile())
     {
         Error error;
         error.devMessage = "File does not exist: " + fileToUpload.getFullPathName();
@@ -49,12 +50,14 @@ OpResult StabilityClient::uploadFileRequest(const juce::File& fileToUpload,
     return OpResult::ok();
 }
 
-juce::String StabilityClient::getControlValue(const juce::String& label, const juce::Array<juce::var>* dataArray)
+juce::String StabilityClient::getControlValue(const juce::String& label,
+                                              const juce::Array<juce::var>* dataArray)
 {
     DBG("[getControlValue] Searching for label: " + label);
     for (const auto& item : *dataArray)
     {
-        if (!item.isObject()) continue;
+        if (! item.isObject())
+            continue;
 
         const auto itemStr = juce::JSON::toString(item);
         DBG("[getControlValue] Scanning item: " + itemStr);
@@ -74,16 +77,12 @@ juce::String StabilityClient::getControlValue(const juce::String& label, const j
     return {};
 }
 
-
-
-
 OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataArray,
                                              Error& error,
                                              std::vector<juce::String>& outputFilePaths)
 {
-
     juce::String processID = juce::Uuid().toString();
-    shouldCancel.store(false);  // Reset cancel flag 
+    shouldCancel.store(false); // Reset cancel flag
 
     juce::String prompt = "happy";
     juce::String duration = "30";
@@ -91,21 +90,25 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
     juce::String outputFormat = "wav";
     juce::String cfg = "3.0";
 
-
-
     for (const auto& item : *dataArray)
     {
         auto* obj = item.getDynamicObject();
-        if (!obj) continue;
+        if (! obj)
+            continue;
 
-            const auto label = obj->getProperty("label").toString().toLowerCase();
-            const auto value = obj->getProperty("value").toString();
+        const auto label = obj->getProperty("label").toString().toLowerCase();
+        const auto value = obj->getProperty("value").toString();
 
-        if (label.contains("prompt")) prompt = value;
-            else if (label.contains("duration")) duration = value;
-            else if (label.contains("steps")) steps = value;
-            else if (label.contains("cfg")) cfg = value;
-            else if (label.contains("format")) outputFormat = value;
+        if (label.contains("prompt"))
+            prompt = value;
+        else if (label.contains("duration"))
+            duration = value;
+        else if (label.contains("steps"))
+            steps = value;
+        else if (label.contains("cfg"))
+            cfg = value;
+        else if (label.contains("format"))
+            outputFormat = value;
     }
 
     juce::StringPairArray args;
@@ -117,7 +120,8 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
 
     juce::String payload;
     OpResult result = buildPayload(args, processID, payload);
-    if (result.failed()) return result;
+    if (result.failed())
+        return result;
 
     juce::URL url("https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio");
     url = url.withPOSTData(payload);
@@ -127,11 +131,11 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
     juce::StringPairArray responseHeaders;
 
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                                                 .withExtraHeaders(headers)
-                                                 .withResponseHeaders(&responseHeaders)
-                                                 .withStatusCode(&statusCode)
-                                                 .withHttpRequestCmd("POST")
-                                                 .withConnectionTimeoutMs(30000);
+                       .withExtraHeaders(headers)
+                       .withResponseHeaders(&responseHeaders)
+                       .withStatusCode(&statusCode)
+                       .withHttpRequestCmd("POST")
+                       .withConnectionTimeoutMs(30000);
 
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
 
@@ -141,7 +145,7 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
         return OpResult::fail(error);
     }
 
-    if (!stream || statusCode != 200)
+    if (! stream || statusCode != 200)
     {
         juce::String response = stream ? stream->readEntireStreamAsString() : "";
         error.code = statusCode;
@@ -150,10 +154,10 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
     }
 
     juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                                .getChildFile(juce::Uuid().toString() + "." + outputFormat);
+                         .getChildFile(juce::Uuid().toString() + "." + outputFormat);
 
     std::unique_ptr<juce::FileOutputStream> f(out.createOutputStream());
-    if (!f || !f->openedOk())
+    if (! f || ! f->openedOk())
     {
         error.devMessage = "Failed to write output file.";
         return OpResult::fail(error);
@@ -171,8 +175,9 @@ OpResult StabilityClient::processTextToAudio(const juce::Array<juce::var>* dataA
         }
 
         const int n = stream->read(buf.getData(), bufSz);
-        if (n <= 0) break;
-        f->write(buf.getData(), (size_t)n);
+        if (n <= 0)
+            break;
+        f->write(buf.getData(), (size_t) n);
     }
 
     f->flush();
@@ -215,27 +220,28 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     }
 
     juce::File inputFile(inputAudioPath);
-    if (!inputFile.existsAsFile())
+    if (! inputFile.existsAsFile())
     {
         error.devMessage = "Audio file does not exist: " + inputAudioPath;
         return OpResult::fail(error);
     }
 
     // --- Step 2: Extract controls by index ---
-    auto getVal = [&](int idx) -> juce::var {
-        if (idx >= dataArray->size()) return {};
+    auto getVal = [&](int idx) -> juce::var
+    {
+        if (idx >= dataArray->size())
+            return {};
         auto* obj = dataArray->getReference(idx).getDynamicObject();
         if (obj && obj->hasProperty("value"))
             return obj->getProperty("value");
         return {};
     };
-    
-    juce::String duration      = juce::String((double)getVal(1));
-    juce::String steps         = juce::String((double)getVal(2));
-    juce::String cfg_scale     = juce::String((double)getVal(3));
-    juce::String outputFormat  = getVal(4).toString();
-    juce::String prompt        = getVal(5).toString();
-   
+
+    juce::String duration = juce::String((double) getVal(1));
+    juce::String steps = juce::String((double) getVal(2));
+    juce::String cfg_scale = juce::String((double) getVal(3));
+    juce::String outputFormat = getVal(4).toString();
+    juce::String prompt = getVal(5).toString();
 
     //if (prompt.isEmpty())
     //  {
@@ -248,7 +254,8 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     //}
 
     // --- Step 3: Construct multipart body ---
-    const juce::String boundary = "--------------------------" + juce::Uuid().toString().replace("-", "");
+    const juce::String boundary =
+        "--------------------------" + juce::Uuid().toString().replace("-", "");
     juce::MemoryOutputStream body;
     auto crlf = [&](const juce::String& s) { body << s << "\r\n"; };
 
@@ -273,38 +280,39 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     crlf("");
 
     std::unique_ptr<juce::FileInputStream> in(inputFile.createInputStream());
-    if (!in || !in->openedOk())
+    if (! in || ! in->openedOk())
     {
         error.devMessage = "Failed to open input WAV for reading.";
         return OpResult::fail(error);
     }
 
-    constexpr int bufSz = 16384;  
-    juce::HeapBlock<char> buf(bufSz); 
-    for (;;) 
+    constexpr int bufSz = 16384;
+    juce::HeapBlock<char> buf(bufSz);
+    for (;;)
     {
         const int n = in->read(buf.getData(), bufSz);
-        if (n <= 0) break;
-        body.write(buf.getData(), (size_t)n);
+        if (n <= 0)
+            break;
+        body.write(buf.getData(), (size_t) n);
     }
     crlf(""); // End of file part
 
     // Helper to add text fields
     auto addField = [&](const juce::String& key, const juce::String& val)
     {
-    if (val.isNotEmpty())
-    {
-        crlf("--" + boundary);
-        crlf("Content-Disposition: form-data; name=\"" + key + "\"");
-        crlf("");
-        crlf(val);
-    }
+        if (val.isNotEmpty())
+        {
+            crlf("--" + boundary);
+            crlf("Content-Disposition: form-data; name=\"" + key + "\"");
+            crlf("");
+            crlf(val);
+        }
     };
 
-    addField("prompt",        prompt);
-    addField("duration",      duration);
-    addField("steps",         steps);
-    addField("cfg_scale",     cfg_scale);
+    addField("prompt", prompt);
+    addField("duration", duration);
+    addField("steps", steps);
+    addField("cfg_scale", cfg_scale);
     addField("output_format", outputFormat);
 
     // Final boundary
@@ -318,27 +326,28 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     juce::URL url("https://api.stability.ai/v2beta/audio/stable-audio-2/audio-to-audio");
     url = url.withPOSTData(blob);
 
-    const juce::String headers = "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n" + getAuthorizationHeader() + getAcceptHeader();
+    const juce::String headers = "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n"
+                                 + getAuthorizationHeader() + getAcceptHeader();
 
     int statusCode = 0;
     juce::StringPairArray responseHeaders;
 
     auto opts = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                                              .withHttpRequestCmd("POST")
-                                              .withExtraHeaders(headers)
-                                              .withResponseHeaders(&responseHeaders)
-                                              .withStatusCode(&statusCode)
-                                              .withConnectionTimeoutMs(60000);
-    
-     if (shouldCancel.load())
-     {
-         error.devMessage = "Cancelled before sending request.";
-         return OpResult::fail(error);
+                    .withHttpRequestCmd("POST")
+                    .withExtraHeaders(headers)
+                    .withResponseHeaders(&responseHeaders)
+                    .withStatusCode(&statusCode)
+                    .withConnectionTimeoutMs(60000);
+
+    if (shouldCancel.load())
+    {
+        error.devMessage = "Cancelled before sending request.";
+        return OpResult::fail(error);
     }
 
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(opts);
 
-    if (!stream)
+    if (! stream)
     {
         error.code = statusCode;
         error.devMessage = "Failed to create input stream for audio-to-audio POST.";
@@ -353,15 +362,15 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
     }
 
     // --- Step 5: Save returned audio to temp file ---
-   // juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
+    // juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
     //           .getChildFile(juce::Uuid().toString() + ".wav");
     juce::String outExt = outputFormat.isNotEmpty() ? "." + outputFormat : ".wav";
     juce::File out = juce::File::getSpecialLocation(juce::File::tempDirectory)
-                  .getChildFile(juce::Uuid().toString() + outExt);
+                         .getChildFile(juce::Uuid().toString() + outExt);
 
     std::unique_ptr<juce::FileOutputStream> f(out.createOutputStream());
 
-    if (!f || !f->openedOk())
+    if (! f || ! f->openedOk())
     {
         error.devMessage = "Failed to write output audio: " + out.getFullPathName();
         return OpResult::fail(error);
@@ -376,19 +385,15 @@ OpResult StabilityClient::processAudioToAudio(const juce::Array<juce::var>* data
         }
 
         const int n = stream->read(buf.getData(), bufSz);
-        if (n <= 0) break;
-        f->write(buf.getData(), (size_t)n);
+        if (n <= 0)
+            break;
+        f->write(buf.getData(), (size_t) n);
     }
     f->flush();
 
     outputFilePaths.push_back(juce::URL(out).toString(true));
     return OpResult::ok();
 }
-
-
-
-
-
 
 OpResult StabilityClient::processRequest(Error& error,
                                          juce::String& processingPayload,
@@ -401,8 +406,7 @@ OpResult StabilityClient::processRequest(Error& error,
     juce::var parsedPayload;
     juce::JSON::parse(processingPayload, parsedPayload);
 
-
-    if (!parsedPayload.isObject())
+    if (! parsedPayload.isObject())
     {
         error.devMessage = "Failed to parse processingPayload. Not a JSON object.";
         return OpResult::fail(error);
@@ -446,8 +450,6 @@ OpResult StabilityClient::processRequest(Error& error,
     }
 }
 
-
-
 OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
                                       juce::Array<juce::var>& outputComponents,
                                       juce::DynamicObject& cardDict)
@@ -464,7 +466,8 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
 
     // Fetch the controls JSON from the URL. It's an array of 2 dicts.
     // The first is for text-to-audio, the second is for audio-to-audio.
-    const juce::String controlsJsonUrl = "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
+    const juce::String controlsJsonUrl =
+        "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
 
     juce::URL url(controlsJsonUrl);
     juce::String responseData = url.readEntireTextStream();
@@ -472,7 +475,9 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
     if (responseData.isEmpty())
     {
         error.devMessage = "Failed to fetch controls JSON from URL: " + controlsJsonUrl;
-        if (url.isWellFormed() && url.getDomain().isEmpty()) // Basic check if it looks like a local file path that failed
+        if (url.isWellFormed()
+            && url.getDomain()
+                   .isEmpty()) // Basic check if it looks like a local file path that failed
         {
             error.devMessage += ". Ensure the URL is correct and accessible.";
         }
@@ -503,11 +508,11 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
 
     juce::DynamicObject* obj = nullptr;
     if (spaceInfo.modelName == "text-to-audio")
-    // Check if the first element in the array is a dict
-    obj = dataArray->getReference(0).getDynamicObject();
+        // Check if the first element in the array is a dict
+        obj = dataArray->getReference(0).getDynamicObject();
     else if (spaceInfo.modelName == "audio-to-audio")
-    // Check if the first element in the array is a dict
-    obj = dataArray->getReference(1).getDynamicObject();
+        // Check if the first element in the array is a dict
+        obj = dataArray->getReference(1).getDynamicObject();
 
     if (obj == nullptr)
     {
@@ -552,9 +557,8 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
     return result;
 }
 
-
-
-OpResult StabilityClient::cancel() {
+OpResult StabilityClient::cancel()
+{
     DBG("[StabilityClient] Cancel request received.");
     shouldCancel.store(true);
     return OpResult::ok();
@@ -575,7 +579,10 @@ juce::String StabilityClient::getJsonContentTypeHeader(const juce::String& proce
     return "Content-Type: multipart/form-data; boundary=" + boundary + "\r\n";
 }
 
-juce::String StabilityClient::getAcceptHeader() const {  return "Accept: audio/*,application/json\r\n"; }
+juce::String StabilityClient::getAcceptHeader() const
+{
+    return "Accept: audio/*,application/json\r\n";
+}
 
 juce::String StabilityClient::createCommonHeaders() const
 {
@@ -595,7 +602,7 @@ OpResult StabilityClient::validateToken(const juce::String& inToken) const
 
     juce::URL url = juce::URL("https://api.stability.ai/v1/user/account");
 
-    // Create a GET request to account API with provided token 
+    // Create a GET request to account API with provided token
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                        .withExtraHeaders("Authorization: Bearer " + inToken + "\r\n")
                        .withConnectionTimeoutMs(5000)
@@ -606,8 +613,7 @@ OpResult StabilityClient::validateToken(const juce::String& inToken) const
     if (stream == nullptr)
     {
         error.code = statusCode;
-        error.devMessage =
-            "Failed to create input stream for GET request \nto validate token.";
+        error.devMessage = "Failed to create input stream for GET request \nto validate token.";
         return OpResult::fail(error);
     }
 
@@ -617,8 +623,7 @@ OpResult StabilityClient::validateToken(const juce::String& inToken) const
     if (statusCode != 200)
     {
         error.code = statusCode;
-        error.devMessage =
-            "Authentication failed with status code: " + juce::String(statusCode);
+        error.devMessage = "Authentication failed with status code: " + juce::String(statusCode);
         return OpResult::fail(error);
     }
 
@@ -646,7 +651,10 @@ juce::String StabilityClient::getToken() const { return token; }
 
 void StabilityClient::setTokenEnabled(bool enabled) { tokenEnabled = enabled; }
 
-OpResult StabilityClient::buildPayload(juce::StringPairArray& args, juce::String& processID, juce::String& payload) const {
+OpResult StabilityClient::buildPayload(juce::StringPairArray& args,
+                                       juce::String& processID,
+                                       juce::String& payload) const
+{
     juce::String boundary = "--------" + processID + "--------";
     payload = "--" + boundary + "\r\n";
     payload += "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n";

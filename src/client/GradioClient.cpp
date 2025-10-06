@@ -15,7 +15,8 @@ SpaceInfo GradioClient::getSpaceInfo() const { return spaceInfo; }
 OpResult GradioClient::processRequest(Error& error,
                                       juce::String& processingPayload,
                                       std::vector<juce::String>& outputFilePaths,
-                                      LabelList& labels) {
+                                      LabelList& labels)
+{
     OpResult result = OpResult::ok();
     juce::String eventId;
     juce::String endpoint = "process";
@@ -133,8 +134,7 @@ OpResult GradioClient::processRequest(Error& error,
 
             for (int j = 0; j < labelsPyharp->size(); j++)
             {
-                juce::DynamicObject* labelPyharp =
-                    labelsPyharp->getReference(j).getDynamicObject();
+                juce::DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
                 juce::String labelType = labelPyharp->getProperty("label_type").toString();
                 std::unique_ptr<OutputLabel> label;
 
@@ -224,8 +224,7 @@ OpResult GradioClient::processRequest(Error& error,
                     if (labelPyharp->getProperty("duration").isDouble()
                         || labelPyharp->getProperty("duration").isInt())
                     {
-                        label->duration =
-                            static_cast<float>(labelPyharp->getProperty("duration"));
+                        label->duration = static_cast<float>(labelPyharp->getProperty("duration"));
                     }
                 }
                 if (labelPyharp->hasProperty("description"))
@@ -240,7 +239,7 @@ OpResult GradioClient::processRequest(Error& error,
                 {
                     // now check if it's an int
                     if ((labelPyharp->getProperty("color").isInt64()
-                            || labelPyharp->getProperty("color").isInt()))
+                         || labelPyharp->getProperty("color").isInt()))
                     {
                         int color_val = static_cast<int>(labelPyharp->getProperty("color"));
 
@@ -264,12 +263,11 @@ OpResult GradioClient::processRequest(Error& error,
         else
         {
             LogAndDBG("The pyharp Gradio app returned a " + procObjType
-                        + " object, that we don't yet support in HARP.");
+                      + " object, that we don't yet support in HARP.");
         }
     }
     return result;
 }
-
 
 OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
                                               juce::String& responseKey,
@@ -292,7 +290,6 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
     responseKey = response.substring(dataIndex + key.length()).trim();
     return OpResult::ok();
 }
-
 
 OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
                                          juce::String& uploadedFilePath,
@@ -608,7 +605,8 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
     return result;
 }
 
-OpResult GradioClient::cancel() {
+OpResult GradioClient::cancel()
+{
     OpResult result = OpResult::ok();
     juce::String eventId;
     juce::String endpoint = "cancel";
@@ -645,9 +643,11 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     // juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
     // juce::String timestamp = "_" + juce::String(juce::Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
     // fileName = baseName + timestamp + extension;
-    juce::String baseName = juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    juce::String baseName =
+        juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
     juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
-    juce::File downloadedFile = tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
+    juce::File downloadedFile =
+        tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
 
     // Create input stream to download the file
     juce::StringPairArray responseHeaders;
@@ -732,7 +732,7 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
 
     juce::URL url = juce::URL("https://huggingface.co/api/whoami-v2");
 
-    // Create a GET request to whoami-v2 API with provided token 
+    // Create a GET request to whoami-v2 API with provided token
     auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                        .withExtraHeaders("Authorization: Bearer " + inputToken + "\r\n")
                        .withConnectionTimeoutMs(5000)
@@ -743,8 +743,7 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
     if (stream == nullptr)
     {
         error.code = statusCode;
-        error.devMessage =
-            "Failed to create input stream for GET request \nto validate token.";
+        error.devMessage = "Failed to create input stream for GET request \nto validate token.";
         return OpResult::fail(error);
     }
 
@@ -754,8 +753,7 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
     if (statusCode != 200)
     {
         error.code = statusCode;
-        error.devMessage =
-            "Authentication failed with status code: " + juce::String(statusCode);
+        error.devMessage = "Authentication failed with status code: " + juce::String(statusCode);
         return OpResult::fail(error);
     }
 
@@ -774,40 +772,44 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
         return OpResult::fail(error);
     }
 
-    auto* tokenJSON = obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
+    auto* tokenJSON =
+        obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
 
     String role = tokenJSON->getProperty("role").toString();
 
-    if (!(role == "write" || role == "read"))
+    if (! (role == "write" || role == "read"))
     {
         bool hasAllPermissions = false;
 
-        auto* scopedArray = tokenJSON->getProperty("fineGrained").getDynamicObject()->getProperty("scoped").getArray();
+        auto* scopedArray = tokenJSON->getProperty("fineGrained")
+                                .getDynamicObject()
+                                ->getProperty("scoped")
+                                .getArray();
 
         for (const auto& scopeEntry : *scopedArray)
         {
-            if (!scopeEntry.isObject())
+            if (! scopeEntry.isObject())
                 continue;
-    
+
             var permissionsVar = scopeEntry.getDynamicObject()->getProperty("permissions");
-    
-            if (!permissionsVar.isArray())
+
+            if (! permissionsVar.isArray())
                 continue;
-    
+
             auto* permissionsArray = permissionsVar.getArray();
-            bool hasAll = permissionsArray->contains("repo.content.read") &&
-                          permissionsArray->contains("repo.write") &&
-                          permissionsArray->contains("inference.serverless.write") &&
-                          permissionsArray->contains("inference.endpoints.infer.write");
-    
+            bool hasAll = permissionsArray->contains("repo.content.read")
+                          && permissionsArray->contains("repo.write")
+                          && permissionsArray->contains("inference.serverless.write")
+                          && permissionsArray->contains("inference.endpoints.infer.write");
+
             if (hasAll)
             {
                 hasAllPermissions = true;
                 break;
             }
         }
-    
-        if (!hasAllPermissions)
+
+        if (! hasAllPermissions)
         {
             error.devMessage = "Provided token does not have suitable read/write permissions.";
             return OpResult::fail(error);

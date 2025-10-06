@@ -25,21 +25,18 @@ public:
     virtual SpaceInfo getSpaceInfo() const = 0;
 
     // Requests
-    virtual OpResult uploadFileRequest(const juce::File&,
-                                       juce::String&,
-                                       const int timeoutMs = 10000) const = 0;
+    virtual OpResult
+        uploadFileRequest(const juce::File&, juce::String&, const int timeoutMs = 10000) const = 0;
 
-    virtual OpResult processRequest(Error&,
-                                    juce::String&,
-                                    std::vector<juce::String>&,
-                                    LabelList&) = 0;
+    virtual OpResult
+        processRequest(Error&, juce::String&, std::vector<juce::String>&, LabelList&) = 0;
 
     virtual OpResult getControls(juce::Array<juce::var>& inputComponents,
                                  juce::Array<juce::var>& outputComponents,
                                  juce::DynamicObject& cardDict) = 0;
 
     virtual OpResult cancel() = 0;
-    
+
     // Authorization
     virtual void setToken(const juce::String& token) = 0;
 
@@ -50,7 +47,6 @@ public:
     virtual OpResult validateToken(const juce::String& token) const = 0;
 
 private:
-    
     juce::String getAuthorizationHeader() const;
     juce::String getJsonContentTypeHeader() const;
     juce::String getAcceptHeader() const;

@@ -1,5 +1,3 @@
-
-
 /**
  * @file
  * @brief Custom UI components for the HARPPlugin
