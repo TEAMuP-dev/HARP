@@ -464,23 +464,23 @@ OpResult StabilityClient::getControls(juce::Array<juce::var>& inputComponents,
     Error error;
     error.type = ErrorType::JsonParseError;
 
-    // Fetch the controls JSON from the URL. It's an array of 2 dicts.
+    // Fetch the controls JSON. It's an array of 2 dicts.
     // The first is for text-to-audio, the second is for audio-to-audio.
-    const juce::String controlsJsonUrl =
-        "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
+    juce::File sourceFile(__FILE__);
+    const juce::File jsonFile =
+        sourceFile.getParentDirectory().getChildFile("stability-controls.json");
 
-    juce::URL url(controlsJsonUrl);
-    juce::String responseData = url.readEntireTextStream();
+    if (! jsonFile.existsAsFile())
+    {
+        error.devMessage = "JSON file not found: " + jsonFile.getFullPathName();
+        return OpResult::fail(error);
+    }
+
+    juce::String responseData = jsonFile.loadFileAsString();
 
     if (responseData.isEmpty())
     {
-        error.devMessage = "Failed to fetch controls JSON from URL: " + controlsJsonUrl;
-        if (url.isWellFormed()
-            && url.getDomain()
-                   .isEmpty()) // Basic check if it looks like a local file path that failed
-        {
-            error.devMessage += ". Ensure the URL is correct and accessible.";
-        }
+        error.devMessage = "Failed to read controls JSON from file: " + jsonFile.getFullPathName();
         return OpResult::fail(error);
     }
 
