@@ -12,10 +12,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#include "ControlAreaWidget.h"
-#include "MediaClipboardWidget.h"
+#include "widgets/ControlAreaWidget.h"
+#include "widgets/MediaClipboardWidget.h"
 #include "ThreadPoolJob.h"
-#include "TrackAreaWidget.h"
+#include "widgets/TrackAreaWidget.h"
 #include "WebModel.h"
 
 #include "gui/CustomPathDialog.h"
@@ -998,12 +998,12 @@ public:
             // "xribene/pitch_shifter_slow",
             "stability/text-to-audio",
             "stability/audio-to-audio",
-            "lllindsey0615/text2midi-HARP3",
-            "lllindsey0615/demucs-gen-input-output-harp-v3",
-            "lllindsey0615/solo-piano-audio-to-midi-transcription",
-            "lllindsey0615/AMT_HARP3",
-            "lllindsey0615/vampnet-music-HARP-V3",
-            "lllindsey0615/harmonic-percussive-HARP-3",
+            "teamup-tech/text2midi-HARP3",
+            "teamup-tech/demucs-gen-input-output-harp-v3",
+            "teamup-tech/solo-piano-audio-to-midi-transcription",
+            "teamup-tech/AMT_HARP3",
+            "teamup-tech/vampnet-music-HARP-V3",
+            "teamup-tech/harmonic-percussive-HARP-3",
             // "xribene/HARP-UI-TEST-v3"
             // "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",

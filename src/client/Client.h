@@ -1,60 +1,55 @@
 /**
  * @file
- * @brief The Client class for making http requests to API
+ * @brief Parent class for making HTTP requests to an API
  * @author huiranyu
  */
 
 #pragma once
 
+#include "juce_core/juce_core.h"
 #include <fstream>
 
 #include "../HarpLogger.h"
 #include "../errors.h"
 #include "../utils.h"
-#include "juce_core/juce_core.h"
-class Client
 
+using namespace juce;
+
+class Client
 {
 public:
     Client() = default;
-    virtual ~Client() {};
+    ~Client() = default;
 
     // Space Info
     virtual OpResult setSpaceInfo(const SpaceInfo&) = 0;
-
-    virtual SpaceInfo getSpaceInfo() const = 0;
+    SpaceInfo getSpaceInfo() const { return spaceInfo; }
 
     // Requests
-    virtual OpResult
-        uploadFileRequest(const juce::File&, juce::String&, const int timeoutMs = 10000) const = 0;
-
-    virtual OpResult
-        processRequest(Error&, juce::String&, std::vector<juce::String>&, LabelList&) = 0;
-
-    virtual OpResult getControls(juce::Array<juce::var>& inputComponents,
-                                 juce::Array<juce::var>& outputComponents,
-                                 juce::DynamicObject& cardDict) = 0;
-
+    virtual OpResult getControls(Array<var>& inputComponents,
+                                 Array<var>& outputComponents,
+                                 DynamicObject& cardDict) = 0;
+    virtual OpResult uploadFileRequest(const File&, String&, const int timeoutMs = 10000) const = 0;
+    virtual OpResult processRequest(Error&, String&, std::vector<String>&, LabelList&) = 0;
     virtual OpResult cancel() = 0;
 
     // Authorization
-    virtual void setToken(const juce::String& token) = 0;
+    void setToken(const String& t) { accessToken = t; }
+    String getToken() const { return accessToken; }
 
-    virtual juce::String getToken() const = 0;
+    //OpResult queryToken(const String& token) const;
+    virtual OpResult validateToken(const String& token) const;
 
-    virtual void setTokenEnabled(bool enabled) = 0;
+protected:
+    String getAuthorizationHeader() const;
+    String getAcceptHeader() const;
+    String getJsonContentTypeHeader() const;
 
-    virtual OpResult validateToken(const juce::String& token) const = 0;
+    String createCommonHeaders() const;
+    String createJsonHeaders() const;
 
-private:
-    juce::String getAuthorizationHeader() const;
-    juce::String getJsonContentTypeHeader() const;
-    juce::String getAcceptHeader() const;
-    juce::String createCommonHeaders() const;
-    juce::String createJsonHeaders() const;
+    String accessToken;
+    URL tokenValidationURL;
 
     SpaceInfo spaceInfo;
-    juce::String token;
-    // A bool flag that could be controlled by a checkbox
-    bool tokenEnabled = true;
 };

@@ -1,11 +1,12 @@
-#include "WebModel.h"
-#include "gui/SliderWithLabel.h"
-#include "gui/TitledTextBox.h"
-#include "gui/ComboBoxWithLabel.h"
-#include "gui/StatusComponent.h"
-#include "gui/HoverHandler.h"
 #include "juce_gui_basics/juce_gui_basics.h"
-#include "utils.h"
+
+#include "../WebModel.h"
+#include "../gui/SliderWithLabel.h"
+#include "../gui/TitledTextBox.h"
+#include "../gui/ComboBoxWithLabel.h"
+#include "../gui/StatusComponent.h"
+#include "../gui/HoverHandler.h"
+#include "../utils.h"
 
 class ControlAreaWidget : public juce::Component,
                           public Button::Listener,
@@ -379,6 +380,8 @@ public:
 private:
     // ToolbarSliderStyle toolbarSliderStyle;
     juce::SharedResourcePointer<InstructionBox> instructionBox;
+    // TODO - remove model and parameterize based on ComponentInfoList
+    //        and split into separate addCtrl functions?
     std::shared_ptr<WebModel> mModel { nullptr };
 
     juce::Label headerLabel;

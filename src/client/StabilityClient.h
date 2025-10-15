@@ -6,72 +6,53 @@
 
 #pragma once
 
+#include "juce_core/juce_core.h"
 #include <fstream>
 
 #include "../HarpLogger.h"
 #include "../errors.h"
 #include "../utils.h"
 #include "Client.h"
-#include "juce_core/juce_core.h"
-class StabilityClient : public Client
 
+using namespace juce;
+
+class StabilityClient : public Client
 {
 public:
-    // StabilityClienty(const juce::String& spaceUrl);
-    StabilityClient() = default;
+    StabilityClient();
+    ~StabilityClient() = default;
 
     // Space Info
     OpResult setSpaceInfo(const SpaceInfo& info) override;
-    SpaceInfo getSpaceInfo() const override;
 
     // Requests
-    OpResult uploadFileRequest(const juce::File& fileToUpload,
-                               juce::String& uploadedFilePath,
+    OpResult getControls(Array<var>& inputComponents,
+                         Array<var>& outputComponents,
+                         DynamicObject& cardDict) override; // TODO - abstract to ThirdPartyClient
+    OpResult uploadFileRequest(const File& fileToUpload,
+                               String& uploadedFilePath,
                                const int timeoutMs = 10000) const override;
-    OpResult processRequest(Error&, juce::String&, std::vector<juce::String>&, LabelList&) override;
-    OpResult getControls(juce::Array<juce::var>& inputComponents,
-                         juce::Array<juce::var>& outputComponents,
-                         juce::DynamicObject& cardDict) override;
-
+    OpResult processRequest(Error&, String&, std::vector<String>&, LabelList&) override;
     OpResult cancel() override;
 
-    // Authorization
-    void setToken(const juce::String& token) override;
-
-    juce::String getToken() const override;
-
-    void setTokenEnabled(bool enabled) override;
-
-    OpResult validateToken(const juce::String& token) const override;
-
 private:
-    juce::String getAuthorizationHeader() const;
-    juce::String getJsonContentTypeHeader(const juce::String&) const;
-    juce::String getAcceptHeader() const;
-    juce::String createCommonHeaders() const;
-    juce::String createJsonHeaders(const juce::String&) const;
-    static juce::String getControlValue(const juce::String& label,
-                                        const juce::Array<juce::var>* dataArray);
-    static juce::String mimeForAudioFile(const juce::File& f);
+    String getAcceptHeader() const;
+    String getJsonContentTypeHeader(const String&) const;
 
-    OpResult buildPayload(juce::StringPairArray& args,
-                          juce::String& processID,
-                          juce::String& payload) const;
-    // OpResult buildPayload(const juce::String& prompt,
-    //                       const juce::String& processID,
-    //                       juce::String& payload) const;
+    String createJsonHeaders(const String&) const;
 
-    OpResult processTextToAudio(const juce::Array<juce::var>* dataArray,
+    static String getControlValue(const String& label, const Array<var>* dataArray);
+    static String mimeForAudioFile(const File& f);
+
+    OpResult buildPayload(StringPairArray& args, String& processID, String& payload) const;
+
+    OpResult processTextToAudio(const Array<var>* dataArray,
                                 Error& error,
-                                std::vector<juce::String>& outputFilePaths);
+                                std::vector<String>& outputFilePaths);
 
-    OpResult processAudioToAudio(const juce::Array<juce::var>* dataArray,
+    OpResult processAudioToAudio(const Array<var>* dataArray,
                                  Error& error,
-                                 std::vector<juce::String>& outputFilePaths);
+                                 std::vector<String>& outputFilePaths);
 
-    SpaceInfo spaceInfo;
-    juce::String token = "TBD";
-    // A bool flag that could be controlled by a checkbox
-    bool tokenEnabled = true;
     std::atomic<bool> shouldCancel { false };
 };

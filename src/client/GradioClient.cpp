@@ -2,6 +2,8 @@
 #include "../errors.h"
 #include "../external/magic_enum.hpp"
 
+GradioClient::GradioClient() { tokenValidationURL = URL("https://huggingface.co/api/whoami-v2"); }
+
 // Space Info
 OpResult GradioClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
 {
@@ -9,44 +11,51 @@ OpResult GradioClient::setSpaceInfo(const SpaceInfo& inSpaceInfo)
     return OpResult::ok();
 }
 
-SpaceInfo GradioClient::getSpaceInfo() const { return spaceInfo; }
-
 // Requests
 OpResult GradioClient::processRequest(Error& error,
-                                      juce::String& processingPayload,
-                                      std::vector<juce::String>& outputFilePaths,
+                                      String& processingPayload,
+                                      std::vector<String>& outputFilePaths,
                                       LabelList& labels)
 {
     OpResult result = OpResult::ok();
-    juce::String eventId;
-    juce::String endpoint = "process";
+    String eventId;
+    String endpoint = "process";
     result = makePostRequestForEventID(endpoint, eventId, processingPayload);
     if (result.failed())
     {
-        result.getError().devMessage = "Failed to make post request.";
+        if (result.getError().devMessage.isEmpty())
+        {
+            result.getError().devMessage = "Failed to make post request.";
+        }
         return result;
     }
 
-    juce::String response;
+    String response;
     result = getResponseFromEventID(endpoint, eventId, response, -1);
     if (result.failed())
     {
-        result.getError().devMessage = "Failed to make get request";
+        if (result.getError().devMessage.isEmpty())
+        {
+            result.getError().devMessage = "Failed to make get request";
+        }
         return result;
     }
 
-    juce::String responseData;
+    String responseData;
 
-    juce::String key = "data: ";
+    String key = "data: ";
     result = extractKeyFromResponse(response, responseData, key);
     if (result.failed())
     {
-        result.getError().devMessage = "Failed to extract 'data:'";
+        if (result.getError().devMessage.isEmpty())
+        {
+            result.getError().devMessage = "Failed to extract 'data:'";
+        }
         return result;
     }
 
-    juce::var parsedData;
-    juce::JSON::parse(responseData, parsedData);
+    var parsedData;
+    JSON::parse(responseData, parsedData);
     if (! parsedData.isObject())
     {
         error.devMessage = "Failed to parse the 'data' key of the received JSON.";
@@ -58,7 +67,7 @@ OpResult GradioClient::processRequest(Error& error,
         return OpResult::fail(error);
     }
 
-    juce::Array<juce::var>* dataArray = parsedData.getArray();
+    Array<var>* dataArray = parsedData.getArray();
     if (dataArray == nullptr)
     {
         error.devMessage = "The data array is empty.";
@@ -68,11 +77,11 @@ OpResult GradioClient::processRequest(Error& error,
     // Iterate through the array elements
     for (int i = 0; i < dataArray->size(); i++)
     {
-        juce::var procObj = dataArray->getReference(i);
+        var procObj = dataArray->getReference(i);
         if (! procObj.isObject())
         {
             error.devMessage =
-                "The " + juce::String(i)
+                "The " + String(i)
                 + "th returned element of the process_fn function in the gradio-app is not an object.";
             return OpResult::fail(error);
         }
@@ -82,7 +91,7 @@ OpResult GradioClient::processRequest(Error& error,
         if (! procObj.getDynamicObject())
         {
             error.devMessage =
-                "The " + juce::String(i)
+                "The " + String(i)
                 + "th returned element of the process_fn function in the gradio-app is not a valid object. "
                 + "Make sure you are using LabelList() and not just a python list, in process_fn, to return the output labels.";
             return OpResult::fail(error);
@@ -91,37 +100,37 @@ OpResult GradioClient::processRequest(Error& error,
         {
             error.type = ErrorType::MissingJsonKey;
             error.devMessage =
-                "The " + juce::String(i)
+                "The " + String(i)
                 + "th element of the array of processed outputs does not have a meta object. "
                 + "Make sure you are using LabelList() in process_fn to return the output labels.";
             return OpResult::fail(error);
         }
-        juce::var meta = procObj.getDynamicObject()->getProperty("meta");
+        var meta = procObj.getDynamicObject()->getProperty("meta");
         // meta should be an object
         if (! meta.isObject())
         {
             error.type = ErrorType::MissingJsonKey;
             error.devMessage =
-                "The " + juce::String(i)
+                "The " + String(i)
                 + "th element of the array of processed outputs does not have a valid meta object.";
             return OpResult::fail(error);
         }
-        juce::String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
+        String procObjType = meta.getDynamicObject()->getProperty("_type").toString();
 
         // procObjType could be "gradio.FileData" for file/midi/audio
         // and "pyharp.LabelList" for labels
         if (procObjType == "gradio.FileData")
         {
-            juce::String outputFilePath;
-            juce::String url = procObj.getDynamicObject()->getProperty("url").toString();
+            String outputFilePath;
+            String url = procObj.getDynamicObject()->getProperty("url").toString();
 
             result = downloadFileFromURL(url, outputFilePath);
             if (result.failed())
             {
                 return result;
             }
-            // Make a juce::File from the path
-            juce::File downloadedFile(outputFilePath);
+            // Make a File from the path
+            File downloadedFile(outputFilePath);
             // auto aa = downloadedFile.getFileName();
             // auto bb = downloadedFile.getFullPathName();
             // auto cc = URL(downloadedFile).toString(true);
@@ -129,13 +138,12 @@ OpResult GradioClient::processRequest(Error& error,
         }
         else if (procObjType == "pyharp.LabelList")
         {
-            juce::Array<juce::var>* labelsPyharp =
-                procObj.getDynamicObject()->getProperty("labels").getArray();
+            Array<var>* labelsPyharp = procObj.getDynamicObject()->getProperty("labels").getArray();
 
             for (int j = 0; j < labelsPyharp->size(); j++)
             {
-                juce::DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
-                juce::String labelType = labelPyharp->getProperty("label_type").toString();
+                DynamicObject* labelPyharp = labelsPyharp->getReference(j).getDynamicObject();
+                String labelType = labelPyharp->getProperty("label_type").toString();
                 std::unique_ptr<OutputLabel> label;
 
                 if (labelType == "AudioLabel")
@@ -269,11 +277,11 @@ OpResult GradioClient::processRequest(Error& error,
     return result;
 }
 
-OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
-                                              juce::String& responseKey,
-                                              const juce::String& key) const
+OpResult GradioClient::extractKeyFromResponse(const String& response,
+                                              String& responseKey,
+                                              const String& key) const
 //   OpResult& result) const
-//   juce::String& error) const
+//   String& error) const
 
 {
     int dataIndex = response.indexOf(key);
@@ -291,16 +299,16 @@ OpResult GradioClient::extractKeyFromResponse(const juce::String& response,
     return OpResult::ok();
 }
 
-OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
-                                         juce::String& uploadedFilePath,
+OpResult GradioClient::uploadFileRequest(const File& fileToUpload,
+                                         String& uploadedFilePath,
                                          const int timeoutMs) const
 {
-    juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL uploadEndpoint = gradioEndpoint.getChildURL("gradio_api").getChildURL("upload");
+    URL gradioEndpoint = spaceInfo.gradio;
+    URL uploadEndpoint = gradioEndpoint.getChildURL("gradio_api").getChildURL("upload");
 
-    juce::StringPairArray responseHeaders;
+    StringPairArray responseHeaders;
     int statusCode = 0;
-    juce::String mimeType = "audio/midi";
+    String mimeType = "audio/midi";
 
     // Create the error here, in case we need it
     // All the errors of this function are of type FileUploadError
@@ -310,7 +318,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     // Use withFileToUpload to handle the multipart/form-data construction
     auto postEndpoint = uploadEndpoint.withFileToUpload("files", fileToUpload, mimeType);
 
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+    auto options = URL::InputStreamOptions(URL::ParameterHandling::inPostData)
                        .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
@@ -319,7 +327,7 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
                        .withHttpRequestCmd("POST");
 
     // Create the input stream for the POST request
-    std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
+    std::unique_ptr<InputStream> stream(postEndpoint.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -328,24 +336,24 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
         return OpResult::fail(error);
     }
 
-    juce::String response = stream->readEntireStreamAsString();
+    String response = stream->readEntireStreamAsString();
 
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
-        error.devMessage = "Request failed with status code: " + juce::String(statusCode);
+        error.devMessage = "Request failed with status code: " + String(statusCode);
         return OpResult::fail(error);
     }
 
     // Parse the response
-    juce::var parsedResponse = juce::JSON::parse(response);
+    var parsedResponse = JSON::parse(response);
     if (! parsedResponse.isObject())
     {
         error.devMessage = "Failed to parse JSON response.";
         return OpResult::fail(error);
     }
 
-    juce::Array<juce::var>* responseArray = parsedResponse.getArray();
+    Array<var>* responseArray = parsedResponse.getArray();
     if (responseArray == nullptr || responseArray->isEmpty())
     {
         error.devMessage = "Parsed JSON does not contain the expected array.";
@@ -364,9 +372,9 @@ OpResult GradioClient::uploadFileRequest(const juce::File& fileToUpload,
     return OpResult::ok();
 }
 
-OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
-                                                 juce::String& eventID,
-                                                 const juce::String jsonBody,
+OpResult GradioClient::makePostRequestForEventID(const String endpoint,
+                                                 String& eventID,
+                                                 const String jsonBody,
                                                  const int timeoutMs) const
 {
     // Create the error here, in case we need it
@@ -375,16 +383,21 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     error.type = ErrorType::HttpRequestError;
 
     // Ensure that setSpaceInfo has been called before this method
-    juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL requestEndpoint =
+    URL gradioEndpoint = spaceInfo.gradio;
+    URL requestEndpoint =
         gradioEndpoint.getChildURL("gradio_api").getChildURL("call").getChildURL(endpoint);
 
     // Prepare the POST request
-    // juce::String jsonBody = R"({"data": []})";
-    juce::URL postEndpoint = requestEndpoint.withPOSTData(jsonBody);
-    juce::StringPairArray responseHeaders;
+    // String jsonBody = R"({"data": []})";
+    URL postEndpoint = requestEndpoint.withPOSTData(jsonBody);
+
+    DBG("POST URL: " + postEndpoint.toString(true));
+    DBG("JSON body: " + jsonBody);
+    DBG("Headers: " + createJsonHeaders());
+
+    StringPairArray responseHeaders;
     int statusCode = 0;
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+    auto options = URL::InputStreamOptions(URL::ParameterHandling::inPostData)
                        .withExtraHeaders(createJsonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
@@ -393,7 +406,7 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
                        .withHttpRequestCmd("POST");
 
     // Create the input stream for the POST request
-    std::unique_ptr<juce::InputStream> stream(postEndpoint.createInputStream(options));
+    std::unique_ptr<InputStream> stream(postEndpoint.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -402,26 +415,26 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
         return OpResult::fail(error);
     }
 
-    juce::String response = stream->readEntireStreamAsString();
+    String response = stream->readEntireStreamAsString();
 
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
         error.code = statusCode;
         error.devMessage =
-            "Request to " + endpoint + " failed with status code: " + juce::String(statusCode);
+            "Request to " + endpoint + " failed with status code: " + String(statusCode);
         return OpResult::fail(error);
     }
 
     // Parse the response
-    juce::var parsedResponse = juce::JSON::parse(response);
+    var parsedResponse = JSON::parse(response);
     if (! parsedResponse.isObject())
     {
         error.devMessage = "Failed to parse JSON response from " + endpoint;
         return OpResult::fail(error);
     }
 
-    juce::DynamicObject* obj = parsedResponse.getDynamicObject();
+    DynamicObject* obj = parsedResponse.getDynamicObject();
     if (obj == nullptr)
     {
         error.devMessage = "Parsed JSON is not an object from " + endpoint;
@@ -441,9 +454,9 @@ OpResult GradioClient::makePostRequestForEventID(const juce::String endpoint,
     return OpResult::ok();
 }
 
-OpResult GradioClient::getResponseFromEventID(const juce::String callID,
-                                              const juce::String eventID,
-                                              juce::String& response,
+OpResult GradioClient::getResponseFromEventID(const String callID,
+                                              const String eventID,
+                                              String& response,
                                               const int timeoutMs) const
 {
     // Create the error here, in case we need it
@@ -453,22 +466,29 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
     // Now we make a GET request to the endpoint with the event ID appended
     // The endpoint for the get request is the same as the post request with
     // /{eventID} appended
-    juce::URL gradioEndpoint = spaceInfo.gradio;
-    juce::URL getEndpoint = gradioEndpoint.getChildURL("gradio_api")
-                                .getChildURL("call")
-                                .getChildURL(callID)
-                                .getChildURL(eventID);
-    juce::StringPairArray responseHeaders;
+    URL gradioEndpoint = spaceInfo.gradio;
+    URL getEndpoint = gradioEndpoint.getChildURL("gradio_api")
+                          .getChildURL("call")
+                          .getChildURL(callID)
+                          .getChildURL(eventID);
+
+    DBG("GET URL: " + getEndpoint.toString(true));
+    DBG("Headers: " + createCommonHeaders());
+
+    StringPairArray responseHeaders;
     int statusCode = 0;
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+    auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
                        .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5);
     //  .withHttpRequestCmd ("POST");
-    std::unique_ptr<juce::InputStream> stream(getEndpoint.createInputStream(options));
+    std::unique_ptr<InputStream> stream(getEndpoint.createInputStream(options));
     DBG("Input stream created");
+
+    DBG("Status code: " + String(statusCode));
+    DBG("Response headers:\n" + responseHeaders.getDescription());
 
     if (stream == nullptr)
     {
@@ -495,20 +515,30 @@ OpResult GradioClient::getResponseFromEventID(const juce::String callID,
         else if (response.contains(enumToString(GradioEvents::error)))
         {
             response = stream->readNextLine();
-            error.code = statusCode;
-            error.devMessage = response;
-            return OpResult::fail(error);
+
+            if ((statusCode == 200) & (response.contains("data: null")))
+            {
+                error.devMessage =
+                    "Your ZeroGPU quota has been reached.\nHave you added a Hugging Face access token in settings yet?";
+                return OpResult::fail(error);
+            }
+            else
+            {
+                error.code = statusCode;
+                error.devMessage = response;
+                return OpResult::fail(error);
+            }
         }
     }
     return OpResult::ok();
 }
 
-OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
-                                   juce::Array<juce::var>& outputComponents,
-                                   juce::DynamicObject& cardDict)
+OpResult GradioClient::getControls(Array<var>& inputComponents,
+                                   Array<var>& outputComponents,
+                                   DynamicObject& cardDict)
 {
-    juce::String callID = "controls";
-    juce::String eventID;
+    String callID = "controls";
+    String eventID;
 
     // Initialize a positive result
     OpResult result = OpResult::ok();
@@ -519,7 +549,7 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
         return result;
     }
 
-    juce::String response;
+    String response;
     result = getResponseFromEventID(callID, eventID, response);
     if (result.failed())
     {
@@ -529,7 +559,7 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
     // From the gradio app, we receive a JSON string
     // (see core.py in pyharp --> gr.Text(label="Controls"))
     // Extract the data portion from the response
-    juce::String responseData;
+    String responseData;
     result = extractKeyFromResponse(response, responseData, "data: ");
     if (result.failed())
     {
@@ -540,8 +570,8 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
     Error error;
     error.type = ErrorType::JsonParseError;
     // Parse the extracted JSON string
-    juce::var parsedData;
-    juce::JSON::parse(responseData, parsedData);
+    var parsedData;
+    JSON::parse(responseData, parsedData);
 
     if (! parsedData.isObject())
     {
@@ -554,14 +584,14 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
         error.devMessage = "Parsed JSON is not an array.";
         return OpResult::fail(error);
     }
-    juce::Array<juce::var>* dataArray = parsedData.getArray();
+    Array<var>* dataArray = parsedData.getArray();
     if (dataArray == nullptr)
     {
         error.devMessage = "Parsed JSON is not an array 2.";
         return OpResult::fail(error);
     }
     // Check if the first element in the array is a dict
-    juce::DynamicObject* obj = dataArray->getFirst().getDynamicObject();
+    DynamicObject* obj = dataArray->getFirst().getDynamicObject();
     if (obj == nullptr)
     {
         error.devMessage = "First element in the array is not a dict.";
@@ -569,7 +599,7 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
     }
 
     // Get the card and controls objects from the parsed data
-    juce::DynamicObject* cardObj = obj->getProperty("card").getDynamicObject();
+    DynamicObject* cardObj = obj->getProperty("card").getDynamicObject();
 
     if (cardObj == nullptr)
     {
@@ -586,7 +616,7 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
         cardDict.setProperty(key.name, key.value);
     }
 
-    juce::Array<juce::var>* inputsArray = obj->getProperty("inputs").getArray();
+    Array<var>* inputsArray = obj->getProperty("inputs").getArray();
     if (inputsArray == nullptr)
     {
         error.devMessage = "Couldn't load the controls array/list from the controls response.";
@@ -594,7 +624,7 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
     }
     inputComponents = *inputsArray;
 
-    juce::Array<juce::var>* outputsArray = obj->getProperty("outputs").getArray();
+    Array<var>* outputsArray = obj->getProperty("outputs").getArray();
     if (outputsArray == nullptr)
     {
         error.devMessage = "Couldn't load the controls array/list from the controls response.";
@@ -608,11 +638,11 @@ OpResult GradioClient::getControls(juce::Array<juce::var>& inputComponents,
 OpResult GradioClient::cancel()
 {
     OpResult result = OpResult::ok();
-    juce::String eventId;
-    juce::String endpoint = "cancel";
+    String eventId;
+    String endpoint = "cancel";
 
     // Perform a POST request to the cancel endpoint to get the event ID
-    juce::String jsonBody = R"({"data": []})"; // The body is empty in this case
+    String jsonBody = R"({"data": []})"; // The body is empty in this case
 
     result = makePostRequestForEventID(endpoint, eventId, jsonBody);
     if (result.failed())
@@ -621,13 +651,13 @@ OpResult GradioClient::cancel()
     }
 
     // Use the event ID to make a GET request for the cancel response
-    juce::String response;
+    String response;
     result = getResponseFromEventID(endpoint, eventId, response);
     return result;
 }
 
-OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
-                                           juce::String& downloadedFilePath,
+OpResult GradioClient::downloadFileFromURL(const URL& fileURL,
+                                           String& downloadedFilePath,
                                            const int timeoutMs) const
 {
     // Create the error here, in case we need it
@@ -635,31 +665,29 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     error.type = ErrorType::FileDownloadError;
 
     // Determine the local temporary directory for storing the downloaded file
-    juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
-    juce::String fileName = fileURL.getFileName();
+    File tempDir = File::getSpecialLocation(File::tempDirectory);
+    String fileName = fileURL.getFileName();
     // // Add a timestamp to the file name to avoid overwriting
-    // // Insert timestamp before the file extension using juce::File operations
-    // juce::String baseName = juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
-    // juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
-    // juce::String timestamp = "_" + juce::String(juce::Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
+    // // Insert timestamp before the file extension using File operations
+    // String baseName = File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    // String extension = File::createFileWithoutCheckingPath(fileName).getFileExtension();
+    // String timestamp = "_" + String(Time::getCurrentTime().formatted("%Y%m%d%H%M%S"));
     // fileName = baseName + timestamp + extension;
-    juce::String baseName =
-        juce::File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
-    juce::String extension = juce::File::createFileWithoutCheckingPath(fileName).getFileExtension();
-    juce::File downloadedFile =
-        tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
+    String baseName = File::createFileWithoutCheckingPath(fileName).getFileNameWithoutExtension();
+    String extension = File::createFileWithoutCheckingPath(fileName).getFileExtension();
+    File downloadedFile = tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
 
     // Create input stream to download the file
-    juce::StringPairArray responseHeaders;
+    StringPairArray responseHeaders;
     int statusCode = 0;
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+    auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
                        .withExtraHeaders(createCommonHeaders())
                        .withConnectionTimeoutMs(timeoutMs)
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5);
 
-    std::unique_ptr<juce::InputStream> stream(fileURL.createInputStream(options));
+    std::unique_ptr<InputStream> stream(fileURL.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -670,7 +698,7 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     // Check if the request was successful
     if (statusCode != 200)
     {
-        error.devMessage = "Request failed with status code: " + juce::String(statusCode);
+        error.devMessage = "Request failed with status code: " + String(statusCode);
         return OpResult::fail(error);
     }
 
@@ -680,7 +708,7 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     downloadedFile.deleteFile();
 
     // Create output stream to save the file locally
-    std::unique_ptr<juce::FileOutputStream> fileOutput(downloadedFile.createOutputStream());
+    std::unique_ptr<FileOutputStream> fileOutput(downloadedFile.createOutputStream());
 
     if (fileOutput == nullptr || ! fileOutput->openedOk())
     {
@@ -698,47 +726,19 @@ OpResult GradioClient::downloadFileFromURL(const juce::URL& fileURL,
     return OpResult::ok();
 }
 
-juce::String GradioClient::getAuthorizationHeader() const
-{
-    if (tokenEnabled && ! token.isEmpty())
-    {
-        return "Authorization: Bearer " + token + "\r\n";
-    }
-    return "";
-}
-
-juce::String GradioClient::getJsonContentTypeHeader() const
-{
-    return "Content-Type: application/json\r\n";
-}
-
-juce::String GradioClient::getAcceptHeader() const { return "Accept: */*\r\n"; }
-
-juce::String GradioClient::createCommonHeaders() const
-{
-    return getAcceptHeader() + getAuthorizationHeader();
-}
-
-juce::String GradioClient::createJsonHeaders() const
-{
-    return getJsonContentTypeHeader() + getAcceptHeader() + getAuthorizationHeader();
-}
-
-OpResult GradioClient::validateToken(const juce::String& inputToken) const
+OpResult GradioClient::validateToken(const String& inputToken) const
 {
     // Create the error here, in case we need it
     Error error;
     int statusCode = 0;
 
-    juce::URL url = juce::URL("https://huggingface.co/api/whoami-v2");
-
-    // Create a GET request to whoami-v2 API with provided token
-    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                       .withExtraHeaders("Authorization: Bearer " + inputToken + "\r\n")
+    // Create a GET request to account API with provided token
+    auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+                       .withExtraHeaders(getAuthorizationHeader())
                        .withConnectionTimeoutMs(5000)
                        .withStatusCode(&statusCode);
 
-    std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+    std::unique_ptr<InputStream> stream(tokenValidationURL.createInputStream(options));
 
     if (stream == nullptr)
     {
@@ -747,30 +747,32 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
         return OpResult::fail(error);
     }
 
-    juce::String response = stream->readEntireStreamAsString();
+    String response = stream->readEntireStreamAsString();
 
     // Check the status code to ensure the request was successful
     if (statusCode != 200)
     {
         error.code = statusCode;
-        error.devMessage = "Authentication failed with status code: " + juce::String(statusCode);
+        error.devMessage = "Authentication failed with status code: " + String(statusCode);
         return OpResult::fail(error);
     }
 
     // Parse the response
-    juce::var parsedResponse = juce::JSON::parse(response);
+    var parsedResponse = JSON::parse(response);
     if (! parsedResponse.isObject())
     {
-        error.devMessage = "Failed to parse JSON response from whoami-v2 API.";
+        error.devMessage = "Failed to parse JSON response from validation API.";
         return OpResult::fail(error);
     }
 
-    juce::DynamicObject* obj = parsedResponse.getDynamicObject();
+    DynamicObject* obj = parsedResponse.getDynamicObject();
     if (obj == nullptr)
     {
-        error.devMessage = "Parsed JSON is not an object from whoami-v2 API.";
+        error.devMessage = "Parsed JSON from validation API is not an object.";
         return OpResult::fail(error);
     }
+
+    // TODO - split into queryToken and validateToken and reuse Client.cpp code
 
     auto* tokenJSON =
         obj->getProperty("auth").getDynamicObject()->getProperty("accessToken").getDynamicObject();
@@ -818,9 +820,3 @@ OpResult GradioClient::validateToken(const juce::String& inputToken) const
 
     return OpResult::ok();
 }
-
-void GradioClient::setToken(const juce::String& inputToken) { this->token = inputToken; }
-
-juce::String GradioClient::getToken() const { return token; }
-
-void GradioClient::setTokenEnabled(bool enabled) { tokenEnabled = enabled; }
