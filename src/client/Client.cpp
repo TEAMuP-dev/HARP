@@ -1,6 +1,6 @@
 #include "Client.h"
 
-OpResult Client::validateToken(const String& inToken) const
+OpResult Client::validateToken(const String& newToken) const
 {
     // Create the error here, in case we need it
     Error error;
@@ -8,7 +8,7 @@ OpResult Client::validateToken(const String& inToken) const
 
     // Create a GET request to account API with provided token
     auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
-                       .withExtraHeaders(getAuthorizationHeader())
+                       .withExtraHeaders(getAuthorizationHeader(newToken))
                        .withConnectionTimeoutMs(5000)
                        .withStatusCode(&statusCode);
 
@@ -49,11 +49,22 @@ OpResult Client::validateToken(const String& inToken) const
     return OpResult::ok();
 }
 
-String Client::getAuthorizationHeader() const
+String Client::getAuthorizationHeader(String inputToken) const
 {
-    if (! accessToken.isEmpty())
+    String currentToken;
+
+    if (inputToken.isNotEmpty())
     {
-        return "Authorization: Bearer " + accessToken + "\r\n";
+        currentToken = inputToken;
+    }
+    else
+    {
+        currentToken = accessToken;
+    }
+
+    if (! currentToken.isEmpty())
+    {
+        return "Authorization: Bearer " + currentToken + "\r\n";
     }
     return "";
 }

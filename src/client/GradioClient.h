@@ -36,7 +36,7 @@ public:
     OpResult cancel() override;
 
     // Authorization
-    OpResult validateToken(const String& token) const override;
+    OpResult validateToken(const String& newToken) const override;
 
 private:
     OpResult extractKeyFromResponse(const String& response,

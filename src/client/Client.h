@@ -38,10 +38,10 @@ public:
     String getToken() const { return accessToken; }
 
     //OpResult queryToken(const String& token) const;
-    virtual OpResult validateToken(const String& token) const;
+    virtual OpResult validateToken(const String& newToken) const;
 
 protected:
-    String getAuthorizationHeader() const;
+    String getAuthorizationHeader(String t = "") const;
     String getAcceptHeader() const;
     String getJsonContentTypeHeader() const;
 

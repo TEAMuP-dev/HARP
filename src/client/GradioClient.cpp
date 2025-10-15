@@ -726,7 +726,7 @@ OpResult GradioClient::downloadFileFromURL(const URL& fileURL,
     return OpResult::ok();
 }
 
-OpResult GradioClient::validateToken(const String& inputToken) const
+OpResult GradioClient::validateToken(const String& newToken) const
 {
     // Create the error here, in case we need it
     Error error;
@@ -734,7 +734,7 @@ OpResult GradioClient::validateToken(const String& inputToken) const
 
     // Create a GET request to account API with provided token
     auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
-                       .withExtraHeaders(getAuthorizationHeader())
+                       .withExtraHeaders(getAuthorizationHeader(newToken))
                        .withConnectionTimeoutMs(5000)
                        .withStatusCode(&statusCode);
 

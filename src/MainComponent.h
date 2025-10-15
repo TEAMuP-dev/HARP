@@ -490,14 +490,14 @@ public:
                                     auto& client = model->getClient();
                                     const auto spaceInfo = client.getSpaceInfo();
 
-                                    if ((isHuggingFace
-                                         && spaceInfo.status == SpaceInfo::Status::GRADIO)
-                                        || (isStability
-                                            && spaceInfo.status == SpaceInfo::Status::STABILITY))
-                                    {
-                                        client.setToken(token);
-                                        setStatus("Token applied to loaded model.");
-                                    }
+                                    //if ((isHuggingFace
+                                    //     && spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
+                                    //    || (isStability
+                                    //        && spaceInfo.status == SpaceInfo::Status::STABILITY))
+                                    //{
+                                    client.setToken(token);
+                                    setStatus("Token applied to loaded model.");
+                                    //}
                                 }
                             }
                         }
