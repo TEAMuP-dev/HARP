@@ -527,21 +527,21 @@ public:
                         else if (chosen == "Open Space URL")
                         {
                             // get the spaceInfo
-                            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
+                            SpaceInfo spaceInfo = model->getTempClient().getSpaceInfo();
                             if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                             {
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().gradio;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().gradio;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
