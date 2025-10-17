@@ -89,9 +89,9 @@ private:
         auto x_offset = (getBounds().getWidth() - textWidth) / 2;
         auto y_offset = (getBounds().getHeight() - textHeight) / 2;
 
-        return juce::Rectangle<int>(getX() + static_cast<int>(x_offset), 
-                                    getY() + static_cast<int>(y_offset), 
-                                    static_cast<int>(textWidth), 
+        return juce::Rectangle<int>(getX() + static_cast<int>(x_offset),
+                                    getY() + static_cast<int>(y_offset),
+                                    static_cast<int>(textWidth),
                                     static_cast<int>(textHeight));
     }
 

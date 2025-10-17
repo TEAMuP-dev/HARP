@@ -6,75 +6,54 @@
 
 #pragma once
 
+#include "juce_core/juce_core.h"
 #include <fstream>
 
 #include "../HarpLogger.h"
 #include "../errors.h"
 #include "../utils.h"
 #include "Client.h"
-#include "juce_core/juce_core.h"
+
+using namespace juce;
+
 class GradioClient : public Client
 {
 public:
-    // GradioClient(const juce::String& spaceUrl);
-    GradioClient() = default;
+    GradioClient();
+    ~GradioClient() = default;
 
     // Space Info
     OpResult setSpaceInfo(const SpaceInfo& info) override;
-    SpaceInfo getSpaceInfo() const override;
 
     // Requests
-    OpResult uploadFileRequest(const juce::File& fileToUpload,
-                               juce::String& uploadedFilePath,
+    OpResult getControls(Array<var>& inputComponents,
+                         Array<var>& outputComponents,
+                         DynamicObject& cardDict) override;
+    OpResult uploadFileRequest(const File& fileToUpload,
+                               String& uploadedFilePath,
                                const int timeoutMs = 10000) const override;
-    OpResult processRequest(Error&,
-                            juce::String&,
-                            std::vector<juce::String>&,
-                            LabelList&) override;
-    OpResult getControls(juce::Array<juce::var>& inputComponents,
-                         juce::Array<juce::var>& outputComponents,
-                         juce::DynamicObject& cardDict) override;
-
+    OpResult processRequest(Error&, String&, std::vector<String>&, LabelList&) override;
     OpResult cancel() override;
 
-    // Authorization    
-    void setToken(const juce::String& token) override;
-
-    juce::String getToken() const override;
-
-    void setTokenEnabled(bool enabled) override;
-
-    OpResult validateToken(const juce::String& token) const override;
+    // Authorization
+    OpResult validateToken(const String& newToken) const override;
 
 private:
+    OpResult extractKeyFromResponse(const String& response,
+                                    String& responseKey,
+                                    const String& key) const;
 
-    OpResult extractKeyFromResponse(const juce::String& response,
-                                    juce::String& responseKey,
-                                    const juce::String& key) const;
-
-    OpResult makePostRequestForEventID(const juce::String endpoint,
-                                       juce::String& eventId,
-                                       const juce::String jsonBody = R"({"data": []})",
+    OpResult makePostRequestForEventID(const String endpoint,
+                                       String& eventId,
+                                       const String jsonBody = R"({"data": []})",
                                        const int timeoutMs = 10000) const;
 
-    OpResult getResponseFromEventID(const juce::String callID,
-                                    const juce::String eventID,
-                                    juce::String& response,
+    OpResult getResponseFromEventID(const String callID,
+                                    const String eventID,
+                                    String& response,
                                     const int timeoutMs = 10000) const;
 
-
-    OpResult downloadFileFromURL(const juce::URL& fileURL,
-                                 juce::String& downloadedFilePath,
+    OpResult downloadFileFromURL(const URL& fileURL,
+                                 String& downloadedFilePath,
                                  const int timeoutMs = 10000) const;
-    
-    juce::String getAuthorizationHeader() const;
-    juce::String getJsonContentTypeHeader() const;
-    juce::String getAcceptHeader() const;
-    juce::String createCommonHeaders() const;
-    juce::String createJsonHeaders() const;
-
-    SpaceInfo spaceInfo;
-    juce::String token;
-    // A bool flag that could be controlled by a checkbox
-    bool tokenEnabled = true;
 };

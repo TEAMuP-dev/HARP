@@ -68,8 +68,6 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
         src/MainComponent.h
-        src/ControlAreaWidget.h
-        src/TrackAreaWidget.h
         src/Model.h 
         src/WebModel.h
         src/AppSettings.h
@@ -78,8 +76,10 @@ target_sources(${PROJECT_NAME}
         src/errors.h
         src/utils.h
 
+        src/client/Client.cpp
         src/client/GradioClient.cpp
         src/client/StabilityClient.cpp
+
         src/settings/SettingsBox.h       
         src/settings/SettingsBox.cpp 
         src/settings/GeneralSettingsTab.h
@@ -120,6 +120,10 @@ target_sources(${PROJECT_NAME}
         src/pianoroll/KeyboardComponent.cpp
         src/pianoroll/NoteGridComponent.cpp
         src/pianoroll/PianoRollComponent.cpp
+
+        src/widgets/ControlAreaWidget.h
+        src/widgets/TrackAreaWidget.h
+        src/widgets/MediaClipboardWidget.h
 
         src/windows/AboutWindow.h
 )

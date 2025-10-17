@@ -1,5 +1,3 @@
-
-
 /**
  * @file
  * @brief Custom UI components for the HARPPlugin
@@ -39,7 +37,7 @@ public:
         textBox.setWantsKeyboardFocus(true);
         // Without this, the parent takes the focus
         // and we can't type in the text box
-        setWantsKeyboardFocus(false); 
+        setWantsKeyboardFocus(false);
         // Some other interesting methods to consider:
         textBox.setInterceptsMouseClicks(true, false);
         textBox.setMouseClickGrabsKeyboardFocus(true);

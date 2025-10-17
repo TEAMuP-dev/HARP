@@ -1,3 +1,5 @@
+// See https://juce.com/tutorials/tutorial_synth_using_midi_input/ for details
+
 #include <juce_audio_basics/juce_audio_basics.h>
 
 struct SineWaveSound : public SynthesiserSound
@@ -23,13 +25,14 @@ struct SineWaveVoice : public SynthesiserVoice
                    int /*currentPitchWheelPosition*/) override
     {
         currentAngle = 0.0;
-        level = velocity * 0.15;
-        tailOff = 0.0;
 
-        auto cyclesPerSecond = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-        auto cyclesPerSample = cyclesPerSecond / getSampleRate();
+        double cyclesPerSecond = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        double cyclesPerSample = cyclesPerSecond / getSampleRate();
 
         angleDelta = cyclesPerSample * 2.0 * MathConstants<double>::pi;
+
+        tailOff = 0.0;
+        level = static_cast<double>(velocity) * 0.15;
     }
 
     void stopNote(float /*velocity*/, bool allowTailOff) override
@@ -37,11 +40,14 @@ struct SineWaveVoice : public SynthesiserVoice
         if (allowTailOff)
         {
             if (tailOff == 0.0)
+            {
                 tailOff = 1.0;
+            }
         }
         else
         {
             clearCurrentNote();
+
             angleDelta = 0.0;
         }
     }
@@ -53,39 +59,47 @@ struct SineWaveVoice : public SynthesiserVoice
     {
         if (angleDelta != 0.0)
         {
-            if (tailOff > 0.0) // [7]
+            if (tailOff > 0.0)
             {
                 while (--numSamples >= 0)
                 {
-                    auto currentSample = (float) (std::sin(currentAngle) * level * tailOff);
+                    float currentSample =
+                        static_cast<float>(std::sin(currentAngle) * level * tailOff);
 
-                    for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
+                    for (int i = outputBuffer.getNumChannels(); --i >= 0;)
+                    {
                         outputBuffer.addSample(i, startSample, currentSample);
+                    }
 
                     currentAngle += angleDelta;
+
                     ++startSample;
 
-                    tailOff *= 0.99; // [8]
+                    tailOff *= 0.99;
 
                     if (tailOff <= 0.005)
                     {
-                        clearCurrentNote(); // [9]
+                        clearCurrentNote();
 
                         angleDelta = 0.0;
+
                         break;
                     }
                 }
             }
             else
             {
-                while (--numSamples >= 0) // [6]
+                while (--numSamples >= 0)
                 {
-                    auto currentSample = (float) (std::sin(currentAngle) * level);
+                    auto currentSample = static_cast<float>(std::sin(currentAngle) * level);
 
                     for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
+                    {
                         outputBuffer.addSample(i, startSample, currentSample);
+                    }
 
                     currentAngle += angleDelta;
+
                     ++startSample;
                 }
             }
@@ -93,25 +107,27 @@ struct SineWaveVoice : public SynthesiserVoice
     }
 
 private:
-    double currentAngle = 0.0, angleDelta = 0.0, level = 0.0, tailOff = 0.0;
+    double currentAngle = 0.0;
+    double angleDelta = 0.0;
+    double tailOff = 0.0;
+    double level = 0.0;
 };
 
 class SynthAudioSource : public PositionableAudioSource
 {
 public:
-    SynthAudioSource()
-    {
-        synth.addSound(new SineWaveSound()); // [2]
-    }
+    SynthAudioSource() { synth.addSound(new SineWaveSound()); }
 
     void setUsingSineWaveSound() { synth.clearSounds(); }
 
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override
+    void prepareToPlay(int samplesPerBlockExpected, double sr) override
     {
-        DBG("Sample rate being set to " << sampleRate);
-        DBG("Samples per block being set to " << samplesPerBlockExpected);
-        synth.setCurrentPlaybackSampleRate(sampleRate); // [3]
-        mySampleRate = sampleRate;
+        //DBG("SynthAudioSource::prepareToPlay: Sample rate being set to " << sr << ".");
+        //DBG("SynthAudioSource::prepareToPlay: Samples per block being set to "
+        //    << samplesPerBlockExpected << ".");
+
+        synth.setCurrentPlaybackSampleRate(sr);
+        sampleRate = sr;
         samplesPerBlock = samplesPerBlockExpected;
     }
 
@@ -121,18 +137,18 @@ public:
     {
         sequence = midiSequence;
 
-        // Get max number of voices needed and add that many voices
         int maxVoices = 0;
         int currVoices = 0;
+
+        // Get max number of voices needed and add that many voices
         for (int eventIdx = 0; eventIdx < sequence.getNumEvents(); ++eventIdx)
         {
             const auto midiEvent = sequence.getEventPointer(eventIdx);
             const auto& midiMessage = midiEvent->message;
 
             double startTime = midiEvent->message.getTimeStamp();
-            lastStartTime = startTime;
 
-            // DBG("Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+            lastStartTime = startTime;
 
             if (midiMessage.isNoteOn())
             {
@@ -140,7 +156,6 @@ public:
                 if (currVoices > maxVoices)
                 {
                     maxVoices = currVoices;
-                    //DBG("Max voices now " << maxVoices);
                 }
             }
 
@@ -148,13 +163,16 @@ public:
             {
                 currVoices--;
             }
-            // DBG("Curr voices is " << currVoices);
         }
+
+        //DBG("SynthAudioSource::useSequence Max voices set to " << maxVoices << ".");
 
         synth.clearVoices();
 
-        for (auto i = 0; i < maxVoices; ++i) // [1]
+        for (auto i = 0; i < maxVoices; ++i)
+        {
             synth.addVoice(new SineWaveVoice());
+        }
     }
 
     void getNextAudioBlock(const AudioSourceChannelInfo& bufferToFill) override
@@ -176,15 +194,11 @@ public:
             {
                 incomingMidi.addEvent(midiMessage,
                                       static_cast<int>(startTimeSamples - readPosition));
-
-                // DBG("Event " << eventIdx << " at " << startTimeSamples << ": " << midiMessage.getDescription());
             }
         }
 
-        synth.renderNextBlock(*bufferToFill.buffer,
-                              incomingMidi,
-                              bufferToFill.startSample,
-                              bufferToFill.numSamples); // [5]
+        synth.renderNextBlock(
+            *bufferToFill.buffer, incomingMidi, bufferToFill.startSample, bufferToFill.numSamples);
 
         readPosition += samplesPerBlock;
     }
@@ -195,33 +209,24 @@ public:
 
     int64 getTotalLength() const override
     {
-        // Location of last MIDI message (will likely be a note off)
+        // Location of last MIDI message (likely a note off event)
         return secondsToSamples(lastStartTime);
     }
 
-    bool isLooping() const override
-    {
-        // TODO
-        return 0;
-    }
-
-    void setLooping(bool /*shouldLoop*/) override
-    {
-        // TODO
-    }
+    void setLooping(bool /*shouldLoop*/) override {}
+    bool isLooping() const override { return 0; }
 
     void resetNotes() { synth.allNotesOff(0, false); }
 
 private:
-    Synthesiser synth;
-    MidiMessageSequence sequence;
+    int secondsToSamples(double secondsTime) const { return (int) (secondsTime * sampleRate); }
 
-    double mySampleRate;
+    double sampleRate;
     int samplesPerBlock;
+    int64 readPosition;
 
     double lastStartTime;
 
-    int64 readPosition;
-
-    int secondsToSamples(double secondsTime) const { return (int) (secondsTime * mySampleRate); }
+    MidiMessageSequence sequence;
+    Synthesiser synth;
 };

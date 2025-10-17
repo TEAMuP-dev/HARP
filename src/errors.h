@@ -1,4 +1,3 @@
-
 /**
  * @file
  * @brief classes and functions for handling errors in the application
@@ -69,12 +68,12 @@ struct Error
         else if (error.type == ErrorType::FileUploadError)
         {
             error.userMessage =
-                "Failed to upload the file to the gradio app. Please check you internet connection.";
+                "Failed to upload the file to the gradio app. Please check your internet connection.";
         }
         else if (error.type == ErrorType::FileDownloadError)
         {
             error.userMessage =
-                "Processing was successfull but Failed to download the file from the gradio app. Please check you internet connection.";
+                "Processing was successful but failed to download the file from the gradio app. Please check your internet connection.";
         }
     }
 
