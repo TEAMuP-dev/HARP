@@ -105,8 +105,10 @@
                  spaceInfo.stabilityServiceType = model;
  
                  if (model.equalsIgnoreCase("text-to-audio")) {
+                     spaceInfo.stability = "https://platform.stability.ai/docs/api-reference#tag/Stable-Audio-2/paths/~1v2beta~1audio~1stable-audio-2~1text-to-audio/post";
                      spaceInfo.apiEndpointURL = "https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio";
                  } else if (model.equalsIgnoreCase("audio-to-audio")) {
+                     spaceInfo.stability = "https://platform.stability.ai/docs/api-reference#tag/Stable-Audio-2/paths/~1v2beta~1audio~1stable-audio-2~1audio-to-audio/post";
                      spaceInfo.apiEndpointURL = "https://api.stability.ai/v2beta/audio/stable-audio-2/audio-to-audio";
                  } else {
                      spaceInfo.error = "Unsupported Stability AI service type: " + model;

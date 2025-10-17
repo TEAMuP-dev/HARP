@@ -544,6 +544,11 @@ public:
                                 URL spaceUrl = this->model->getTempClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
+                            else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+                            {
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().stability;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
                             // URL spaceUrl =
                             //     this->model->getGradioClient().getSpaceInfo().huggingface;
                             // spaceUrl.launchInDefaultBrowser();
@@ -1704,6 +1709,10 @@ private:
                 //                              + spaceInfo.modelName + " in browser");
                 // nameLabelButton.setURL(URL(spaceInfo.gradio));
                 modelAuthorLabel.setURL(URL(spaceInfo.gradio));
+            }
+            else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+            {
+                modelAuthorLabel.setURL(URL(spaceInfo.stability));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(modelAuthorLabel);
