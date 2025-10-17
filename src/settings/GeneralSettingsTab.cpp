@@ -11,13 +11,13 @@ GeneralSettingsTab::GeneralSettingsTab()
 
     // Setup button to open settings file
     openSettingsButton.setButtonText("Open Settings File");
-    openSettingsButton.onClick = [this] { handleOpenSettings();};
+    openSettingsButton.onClick = [this] { handleOpenSettings(); };
     addAndMakeVisible(openSettingsButton);
 }
 
 void GeneralSettingsTab::resized()
 {
-    DBG("GeneralSettingsTab::resized()");
+    //DBG("GeneralSettingsTab::resized()");
     auto area = getLocalBounds().reduced(10);
     openLogFolderButton.setBounds(area.removeFromTop(30));
     area.removeFromTop(10); // Spacer
@@ -26,8 +26,8 @@ void GeneralSettingsTab::resized()
 
 void GeneralSettingsTab::paint(juce::Graphics& g)
 {
-    DBG("GeneralSettingsTab::paint()");
-    // g.fillAll(juce::Colours::lightgrey);  
+    //DBG("GeneralSettingsTab::paint()");
+    // g.fillAll(juce::Colours::lightgrey);
 }
 
 void GeneralSettingsTab::handleOpenLogFolder()

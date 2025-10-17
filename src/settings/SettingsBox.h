@@ -1,14 +1,15 @@
 #pragma once
 
-#include <JuceHeader.h>
-#include "GeneralSettingsTab.h"
+#include "../WebModel.h"
 #include "AudioSettingsTab.h"
+#include "GeneralSettingsTab.h"
 #include "LoginTab.h"
+#include <JuceHeader.h>
 
 class SettingsBox : public juce::Component
 {
 public:
-    SettingsBox();
+    SettingsBox(WebModel* m);
     ~SettingsBox() override = default;
 
     void resized() override;

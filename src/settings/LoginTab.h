@@ -1,20 +1,22 @@
 #pragma once
 
-#include <JuceHeader.h>
-#include "../external/magic_enum.hpp"
+#include "../WebModel.h"
 #include "../client/GradioClient.h"
 #include "../client/StabilityClient.h"
+#include "../external/magic_enum.hpp"
+#include <JuceHeader.h>
 
 class LoginTab : public juce::Component
 {
 public:
-    enum Provider {
+    enum Provider
+    {
         HUGGINGFACE,
         STABILITY,
         UNKNOWN
     };
 
-    LoginTab(const juce::String& providerName);
+    LoginTab(const juce::String& providerName, WebModel* m);
     ~LoginTab() override = default;
 
     void resized() override;
@@ -26,11 +28,13 @@ private:
     juce::Label registerLabel;
     juce::HyperlinkButton linkLabel;
 
+    WebModel* currentlyLoadedModel;
+
     juce::Label statusLabel;
     LoginTab::Provider provider;
     juce::TextEditor userToken;
-    juce::TextButton submitButton {"Submit"};
-    juce::TextButton forgetButton {"Remove Token"};
+    juce::TextButton submitButton { "Submit" };
+    juce::TextButton forgetButton { "Remove Token" };
 
     LoginTab::Provider getProvider(const juce::String& providerName);
     juce::String getStorageKey();

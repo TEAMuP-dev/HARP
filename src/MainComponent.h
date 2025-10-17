@@ -228,7 +228,7 @@ public:
                 result.setTicked(showMediaClipboard);
                 break;
             case CommandIDs::settings:
-                result.setInfo("Preferences...", "Open the settings window", "Settings", 0);
+                result.setInfo("Settings", "Open the settings window", "Settings", 0);
                 break;
         }
     }
@@ -824,7 +824,7 @@ public:
 
         juce::DialogWindow::LaunchOptions options;
         options.dialogTitle = "Settings";
-        options.content.setOwned(new SettingsBox());
+        options.content.setOwned(new SettingsBox(model.get()));
         options.useNativeTitleBar = true;
         options.resizable = true;
         options.escapeKeyTriggersCloseButton = true;

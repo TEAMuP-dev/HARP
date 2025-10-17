@@ -2,10 +2,13 @@
 #include "../AppSettings.h"
 #include "../HarpLogger.h"
 
-LoginTab::LoginTab(const juce::String& providerName)
+LoginTab::LoginTab(const juce::String& providerName, WebModel* m)
 {
     // Setup toggle button
     provider = getProvider(providerName);
+
+    currentlyLoadedModel = m;
+
     if (provider == LoginTab::Provider::UNKNOWN)
     {
         DBG("Invalid provider name passed to loginToProvider()");
@@ -20,7 +23,7 @@ LoginTab::LoginTab(const juce::String& providerName)
         "Paste your "
         + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token")
         + " below.";
-    
+
     juce::String tokenLabel = isHuggingFace ? "Access Token" : "API Token";
 
     // Create token prompt window
@@ -29,7 +32,10 @@ LoginTab::LoginTab(const juce::String& providerName)
     registerLabel.setText("New User?", juce::dontSendNotification);
     linkLabel.setButtonText("Get token");
     linkLabel.setURL(getTokenURL());
-    linkLabel.setFont(juce::Font(registerLabel.getFont().getHeight(), juce::Font::FontStyleFlags::underlined), false, juce::Justification::centredLeft);
+    linkLabel.setFont(
+        juce::Font(registerLabel.getFont().getHeight(), juce::Font::FontStyleFlags::underlined),
+        false,
+        juce::Justification::centredLeft);
 
     addAndMakeVisible(titleLabel);
     addAndMakeVisible(infoLabel);
@@ -41,7 +47,8 @@ LoginTab::LoginTab(const juce::String& providerName)
     userToken.setTextToShowWhenEmpty(tokenLabel, juce::Colours::grey);
     userToken.setReturnKeyStartsNewLine(false);
     userToken.setSelectAllWhenFocused(true);
-    userToken.onTextChange = [this] () {
+    userToken.onTextChange = [this]()
+    {
         bool hasText = userToken.getText().trim().isNotEmpty();
         submitButton.setEnabled(hasText);
     };
@@ -53,19 +60,23 @@ LoginTab::LoginTab(const juce::String& providerName)
     // addAndMakeVisible(rememberTokenToggle);
 
     juce::String savedToken = AppSettings::getString(getStorageKey());
-    if (savedToken.isNotEmpty()) {
+    if (savedToken.isNotEmpty())
+    {
         OpResult result = validateToken(savedToken);
-        if (result.failed()) {
+        if (result.failed())
+        {
             setStatus("Saved token invalid. Please apply for another token.");
             forgetButton.setEnabled(true);
         }
-        else {
+        else
+        {
             userToken.setText(savedToken);
             setStatus("Token verified.");
             forgetButton.setEnabled(true);
         }
     }
-    else {
+    else
+    {
         submitButton.setEnabled(false);
         forgetButton.setEnabled(false);
     }
@@ -80,14 +91,17 @@ LoginTab::LoginTab(const juce::String& providerName)
     // addAndMakeVisible(tokenButton);
 }
 
-LoginTab::Provider LoginTab::getProvider(const juce::String& providerName) {
-    static const juce::StringArray names {"huggingface", "stability"};
+LoginTab::Provider LoginTab::getProvider(const juce::String& providerName)
+{
+    static const juce::StringArray names { "huggingface", "stability" };
     auto i = names.indexOf(providerName.trim().toLowerCase());
     return (i >= 0) ? static_cast<LoginTab::Provider>(i) : LoginTab::Provider::UNKNOWN;
 }
 
-juce::String LoginTab::getStorageKey() {
-    switch (provider) {
+juce::String LoginTab::getStorageKey()
+{
+    switch (provider)
+    {
         case LoginTab::Provider::HUGGINGFACE:
             return "huggingFaceToken";
             break;
@@ -99,8 +113,10 @@ juce::String LoginTab::getStorageKey() {
     }
 }
 
-OpResult LoginTab::validateToken(const juce::String& token) {
-    switch (provider) {
+OpResult LoginTab::validateToken(const juce::String& token)
+{
+    switch (provider)
+    {
         case LoginTab::Provider::HUGGINGFACE:
             return GradioClient().validateToken(token);
             break;
@@ -115,7 +131,8 @@ OpResult LoginTab::validateToken(const juce::String& token) {
     }
 }
 
-void LoginTab::handleSubmit() {
+void LoginTab::handleSubmit()
+{
     auto token = userToken.getText().trim();
     if (token.isNotEmpty())
     {
@@ -128,22 +145,43 @@ void LoginTab::handleSubmit() {
             Error::fillUserMessage(err);
             LogAndDBG("Invalid token:\n" + err.devMessage.toStdString());
             AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                "Invalid Token",
-                                                "The provided token is invalid:\n"
-                                                    + err.userMessage);
+                                             "Invalid Token",
+                                             "The provided token is invalid:\n" + err.userMessage);
             juce::String savedToken = AppSettings::getString(getStorageKey());
-            if (savedToken.isNotEmpty()) {
+            if (savedToken.isNotEmpty())
+            {
                 userToken.setText(savedToken);
                 setStatus("Invalid token. Saved token restored.");
             }
-            else {
+            else
+            {
                 userToken.clear();
                 submitButton.setEnabled(false);
                 setStatus("Invalid token.");
             }
         }
         else
-        {                
+        {
+            if (currentlyLoadedModel->ready())
+            {
+                auto& client = currentlyLoadedModel->getClient();
+
+                if (dynamic_cast<GradioClient*>(&client))
+                {
+                    if (provider == LoginTab::Provider::HUGGINGFACE)
+                    {
+                        client.setToken(token);
+                    }
+                }
+                else if (dynamic_cast<StabilityClient*>(&client))
+                {
+                    if (provider == LoginTab::Provider::STABILITY)
+                    {
+                        client.setToken(token);
+                    }
+                }
+            }
+
             AppSettings::setValue(getStorageKey(), token);
             AppSettings::saveIfNeeded();
             setStatus("Token verified and saved.");
@@ -156,18 +194,19 @@ void LoginTab::handleSubmit() {
     }
 }
 
-juce::URL LoginTab::getTokenURL() {
+juce::URL LoginTab::getTokenURL()
+{
     juce::String tokenURL;
     switch (provider)
     {
-    case LoginTab::Provider::HUGGINGFACE:
-        tokenURL = "https://huggingface.co/settings/tokens";
-        break;
-    case LoginTab::Provider::STABILITY:
-        tokenURL = "https://platform.stability.ai/account/keys";
-        break;
-    default:
-        break;
+        case LoginTab::Provider::HUGGINGFACE:
+            tokenURL = "https://huggingface.co/settings/tokens";
+            break;
+        case LoginTab::Provider::STABILITY:
+            tokenURL = "https://platform.stability.ai/account/keys";
+            break;
+        default:
+            break;
     }
     // juce::URL(tokenURL).launchInDefaultBrowser();
     return juce::URL(tokenURL);
@@ -175,7 +214,7 @@ juce::URL LoginTab::getTokenURL() {
 
 void LoginTab::resized()
 {
-    DBG("LoginTab::resized()");
+    //DBG("LoginTab::resized()");
     auto area = getLocalBounds().reduced(10);
     const int rowH = 26;
     const int gap = 10;
@@ -208,19 +247,22 @@ void LoginTab::resized()
 
 void LoginTab::paint(juce::Graphics& g)
 {
-    DBG("LoginTab::paint()");
-    // g.fillAll(juce::Colours::lightgrey);  
+    //DBG("LoginTab::paint()");
+    // g.fillAll(juce::Colours::lightgrey);
 }
 
-void LoginTab::setStatus(juce::String text) {
+void LoginTab::setStatus(juce::String text)
+{
     statusLabel.setText(std::move(text), juce::dontSendNotification);
 }
 
 void LoginTab::handleForget()
-{   
+{
     AppSettings::removeValue(getStorageKey());
     forgetButton.setEnabled(false);
     userToken.clear();
     submitButton.setEnabled(false);
     setStatus("Token removed");
+
+    // TODO - remove token from client
 }
