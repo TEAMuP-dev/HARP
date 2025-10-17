@@ -153,7 +153,7 @@ OpResult StabilityClient::processTextToAudio(const Array<var>* dataArray,
         if (response.contains("authorization"))
         {
             error.devMessage =
-                "Missing or invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+                "Missing or invalid authorization.\nHave you added a Stability AI API key in settings yet?";
         }
         else
         {
@@ -371,7 +371,7 @@ OpResult StabilityClient::processAudioToAudio(const Array<var>* dataArray,
         if (response.contains("authorization"))
         {
             error.devMessage =
-                "Invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+                "Invalid authorization.\nHave you added a Stability AI API key in settings yet?";
         }
         else
         {

@@ -21,10 +21,11 @@ LoginTab::LoginTab(const juce::String& providerName, WebModel* m)
         "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
     juce::String message =
         "Paste your "
-        + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token")
+        + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API key")
         + " below.";
 
-    juce::String tokenLabel = isHuggingFace ? "Access Token" : "API Token";
+    // TODO - use this term on the rest of the tab as well
+    juce::String tokenLabel = isHuggingFace ? "Access Token" : "API Key";
 
     // Create token prompt window
     titleLabel.setText(title, juce::dontSendNotification);
