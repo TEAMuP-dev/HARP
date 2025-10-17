@@ -150,7 +150,16 @@ OpResult StabilityClient::processTextToAudio(const Array<var>* dataArray,
     {
         String response = stream ? stream->readEntireStreamAsString() : "";
         error.code = statusCode;
-        error.devMessage = "Text-to-audio request failed: " + response;
+        if (response.contains("authorization"))
+        {
+            error.devMessage =
+                "Missing or invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+        }
+        else
+        {
+            error.devMessage = "Text-to-audio request failed: " + response;
+        }
+
         return OpResult::fail(error);
     }
 
@@ -356,8 +365,19 @@ OpResult StabilityClient::processAudioToAudio(const Array<var>* dataArray,
 
     if (statusCode != 200)
     {
+        String response = stream ? stream->readEntireStreamAsString() : "";
         error.code = statusCode;
-        error.devMessage = "Audio-to-audio request failed: " + stream->readEntireStreamAsString();
+
+        if (response.contains("authorization"))
+        {
+            error.devMessage =
+                "Invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+        }
+        else
+        {
+            error.devMessage = "Audio-to-audio request failed: " + response;
+        }
+
         return OpResult::fail(error);
     }
 
