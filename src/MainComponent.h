@@ -34,10 +34,9 @@
 // #include "media/MidiDisplayComponent.h"
 
 #include "AppSettings.h"
-#include "windows/AboutWindow.h"
-#include "utils.h"
 #include "settings/SettingsBox.h"
-
+#include "utils.h"
+#include "windows/AboutWindow.h"
 
 using namespace juce;
 
@@ -154,7 +153,7 @@ public:
             //menu.addCommandItem(&commandManager, CommandIDs::undo);
             //menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            menu.addCommandItem (&commandManager, CommandIDs::settings);
+            menu.addCommandItem(&commandManager, CommandIDs::settings);
             menu.addSeparator();
             // menu.addCommandItem(&commandManager, CommandIDs::login);
             menu.addCommandItem(&commandManager, CommandIDs::about);
@@ -182,11 +181,10 @@ public:
     // Fills the commands array with the commands that this component/target supports
     void getAllCommands(Array<CommandID>& commands) override
     {
-        const CommandID ids[] = {
-            CommandIDs::open, CommandIDs::save, CommandIDs::saveAs,
-            CommandIDs::undo, CommandIDs::redo,
-            CommandIDs::about, CommandIDs::settings, CommandIDs::viewMediaClipboard
-        };
+        const CommandID ids[] = { CommandIDs::open,     CommandIDs::save,
+                                  CommandIDs::saveAs,   CommandIDs::undo,
+                                  CommandIDs::redo,     CommandIDs::about,
+                                  CommandIDs::settings, CommandIDs::viewMediaClipboard };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
@@ -268,7 +266,7 @@ public:
                 break;
             case CommandIDs::settings:
                 DBG("Settings command invoked");
-                showSettingsDialog();  
+                showSettingsDialog();
                 break;
             default:
                 return false;
@@ -596,21 +594,23 @@ public:
                             MessageManager::callAsync([this, loadingError]
                                                       { loadModelButton.setEnabled(false); });
                         }
+                        /*
                         if (loadingError.userMessage.containsIgnoreCase("sleeping"))
                         {
-                             MessageManager::callAsync([this] {
-                            addCustomPathToDropdown(customPath, true); // mark as sleeping
-                            });
+                            MessageManager::callAsync(
+                                [this]
+                                {
+                                    addCustomPathToDropdown(customPath, true); // mark as sleeping
+                                });
                         }
                         //NEW: reopen custom path dialog if sleeping or 404
-                        if (loadingError.type == ErrorType::InvalidURL || 
-                            loadingError.devMessage.contains("404") ||
-                            loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        if (loadingError.type == ErrorType::InvalidURL
+                            || loadingError.devMessage.contains("404")
+                            || loadingError.userMessage.containsIgnoreCase("sleeping"))
                         {
-                            MessageManager::callAsync([this] {
-                                openCustomPathDialog(customPath);
-                            });
+                            MessageManager::callAsync([this] { openCustomPathDialog(customPath); });
                         }
+                        */
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
@@ -696,28 +696,36 @@ public:
 
     void openCustomPathDialog(const std::string& prefillPath = "")
     {
+        // Create and show the custom path dialog with a callback
         std::function<void(const juce::String&)> loadCallback =
-         [this](const juce::String& customPath2)
+            [this](const juce::String& customPath2)
         {
-             this->customPath = customPath2.toStdString();
-             loadModelButton.triggerClick(); // Trigger load
-         };
-
+            DBG("Custom path entered: " + customPath2);
+            this->customPath = customPath2.toStdString(); // Store the custom path
+            loadModelButton.triggerClick(); // Trigger the load model button click
+        };
         std::function<void()> cancelCallback = [this]()
         {
+            // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
             if (lastLoadedModelItemIndex != -1)
-                 modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
-            else if (lastSelectedItemIndex != -1)
-                 modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+            {
+                modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+            }
+            else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+            {
+                modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+            }
             else
-                 resetModelPathComboBox();
-         };
+            {
+                resetModelPathComboBox();
+                MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
+            }
+        };
 
         CustomPathDialog* dialog = new CustomPathDialog(loadCallback, cancelCallback);
-        if (!prefillPath.empty())
-             dialog->setTextFieldValue(prefillPath); 
-        }
-
+        if (! prefillPath.empty())
+            dialog->setTextFieldValue(prefillPath);
+    }
 
     void resetModelPathComboBox()
     {
@@ -747,13 +755,14 @@ public:
         lastSelectedItemIndex = -1;
     }
 
+    /*
     // Adds a path to the model dropdown if it's not already present
     void addCustomPathToDropdown(const std::string& path, bool wasSleeping = false)
     {
         juce::String displayStr(path);
         if (wasSleeping)
             displayStr += " (sleeping)";
-    
+
         bool alreadyExists = false;
         for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
         {
@@ -763,19 +772,16 @@ public:
                 break;
             }
         }
-    
-        if (!alreadyExists)
+
+        if (! alreadyExists)
         {
             int newID = modelPathComboBox.getNumItems() + 1;
             modelPathComboBox.addItem(displayStr, newID);
         }
-    
+
         modelPathComboBox.setText(displayStr, juce::dontSendNotification);
     }
-    
-    
-        
-
+    */
 
     void focusCallback()
     {
@@ -820,7 +826,7 @@ public:
 
     void showSettingsDialog()
     {
-         DBG("Settings command invoked");
+        DBG("Settings command invoked");
 
         juce::DialogWindow::LaunchOptions options;
         options.dialogTitle = "Settings";
@@ -848,9 +854,9 @@ public:
 #if JUCE_MAC
         // Not used for now
         //auto extraMenu = getMacExtraMenu();
-       // MenuBarModel::setMacMainMenu(this);
-       macExtraMenu = getMacExtraMenu();
-       MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
+        // MenuBarModel::setMacMainMenu(this);
+        macExtraMenu = getMacExtraMenu();
+        MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
 #endif
 
         menuBar->setVisible(true);
@@ -995,32 +1001,7 @@ public:
             // Check if the 'custom path...' option is selected
             if (modelPathComboBox.getSelectedItemIndex() == 0)
             {
-                // Create and show the custom path dialog with a callback
-                std::function<void(const juce::String&)> loadCallback =
-                    [this](const juce::String& customPath2)
-                {
-                    DBG("Custom path entered: " + customPath2);
-                    this->customPath = customPath2.toStdString(); // Store the custom path
-                    loadModelButton.triggerClick(); // Trigger the load model button click
-                };
-                std::function<void()> cancelCallback = [this]()
-                {
-                    // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
-                    if (lastLoadedModelItemIndex != -1)
-                    {
-                        modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
-                    }
-                    else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
-                    {
-                        modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
-                    }
-                    else
-                    {
-                        resetModelPathComboBox();
-                        MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
-                    }
-                };
-                new CustomPathDialog(loadCallback, cancelCallback);
+                openCustomPathDialog("");
             }
             else
             {
@@ -1111,7 +1092,6 @@ public:
         // set to full screen
         // setFullScreen(true);
         resized();
-        
     }
 
     ~MainComponent() override
@@ -1319,7 +1299,7 @@ public:
         menuBar->setBounds(
             mainArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
-       auto margin = 2; // Adjusted margin value for top and bottom spacing
+        auto margin = 2; // Adjusted margin value for top and bottom spacing
 
         juce::FlexBox fullWindow;
         fullWindow.flexDirection = juce::FlexBox::Direction::row;
@@ -1380,8 +1360,9 @@ public:
         {
             float inputTrackAreaFlex = 4 * (numInputTracks / totalTracks);
             mainPanel.items.add(juce::FlexItem(inputTracksLabel).withHeight(20).withMargin(margin));
-            mainPanel.items.add(
-                juce::FlexItem(inputTrackAreaWidget).withFlex(inputTrackAreaFlex).withMargin(margin));
+            mainPanel.items.add(juce::FlexItem(inputTrackAreaWidget)
+                                    .withFlex(inputTrackAreaFlex)
+                                    .withMargin(margin));
         }
         else
         {
@@ -1393,9 +1374,11 @@ public:
         if (numOutputTracks > 0)
         {
             float outputTrackAreaFlex = 4 * (numOutputTracks / totalTracks);
-            mainPanel.items.add(juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
             mainPanel.items.add(
-                juce::FlexItem(outputTrackAreaWidget).withFlex(outputTrackAreaFlex).withMargin(margin));
+                juce::FlexItem(outputTracksLabel).withHeight(20).withMargin(margin));
+            mainPanel.items.add(juce::FlexItem(outputTrackAreaWidget)
+                                    .withFlex(outputTrackAreaFlex)
+                                    .withMargin(margin));
         }
         else
         {

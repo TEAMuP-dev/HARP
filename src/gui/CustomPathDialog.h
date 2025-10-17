@@ -70,11 +70,10 @@ public:
     }
 
     void setTextFieldValue(const std::string& path)
-{
-    customPathEditor.setText(path, juce::dontSendNotification);
-    customPathEditor.selectAll(); 
-}
-
+    {
+        customPathEditor.setText(path, juce::dontSendNotification);
+        customPathEditor.selectAll();
+    }
 
 private:
     TextEditor customPathEditor;
@@ -93,14 +92,13 @@ public:
     {
         // Create the content component
         //auto* content =
-           // new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
-                                    //[this]() { cancelButtonPressed(); });
-         pathComponent = new CustomPathComponent(
-                                        [this](const String& path) { loadButtonPressed(path); },
-                                        [this]() { cancelButtonPressed(); });
-                                    
+        // new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
+        //[this]() { cancelButtonPressed(); });
+        pathComponent =
+            new CustomPathComponent([this](const String& path) { loadButtonPressed(path); },
+                                    [this]() { cancelButtonPressed(); });
+
         setContentOwned(pathComponent, true);
-                                    
 
         // Add custom content
         //setContentOwned(content, true);
@@ -150,7 +148,6 @@ public:
         if (pathComponent != nullptr)
             pathComponent->setTextFieldValue(path);
     }
-
 
 private:
     std::function<void(const String&)> m_onLoadCallback;
