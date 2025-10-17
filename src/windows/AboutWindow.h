@@ -20,7 +20,7 @@ public:
 
         // hyperlink buttons
         modelGlossaryButton.setButtonText("Model Glossary");
-        modelGlossaryButton.setURL(URL("https://github.com/TEAMuP-dev/HARP#models"));
+        modelGlossaryButton.setURL(URL("https://harp-plugin.netlify.app/content/usage/models.html"));
         modelGlossaryButton.setSize(380, 24);
         modelGlossaryButton.setTopLeftPosition(10, 110);
         modelGlossaryButton.setColour(HyperlinkButton::textColourId, Colours::blue);

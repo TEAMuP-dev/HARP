@@ -7,10 +7,11 @@
 #pragma once
 
 #include "juce_gui_basics/juce_gui_basics.h"
-#include "media/AudioDisplayComponent.h"
-#include "media/MediaDisplayComponent.h"
-#include "media/MidiDisplayComponent.h"
-#include "utils.h"
+
+#include "../media/AudioDisplayComponent.h"
+#include "../media/MediaDisplayComponent.h"
+#include "../media/MidiDisplayComponent.h"
+#include "../utils.h"
 
 using namespace juce;
 
@@ -183,7 +184,7 @@ public:
 
         if (m)
         {
-            if (!trackInfo->info.empty())
+            if (! trackInfo->info.empty())
             {
                 m->setMediaInstructions(trackInfo->info);
             }

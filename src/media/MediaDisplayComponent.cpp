@@ -1033,7 +1033,8 @@ void MediaDisplayComponent::updateCursorPosition()
 
 void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
 {
-    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && instructionBox != nullptr)
+    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent()
+        && instructionBox != nullptr)
     {
         instructionBox->setStatusMessage(mediaInstructions);
     }
@@ -1041,7 +1042,8 @@ void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
 
 void MediaDisplayComponent::mouseExit(const MouseEvent& e)
 {
-    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && instructionBox != nullptr)
+    if (! isThumbnailTrack() && e.eventComponent == getMediaComponent()
+        && instructionBox != nullptr)
     {
         instructionBox->setStatusMessage("");
     }
