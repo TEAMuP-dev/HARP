@@ -34,8 +34,9 @@
 // #include "media/MidiDisplayComponent.h"
 
 #include "AppSettings.h"
-#include "windows/AboutWindow.h"
+#include "settings/SettingsBox.h"
 #include "utils.h"
+#include "windows/AboutWindow.h"
 
 using namespace juce;
 
@@ -112,14 +113,14 @@ public:
         saveAs = 0x2003,
         undo = 0x2004,
         redo = 0x2005,
-        loginHF = 0x2006,
-        loginStability = 0x2008,
-        // settings = 0x2007,
+        // login = 0x2006,
+        settings = 0x2007,
         viewMediaClipboard = 0x3000
     };
 
     StringArray getMenuBarNames() override
     {
+        //DBG("getMenuBarNames() called");
         StringArray menuBarNames;
 
         menuBarNames.add("File");
@@ -135,6 +136,8 @@ public:
     {
         auto menu = std::make_unique<PopupMenu>();
         menu->addCommandItem(&commandManager, CommandIDs::about);
+        menu->addCommandItem(&commandManager, CommandIDs::settings);
+        // menu->addCommandItem(&commandManager, CommandIDs::login);
         return menu;
     }
 
@@ -150,16 +153,18 @@ public:
             //menu.addCommandItem(&commandManager, CommandIDs::undo);
             //menu.addCommandItem(&commandManager, CommandIDs::redo);
             menu.addSeparator();
-            // menu.addCommandItem (&commandManager, CommandIDs::settings);
-            // menu.addSeparator()
-            menu.addCommandItem(&commandManager, CommandIDs::about);
+            menu.addCommandItem(&commandManager, CommandIDs::settings);
             menu.addSeparator();
-            menu.addCommandItem(&commandManager, CommandIDs::loginHF);
-            menu.addCommandItem(&commandManager, CommandIDs::loginStability);
+            // menu.addCommandItem(&commandManager, CommandIDs::login);
+            menu.addCommandItem(&commandManager, CommandIDs::about);
         }
         else if (menuName == "View")
         {
             menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        }
+        else
+        {
+            DBG("Unknown menu name: " << menuName);
         }
 
         return menu;
@@ -176,11 +181,10 @@ public:
     // Fills the commands array with the commands that this component/target supports
     void getAllCommands(Array<CommandID>& commands) override
     {
-        const CommandID ids[] = {
-            CommandIDs::open,  CommandIDs::save,           CommandIDs::saveAs,
-            CommandIDs::undo,  CommandIDs::redo,           CommandIDs::loginHF,
-            CommandIDs::about, CommandIDs::loginStability, CommandIDs::viewMediaClipboard
-        };
+        const CommandID ids[] = { CommandIDs::open,     CommandIDs::save,
+                                  CommandIDs::saveAs,   CommandIDs::undo,
+                                  CommandIDs::redo,     CommandIDs::about,
+                                  CommandIDs::settings, CommandIDs::viewMediaClipboard };
         commands.addArray(ids, numElementsInArray(ids));
     }
 
@@ -214,26 +218,22 @@ public:
                 result.addDefaultKeypress(
                     'z', ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
                 break;
-            case CommandIDs::loginHF:
-                result.setInfo(
-                    "Login to Hugging Face", "Authenticate with a Hugging Face token", "Login", 0);
-                break;
             case CommandIDs::about:
                 result.setInfo("About HARP", "Shows information about the application", "About", 0);
-                break;
-            case CommandIDs::loginStability:
-                result.setInfo(
-                    "Login to Stability AI", "Authenticate with a Stability AI token", "Login", 0);
                 break;
             case CommandIDs::viewMediaClipboard:
                 result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
                 result.setTicked(showMediaClipboard);
+                break;
+            case CommandIDs::settings:
+                result.setInfo("Settings", "Open the settings window", "Settings", 0);
                 break;
         }
     }
 
     bool perform(const InvocationInfo& info) override
     {
+        DBG("perform() called");
         switch (info.commandID)
         {
             case CommandIDs::open:
@@ -256,21 +256,17 @@ public:
                 DBG("Redo command invoked");
                 redoCallback();
                 break;
-            case CommandIDs::loginHF:
-                DBG("Login command invoked");
-                loginToProvider("huggingface");
-                break;
             case CommandIDs::about:
                 DBG("About command invoked");
                 showAboutDialog();
                 break;
-            case CommandIDs::loginStability:
-                DBG("Login to Stability command invoked");
-                loginToProvider("stability");
-                break;
             case CommandIDs::viewMediaClipboard:
                 DBG("ViewMediaClipboard command invoked");
                 viewMediaClipboardCallback();
+                break;
+            case CommandIDs::settings:
+                DBG("Settings command invoked");
+                showSettingsDialog();
                 break;
             default:
                 return false;
@@ -398,128 +394,6 @@ public:
                 setStatus("Applied saved Stability token.");
             }
         }
-    }
-
-    void loginToProvider(const juce::String& providerName)
-    {
-        bool isHuggingFace = (providerName == "huggingface");
-        bool isStability = (providerName == "stability");
-
-        if (! isHuggingFace && ! isStability)
-        {
-            DBG("Invalid provider name passed to loginToProvider()");
-            return;
-        }
-
-        // Set provider-specific values
-        juce::String title =
-            "Login to " + juce::String(isHuggingFace ? "Hugging Face" : "Stability AI");
-        juce::String message =
-            "Paste your "
-            + juce::String(isHuggingFace ? "Hugging Face access token" : "Stability AI API token")
-            + " below.\n\nClick 'Get Token' to open the token page.";
-        juce::String tokenLabel = isHuggingFace ? "Access Token:" : "API Token:";
-        juce::String tokenURL = isHuggingFace ? "https://huggingface.co/settings/tokens"
-                                              : "https://platform.stability.ai/account/keys";
-        juce::String storageKey = isHuggingFace ? "huggingFaceToken" : "stabilityToken";
-
-        // Create token prompt window
-        auto* prompt = new juce::AlertWindow(title, message, juce::AlertWindow::NoIcon);
-        prompt->addTextEditor("token", "", tokenLabel);
-        prompt->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-        prompt->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-        prompt->addButton("Get Token", 2);
-
-        auto rememberCheckbox = std::make_unique<juce::ToggleButton>();
-        rememberCheckbox->setButtonText("Remember this token");
-        rememberCheckbox->setSize(200, 24);
-        prompt->addCustomComponent(rememberCheckbox.get());
-
-        prompt->enterModalState(
-            true,
-            juce::ModalCallbackFunction::create(
-                [this,
-                 prompt,
-                 rememberCheckboxPtr = std::move(rememberCheckbox),
-                 isHuggingFace,
-                 isStability,
-                 storageKey,
-                 tokenURL](int choice)
-                {
-                    if (choice == 1)
-                    {
-                        auto token = prompt->getTextEditor("token")->getText().trim();
-                        if (token.isNotEmpty())
-                        {
-                            // Validate token
-                            OpResult result = isHuggingFace
-                                                  ? GradioClient().validateToken(token)
-                                                  : StabilityClient().validateToken(token);
-
-                            if (result.failed())
-                            {
-                                Error err = result.getError();
-                                Error::fillUserMessage(err);
-                                LogAndDBG("Invalid token:\n" + err.devMessage.toStdString());
-                                AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                                                 "Invalid Token",
-                                                                 "The provided token is invalid:\n"
-                                                                     + err.userMessage);
-                                setStatus("Invalid token.");
-                            }
-                            else
-                            {
-                                if (rememberCheckboxPtr->getToggleState())
-                                {
-                                    AppSettings::setValue(storageKey, token);
-                                    AppSettings::saveIfNeeded();
-                                    setStatus(
-                                        juce::String(isHuggingFace ? "Hugging Face" : "Stability")
-                                        + " token saved.");
-                                }
-                                else
-                                {
-                                    AppSettings::removeValue(storageKey);
-                                    setStatus("Token accepted but not saved.");
-                                }
-
-                                // Apply to model if appropriate model is already loaded
-                                if (model != nullptr
-                                    && model->getStatus() != ModelStatus::INITIALIZED)
-                                {
-                                    auto& client = model->getClient();
-                                    const auto spaceInfo = client.getSpaceInfo();
-
-                                    //if ((isHuggingFace
-                                    //     && spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
-                                    //    || (isStability
-                                    //        && spaceInfo.status == SpaceInfo::Status::STABILITY))
-                                    //{
-                                    client.setToken(token);
-                                    setStatus("Token applied to loaded model.");
-                                    //}
-                                }
-                            }
-                        }
-                        else
-                        {
-                            setStatus("No token entered.");
-                        }
-                    }
-                    else if (choice == 2)
-                    {
-                        juce::URL(tokenURL).launchInDefaultBrowser();
-                        loginToProvider(isHuggingFace ? "huggingface"
-                                                      : "stability"); // Reopen prompt
-                    }
-                    else
-                    {
-                        setStatus("Login cancelled.");
-                    }
-
-                    delete prompt;
-                }),
-            false);
     }
 
     void loadModelCallback()
@@ -653,21 +527,26 @@ public:
                         else if (chosen == "Open Space URL")
                         {
                             // get the spaceInfo
-                            SpaceInfo spaceInfo = model->getClient().getSpaceInfo();
+                            SpaceInfo spaceInfo = model->getTempClient().getSpaceInfo();
                             if (spaceInfo.status == SpaceInfo::Status::GRADIO)
                             {
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().gradio;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().gradio;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::HUGGINGFACE)
                             {
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().huggingface;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             else if (spaceInfo.status == SpaceInfo::Status::LOCALHOST)
                             {
                                 // either choose hugingface or gradio, they are the same
-                                URL spaceUrl = this->model->getClient().getSpaceInfo().huggingface;
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().huggingface;
+                                spaceUrl.launchInDefaultBrowser();
+                            }
+                            else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+                            {
+                                URL spaceUrl = this->model->getTempClient().getSpaceInfo().stability;
                                 spaceUrl.launchInDefaultBrowser();
                             }
                             // URL spaceUrl =
@@ -720,6 +599,23 @@ public:
                             MessageManager::callAsync([this, loadingError]
                                                       { loadModelButton.setEnabled(false); });
                         }
+                        /*
+                        if (loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                            MessageManager::callAsync(
+                                [this]
+                                {
+                                    addCustomPathToDropdown(customPath, true); // mark as sleeping
+                                });
+                        }
+                        //NEW: reopen custom path dialog if sleeping or 404
+                        if (loadingError.type == ErrorType::InvalidURL
+                            || loadingError.devMessage.contains("404")
+                            || loadingError.userMessage.containsIgnoreCase("sleeping"))
+                        {
+                            MessageManager::callAsync([this] { openCustomPathDialog(customPath); });
+                        }
+                        */
                     };
 
                     AlertWindow::showAsync(msgOpts, alertCallback);
@@ -803,6 +699,39 @@ public:
         resized();
     }
 
+    void openCustomPathDialog(const std::string& prefillPath = "")
+    {
+        // Create and show the custom path dialog with a callback
+        std::function<void(const juce::String&)> loadCallback =
+            [this](const juce::String& customPath2)
+        {
+            DBG("Custom path entered: " + customPath2);
+            this->customPath = customPath2.toStdString(); // Store the custom path
+            loadModelButton.triggerClick(); // Trigger the load model button click
+        };
+        std::function<void()> cancelCallback = [this]()
+        {
+            // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
+            if (lastLoadedModelItemIndex != -1)
+            {
+                modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
+            }
+            else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
+            {
+                modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
+            }
+            else
+            {
+                resetModelPathComboBox();
+                MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
+            }
+        };
+
+        CustomPathDialog* dialog = new CustomPathDialog(loadCallback, cancelCallback);
+        if (! prefillPath.empty())
+            dialog->setTextFieldValue(prefillPath);
+    }
+
     void resetModelPathComboBox()
     {
         // cb: why do we resetUI inside a function named resetModelPathComboBox ?
@@ -830,6 +759,34 @@ public:
         }
         lastSelectedItemIndex = -1;
     }
+
+    /*
+    // Adds a path to the model dropdown if it's not already present
+    void addCustomPathToDropdown(const std::string& path, bool wasSleeping = false)
+    {
+        juce::String displayStr(path);
+        if (wasSleeping)
+            displayStr += " (sleeping)";
+
+        bool alreadyExists = false;
+        for (int i = 0; i < modelPathComboBox.getNumItems(); ++i)
+        {
+            if (modelPathComboBox.getItemText(i).startsWithIgnoreCase(path))
+            {
+                alreadyExists = true;
+                break;
+            }
+        }
+
+        if (! alreadyExists)
+        {
+            int newID = modelPathComboBox.getNumItems() + 1;
+            modelPathComboBox.addItem(displayStr, newID);
+        }
+
+        modelPathComboBox.setText(displayStr, juce::dontSendNotification);
+    }
+    */
 
     void focusCallback()
     {
@@ -872,6 +829,20 @@ public:
         // }
     }
 
+    void showSettingsDialog()
+    {
+        DBG("Settings command invoked");
+
+        juce::DialogWindow::LaunchOptions options;
+        options.dialogTitle = "Settings";
+        options.content.setOwned(new SettingsBox(model.get()));
+        options.useNativeTitleBar = true;
+        options.resizable = true;
+        options.escapeKeyTriggersCloseButton = true;
+        options.dialogBackgroundColour = juce::Colours::darkgrey;
+        options.launchAsync();
+    }
+
     void initMenuBar()
     {
         // init the menu bar
@@ -880,13 +851,17 @@ public:
         setApplicationCommandManagerToWatch(&commandManager);
         // Register commands
         commandManager.registerAllCommandsForTarget(this);
+        commandManager.setFirstCommandTarget(this);
+
         // commandManager.setFirstCommandTarget(this);
         addKeyListener(commandManager.getKeyMappings());
 
 #if JUCE_MAC
         // Not used for now
-        // auto extraMenu = getMacExtraMenu();
-        MenuBarModel::setMacMainMenu(this);
+        //auto extraMenu = getMacExtraMenu();
+        // MenuBarModel::setMacMainMenu(this);
+        macExtraMenu = getMacExtraMenu();
+        MenuBarModel::setMacMainMenu(this, macExtraMenu.get());
 #endif
 
         menuBar->setVisible(true);
@@ -998,12 +973,13 @@ public:
             // "xribene/pitch_shifter_slow",
             "stability/text-to-audio",
             "stability/audio-to-audio",
-            "teamup-tech/text2midi-HARP3",
-            "teamup-tech/demucs-gen-input-output-harp-v3",
+            "teamup-tech/text2midi-symbolic-music-generation",
+            "teamup-tech/demucs-source-separation",
             "teamup-tech/solo-piano-audio-to-midi-transcription",
-            "teamup-tech/AMT_HARP3",
-            "teamup-tech/vampnet-music-HARP-V3",
-            "teamup-tech/harmonic-percussive-HARP-3",
+            "teamup-tech/anticipatory-music-transformer",
+            "teamup-tech/vampnet-conditional-music-generation",
+            "teamup-tech/harmonic-percussive-separation",
+            "teamup-tech/midi-synthesizer",
             // "xribene/HARP-UI-TEST-v3"
             // "http://localhost:7860",
             // "https://xribene-midi-pitch-shifter.hf.space/",
@@ -1031,32 +1007,7 @@ public:
             // Check if the 'custom path...' option is selected
             if (modelPathComboBox.getSelectedItemIndex() == 0)
             {
-                // Create and show the custom path dialog with a callback
-                std::function<void(const juce::String&)> loadCallback =
-                    [this](const juce::String& customPath2)
-                {
-                    DBG("Custom path entered: " + customPath2);
-                    this->customPath = customPath2.toStdString(); // Store the custom path
-                    loadModelButton.triggerClick(); // Trigger the load model button click
-                };
-                std::function<void()> cancelCallback = [this]()
-                {
-                    // modelPathComboBox.setSelectedId(lastSelectedItemIndex);
-                    if (lastLoadedModelItemIndex != -1)
-                    {
-                        modelPathComboBox.setSelectedId(lastLoadedModelItemIndex + 1);
-                    }
-                    else if (lastLoadedModelItemIndex == -1 && lastSelectedItemIndex != -1)
-                    {
-                        modelPathComboBox.setSelectedId(lastSelectedItemIndex + 1);
-                    }
-                    else
-                    {
-                        resetModelPathComboBox();
-                        MessageManager::callAsync([this] { loadModelButton.setEnabled(false); });
-                    }
-                };
-                new CustomPathDialog(loadCallback, cancelCallback);
+                openCustomPathDialog("");
             }
             else
             {
@@ -1354,7 +1305,6 @@ public:
         menuBar->setBounds(
             mainArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
-
         auto margin = 2; // Adjusted margin value for top and bottom spacing
 
         juce::FlexBox fullWindow;
@@ -1604,6 +1554,7 @@ private:
 
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
+    std::unique_ptr<PopupMenu> macExtraMenu;
 
     juce::String savedStabilityToken; //  used to save the Stability AI token
 
@@ -1759,6 +1710,10 @@ private:
                 //                              + spaceInfo.modelName + " in browser");
                 // nameLabelButton.setURL(URL(spaceInfo.gradio));
                 modelAuthorLabel.setURL(URL(spaceInfo.gradio));
+            }
+            else if (spaceInfo.status == SpaceInfo::Status::STABILITY)
+            {
+                modelAuthorLabel.setURL(URL(spaceInfo.stability));
             }
             // spaceUrlButton.setFont(Font(15.00f, Font::plain));
             addAndMakeVisible(modelAuthorLabel);

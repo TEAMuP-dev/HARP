@@ -153,7 +153,7 @@ OpResult StabilityClient::processTextToAudio(const Array<var>* dataArray,
         if (response.contains("authorization"))
         {
             error.devMessage =
-                "Missing or invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+                "Missing or invalid authorization.\nHave you added a Stability AI API key in settings yet?";
         }
         else
         {
@@ -371,7 +371,7 @@ OpResult StabilityClient::processAudioToAudio(const Array<var>* dataArray,
         if (response.contains("authorization"))
         {
             error.devMessage =
-                "Invalid authorization.\nHave you added a Stability AI access token in settings yet?";
+                "Invalid authorization.\nHave you added a Stability AI API key in settings yet?";
         }
         else
         {
@@ -486,20 +486,22 @@ OpResult StabilityClient::getControls(Array<var>& inputComponents,
 
     // Fetch the controls JSON. It's an array of 2 dicts.
     // The first is for text-to-audio, the second is for audio-to-audio.
-    File sourceFile(__FILE__);
-    const File jsonFile = sourceFile.getParentDirectory().getChildFile("stability-controls.json");
 
-    if (! jsonFile.existsAsFile())
-    {
-        error.devMessage = "JSON file not found: " + jsonFile.getFullPathName();
-        return OpResult::fail(error);
-    }
+    const juce::String controlsJsonUrl =
+        "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
 
-    String responseData = jsonFile.loadFileAsString();
+    URL url(controlsJsonUrl);
+    String responseData = url.readEntireTextStream();
 
     if (responseData.isEmpty())
     {
-        error.devMessage = "Failed to read controls JSON from file: " + jsonFile.getFullPathName();
+        error.devMessage = "Failed to fetch controls JSON from URL: " + controlsJsonUrl;
+        if (url.isWellFormed()
+            && url.getDomain()
+                   .isEmpty()) // Basic check if it looks like a local file path that failed
+        {
+            error.devMessage += ". Ensure the URL is correct and accessible.";
+        }
         return OpResult::fail(error);
     }
 

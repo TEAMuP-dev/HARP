@@ -19,7 +19,7 @@ class Client
 {
 public:
     Client() = default;
-    ~Client() = default;
+    virtual ~Client() {};
 
     // Space Info
     virtual OpResult setSpaceInfo(const SpaceInfo&) = 0;

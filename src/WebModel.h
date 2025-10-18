@@ -261,22 +261,22 @@ public:
             return result;
         }
 
-        std::unique_ptr<Client> newClient;
+        //std::unique_ptr<Client> newClient;
 
         if (spaceInfo.status == SpaceInfo::Status::STABILITY)
         {
-            newClient = std::make_unique<StabilityClient>();
+            tempClient = std::make_unique<StabilityClient>();
             isStabilityModel = true;
         }
         else
         { // GRADIO, HUGGINFACE, LOCALHOST
-            newClient = std::make_unique<GradioClient>();
+            tempClient = std::make_unique<GradioClient>();
             isStabilityModel = false;
         }
 
-        newClient->setSpaceInfo(spaceInfo);
+        tempClient->setSpaceInfo(spaceInfo);
 
-        LogAndDBG(newClient->getSpaceInfo().toString());
+        LogAndDBG(tempClient->getSpaceInfo().toString());
 
         // The input components defined in PyHARP include
         // both the input tracks (audio or midi) and the controls (sliders, text boxes, etc)
@@ -286,7 +286,7 @@ public:
 
         juce::DynamicObject cardDict;
         status2 = ModelStatus::GETTING_CONTROLS;
-        result = newClient->getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
+        result = tempClient->getControls(inputPyharpComponents, outputPyharpComponents, cardDict);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -509,7 +509,7 @@ public:
                 return OpResult::fail(error);
             }
         }
-        client = std::move(newClient);
+        loadedClient = std::move(tempClient);
         status2 = ModelStatus::LOADED;
         m_loaded = true;
         return OpResult::ok();
@@ -543,7 +543,7 @@ public:
         for (auto& tuple : localInputTrackFiles)
         {
             juce::String remoteTrackFilePath;
-            result = client->uploadFileRequest(std::get<2>(tuple), remoteTrackFilePath);
+            result = loadedClient->uploadFileRequest(std::get<2>(tuple), remoteTrackFilePath);
             if (result.failed())
             {
                 result.getError().userMessage = "Failed to upload file for track "
@@ -588,7 +588,7 @@ public:
         }
 
         status2 = ModelStatus::PROCESSING;
-        result = client->processRequest(error, processingPayload, outputFilePaths, labels);
+        result = loadedClient->processRequest(error, processingPayload, outputFilePaths, labels);
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -603,7 +603,7 @@ public:
         // Create a successful result.
         // we'll update it to a failure result if something goes wrong
         status2 = ModelStatus::CANCELLING;
-        OpResult result = client->cancel();
+        OpResult result = loadedClient->cancel();
         if (result.failed())
         {
             status2 = ModelStatus::ERROR;
@@ -620,7 +620,8 @@ public:
     ModelStatus getLastStatus() { return lastStatus; }
     void setLastStatus(ModelStatus status) { lastStatus = status; }
 
-    Client& getClient() { return *client; }
+    Client& getClient() { return *loadedClient; }
+    Client& getTempClient() { return *tempClient; }
     // StabilityClient& getStabilityClient() { return stabilityClient; }
 
     LabelList& getLabels() { return labels; }
@@ -775,7 +776,8 @@ private:
     //    1. c++ had an ordered map (like python)
     //    2. the gradio server would accept key:value pairs instead of list
     std::vector<juce::Uuid> uuidsInOrder;
-    std::unique_ptr<Client> client;
+    std::unique_ptr<Client> loadedClient;
+    std::unique_ptr<Client> tempClient;
     // GradioClient gradioClient;
     // StabilityClient stabilityClient;
 

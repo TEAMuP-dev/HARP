@@ -63,6 +63,18 @@ public:
         return defaultValue;
     }
 
+    // Set value specific for boolean type
+    static void setValue(const juce::String& keyName, bool value, bool saveImmediately = false)
+    {
+        if (auto* settings = getUserSettings())
+        {
+            settings->setValue(keyName, value ? "true" : "false");
+
+            if (saveImmediately)
+                settings->saveIfNeeded();
+        }
+    }
+
     /** Set a value of any type that can be converted to string */
     template <typename ValueType>
     static void
