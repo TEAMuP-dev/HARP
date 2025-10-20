@@ -1,26 +1,16 @@
-## v3.0.0
+## v3.0.1
  ### Overview
- - HARP 3.0 is a major release with several significant upgrades to HARP's extensibility, utility, and workflow.
+ - HARP 3.0.1 introduces a few minor improvements to workflow and usability.
 
- ### Key Features
- - **Generalized I/O**:
-   - HARP now supports models with arbitrary combinations of audio/MIDI/text inputs and audio/MIDI outputs, including models with multiple input/output tracks or optional input tracks. See our companion repository [pyharp](https://github.com/TEAMuP-dev/pyharp) for instructions on deploying models and some basic examples.
- - **Media Clipboard**:
-   - A collapsible media clipboard has been added to HARP to hold any potential inputs, intermediate results, or outputs over the course of processing. The media clipboard supports drag/drop, and its contents can also be managed through add/remove buttons. Other media clipboard features include saving files, track playback, and overwriting DAW-linked files for seamless DAW integration.
- - **Support for Stable Audio Models**:
-   - HARP is no longer constrained to working exclusively with the Hugging Face API to interface with hosted models. It has been abstracted to support the Stability AI Web API, and in particular the text-to-audio and audio-to-audio models. This abstraction will simplify the adoption of new and alternative APIs in the future.
-
- ### Major Bug Fixes
- - **Media Component Efficiency**:
-   - The media display component implementation has been refactored extensively, with major efficiency upgrades improving HARP's performance.
-
- ### Other New Features
- - **Control Info Display**:
-   - HARP now displays any pre-defined info for model controls and input/output tracks. Control info can be defined using the "info" keyword in [pyharp](https://github.com/TEAMuP-dev/pyharp) or in the config for supported APIs.
- - **Website Organization**:
-   - In an effort to avoid making the main READMEs for HARP and PyHARP too overwhelming, we have dispersed all relevant information throughout our [our website](https://harp-plugin.netlify.app).
- - **Several New Models**:
-   - We have added several new models to go along with this release and to serve as examples for deploying your own model. See the [model list](https://harp-plugin.netlify.app/content/usage/models.html) on our website for more information.
+ ### Minor Improvements
+ - **Settings Window**:
+   - A settings window can now be opened from the file menu. This is where most important persistent settings will be managed.
+- **Token Interactions**:
+   - The token logins for Hugging Face and Stability AI have been moved to settings. Previously added tokens are displayed and the ability to remove added tokens has been added.
+- **Token Error Messages**:
+   - The case where a user has not added a token is now detected for both Hugging Face and Stability AI models, and more intuitive error messages are given to the user.
+- **Fixed Incorrect Links**:
+   - The links for sleeping spaces have been fixed, along with better links on the about page and for the Stability AI models.
 
  ### Requirements
  - Supports models deployed with [`pyharp` **v0.3.0**](https://github.com/TEAMuP-dev/pyharp/releases/tag/v0.3.0) and `gradio` **v5.x.x**.

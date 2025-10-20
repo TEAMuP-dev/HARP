@@ -979,6 +979,8 @@ public:
             "teamup-tech/anticipatory-music-transformer",
             "teamup-tech/vampnet-conditional-music-generation",
             "teamup-tech/harmonic-percussive-separation",
+            "teamup-tech/Kokoro-TTS",
+            "teamup-tech/MegaTTS3-Voice-Cloning",
             "teamup-tech/midi-synthesizer",
             // "xribene/HARP-UI-TEST-v3"
             // "http://localhost:7860",
