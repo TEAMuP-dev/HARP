@@ -122,6 +122,7 @@ struct ComboBoxInfo : public PyHarpComponentInfo
     std::vector<std::string> options;
     std::string value;
 };
+
 struct SpaceInfo
 {
     enum Status
@@ -135,6 +136,7 @@ struct SpaceInfo
     };
     String huggingface;
     String gradio;
+    String stability;
     String userInput;
     String modelName;
     String userName;

@@ -10,16 +10,22 @@ The following models are always available for use within HARP, and can be found 
 
 <!-- - **MelodyFlow** \([hugggof/melodyflow](https://huggingface.co/spaces/hugggof/melodyflow)\) performs text-guided music generation and editing. Given an audio file and a text prompt describing a desired sound, MelodyFlow transforms the given audio to impart characteristics of the desired sound. -->
 
-- **Text2Midi** \([lllindsey0615/text2midi-HARP3](https://huggingface.co/spaces/lllindsey0615/text2midi-HARP3)\) generates MIDI files from textual descriptions.
+- **Text2Midi** \([teamup-tech/text2midi-symbolic-music-generation](https://huggingface.co/spaces/teamup-tech/text2midi-symbolic-music-generation)\) generates MIDI files from textual descriptions.
 
-- **Demucs** \([lllindsey0615/demucs-gen-input-output-harp-v3](https://huggingface.co/spaces/lllindsey0615/demucs-gen-input-output-harp-v3)\) performs source separation on music, splitting it into "Drums", "Bass", "Vocals", and "Instrumental" stems.
+- **Demucs** \([teamup-tech/demucs-source-separation](https://huggingface.co/spaces/teamup-tech/demucs-source-separation)\) performs source separation on music, splitting it into "Drums", "Bass", "Vocals", and "Instrumental" stems.
 
-- **High Resolution Piano Transcription** \([lllindsey0615/solo-piano-audio-to-midi-transcription](https://huggingface.co/spaces/lllindsey0615/solo-piano-audio-to-midi-transcription)\) converts audio of solo piano playing into a corresponding MIDI file.
+- **High Resolution Piano Transcription** \([teamup-tech/solo-piano-audio-to-midi-transcription](https://huggingface.co/spaces/teamup-tech/solo-piano-audio-to-midi-transcription)\) converts audio of solo piano playing into a corresponding MIDI file.
 
-- **Anticipatory Music Transformer** \([lllindsey0615/AMT_HARP3](https://huggingface.co/spaces/lllindsey0615/AMT_HARP3)\) performs harmonization on MIDI inputs, generating additional notes to provide the harmony for a given melody.
+- **Anticipatory Music Transformer** \([teamup-tech/anticipatory-music-transformer](https://huggingface.co/spaces/teamup-tech/anticipatory-music-transformer)\) performs harmonization on MIDI inputs, generating additional notes to provide the harmony for a given melody.
 
 <!-- - **Timbre-Trap** \([npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap), [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)\) performs timbre removal on music audio, reducing "textural" characteristics while preserving pitch (harmony/melody). -->
 
-- **VampNet** \([lllindsey0615/vampnet-music-HARP-V3](https://huggingface.co/spaces/lllindsey0615/vampnet-music-HARP-V3)\) generates variations or "vamps" on music audio, and offers a variety of controls for determining how the vamps diverge from the original input audio.
+- **VampNet** \([teamup-tech/vampnet-conditional-music-generation](https://huggingface.co/spaces/teamup-tech/vampnet-conditional-music-generation)\) generates variations or "vamps" on music audio, and offers a variety of controls for determining how the vamps diverge from the original input audio.
 
-- **Harmonic/Percussive Source Separation** \([lllindsey0615/harmonic-percussive-HARP-3](https://huggingface.co/spaces/lllindsey0615/harmonic-percussive-HARP-3)\) performs source separation on music by splitting it into "harmonic" and "percussive" tracks, allowing for the extraction of drum-like elements.
+- **Harmonic/Percussive Source Separation** \([teamup-tech/harmonic-percussive-separation](https://huggingface.co/spaces/teamup-tech/harmonic-percussive-separation)\) performs source separation on music by splitting it into "harmonic" and "percussive" tracks, allowing for the extraction of drum-like elements.
+
+- **Text-to-Speech** \([teamup-tech/Kokoro-TTS](https://huggingface.co/spaces/teamup-tech/Kokoro-TTS)\) generates speech in the style of a chosen voice preset given a text prompt.
+
+- **Voice Cloning** \([teamup-tech/MegaTTS3-Voice-Cloning](https://huggingface.co/spaces/teamup-tech/MegaTTS3-Voice-Cloning)\) generates speech conditioned on another speech recording following a text prompt.
+
+- **Midi Synthesis** \([teamup-tech/midi-synthesizer](https://huggingface.co/spaces/teamup-tech/midi-synthesizer)\) synthesizes MIDI into audio using the standard MuseScore SoundFont.

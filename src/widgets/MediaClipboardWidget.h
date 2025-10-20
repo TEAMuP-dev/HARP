@@ -6,10 +6,11 @@
 
 #pragma once
 
-#include "TrackAreaWidget.h"
-#include "gui/MultiButton.h"
 #include "juce_gui_basics/juce_gui_basics.h"
-#include "utils.h"
+
+#include "TrackAreaWidget.h"
+#include "../gui/MultiButton.h"
+#include "../utils.h"
 
 using namespace juce;
 
