@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 #include "AppSettings.h"
+#include "windows/WelcomeWindow.h"
 
 using namespace juce;
 
@@ -61,6 +62,33 @@ public:
         windowCounter++;
 
         mainWindow.reset(new HARPWindow(windowTitle));
+
+        bool forceShowWelcome = false;
+
+        bool showWelcome = true;
+
+        if (!forceShowWelcome)
+        {
+            if (AppSettings::containsKey("showWelcomePopup"))
+                showWelcome = AppSettings::getIntValue("showWelcomePopup", 1) == 1;
+        }
+
+        if (showWelcome)
+        {
+            MessageManager::callAsync([this]()
+            {
+                DialogWindow::LaunchOptions opts;
+                opts.dialogTitle = "HARP";
+                opts.content.setOwned(new WelcomeWindow([this]()
+                {
+                    if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                        mainComp->showSettingsDialog();
+                }));
+                opts.content->setSize(480, 500);
+                opts.useNativeTitleBar = true;
+                opts.launchAsync();
+            });
+        }
 
         StringArray args;
 
