@@ -1,6 +1,7 @@
 #include "StabilityClient.h"
 #include "../errors.h"
 #include "../external/magic_enum.hpp"
+#include "BinaryData.h"
 
 StabilityClient::StabilityClient()
 {
@@ -484,24 +485,17 @@ OpResult StabilityClient::getControls(Array<var>& inputComponents,
     Error error;
     error.type = ErrorType::JsonParseError;
 
-    // Fetch the controls JSON. It's an array of 2 dicts.
+    // Access binarized controls JSON. It's an array of 2 dicts.
     // The first is for text-to-audio, the second is for audio-to-audio.
+    const char* jsonData = BinaryData::stabilitycontrols_json;
+    const int jsonDataSize = BinaryData::stabilitycontrols_jsonSize;
 
-    const juce::String controlsJsonUrl =
-        "https://gist.githubusercontent.com/xribene/eb0650de86fdcf8d7324ded49e07bce9/raw/acd103b0bc6af3ef6f20802008da6f2a3ba7fc78/gistfile1.txt";
-
-    URL url(controlsJsonUrl);
-    String responseData = url.readEntireTextStream();
+    String responseData = String::fromUTF8(jsonData, jsonDataSize);
 
     if (responseData.isEmpty())
     {
-        error.devMessage = "Failed to fetch controls JSON from URL: " + controlsJsonUrl;
-        if (url.isWellFormed()
-            && url.getDomain()
-                   .isEmpty()) // Basic check if it looks like a local file path that failed
-        {
-            error.devMessage += ". Ensure the URL is correct and accessible.";
-        }
+        error.devMessage = "Failed to read controls JSON from resource file.";
+
         return OpResult::fail(error);
     }
 
