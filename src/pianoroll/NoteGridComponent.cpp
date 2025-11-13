@@ -27,8 +27,12 @@ void NoteGridComponent::paint(Graphics& g)
 
         Rectangle<float> bounds(noteXPos, noteYPos, jmax(3.0f, noteWidth), noteHeight - 1.0f);
 
+        float hue = static_cast<float>(n->instrument) / 127.0f;
+
+        Colour color = Colour::fromHSV(hue, 1.0f, 1.0f, 1.0f).brighter();
+
         // Note fill
-        g.setColour(Colours::red.brighter().withAlpha(0.75f));
+        g.setColour(color.withAlpha(0.75f));
         g.fillRect(bounds.toNearestInt());
 
         if ((noteWidth >= 5) & (noteHeight >= 8))
@@ -38,7 +42,7 @@ void NoteGridComponent::paint(Graphics& g)
             const float velocityHeight = 4.0f;
 
             // Velocity fill
-            g.setColour(Colours::red.brighter().brighter());
+            g.setColour(color.brighter());
             g.fillRect(bounds.translated(2, verticalOffset)
                            .withWidth(maxVelocityWidth * n->velocity / 127.0f)
                            .withHeight(velocityHeight)
