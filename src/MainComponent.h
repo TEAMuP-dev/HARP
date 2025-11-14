@@ -1080,6 +1080,13 @@ public:
         addAndMakeVisible(inputTrackAreaWidget);
         addAndMakeVisible(outputTrackAreaWidget);
 
+        // Configure description as scrollable read-only text
+        descriptionLabel.setMultiLine(true);
+        descriptionLabel.setReadOnly(true);
+        descriptionLabel.setScrollbarsShown(true);
+        descriptionLabel.setCaretVisible(false);
+        descriptionLabel.setPopupMenuEnabled(false);
+        descriptionLabel.setFont(Font(15.0f));
         addAndMakeVisible(descriptionLabel);
         // addAndMakeVisible(tagsLabel);
         // addAndMakeVisible(audioOrMidiLabel);
@@ -1330,19 +1337,18 @@ public:
         row2.flexDirection = juce::FlexBox::Direction::row;
         row2.items.add(juce::FlexItem(modelAuthorLabel).withFlex(0.5).withMargin(margin));
         row2.items.add(juce::FlexItem().withFlex(0.5).withMargin(margin));
-        mainPanel.items.add(juce::FlexItem(row2).withHeight(30).withMargin(margin));
+        mainPanel.items.add(juce::FlexItem(row2).withHeight(50).withMargin(margin));
 
         // Row 3: Description
-        auto font = Font(15.0f);
-        descriptionLabel.setFont(font);
-        // descriptionLabel.setColour(Label::backgroundColourId, Colours::red);
-        auto maxLabelWidth = mainArea.getWidth() - 2 * margin;
-        auto numberOfLines =
-            font.getStringWidthFloat(descriptionLabel.getText(false)) / maxLabelWidth;
-        float textHeight =
-            (font.getHeight() + 5) * (std::floor(numberOfLines) + 1) + font.getHeight();
-        mainPanel.items.add(
-            juce::FlexItem(descriptionLabel).withHeight(textHeight).withMargin(margin));
+        if (model != nullptr && model->getStatus() != ModelStatus::INITIALIZED 
+            && !descriptionLabel.getText().isEmpty())
+        {
+            mainPanel.items.add(juce::FlexItem(descriptionLabel).withHeight(60).withMargin(margin));
+        }
+        else
+        {
+            descriptionLabel.setBounds(0, 0, 0, 0); // Hide it
+        }
 
         // Row 4: Control Area Widget
         // TODO - set min/max height based on limits of control element scaling
@@ -1432,7 +1438,7 @@ public:
     void setModelCard(const ModelCard& card)
     {
         modelAuthorLabel.setModelText(String(card.name));
-        descriptionLabel.setText(String(card.description), dontSendNotification);
+        descriptionLabel.setText(String(card.description));
         // set the author label text to "by {author}" only if {author} isn't empty
         card.author.empty() ? modelAuthorLabel.setAuthorText("")
                             : modelAuthorLabel.setAuthorText("by " + String(card.author));
@@ -1484,7 +1490,7 @@ private:
 
     // model card
     // Label nameLabel, authorLabel,
-    Label descriptionLabel;
+    TextEditor descriptionLabel;
     // Label tagsLabel;
     // Label audioOrMidiLabel;
 
