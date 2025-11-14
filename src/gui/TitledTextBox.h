@@ -64,6 +64,16 @@ public:
 
     juce::String getText() { return textBox.getText(); }
 
+    int getMinimumRequiredWidth() const
+    {
+        auto font = titleLabel.getFont();
+        const int labelWidth     = font.getStringWidth(titleLabel.getText());
+        const int padding        = 20;
+        const int minTextBoxWidth = 120;
+
+        return juce::jmax(minTextBoxWidth, labelWidth + padding);
+    }
+
 private:
     juce::TextEditor textBox;
     juce::Label titleLabel;
