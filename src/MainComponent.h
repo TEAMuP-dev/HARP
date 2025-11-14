@@ -976,6 +976,7 @@ public:
             "teamup-tech/text2midi-symbolic-music-generation",
             "teamup-tech/demucs-source-separation",
             "teamup-tech/solo-piano-audio-to-midi-transcription",
+            "teamup-tech/TRIA",
             "teamup-tech/anticipatory-music-transformer",
             "teamup-tech/vampnet-conditional-music-generation",
             "teamup-tech/harmonic-percussive-separation",
