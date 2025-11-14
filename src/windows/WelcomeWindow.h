@@ -21,7 +21,6 @@ public:
             dontSendNotification);
         introText.setJustificationType(Justification::centred);
         introText.setFont(Font(17.0f, Font::bold));
-        introText.setBounds(20, 15, 440, 50);
         addAndMakeVisible(introText);
 
         // --- Instructions ---
@@ -40,16 +39,10 @@ public:
             dontSendNotification);
         instructions.setJustificationType(Justification::centredTop);
         instructions.setFont(Font(14.0f));
-        instructions.setBounds(30, 70, 420, 270);
         addAndMakeVisible(instructions);
 
-        // --- Buttons and Layout Adjustments ---
-        const int buttonWidth = 200;
-        const int buttonX = (getWidth() - buttonWidth) / 2; // center align
-
+        // --- Buttons ---
         openSettingsButton.setButtonText("Open Settings");
-        openSettingsButton.setSize(buttonWidth, 30);
-        openSettingsButton.setTopLeftPosition(buttonX, 355);
         openSettingsButton.onClick = [this]()
         {
             if (onOpenSettings)
@@ -57,16 +50,12 @@ public:
         };
         addAndMakeVisible(openSettingsButton);
 
-        // --- Centered checkbox ---
+        // --- Checkbox ---
         dontShowAgain.setButtonText("Don't show this again");
-        dontShowAgain.setSize(buttonWidth, 24);
-        dontShowAgain.setTopLeftPosition(buttonX, 390);
         dontShowAgain.setColour(ToggleButton::textColourId, Colours::white);
         addAndMakeVisible(dontShowAgain);
 
         continueButton.setButtonText("Continue");
-        continueButton.setSize(buttonWidth, 30);
-        continueButton.setTopLeftPosition(buttonX, 420);
         continueButton.onClick = [this]()
         {
             const bool dontShow = dontShowAgain.getToggleState();
@@ -82,8 +71,6 @@ public:
         docsLink.setButtonText("View Documentation");
         docsLink.setURL(URL("https://harp-plugin.netlify.app/content/intro.html"));
         docsLink.setColour(HyperlinkButton::textColourId, Colours::skyblue);
-        docsLink.setSize(buttonWidth, 20);
-        docsLink.setTopLeftPosition(buttonX, 455);
         addAndMakeVisible(docsLink);
 
         // --- Footer ---
@@ -91,13 +78,39 @@ public:
                             dontSendNotification);
         footerLabel.setJustificationType(Justification::centred);
         footerLabel.setFont(Font(13.0f));
-        footerLabel.setBounds(0, 475, 480, 20);
         addAndMakeVisible(footerLabel);
     }
 
     void paint(Graphics& g) override
     {
         g.fillAll(findColour(ResizableWindow::backgroundColourId));
+    }
+
+    void resized() override
+    {
+        // Get the content area dimensions
+        auto area = getLocalBounds();
+        
+        // Define content width (same as original 480 width minus padding)
+        const int contentWidth = 440;
+        const int buttonWidth = 200;
+        
+        // Calculate horizontal center offset
+        const int centerX = (area.getWidth() - contentWidth) / 2;
+        const int buttonX = (area.getWidth() - buttonWidth) / 2;
+        
+        // Calculate vertical center offset for the entire content block
+        const int totalContentHeight = 485; // Approximate total height of all content
+        const int startY = jmax(0, (area.getHeight() - totalContentHeight) / 2);
+        
+        // Position all elements relative to center
+        introText.setBounds(centerX, startY + 15, contentWidth, 50);
+        instructions.setBounds(centerX + 10, startY + 70, contentWidth - 20, 270);
+        openSettingsButton.setBounds(buttonX, startY + 355, buttonWidth, 30);
+        dontShowAgain.setBounds(buttonX, startY + 390, buttonWidth, 24);
+        continueButton.setBounds(buttonX, startY + 420, buttonWidth, 30);
+        docsLink.setBounds(buttonX, startY + 455, buttonWidth, 20);
+        footerLabel.setBounds(centerX - 20, startY + 475, contentWidth + 40, 20);
     }
 
 private:
