@@ -39,6 +39,16 @@ public:
     juce::Slider& getSlider() { return slider; }
     juce::Label& getLabel() { return label; }
 
+    int getMinimumRequiredWidth() const
+    {
+        auto font = label.getFont();
+        const int labelWidth    = font.getStringWidth(label.getText());
+        const int padding       = 20;
+        const int minSliderBody = 60;
+
+        return juce::jmax(minSliderBody, labelWidth + padding);
+    }
+
 private:
     juce::Label label;
     juce::Slider slider;

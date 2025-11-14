@@ -24,6 +24,16 @@ public:
     juce::ComboBox& getComboBox() { return comboBox; }
     juce::Label& getLabel() { return label; }
 
+    int getMinimumRequiredWidth() const
+    {
+        auto font = label.getFont();
+        const int labelWidth    = font.getStringWidth(label.getText());
+        const int padding       = 20;
+        const int minComboWidth = 80;
+
+        return juce::jmax(minComboWidth, labelWidth + padding);
+    }
+
 private:
     juce::Label label;
     juce::ComboBox comboBox;

@@ -218,7 +218,7 @@ public:
             //     + " to sliderBox");
             sliderBox.items.add(juce::FlexItem(*sliderWithLabel)
                                     .withFlex(1)
-                                    .withMinWidth(20)
+                                    .withMinWidth(sliderWithLabel->getMinimumRequiredWidth())
                                     .withMaxHeight(maxHeight)
                                     .withMargin(margin)); // Adjusted min height
         }
@@ -230,7 +230,7 @@ public:
         {
             // DBG("Adding toggle with name: " + toggle->getName() + " to toggleBox");
             toggleBox.items.add(
-                juce::FlexItem(*toggle).withFlex(1).withMinWidth(40).withMaxHeight(20).withMargin(
+                juce::FlexItem(*toggle).withFlex(1).withMinWidth(getMinimumRequiredWidthForToggle(*toggle)).withMaxHeight(20).withMargin(
                     margin));
         }
 
@@ -242,7 +242,7 @@ public:
             // DBG("Adding option control with name: " + optionCtrl->getName() + " to optionBox");
             optionBox.items.add(juce::FlexItem(*optionCtrl)
                                     .withFlex(1)
-                                    .withMinWidth(40)
+                                    .withMinWidth(optionCtrl->getMinimumRequiredWidth())
                                     .withMaxHeight(50)
                                     .withMargin(margin));
         }
@@ -255,7 +255,7 @@ public:
             // DBG("Adding text control with name: " + textCtrl->getName() + " to textBox");
             textBox.items.add(juce::FlexItem(*textCtrl)
                                   .withFlex(1)
-                                  .withMinWidth(80)
+                                  .withMinWidth(textCtrl->getMinimumRequiredWidth())
                                   .withMaxWidth(180)
                                   .withMaxHeight(maxHeight)
                                   .withMargin(margin));
@@ -393,6 +393,16 @@ private:
     std::vector<std::unique_ptr<TitledTextBox>> textCtrls;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
+
+    int getMinimumRequiredWidthForToggle(const juce::ToggleButton& toggle) const
+    {
+        juce::Font font(15.0f);
+        const int labelWidth    = font.getStringWidth(toggle.getButtonText());
+        const int padding       = 20;
+        const int minToggleWidth = 60;
+
+        return juce::jmax(minToggleWidth, labelWidth + padding);
+    }
 
     void updateInstructionBox(const juce::String& text)
     {
