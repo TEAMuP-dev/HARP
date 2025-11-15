@@ -9,13 +9,8 @@ using namespace juce;
 struct MidiNote
 {
 public:
-    unsigned char noteNumber;
-    double startTime;
-    double duration;
-    unsigned char velocity;
-
-    MidiNote(unsigned char n, double s, double d, unsigned char v)
-        : noteNumber(n), startTime(s), duration(d), velocity(v)
+    MidiNote(unsigned char n, double s, double d, unsigned char v, unsigned char i = 0)
+        : noteNumber(n), startTime(s), duration(d), velocity(v), instrument(i)
     {
     }
 
@@ -25,7 +20,14 @@ public:
         startTime = other.startTime;
         duration = other.duration;
         velocity = other.velocity;
+        instrument = other.instrument;
     }
+
+    unsigned char noteNumber;
+    double startTime;
+    double duration;
+    unsigned char velocity;
+    unsigned char instrument;
 };
 
 class NoteGridComponent : public KeyboardComponent

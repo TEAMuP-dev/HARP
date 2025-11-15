@@ -1,9 +1,9 @@
-#include "MainComponent.h"
 #include "AppSettings.h"
+#include "MainComponent.h"
 
 using namespace juce;
 
-class GuiAppApplication : public JUCEApplication
+class GuiAppApplication : public JUCEApplication, public FocusChangeListener
 {
 public:
     GuiAppApplication()
@@ -50,6 +50,9 @@ public:
 
         appJustLaunched = true;
         originalCommandLine = commandLine;
+
+        clearLastFocusedWindow();
+        Desktop::getInstance().addFocusChangeListener(this);
 
         String windowTitle = getApplicationName();
 
@@ -154,6 +157,8 @@ public:
     /// Application shutdown code
     void shutdown() override
     {
+        Desktop::getInstance().removeFocusChangeListener(this);
+
         // Delete our window
         mainWindow = nullptr;
     }
@@ -201,6 +206,12 @@ public:
             saveWindowPosition();
 
             auto* app = dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance());
+
+            if (this == app->getLastFocusedWindowPtr())
+            {
+                // Clear last focused window pointer
+                app->clearLastFocusedWindow();
+            }
 
             if (this == app->getMainWindowPtr())
             {
@@ -308,6 +319,7 @@ public:
     };
 
     HARPWindow* getMainWindowPtr() const { return mainWindow.get(); }
+    HARPWindow* getLastFocusedWindowPtr() const { return lastFocusedWindow; }
 
     bool hasAdditionalWindows() const { return ! additionalWindows.isEmpty(); }
 
@@ -320,7 +332,7 @@ public:
             // Remove from additional windows
             additionalWindows.remove(0);
 
-            windowCounter--;
+            //windowCounter--; // TODO - leads to duplicate window numbers
         }
     }
 
@@ -333,7 +345,7 @@ public:
                 // Remove referenced window
                 additionalWindows.remove(i);
 
-                windowCounter--;
+                //windowCounter--; // TODO - leads to duplicate window numbers
 
                 break;
             }
@@ -362,6 +374,33 @@ private:
         // Write message to file
         debugFile.appendText(message + "\n", true, true);
     }
+
+    void globalFocusChanged(Component* focusedComponent) override
+    {
+        if (focusedComponent == nullptr)
+        {
+            // Handle case where pointer was cleared prior to callback
+            return;
+        }
+
+        // Obtain reference to top-level component containing focused child
+        Component* topFocusedComponent = focusedComponent->getTopLevelComponent();
+
+        if (HARPWindow* focusedWindow = dynamic_cast<HARPWindow*>(topFocusedComponent))
+        {
+            if (lastFocusedWindow != focusedWindow)
+            {
+                // Update pointer to most recently focused HARP window
+                lastFocusedWindow = focusedWindow;
+
+                writeDebugLog(
+                    "GuiAppApplication::globalFocusChanged: Last focused window updated to \""
+                    + focusedWindow->getName() + "\".");
+            }
+        }
+    }
+
+    void clearLastFocusedWindow() { lastFocusedWindow = nullptr; }
 
     void tryOpenChoiceWindow(File inputMediaFile)
     {
@@ -401,7 +440,7 @@ private:
                                                     + inputMediaFile.getFileName() + "\"?")
                                        .withIconType(MessageBoxIconType::QuestionIcon)
                                        .withButton("New Window")
-                                       .withButton("Existing Window")
+                                       .withButton("Current Window")
                                        .withButton("Cancel");
 
                     /*
@@ -486,12 +525,27 @@ private:
             }
             case 1: // Current window
             {
-                if (auto* mainComp =
-                        dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                HARPWindow* windowForFileImport;
+
+                if (lastFocusedWindow != nullptr)
                 {
-                    // Import file into current window
+                    windowForFileImport = lastFocusedWindow;
+                }
+                else
+                {
+                    writeDebugLog(
+                        "GuiAppApplication::handleFileOpenChoice: No window currently focused. Importing file to main window.");
+
+                    windowForFileImport = mainWindow.get();
+                }
+
+                if (auto* mainComp =
+                        dynamic_cast<MainComponent*>(windowForFileImport->getContentComponent()))
+                {
+                    // Import file into most recently focused window
                     mainComp->importNewFile(inputMediaFile, true);
                 }
+
                 break;
             }
         }
@@ -499,6 +553,8 @@ private:
 
     std::unique_ptr<HARPWindow> mainWindow;
     Array<std::unique_ptr<HARPWindow>> additionalWindows;
+
+    HARPWindow* lastFocusedWindow;
 
     ApplicationProperties applicationProperties;
 

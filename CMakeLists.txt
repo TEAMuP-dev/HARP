@@ -161,7 +161,10 @@ target_compile_definitions(${PROJECT_NAME}
 # static library. These source files can be of any kind (wav data, images, fonts, icons etc.).
 # Conversion to binary-data will happen when your target is built.
 
-# juce_add_binary_data(GuiAppData SOURCES ...)
+juce_add_binary_data(client_controls
+    SOURCES
+        ${CMAKE_SOURCE_DIR}/src/client/stability-controls.json
+)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_gui_extra` module. Inter-module
@@ -169,10 +172,8 @@ target_compile_definitions(${PROJECT_NAME}
 # linked automatically. If we'd generated a binary data target above, we would need to link to it
 # here too. This is a standard CMake command.
 
-
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        # GuiAppData            # If we'd created a binary data target, we'd link to it here
         juce::juce_gui_extra
         juce::juce_audio_basics
         juce::juce_audio_devices
@@ -185,10 +186,12 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_events
         juce::juce_gui_basics
         juce::juce_gui_extra
+        client_controls
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags)
+        juce::juce_recommended_warning_flags
+)
 
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
