@@ -15,6 +15,13 @@
 
 using namespace juce;
 
+enum class RemoteMessageType
+{
+    Info,
+    Warning,
+    Error
+};
+
 class Client
 {
 public:
@@ -39,6 +46,9 @@ public:
 
     //OpResult queryToken(const String& token) const;
     virtual OpResult validateToken(const String& newToken) const;
+
+    std::function<void(RemoteMessageType, const juce::String&)> onRemoteMessage =
+    [](RemoteMessageType, const juce::String&) {};
 
 protected:
     String getAuthorizationHeader(String t = "") const;

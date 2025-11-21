@@ -464,8 +464,6 @@ OpResult GradioClient::getResponseFromEventID(const String callID,
     error.type = ErrorType::HttpRequestError;
 
     // Now we make a GET request to the endpoint with the event ID appended
-    // The endpoint for the get request is the same as the post request with
-    // /{eventID} appended
     URL gradioEndpoint = spaceInfo.gradio;
     URL getEndpoint = gradioEndpoint.getChildURL("gradio_api")
                           .getChildURL("call")
@@ -483,7 +481,7 @@ OpResult GradioClient::getResponseFromEventID(const String callID,
                        .withResponseHeaders(&responseHeaders)
                        .withStatusCode(&statusCode)
                        .withNumRedirectsToFollow(5);
-    //  .withHttpRequestCmd ("POST");
+
     std::unique_ptr<InputStream> stream(getEndpoint.createInputStream(options));
     DBG("Input stream created");
 
@@ -498,40 +496,210 @@ OpResult GradioClient::getResponseFromEventID(const String callID,
         return OpResult::fail(error);
     }
 
-    // Stream the response
+    // We’ll collect any info/warning/error logs we see along the way so that,
+    // if something fails, we can append them to the error message.
+    StringArray infoLogs;
+    StringArray warningLogs;
+
+    // Stream the SSE response
     while (! stream->isExhausted())
     {
-        response = stream->readNextLine();
+        String line = stream->readNextLine();
 
-        DBG(eventID);
-        DBG(response);
-        DBG(response.length());
+        if (line.isEmpty())
+            continue;
 
-        if (response.contains(enumToString(GradioEvents::complete)))
+        DBG("SSE line: " + line);
+
+        if (line.contains("event: " + enumToString(GradioEvents::complete)))
         {
-            response = stream->readNextLine();
-            break;
+            // Next line should be "data: <json>"
+            String dataLine = stream->readNextLine();
+            DBG("Complete data line: " + dataLine);
+            response = dataLine;
+            return OpResult::ok();
         }
-        else if (response.contains(enumToString(GradioEvents::error)))
-        {
-            response = stream->readNextLine();
 
-            if ((statusCode == 200) & (response.contains("data: null")))
+        // INFO / WARNING messages (gr.Info / gr.Warning)
+        // These do NOT stop processing. We just record them.
+        if (line.startsWith("event: info") || line.contains("event: info"))
+        {
+            String dataLine = stream->readNextLine();
+            DBG("Info data line: " + dataLine);
+
+            if (dataLine.startsWith("data:"))
             {
-                error.devMessage =
-                    "Your ZeroGPU quota has been reached.\nHave you added a Hugging Face access token in settings yet?";
-                return OpResult::fail(error);
+                auto jsonData = dataLine.fromFirstOccurrenceOf("data:", false, true).trim();
+                var parsed = JSON::parse(jsonData);
+
+                if (parsed.isObject())
+                {
+                    if (auto* obj = parsed.getDynamicObject())
+                    {
+                        juce::String msg;
+                        if (obj->hasProperty("log"))
+                            msg = obj->getProperty("log").toString();
+                        else if (obj->hasProperty("message"))
+                            msg = obj->getProperty("message").toString();
+
+                        if (msg.isNotEmpty())
+                        {
+                            infoLogs.add(msg);
+                            DBG("Captured info log: " + msg);
+                            onRemoteMessage(RemoteMessageType::Info, msg);
+                        }
+                    }
+                }
+            }
+
+            continue;
+        }
+
+        if (line.startsWith("event: warning") || line.contains("event: warning"))
+        {
+            String dataLine = stream->readNextLine();
+            DBG("Warning data line: " + dataLine);
+
+            if (dataLine.startsWith("data:"))
+            {
+                auto jsonData = dataLine.fromFirstOccurrenceOf("data:", false, true).trim();
+                var parsed = JSON::parse(jsonData);
+
+                if (parsed.isObject())
+                {
+                    if (auto* obj = parsed.getDynamicObject())
+                    {
+                        juce::String msg;
+                        if (obj->hasProperty("log"))
+                            msg = obj->getProperty("log").toString();
+                        else if (obj->hasProperty("message"))
+                            msg = obj->getProperty("message").toString();
+
+                        if (msg.isNotEmpty())
+                        {
+                            warningLogs.add(msg);
+                            DBG("Captured warning log: " + msg);
+                            onRemoteMessage(RemoteMessageType::Warning, msg);
+                        }
+                    }
+                }
+            }
+
+            continue;
+        }
+
+        // ERROR: either ZeroGPU / worker error / Python exception
+        if (line.contains("event: " + enumToString(GradioEvents::error))
+            || line.startsWith("event: error"))
+        {
+            String dataLine = stream->readNextLine();
+            DBG("Error data line: " + dataLine);
+
+            // parse a real error payload after "data:"
+            juce::String errorPayload;
+            if (dataLine.startsWith("data:"))
+                errorPayload =
+                    dataLine.fromFirstOccurrenceOf("data:", false, true).trim();
+
+            // Some HF / ZeroGPU paths send "data: null"
+            bool isNullData = errorPayload.isEmpty()
+                              || errorPayload == "null"
+                              || errorPayload == "None";
+
+            // Read a few more lines for additional context (stack traces, etc.)
+            juce::String additionalInfo;
+            const int maxContextLines = 10;
+            for (int i = 0; i < maxContextLines && ! stream->isExhausted(); ++i)
+            {
+                auto nextLine = stream->readNextLine();
+                if (nextLine.isEmpty())
+                    continue;
+                if (nextLine.startsWith("event:"))
+                    break; // next SSE event, stop
+                additionalInfo += nextLine + "\n";
+            }
+            additionalInfo = additionalInfo.trim();
+
+            // Default to remote application error, not HTTP error
+            error.type = ErrorType::RemoteAppError;
+
+            // interpret errorPayload as JSON 
+            if (! isNullData)
+            {
+                var parsed = JSON::parse(errorPayload);
+                if (parsed.isObject())
+                {
+                    if (auto* obj = parsed.getDynamicObject())
+                    {
+                        juce::String msg;
+                        if (obj->hasProperty("error"))
+                            msg = obj->getProperty("error").toString();
+                        else if (obj->hasProperty("message"))
+                            msg = obj->getProperty("message").toString();
+                        else if (obj->hasProperty("detail"))
+                            msg = obj->getProperty("detail").toString();
+
+                        if (msg.isNotEmpty())
+                        {
+                            error.devMessage = msg;
+                            onRemoteMessage(RemoteMessageType::Error, msg);
+                        }
+                    }
+                }
+
+                // If JSON parse failed or we didn't get a message, fall back to raw
+                if (error.devMessage.isEmpty())
+                    error.devMessage = errorPayload;
             }
             else
             {
-                error.code = statusCode;
-                error.devMessage = response;
-                return OpResult::fail(error);
+                // data:null case – we no longer assume "ZeroGPU quota".
+                // Treat it as a generic remote worker error, but keep any context we have.
+                if (additionalInfo.isNotEmpty())
+                    error.devMessage = additionalInfo;
+                else
+                    error.devMessage =
+                        "The remote worker reported an error with no additional details.\n"
+                        "Open the model's Hugging Face Space to inspect the exact cause.";
             }
+
+            // Append any info/warning logs for more context
+            if (! infoLogs.isEmpty() || ! warningLogs.isEmpty())
+            {
+                juce::String logContext = "\n\n Logs from remote model \n";
+                for (auto& msg : infoLogs)
+                    logContext += "[info] " + msg + "\n";
+                for (auto& msg : warningLogs)
+                    logContext += "[warning] " + msg + "\n";
+                error.devMessage += logContext;
+            }
+
+            error.code = statusCode;
+            return OpResult::fail(error);
+        }
+
+        // HEARTBEAT: keep-alive, ignore
+        if (line.contains("event: " + enumToString(GradioEvents::heartbeat))
+            || line.startsWith("event: heartbeat"))
+        {
+            continue;
+        }
+
+        // GENERATING / progress – currently we only debug-print
+        if (line.contains("event: " + enumToString(GradioEvents::generating))
+            || line.startsWith("event: generating"))
+        {
+            String dataLine = stream->readNextLine();
+            DBG("Generating / progress data: " + dataLine);
+            continue;
         }
     }
-    return OpResult::ok();
-}
+
+    // If we exit the loop without a complete or error event, treat as an HTTP-ish error
+    error.code = statusCode;
+    error.devMessage = "Did not receive a complete or error event from the remote worker.";
+    return OpResult::fail(error);
+}   
 
 OpResult GradioClient::getControls(Array<var>& inputComponents,
                                    Array<var>& outputComponents,

@@ -1042,6 +1042,28 @@ public:
             return;
         }
 
+        // Hook remote messages from Gradio/Stability clients into StatusBox
+        model->getClient().onRemoteMessage =
+        [this](RemoteMessageType type, const juce::String& msg)
+        {
+            juce::MessageManager::callAsync([this, type, msg]
+            {
+                // Forward messages into the status box UI
+                switch (type)
+                {
+                    case RemoteMessageType::Info:
+                        statusBox->appendRemoteMessage("info", msg);
+                        break;
+                    case RemoteMessageType::Warning:
+                        statusBox->appendRemoteMessage("warning", msg);
+                        break;
+                    case RemoteMessageType::Error:
+                        statusBox->appendRemoteMessage("error", msg);
+                        break;
+                }
+            });
+        };
+
         // Set setWantsKeyboardFocus to true for this component
         // Doing that, everytime we click outside the modelPathTextBox,
         // the focus will be taken away from the modelPathTextBox

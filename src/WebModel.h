@@ -618,6 +618,15 @@ public:
     }
 
     ModelStatus getStatus() { return status2; }
+    
+    // forward log callback into the active client
+    void setLogCallback(Client::LogCallback callback)
+    {
+        if (loadedClient)
+            loadedClient->setLogCallback(callback);
+        if (tempClient)
+            tempClient->setLogCallback(callback);
+    }
 
     void setStatus(ModelStatus status) { status2 = status; }
 

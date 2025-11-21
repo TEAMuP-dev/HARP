@@ -32,14 +32,18 @@ class StatusBox : public juce::Component
 public:
     StatusBox(float fontSize = 15.0f,
               juce::Justification justification = juce::Justification::centred);
+
     void paint(juce::Graphics& g) override;
     void resized() override;
+
     void setStatusMessage(const juce::String& message);
     void clearStatusMessage();
-
-protected:
-    juce::Label statusLabel;
+    void appendRemoteMessage(const juce::String& level, const juce::String& message);
 
 private:
+    juce::Viewport viewport;      // scroll container
+    juce::Label contentLabel;     // text buffer
+    juce::String accumulatedMessages;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatusBox)
 };

@@ -22,6 +22,7 @@ enum class ErrorType
     UnknownError,
     UnsupportedControlType,
     UnknownLabelType,
+    RemoteAppError,
 };
 
 struct Error
@@ -40,11 +41,34 @@ struct Error
     */
     static void fillUserMessage(Error& error)
     {
-        error.userMessage = error.devMessage;
+        if (error.userMessage.isEmpty()){
+            error.userMessage = error.devMessage;
+        }
         if (error.devMessage.contains("503"))
         {
             error.userMessage =
                 "The gradio app is currently paused by the developer. Please try again later.";
+        }
+        else if (error.type == ErrorType::RemoteAppError)
+        {
+            // Make the message a bit more friendly depending on common Python errors
+            if (error.devMessage.containsIgnoreCase("NameError"))
+            {
+                error.userMessage =
+                    "The remote model crashed with a NameError (a variable or function wasn't defined).\n\n"
+                    + error.devMessage;
+            }
+            else if (error.devMessage.containsIgnoreCase("TypeError"))
+            {
+                error.userMessage =
+                    "The remote model crashed with a TypeError (unexpected type passed in the model code).\n\n"
+                    + error.devMessage;
+            }
+            else
+            {
+                error.userMessage = "A remote processing error occurred in the model.\n\n"
+                                    + error.devMessage;
+            }
         }
         else if (error.type == ErrorType::HttpRequestError)
         {
