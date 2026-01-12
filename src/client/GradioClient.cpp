@@ -516,7 +516,7 @@ OpResult GradioClient::getResponseFromEventID(const String callID,
         {
             response = stream->readNextLine();
 
-            if ((statusCode == 200) & (response.contains("data: null")))
+            if ((statusCode == 200) && (response.contains("data: null")))
             {
                 error.devMessage =
                     "Your ZeroGPU quota has been reached.\nHave you added a Hugging Face access token in settings yet?";
