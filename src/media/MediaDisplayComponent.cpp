@@ -396,6 +396,12 @@ void MediaDisplayComponent::timerCallback()
 {
     if (isPlaying())
     {
+        // For thumbnail tracks, stop at the end of visible range
+        if (isThumbnailTrack() && getPlaybackPosition() >= visibleRange.getEnd())
+        {
+            stop();
+            return;
+        }
         updateCursorPosition();
     }
     else
@@ -1001,6 +1007,12 @@ void MediaDisplayComponent::deselectTrack()
 
 void MediaDisplayComponent::start()
 {
+    // For thumbnail tracks, start playback from the visible range start
+    if (isThumbnailTrack())
+    {
+        setPlaybackPosition(visibleRange.getStart());
+    }
+
     startPlaying();
 
     startTimerHz(40);
@@ -1015,7 +1027,16 @@ void MediaDisplayComponent::stop()
     stopTimer();
 
     currentPositionCursor.setVisible(false);
-    setPlaybackPosition(0.0);
+
+    // For thumbnail tracks, reset to visible range start instead of 0
+    if (isThumbnailTrack())
+    {
+        setPlaybackPosition(visibleRange.getStart());
+    }
+    else
+    {
+        setPlaybackPosition(0.0);
+    }
 
     playStopButton.setMode(playButtonActiveInfo.label);
 
