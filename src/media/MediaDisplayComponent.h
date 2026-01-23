@@ -126,11 +126,14 @@ protected:
     void resetTransport();
 
     virtual void updateVisibleRange(Range<double> r);
+    void autoZoomToHorizontalMass(double previewDuration = 10.0);
 
     virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
+
+    double horizontalCenterOfMass = 0.0;
 
     // Media (audio or MIDI) content area
     Component contentComponent;

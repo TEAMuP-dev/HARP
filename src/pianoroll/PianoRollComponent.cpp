@@ -57,11 +57,11 @@ void PianoRollComponent::resized()
 
     double keyHeight = getKeyHeight();
 
-    // Set size of keyboard and note grid according to key height
+    // Set size of keyboard according to key height
     keyboard.setSize(getKeyboardWidth(), static_cast<int>(128.0 * keyHeight));
-    noteGrid.setSize(getPianoRollContainerWidth(), static_cast<int>(128.0 * keyHeight));
 
     double pixelsPerSecond = 0.0;
+    double totalLength = totalMediaLength;
 
     if (visibleMediaRange.getLength() > 0)
     {
@@ -71,6 +71,12 @@ void PianoRollComponent::resized()
 
     // Update horizontal pianoroll resolution
     setResolution(pixelsPerSecond);
+
+    // Update noteGrid resolution and size to match the zoom level
+    noteGrid.setResolution(pixelsPerSecond);
+    int noteGridWidth = static_cast<int>(totalLength * pixelsPerSecond);
+    noteGridWidth = jmax(noteGridWidth, getPianoRollContainerWidth());
+    noteGrid.setSize(noteGridWidth, static_cast<int>(128.0 * keyHeight));
 
     int currYPosition = static_cast<int>(visibleKeyRange.getStart() * getKeyHeight());
     int currXPosition = static_cast<int>(visibleMediaRange.getStart() * getResolution());
@@ -112,19 +118,7 @@ double PianoRollComponent::keysVisibleToZoom(float numKeysVisible)
                  / static_cast<double>(maxKeysVisible - minKeysVisible);
 }
 
-void PianoRollComponent::resizeNoteGrid(double lengthInSecs)
-{
-    noteGrid.setLength(lengthInSecs);
-
-    if (lengthInSecs > 0)
-    {
-        noteGrid.setResolution(static_cast<double>(getPianoRollContainerWidth()) / lengthInSecs);
-    }
-    else
-    {
-        noteGrid.setResolution(0);
-    }
-}
+// resizeNoteGrid is now inline in PianoRollComponent.hpp
 
 void PianoRollComponent::updateVisibleMediaRange(Range<double> newRange)
 {

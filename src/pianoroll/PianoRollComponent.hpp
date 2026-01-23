@@ -45,7 +45,11 @@ public:
     //Range<double> getVisibleMediaRange() { return visibleMediaRange; }
     Range<double> getVisibleKeyRange() { return visibleKeyRange; }
 
-    void resizeNoteGrid(double lengthInSecs);
+    void resizeNoteGrid(double lengthInSecs)
+    {
+        totalMediaLength = lengthInSecs;
+        noteGrid.setLength(lengthInSecs);
+    }
 
     void insertNote(MidiNote n) { noteGrid.insertNote(n); }
     void resetNotes() { noteGrid.resetNotes(); }
@@ -82,6 +86,7 @@ private:
     Viewport noteGridContainer;
 
     Range<double> visibleMediaRange;
+    double totalMediaLength = 0.0;
 
     int minKeysVisible = 5;
     int maxKeysVisible = 16;

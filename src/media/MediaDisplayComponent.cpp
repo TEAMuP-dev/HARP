@@ -458,8 +458,9 @@ void MediaDisplayComponent::initializeDisplay(const URL& filePath)
     if (! isThumbnailTrack())
     {
         horizontalScrollBar.setVisible(true);
+        updateVisibleRange({ 0.0, getTotalLengthInSecs() });
     }
-    updateVisibleRange({ 0.0, getTotalLengthInSecs() });
+
     resized(); // Needed to display scrollbar after loading
 }
 
@@ -828,6 +829,38 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     repositionLabels();
 
     visibleRangeCallback();
+}
+
+void MediaDisplayComponent::autoZoomToHorizontalMass(double previewDuration)
+{
+    if (! isThumbnailTrack())
+    {
+        return;
+    }
+
+    double total = getTotalLengthInSecs();
+    double start = horizontalCenterOfMass - (previewDuration / 2.0);
+    double end = start + previewDuration;
+
+    if (start < 0)
+    {
+        start = 0;
+        end = previewDuration;
+    }
+
+    if (end > total)
+    {
+        end = total;
+        start = total - previewDuration;
+    }
+
+    if (start < 0)
+    {
+        start = 0;
+    }
+
+    updateVisibleRange({ start, end });
+    repaint();
 }
 
 void MediaDisplayComponent::horizontalMove(double deltaT)

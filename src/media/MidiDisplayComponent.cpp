@@ -162,6 +162,33 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     stdDevMidi = std::sqrt(sq_sum / static_cast<float>(numNotes) - mean * mean);
 
+    // Calculate horizontal center of mass (median time)
+    std::vector<double> noteTimes;
+    for (int eventIdx = 0; eventIdx < allTracks.getNumEvents(); ++eventIdx)
+    {
+        const auto midiEvent = allTracks.getEventPointer(eventIdx);
+        if (midiEvent->message.isNoteOn())
+        {
+            noteTimes.push_back(midiEvent->message.getTimeStamp());
+        }
+    }
+
+    if (! noteTimes.empty())
+    {
+        std::sort(noteTimes.begin(), noteTimes.end());
+        int numTimes = noteTimes.size();
+        horizontalCenterOfMass = noteTimes[numTimes / 2];
+        if (numTimes % 2 == 0)
+        {
+            horizontalCenterOfMass += noteTimes[numTimes / 2 - 1];
+            horizontalCenterOfMass /= 2.0;
+        }
+    }
+    else
+    {
+        horizontalCenterOfMass = 0.0;
+    }
+
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
 }
@@ -180,6 +207,9 @@ void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)
 {
     // Auto-center pianoRoll vertically about median note
     pianoRoll.autoCenterViewBox(medianMidi, stdDevMidi);
+
+    // Auto-center horizontally about median time
+    autoZoomToHorizontalMass();
 }
 
 float MidiDisplayComponent::getVerticalControlsWidth()
@@ -207,6 +237,7 @@ void MidiDisplayComponent::updateVisibleRange(Range<double> newRange)
     MediaDisplayComponent::updateVisibleRange(newRange);
 
     pianoRoll.updateVisibleMediaRange(newRange);
+    pianoRoll.repaint();
 }
 
 void MidiDisplayComponent::verticalMove(double deltaY)
