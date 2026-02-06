@@ -1,99 +1,122 @@
 /**
  * @file HoverableLabel.h
- * @brief A custom label that is clickable and changes color when hovering over the text
+ * @brief Custom clickable label that changes color when hovering over the text.
  * @author xribene
  */
+
 #pragma once
-#include "juce_gui_basics/juce_gui_basics.h"
+
 #include <functional>
 
-class HoverableLabel : public juce::Label
+#include <juce_gui_basics/juce_gui_basics.h>
+
+class HoverableLabel : public Label
 {
 public:
     HoverableLabel()
     {
-        // Save the original text color. We need it to reset the color on mouse exit
-        originalTextColor = findColour(juce::Label::textColourId);
-        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+        // Save original text color for resets
+        originalTextColor = findColour(Label::textColourId);
+
+        setHoverable(true);
     }
 
-    // From JUCE doc
-    // hitTest() Tests whether a given point is inside the component.
-    // Overriding this method allows you to create components which only
-    // intercept mouse-clicks within a user-defined area
-    // We override it so that we can check if the mouse is over the text
+    bool isHoverable() { return hoverable; }
+
+    void setHoverable(bool h)
+    {
+        hoverable = h;
+
+        if (hoverable)
+        {
+            setMouseCursor(MouseCursor::PointingHandCursor);
+        }
+        else
+        {
+            setMouseCursor(MouseCursor::NormalCursor);
+        }
+    }
+
+    /**
+     * Overriden component function to test if mouse is over text.
+     */
     bool hitTest(int x, int y) override
     {
-        // Get the text bounds
-        auto textBounds = getTextBounds();
-        // Check if the mouse coordinates are within the text bounds
+        Rectangle<int> textBounds = getTextBounds();
+
+        // Check if mouse coordinates are within bounds
         return textBounds.contains(x, y);
     }
 
-    void mouseEnter(const juce::MouseEvent& event) override
+    void mouseEnter(const MouseEvent& event) override
     {
-        // Only change color if the mouse is over the text
+        // Change color if mouse is over text
         if (hitTest(event.x, event.y))
         {
             // Change text color to hover color
-            setColour(juce::Label::textColourId, hoverColor);
-            // setColour(juce::Label::backgroundColourId, juce::Colours::lightgrey);
-            repaint();
-            // Call the hover callback if set
-            if (onHover)
+            setColour(Label::textColourId, hoverColor);
+
+            if (onHover && hoverable)
+            {
+                // Call hover callback if set
                 onHover();
+            }
         }
-        // Call base class
+
         Label::mouseEnter(event);
     }
 
-    void mouseExit(const juce::MouseEvent& event) override
+    void mouseExit(const MouseEvent& event) override
     {
-        // Reset label style back to the original color
-        setColour(juce::Label::textColourId, originalTextColor);
-        // setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack); // Reset background color
-        // Call the exit callback if set
-        if (onExit)
+        // Reset label back to original color
+        setColour(Label::textColourId, originalTextColor);
+
+        if (onExit && hoverable)
+        {
+            // Call exit callback if set
             onExit();
-        repaint();
-        // Call base class
+        }
+
         Label::mouseExit(event);
     }
 
-    void mouseDown(const juce::MouseEvent& event) override
+    void mouseDown(const MouseEvent& event) override
     {
-        // Check if clicking over the text
-        // and call the click callback if set
-        if (hitTest(event.x, event.y) && onClick)
+        if (hitTest(event.x, event.y) && onClick && hoverable)
+        {
+            // Call click callback if set
             onClick();
+        }
+
         Label::mouseDown(event);
     }
 
-    void setHoverColour(juce::Colour color) { hoverColor = color; }
+    void setHoverColour(Colour color) { hoverColor = color; }
 
-    // Callback for hover event
+    // Callbacks for mouse events
     std::function<void()> onHover;
     std::function<void()> onExit;
-    // Callback for click event
     std::function<void()> onClick;
-    // Color for hoverOn event
-    juce::Colour hoverColor = juce::Colours::blue;
 
 private:
-    juce::Rectangle<int> getTextBounds() const
+    Rectangle<int> getTextBounds() const
     {
-        auto font = getFont();
-        auto textWidth = font.getStringWidth(getText());
-        auto textHeight = font.getHeight();
+        Font f = getFont();
 
-        auto x_offset = (getBounds().getWidth() - textWidth) / 2;
-        auto y_offset = (getBounds().getHeight() - textHeight) / 2;
+        int textWidth = f.getStringWidth(getText());
+        int textHeight = f.getHeight();
 
-        return juce::Rectangle<int>(getX() + static_cast<int>(x_offset),
-                                    getY() + static_cast<int>(y_offset),
-                                    static_cast<int>(textWidth),
-                                    static_cast<int>(textHeight));
+        float x_offset = (getBounds().getWidth() - textWidth) / 2;
+        float y_offset = (getBounds().getHeight() - textHeight) / 2;
+
+        return Rectangle<int>(getX() + static_cast<int>(x_offset),
+                              getY() + static_cast<int>(y_offset),
+                              static_cast<int>(textWidth),
+                              static_cast<int>(textHeight));
     }
 
-    juce::Colour originalTextColor;
+    bool hoverable;
+
+    Colour originalTextColor;
+    Colour hoverColor = Colours::blue;
 };

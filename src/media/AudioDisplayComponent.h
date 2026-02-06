@@ -1,7 +1,16 @@
+/**
+ * @file AudioDisplayComponent.h
+ * @brief Display specifics for audio (waveform).
+ * @author cwitkowitz, xribene
+ */
+
 #pragma once
 
-#include "MediaDisplayComponent.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+
+#include "MediaDisplayComponent.h"
+
+#include "../utils/Labels.h"
 
 class AudioThumbnailWrapper : public Component
 {

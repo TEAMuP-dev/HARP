@@ -80,15 +80,15 @@ void OutputLabelComponent::setMarkerVisibility(bool v)
 
 void OutputLabelComponent::setFillVisibility(bool v) { durationFill.setVisible(v); }
 
-juce::MouseCursor OutputLabelComponent::getMouseCursor()
+MouseCursor OutputLabelComponent::getMouseCursor()
 {
     if (link.isNotEmpty())
-        return juce::MouseCursor::PointingHandCursor;
+        return MouseCursor::PointingHandCursor;
     else
-        return juce::MouseCursor::NormalCursor;
+        return MouseCursor::NormalCursor;
 }
 
-void OutputLabelComponent::mouseUp(const juce::MouseEvent& /*e*/)
+void OutputLabelComponent::mouseUp(const MouseEvent& /*e*/)
 {
     if (isMouseOver(true))
     {
@@ -104,36 +104,34 @@ void OutputLabelComponent::mouseUp(const juce::MouseEvent& /*e*/)
             }
             else
             {
-                DBG("OutputLabelComponent::mouseUp: label link \'" << lnk
-                                                                   << "\' appears malformed.");
+                DBG_AND_LOG("OutputLabelComponent::mouseUp: label link \'"
+                            << lnk << "\' appears malformed.");
             }
         }
     }
 }
 
-void OutputLabelComponent::mouseEnter(const juce::MouseEvent& /*e*/)
+void OutputLabelComponent::mouseEnter(const MouseEvent& /*e*/)
 {
     setFillVisibility(true);
     setMarkerVisibility(true);
 
     String desc = getDescription();
 
-    if (desc.isNotEmpty() && instructionBox != nullptr)
+    if (instructionsMessage != nullptr && desc.isNotEmpty())
     {
-        instructionBox->setStatusMessage(desc);
+        instructionsMessage->setMessage(desc);
     }
 }
 
-void OutputLabelComponent::mouseExit(const juce::MouseEvent& /*e*/)
+void OutputLabelComponent::mouseExit(const MouseEvent& /*e*/)
 {
     setFillVisibility(false);
     setMarkerVisibility(false);
 
-    String desc = getDescription();
-
-    if (desc.isNotEmpty() && instructionBox != nullptr)
+    if (instructionsMessage != nullptr)
     {
-        instructionBox->setStatusMessage("");
+        instructionsMessage->clearMessage();
     }
 }
 

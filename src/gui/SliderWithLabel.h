@@ -1,45 +1,42 @@
 /**
- * @file
- * @brief Custom UI components for the HARPPlugin
+ * @file SliderWithLabel.h
+ * @brief Custom slider component with label.
  * @author xribene
  */
 
 #pragma once
 
-#include "juce_audio_basics/juce_audio_basics.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 using namespace juce;
 
-class SliderWithLabel : public juce::Component
+class SliderWithLabel : public Component
 {
 public:
-    SliderWithLabel(const juce::String& labelText, juce::Slider::SliderStyle style)
-        : slider(style, juce::Slider::TextBoxBelow)
+    SliderWithLabel(const String& labelText, Slider::SliderStyle style)
+        : slider(style, Slider::TextBoxBelow)
     {
-        label.setText(labelText, juce::dontSendNotification);
-        label.setJustificationType(juce::Justification::centred);
+        label.setText(labelText, dontSendNotification);
+        label.setJustificationType(Justification::centred);
+
+        slider.setColour(Slider::thumbColourId, Colours::coral);
+
         addAndMakeVisible(label);
         addAndMakeVisible(slider);
-        setThumbColor(juce::Colours::coral);
     }
 
     void resized() override
     {
-        auto bounds = getLocalBounds();
-        label.setBounds(bounds.removeFromTop(bounds.getHeight() / 6));
-        slider.setBounds(bounds);
-        // DBG("Slider bounds now considered " + getBounds().toString());
+        auto sliderArea = getLocalBounds();
+        auto labelArea = sliderArea.removeFromTop(sliderArea.getHeight() / 6);
+
+        label.setBounds(labelArea);
+        slider.setBounds(sliderArea);
     }
 
-    void setThumbColor(juce::Colour colour)
-    {
-        slider.setColour(juce::Slider::thumbColourId, colour);
-    }
-
-    juce::Slider& getSlider() { return slider; }
-    juce::Label& getLabel() { return label; }
+    Slider& getSlider() { return slider; }
 
 private:
-    juce::Label label;
-    juce::Slider slider;
+    Label label;
+    Slider slider;
 };

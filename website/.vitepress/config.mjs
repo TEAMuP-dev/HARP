@@ -33,7 +33,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the BSD 3-Clause License.',
-      copyright: 'Copyright © 2025-present TEAMuP-dev'
+      copyright: 'Copyright © 2026 TEAMuP-dev'
     },
     search: {
       provider: 'local'

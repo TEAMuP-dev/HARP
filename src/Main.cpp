@@ -1,6 +1,14 @@
-#include "AppSettings.h"
+/**
+ * @file Main.cpp
+ * @brief Initial JUCE launch code and window management.
+ * @author hugofloresgarcia, xribene, cwitkowitz
+ */
+
 #include "MainComponent.h"
+
 #include "windows/WelcomeWindow.h"
+
+#include "utils/Settings.h"
 
 using namespace juce;
 
@@ -24,8 +32,8 @@ public:
         options.commonToAllUsers = false;
         applicationProperties.setStorageParameters(options);
 
-        // Initialize AppSettings singleton with our application properties
-        AppSettings::initialize(&applicationProperties);
+        // Initialize Settings singleton with our application properties
+        Settings::initialize(&applicationProperties);
     }
 
     /*
@@ -41,13 +49,15 @@ public:
     const String getApplicationName() override { return JUCE_APPLICATION_NAME_STRING; }
     const String getApplicationVersion() override { return JUCE_APPLICATION_VERSION_STRING; }
 
-    /// Called when app is invoked
+    /**
+     * Called when the app is invoked.
+     */
     void initialise(const String& commandLine) override
     {
-        writeDebugLog("GuiAppApplication::initialise: Invoked with command line \"" + commandLine
-                      + "\".");
-        writeDebugLog("GuiAppApplication::getCommandLineParameters(): \""
-                      + getCommandLineParameters() + "\".");
+        debugAndLog("GuiAppApplication::initialise: Invoked with command line \"" + commandLine
+                    + "\".");
+        debugAndLog("GuiAppApplication::getCommandLineParameters(): \"" + getCommandLineParameters()
+                    + "\".");
 
         appJustLaunched = true;
         originalCommandLine = commandLine;
@@ -70,27 +80,32 @@ public:
 
         bool showWelcome = true;
 
-        if (!forceShowWelcome)
+        if (! forceShowWelcome)
         {
-            if (AppSettings::containsKey("showWelcomePopup"))
-                showWelcome = AppSettings::getIntValue("showWelcomePopup", 1) == 1;
+            if (Settings::containsKey("view.showWelcomePopup"))
+            {
+                showWelcome = Settings::getIntValue("view.showWelcomePopup", 1) == 1;
+            }
         }
 
         if (showWelcome)
         {
-            MessageManager::callAsync([this]()
-            {
-                DialogWindow::LaunchOptions opts;
-                opts.dialogTitle = "Welcome";
-                opts.content.setOwned(new WelcomeWindow([this]()
+            MessageManager::callAsync(
+                [this]()
                 {
-                    if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-                        mainComp->showSettingsDialog();
-                }));
-                opts.content->setSize(480, 500);
-                opts.useNativeTitleBar = true;
-                opts.launchAsync();
-            });
+                    DialogWindow::LaunchOptions opts;
+                    opts.dialogTitle = "Welcome";
+                    opts.content.setOwned(new WelcomeWindow(
+                        [this]()
+                        {
+                            if (auto* mainComp =
+                                    dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
+                                mainComp->openSettingsWindow();
+                        }));
+                    opts.content->setSize(480, 500);
+                    opts.useNativeTitleBar = true;
+                    opts.launchAsync();
+                });
         }
 
         StringArray args;
@@ -123,7 +138,9 @@ public:
         }
     }
 
-    /// Called when app is invoked and other instances are running
+    /**
+     * Called when the app is invoked and other instances are running.
+     */
     void anotherInstanceStarted(const String& commandLine) override
     {
         StringArray args;
@@ -149,7 +166,7 @@ public:
         {
             if (! commandLine.isEmpty() && originalCommandLine.isEmpty())
             {
-                writeDebugLog(
+                debugAndLog(
                     "GuiAppApplication::anotherInstanceStarted: Handling subsequent invocation with command line \""
                     + commandLine + "\".");
 
@@ -158,14 +175,14 @@ public:
                 return;
             }
 
-            writeDebugLog(
+            debugAndLog(
                 "GuiAppApplication::anotherInstanceStarted: Ignoring spurious invocation with command line \""
                 + commandLine + "\".");
 
             return;
         }
 
-        writeDebugLog(
+        debugAndLog(
             "GuiAppApplication::anotherInstanceStarted: Another instance started with command line \""
             + commandLine + "\".");
 
@@ -182,7 +199,6 @@ public:
         }
     }
 
-    /// Application shutdown code
     void shutdown() override
     {
         Desktop::getInstance().removeFocusChangeListener(this);
@@ -289,12 +305,12 @@ public:
                 String prefix = getPrefix();
 
                 // Create property names using window identifier to avoid conflicts
-                AppSettings::setValue(prefix + "x", bounds.getX());
-                AppSettings::setValue(prefix + "y", bounds.getY());
-                AppSettings::setValue(prefix + "width", bounds.getWidth());
-                AppSettings::setValue(prefix + "height", bounds.getHeight());
+                Settings::setValue(prefix + "x", bounds.getX());
+                Settings::setValue(prefix + "y", bounds.getY());
+                Settings::setValue(prefix + "width", bounds.getWidth());
+                Settings::setValue(prefix + "height", bounds.getHeight());
 
-                AppSettings::saveIfNeeded();
+                Settings::saveIfNeeded();
             }
         }
 
@@ -303,15 +319,15 @@ public:
             String prefix = getPrefix();
 
             // Check if we have saved position data
-            if (AppSettings::containsKey(prefix + "x") && AppSettings::containsKey(prefix + "y")
-                && AppSettings::containsKey(prefix + "width")
-                && AppSettings::containsKey(prefix + "height"))
+            if (Settings::containsKey(prefix + "x") && Settings::containsKey(prefix + "y")
+                && Settings::containsKey(prefix + "width")
+                && Settings::containsKey(prefix + "height"))
             {
                 // Get stored position and size
-                int x = AppSettings::getIntValue(prefix + "x");
-                int y = AppSettings::getIntValue(prefix + "y");
-                int width = AppSettings::getIntValue(prefix + "width");
-                int height = AppSettings::getIntValue(prefix + "height");
+                int x = Settings::getIntValue(prefix + "x");
+                int y = Settings::getIntValue(prefix + "y");
+                int width = Settings::getIntValue(prefix + "width");
+                int height = Settings::getIntValue(prefix + "height");
 
                 // Validate size
                 width = jmax(100, width);
@@ -388,7 +404,7 @@ private:
         - Windows: C:\Users\<username>\AppData\Roaming\HARP\launch.log
         - Linux: ~/.config/HARP/launch.log
     */
-    void writeDebugLog(const String& message)
+    void debugAndLog(const String& message)
     {
         // Write message to standard error stream
         DBG(message);
@@ -421,7 +437,7 @@ private:
                 // Update pointer to most recently focused HARP window
                 lastFocusedWindow = focusedWindow;
 
-                writeDebugLog(
+                debugAndLog(
                     "GuiAppApplication::globalFocusChanged: Last focused window updated to \""
                     + focusedWindow->getName() + "\".");
             }
@@ -450,8 +466,8 @@ private:
             [this, inputMediaFile]()
             {
                 // Check if existing user choice in settings
-                bool hasPreference = AppSettings::containsKey("newInstancePreference");
-                int preferenceValue = AppSettings::getIntValue("newInstancePreference", -1);
+                bool hasPreference = Settings::containsKey("newInstancePreference");
+                int preferenceValue = Settings::getIntValue("newInstancePreference", -1);
 
                 if (hasPreference && preferenceValue >= 0 && preferenceValue <= 1)
                 {
@@ -511,8 +527,7 @@ private:
                                     // Save preference if requested but d on't save Cancel choice
                                     if (rememberChoice && choice <= 1)
                                     {
-                                        AppSettings::setValue("newInstancePreference", choice);
-                                        AppSettings::saveIfNeeded();
+                                        Settings::setValue("newInstancePreference", choice, true);
                                     }
 
                                     handleFileOpenChoice(choice, inputMediaFile);
@@ -561,7 +576,7 @@ private:
                 }
                 else
                 {
-                    writeDebugLog(
+                    debugAndLog(
                         "GuiAppApplication::handleFileOpenChoice: No window currently focused. Importing file to main window.");
 
                     windowForFileImport = mainWindow.get();

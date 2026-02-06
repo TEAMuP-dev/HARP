@@ -1,13 +1,22 @@
-#pragma once
-#include "juce_gui_basics/juce_gui_basics.h"
+/**
+ * @file ComboBoxWithLabel.h
+ * @brief Custom dropdown component with label.
+ * @author xribene
+ */
 
-class ComboBoxWithLabel : public juce::Component
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+using namespace juce;
+
+class ComboBoxWithLabel : public Component
 {
 public:
-    ComboBoxWithLabel(const juce::String& labelText = {})
+    ComboBoxWithLabel(const String& labelText = {})
     {
-        label.setText(labelText, juce::dontSendNotification);
-        label.setJustificationType(juce::Justification::centred);
+        label.setText(labelText, dontSendNotification);
+        label.setJustificationType(Justification::centred);
 
         addAndMakeVisible(label);
         addAndMakeVisible(comboBox);
@@ -15,18 +24,16 @@ public:
 
     void resized() override
     {
-        auto area = getLocalBounds();
-        auto topArea = area.removeFromTop(20);
-        label.setBounds(topArea);
-        comboBox.setBounds(area);
+        auto comboBoxArea = getLocalBounds();
+        auto labelArea = comboBoxArea.removeFromTop(20);
+
+        label.setBounds(labelArea);
+        comboBox.setBounds(comboBoxArea);
     }
 
-    juce::ComboBox& getComboBox() { return comboBox; }
-    juce::Label& getLabel() { return label; }
+    ComboBox& getComboBox() { return comboBox; }
 
 private:
-    juce::Label label;
-    juce::ComboBox comboBox;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ComboBoxWithLabel)
+    Label label;
+    ComboBox comboBox;
 };

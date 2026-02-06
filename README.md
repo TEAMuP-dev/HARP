@@ -180,7 +180,7 @@ We provide instructions for debugging your HARP build in [Visual Studio Code](ht
             "program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.app", // macOS
             //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP.exe", // Windows
             //"program": "${workspaceFolder}/build/HARP_artefacts/Debug/HARP", // Linux
-            "args": ["../test/test.wav", "../test/test.mid"],
+            "args": ["../resources/media/test.wav", "../resources/media/test.mid"],
             "cwd": "${fileDirname}",
             "MIMode": "lldb" // macOS
         },

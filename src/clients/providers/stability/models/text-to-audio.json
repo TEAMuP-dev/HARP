@@ -1,0 +1,64 @@
+{
+    "card": {
+        "name": "Stable Audio 2.0 (Text to Audio)",
+        "description": "Enter text prompts to generate 44.1khz audio.",
+        "author": "Stability AI",
+        "tags": [
+            "text-to-audio",
+            "stability"
+        ]
+    },
+    "inputs": [
+        {
+            "label": "Duration (s)",
+            "minimum": 1,
+            "maximum": 190,
+            "step": 1,
+            "value": 10,
+            "type": "slider"
+        },
+        {
+            "label": "steps",
+            "minimum": 30,
+            "maximum": 100,
+            "step": 1,
+            "value": 50,
+            "type": "slider"
+        },
+        {
+            "label": "cfg",
+            "minimum": 1,
+            "maximum": 25,
+            "step": 1,
+            "value": 7,
+            "type": "slider"
+        },
+        {
+            "label": "Output Format",
+            "choices": [
+                [
+                    "wav",
+                    "wav"
+                ],
+                [
+                    "mp3",
+                    "mp3"
+                ]
+            ],
+            "value": "wav",
+            "type": "dropdown"
+        },
+        {
+            "label": "Text Prompt",
+            "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
+            "type": "text_box"
+        }
+    ],
+    "outputs": [
+        {
+            "label": "Output Audio",
+            "required": true,
+            "type": "audio_track"
+        }
+    ]
+}

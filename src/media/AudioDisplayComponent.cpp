@@ -56,8 +56,8 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 
     if (source == nullptr)
     {
-        DBG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName()
-                                                          << " does not exist.");
+        DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName()
+                                                                  << " does not exist.");
         // TODO - better error handing
         jassertfalse;
         return;
@@ -67,8 +67,8 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 
     if (stream == nullptr)
     {
-        DBG("AudioDisplayComponent::loadMediaFile: Failed to load file "
-            << audioFile.getFullPathName() << ".");
+        DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: Failed to load file "
+                    << audioFile.getFullPathName() << ".");
         // TODO - better error handing
         jassertfalse;
         return;
@@ -78,8 +78,8 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 
     if (reader == nullptr)
     {
-        DBG("AudioDisplayComponent::loadMediaFile: Failed to read file "
-            << audioFile.getFullPathName() << ".");
+        DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: Failed to read file "
+                    << audioFile.getFullPathName() << ".");
         // TODO - better error handing
         jassertfalse;
         return;

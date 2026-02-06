@@ -44,8 +44,8 @@ endif()
 juce_add_gui_app(${PROJECT_NAME}
     # VERSION ...                       # Set this if the app version is different to the project version
     # ICON_* arguments specify a path to an image file to use as an icon
-    ICON_BIG "${CMAKE_SOURCE_DIR}/icons/harp_logo_1.png"  # Specify a big icon for the app
-    ICON_SMALL "${CMAKE_SOURCE_DIR}/icons/harp_logo_1.png"  # Specify a small icon for the app
+    ICON_BIG "${CMAKE_SOURCE_DIR}/resources/icons/harp_logo_1.png"  # Specify a big icon for the app
+    ICON_SMALL "${CMAKE_SOURCE_DIR}/resources/icons/harp_logo_1.png"  # Specify a small icon for the app
     
     DOCUMENT_EXTENSIONS wav mp3 aiff           # Specify file extensions that should be associated with this app
     COMPANY_NAME "TEAMuP"                  # Specify the name of the app's author
@@ -67,65 +67,65 @@ juce_generate_juce_header(${PROJECT_NAME})
 target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
-        src/MainComponent.h
-        src/Model.h 
-        src/WebModel.h
-        src/AppSettings.h
-        src/HarpLogger.h
-        src/HarpLogger.cpp
-        src/errors.h
-        src/utils.h
+        src/Application.cpp
+        src/MainComponent.cpp
+        src/ModelTab.h
+        src/Model.h
 
-        src/client/Client.cpp
-        src/client/GradioClient.cpp
-        src/client/StabilityClient.cpp
+        src/windows/AboutWindow.h
+        src/windows/WelcomeWindow.h
+        src/windows/settings/SettingsWindow.h
+        src/windows/settings/GeneralSettingsTab.cpp
+        src/windows/settings/LoginTab.cpp
 
-        src/settings/SettingsBox.h       
-        src/settings/SettingsBox.cpp 
-        src/settings/GeneralSettingsTab.h
-        src/settings/GeneralSettingsTab.cpp
-        src/settings/AudioSettingsTab.h
-        src/settings/AudioSettingsTab.cpp
-        src/settings/LoginTab.h
-        src/settings/LoginTab.cpp
+        src/widgets/ModelSelectionWidget.h
+        src/widgets/ModelInfoWidget.h
+        src/widgets/ControlAreaWidget.h
+        src/widgets/TrackAreaWidget.h
+        src/widgets/StatusAreaWidget.h
+        src/widgets/MediaClipboardWidget.h
 
-        src/external/magic_enum.hpp
-        src/external/fontaudio/src/FontAudio.h
-        src/external/fontaudio/src/FontAudio.cpp
-        src/external/fontaudio/data/FontAudioData.h
-        src/external/fontaudio/data/FontAudioData.cpp
-        src/external/fontaudio/data/FontAudioIcons.h
-
-        src/external/fontawesome/src/FontAwesome.h
-        src/external/fontawesome/src/FontAwesome.cpp
-        src/external/fontawesome/data/FontAwesomeData.h
-        src/external/fontawesome/data/FontAwesomeData.cpp
-        src/external/fontawesome/data/FontAwesomeIcons.h
-        
         src/gui/MultiButton.cpp
-        src/gui/StatusComponent.cpp
-        src/gui/HoverHandler.cpp
-        src/gui/TitledTextBox.h
-        src/gui/SliderWithLabel.h
-        src/gui/CustomPathDialog.h
-        src/gui/ModelAuthorLabel.h
         src/gui/HoverableLabel.h
+        src/gui/TextBoxWithLabel.h
+        src/gui/SliderWithLabel.h
         src/gui/ComboBoxWithLabel.h
+        src/gui/HoverHandler.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
-        src/pianoroll/KeyboardComponent.cpp
-        src/pianoroll/NoteGridComponent.cpp
-        src/pianoroll/PianoRollComponent.cpp
+        src/media/pianoroll/KeyboardComponent.cpp
+        src/media/pianoroll/NoteGridComponent.cpp
+        src/media/pianoroll/PianoRollComponent.cpp
+        src/media/pianoroll/SynthAudioSource.h
 
-        src/widgets/ControlAreaWidget.h
-        src/widgets/TrackAreaWidget.h
-        src/widgets/MediaClipboardWidget.h
+        src/clients/Client.h
+        src/clients/GradioClient.h
+        src/clients/GradioClient.h
 
-        src/windows/AboutWindow.h
+        src/utils/Logging.h
+        src/utils/Settings.h
+        src/utils/Interface.h
+        src/utils/Controls.h
+        src/utils/Labels.h
+        src/utils/Clients.h
+        src/utils/Errors.h
+        src/utils/Enums.h
+
+        src/external/magic_enum.hpp
+        src/external/fontawesome/src/FontAwesome.h
+        src/external/fontawesome/src/FontAwesome.cpp
+        src/external/fontawesome/data/FontAwesomeData.h
+        src/external/fontawesome/data/FontAwesomeData.cpp
+        src/external/fontawesome/data/FontAwesomeIcons.h
+        src/external/fontaudio/src/FontAudio.h
+        src/external/fontaudio/src/FontAudio.cpp
+        src/external/fontaudio/data/FontAudioData.h
+        src/external/fontaudio/data/FontAudioData.cpp
+        src/external/fontaudio/data/FontAudioIcons.h
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
@@ -151,7 +151,7 @@ target_compile_definitions(${PROJECT_NAME}
         APP_VERSION="${CURRENT_VERSION}"
         APP_COMPANY="TEAMuP"
         APP_NAME="HARP"
-        APP_COPYRIGHT="Copyright 2025 TEAMuP. All rights reserved."    
+        APP_COPYRIGHT="Copyright 2026 TEAMuP. All rights reserved."    
 )
 
 # If your target needs extra binary assets, you can add them here. The first argument is the name of
@@ -161,9 +161,10 @@ target_compile_definitions(${PROJECT_NAME}
 # static library. These source files can be of any kind (wav data, images, fonts, icons etc.).
 # Conversion to binary-data will happen when your target is built.
 
-juce_add_binary_data(client_controls
+juce_add_binary_data(stability_controls
     SOURCES
-        ${CMAKE_SOURCE_DIR}/src/client/stability-controls.json
+        ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/text-to-audio.json
+        ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/audio-to-audio.json
 )
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
@@ -186,7 +187,7 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_events
         juce::juce_gui_basics
         juce::juce_gui_extra
-        client_controls
+        stability_controls
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

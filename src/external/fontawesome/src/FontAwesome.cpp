@@ -1,25 +1,8 @@
-/*
-  ==============================================================================
-
-    FontAwesome.cpp
-    Created: 13 Jul 2014 12:45:27pm
-    Author:  Daniel Lindenfelser
-
-  ==============================================================================
-*/
-// #pragma once
 #include "FontAwesome.h"
-#include "juce_core/juce_core.h"
-#include "juce_graphics/juce_graphics.h"
-#include "juce_gui_basics/juce_gui_basics.h"
-// using namespace juce;
-#include "../data/FontAwesomeData.h"
-#include "../data/FontAwesomeIcons.h"
 
 namespace fontawesome
 {
 IconHelper::IconHelper() {}
-
 IconHelper::~IconHelper() {}
 
 RenderedIcon IconHelper::getIcon(IconName icon, float size, juce::Colour colour, float scaleFactor)
@@ -32,7 +15,7 @@ RenderedIcon IconHelper::getIcon(IconName icon, float size, juce::Colour colour,
     if (canvas.isValid())
         return canvas;
 
-    Font fontAwesome = getFont((float) scaledSize);
+    Font fontAwesome = getFont((float)scaledSize);
     scaledSize = std::max(fontAwesome.getStringWidth(icon), scaledSize);
 
     canvas = Image(Image::PixelFormat::ARGB, scaledSize, scaledSize, true);
@@ -44,15 +27,10 @@ RenderedIcon IconHelper::getIcon(IconName icon, float size, juce::Colour colour,
     return canvas;
 }
 
-RenderedIcon IconHelper::getRotatedIcon(IconName icon,
-                                        float size,
-                                        juce::Colour colour,
-                                        float iconRotation,
-                                        float scaleFactor)
+RenderedIcon IconHelper::getRotatedIcon(IconName icon, float size, juce::Colour colour, float iconRotation, float scaleFactor)
 {
     int scaledSize = int(size * scaleFactor);
-    String identifier = String(icon + "@" + String(scaledSize) + "@" + colour.toString() + "@"
-                               + String(iconRotation) + "@");
+    String identifier = String(icon + "@" + String(scaledSize) + "@" + colour.toString() + "@" + String(iconRotation) + "@");
     int64 hash = identifier.hashCode64();
     Image canvas = juce::ImageCache::getFromHashCode(hash);
     if (canvas.isValid())
@@ -61,10 +39,7 @@ RenderedIcon IconHelper::getRotatedIcon(IconName icon,
     RenderedIcon renderdIcon = getIcon(icon, size, colour, scaleFactor);
     canvas = Image(Image::PixelFormat::ARGB, renderdIcon.getWidth(), renderdIcon.getHeight(), true);
     Graphics g(canvas);
-    g.drawImageTransformed(renderdIcon,
-                           AffineTransform::rotation(-(juce::MathConstants<float>::pi * iconRotation),
-                                                     renderdIcon.getWidth() * 0.5f,
-                                                     renderdIcon.getHeight() * 0.5f));
+    g.drawImageTransformed(renderdIcon, AffineTransform::rotation(-(juce::MathConstants<float>::pi * iconRotation), renderdIcon.getWidth() * 0.5f, renderdIcon.getHeight() * 0.5f));
     juce::ImageCache::addImageToCache(canvas, hash);
     return canvas;
 }
@@ -73,21 +48,22 @@ void IconHelper::drawAt(juce::Graphics& g, RenderedIcon icon, int x, int y, floa
 {
     int w = icon.getWidth();
     int h = icon.getHeight();
-    g.drawImage(icon, x, y, (int) (w / scaleFactor), (int) (h / scaleFactor), 0, 0, w, h, false);
+    g.drawImage(icon,
+        x, y,
+        (int)(w / scaleFactor), (int)(h / scaleFactor),
+        0, 0,
+        w, h,
+        false);
 }
 
-void IconHelper::drawCenterdAt(juce::Graphics& g,
-                               RenderedIcon icon,
-                               Rectangle<int> r,
-                               float scaleFactor)
+void IconHelper::drawCenterdAt(juce::Graphics& g, RenderedIcon icon, Rectangle<int> r, float scaleFactor)
 {
     float iconWidth = icon.getWidth() / scaleFactor;
     float iconHeight = icon.getHeight() / scaleFactor;
 
-    int x = r.getX() + (int) ((r.getWidth() * 0.5f) - (iconWidth * 0.5f));
-    int y = r.getY() + (int) ((r.getHeight() * 0.5f) - (iconHeight * 0.5f));
-    g.drawImage(
-        icon, x, y, (int) iconWidth, (int) iconHeight, 0, 0, icon.getWidth(), icon.getWidth());
+    int x = r.getX() + (int)((r.getWidth() * 0.5f) - (iconWidth * 0.5f));
+    int y = r.getY() + (int)((r.getHeight() * 0.5f) - (iconHeight * 0.5f));
+    g.drawImage(icon, x, y, (int)iconWidth, (int)iconHeight, 0, 0, icon.getWidth(), icon.getWidth());
 }
 
 juce::Font IconHelper::getFont()
@@ -103,105 +79,43 @@ juce::Font IconHelper::getFont(float size)
     return font;
 }
 
-void IconHelper::drawAt(juce::Graphics& g,
-                        IconName icon,
-                        float size,
-                        juce::Colour colour,
-                        int x,
-                        int y,
-                        float scaleFactor)
+void IconHelper::drawAt(juce::Graphics& g, IconName icon, float size, juce::Colour colour, int x, int y, float scaleFactor)
 {
     drawAt(g, getIcon(icon, size, colour, scaleFactor), x, y, scaleFactor);
 }
 
-void IconHelper::drawAt(juce::Graphics& g,
-                        IconName icon,
-                        float size,
-                        juce::Colour colour,
-                        int x,
-                        int y)
+void IconHelper::drawAt(juce::Graphics& g, IconName icon, float size, juce::Colour colour, int x, int y)
 {
-    drawAt(g,
-           getIcon(icon, size, colour, g.getInternalContext().getPhysicalPixelScaleFactor()),
-           x,
-           y,
-           g.getInternalContext().getPhysicalPixelScaleFactor());
+    drawAt(g, getIcon(icon, size, colour, g.getInternalContext().getPhysicalPixelScaleFactor()), x, y, g.getInternalContext().getPhysicalPixelScaleFactor());
 }
 
-void IconHelper::drawCenterd(juce::Graphics& g,
-                             IconName icon,
-                             float size,
-                             juce::Colour colour,
-                             juce::Rectangle<int> r,
-                             float scaleFactor)
+void IconHelper::drawCenterd(juce::Graphics& g, IconName icon, float size, juce::Colour colour, juce::Rectangle<int> r, float scaleFactor)
 {
     drawCenterdAt(g, getIcon(icon, size, colour, scaleFactor), r, scaleFactor);
 }
 
-void IconHelper::drawCenterd(juce::Graphics& g,
-                             IconName icon,
-                             float size,
-                             juce::Colour colour,
-                             juce::Rectangle<int> r)
+void IconHelper::drawCenterd(juce::Graphics& g, IconName icon, float size, juce::Colour colour, juce::Rectangle<int> r)
 {
-    drawCenterdAt(g,
-                  getIcon(icon, size, colour, g.getInternalContext().getPhysicalPixelScaleFactor()),
-                  r,
-                  g.getInternalContext().getPhysicalPixelScaleFactor());
+    drawCenterdAt(g, getIcon(icon, size, colour, g.getInternalContext().getPhysicalPixelScaleFactor()), r, g.getInternalContext().getPhysicalPixelScaleFactor());
 }
 
-void IconHelper::drawAtRotated(juce::Graphics& g,
-                               IconName icon,
-                               float size,
-                               juce::Colour colour,
-                               int x,
-                               int y,
-                               float rotation,
-                               float scaleFactor)
+void IconHelper::drawAtRotated(juce::Graphics& g, IconName icon, float size, juce::Colour colour, int x, int y, float rotation, float scaleFactor)
 {
     drawAt(g, getRotatedIcon(icon, size, colour, rotation, scaleFactor), x, y, scaleFactor);
 }
 
-void IconHelper::drawAtRotated(juce::Graphics& g,
-                               IconName icon,
-                               float size,
-                               juce::Colour colour,
-                               int x,
-                               int y,
-                               float rotation)
+void IconHelper::drawAtRotated(juce::Graphics& g, IconName icon, float size, juce::Colour colour, int x, int y, float rotation)
 {
-    drawAt(g,
-           getRotatedIcon(
-               icon, size, colour, rotation, g.getInternalContext().getPhysicalPixelScaleFactor()),
-           x,
-           y,
-           g.getInternalContext().getPhysicalPixelScaleFactor());
+    drawAt(g, getRotatedIcon(icon, size, colour, rotation, g.getInternalContext().getPhysicalPixelScaleFactor()), x, y, g.getInternalContext().getPhysicalPixelScaleFactor());
 }
 
-void IconHelper::drawCenterdRotated(juce::Graphics& g,
-                                    IconName icon,
-                                    float size,
-                                    juce::Colour colour,
-                                    juce::Rectangle<int> r,
-                                    float rotation,
-                                    float scaleFactor)
+void IconHelper::drawCenterdRotated(juce::Graphics& g, IconName icon, float size, juce::Colour colour, juce::Rectangle<int> r, float rotation, float scaleFactor)
 {
     drawCenterdAt(g, getRotatedIcon(icon, size, colour, rotation, scaleFactor), r, scaleFactor);
 }
 
-void IconHelper::drawCenterdRotated(juce::Graphics& g,
-                                    IconName icon,
-                                    float size,
-                                    juce::Colour colour,
-                                    juce::Rectangle<int> r,
-                                    float rotation)
+void IconHelper::drawCenterdRotated(juce::Graphics& g, IconName icon, float size, juce::Colour colour, juce::Rectangle<int> r, float rotation)
 {
-    drawCenterdAt(
-        g,
-        getRotatedIcon(
-            icon, size, colour, rotation, g.getInternalContext().getPhysicalPixelScaleFactor()),
-        r,
-        g.getInternalContext().getPhysicalPixelScaleFactor());
+    drawCenterdAt(g, getRotatedIcon(icon, size, colour, rotation, g.getInternalContext().getPhysicalPixelScaleFactor()), r, g.getInternalContext().getPhysicalPixelScaleFactor());
 }
-
-} // namespace fontawesome
+}

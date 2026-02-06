@@ -2,7 +2,6 @@
 
 namespace fontaudio
 {
-// typedef juce::String IconName;
 struct IconName
 {
     juce::String name;
@@ -186,4 +185,4 @@ const IconName Waveform = IconName::fromUTF8(convertChar8ToChar(u8"\uf198"));
 const IconName Xlrplug = IconName::fromUTF8(convertChar8ToChar(u8"\uf199"));
 const IconName Zoomin = IconName::fromUTF8(convertChar8ToChar(u8"\uf19a"));
 const IconName Zoomout = IconName::fromUTF8(convertChar8ToChar(u8"\uf19b"));
-} // end namespace fontaudio
+}
