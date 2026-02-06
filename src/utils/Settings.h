@@ -169,6 +169,10 @@ public:
         }
     }
 
+    static void setSaveOnExit(bool shouldSave) { getInstance()->saveOnExit = shouldSave; }
+
+    static bool getSaveOnExit() { return getInstance()->saveOnExit; }
+
 private:
     Settings() : appProperties(nullptr) {}
 
@@ -180,4 +184,5 @@ private:
     }
 
     ApplicationProperties* appProperties;
+    bool saveOnExit = true;
 };

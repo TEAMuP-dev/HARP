@@ -24,9 +24,11 @@ public:
 private:
     void handleOpenLogFolder();
     void handleOpenSettings();
+    void handleRestoreDefaultSettings();
 
     TextButton openLogFolderButton;
     TextButton openSettingsButton;
+    TextButton restoreDefaultSettingsButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GeneralSettingsTab)
 };

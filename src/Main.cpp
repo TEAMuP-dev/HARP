@@ -297,6 +297,10 @@ public:
 
         void saveWindowPosition()
         {
+            // Check if we should save
+            if (! Settings::getSaveOnExit())
+                return;
+
             // Don't save minimized position
             if (! isMinimised())
             {
