@@ -1,35 +1,32 @@
 /**
  * @file MultiButton.h
- * @brief A flexible button component that supports multiple modes, hover instructions, and icons.
+ * @brief Flexible button component that supports multiple modes, hover instructions, and icons.
  * @author xribene
  * 
  * The MultiButton class extends the JUCE TextButton to provide a button that can switch between 
  * multiple modes. Each mode can have its own label, callback function, color, icon, and hover 
- * instruction message. The button can display text, an icon, or both, depending on the specified 
- * drawing mode.
- *
- * ## Usage
+ * message. The button can display text or an icon, depending on the specified drawing mode.
  *
  * ### Example: Creating a Play/Stop Button
  *
  * ```cpp
- * void initPlayStopButton()
+ * void initializePlayStopButton()
  * {
  *     playButtonInfo = MultiButton::Mode {
  *         "Play",
+ *         "Click to start playback.",
  *         [this] { play(); },
- *         juce::Colours::limegreen,
- *         "Click to start playback",
  *         MultiButton::DrawingMode::IconOnly,
- *         fontawesome::Play,
+ *         Colours::limegreen,
+ *         fontawesome::Play
  *     };
  *     stopButtonInfo = MultiButton::Mode {
  *         "Stop",
+ *         "Click to stop playback.",
  *         [this] { stop(); },
- *         juce::Colours::orangered,
- *         "Click to stop playback",
- *         MultiButton::DrawingMode::IconOnly
- *         fontawesome::FontAwesome_Stop,
+ *         MultiButton::DrawingMode::IconOnly,
+ *         Colours::orangered,
+ *         fontawesome::FontAwesome_Stop
  *     };
  *     playStopButton.addMode(playButtonInfo);
  *     playStopButton.addMode(stopButtonInfo);
@@ -37,25 +34,29 @@
  *     addAndMakeVisible(playStopButton);
  * }
  * ```
- *
- * The MultiButton class is very flexible, allowing for multiple modes, hover-on instructions, 
- * and icons.
  */
+
 #pragma once
-#include "../external/fontaudio/src/FontAudio.h"
-#include "../external/fontawesome/src/FontAwesome.h"
-#include "StatusComponent.h"
-#include "juce_gui_basics/juce_gui_basics.h"
+
 #include <string>
 #include <unordered_map>
-class MultiButton : public juce::TextButton
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../external/fontaudio/src/FontAudio.h"
+#include "../external/fontawesome/src/FontAwesome.h"
+
+#include "../widgets/StatusAreaWidget.h"
+
+#include "../utils/Logging.h"
+
+class MultiButton : public TextButton
 {
 public:
     enum class DrawingMode
     {
         TextOnly,
-        IconOnly,
-        TextAndIcon
+        IconOnly
     };
 
     enum class IconType
@@ -64,47 +65,38 @@ public:
         FontAwesome,
         FontAudio
     };
+
     struct Mode
     {
-        juce::String label;
+        String displayLabel;
+        String instructions;
         std::function<void()> callback;
-        juce::Colour color;
-        // std::shared_ptr<juce::Image> icon;
-        // juce::String iconName;
-        juce::String instructionMessage;
         DrawingMode drawingMode;
-        // juce::Colour iconColor;
-        // juce::String iconName;
 
+        Colour iconColor;
         IconType iconType = IconType::None;
-        fontawesome::IconName awesomeIcon {}; // For FontAwesome
+
+        fontawesome::IconName awesomeIcon {};
         fontaudio::IconName audioIcon {};
 
-        // 1) Constructor for text-only
-        Mode(const juce::String& lbl,
-             std::function<void()> cb,
-             juce::Colour col,
-             const juce::String& instr,
-             DrawingMode dm)
-            : label(lbl),
-              callback(cb),
-              color(col),
-              instructionMessage(instr),
-              drawingMode(dm),
-              iconType(IconType::None)
+        // Full text-only constructor
+        Mode(const String& lbl, const String& ins, std::function<void()> cb, DrawingMode dm)
+            : displayLabel(lbl), instructions(ins), callback(cb), drawingMode(dm)
         {
         }
 
-        // 2) Template constructor for an icon (FontAwesome or FontAudio)
+        // Full template icon constructor (FontAwesome or FontAudio)
         template <typename IconT>
-        Mode(const juce::String& lbl,
+        Mode(const String& lbl,
+             const String& ins,
              std::function<void()> cb,
-             juce::Colour col,
-             const juce::String& instr,
              DrawingMode dm,
+             Colour clr,
              IconT icon)
-            : label(lbl), callback(cb), color(col), instructionMessage(instr), drawingMode(dm)
+            : Mode(lbl, ins, cb, dm)
         {
+            iconColor = clr;
+
             if constexpr (std::is_same_v<IconT, fontawesome::IconName>)
             {
                 iconType = IconType::FontAwesome;
@@ -117,45 +109,45 @@ public:
             }
         }
 
-        Mode() : drawingMode(DrawingMode::TextOnly), iconType(IconType::None) {}
+        // Default constructor for empty button
+        Mode() : Mode("", "", [] {}, DrawingMode::TextOnly) {}
     };
 
-    std::function<void()> onMouseEnter;
-    std::function<void()> onMouseExit;
+    MultiButton(const String& buttonName = "");
 
-    // MultiButton(const Mode& mode1, const Mode& mode2);
-
-    MultiButton(const juce::String& buttonName = "MultiButton");
-    // MultiButton();
-
-    void setMode(const juce::String& modeName);
-    juce::String getModeName();
-    void addMode(const Mode& mode);
-
-    // template <class IconT>
-    // void addMode(const juce::String& modeLabel,
-    //             std::function<void()> callback,
-    //             juce::Colour color,
-    //             IconT icon,
-    //             const juce::String& instruction,
-    //             DrawingMode drawingMode);
-
-    void mouseEnter(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
-
-    void paint(juce::Graphics& g) override;
-    void paintButton(juce::Graphics& g,
+    void paintButton(Graphics& g,
                      bool shouldDrawButtonAsHighlighted,
                      bool shouldDrawButtonAsDown) override;
 
     void resized() override;
 
+    String getModeName() { return currentModeKey; }
+
+    int getIconSize()
+    {
+        // Only square icons are supported
+        return jmin(getWidth(), getHeight());
+    }
+
+    void addMode(const Mode& mode);
+    void setMode(const String& modeKey);
+
+    void mouseEnter(const MouseEvent& event) override;
+    void mouseExit(const MouseEvent& event) override;
+
+    // Optional callbacks
+    std::function<void()> onMouseEnter;
+    std::function<void()> onMouseExit;
+
 private:
-    std::unordered_map<juce::String, Mode> modes;
-    juce::String currentMode;
-    // juce::Drawable* currentIcon = nullptr;
+    void updateInstructions();
+
     std::shared_ptr<fontawesome::IconHelper> fontawesomeHelper;
     std::shared_ptr<fontaudio::IconHelper> fontaudioHelper;
-    SharedResourcePointer<InstructionBox> instructionBox;
-    // DrawingMode drawingMode;
+
+    std::unordered_map<String, Mode> modes;
+
+    String currentModeKey;
+
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };

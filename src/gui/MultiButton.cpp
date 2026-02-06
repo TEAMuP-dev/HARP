@@ -1,78 +1,20 @@
 #include "MultiButton.h"
-#include "CustomPathDialog.h"
-// MultiButton::MultiButton(const Mode& mode1, const Mode& mode2)
-// {
-//     addMode(mode1);
-//     addMode(mode2);
-//     setMode(mode1.label);
-// }
-MultiButton::MultiButton(const juce::String& buttonName) : juce::TextButton(buttonName)
+
+MultiButton::MultiButton(const String& buttonName) : TextButton(buttonName)
 {
-    // Optionally set default properties
-    setToggleState(false, juce::dontSendNotification);
+    // Set default properties
+
+    setToggleState(false, dontSendNotification);
+
     fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
     fontaudioHelper = std::make_shared<fontaudio::IconHelper>();
 }
 
-// MultiButton::MultiButton()
-// {
-//     setToggleState(false, juce::dontSendNotification);
-//     fontawesomeHelper = std::make_shared<fontawesome::IconHelper>();
-// }
-
-void MultiButton::addMode(const Mode& mode)
-{
-    // Check if the mode.label already exists
-    if (modes.find(mode.label) != modes.end())
-    {
-        // If it does, print a warning
-        DBG("Mode with label " + mode.label + " already exists. Overwriting.");
-    }
-    modes[mode.label] = mode;
-}
-
-void MultiButton::setMode(const juce::String& modeName)
-{
-    if (modes.find(modeName) != modes.end() && currentMode != modeName)
-    {
-        currentMode = modeName;
-        setButtonText(modes[currentMode].label);
-        // setColour(juce::TextButton::buttonColourId, modes[currentMode].color);
-        onClick = modes[currentMode].callback;
-        repaint();
-    }
-}
-
-void MultiButton::mouseEnter(const juce::MouseEvent& event)
-{
-    // First call the base class method
-    juce::TextButton::mouseEnter(event);
-    instructionBox->setStatusMessage(modes[currentMode].instructionMessage);
-    if (onMouseEnter)
-    {
-        onMouseEnter();
-    }
-}
-
-void MultiButton::mouseExit(const juce::MouseEvent& event)
-{
-    // First call the base class method
-    juce::TextButton::mouseExit(event);
-    instructionBox->clearStatusMessage();
-    if (onMouseExit)
-    {
-        onMouseExit();
-    }
-}
-
-juce::String MultiButton::getModeName() { return currentMode; }
-
-void MultiButton::paintButton(juce::Graphics& g,
+void MultiButton::paintButton(Graphics& g,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown)
 {
-    // juce::TextButton::paintButton(g, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
-    auto& lf = getLookAndFeel();
+    LookAndFeel& lf = getLookAndFeel();
 
     lf.drawButtonBackground(g,
                             *this,
@@ -80,10 +22,10 @@ void MultiButton::paintButton(juce::Graphics& g,
                             shouldDrawButtonAsHighlighted,
                             shouldDrawButtonAsDown);
 
-    if (modes[currentMode].drawingMode == DrawingMode::TextOnly)
+    if (modes[currentModeKey].drawingMode == DrawingMode::TextOnly)
     {
-        // Code to draw the button text
         Font font(lf.getTextButtonFont(*this, getHeight()));
+
         g.setFont(font);
         g.setColour(
             findColour(getToggleState() ? TextButton::textColourOnId : TextButton::textColourOffId)
@@ -98,6 +40,7 @@ void MultiButton::paintButton(juce::Graphics& g,
         const int textWidth = getWidth() - leftIndent - rightIndent;
 
         if (textWidth > 0)
+        {
             g.drawFittedText(getButtonText(),
                              leftIndent,
                              yIndent,
@@ -105,47 +48,113 @@ void MultiButton::paintButton(juce::Graphics& g,
                              getHeight() - yIndent * 2,
                              Justification::centred,
                              2);
+        }
     }
-    else if (modes[currentMode].drawingMode == DrawingMode::IconOnly)
+
+    if (modes[currentModeKey].drawingMode == DrawingMode::IconOnly)
     {
-        // auto textArea = getLocalBounds(); //.reduced(10); // Add some padding
-        // auto icon = fontawesomeHelper->getIcon(currentIconName, textArea.getHeight(), currentColor, 1.0f);
-        juce::String currentIconName;
-        auto currentColor = modes[currentMode].color;
-        auto size = jmin(getWidth(), getHeight());
-        if (modes[currentMode].iconType == IconType::FontAwesome)
+        String currentIconKey;
+
+        int size = getIconSize();
+
+        Colour modeColor = modes[currentModeKey].iconColor;
+
+        if (modes[currentModeKey].iconType == IconType::FontAwesome)
         {
-            currentIconName = modes[currentMode].awesomeIcon;
-            auto icon = fontawesomeHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+            currentIconKey = modes[currentModeKey].awesomeIcon;
+
+            auto icon = fontawesomeHelper->getIcon(currentIconKey, size, modeColor, 1.0f);
+
             fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
         }
-        else if (modes[currentMode].iconType == IconType::FontAudio)
+        else if (modes[currentModeKey].iconType == IconType::FontAudio)
         {
-            currentIconName = modes[currentMode].audioIcon;
-            auto icon = fontaudioHelper->getIcon(currentIconName, size, currentColor, 1.0f);
+            currentIconKey = modes[currentModeKey].audioIcon;
+
+            auto icon = fontaudioHelper->getIcon(currentIconKey, size, modeColor, 1.0f);
+
             fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
         }
-        // auto icon = fontawesomeHelper->getIcon(currentIconName, size, currentColor, 1.0f);
-        // fontawesomeHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
-        // auto icon = fontaudioHelper->getIcon(currentIconName, size, currentColor, 1.0f);
-        // fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
     }
-    // int shouldDrawButtonAsHighlightedInt = shouldDrawButtonAsHighlighted ? 1 : 0;
-    // int shouldDrawButtonAsDownInt = shouldDrawButtonAsDown ? 1 : 0;
-    // DBG("shouldDrawButtonAsHighlighted: " + juce::String(shouldDrawButtonAsHighlightedInt));
-    // DBG("shouldDrawButtonAsDown: " + juce::String(shouldDrawButtonAsDownInt));
-}
-
-void MultiButton::paint(juce::Graphics& g)
-{
-    juce::TextButton::paint(g); // Call the base class paint method
 }
 
 void MultiButton::resized()
 {
-    if (modes[currentMode].drawingMode == DrawingMode::IconOnly)
+    if (modes[currentModeKey].drawingMode == DrawingMode::IconOnly)
     {
-        auto size = jmin(getWidth(), getHeight());
+        int size = getIconSize();
+
         setSize(size, size);
+    }
+}
+
+void MultiButton::addMode(const Mode& mode)
+{
+    // Check if mode.key already exists
+    if (modes.find(mode.displayLabel) != modes.end())
+    {
+        DBG_AND_LOG("MultiButton::addMode: Mode with key \"" + mode.displayLabel
+                    + "\" already exists and is being overwritten.");
+    }
+
+    // Add new mode to dictionary
+    modes[mode.displayLabel] = mode;
+}
+
+void MultiButton::setMode(const String& modeKey)
+{
+    if (modes.find(modeKey) != modes.end() && currentModeKey != modeKey)
+    {
+        currentModeKey = modeKey;
+
+        setButtonText(modes[currentModeKey].displayLabel);
+
+        onClick = modes[currentModeKey].callback;
+
+        if (isMouseOver())
+        {
+            updateInstructions();
+        }
+
+        repaint();
+    }
+}
+
+void MultiButton::updateInstructions()
+{
+    String instructions = modes[currentModeKey].instructions;
+
+    if (instructionsMessage != nullptr && instructions.isNotEmpty())
+    {
+        instructionsMessage->setMessage(instructions);
+    }
+}
+
+void MultiButton::mouseEnter(const MouseEvent& event)
+{
+    // Invoke base class method
+    TextButton::mouseEnter(event);
+
+    updateInstructions();
+
+    if (onMouseEnter)
+    {
+        onMouseEnter();
+    }
+}
+
+void MultiButton::mouseExit(const MouseEvent& event)
+{
+    // Invoke base class method
+    TextButton::mouseExit(event);
+
+    if (instructionsMessage != nullptr)
+    {
+        instructionsMessage->clearMessage();
+    }
+
+    if (onMouseExit)
+    {
+        onMouseExit();
     }
 }

@@ -1,8 +1,16 @@
+/**
+ * @file OutputLabelComponent.h
+ * @brief Label components for media display.
+ * @author cwitkowitz, nathanpruyne, xribene
+ */
+
 #pragma once
 
-#include "juce_gui_basics/juce_gui_basics.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../gui/StatusComponent.h"
+#include "../widgets/StatusAreaWidget.h"
+
+#include "../utils/Logging.h"
 
 using namespace juce;
 
@@ -13,7 +21,7 @@ public:
 
     void setColor(Colour clr) { color = clr; }
 
-    void paint(juce::Graphics& g) override
+    void paint(Graphics& g) override
     {
         g.setColour(color);
         g.fillRect(getLocalBounds());
@@ -75,7 +83,7 @@ protected:
     String link;
 
 private:
-    juce::MouseCursor getMouseCursor() override;
+    MouseCursor getMouseCursor() override;
     void mouseUp(const MouseEvent& e) override;
     void mouseEnter(const MouseEvent& e) override;
     void mouseExit(const MouseEvent& e) override;
@@ -86,7 +94,7 @@ private:
     TimeMarkerComponent rightMarker;
     TimeMarkerComponent durationFill;
 
-    SharedResourcePointer<InstructionBox> instructionBox;
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
 
 class OverheadLabelComponent : public OutputLabelComponent

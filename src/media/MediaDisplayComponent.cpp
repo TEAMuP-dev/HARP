@@ -53,66 +53,48 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 void MediaDisplayComponent::initializeButtons()
 {
     // Mode when a playable file is loaded
-    playButtonActiveInfo = MultiButton::Mode {
-        "Play-Active",
-        [this] { start(); },
-        Colours::limegreen,
-        "Click to start playback",
-        MultiButton::DrawingMode::IconOnly,
-        fontaudio::Play,
-    };
+    playButtonActiveInfo =
+        MultiButton::Mode { "Play-Active",       "Click to start playback.",
+                            [this] { start(); }, MultiButton::DrawingMode::IconOnly,
+                            Colours::limegreen,  fontaudio::Play };
     // Mode when there is nothing to play
-    playButtonInactiveInfo = MultiButton::Mode {
-        "Play-Inactive",
-        [this] {},
-        Colours::lightgrey,
-        "Nothing to play",
-        MultiButton::DrawingMode::IconOnly,
-        fontaudio::Play,
-    };
+    playButtonInactiveInfo =
+        MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
+                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            Colours::lightgrey, fontaudio::Play };
     // Mode during playback
-    stopButtonInfo = MultiButton::Mode {
-        "Stop",
-        [this] { stop(); },
-        Colours::orangered,
-        "Click to stop playback",
-        MultiButton::DrawingMode::IconOnly,
-        fontaudio::Stop,
-    };
+    stopButtonInfo = MultiButton::Mode { "Stop",
+                                         "Click to stop playback.",
+                                         [this] { stop(); },
+                                         MultiButton::DrawingMode::IconOnly,
+                                         Colours::orangered,
+                                         fontaudio::Stop };
     playStopButton.addMode(playButtonActiveInfo);
     playStopButton.addMode(playButtonInactiveInfo);
     playStopButton.addMode(stopButtonInfo);
     headerComponent.addAndMakeVisible(playStopButton);
 
-    chooseFileButtonInfo = MultiButton::Mode {
-        "ChooseFile",
-        [this] { chooseFileCallback(); },
-        Colours::lightblue,
-        "Click to choose a media file",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Folder,
-    };
+    chooseFileButtonInfo = MultiButton::Mode { "ChooseFile",
+                                               "Click to choose a media file.",
+                                               [this] { chooseFileCallback(); },
+                                               MultiButton::DrawingMode::IconOnly,
+                                               Colours::lightblue,
+                                               fontawesome::Folder };
     chooseFileButton.addMode(chooseFileButtonInfo);
     headerComponent.addAndMakeVisible(chooseFileButton);
 
     // Mode when an unsaved file is loaded
-    saveFileButtonActiveInfo = MultiButton::Mode {
-        "Save-Active",
-        [this] { saveFileCallback(); },
-        Colours::lightblue,
-        "Click to save the media file",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Save,
-    };
+    saveFileButtonActiveInfo = MultiButton::Mode { "Save-Active",
+                                                   "Click to save the media file.",
+                                                   [this] { saveFileCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightblue,
+                                                   fontawesome::Save };
     // Mode when there is nothing to save
-    saveFileButtonInactiveInfo = MultiButton::Mode {
-        "Save-Inactive",
-        [this] {},
-        Colours::lightgrey,
-        "Nothing to save",
-        MultiButton::DrawingMode::IconOnly,
-        fontawesome::Save,
-    };
+    saveFileButtonInactiveInfo =
+        MultiButton::Mode { "Save-Inactive",    "Nothing to save.",
+                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            Colours::lightgrey, fontawesome::Save };
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
@@ -443,9 +425,9 @@ void MediaDisplayComponent::resetScrollBar()
 
 void MediaDisplayComponent::resetButtonState()
 {
-    playStopButton.setMode(playButtonInactiveInfo.label);
-    chooseFileButton.setMode(chooseFileButtonInfo.label);
-    saveFileButton.setMode(saveFileButtonInactiveInfo.label);
+    playStopButton.setMode(playButtonInactiveInfo.displayLabel);
+    chooseFileButton.setMode(chooseFileButtonInfo.displayLabel);
+    saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -476,8 +458,8 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 
     horizontalScrollBar.setRangeLimits(range);
 
-    playStopButton.setMode(playButtonActiveInfo.label);
-    saveFileButton.setMode(saveFileButtonActiveInfo.label);
+    playStopButton.setMode(playButtonActiveInfo.displayLabel);
+    saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::setOriginalFilePath(URL filePath)
@@ -525,12 +507,12 @@ void MediaDisplayComponent::setOriginalFilePath(URL filePath)
 
     if (! targetFile.copyFileTo(tempFile))
     {
-        DBG("MediaDisplayComponent::addNewTempFile: Failed to copy file "
+        DBG_AND_LOG("MediaDisplayComponent::addNewTempFile: Failed to copy file "
             << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::addNewTempFile: Copied file "
+        DBG_AND_LOG("MediaDisplayComponent::addNewTempFile: Copied file "
             << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
     }
 
@@ -593,23 +575,23 @@ void MediaDisplayComponent::overwriteOriginalFile()
 
     if (targetFile.copyFileTo(backupFile))
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file "
+        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file "
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file "
+        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file "
             << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
     }
 
     if (tempFile.copyFileTo(targetFile))
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Overwriting file "
+        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Overwriting file "
             << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
     }
     else
     {
-        DBG("MediaDisplayComponent::overwriteOriginalFile: Failed to overwrite file "
+        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Failed to overwrite file "
             << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
     }
 }*/
@@ -624,14 +606,15 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
 {
     for (int i = 1; i < files.size(); i++)
     {
-        DBG("MediaDisplayComponent::filesDropped: Ignoring additional file " << files[i] << ".");
+        DBG_AND_LOG("MediaDisplayComponent::filesDropped: Ignoring additional file " << files[i]
+                                                                                     << ".");
     }
 
     File mediaFile = File(files[0]);
 
     if (isDuplicateFile(URL(mediaFile)))
     {
-        DBG("MediaDisplayComponent::filesDropped: Ignoring self-drag.");
+        DBG_AND_LOG("MediaDisplayComponent::filesDropped: Ignoring self-drag.");
         return;
     }
 
@@ -671,10 +654,10 @@ void MediaDisplayComponent::chooseFileCallback()
 
 void MediaDisplayComponent::saveFileCallback()
 {
-    if (saveFileButton.getModeName() == saveFileButtonActiveInfo.label)
+    if (saveFileButton.getModeName() == saveFileButtonActiveInfo.displayLabel)
     {
         //overwriteOriginalFile();
-        //saveFileButton.setMode(saveButtonInactiveInfo.label);
+        //saveFileButton.setMode(saveButtonInactiveInfo.displayLabel);
 
         /*if (statusBox != nullptr)
         {
@@ -723,10 +706,10 @@ void MediaDisplayComponent::saveFileCallback()
 
                                 //saveFileButton.setMode(saveButtonInactiveInfo.label);
 
-                                if (statusBox != nullptr)
+                                if (statusMessage != nullptr)
                                 {
-                                    statusBox->setStatusMessage("File successfully saved to "
-                                                                + chosenFile.getFullPathName());
+                                    statusMessage->setMessage("File successfully saved to "
+                                                              + chosenFile.getFullPathName());
                                 }
                             }
                             else
@@ -750,7 +733,7 @@ void MediaDisplayComponent::saveFileCallback()
                     }
                     else
                     {
-                        //DBG("MediaDisplayComponent::saveFileCallback: Save operation canceled.");
+                        //DBG_AND_LOG("MediaDisplayComponent::saveFileCallback: Save operation canceled.");
                     }
                 });
         }
@@ -972,7 +955,7 @@ void MediaDisplayComponent::start()
 
     startTimerHz(40);
 
-    playStopButton.setMode(stopButtonInfo.label);
+    playStopButton.setMode(stopButtonInfo.displayLabel);
 }
 
 void MediaDisplayComponent::stop()
@@ -984,7 +967,7 @@ void MediaDisplayComponent::stop()
     currentPositionCursor.setVisible(false);
     setPlaybackPosition(0.0);
 
-    playStopButton.setMode(playButtonActiveInfo.label);
+    playStopButton.setMode(playButtonActiveInfo.displayLabel);
 
     sendChangeMessage();
 }
@@ -1034,18 +1017,18 @@ void MediaDisplayComponent::updateCursorPosition()
 void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
 {
     if (! isThumbnailTrack() && e.eventComponent == getMediaComponent()
-        && instructionBox != nullptr)
+        && instructionsMessage != nullptr)
     {
-        instructionBox->setStatusMessage(mediaInstructions);
+        instructionsMessage->setMessage(mediaInstructions);
     }
 }
 
 void MediaDisplayComponent::mouseExit(const MouseEvent& e)
 {
     if (! isThumbnailTrack() && e.eventComponent == getMediaComponent()
-        && instructionBox != nullptr)
+        && instructionsMessage != nullptr)
     {
-        instructionBox->setStatusMessage("");
+        instructionsMessage->clearMessage();
     }
 }
 
@@ -1180,7 +1163,7 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
     labelOverlays.removeObject(l);
 }
 
-void MediaDisplayComponent::addLabels(LabelList& labels)
+void MediaDisplayComponent::addLabels(const LabelList& labels)
 {
     for (const auto& l : labels)
     {

@@ -1,14 +1,29 @@
+/**
+ * @file MediaDisplayComponent.h
+ * @brief Parent class for shared functionality of media displays.
+ * @author cwitkowitz, xribene, nathanpruyne
+ */
+
 #pragma once
 
-#include "juce_core/juce_core.h"
-#include "juce_gui_basics/juce_gui_basics.h"
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_core/juce_core.h>
 
 #include "../gui/MultiButton.h"
-#include "../utils.h"
 #include "OutputLabelComponent.h"
 
+#include "../utils/Labels.h"
+#include "../utils/Logging.h"
+
 using namespace juce;
+
+enum class DisplayMode
+{
+    Input,
+    Output,
+    Hybrid, // All functionality
+    Thumbnail // Reduced functionality
+};
 
 class ColorablePanel : public Component
 {
@@ -54,19 +69,19 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
+    void setTrackID(Uuid id) { trackID = id; }
+    Uuid getTrackID() { return trackID; }
+
     void setTrackName(String name);
     String getTrackName() { return trackName; }
 
     bool isRequired() const { return required; }
     bool isLinkedToDAW() const { return linkedToDAW; }
 
-    bool isInputTrack() { return (displayMode == 0) || isHybridTrack(); }
-    bool isOutputTrack() { return (displayMode == 1) || isHybridTrack(); }
-    bool isHybridTrack() { return displayMode == 2; }
-    bool isThumbnailTrack() { return displayMode == 3; }
-
-    void setDisplayID(Uuid id) { displayID = id; }
-    Uuid getDisplayID() { return displayID; }
+    bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
+    bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
+    bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
+    bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -119,7 +134,7 @@ public:
     void addLabelOverlay(LabelOverlayComponent* l);
     void removeLabelOverlay(LabelOverlayComponent* l);
 
-    void addLabels(LabelList& labels);
+    void addLabels(const LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
 
 protected:
@@ -242,7 +257,7 @@ private:
     // Flex for media / overhead panel (if any)
     FlexBox mediaAreaFlexBox;
 
-    Uuid displayID;
+    Uuid trackID;
     String trackName;
     const bool required = true;
     bool linkedToDAW = false;
@@ -268,6 +283,6 @@ private:
 
     bool isLabelRepositioningScheduled = false;
 
-    SharedResourcePointer<InstructionBox> instructionBox;
-    SharedResourcePointer<StatusBox> statusBox;
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
+    SharedResourcePointer<StatusMessage> statusMessage;
 };

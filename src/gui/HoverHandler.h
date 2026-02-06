@@ -1,23 +1,52 @@
+/**
+ * @file HoverHandler.h
+ * @brief Attach custom event handling functionality to an arbitrary component.
+ * @author xribene
+ */
+
 #pragma once
 
-#include "juce_gui_basics/juce_gui_basics.h"
 #include <functional>
 
-class HoverHandler : public juce::MouseListener
+#include <juce_gui_basics/juce_gui_basics.h>
+
+class HoverHandler : public MouseListener
 {
 public:
-    HoverHandler(juce::Component& target);
+    HoverHandler(Component& target) : component(target) {}
 
-    void attach();
-    void detach();
+    void attach() { component.addMouseListener(this, true); }
+
+    void detach() { component.removeMouseListener(this); }
 
     std::function<void()> onMouseEnter;
     std::function<void()> onMouseMove;
     std::function<void()> onMouseExit;
 
 private:
-    juce::Component& component;
-    void mouseEnter(const juce::MouseEvent& event) override;
-    void mouseMove(const juce::MouseEvent& event) override;
-    void mouseExit(const juce::MouseEvent& event) override;
+    void mouseEnter(const MouseEvent& /*event*/) override
+    {
+        if (onMouseEnter)
+        {
+            onMouseEnter();
+        }
+    }
+
+    void mouseMove(const MouseEvent& /*event*/) override
+    {
+        if (onMouseMove)
+        {
+            onMouseMove();
+        }
+    }
+
+    void mouseExit(const MouseEvent& /*event*/) override
+    {
+        if (onMouseExit)
+        {
+            onMouseExit();
+        }
+    }
+
+    Component& component;
 };

@@ -2,8 +2,6 @@
 
 namespace fontawesome
 {
-// typedef juce::String IconName;
-
 struct IconName
 {
     juce::String name;
@@ -819,5 +817,4 @@ const IconName SnowflakeO = IconName::fromUTF8(convertChar8ToChar(u8"\uf2dc"));
 const IconName Superpowers = IconName::fromUTF8(convertChar8ToChar(u8"\uf2dd"));
 const IconName Wpexplorer = IconName::fromUTF8(convertChar8ToChar(u8"\uf2de"));
 const IconName Meetup = IconName::fromUTF8(convertChar8ToChar(u8"\uf2e0"));
-} // namespace fontawesome
-// #endif // __FONTAWESOME_ICONS_H__
+}

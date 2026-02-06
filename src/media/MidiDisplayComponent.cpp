@@ -50,8 +50,8 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     if (! midiFile.readFrom(*fileStream))
     {
-        DBG("MidiDisplayComponent::loadMediaFile: Error reading MIDI from file "
-            << file.getFullPathName() << ".");
+        DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Error reading MIDI from file "
+                    << file.getFullPathName() << ".");
         // TODO - better error handing
         //jassertfalse;
         //return;
@@ -61,7 +61,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     totalLengthInSecs = midiFile.getLastTimestamp();
 
-    //DBG("MidiDisplayComponent::loadMediaFile: Total duration of MIDI file " << totalLengthInSecs << " seconds.");
+    //DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
@@ -92,7 +92,7 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
         double startTime = midiEvent->message.getTimeStamp();
 
-        //DBG("MidiDisplayComponent::loadMediaFile: Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
+        //DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
 
         int channel = midiMessage.getChannel();
 

@@ -1,8 +1,16 @@
+/**
+ * @file MidiDisplayComponent.h
+ * @brief Display specifics for MIDI (pianoroll).
+ * @author xribene, cwitkowitz
+ */
+
 #pragma once
 
-#include "../pianoroll/PianoRollComponent.hpp"
-#include "../pianoroll/SynthAudioSource.h"
 #include "MediaDisplayComponent.h"
+#include "pianoroll/PianoRollComponent.hpp"
+#include "pianoroll/SynthAudioSource.h"
+
+#include "../utils/Labels.h"
 
 class MidiDisplayComponent : public MediaDisplayComponent
 {

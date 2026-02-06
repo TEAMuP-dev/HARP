@@ -1,7 +1,14 @@
+/**
+ * @file WelcomeWindow.h
+ * @brief Window containing instructions and walkthrough.
+ * @author saumya-pailwan
+ */
+
 #pragma once
 
-#include "juce_gui_basics/juce_gui_basics.h"
-#include "../AppSettings.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../utils/Settings.h"
 
 using namespace juce;
 
@@ -15,10 +22,9 @@ public:
         setColour(ResizableWindow::backgroundColourId, Colours::darkgrey);
 
         // --- Intro Text ---
-        introText.setText(
-            "Welcome to HARP!\n"
-            "A tool for hosted, asynchronous, remote processing of audio tracks.",
-            dontSendNotification);
+        introText.setText("Welcome to HARP!\n"
+                          "A tool for hosted, asynchronous, remote processing of audio tracks.",
+                          dontSendNotification);
         introText.setJustificationType(Justification::centred);
         introText.setFont(Font(17.0f, Font::bold));
         addAndMakeVisible(introText);
@@ -60,8 +66,7 @@ public:
         continueButton.onClick = [this]()
         {
             const bool dontShow = dontShowAgain.getToggleState();
-            AppSettings::setValue("showWelcomePopup", dontShow ? 0 : 1);
-            AppSettings::saveIfNeeded();
+            Settings::setValue("view.showWelcomePopup", dontShow ? 0 : 1, true);
 
             if (auto* window = findParentComponentOfClass<DialogWindow>())
                 window->closeButtonPressed();
@@ -75,35 +80,31 @@ public:
         addAndMakeVisible(docsLink);
 
         // --- Footer ---
-        footerLabel.setText("Copyright 2025 TEAMuP. All rights reserved.",
-                            dontSendNotification);
+        footerLabel.setText("Copyright 2026 TEAMuP. All rights reserved.", dontSendNotification);
         footerLabel.setJustificationType(Justification::centred);
         footerLabel.setFont(Font(13.0f));
         addAndMakeVisible(footerLabel);
     }
 
-    void paint(Graphics& g) override
-    {
-        g.fillAll(findColour(ResizableWindow::backgroundColourId));
-    }
+    void paint(Graphics& g) override { g.fillAll(findColour(ResizableWindow::backgroundColourId)); }
 
     void resized() override
     {
         // Get the content area dimensions
         auto area = getLocalBounds();
-        
+
         // Define content width (same as original 480 width minus padding)
         const int contentWidth = 440;
         const int buttonWidth = 200;
-        
+
         // Calculate horizontal center offset
         const int centerX = (area.getWidth() - contentWidth) / 2;
         const int buttonX = (area.getWidth() - buttonWidth) / 2;
-        
+
         // Calculate vertical center offset for the entire content block
         const int totalContentHeight = 485; // Approximate total height of all content
         const int startY = jmax(0, (area.getHeight() - totalContentHeight) / 2);
-        
+
         // Position all elements relative to center
         introText.setBounds(centerX, startY + 15, contentWidth, 50);
         instructions.setBounds(centerX + 10, startY + 70, contentWidth - 20, 270);

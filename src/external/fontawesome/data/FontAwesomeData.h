@@ -1,6 +1,8 @@
+// IMPORTANT! This file is auto-generated see extras/AwesomeMaker
+
 #pragma once
-namespace FontAwesomeData
-{
-extern const char* FontAwesomewebfont_ttf;
-const int FontAwesomewebfont_ttfSize = 165548;
-} // namespace FontAwesomeData
+
+namespace FontAwesomeData {
+    extern const char*  fontawesomewebfont_ttf;
+    const int           fontawesomewebfont_ttfSize = 165548;
+}
