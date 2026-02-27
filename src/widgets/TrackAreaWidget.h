@@ -27,6 +27,7 @@ public:
     TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
         : displayMode(mode), fixedTrackHeight(trackHeight)
     {
+        addMouseListener(this, true);
     }
 
     ~TrackAreaWidget() { resetState(); }
@@ -34,6 +35,24 @@ public:
     void paint(Graphics& g) override
     {
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+        
+        // Draws drop line for track reordering
+        if (isDraggingTrack && dragInsertIndex >= 0)
+        {
+            int trackSlotHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+            int lineY = dragInsertIndex * trackSlotHeight;
+
+            g.setColour(Colours::white);
+            g.fillRect(0, lineY - 1, getWidth(), 3);
+        }
+
+        // Makes the dragged track look visually distinct
+        if (isDraggingTrack && draggedTrack != nullptr)
+        {
+            Rectangle<int> draggedBounds = draggedTrack->getBounds();
+            g.setColour(Colours::black.withAlpha(0.3f));
+            g.fillRect(draggedBounds);
+        }
     }
 
     void resized() override
@@ -328,6 +347,25 @@ public:
         resized();
     }
 
+    void reorderTrack(MediaDisplayComponent* draggedDisplay, int newIndex)
+    {
+        auto it =
+            std::find_if(mediaDisplays.begin(), 
+                         mediaDisplays.end(),
+                         [draggedDisplay](const auto& ptr) { return ptr.get() == draggedDisplay; });
+        
+        if (it == mediaDisplays.end()) return;
+
+        auto draggedPtr = std::move(*it);
+        mediaDisplays.erase(it);
+
+        newIndex = jlimit(0, (int)mediaDisplays.size(), newIndex);
+
+        mediaDisplays.insert(mediaDisplays.begin() + newIndex, std::move(draggedPtr));
+
+        resized();
+    }
+
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
         for (String f : files)
@@ -357,12 +395,97 @@ private:
         }
     }
 
+    int getInsertIndexAtY(int y)
+    {
+        int trackSlotHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+        int index = y / trackSlotHeight;
+        return jlimit(0, getNumTracks(), index);
+    }
+
+    void mouseDown(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget()) return;
+
+        Component* clicked = e.eventComponent;
+        
+        MediaDisplayComponent* clickedDisplay = nullptr;
+        Component* c = clicked;
+        while (c != nullptr && c != this)
+        {
+            if (auto* md = dynamic_cast<MediaDisplayComponent*>(c))
+            {
+                clickedDisplay = md;
+                break;
+            }
+            c = c->getParentComponent();
+        }
+
+        if (clickedDisplay)
+        {
+            draggedTrack = clickedDisplay;
+            isDraggingTrack = false;
+        }
+    }
+
+    void mouseDrag(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget() || draggedTrack == nullptr) return;
+
+        Point<int> posInThis = e.getEventRelativeTo(this).getPosition();
+
+        if (!isDraggingTrack && e.getDistanceFromDragStart() > 5)
+        {
+            isDraggingTrack = true;
+        }
+
+        if (isDraggingTrack)
+        {
+            dragInsertIndex = getInsertIndexAtY(posInThis.y);
+            // Draws the drop indicator line
+            repaint();
+        }
+    }
+
+    void mouseUp(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget()) return;
+
+        if (isDraggingTrack && draggedTrack != nullptr)
+        {
+            int currentIndex = -1;
+            for (int i = 0; i < (int)mediaDisplays.size(); i++)
+            {
+                if (mediaDisplays[i].get() == draggedTrack)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+
+            if (dragInsertIndex != currentIndex && dragInsertIndex != currentIndex + 1)
+            {
+                reorderTrack(draggedTrack, dragInsertIndex);
+            }
+        }
+
+        // Reset the drag state
+        draggedTrack = nullptr;
+        dragInsertIndex = -1;
+        isDraggingTrack = false;
+        repaint();
+    }
+
     const DisplayMode displayMode;
     const int fixedTrackHeight = 0;
 
     const float marginSize = 4;
     int fixedTotalWidth = 0;
     int minTotalHeight = 0;
+
+    // For reordering tracks via dragging
+    MediaDisplayComponent* draggedTrack = nullptr;
+    int dragInsertIndex = -1;
+    bool isDraggingTrack = false;
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
