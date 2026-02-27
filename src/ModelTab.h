@@ -493,8 +493,12 @@ private:
         modelSelectionWidget.setDisabled();
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
-        // Disable all input track Open File buttons during processing
+        // Disable all track Open File buttons (input and output) during processing
         for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+        {
+            mediaDisplay->setChooseFileButtonEnabled(false);
+        }
+        for (auto& mediaDisplay : outputTrackAreaWidget.getMediaDisplays())
         {
             mediaDisplay->setChooseFileButtonEnabled(false);
         }
@@ -534,8 +538,12 @@ private:
                                 .setFinishedState(); // TODO - should this be last selected?
                             processCancelButton.setMode(processButtonInfo.displayLabel);
 
-                            // Re-enable all input track Open File buttons after processing
+                            // Re-enable all track Open File buttons (input and output) after processing
                             for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+                            {
+                                mediaDisplay->setChooseFileButtonEnabled(true);
+                            }
+                            for (auto& mediaDisplay : outputTrackAreaWidget.getMediaDisplays())
                             {
                                 mediaDisplay->setChooseFileButtonEnabled(true);
                             }
@@ -585,8 +593,12 @@ private:
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
 
-        // Re-enable all input track Open File buttons after cancel
+        // Re-enable all track Open File buttons (input and output) after cancel
         for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+        {
+            mediaDisplay->setChooseFileButtonEnabled(true);
+        }
+        for (auto& mediaDisplay : outputTrackAreaWidget.getMediaDisplays())
         {
             mediaDisplay->setChooseFileButtonEnabled(true);
         }
