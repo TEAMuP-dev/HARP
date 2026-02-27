@@ -493,6 +493,12 @@ private:
         modelSelectionWidget.setDisabled();
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
+        // Disable all input track Open File buttons during processing
+        for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+        {
+            mediaDisplay->setChooseFileButtonEnabled(false);
+        }
+
         uint64_t processID = currentProcessID;
 
         processingThreadPool.addJob(
@@ -527,6 +533,12 @@ private:
                             modelSelectionWidget
                                 .setFinishedState(); // TODO - should this be last selected?
                             processCancelButton.setMode(processButtonInfo.displayLabel);
+
+                            // Re-enable all input track Open File buttons after processing
+                            for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+                            {
+                                mediaDisplay->setChooseFileButtonEnabled(true);
+                            }
                         };
 
                         if (result.wasOk())
@@ -572,6 +584,12 @@ private:
 
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
+
+        // Re-enable all input track Open File buttons after cancel
+        for (auto& mediaDisplay : inputTrackAreaWidget.getMediaDisplays())
+        {
+            mediaDisplay->setChooseFileButtonEnabled(true);
+        }
     }
 
     static constexpr float marginSize = 2;

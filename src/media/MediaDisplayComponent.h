@@ -121,6 +121,8 @@ public:
     void deselectTrack();
     bool isCurrentlySelected() { return isSelected; }
 
+    void setChooseFileButtonEnabled(bool enabled) { chooseFileButton.setEnabled(enabled); }
+
     void start();
     void stop();
 
