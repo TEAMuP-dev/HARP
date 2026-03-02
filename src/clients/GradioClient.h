@@ -18,7 +18,6 @@ public:
         Complete,
         Heartbeat,
         Error
-        //Generating
     };
 
     GradioClient()
@@ -643,7 +642,7 @@ private:
         return OpResult::ok();
     }
 
-    String extractPayLoad(String response)
+    String extractPayload(String response)
     {
         String payload = response.trim();
 
@@ -653,6 +652,225 @@ private:
         }
 
         return payload;
+    }
+
+    static bool isEventLine(const String& line, GradioEvents event)
+    {
+        return line.trim().equalsIgnoreCase("event: " + enumToString(event));
+    }
+
+    static String extractErrorTextFromPayload(const String& payload)
+    {
+        String normalizedPayload = payload.trim();
+
+        if (normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null")
+            || normalizedPayload.equalsIgnoreCase("none"))
+        {
+            return "";
+        }
+
+        var parsedPayload = JSON::parse(normalizedPayload);
+
+        if (auto* payloadDict = parsedPayload.getDynamicObject())
+        {
+            for (auto key : { "error", "message", "detail" })
+            {
+                if (payloadDict->hasProperty(key))
+                {
+                    String value = payloadDict->getProperty(key).toString().trim();
+
+                    if (value.isNotEmpty() && ! value.equalsIgnoreCase("null"))
+                    {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        return normalizedPayload;
+    }
+
+    static bool isExplicitQuotaError(const String& text)
+    {
+        if (text.isEmpty())
+        {
+            return false;
+        }
+
+        if (text.containsIgnoreCase("exceeded your gpu quota"))
+        {
+            return true;
+        }
+
+        if (text.containsIgnoreCase("gradio_client.exceptions.apperror")
+            && text.containsIgnoreCase("usage quota"))
+        {
+            return true;
+        }
+
+        if (text.containsIgnoreCase("spaces.zero.gradio.htmlerror")
+            && text.containsIgnoreCase("gpu quota"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    static String extractExceptionLabel(const String& text)
+    {
+        if (text.isEmpty())
+        {
+            return "";
+        }
+
+        for (auto label : { "NameError", "TypeError", "ImportError", "ModuleNotFoundError",
+                            "ValueError", "KeyError", "AttributeError", "RuntimeError",
+                            "AssertionError", "IndexError", "SyntaxError", "OSError" })
+        {
+            if (text.containsIgnoreCase(label))
+            {
+                return label;
+            }
+        }
+
+        StringArray tokens = StringArray::fromTokens(
+            text, " \t\r\n,:;()[]{}<>\"'`\\/|", "");
+
+        for (auto& token : tokens)
+        {
+            String trimmedToken = token.trim();
+
+            if (trimmedToken.length() > 5 && trimmedToken.endsWithIgnoreCase("Error")
+                && ! trimmedToken.equalsIgnoreCase("error"))
+            {
+                return trimmedToken;
+            }
+        }
+
+        return "";
+    }
+
+    static String extractShortReason(const String& text)
+    {
+        String firstLine = text.upToFirstOccurrenceOf("\n", false, false).trim();
+
+        if (firstLine.length() > 120)
+        {
+            firstLine = firstLine.substring(0, 120).trimEnd() + "...";
+        }
+
+        return firstLine;
+    }
+
+    String collectErrorContextText(std::unique_ptr<InputStream>& stream, int maxLines = 8)
+    {
+        String contextText;
+
+        for (int i = 0; i < maxLines && ! stream->isExhausted(); ++i)
+        {
+            String contextLine = stream->readNextLine().trim();
+
+            if (contextLine.isEmpty())
+            {
+                continue;
+            }
+
+            if (contextLine.startsWithIgnoreCase("event:"))
+            {
+                break;
+            }
+
+            String normalizedContext = extractErrorTextFromPayload(extractPayload(contextLine));
+
+            if (normalizedContext.isEmpty())
+            {
+                continue;
+            }
+
+            if (contextText.isNotEmpty())
+            {
+                contextText += "\n";
+            }
+
+            contextText += normalizedContext;
+        }
+
+        return contextText;
+    }
+
+    static String extractMessageTypeFromPayload(const String& payload)
+    {
+        String normalizedPayload = payload.trim();
+
+        if (normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null")
+            || normalizedPayload.equalsIgnoreCase("none"))
+        {
+            return "";
+        }
+
+        var parsedPayload = JSON::parse(normalizedPayload);
+
+        if (auto* payloadDict = parsedPayload.getDynamicObject())
+        {
+            if (payloadDict->hasProperty("msg"))
+            {
+                String value = payloadDict->getProperty("msg").toString().trim();
+
+                if (value.isNotEmpty() && ! value.equalsIgnoreCase("null"))
+                {
+                    return value;
+                }
+            }
+        }
+
+        return "";
+    }
+
+    static String formatProcessMessage(const String& messageType)
+    {
+        if (messageType.isEmpty())
+        {
+            return "";
+        }
+
+        if (messageType.equalsIgnoreCase("process_starts"))
+        {
+            return "[process] started";
+        }
+
+        if (messageType.equalsIgnoreCase("process_completed"))
+        {
+            return "[process] completed";
+        }
+
+        if (messageType.startsWithIgnoreCase("process_"))
+        {
+            String detail =
+                messageType.fromFirstOccurrenceOf("process_", false, false).replace("_", " ");
+            return "[process] " + detail;
+        }
+
+        return "[status] " + messageType.replace("_", " ");
+    }
+
+    void appendProcessMessageFromDataLine(const String& dataLine)
+    {
+        if (statusMessage == nullptr)
+        {
+            return;
+        }
+
+        String payload = extractPayload(dataLine);
+        String messageType = extractMessageTypeFromPayload(payload);
+        String statusText = formatProcessMessage(messageType);
+
+        if (statusText.isEmpty())
+        {
+            return;
+        }
+
+        statusMessage->setMessage(statusText);
     }
 
     // String response version
@@ -676,32 +894,69 @@ private:
 
             DBG_AND_LOG("GradioClient::makeGETRequest: Streamed response \"" << response << "\".");
 
-            if (response.containsIgnoreCase(enumToString(GradioEvents::Complete)))
+            String eventLine = response.trim();
+
+            if (eventLine.isEmpty())
             {
-                response = extractPayLoad(stream->readNextLine());
+                continue;
+            }
+
+            if (isEventLine(eventLine, GradioEvents::Complete))
+            {
+                response = extractPayload(stream->readNextLine());
 
                 DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response << "\".");
 
                 break;
             }
-            else if (response.containsIgnoreCase(enumToString(GradioEvents::Error)))
+            else if (isEventLine(eventLine, GradioEvents::Error))
             {
-                response = stream->readNextLine();
+                String errorDataLine = stream->readNextLine();
 
-                DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << response << "\".");
+                DBG_AND_LOG(
+                    "GradioClient::makeGETRequest: Error response \"" << errorDataLine << "\".");
 
-                // TODO - could potentially identify other errors (e.g., too many requests)
+                String payload = extractPayload(errorDataLine);
+                String diagnosticText = extractErrorTextFromPayload(payload);
+                String contextText = collectErrorContextText(stream);
 
-                return OpResult::fail(GradioError { GradioError::Type::RuntimeError, errorPath });
+                String classificationText = diagnosticText;
+
+                if (contextText.isNotEmpty())
+                {
+                    if (classificationText.isNotEmpty())
+                    {
+                        classificationText += "\n";
+                    }
+
+                    classificationText += contextText;
+                }
+
+                String reasonText = diagnosticText.isNotEmpty() ? diagnosticText : contextText;
+
+                String reason = extractExceptionLabel(reasonText);
+
+                if (reason.isEmpty() && reasonText.isNotEmpty())
+                {
+                    reason = extractShortReason(reasonText);
+                }
+
+                GradioError::Type errorType =
+                    isExplicitQuotaError(classificationText) ? GradioError::Type::QuotaExceeded
+                                                             : GradioError::Type::RuntimeError;
+
+                return OpResult::fail(GradioError { errorType, errorPath, reason });
+            }
+            else if (eventLine.startsWithIgnoreCase("data:"))
+            {
+                appendProcessMessageFromDataLine(eventLine);
             }
             else
             {
                 // TODO - what other information is available?
-                // Informational or progress events
+                // Unhandled SSE events (e.g., heartbeat)
                 // Examples:
                 // - event: heartbeat
-                // - event: log
-                // - event: progress
             }
         }
 

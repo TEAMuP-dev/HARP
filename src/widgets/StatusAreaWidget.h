@@ -8,31 +8,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../utils/Messages.h"
+
 using namespace juce;
-
-struct SharedMessage : public ChangeBroadcaster
-{
-    void setMessage(const String& m)
-    {
-        message = m;
-        sendChangeMessage();
-    }
-
-    void clearMessage()
-    {
-        message.clear();
-        sendChangeMessage();
-    }
-
-    String message;
-};
-
-struct StatusMessage : SharedMessage
-{
-};
-struct InstructionsMessage : SharedMessage
-{
-};
 
 template <typename MessageType>
 class MessageBox : public Component, ChangeListener
@@ -51,7 +29,7 @@ public:
 
     ~MessageBox() override { sharedMessage->removeChangeListener(this); }
 
-    void paint(Graphics& g)
+    void paint(Graphics& g) override
     {
         g.setColour(Colour(0x33, 0x33, 0x33));
         g.fillAll();
@@ -60,11 +38,11 @@ public:
         g.drawRect(getLocalBounds(), 1);
     }
 
-    void resized() { messageLabel.setBounds(getLocalBounds()); }
+    void resized() override { messageLabel.setBounds(getLocalBounds()); }
 
-    void changeListenerCallback(ChangeBroadcaster* /*source*/)
+    void changeListenerCallback(ChangeBroadcaster* /*source*/) override
     {
-        messageLabel.setText(sharedMessage->message, dontSendNotification);
+        messageLabel.setText(sharedMessage->getMessage(), dontSendNotification);
     }
 
 private:
@@ -75,16 +53,88 @@ private:
 using StatusBox = MessageBox<StatusMessage>;
 using InstructionsBox = MessageBox<InstructionsMessage>;
 
+class StatusHistoryBox : public Component, ChangeListener
+{
+public:
+    StatusHistoryBox()
+    {
+        historyEditor.setMultiLine(true);
+        historyEditor.setReadOnly(true);
+        historyEditor.setScrollbarsShown(false);
+        historyEditor.setCaretVisible(false);
+        historyEditor.setPopupMenuEnabled(false);
+        historyEditor.setColour(TextEditor::backgroundColourId, Colour(0x33, 0x33, 0x33));
+        historyEditor.setColour(TextEditor::textColourId, Colour(0xE0, 0xE0, 0xE0));
+
+        addAndMakeVisible(historyEditor);
+
+        StatusHistorySnapshot snapshot = sharedMessage->getHistorySnapshot();
+        historyEditor.setText(sharedMessage->getHistoryText(), false);
+        historyEditor.moveCaretToEnd();
+        lastRevisionSeen = snapshot.revision;
+        lastTrimRevisionSeen = snapshot.trimRevision;
+        lastClearRevisionSeen = snapshot.clearRevision;
+
+        sharedMessage->addChangeListener(this);
+    }
+
+    ~StatusHistoryBox() override { sharedMessage->removeChangeListener(this); }
+
+    void paint(Graphics& g) override
+    {
+        g.setColour(Colour(0x44, 0x44, 0x44));
+        g.drawRect(getLocalBounds(), 1);
+    }
+
+    void resized() override { historyEditor.setBounds(getLocalBounds()); }
+
+    void changeListenerCallback(ChangeBroadcaster* /*source*/) override
+    {
+        StatusHistorySnapshot snapshot = sharedMessage->getHistorySnapshot();
+
+        bool trimChanged = snapshot.trimRevision != lastTrimRevisionSeen;
+        bool clearChanged = snapshot.clearRevision != lastClearRevisionSeen;
+        bool shouldRebuild = (snapshot.revision <= lastRevisionSeen) || trimChanged || clearChanged
+                             || snapshot.revision != (lastRevisionSeen + 1);
+
+        if (shouldRebuild)
+        {
+            historyEditor.setText(sharedMessage->getHistoryText(), false);
+        }
+        else if (snapshot.lastEntry.isNotEmpty())
+        {
+            if (historyEditor.getText().isNotEmpty())
+            {
+                historyEditor.insertTextAtCaret("\n");
+            }
+
+            historyEditor.insertTextAtCaret(snapshot.lastEntry);
+        }
+
+        lastRevisionSeen = snapshot.revision;
+        lastTrimRevisionSeen = snapshot.trimRevision;
+        lastClearRevisionSeen = snapshot.clearRevision;
+        historyEditor.moveCaretToEnd();
+    }
+
+private:
+    SharedResourcePointer<StatusMessage> sharedMessage;
+    TextEditor historyEditor;
+    uint64 lastRevisionSeen = 0;
+    uint64 lastTrimRevisionSeen = 0;
+    uint64 lastClearRevisionSeen = 0;
+};
+
 class StatusAreaWidget : public Component
 {
 public:
     StatusAreaWidget()
     {
         addAndMakeVisible(instructionsBox);
-        addAndMakeVisible(statusBox);
+        addAndMakeVisible(statusHistoryBox);
     }
 
-    ~StatusAreaWidget() {}
+    ~StatusAreaWidget() override {}
 
     void resized() override
     {
@@ -92,7 +142,7 @@ public:
         statusArea.flexDirection = FlexBox::Direction::row;
 
         statusArea.items.add(FlexItem(instructionsBox).withFlex(1).withMargin(marginSize));
-        statusArea.items.add(FlexItem(statusBox).withFlex(1).withMargin(marginSize));
+        statusArea.items.add(FlexItem(statusHistoryBox).withFlex(1).withMargin(marginSize));
 
         statusArea.performLayout(getLocalBounds());
     }
@@ -101,5 +151,5 @@ private:
     const float marginSize = 2;
 
     InstructionsBox instructionsBox;
-    StatusBox statusBox;
+    StatusHistoryBox statusHistoryBox;
 };

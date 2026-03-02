@@ -14,6 +14,7 @@
 #include "../utils/Errors.h"
 #include "../utils/Labels.h"
 #include "../utils/Logging.h"
+#include "../utils/Messages.h"
 #include "../utils/Settings.h"
 
 using namespace juce;
@@ -291,6 +292,8 @@ public:
 protected:
     String getCommonHeaders() const { return getAuthorizationHeader() + acceptHeader; }
     String getJSONHeaders() const { return getCommonHeaders() + contentTypeJSONHeader; }
+
+    SharedResourcePointer<StatusMessage> statusMessage;
 
 private:
     String getAuthorizationHeader() const

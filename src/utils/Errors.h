@@ -221,12 +221,14 @@ struct GradioError
 {
     enum class Type
     {
-        RuntimeError
+        RuntimeError,
+        QuotaExceeded
     };
 
     Type type;
 
     String endpointPath;
+    String reason;
 };
 
 inline String toUserMessage(const GradioError& e)
@@ -237,15 +239,21 @@ inline String toUserMessage(const GradioError& e)
     {
         case GradioError::Type::RuntimeError:
 
-            userMessage = "A runtime error occurred at endpoint";
+            userMessage = "The Hugging Face Space reported a runtime error";
 
-            if (e.endpointPath.isNotEmpty())
+            if (e.reason.isNotEmpty())
             {
-                userMessage += " \"" + e.endpointPath + "\"";
+                userMessage += " (" + e.reason + ")";
             }
 
-            userMessage += ". If this is a Hugging Face space running on ZeroGPU, this "
-                           "can also indicate a user has exceeded their daily ZeroGPU quota.";
+            userMessage += ". Please open the Space logs for details.";
+
+            return userMessage;
+
+        case GradioError::Type::QuotaExceeded:
+
+            userMessage = "ZeroGPU quota appears to be exceeded for this Space. "
+                          "Please try again later or use an account with available quota.";
 
             return userMessage;
     }
