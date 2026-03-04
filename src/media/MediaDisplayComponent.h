@@ -110,6 +110,8 @@ public:
 
     void saveFileCallback();
 
+    void copyFileCallback();
+
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
@@ -236,6 +238,7 @@ private:
     // Media + overhead panel (if any)
     Component mediaAreaContainer;
 
+
     // Header sub-components
     Label trackNameLabel;
     MultiButton playStopButton;
@@ -247,6 +250,9 @@ private:
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };

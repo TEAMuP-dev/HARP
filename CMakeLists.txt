@@ -99,6 +99,8 @@ target_sources(${PROJECT_NAME}
         src/media/MidiDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
+        src/media/copy.mm
+
         src/media/pianoroll/KeyboardComponent.cpp
         src/media/pianoroll/NoteGridComponent.cpp
         src/media/pianoroll/PianoRollComponent.cpp

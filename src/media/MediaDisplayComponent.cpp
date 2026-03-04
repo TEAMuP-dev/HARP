@@ -1,6 +1,7 @@
 #include "MediaDisplayComponent.h"
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
+#include "copy.h"
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
@@ -11,6 +12,7 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
     deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
     deviceManager.addAudioCallback(&sourcePlayer);
+    
 
     sourcePlayer.setSource(&transportSource);
 
@@ -98,6 +100,24 @@ void MediaDisplayComponent::initializeButtons()
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
+
+    // Mode when an copyable file is loaded
+    copyFileButtonActiveInfo = MultiButton::Mode { "Copy-Active",
+                                                   "Click to copy the media file.",
+                                                   [this] { copyFileCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightblue,
+                                                   fontawesome::Save };
+    // Mode when there is nothing to copy
+    copyFileButtonInactiveInfo =
+        MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
+                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            Colours::lightgrey, fontawesome::Save };
+    copyFileButton.addMode(copyFileButtonActiveInfo);
+    copyFileButton.addMode(copyFileButtonInactiveInfo);
+    headerComponent.addAndMakeVisible(copyFileButton);
+
+
 
     resetButtonState();
 }
@@ -244,7 +264,7 @@ void MediaDisplayComponent::resized()
     if (isOutputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(copyFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
     }
 
     buttonsFlexBox.performLayout(buttonsComponent.getBounds());
@@ -428,6 +448,7 @@ void MediaDisplayComponent::resetButtonState()
     playStopButton.setMode(playButtonInactiveInfo.displayLabel);
     chooseFileButton.setMode(chooseFileButtonInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -460,6 +481,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonActiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::setOriginalFilePath(URL filePath)
@@ -737,6 +759,33 @@ void MediaDisplayComponent::saveFileCallback()
                     }
                 });
         }
+    }
+}
+
+
+void MediaDisplayComponent::copyFileCallback()
+{
+    if (!isFileLoaded())
+    {
+        if (statusMessage != nullptr)
+            statusMessage->setMessage("No file loaded.");
+        return;
+    }
+
+    // If you're copying the original file path:
+    juce::File file = getOriginalFilePath().getLocalFile();
+
+    if (file.exists())
+    {
+        copyFileToClipboard(file);
+
+        if (statusMessage != nullptr)
+            statusMessage->setMessage("File path copied to clipboard.");
+    }
+    else
+    {   
+        if (statusMessage != nullptr)
+            statusMessage->setMessage("File does not exist.");
     }
 }
 
