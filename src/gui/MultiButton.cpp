@@ -16,9 +16,13 @@ void MultiButton::paintButton(Graphics& g,
 {
     LookAndFeel& lf = getLookAndFeel();
 
+    Colour bgColour = findColour(getToggleState() ? buttonOnColourId : buttonColourId);
+    if (! isEnabled())
+        bgColour = bgColour.withMultipliedAlpha(0.5f);
+
     lf.drawButtonBackground(g,
                             *this,
-                            findColour(getToggleState() ? buttonOnColourId : buttonColourId),
+                            bgColour,
                             shouldDrawButtonAsHighlighted,
                             shouldDrawButtonAsDown);
 
@@ -59,6 +63,10 @@ void MultiButton::paintButton(Graphics& g,
 
         Colour modeColor = modes[currentModeKey].iconColor;
 
+        const float iconAlpha = isEnabled() ? 1.0f : 0.5f;
+        g.saveState();
+        g.setOpacity(iconAlpha);
+
         if (modes[currentModeKey].iconType == IconType::FontAwesome)
         {
             currentIconKey = modes[currentModeKey].awesomeIcon;
@@ -75,6 +83,8 @@ void MultiButton::paintButton(Graphics& g,
 
             fontaudioHelper->drawCenterdAt(g, icon, getLocalBounds(), 1.0f);
         }
+
+        g.restoreState();
     }
 }
 
