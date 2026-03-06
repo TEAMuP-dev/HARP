@@ -356,8 +356,16 @@ public:
         
         if (it == mediaDisplays.end()) return;
 
+        // Track the old index for downward reordering
+        int oldIndex = std::distance(mediaDisplays.begin(), it);
+
         auto draggedPtr = std::move(*it);
         mediaDisplays.erase(it);
+
+
+        // Decrement index if moving downward to account for shifting indicies
+        if (newIndex > oldIndex)
+            newIndex--;
 
         newIndex = jlimit(0, (int)mediaDisplays.size(), newIndex);
 
@@ -440,8 +448,18 @@ private:
 
         if (isDraggingTrack)
         {
-            dragInsertIndex = getInsertIndexAtY(posInThis.y);
-            // Draws the drop indicator line
+            // Only update the drop index while inside the widget
+            if (getLocalBounds().contains(posInThis))
+            {
+                dragInsertIndex = getInsertIndexAtY(posInThis.y);
+            }
+            else
+            {
+                // Hides the indicator line when outside the widget
+                dragInsertIndex = -1;
+            }
+
+            // Updates the drop indicator line
             repaint();
         }
     }
@@ -450,7 +468,11 @@ private:
     {
         if (!isThumbnailWidget()) return;
 
-        if (isDraggingTrack && draggedTrack != nullptr)
+        // Tracks the release psoition of the mouse
+        Point<int> releasePos = e.getEventRelativeTo(this).getPosition();
+
+        // Only reorders if the mouse was released inside the widget
+        if (isDraggingTrack && draggedTrack != nullptr && getLocalBounds().contains(releasePos))
         {
             int currentIndex = -1;
             for (int i = 0; i < (int)mediaDisplays.size(); i++)
