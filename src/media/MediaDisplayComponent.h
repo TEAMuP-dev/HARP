@@ -115,6 +115,7 @@ public:
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
+    const Range<double>& getVisibleRange() const { return visibleRange; }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -151,6 +152,7 @@ protected:
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
+    const int timeAxisHeight = 20;
 
     // Media (audio or MIDI) content area
     Component contentComponent;
@@ -158,6 +160,9 @@ protected:
     String mediaInstructions;
 
     Range<double> visibleRange;
+
+    class TimeAxisStrip;
+    std::unique_ptr<TimeAxisStrip> timeAxisStrip;
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;

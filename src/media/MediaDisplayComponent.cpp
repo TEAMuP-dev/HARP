@@ -2,6 +2,82 @@
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
 
+#include <cmath>
+
+namespace
+{
+class MediaDisplayComponent::TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override
+    {
+        if (owner == nullptr || ! owner->isFileLoaded())
+            return;
+
+        const auto& visibleRange = owner->getVisibleRange();
+        const float pps = owner->getPixelsPerSecond();
+        const double totalLength = owner->getTotalLengthInSecs();
+
+        if (pps <= 0.0f || visibleRange.getLength() <= 0.0)
+            return;
+
+        const double visibleStart = visibleRange.getStart();
+        const double visibleEnd = visibleRange.getEnd();
+        const int w = getWidth();
+        const int h = getHeight();
+
+        g.setColour(Colours::darkgrey);
+        g.fillRect(getLocalBounds());
+
+        g.setColour(Colours::lightgrey.withAlpha(0.8f));
+
+        // Choose tick interval so we get roughly 5–15 major ticks
+        double visibleLength = visibleRange.getLength();
+        double step = 1.0;
+        if (visibleLength > 0.0)
+        {
+            double logStep = std::ceil(std::log10(visibleLength / 10.0));
+            step = std::pow(10.0, logStep);
+            step = std::max(0.01, step);
+        }
+
+        const double firstTick = std::ceil(visibleStart / step) * step;
+        const int labelHeight = jmin(14, h - 2);
+        g.setFont(static_cast<float>(labelHeight));
+
+        for (double t = firstTick; t < visibleEnd && t <= totalLength; t += step)
+        {
+            const float x = static_cast<float>((t - visibleStart) * pps);
+            if (x < -50.0f || x > w + 50.0f)
+                continue;
+
+            g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(h));
+
+            String label;
+            if (t >= 60.0)
+                label = String(static_cast<int>(t / 60)) + "m " + String(static_cast<int>(std::fmod(t, 60))) + "s";
+            else if (step >= 1.0)
+                label = String(static_cast<int>(t)) + "s";
+            else
+                label = String(t, 1) + "s";
+
+            g.drawText(label,
+                      static_cast<int>(x) + 2,
+                      0,
+                      jmin(80, w - static_cast<int>(x)),
+                      h,
+                      Justification::centredLeft,
+                      true);
+        }
+    }
+
+private:
+    MediaDisplayComponent* owner = nullptr;
+};
+} // namespace
+
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
 MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -36,8 +112,11 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
 
+    timeAxisStrip = std::make_unique<TimeAxisStrip>(this);
+
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
     mediaAreaContainer.addAndMakeVisible(contentComponent);
+    mediaAreaContainer.addAndMakeVisible(*timeAxisStrip);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     addAndMakeVisible(mediaAreaContainer);
 
@@ -276,6 +355,20 @@ void MediaDisplayComponent::resized()
 
     // Media component takes remaining space
     mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1));
+
+    if (timeAxisStrip != nullptr)
+    {
+        timeAxisStrip->setVisible(horizontalScrollBar.isVisible());
+        if (timeAxisStrip->isVisible())
+        {
+            mediaAreaFlexBox.items.add(FlexItem(*timeAxisStrip)
+                                           .withHeight(timeAxisHeight)
+                                           .withMargin({ 0,
+                                                         getVerticalControlsWidth(),
+                                                         static_cast<float>(controlSpacing),
+                                                         getMediaXPos() }));
+        }
+    }
 
     if (horizontalScrollBar.isVisible())
     {
@@ -823,6 +916,9 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     updateCursorPosition();
     repositionLabels();
 
+    if (timeAxisStrip != nullptr)
+        timeAxisStrip->repaint();
+
     visibleRangeCallback();
 }
 
@@ -839,16 +935,30 @@ void MediaDisplayComponent::horizontalMove(double deltaT)
 
 void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
 {
-    horizontalZoomFactor = jlimit(1.0, 2.0, horizontalZoomFactor + deltaZoom);
+    const float mediaWidth = getMediaWidth();
+    const double totalLength = getTotalLengthInSecs();
 
-    double newScale = jmax(0.05, getTotalLengthInSecs() * (2.0 - horizontalZoomFactor));
+    if (mediaWidth <= 0.0f || totalLength <= 0.0)
+        return;
 
-    double visibleStart = visibleRange.getStart();
-    double visibleEnd = visibleRange.getEnd();
-    double visibleLength = visibleRange.getLength();
+    const float pps = getPixelsPerSecond();
+    if (pps <= 0.0f)
+        return;
 
-    double newStart = scrollPosT - newScale * (scrollPosT - visibleStart) / visibleLength;
-    double newEnd = scrollPosT + newScale * (visibleEnd - scrollPosT) / visibleLength;
+    // Fixed time scale: zoom is seconds per pixel. Same scale = same time span for any file.
+    const float minPps = 20.0f;
+    const float maxPps = static_cast<float>(mediaWidth / totalLength);
+
+    float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
+    newPps = jlimit(minPps, maxPps, newPps);
+
+    double newVisibleLength = static_cast<double>(mediaWidth) / static_cast<double>(newPps);
+    if (newVisibleLength > totalLength)
+        newVisibleLength = totalLength;
+
+    double newStart = scrollPosT - newVisibleLength * 0.5;
+    newStart = jlimit(0.0, totalLength - newVisibleLength, newStart);
+    double newEnd = newStart + newVisibleLength;
 
     updateVisibleRange({ newStart, newEnd });
 }
