@@ -17,6 +17,8 @@
 
 using namespace juce;
 
+class MediaDisplayComponent;
+
 enum class DisplayMode
 {
     Input,
@@ -44,6 +46,17 @@ public:
 private:
     Colour defaultColor;
     Colour backgroundColor;
+};
+
+class TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override;
+
+private:
+    MediaDisplayComponent* owner = nullptr;
 };
 
 class MediaDisplayComponent : public Component,
@@ -160,77 +173,6 @@ protected:
     String mediaInstructions;
 
     Range<double> visibleRange;
-
-    class TimeAxisStrip : public Component
-    {
-    public:
-        explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
-
-        void paint(Graphics& g) override
-        {
-            if (owner == nullptr || ! owner->isFileLoaded())
-                return;
-
-            const auto& visibleRange = owner->getVisibleRange();
-            const float pps = owner->getPixelsPerSecond();
-            const double totalLength = owner->getTotalLengthInSecs();
-
-            if (pps <= 0.0f || visibleRange.getLength() <= 0.0)
-                return;
-
-            const double visibleStart = visibleRange.getStart();
-            const double visibleEnd = visibleRange.getEnd();
-            const int w = getWidth();
-            const int h = getHeight();
-
-            g.setColour(Colours::darkgrey);
-            g.fillRect(getLocalBounds());
-
-            g.setColour(Colours::lightgrey.withAlpha(0.8f));
-
-            // Choose tick interval so we get roughly 5–15 major ticks
-            double visibleLength = visibleRange.getLength();
-            double step = 1.0;
-            if (visibleLength > 0.0)
-            {
-                double logStep = std::ceil(std::log10(visibleLength / 10.0));
-                step = std::pow(10.0, logStep);
-                step = std::max(0.01, step);
-            }
-
-            const double firstTick = std::ceil(visibleStart / step) * step;
-            const int labelHeight = jmin(14, h - 2);
-            g.setFont(static_cast<float>(labelHeight));
-
-            for (double t = firstTick; t < visibleEnd && t <= totalLength; t += step)
-            {
-                const float x = static_cast<float>((t - visibleStart) * pps);
-                if (x < -50.0f || x > w + 50.0f)
-                    continue;
-
-                g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(h));
-
-                String label;
-                if (t >= 60.0)
-                    label = String(static_cast<int>(t / 60)) + "m " + String(static_cast<int>(std::fmod(t, 60))) + "s";
-                else if (step >= 1.0)
-                    label = String(static_cast<int>(t)) + "s";
-                else
-                    label = String(t, 1) + "s";
-
-                g.drawText(label,
-                          static_cast<int>(x) + 2,
-                          0,
-                          jmin(80, w - static_cast<int>(x)),
-                          h,
-                          Justification::centredLeft,
-                          true);
-            }
-        }
-
-    private:
-        MediaDisplayComponent* owner = nullptr;
-    };
 
     std::unique_ptr<TimeAxisStrip> timeAxisStrip;
 
