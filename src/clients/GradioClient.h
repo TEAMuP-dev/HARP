@@ -586,6 +586,29 @@ private:
 
         if (statusCode != 200)
         {
+            String diagnosticText = extractErrorTextFromPayload(response);
+
+            if (diagnosticText.isNotEmpty())
+            {
+                String reason = extractExceptionLabel(diagnosticText);
+
+                if (reason.isEmpty())
+                {
+                    reason = extractShortReason(diagnosticText);
+                }
+
+                if (statusMessage != nullptr && reason.isNotEmpty())
+                {
+                    statusMessage->setMessage("[error] " + reason);
+                }
+
+                GradioError::Type errorType =
+                    isExplicitQuotaError(diagnosticText) ? GradioError::Type::QuotaExceeded
+                                                         : GradioError::Type::RuntimeError;
+
+                return OpResult::fail(GradioError { errorType, errorPath, reason });
+            }
+
             return OpResult::fail(HttpError {
                 HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, statusCode });
         }
@@ -827,6 +850,90 @@ private:
         return "";
     }
 
+    static String extractFirstNonEmptyField(
+        const DynamicObject* object, std::initializer_list<const char*> keys)
+    {
+        if (object == nullptr)
+        {
+            return "";
+        }
+
+        for (auto key : keys)
+        {
+            Identifier id(key);
+
+            if (! object->hasProperty(id))
+            {
+                continue;
+            }
+
+            String value = object->getProperty(id).toString().trim();
+
+            if (value.isNotEmpty() && ! value.equalsIgnoreCase("null")
+                && ! value.equalsIgnoreCase("undefined"))
+            {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    static String extractGradioAlertStatusFromPayload(const String& payload)
+    {
+        String normalizedPayload = payload.trim();
+
+        if (normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null")
+            || normalizedPayload.equalsIgnoreCase("none"))
+        {
+            return "";
+        }
+
+        var parsedPayload = JSON::parse(normalizedPayload);
+        auto* payloadDict = parsedPayload.getDynamicObject();
+
+        if (payloadDict == nullptr)
+        {
+            return "";
+        }
+
+        String severity =
+            extractFirstNonEmptyField(payloadDict, { "type", "level", "severity", "status" })
+                .toLowerCase();
+        String message =
+            extractFirstNonEmptyField(payloadDict, { "message", "detail", "error", "reason" });
+
+        if (message.isEmpty())
+        {
+            var outputVar = payloadDict->getProperty("output");
+
+            if (auto* outputDict = outputVar.getDynamicObject())
+            {
+                message =
+                    extractFirstNonEmptyField(outputDict, { "message", "detail", "error", "reason" });
+            }
+        }
+
+        if (message.isEmpty())
+        {
+            return "";
+        }
+
+        if (severity.isEmpty() || severity == "success")
+        {
+            if (message.containsIgnoreCase("error"))
+            {
+                severity = "error";
+            }
+            else
+            {
+                severity = "info";
+            }
+        }
+
+        return "[" + severity + "] " + message;
+    }
+
     static String formatProcessMessage(const String& messageType)
     {
         if (messageType.isEmpty())
@@ -863,7 +970,17 @@ private:
 
         String payload = extractPayload(dataLine);
         String messageType = extractMessageTypeFromPayload(payload);
-        String statusText = formatProcessMessage(messageType);
+        String statusText;
+
+        if (messageType.isNotEmpty())
+        {
+            statusText = formatProcessMessage(messageType);
+        }
+
+        if (statusText.isEmpty())
+        {
+            statusText = extractGradioAlertStatusFromPayload(payload);
+        }
 
         if (statusText.isEmpty())
         {
@@ -944,6 +1061,16 @@ private:
                 GradioError::Type errorType =
                     isExplicitQuotaError(classificationText) ? GradioError::Type::QuotaExceeded
                                                              : GradioError::Type::RuntimeError;
+
+                if (statusMessage != nullptr)
+                {
+                    String statusErrorText = reasonText.isNotEmpty() ? reasonText : classificationText;
+
+                    if (statusErrorText.isNotEmpty())
+                    {
+                        statusMessage->setMessage("[error] " + extractShortReason(statusErrorText));
+                    }
+                }
 
                 return OpResult::fail(GradioError { errorType, errorPath, reason });
             }

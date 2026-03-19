@@ -17,6 +17,7 @@
 
 #include "utils/Errors.h"
 #include "utils/Logging.h"
+#include "utils/Settings.h"
 #include "utils/Tutorial.h"
 
 using namespace juce;
@@ -327,79 +328,168 @@ private:
 
     void openErrorPopup(const Error error, std::function<void()> onExit = {})
     {
-        MessageBoxOptions errorPopup =
-            MessageBoxOptions()
-                .withIconType(AlertWindow::WarningIcon)
-                .withTitle("Error") // TODO - Name of error family would be nice here
-                // error ? toUserMessage(*error) : "An unknown error occurred."
-                .withMessage(toUserMessage(error));
-
         std::optional<String> openablePath = getOpenablePath(error);
+        String errorMessage = toUserMessage(error);
+
+        constexpr int buttonOpenURL = 1;
+        constexpr int buttonOpenLogs = 2;
+        constexpr int buttonSendReport = 3;
+        constexpr int buttonOk = 0;
+
+        String popupMessage = errorMessage
+                              + "\n\nOptional: add context below before sending the report.";
+
+        if (errorPopupWindow != nullptr)
+        {
+            removeChildComponent(errorPopupWindow.get());
+            errorPopupWindow.reset();
+        }
+
+        errorPopupWindow = std::make_unique<AlertWindow>("Error", popupMessage, AlertWindow::WarningIcon);
+        AlertWindow* alertWindow = errorPopupWindow.get();
+
+        auto bindButtonCallback = [alertWindow](const String& buttonText, std::function<void()> callback)
+        {
+            for (int i = 0; i < alertWindow->getNumChildComponents(); ++i)
+            {
+                if (auto* button = dynamic_cast<TextButton*>(alertWindow->getChildComponent(i)))
+                {
+                    if (button->getButtonText() == buttonText)
+                    {
+                        button->onClick = std::move(callback);
+                        return;
+                    }
+                }
+            }
+        };
 
         if (openablePath.has_value())
         {
-            errorPopup = errorPopup.withButton("Open URL");
-        }
-
-        errorPopup = errorPopup.withButton("Open Logs").withButton("Ok");
-
-        auto alertCallback = [this, error, openablePath, onExit, errorPopup](int choice)
-        {
-            DBG_AND_LOG("ModelTab::loadModelCallback::alertCallback: Chose button index: " << choice
-                                                                                           << ".");
-
-            enum Choice
-            {
-                OpenURL,
-                OpenLogs,
-                OK
-            };
-
-            /*
-            TODO - The button indices assigned by MessageBoxOptions do not follow the order in which
-            they were added. This should be fixed in JUCE v8. The following is a temporary workaround.
-
-            See https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
-
-            When this is fixed, errorPopup can be removed from the argument list.
-            */
-            {
-                std::map<int, int> observedButtonIndicesMap = {};
-
-                if (errorPopup.getNumButtons() == 3)
-                {
-                    observedButtonIndicesMap.insert({ 1, Choice::OpenURL });
-                }
-
-                observedButtonIndicesMap.insert(
-                    { errorPopup.getNumButtons() - 1, Choice::OpenLogs });
-
-                observedButtonIndicesMap.insert({ 0, Choice::OK });
-
-                choice = observedButtonIndicesMap[choice];
-            }
-
-            if (choice == Choice::OpenURL)
+            alertWindow->addButton("Open URL", buttonOpenURL);
+            bindButtonCallback("Open URL", [this, openablePath, onExit]
             {
                 URL(*openablePath).launchInDefaultBrowser();
-            }
-            else if (choice == Choice::OpenLogs)
+
+                if (onExit)
+                {
+                    onExit();
+                }
+
+                if (errorPopupWindow != nullptr)
+                {
+                    removeChildComponent(errorPopupWindow.get());
+                    errorPopupWindow.reset();
+                }
+            });
+        }
+
+        alertWindow->addButton("Open Logs", buttonOpenLogs);
+        bindButtonCallback("Open Logs", [this, onExit]
+        {
+            HARPLogger::getInstance()->getLogFile().revealToUser();
+
+            if (onExit)
             {
-                HARPLogger::getInstance()->getLogFile().revealToUser();
+                onExit();
             }
-            else
+
+            if (errorPopupWindow != nullptr)
             {
-                // Nothing to do
+                removeChildComponent(errorPopupWindow.get());
+                errorPopupWindow.reset();
+            }
+        });
+
+        alertWindow->addButton("Send Error Log to TeamUP", buttonSendReport);
+        bindButtonCallback("Send Error Log to TeamUP", [this, error, errorMessage, onExit]
+        {
+            if (errorPopupWindow != nullptr)
+            {
+                sendErrorReportEmail(
+                    error, errorMessage, errorPopupWindow->getTextEditorContents("errorReportNotes"));
             }
 
             if (onExit)
             {
-                // Perform optional state cleanup
                 onExit();
             }
-        };
 
-        AlertWindow::showAsync(errorPopup, alertCallback);
+            if (errorPopupWindow != nullptr)
+            {
+                removeChildComponent(errorPopupWindow.get());
+                errorPopupWindow.reset();
+            }
+        });
+
+        alertWindow->addButton("Ok", buttonOk);
+        bindButtonCallback("Ok", [this, onExit]
+        {
+            if (onExit)
+            {
+                onExit();
+            }
+
+            if (errorPopupWindow != nullptr)
+            {
+                removeChildComponent(errorPopupWindow.get());
+                errorPopupWindow.reset();
+            }
+        });
+
+        alertWindow->addTextEditor(
+            "errorReportNotes",
+            "",
+            "What were you doing when this happened? (optional)");
+
+        addAndMakeVisible(*errorPopupWindow);
+        errorPopupWindow->setAlwaysOnTop(true);
+
+        int popupWidth = jmax(560, jmin(getWidth() - 24, 1100));
+        int popupHeight = 280;
+        errorPopupWindow->setBounds(getLocalBounds().withSizeKeepingCentre(popupWidth, popupHeight));
+        errorPopupWindow->toFront(true);
+    }
+
+    void sendErrorReportEmail(const Error& error, const String& errorMessage, const String& notes)
+    {
+        String supportEmail = Settings::getString("supportEmail", "support@teamup.tech").trim();
+
+        if (supportEmail.isEmpty())
+        {
+            AlertWindow::showMessageBoxAsync(
+                AlertWindow::WarningIcon,
+                "Missing Support Email",
+                "Unable to send report because support email is not configured.",
+                "Ok");
+            return;
+        }
+
+        File logFile = HARPLogger::getInstance()->getLogFile();
+
+        String body;
+        body << "Please investigate this HARP error.\n\n";
+        body << "Error:\n" << errorMessage << "\n\n";
+
+        if (const auto* gradioError = std::get_if<GradioError>(&error))
+        {
+            if (gradioError->endpointPath.isNotEmpty())
+            {
+                body << "Endpoint:\n" << gradioError->endpointPath << "\n\n";
+            }
+        }
+
+        body << "User notes:\n" << (notes.isNotEmpty() ? notes : "(none)") << "\n\n";
+        body << "Log file:\n" << logFile.getFullPathName() << "\n\n";
+        body << "Please attach the log file from the path above when sending.";
+
+        String subject = "HARP Error Report";
+
+        String escapedSubject = URL::addEscapeChars(subject, true);
+        String escapedBody = URL::addEscapeChars(body, true);
+        String escapedRecipient = URL::addEscapeChars(supportEmail, true);
+
+        URL("mailto:" + escapedRecipient + "?subject=" + escapedSubject + "&body=" + escapedBody)
+            .launchInDefaultBrowser();
     }
 
     void loadModelCallback()
@@ -603,4 +693,5 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    std::unique_ptr<AlertWindow> errorPopupWindow;
 };

@@ -168,9 +168,9 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.request == HttpError::Request::POST)
             {
-                userMessage += " If this is a valid Hugging Face space, this "
-                               "could indicate the space is sleeping or restarting. "
-                               "Please try again in a few minutes.";
+                userMessage += " This may be a temporary connection issue. "
+                               "Click on Open URL to get the space restarted. "
+                               "If it persists, open the Space and check its logs/status.";
             }
 
             return userMessage;
@@ -210,7 +210,7 @@ inline String toUserMessage(const HttpError& e)
             if (e.statusCode == 503)
             {
                 userMessage += " If this is a valid Hugging Face space, this could indicate "
-                               "the space is paused or down due to a build or runtime error.";
+                               "the space is sleeping, paused, or down due to a build/runtime error.";
             }
     }
 

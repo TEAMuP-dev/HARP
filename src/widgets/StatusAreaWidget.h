@@ -60,7 +60,7 @@ public:
     {
         historyEditor.setMultiLine(true);
         historyEditor.setReadOnly(true);
-        historyEditor.setScrollbarsShown(false);
+        historyEditor.setScrollbarsShown(true);
         historyEditor.setCaretVisible(false);
         historyEditor.setPopupMenuEnabled(false);
         historyEditor.setColour(TextEditor::backgroundColourId, Colour(0x33, 0x33, 0x33));
