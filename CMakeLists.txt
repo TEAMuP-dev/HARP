@@ -64,6 +64,8 @@ juce_generate_juce_header(${PROJECT_NAME})
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
 
+
+
 target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
@@ -99,8 +101,6 @@ target_sources(${PROJECT_NAME}
         src/media/MidiDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
-        src/media/copy.mm
-
         src/media/pianoroll/KeyboardComponent.cpp
         src/media/pianoroll/NoteGridComponent.cpp
         src/media/pianoroll/PianoRollComponent.cpp
@@ -131,6 +131,12 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioData.cpp
         src/external/fontaudio/data/FontAudioIcons.h
 )
+
+if(APPLE)
+target_sources(HARP PRIVATE src/utils/Copy/copyMac.mm)
+elseif(WIN32)
+target_sources(HARP PRIVATE src/utils/Copy/copyWindows.cpp)
+endif()
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use

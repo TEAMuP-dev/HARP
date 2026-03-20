@@ -1,7 +1,7 @@
 #include "MediaDisplayComponent.h"
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
-#include "copy.h"
+#include "../utils/Copy/copy.h"
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
