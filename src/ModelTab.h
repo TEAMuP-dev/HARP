@@ -337,7 +337,7 @@ private:
         constexpr int buttonOk = 0;
 
         String popupMessage = errorMessage
-                              + "\n\nOptional: add context below before sending the report.";
+                              + "\n\nOptional: add context below before opening the issue.";
 
         if (errorPopupWindow != nullptr)
         {
@@ -400,12 +400,12 @@ private:
             }
         });
 
-        alertWindow->addButton("Send Error Log to TeamUP", buttonSendReport);
-        bindButtonCallback("Send Error Log to TeamUP", [this, error, errorMessage, onExit]
+        alertWindow->addButton("Open GitHub Issue", buttonSendReport);
+        bindButtonCallback("Open GitHub Issue", [this, error, errorMessage, onExit]
         {
             if (errorPopupWindow != nullptr)
             {
-                sendErrorReportEmail(
+                openGitHubIssue(
                     error, errorMessage, errorPopupWindow->getTextEditorContents("errorReportNotes"));
             }
 
@@ -450,45 +450,55 @@ private:
         errorPopupWindow->toFront(true);
     }
 
-    void sendErrorReportEmail(const Error& error, const String& errorMessage, const String& notes)
+    void openGitHubIssue(const Error& error, const String& errorMessage, const String& notes)
     {
-        String supportEmail = Settings::getString("supportEmail", "support@teamup.tech").trim();
-
-        if (supportEmail.isEmpty())
-        {
-            AlertWindow::showMessageBoxAsync(
-                AlertWindow::WarningIcon,
-                "Missing Support Email",
-                "Unable to send report because support email is not configured.",
-                "Ok");
-            return;
-        }
+        static const String issueBaseUrl = "https://github.com/TEAMuP-dev/HARP/issues/new";
+        static const String issueTemplate = "runtime_error_report.md";
 
         File logFile = HARPLogger::getInstance()->getLogFile();
 
+        String issueTitle = "HARP runtime error report";
+        if (const auto* gradioError = std::get_if<GradioError>(&error))
+        {
+            if (gradioError->reason.isNotEmpty())
+            {
+                issueTitle = "HARP: " + gradioError->reason;
+            }
+            else if (gradioError->type == GradioError::Type::QuotaExceeded)
+            {
+                issueTitle = "HARP: Hugging Face quota exceeded";
+            }
+        }
+
         String body;
-        body << "Please investigate this HARP error.\n\n";
-        body << "Error:\n" << errorMessage << "\n\n";
+        body << "## Summary\n";
+        body << errorMessage << "\n\n";
 
         if (const auto* gradioError = std::get_if<GradioError>(&error))
         {
             if (gradioError->endpointPath.isNotEmpty())
             {
-                body << "Endpoint:\n" << gradioError->endpointPath << "\n\n";
+                body << "## Endpoint\n";
+                body << gradioError->endpointPath << "\n\n";
             }
         }
 
-        body << "User notes:\n" << (notes.isNotEmpty() ? notes : "(none)") << "\n\n";
-        body << "Log file:\n" << logFile.getFullPathName() << "\n\n";
-        body << "Please attach the log file from the path above when sending.";
+        body << "## User Notes\n";
+        body << (notes.isNotEmpty() ? notes : "(none)") << "\n\n";
+        body << "## Environment\n";
+        body << "- HARP version: " << JUCE_APPLICATION_VERSION_STRING << "\n";
+        body << "- Time (local): " << Time::getCurrentTime().toString(true, true) << "\n";
+        body << "- Log file: " << logFile.getFullPathName() << "\n\n";
+        body << "## Reproduction\n";
+        body << "1. \n";
+        body << "2. \n";
+        body << "3. \n";
 
-        String subject = "HARP Error Report";
-
-        String escapedSubject = URL::addEscapeChars(subject, true);
+        String escapedTitle = URL::addEscapeChars(issueTitle, true);
         String escapedBody = URL::addEscapeChars(body, true);
-        String escapedRecipient = URL::addEscapeChars(supportEmail, true);
-
-        URL("mailto:" + escapedRecipient + "?subject=" + escapedSubject + "&body=" + escapedBody)
+        String escapedTemplate = URL::addEscapeChars(issueTemplate, true);
+        URL(issueBaseUrl + "?template=" + escapedTemplate + "&title=" + escapedTitle + "&body="
+            + escapedBody)
             .launchInDefaultBrowser();
     }
 
