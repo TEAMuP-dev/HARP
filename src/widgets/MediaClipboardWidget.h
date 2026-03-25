@@ -133,7 +133,10 @@ public:
 
     Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
 
-    Rectangle<int> getClipboardControlsBounds() const { return controlsComponent.getBounds().expanded(2); }
+    Rectangle<int> getClipboardControlsBounds() const
+    {
+        return controlsComponent.getBounds().expanded(2);
+    }
 
     Rectangle<int> getClipboardNameBoxBounds() const
     {
@@ -273,20 +276,49 @@ public:
                                                 + validExtensions.joinIntoString(", ") + ".",
                                             "OK");
                                     }*/
-
+                                    // RZ
                                     if (originalFile.getFileExtension()
                                         != selectedFile.getFileExtension())
                                     {
-                                        AlertWindow::showMessageBoxAsync(
-                                            AlertWindow::WarningIcon,
-                                            "File Type Mismatch",
-                                            "Cannot overwrite file of type \""
-                                                + originalFile.getFileExtension()
-                                                + "\" with file of type \""
-                                                + selectedFile.getFileExtension() + "\".",
-                                            "OK");
+                                        File tempFile = selectedFile.getSiblingFile(
+                                            selectedFile.getFileNameWithoutExtension()
+                                            + "_converted" + originalFile.getFileExtension());
 
-                                        // TODO - perform conversion if possible
+                                        if (convertAudioFile(selectedFile, tempFile))
+                                        {
+                                            if (tempFile.copyFileTo(originalFile))
+                                            {
+                                                DBG_AND_LOG(
+                                                    "MediaClipboardWidget::sendToDAWCallback: Converted and overwrote "
+                                                    << originalFile.getFullPathName() << " with "
+                                                    << selectedFile.getFullPathName() << ".");
+
+                                                tempFile.deleteFile();
+
+                                                linkedDisplays[selectedIndex]->initializeDisplay(
+                                                    URL(originalFile));
+                                                removeSelectionCallback();
+                                                linkedDisplays[selectedIndex]->selectTrack();
+                                            }
+                                            else
+                                            {
+                                                tempFile.deleteFile();
+                                                DBG_AND_LOG(
+                                                    "MediaClipboardWidget::sendToDAWCallback: Conversion succeeded "
+                                                    "but failed to copy to "
+                                                    << originalFile.getFullPathName());
+                                            }
+                                        }
+                                        else
+                                        {
+                                            AlertWindow::showMessageBoxAsync(
+                                                AlertWindow::WarningIcon,
+                                                "File Type Mismatch",
+                                                "Cannot convert file of type \""
+                                                    + selectedFile.getFileExtension() + "\" to \""
+                                                    + originalFile.getFileExtension() + "\".",
+                                                "OK");
+                                        }
                                     }
                                     else
                                     {
@@ -542,6 +574,80 @@ private:
 
             playStopButton.setMode(playButtonActiveInfo.displayLabel);
         }
+    }
+
+    // RZ edit
+    bool convertAudioFile(const File& source, const File& target)
+    {
+        AudioFormatManager formatManager;
+        formatManager.registerBasicFormats();
+
+        std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(source));
+
+        if (! reader)
+        {
+            DBG_AND_LOG(
+                "convertAudioFile: Could not read source file: " << source.getFullPathName());
+            return false;
+        }
+
+        String ext = target.getFileExtension().toLowerCase();
+        AudioFormat* format = nullptr;
+
+        if (ext == ".wav")
+            format = formatManager.findFormatForFileExtension("wav");
+        else if (ext == ".aiff" || ext == ".aif")
+            format = formatManager.findFormatForFileExtension("aiff");
+        else if (ext == ".flac")
+            format = formatManager.findFormatForFileExtension("flac");
+        else
+        {
+            DBG_AND_LOG("convertAudioFile: Unsupported target format: " << ext);
+            return false;
+        }
+
+        if (! format)
+        {
+            DBG_AND_LOG("convertAudioFile: Format not available: " << ext);
+            return false;
+        }
+
+        target.deleteFile();
+        auto outputStream = target.createOutputStream();
+        if (! outputStream)
+        {
+            DBG_AND_LOG(
+                "convertAudioFile: Could not create output file: " << target.getFullPathName());
+            return false;
+        }
+
+        std::unique_ptr<AudioFormatWriter> writer(format->createWriterFor(
+            outputStream.release(), reader->sampleRate, reader->numChannels, 16, {}, 0));
+
+        if (! writer)
+        {
+            DBG_AND_LOG(
+                "convertAudioFile: Could not create writer for: " << target.getFullPathName());
+            return false;
+        }
+
+        const int blockSize = 4096;
+        AudioBuffer<float> buffer((int) reader->numChannels, blockSize);
+        int64 totalFrames = (int64) reader->lengthInSamples;
+        int64 position = 0;
+
+        while (position < totalFrames)
+        {
+            int64 framesToRead = jmin((int64) blockSize, totalFrames - position);
+            reader->read(&buffer, 0, (int) framesToRead, position, true, true);
+            writer->writeFromAudioSampleBuffer(buffer, 0, (int) framesToRead);
+            position += framesToRead;
+        }
+
+        DBG_AND_LOG("convertAudioFile: Converted " << source.getFullPathName() << " -> "
+                                                   << target.getFullPathName());
+
+        return true;
     }
 
     void resetState()
