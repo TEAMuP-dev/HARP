@@ -167,6 +167,7 @@ juce_add_binary_data(stability_controls
     SOURCES
         ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/text-to-audio.json
         ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/audio-to-audio.json
+        ${CMAKE_SOURCE_DIR}/resources/models/model_registry.json
 )
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,

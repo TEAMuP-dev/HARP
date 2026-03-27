@@ -58,6 +58,10 @@ dist/
 Miniconda*/
 Miniconda*.sh
 
+# model validation outputs
+artifacts/model_validation/
+__pycache__/
+
 # website
 node_modules
 temp
