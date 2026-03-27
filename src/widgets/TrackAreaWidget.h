@@ -18,14 +18,85 @@
 
 using namespace juce;
 
+class DragOverlayComponent : public Component
+{
+public:
+    DragOverlayComponent()
+    {
+        setInterceptsMouseClicks(false, false);
+    }
+
+    void startDrag(Image snapshot, Point<int> offset)
+    {
+        if (isActive) return;
+        dragImage = snapshot;
+        dragOffset = offset;
+        isActive = true;
+        setVisible(true);
+        repaint();
+    }
+
+    // Called every mouseDrag event with the current mouse position
+    void updatePosition(Point<int> newPos)
+    {
+        if (newPos == currentPos) return;
+
+        // Clear old position
+        repaint(currentPos.x - dragOffset.x,
+                currentPos.y - dragOffset.y,
+                dragImage.getWidth(),
+                dragImage.getHeight());
+
+        currentPos = newPos;
+
+        // Repaint only new position
+        repaint(currentPos.x - dragOffset.x,
+                currentPos.y - dragOffset.y,
+                dragImage.getWidth(),
+                dragImage.getHeight());
+    }
+
+    void stopDrag()
+    {
+        isActive = false;
+        dragImage = Image(); // Releases the image data
+        setVisible(false);
+        repaint();
+    }
+
+    void paint(Graphics& g) override
+    {
+        if (!isActive || dragImage.isNull())
+            return;
+
+        g.drawImage(dragImage,
+                    currentPos.x - dragOffset.x,
+                    currentPos.y - dragOffset.y,
+                    dragImage.getWidth(),
+                    dragImage.getHeight(),
+                    0,
+                    0,
+                    dragImage.getWidth(),
+                    dragImage.getHeight());
+    }
+
+private:
+    Image dragImage;
+    Point<int> currentPos;
+    Point<int> dragOffset;
+    bool isActive = false;
+};
+
 class TrackAreaWidget : public Component,
                         public ChangeListener,
                         public ChangeBroadcaster,
                         public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
-        : displayMode(mode), fixedTrackHeight(trackHeight)
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input,
+                    int trackHeight = 0,
+                    DragOverlayComponent* overlay = nullptr)
+        : displayMode(mode), fixedTrackHeight(trackHeight), dragOverlay(overlay)
     {
         addMouseListener(this, true);
     }
@@ -35,24 +106,6 @@ public:
     void paint(Graphics& g) override
     {
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
-        
-        // Draws drop line for track reordering
-        if (isDraggingTrack && dragInsertIndex >= 0)
-        {
-            int trackSlotHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
-            int lineY = dragInsertIndex * trackSlotHeight;
-
-            g.setColour(Colours::white);
-            g.fillRect(0, lineY - 1, getWidth(), 3);
-        }
-
-        // Makes the dragged track look visually distinct
-        if (isDraggingTrack && draggedTrack != nullptr)
-        {
-            Rectangle<int> draggedBounds = draggedTrack->getBounds();
-            g.setColour(Colours::black.withAlpha(0.3f));
-            g.fillRect(draggedBounds);
-        }
     }
 
     void resized() override
@@ -66,8 +119,32 @@ public:
 
         if (getNumTracks() > 0)
         {
+            int draggedIndex = isDraggingTrack ? getDraggedTrackIndex() : -1;
+
+            int visualGapIndex = dragInsertIndex;
+            if (isDraggingTrack && draggedIndex >= 0 && dragInsertIndex > draggedIndex)
+                visualGapIndex = dragInsertIndex - 1;
+
+            int layoutIndex = 0;
+
             for (auto& m : mediaDisplays)
             {
+                // Don't draw dragged track
+                if (m.get() == draggedTrack && isDraggingTrack)
+                    continue;
+
+                if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
+                {
+                    FlexItem gap;
+
+                    if (fixedTrackHeight)
+                        gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                    else  
+                        gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+
+                    mainBox.items.add(gap);
+                }
+
                 FlexItem i = FlexItem(*m);
 
                 if (fixedTrackHeight)
@@ -80,6 +157,21 @@ public:
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
+
+                layoutIndex++;
+            }
+
+            // If the drag gap is at the end of the list
+            if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
+            {
+                FlexItem gap;
+
+                if (fixedTrackHeight)
+                    gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                else
+                    gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+
+                mainBox.items.add(gap);
             }
 
             if (fixedTrackHeight)
@@ -362,7 +454,6 @@ public:
         auto draggedPtr = std::move(*it);
         mediaDisplays.erase(it);
 
-
         // Decrement index if moving downward to account for shifting indicies
         if (newIndex > oldIndex)
             newIndex--;
@@ -406,13 +497,41 @@ private:
     int getInsertIndexAtY(int y)
     {
         int trackSlotHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+        
+        if (isDraggingTrack && draggedTrack != nullptr)
+        {
+            int draggedIndex = getDraggedTrackIndex();
+
+            int draggedSlotTop = draggedIndex * trackSlotHeight;
+
+            if (draggedIndex >= 0 && y > draggedSlotTop)
+                y += trackSlotHeight;
+        }
+
         int index = y / trackSlotHeight;
         return jlimit(0, getNumTracks(), index);
+    }
+
+    int getDraggedTrackIndex() const
+    {
+        if (draggedTrack == nullptr) return -1;
+
+        for (int i = 0; i < (int)mediaDisplays.size(); i++)
+        {
+            if (mediaDisplays[i].get() == draggedTrack)
+                return i;
+        }
+
+        return -1;
     }
 
     void mouseDown(const MouseEvent& e) override
     {
         if (!isThumbnailWidget()) return;
+
+        // Reset drag state at the start of every click
+        draggedTrack = nullptr;
+        isDraggingTrack = false;
 
         Component* clicked = e.eventComponent;
         
@@ -431,7 +550,10 @@ private:
         if (clickedDisplay)
         {
             draggedTrack = clickedDisplay;
-            isDraggingTrack = false;
+
+            Point<int> mouseInThis = e.getEventRelativeTo(this).getPosition();
+            Point<int> trackTopLeft = draggedTrack->getBounds().getTopLeft();
+            dragClickOffset = mouseInThis - trackTopLeft;
         }
     }
 
@@ -444,23 +566,35 @@ private:
         if (!isDraggingTrack && e.getDistanceFromDragStart() > 5)
         {
             isDraggingTrack = true;
+
+            // Takes a snapshot of the track at the moment dragging starts
+            if (dragOverlay != nullptr)
+            {
+                Image snapshot = draggedTrack->createComponentSnapshot(draggedTrack->getLocalBounds());
+                dragOverlay->startDrag(snapshot, dragClickOffset);
+                draggedTrack->setVisible(false);
+            }
         }
 
         if (isDraggingTrack)
         {
-            // Only update the drop index while inside the widget
+            int newInsertIndex = -1;
+
             if (getLocalBounds().contains(posInThis))
+                newInsertIndex = getInsertIndexAtY(posInThis.y);
+
+            if (newInsertIndex != dragInsertIndex)
             {
-                dragInsertIndex = getInsertIndexAtY(posInThis.y);
-            }
-            else
-            {
-                // Hides the indicator line when outside the widget
-                dragInsertIndex = -1;
+                dragInsertIndex = newInsertIndex;
+                resized();
             }
 
-            // Updates the drop indicator line
-            repaint();
+            // Converts the position to the overlay's coordinate space
+            if (dragOverlay != nullptr)
+            {
+                Point<int> posInOverlay = dragOverlay->getLocalPoint(this, posInThis);
+                dragOverlay->updatePosition(posInOverlay);
+            }
         }
     }
 
@@ -468,33 +602,32 @@ private:
     {
         if (!isThumbnailWidget()) return;
 
-        // Tracks the release psoition of the mouse
+        // Tracks the release position of the mouse
         Point<int> releasePos = e.getEventRelativeTo(this).getPosition();
 
         // Only reorders if the mouse was released inside the widget
         if (isDraggingTrack && draggedTrack != nullptr && getLocalBounds().contains(releasePos))
         {
-            int currentIndex = -1;
-            for (int i = 0; i < (int)mediaDisplays.size(); i++)
-            {
-                if (mediaDisplays[i].get() == draggedTrack)
-                {
-                    currentIndex = i;
-                    break;
-                }
-            }
+            int currentIndex = getDraggedTrackIndex();
 
-            if (dragInsertIndex != currentIndex && dragInsertIndex != currentIndex + 1)
+            if (dragInsertIndex != currentIndex)
             {
                 reorderTrack(draggedTrack, dragInsertIndex);
             }
         }
 
+        // Restore the track's appearance and stop the overlay
+        if (draggedTrack != nullptr)
+            draggedTrack->setVisible(true);
+        if (dragOverlay != nullptr)
+            dragOverlay->stopDrag();
+
         // Reset the drag state
         draggedTrack = nullptr;
         dragInsertIndex = -1;
         isDraggingTrack = false;
-        repaint();
+
+        resized();
     }
 
     const DisplayMode displayMode;
@@ -506,8 +639,10 @@ private:
 
     // For reordering tracks via dragging
     MediaDisplayComponent* draggedTrack = nullptr;
+    DragOverlayComponent* dragOverlay = nullptr;
     int dragInsertIndex = -1;
     bool isDraggingTrack = false;
+    Point<int> dragClickOffset { 0, 0 };
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
