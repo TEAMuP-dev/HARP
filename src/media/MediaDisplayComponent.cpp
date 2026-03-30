@@ -1008,9 +1008,9 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     if (pps <= 0.0f)
         return;
 
-    // Fixed time scale: zoom is seconds per pixel. Same scale = same time span for any file.
-    const float minPps = 20.0f;
-    float maxPps = static_cast<float>(mediaWidth / totalLength);
+    const double minVisibleSeconds = 5.0;
+    const float minPps = static_cast<float>(mediaWidth / totalLength);
+    float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
     if (maxPps < minPps)
         maxPps = minPps;
 
