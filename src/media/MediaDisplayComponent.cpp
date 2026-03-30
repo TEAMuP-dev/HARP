@@ -4,6 +4,67 @@
 
 #include <cmath>
 
+namespace
+{
+struct TickScheme
+{
+    double majorStep;
+    double minorStep;
+    int minorCount;
+};
+
+TickScheme chooseTickScheme(double visibleLength)
+{
+    static const TickScheme schemes[] = {
+        { 0.1,   0.02,  5 },
+        { 0.5,   0.1,   5 },
+        { 1.0,   0.25,  4 },
+        { 2.0,   0.5,   4 },
+        { 5.0,   1.0,   5 },
+        { 15.0,  5.0,   3 },
+        { 30.0,  10.0,  3 },
+        { 60.0,  15.0,  4 },
+        { 120.0, 30.0,  4 },
+        { 300.0, 60.0,  5 },
+        { 600.0, 120.0, 5 },
+    };
+
+    // Pick the scheme that gives roughly 4–12 major ticks across the visible range
+    for (const auto& s : schemes)
+    {
+        double numMajor = visibleLength / s.majorStep;
+        if (numMajor >= 2.0 && numMajor <= 15.0)
+            return s;
+    }
+
+    // Fallback for very long files
+    double majorStep = std::pow(10.0, std::floor(std::log10(visibleLength / 5.0)));
+    majorStep = std::max(0.01, majorStep);
+    return { majorStep, majorStep / 5.0, 5 };
+}
+
+String formatTime(double t, double step)
+{
+    if (t >= 3600.0)
+    {
+        int hrs = static_cast<int>(t / 3600.0);
+        int mins = static_cast<int>(std::fmod(t, 3600.0) / 60.0);
+        int secs = static_cast<int>(std::fmod(t, 60.0));
+        return String(hrs) + "h " + String(mins) + "m " + String(secs) + "s";
+    }
+    if (t >= 60.0)
+    {
+        int mins = static_cast<int>(t / 60.0);
+        int secs = static_cast<int>(std::fmod(t, 60.0));
+        return String(mins) + "m " + String(secs) + "s";
+    }
+    if (step >= 1.0)
+        return String(static_cast<int>(t)) + "s";
+
+    return String(t, 2) + "s";
+}
+} // namespace
+
 void TimeAxisStrip::paint(Graphics& g)
 {
     if (owner == nullptr || ! owner->isFileLoaded())
@@ -24,45 +85,57 @@ void TimeAxisStrip::paint(Graphics& g)
     g.setColour(Colours::darkgrey);
     g.fillRect(getLocalBounds());
 
-    g.setColour(Colours::lightgrey.withAlpha(0.8f));
+    const double visibleLength = visibleRange.getLength();
+    const auto scheme = chooseTickScheme(visibleLength);
+    const double majorStep = scheme.majorStep;
+    const double minorStep = scheme.minorStep;
 
-    // Choose tick interval so we get roughly 5–15 major ticks
-    double visibleLength = visibleRange.getLength();
-    double step = 1.0;
-    if (visibleLength > 0.0)
+    const float majorTickTop = 0.0f;
+    const float majorTickBot = static_cast<float>(h);
+    const float minorTickTop = static_cast<float>(h) * 0.55f;
+    const float minorTickBot = static_cast<float>(h);
+
+    // --- Minor ticks ---
+    g.setColour(Colours::grey.withAlpha(0.5f));
+
+    const double firstMinor = std::ceil(visibleStart / minorStep) * minorStep;
+    for (double t = firstMinor; t <= visibleEnd && t <= totalLength; t += minorStep)
     {
-        double logStep = std::ceil(std::log10(visibleLength / 10.0));
-        step = std::pow(10.0, logStep);
-        step = std::max(0.01, step);
-    }
-
-    const double firstTick = std::ceil(visibleStart / step) * step;
-    const int labelHeight = jmin(14, h - 2);
-    g.setFont(static_cast<float>(labelHeight));
-
-    for (double t = firstTick; t < visibleEnd && t <= totalLength; t += step)
-    {
-        const float x = static_cast<float>((t - visibleStart) * pps);
-        if (x < -50.0f || x > w + 50.0f)
+        // Skip positions that coincide with major ticks
+        double remainder = std::fmod(t, majorStep);
+        if (remainder < minorStep * 0.1 || (majorStep - remainder) < minorStep * 0.1)
             continue;
 
-        g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(h));
+        const float x = static_cast<float>((t - visibleStart) * pps);
+        if (x < 0.0f || x > static_cast<float>(w))
+            continue;
 
-        String label;
-        if (t >= 60.0)
-            label = String(static_cast<int>(t / 60)) + "m " + String(static_cast<int>(std::fmod(t, 60))) + "s";
-        else if (step >= 1.0)
-            label = String(static_cast<int>(t)) + "s";
-        else
-            label = String(t, 1) + "s";
+        g.drawVerticalLine(static_cast<int>(x), minorTickTop, minorTickBot);
+    }
 
+    // --- Major ticks and labels ---
+    g.setColour(Colours::lightgrey.withAlpha(0.9f));
+
+    const int labelH = jmin(13, h - 2);
+    g.setFont(static_cast<float>(labelH));
+
+    const double firstMajor = std::ceil(visibleStart / majorStep) * majorStep;
+    for (double t = firstMajor; t <= visibleEnd && t <= totalLength; t += majorStep)
+    {
+        const float x = static_cast<float>((t - visibleStart) * pps);
+        if (x < -60.0f || x > static_cast<float>(w) + 60.0f)
+            continue;
+
+        g.drawVerticalLine(static_cast<int>(x), majorTickTop, majorTickBot);
+
+        String label = formatTime(t, majorStep);
         g.drawText(label,
-                  static_cast<int>(x) + 2,
-                  0,
-                  jmin(80, w - static_cast<int>(x)),
-                  h,
-                  Justification::centredLeft,
-                  true);
+                   static_cast<int>(x) + 3,
+                   0,
+                   jmin(90, w - static_cast<int>(x)),
+                   h,
+                   Justification::centredLeft,
+                   true);
     }
 }
 
