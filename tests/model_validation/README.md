@@ -8,6 +8,8 @@ This directory contains the first pass of HARP's automated model validation harn
 - Verifies the registry has unique ids and featured model paths
 - Runs enabled validation entries through pytest
 - Calls local PyHARP `process_fn` implementations with small fixture media files
+- Exercises remote Hugging Face dropdown models through the same Gradio API flow HARP uses
+- Exercises Stability dropdown models when an API key is provided
 - Verifies that outputs exist and match the expected file type
 - Writes a machine-readable report to `artifacts/model_validation/latest.json`
 - Writes a Markdown summary to `artifacts/model_validation/latest.md`
@@ -45,8 +47,15 @@ You can also enable network-backed validation with:
 export HARP_ENABLE_NETWORK_VALIDATION=1
 ```
 
+Provide a Stability key for the Stability dropdown models:
+
+```bash
+export HARP_STABILITY_API_KEY=...
+```
+
 ## Notes
 
 - The registry is shared with HARP's featured model picker through bundled `BinaryData`.
 - Validation entries can declare optional Python modules; missing modules are reported as skipped instead of failing the full suite.
-- Remote Hugging Face and Stability entries are intentionally present in the registry now even if their automated validation mode is not implemented yet.
+- Remote Hugging Face dropdown models are smoke-tested through their `controls` and `process` endpoints when network validation is enabled.
+- Stability dropdown models are smoke-tested through the provider API when `HARP_STABILITY_API_KEY` or `STABILITY_API_KEY` is set.

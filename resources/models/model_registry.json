@@ -22,9 +22,10 @@
       "source": "stability_api",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_api",
-        "reason": "Requires a Stability API key and provider-specific assertions."
+        "requires_network": true,
+        "requires_env": "HARP_STABILITY_API_KEY"
       }
     },
     {
@@ -35,9 +36,10 @@
       "source": "stability_api",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_api",
-        "reason": "Requires a Stability API key and provider-specific assertions."
+        "requires_network": true,
+        "requires_env": "HARP_STABILITY_API_KEY"
       }
     },
     {
@@ -48,9 +50,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -61,9 +63,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -74,9 +76,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -87,9 +89,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -100,9 +102,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -113,9 +115,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -126,9 +128,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -139,9 +141,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -152,9 +154,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -165,9 +167,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {
@@ -179,27 +181,8 @@
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "local_pyharp_example",
-        "app_path": "pyharp/examples/midi_synthesizer/app.py",
-        "python_modules": [
-          "gradio",
-          "audiotools",
-          "symusic"
-        ],
-        "requires_network": true,
-        "inputs": [
-          {
-            "kind": "midi_fixture",
-            "path": "resources/media/test.mid"
-          }
-        ],
-        "expected_outputs": [
-          {
-            "kind": "audio_file",
-            "extension": ".wav",
-            "min_size_bytes": 128
-          }
-        ]
+        "mode": "remote_gradio",
+        "requires_network": true
       }
     },
     {
@@ -210,9 +193,9 @@
       "source": "huggingface_space",
       "featured": true,
       "validation": {
-        "enabled": false,
+        "enabled": true,
         "mode": "remote_gradio",
-        "reason": "No local fixture app is bundled in this repository yet."
+        "requires_network": true
       }
     },
     {

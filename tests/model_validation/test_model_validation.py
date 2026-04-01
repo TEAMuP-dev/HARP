@@ -3,13 +3,17 @@ from __future__ import annotations
 import pytest
 
 from tests.model_validation.helpers import (
+    build_process_inputs,
     cleanup_outputs,
+    get_required_env_value,
     import_app_module,
     iter_enabled_validation_models,
     load_registry,
     missing_python_modules,
-    build_process_inputs,
     network_validation_enabled,
+    query_remote_gradio_controls,
+    run_remote_gradio_validation,
+    run_stability_remote_validation,
     validate_outputs,
 )
 
@@ -47,20 +51,37 @@ def test_enabled_model_validation(model_entry: dict, request: pytest.FixtureRequ
     ):
         pytest.skip("Network-backed validation is disabled for this test run.")
 
-    module = import_app_module(model_entry)
+    if model_entry.get("validation", {}).get("requires_env") and not get_required_env_value(model_entry):
+        pytest.skip(
+            f"Required environment variable {model_entry['validation']['requires_env']} is not set."
+        )
 
-    assert hasattr(module, "model_card")
-    assert getattr(module.model_card, "name", "")
-    assert hasattr(module, "process_fn")
-    assert callable(module.process_fn)
-
-    if hasattr(module, "input_components"):
-        assert len(module.input_components) == len(model_entry["validation"].get("inputs", []))
-
+    mode = model_entry["validation"]["mode"]
     files_to_cleanup = []
 
     try:
-        result = module.process_fn(*build_process_inputs(model_entry))
-        files_to_cleanup = validate_outputs(result, model_entry)
+        if mode == "local_pyharp_example":
+            module = import_app_module(model_entry)
+
+            assert hasattr(module, "model_card")
+            assert getattr(module.model_card, "name", "")
+            assert hasattr(module, "process_fn")
+            assert callable(module.process_fn)
+
+            if hasattr(module, "input_components"):
+                assert len(module.input_components) == len(model_entry["validation"].get("inputs", []))
+
+            result = module.process_fn(*build_process_inputs(model_entry))
+            files_to_cleanup = validate_outputs(result, model_entry)
+        elif mode == "remote_gradio":
+            controls = query_remote_gradio_controls(model_entry)
+            assert "card" in controls
+            assert controls.get("inputs") is not None
+            assert controls.get("outputs")
+            files_to_cleanup = run_remote_gradio_validation(model_entry)
+        elif mode == "remote_api":
+            files_to_cleanup = run_stability_remote_validation(model_entry)
+        else:
+            raise AssertionError(f"Unsupported validation mode: {mode}")
     finally:
         cleanup_outputs(files_to_cleanup)
