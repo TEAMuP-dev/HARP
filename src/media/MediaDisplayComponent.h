@@ -216,7 +216,7 @@ private:
     int correctMediaXBounds(float mX, float width);
 
     void horizontalMove(double deltaT);
-    void horizontalZoom(double deltaZoom, double scrollPosT);
+    bool horizontalZoom(double deltaZoom, double scrollPosT);
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 

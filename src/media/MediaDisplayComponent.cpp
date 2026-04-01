@@ -996,18 +996,19 @@ void MediaDisplayComponent::horizontalMove(double deltaT)
     updateVisibleRange({ newStart, newStart + visibleLength });
 }
 
-void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
+bool MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
 {
     const float mediaWidth = getMediaWidth();
     const double totalLength = getTotalLengthInSecs();
 
     if (mediaWidth <= 0.0f || totalLength <= 0.0)
-        return;
+        return false;
 
     const float pps = getPixelsPerSecond();
     if (pps <= 0.0f)
-        return;
+        return false;
 
+    // minPps = zoomed all the way out; maxPps = zoomed all the way in (~5 seconds visible).
     const double minVisibleSeconds = 5.0;
     const float minPps = static_cast<float>(mediaWidth / totalLength);
     float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
@@ -1016,6 +1017,10 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
 
     float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
     newPps = jlimit(minPps, maxPps, newPps);
+
+    // If pps didn't change, zoom has hit a limit
+    if (std::abs(newPps - pps) < 0.01f)
+        return false;
 
     double newVisibleLength = static_cast<double>(mediaWidth) / static_cast<double>(newPps);
     if (newVisibleLength > totalLength)
@@ -1027,6 +1032,7 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     double newEnd = newStart + newVisibleLength;
 
     updateVisibleRange({ newStart, newEnd });
+    return true;
 }
 
 void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
@@ -1070,7 +1076,9 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 }
                 else
                 {
-                    horizontalZoom(static_cast<double>(wheel.deltaY), scrollTime);
+                    bool zoomed = horizontalZoom(static_cast<double>(wheel.deltaY), scrollTime);
+                    if (! zoomed)
+                        horizontalMove(static_cast<double>(wheel.deltaY));
                 }
             }
             else
