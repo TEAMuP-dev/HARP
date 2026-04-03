@@ -907,8 +907,8 @@ private:
         String severity =
             extractFirstNonEmptyField(payloadDict, { "type", "level", "severity", "status" })
                 .toLowerCase();
-        String message =
-            extractFirstNonEmptyField(payloadDict, { "message", "detail", "error", "reason" });
+        String message = extractFirstNonEmptyField(
+            payloadDict, { "message", "detail", "error", "reason", "log" });
 
         if (message.isEmpty())
         {
@@ -944,6 +944,12 @@ private:
     static String formatProcessMessage(const String& messageType)
     {
         if (messageType.isEmpty())
+        {
+            return "";
+        }
+
+        // "log" messages carry info/warning text
+        if (messageType.equalsIgnoreCase("log"))
         {
             return "";
         }
