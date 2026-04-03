@@ -74,13 +74,20 @@ void MediaDisplayComponent::initializeButtons()
     playStopButton.addMode(stopButtonInfo);
     headerComponent.addAndMakeVisible(playStopButton);
 
-    chooseFileButtonInfo = MultiButton::Mode { "ChooseFile",
-                                               "Click to choose a media file.",
-                                               [this] { chooseFileCallback(); },
-                                               MultiButton::DrawingMode::IconOnly,
-                                               Colours::lightblue,
-                                               fontawesome::Folder };
-    chooseFileButton.addMode(chooseFileButtonInfo);
+    chooseFileButtonActiveInfo = MultiButton::Mode { "ChooseFile",
+                                                     "Click to choose a media file.",
+                                                     [this] { chooseFileCallback(); },
+                                                     MultiButton::DrawingMode::IconOnly,
+                                                     Colours::lightblue,
+                                                     fontawesome::Folder };
+    chooseFileButtonInactiveInfo = MultiButton::Mode { "ChooseFile-Inactive",
+                                                       "Cannot choose file while processing.",
+                                                       [this] {},
+                                                       MultiButton::DrawingMode::IconOnly,
+                                                       Colours::lightgrey,
+                                                       fontawesome::Folder };
+    chooseFileButton.addMode(chooseFileButtonActiveInfo);
+    chooseFileButton.addMode(chooseFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(chooseFileButton);
 
     // Mode when an unsaved file is loaded
@@ -393,6 +400,12 @@ void MediaDisplayComponent::setTrackName(String name)
     trackNameLabel.setText(trackName, dontSendNotification);
 }
 
+void MediaDisplayComponent::setChooseFileButtonEnabled(bool enabled)
+{
+    chooseFileButton.setMode(enabled ? chooseFileButtonActiveInfo.displayLabel
+                                     : chooseFileButtonInactiveInfo.displayLabel);
+}
+
 void MediaDisplayComponent::resetDisplay()
 {
     clearLabels();
@@ -426,7 +439,7 @@ void MediaDisplayComponent::resetScrollBar()
 void MediaDisplayComponent::resetButtonState()
 {
     playStopButton.setMode(playButtonInactiveInfo.displayLabel);
-    chooseFileButton.setMode(chooseFileButtonInfo.displayLabel);
+    chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
 }
 

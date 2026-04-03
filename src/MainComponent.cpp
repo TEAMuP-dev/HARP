@@ -380,6 +380,7 @@ void MainComponent::openWelcomeWindow(bool ensureDefaultModelLoaded)
             };
 
             safeThis->welcomeWindow->setVisible(true);
+            safeThis->welcomeWindow->positionOnMainComponentDisplay();
             safeThis->welcomeWindow->toFront(true);
         });
 }

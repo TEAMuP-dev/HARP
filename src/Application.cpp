@@ -104,7 +104,6 @@ void MainComponent::initializeMenuBar()
     addKeyListener(commandManager.getKeyMappings());
 
 #if JUCE_MAC
-    // TODO - is this actually used?
     macExtraMenu = getMacExtraMenu();
 
     MenuBarModel::setMacMainMenu(this, macExtraMenu.get());

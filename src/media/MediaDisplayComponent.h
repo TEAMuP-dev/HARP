@@ -85,6 +85,8 @@ public:
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
+    void setChooseFileButtonEnabled(bool enabled);
+
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display
     void updateDisplay(const URL& filePath); // Add new file to existing display
@@ -243,7 +245,8 @@ private:
     MultiButton::Mode playButtonInactiveInfo;
     MultiButton::Mode stopButtonInfo;
     MultiButton chooseFileButton;
-    MultiButton::Mode chooseFileButtonInfo;
+    MultiButton::Mode chooseFileButtonActiveInfo;
+    MultiButton::Mode chooseFileButtonInactiveInfo;
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;

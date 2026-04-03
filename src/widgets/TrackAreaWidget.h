@@ -165,6 +165,14 @@ public:
     bool isHybridWidget() { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailWidget() { return displayMode == DisplayMode::Thumbnail; }
 
+    void setLoadTrackEnabled(bool enabled)
+    {
+        for (auto& m : mediaDisplays)
+        {
+            m->setChooseFileButtonEnabled(enabled);
+        }
+    }
+
     bool isInterestedInFileDrag(const StringArray& /*files*/) override
     {
         return isThumbnailWidget();
