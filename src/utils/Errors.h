@@ -177,6 +177,24 @@ inline String toUserMessage(const HttpError& e)
 
         case HttpError::Type::BadStatusCode:
 
+            if (e.statusCode == 402)
+            {
+                if (e.endpointPath.containsIgnoreCase("stability.ai"))
+                {
+                    userMessage = "Stability AI could not complete this request because your usage "
+                                  "credits or quota may be exhausted. Please check your Stability "
+                                  "account usage/billing and try again.";
+                }
+                else
+                {
+                    userMessage = "This request could not be completed because the service "
+                                  "reported payment/quota limits. Please check your account "
+                                  "usage/billing and try again.";
+                }
+
+                return userMessage;
+            }
+
             userMessage.clear();
 
             if (e.request == HttpError::Request::POST)
