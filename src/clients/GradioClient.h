@@ -523,6 +523,45 @@ private:
         return array.size() == 2;
     }
 
+    bool isZeroGPUSpace(const String& modelPath)
+    {
+        if (! isValidHuggingFacePath(modelPath))
+            return false;
+
+        URL runtimeEndpoint =
+            URL("https://huggingface.co/api/spaces/" + inferHostSlashModel(modelPath) + "/runtime");
+
+        std::unique_ptr<InputStream> stream;
+
+        if (makeGETRequestStream(runtimeEndpoint, stream, "", 5000).failed() || stream == nullptr)
+            return false;
+
+        String responseJSON = stream->readEntireStreamAsString();
+
+        DynamicObject::Ptr responseDict;
+
+        if (stringJSONToDict(responseJSON, responseDict).failed())
+            return false;
+
+        // Navigate: hardware -> current
+        static const Identifier hardwareKey { "hardware" };
+        static const Identifier currentKey { "current" };
+
+        if (! responseDict->hasProperty(hardwareKey))
+            return false;
+
+        var hardwareVar = responseDict->getProperty(hardwareKey);
+        auto* hardwareDict = hardwareVar.getDynamicObject();
+
+        if (hardwareDict == nullptr || ! hardwareDict->hasProperty(currentKey))
+            return false;
+
+        String hardwareCurrent = hardwareDict->getProperty(currentKey).toString();
+
+        // ZeroGPU hardware names start with "zero-" (e.g. "zero-a10g", "zero-a100")
+        return hardwareCurrent.startsWithIgnoreCase("zero-");
+    }
+
     OpResult makePOSTRequest(URL endpoint,
                              const String headers,
                              const String body,
@@ -590,21 +629,16 @@ private:
 
             if (diagnosticText.isNotEmpty())
             {
-                String reason = extractExceptionLabel(diagnosticText);
-
-                if (reason.isEmpty())
-                {
-                    reason = extractShortReason(diagnosticText);
-                }
+                String reason = extractShortReason(diagnosticText);
 
                 if (statusMessage != nullptr && reason.isNotEmpty())
                 {
                     statusMessage->setMessage("[error] " + reason);
                 }
 
-                GradioError::Type errorType =
-                    isExplicitQuotaError(diagnosticText) ? GradioError::Type::QuotaExceeded
-                                                         : GradioError::Type::RuntimeError;
+                GradioError::Type errorType = isExplicitQuotaError(diagnosticText)
+                                                  ? GradioError::Type::QuotaExceeded
+                                                  : GradioError::Type::RuntimeError;
 
                 return OpResult::fail(GradioError { errorType, errorPath, reason });
             }
@@ -720,7 +754,8 @@ private:
             return false;
         }
 
-        if (text.containsIgnoreCase("exceeded your gpu quota"))
+        if ((text.containsIgnoreCase("exceeded your") && text.containsIgnoreCase("gpu quota"))
+            || text.containsIgnoreCase("zerogpu quota exceeded"))
         {
             return true;
         }
@@ -747,9 +782,18 @@ private:
             return "";
         }
 
-        for (auto label : { "NameError", "TypeError", "ImportError", "ModuleNotFoundError",
-                            "ValueError", "KeyError", "AttributeError", "RuntimeError",
-                            "AssertionError", "IndexError", "SyntaxError", "OSError" })
+        for (auto label : { "NameError",
+                            "TypeError",
+                            "ImportError",
+                            "ModuleNotFoundError",
+                            "ValueError",
+                            "KeyError",
+                            "AttributeError",
+                            "RuntimeError",
+                            "AssertionError",
+                            "IndexError",
+                            "SyntaxError",
+                            "OSError" })
         {
             if (text.containsIgnoreCase(label))
             {
@@ -757,8 +801,7 @@ private:
             }
         }
 
-        StringArray tokens = StringArray::fromTokens(
-            text, " \t\r\n,:;()[]{}<>\"'`\\/|", "");
+        StringArray tokens = StringArray::fromTokens(text, " \t\r\n,:;()[]{}<>\"'`\\/|", "");
 
         for (auto& token : tokens)
         {
@@ -784,42 +827,6 @@ private:
         }
 
         return firstLine;
-    }
-
-    String collectErrorContextText(std::unique_ptr<InputStream>& stream, int maxLines = 8)
-    {
-        String contextText;
-
-        for (int i = 0; i < maxLines && ! stream->isExhausted(); ++i)
-        {
-            String contextLine = stream->readNextLine().trim();
-
-            if (contextLine.isEmpty())
-            {
-                continue;
-            }
-
-            if (contextLine.startsWithIgnoreCase("event:"))
-            {
-                break;
-            }
-
-            String normalizedContext = extractErrorTextFromPayload(extractPayload(contextLine));
-
-            if (normalizedContext.isEmpty())
-            {
-                continue;
-            }
-
-            if (contextText.isNotEmpty())
-            {
-                contextText += "\n";
-            }
-
-            contextText += normalizedContext;
-        }
-
-        return contextText;
     }
 
     static String extractMessageTypeFromPayload(const String& payload)
@@ -850,8 +857,8 @@ private:
         return "";
     }
 
-    static String extractFirstNonEmptyField(
-        const DynamicObject* object, std::initializer_list<const char*> keys)
+    static String extractFirstNonEmptyField(const DynamicObject* object,
+                                            std::initializer_list<const char*> keys)
     {
         if (object == nullptr)
         {
@@ -909,8 +916,8 @@ private:
 
             if (auto* outputDict = outputVar.getDynamicObject())
             {
-                message =
-                    extractFirstNonEmptyField(outputDict, { "message", "detail", "error", "reason" });
+                message = extractFirstNonEmptyField(outputDict,
+                                                    { "message", "detail", "error", "reason" });
             }
         }
 
@@ -1005,6 +1012,11 @@ private:
             return result;
         }
 
+        // Track whether ZeroGPU allocated the GPU and started the process.
+        // If an error arrives before process_starts, it was likely rejected at
+        // the quota-check stage rather than failing inside the function body.
+        bool seenProcessStarts = false;
+
         while (! stream->isExhausted())
         {
             response = stream->readNextLine();
@@ -1030,52 +1042,44 @@ private:
             {
                 String errorDataLine = stream->readNextLine();
 
-                DBG_AND_LOG(
-                    "GradioClient::makeGETRequest: Error response \"" << errorDataLine << "\".");
+                DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << errorDataLine
+                                                                              << "\".");
 
                 String payload = extractPayload(errorDataLine);
                 String diagnosticText = extractErrorTextFromPayload(payload);
-                String contextText = collectErrorContextText(stream);
 
-                String classificationText = diagnosticText;
+                String reason = extractShortReason(diagnosticText);
 
-                if (contextText.isNotEmpty())
+                GradioError::Type errorType;
+
+                if (isExplicitQuotaError(diagnosticText))
                 {
-                    if (classificationText.isNotEmpty())
-                    {
-                        classificationText += "\n";
-                    }
-
-                    classificationText += contextText;
+                    errorType = GradioError::Type::QuotaExceeded;
+                }
+                else if (diagnosticText.isEmpty() && ! seenProcessStarts)
+                {
+                    errorType = GradioError::Type::QuotaExceeded;
+                }
+                else
+                {
+                    errorType = GradioError::Type::RuntimeError;
                 }
 
-                String reasonText = diagnosticText.isNotEmpty() ? diagnosticText : contextText;
-
-                String reason = extractExceptionLabel(reasonText);
-
-                if (reason.isEmpty() && reasonText.isNotEmpty())
+                if (statusMessage != nullptr && diagnosticText.isNotEmpty())
                 {
-                    reason = extractShortReason(reasonText);
-                }
-
-                GradioError::Type errorType =
-                    isExplicitQuotaError(classificationText) ? GradioError::Type::QuotaExceeded
-                                                             : GradioError::Type::RuntimeError;
-
-                if (statusMessage != nullptr)
-                {
-                    String statusErrorText = reasonText.isNotEmpty() ? reasonText : classificationText;
-
-                    if (statusErrorText.isNotEmpty())
-                    {
-                        statusMessage->setMessage("[error] " + extractShortReason(statusErrorText));
-                    }
+                    statusMessage->setMessage("[error] " + extractShortReason(diagnosticText));
                 }
 
                 return OpResult::fail(GradioError { errorType, errorPath, reason });
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
             {
+                String dataPayload = extractPayload(eventLine);
+                if (extractMessageTypeFromPayload(dataPayload).equalsIgnoreCase("process_starts"))
+                {
+                    seenProcessStarts = true;
+                }
+
                 appendProcessMessageFromDataLine(eventLine);
             }
             else
@@ -1191,12 +1195,23 @@ private:
 
         response.clear();
 
-        /* WARNING: it's very important to give Gradio enough time to yield a response
+        /* Note: it's very important to give Gradio enough time to yield a response
            (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
         result = makeGETRequest(endpoint, response, inferDocumentationPath(modelPath), 120000);
 
         if (result.failed())
         {
+            if (const auto* gradioErr = std::get_if<GradioError>(&result.getError()))
+            {
+                if (gradioErr->type == GradioError::Type::QuotaExceeded
+                    && gradioErr->reason.isEmpty() && ! isZeroGPUSpace(modelPath))
+                {
+                    return OpResult::fail(GradioError { GradioError::Type::RuntimeError,
+                                                        gradioErr->endpointPath,
+                                                        gradioErr->reason });
+                }
+            }
+
             return result;
         }
 
