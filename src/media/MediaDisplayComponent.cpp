@@ -255,16 +255,18 @@ void MediaDisplayComponent::resized()
 
     // Add buttons to flex with equal height
     buttonsFlexBox.items.add(
-        FlexItem(playStopButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+        FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     if (isInputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(chooseFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(chooseFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
     if (isOutputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(copyFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(saveFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+        buttonsFlexBox.items.add(
+            FlexItem(copyFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
 
     buttonsFlexBox.performLayout(buttonsComponent.getBounds());
