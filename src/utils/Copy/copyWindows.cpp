@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <Shlobj.h>
 #include "copy.h"
 
 void copyFileToClipboard (const juce::File& file)
