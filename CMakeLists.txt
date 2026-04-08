@@ -133,9 +133,11 @@ target_sources(${PROJECT_NAME}
 )
 
 if(APPLE)
-target_sources(HARP PRIVATE src/utils/Copy/copyMac.mm)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
 elseif(WIN32)
-target_sources(HARP PRIVATE src/utils/Copy/copyWindows.cpp)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
+else()
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
 endif()
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer

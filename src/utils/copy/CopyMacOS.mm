@@ -1,6 +1,12 @@
+/**
+ * @file CopyMacOS.mm
+ * @brief Copy file path to clipboard on MacOS.
+ * @author JEYuhas
+ */
+
 #import <Cocoa/Cocoa.h>
 
-#include "copy.h"
+#include "../Interface.h"
 
 void copyFileToClipboard (const juce::File& file)
 {
