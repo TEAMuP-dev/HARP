@@ -134,7 +134,7 @@ if(APPLE)
     target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
 elseif(WIN32)
     target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
-else()
+elseif(LINUX)
     target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
 endif()
 
@@ -203,6 +203,11 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+if(LINUX)
+    find_package(X11 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11)
+endif()
 
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
