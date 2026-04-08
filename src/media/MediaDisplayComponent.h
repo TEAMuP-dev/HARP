@@ -109,7 +109,6 @@ public:
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
-
     void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
@@ -237,7 +236,6 @@ private:
     Component buttonsComponent;
     // Media + overhead panel (if any)
     Component mediaAreaContainer;
-
 
     // Header sub-components
     Label trackNameLabel;

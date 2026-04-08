@@ -13,7 +13,6 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
     deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
     deviceManager.addAudioCallback(&sourcePlayer);
-    
 
     sourcePlayer.setSource(&transportSource);
 
@@ -108,17 +107,15 @@ void MediaDisplayComponent::initializeButtons()
                                                    [this] { copyFileCallback(); },
                                                    MultiButton::DrawingMode::IconOnly,
                                                    Colours::lightblue,
-                                                   fontawesome::Save };
+                                                   fontawesome::Copy };
     // Mode when there is nothing to copy
     copyFileButtonInactiveInfo =
         MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
                             [this] {},          MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey, fontawesome::Save };
+                            Colours::lightgrey, fontawesome::Copy };
     copyFileButton.addMode(copyFileButtonActiveInfo);
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
-
-
 
     resetButtonState();
 }
@@ -765,30 +762,28 @@ void MediaDisplayComponent::saveFileCallback()
     }
 }
 
-
 void MediaDisplayComponent::copyFileCallback()
 {
-    if (!isFileLoaded())
+    if (isFileLoaded())
     {
-        if (statusMessage != nullptr)
-            statusMessage->setMessage("No file loaded.");
-        return;
-    }
+        File file = getOriginalFilePath().getLocalFile();
 
-    // If you're copying the original file path:
-    juce::File file = getOriginalFilePath().getLocalFile();
+        if (file.exists())
+        {
+            copyFileToClipboard(file);
 
-    if (file.exists())
-    {
-        copyFileToClipboard(file);
-
-        if (statusMessage != nullptr)
-            statusMessage->setMessage("File path copied to clipboard.");
-    }
-    else
-    {   
-        if (statusMessage != nullptr)
-            statusMessage->setMessage("File does not exist.");
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("File copied to clipboard.");
+            }
+        }
+        else
+        {
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("Failed to copy file to clipboard.");
+            }
+        }
     }
 }
 

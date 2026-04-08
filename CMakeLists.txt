@@ -64,8 +64,6 @@ juce_generate_juce_header(${PROJECT_NAME})
 # Finally, we supply a list of source files that will be built into the target. This is a standard
 # CMake command.
 
-
-
 target_sources(${PROJECT_NAME}
     PRIVATE
         src/Main.cpp
