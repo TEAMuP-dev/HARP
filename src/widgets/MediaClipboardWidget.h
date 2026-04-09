@@ -133,10 +133,7 @@ public:
 
     Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
 
-    Rectangle<int> getClipboardControlsBounds() const
-    {
-        return controlsComponent.getBounds().expanded(2);
-    }
+    Rectangle<int> getClipboardControlsBounds() const { return controlsComponent.getBounds().expanded(2); }
 
     Rectangle<int> getClipboardNameBoxBounds() const
     {
