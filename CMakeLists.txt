@@ -197,71 +197,12 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 if (WIN32)
-    # Function to find the specific runtime DLLs
-    function(find_vc_runtime_dlls out_var)
-        message(STATUS "Locating MSVC runtime DLLs...")
-
-        # Define the target DLLs
-        set(target_dlls
-            msvcp140.dll
-            vcruntime140.dll
-            vcruntime140_1.dll
-        )
-
-        # Get the MSVC toolchain root from the compiler path
-        get_filename_component(_compiler_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-
-        # Walk up to: .../VC/Tools/MSVC/<version>
-        get_filename_component(_msvc_root "${_compiler_dir}/../../.." ABSOLUTE)
-
-        # Construct Redist path dynamically
-        file(GLOB _redist_dirs
-            "${_msvc_root}/Redist/MSVC/*"
-        )
-
-        set(runtime_dlls)
-
-        foreach(redist_dir ${_redist_dirs})
-            # Handle both x64 and x86 automatically
-            foreach(arch x64 x86)
-                set(crt_dir "${redist_dir}/${arch}/Microsoft.VC*.CRT")
-
-                file(GLOB dlls
-                    "${crt_dir}/*.dll"
-                )
-
-                foreach(dll ${dlls})
-                    get_filename_component(name "${dll}" NAME)
-                    if(name IN_LIST target_dlls)
-                        list(APPEND runtime_dlls "${dll}")
-                    endif()
-                endforeach()
-            endforeach()
-        endforeach()
-
-        list(REMOVE_DUPLICATES runtime_dlls)
-
-        if(runtime_dlls)
-            message(STATUS "Found MSVC runtime DLLs:")
-            foreach(dll ${runtime_dlls})
-                message(STATUS "  ${dll}")
-            endforeach()
-            set(${out_var} ${runtime_dlls} PARENT_SCOPE)
-        else()
-            message(FATAL_ERROR "MSVC runtime DLLs not found")
-        endif()
-    endfunction()
-
-    # Call the function to find the specific DLLs
-    find_vc_runtime_dlls(RUNTIME_DLLS)
-
-    # Add a post-build step to copy the DLLs to the output directory
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${RUNTIME_DLLS}
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND_EXPAND_LISTS
     )
-
 endif()
 
 # copy the pyinstaller tools to the  bundle
