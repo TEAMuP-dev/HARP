@@ -13,6 +13,7 @@ This directory contains the first pass of HARP's automated model validation harn
 - Verifies that outputs exist and match the expected file type
 - Writes a machine-readable report to `artifacts/model_validation/latest.json`
 - Writes a Markdown summary to `artifacts/model_validation/latest.md`
+- Writes stable dashboard aliases to `artifacts/model_validation/status.json` and `artifacts/model_validation/dashboard.md`
 
 ## Run locally
 
@@ -59,3 +60,4 @@ export HARP_STABILITY_API_KEY=...
 - Validation entries can declare optional Python modules; missing modules are reported as skipped instead of failing the full suite.
 - Remote Hugging Face dropdown models are smoke-tested through their `controls` and `process` endpoints when network validation is enabled.
 - Stability dropdown models are smoke-tested through the provider API when `HARP_STABILITY_API_KEY` or `STABILITY_API_KEY` is set.
+- The scheduled GitHub Actions workflow uploads the report directory as an artifact and publishes `dashboard.md` to the workflow summary.

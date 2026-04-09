@@ -1,0 +1,88 @@
+name: Model Validation
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every Sunday at 14:00 UTC.
+    - cron: "0 14 * * 0"
+
+concurrency:
+  group: model-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-models:
+    name: Weekly Model Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HARP_ENABLE_NETWORK_VALIDATION: "1"
+      HARP_HUGGINGFACE_TOKEN: ${{ secrets.HARP_HUGGINGFACE_TOKEN }}
+      HARP_STABILITY_API_KEY: ${{ secrets.HARP_STABILITY_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements-model-validation.txt
+            pyharp/setup.py
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsndfile1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-model-validation.txt
+          python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Run model validation
+        id: validation
+        shell: bash
+        run: |
+          mkdir -p artifacts/model_validation
+          set +e
+          python -m pytest tests/model_validation -rA --run-network-validation \
+            --model-validation-report-dir artifacts/model_validation \
+            2>&1 | tee artifacts/model_validation/pytest.log
+          exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish dashboard to workflow summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/model_validation/dashboard.md ]; then
+            cat artifacts/model_validation/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Model Validation" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No dashboard was generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload model validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-validation-report-${{ github.run_number }}
+          path: artifacts/model_validation/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Fail workflow on validation failures
+        if: steps.validation.outputs.exit_code != '0'
+        run: exit 1

@@ -568,7 +568,26 @@ def cleanup_outputs(paths: list[Path]) -> None:
             pass
 
 
+def summarize_reason(reason: str | None) -> str:
+    if not reason:
+        return ""
+
+    lines = [line.strip() for line in str(reason).splitlines() if line.strip()]
+
+    if not lines:
+        return ""
+
+    summary = lines[-1]
+
+    for prefix in ("E   ", "Skipped: ", "AssertionError: "):
+        if summary.startswith(prefix):
+            summary = summary[len(prefix):]
+
+    return summary.replace("|", "\\|")
+
+
 def render_markdown_report(report: dict[str, Any]) -> str:
+    results = sorted(report["results"], key=lambda item: (item["outcome"], item["id"]))
     lines = [
         "# HARP Model Validation",
         "",
@@ -578,13 +597,17 @@ def render_markdown_report(report: dict[str, Any]) -> str:
         f"- Passed: {report['summary']['passed']}",
         f"- Failed: {report['summary']['failed']}",
         f"- Skipped: {report['summary']['skipped']}",
-        ""
+        "",
+        "## Dashboard",
+        "",
+        "| Model ID | Name | Outcome | Detail |",
+        "| --- | --- | --- | --- |"
     ]
 
-    for result in report["results"]:
+    for result in results:
         lines.append(
-            f"- `{result['id']}` ({result['name']}): {result['outcome']}"
-            + (f" - {result['reason']}" if result.get("reason") else "")
+            f"| `{result['id']}` | {result['name']} | {result['outcome']} | "
+            f"{summarize_reason(result.get('reason'))} |"
         )
 
     return "\n".join(lines) + "\n"

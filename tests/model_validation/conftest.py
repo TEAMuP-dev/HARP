@@ -95,5 +95,10 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         "results": results,
     }
 
-    (report_dir / "latest.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-    (report_dir / "latest.md").write_text(render_markdown_report(report), encoding="utf-8")
+    report_json = json.dumps(report, indent=2)
+    report_md = render_markdown_report(report)
+
+    (report_dir / "latest.json").write_text(report_json, encoding="utf-8")
+    (report_dir / "latest.md").write_text(report_md, encoding="utf-8")
+    (report_dir / "status.json").write_text(report_json, encoding="utf-8")
+    (report_dir / "dashboard.md").write_text(report_md, encoding="utf-8")
