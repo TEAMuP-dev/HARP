@@ -29,7 +29,6 @@ TickScheme chooseTickScheme(double visibleLength)
         { 600.0, 120.0, 5 },
     };
 
-    // Pick the scheme that gives roughly 4–12 major ticks across the visible range
     for (const auto& s : schemes)
     {
         double numMajor = visibleLength / s.majorStep;
@@ -37,7 +36,6 @@ TickScheme chooseTickScheme(double visibleLength)
             return s;
     }
 
-    // Fallback for very long files
     double majorStep = std::pow(10.0, std::floor(std::log10(visibleLength / 5.0)));
     majorStep = std::max(0.01, majorStep);
     return { majorStep, majorStep / 5.0, 5 };
@@ -95,13 +93,12 @@ void TimeAxisStrip::paint(Graphics& g)
     const float minorTickTop = static_cast<float>(h) * 0.55f;
     const float minorTickBot = static_cast<float>(h);
 
-    // --- Minor ticks ---
+    // Minor ticks
     g.setColour(Colours::grey.withAlpha(0.5f));
 
     const double firstMinor = std::ceil(visibleStart / minorStep) * minorStep;
     for (double t = firstMinor; t <= visibleEnd && t <= totalLength; t += minorStep)
     {
-        // Skip positions that coincide with major ticks
         double remainder = std::fmod(t, majorStep);
         if (remainder < minorStep * 0.1 || (majorStep - remainder) < minorStep * 0.1)
             continue;
@@ -113,7 +110,7 @@ void TimeAxisStrip::paint(Graphics& g)
         g.drawVerticalLine(static_cast<int>(x), minorTickTop, minorTickBot);
     }
 
-    // --- Major ticks and labels ---
+    // Major ticks and labels
     g.setColour(Colours::lightgrey.withAlpha(0.9f));
 
     const int labelH = jmin(13, h - 2);
@@ -1008,7 +1005,6 @@ bool MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     if (pps <= 0.0f)
         return false;
 
-    // minPps = zoomed all the way out; maxPps = zoomed all the way in (~5 seconds visible).
     const double minVisibleSeconds = 5.0;
     const float minPps = static_cast<float>(mediaWidth / totalLength);
     float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
@@ -1018,7 +1014,6 @@ bool MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
     newPps = jlimit(minPps, maxPps, newPps);
 
-    // If pps didn't change, zoom has hit a limit
     if (std::abs(newPps - pps) < 0.01f)
         return false;
 
@@ -1076,9 +1071,7 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 }
                 else
                 {
-                    bool zoomed = horizontalZoom(static_cast<double>(wheel.deltaY), scrollTime);
-                    if (! zoomed)
-                        horizontalMove(static_cast<double>(wheel.deltaY));
+                    horizontalZoom(static_cast<double>(wheel.deltaY), scrollTime);
                 }
             }
             else
