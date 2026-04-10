@@ -14,6 +14,8 @@
 
 #include "../utils/Logging.h"
 
+#include "PreviewPaneWidget.h"
+
 using namespace juce;
 
 class MediaClipboardWidget : public Component, public ChangeListener
@@ -322,6 +324,11 @@ public:
             });
     }
 
+    void setPreviewPane(PreviewPaneWidget* pane)
+    {
+        previewPane = pane;
+    }
+
 private:
     void initializeButtons()
     {
@@ -482,12 +489,22 @@ private:
                 selectTrack(mediaDisplay);
                 // Handle track area resizing after adding a track
                 resized(); // TODO - decouple from track selection?
+
+                // Tell the preview pane about the selection
+                if (previewPane != nullptr)
+                    previewPane->showTrack(mediaDisplay);
             }
         }
         else
         {
             // Handle deselect events
             resetState();
+
+            // Clear the preview pane when nothing is selected
+            if (previewPane != nullptr)
+            {
+                previewPane->clearTrack();
+            }
         }
     }
 
@@ -629,6 +646,8 @@ private:
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
+
+    PreviewPaneWidget* previewPane = nullptr;
 
     MediaDisplayComponent* currentlySelectedDisplay;
 };

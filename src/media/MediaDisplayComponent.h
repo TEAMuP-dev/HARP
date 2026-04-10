@@ -24,7 +24,8 @@ enum class DisplayMode
     Input,
     Output,
     Hybrid, // All functionality
-    Thumbnail // Reduced functionality
+    Thumbnail, // Reduced functionality
+    Preview // For preview pane
 };
 
 class ColorablePanel : public Component
@@ -95,6 +96,7 @@ public:
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
+    bool isPreviewTrack() { return displayMode == DisplayMode::Preview; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -187,7 +189,12 @@ private:
 
     void timerCallback() override;
     virtual void visibleRangeCallback() { repaint(); }
-    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override 
+    { 
+        repaint();
+        DBG_AND_LOG("MediaDisplayComponent::changeListenerCallback fired, scheduling sendChangeMessage");
+        MessageManager::callAsync([this]() { sendChangeMessage(); });
+    }
 
     virtual void resetMedia() = 0;
     void resetPaths();

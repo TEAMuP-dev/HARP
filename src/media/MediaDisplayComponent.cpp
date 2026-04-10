@@ -321,6 +321,14 @@ void MediaDisplayComponent::resized()
                                   .withHeight(trackNameLabel.getFont().getHeight())
                                   .withMargin(1));
     }
+    else if (isPreviewTrack())
+    {
+        // Place header over media
+        mainFlexBox.flexDirection = FlexBox::Direction::column;
+        mainFlexBox.items.add(FlexItem(headerComponent)
+                                  .withHeight(trackNameLabel.getFont().getHeight())
+                                  .withMargin(1));
+    }
     else
     {
         // Place header beside media
@@ -340,7 +348,7 @@ void MediaDisplayComponent::resized()
     // Add track label to header flex
     headerFlexBox.items.add(FlexItem(trackNameLabel).withFlex(1).withMargin({ 0, 2, 0, 0 }));
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && ! isPreviewTrack())
     {
         // Add buttons to header flex
         headerFlexBox.items.add(FlexItem(buttonsComponent).withFlex(2).withMargin({ 0, 0, 0, 1 }));
@@ -353,7 +361,7 @@ void MediaDisplayComponent::resized()
     float trackNameLabelWidth = labelBounds.getWidth();
     float trackNameLabelHeight = labelBounds.getHeight();
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && ! isPreviewTrack())
     {
         Point<float> labelCenter = labelBounds.getCentre();
         // Rotate track name label 90 degrees

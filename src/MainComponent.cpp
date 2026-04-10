@@ -17,6 +17,8 @@ MainComponent::MainComponent()
     addAndMakeVisible(mediaClipboardWidget);
     addAndMakeVisible(previewPaneWidget);
 
+    mediaClipboardWidget.setPreviewPane(&previewPaneWidget);
+
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
     showPreviewPane = Settings::getBoolValue("view.showPreviewPane", true);
