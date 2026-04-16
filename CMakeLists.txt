@@ -130,6 +130,14 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioIcons.h
 )
 
+if(APPLE)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
+elseif(WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
+elseif(LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
+endif()
+
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
 # of compile definitions to switch certain features on/off, so if there's a particular feature you
@@ -196,6 +204,11 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_warning_flags
 )
 
+if(LINUX)
+    find_package(X11 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11)
+endif()
+
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
 # C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140.dll
@@ -212,14 +225,16 @@ if (WIN32)
         )
 
         # Set the base path for Visual Studio 2022 redistributable DLLs
-        set(VS_CRT_BASE_PATH "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT")
+        set(VS_CRT_BASE_PATH
+		    "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
+		    "C:/Program Files (x86)/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
+		    )
 
         # Search for the DLLs in the specified base path
         file(GLOB_RECURSE all_runtime_dlls
-            LIST_DIRECTORIES false
-            "${VS_CRT_BASE_PATH}/*.dll"
+                LIST_DIRECTORIES false
+                ${VS_CRT_BASE_PATH}/*.dll
         )
-
         set(runtime_dlls)
 
         foreach(dll ${all_runtime_dlls})

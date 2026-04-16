@@ -2,6 +2,7 @@
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
 
+<<<<<<< feature/375-time-axis-horizontal-zoom
 #include <cmath>
 
 namespace
@@ -135,6 +136,9 @@ void TimeAxisStrip::paint(Graphics& g)
                    true);
     }
 }
+=======
+#include "../utils/Interface.h"
+>>>>>>> develop
 
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
@@ -242,6 +246,22 @@ void MediaDisplayComponent::initializeButtons()
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
+
+    // Mode when an copyable file is loaded
+    copyFileButtonActiveInfo = MultiButton::Mode { "Copy-Active",
+                                                   "Click to copy the media file.",
+                                                   [this] { copyFileCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightblue,
+                                                   fontawesome::Copy };
+    // Mode when there is nothing to copy
+    copyFileButtonInactiveInfo =
+        MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
+                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            Colours::lightgrey, fontawesome::Copy };
+    copyFileButton.addMode(copyFileButtonActiveInfo);
+    copyFileButton.addMode(copyFileButtonInactiveInfo);
+    headerComponent.addAndMakeVisible(copyFileButton);
 
     resetButtonState();
 }
@@ -379,16 +399,18 @@ void MediaDisplayComponent::resized()
 
     // Add buttons to flex with equal height
     buttonsFlexBox.items.add(
-        FlexItem(playStopButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+        FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     if (isInputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(chooseFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(chooseFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
     if (isOutputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(saveFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+        buttonsFlexBox.items.add(
+            FlexItem(copyFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
 
     buttonsFlexBox.performLayout(buttonsComponent.getBounds());
@@ -592,6 +614,7 @@ void MediaDisplayComponent::resetButtonState()
     playStopButton.setMode(playButtonInactiveInfo.displayLabel);
     chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -624,6 +647,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonActiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::setOriginalFilePath(URL filePath)
@@ -900,6 +924,31 @@ void MediaDisplayComponent::saveFileCallback()
                         //DBG_AND_LOG("MediaDisplayComponent::saveFileCallback: Save operation canceled.");
                     }
                 });
+        }
+    }
+}
+
+void MediaDisplayComponent::copyFileCallback()
+{
+    if (isFileLoaded())
+    {
+        File file = getOriginalFilePath().getLocalFile();
+
+        if (file.exists())
+        {
+            copyFileToClipboard(file);
+
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("File copied to clipboard.");
+            }
+        }
+        else
+        {
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("Failed to copy file to clipboard.");
+            }
         }
     }
 }
