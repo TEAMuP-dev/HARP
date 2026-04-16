@@ -225,14 +225,16 @@ if (WIN32)
         )
 
         # Set the base path for Visual Studio 2022 redistributable DLLs
-        set(VS_CRT_BASE_PATH "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT")
+        set(VS_CRT_BASE_PATH
+		    "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
+		    "C:/Program Files (x86)/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
+		    )
 
         # Search for the DLLs in the specified base path
         file(GLOB_RECURSE all_runtime_dlls
-            LIST_DIRECTORIES false
-            "${VS_CRT_BASE_PATH}/*.dll"
+                LIST_DIRECTORIES false
+                ${VS_CRT_BASE_PATH}/*.dll
         )
-
         set(runtime_dlls)
 
         foreach(dll ${all_runtime_dlls})
