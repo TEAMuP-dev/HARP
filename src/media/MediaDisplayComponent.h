@@ -111,6 +111,7 @@ public:
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
+    void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
@@ -250,6 +251,9 @@ private:
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
