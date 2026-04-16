@@ -4,6 +4,132 @@
 
 #include "../utils/Interface.h"
 
+#include <cmath>
+
+namespace
+{
+struct TickScheme
+{
+    double majorStep;
+    double minorStep;
+    int minorCount;
+};
+
+TickScheme chooseTickScheme(double visibleLength)
+{
+    static const TickScheme schemes[] = {
+        { 0.1, 0.02, 5 },   { 0.5, 0.1, 5 },    { 1.0, 0.25, 4 },    { 2.0, 0.5, 4 },
+        { 5.0, 1.0, 5 },    { 15.0, 5.0, 3 },   { 30.0, 10.0, 3 },   { 60.0, 15.0, 4 },
+        { 120.0, 30.0, 4 }, { 300.0, 60.0, 5 }, { 600.0, 120.0, 5 },
+    };
+
+    for (const auto& s : schemes)
+    {
+        double numMajor = visibleLength / s.majorStep;
+        if (numMajor >= 2.0 && numMajor <= 15.0)
+            return s;
+    }
+
+    double majorStep = std::pow(10.0, std::floor(std::log10(visibleLength / 5.0)));
+    majorStep = std::max(0.01, majorStep);
+    return { majorStep, majorStep / 5.0, 5 };
+}
+
+String formatTime(double t, double step)
+{
+    if (t >= 3600.0)
+    {
+        int hrs = static_cast<int>(t / 3600.0);
+        int mins = static_cast<int>(std::fmod(t, 3600.0) / 60.0);
+        int secs = static_cast<int>(std::fmod(t, 60.0));
+        return String(hrs) + "h " + String(mins) + "m " + String(secs) + "s";
+    }
+    if (t >= 60.0)
+    {
+        int mins = static_cast<int>(t / 60.0);
+        int secs = static_cast<int>(std::fmod(t, 60.0));
+        return String(mins) + "m " + String(secs) + "s";
+    }
+    if (step >= 1.0)
+        return String(static_cast<int>(t)) + "s";
+
+    return String(t, 2) + "s";
+}
+} // namespace
+
+void TimeAxisStrip::paint(Graphics& g)
+{
+    if (owner == nullptr || ! owner->isFileLoaded())
+        return;
+
+    const auto& visibleRange = owner->getVisibleRange();
+    const float pps = owner->getPixelsPerSecond();
+    const double totalLength = owner->getTotalLengthInSecs();
+
+    if (pps <= 0.0f || visibleRange.getLength() <= 0.0)
+        return;
+
+    const double visibleStart = visibleRange.getStart();
+    const double visibleEnd = visibleRange.getEnd();
+    const int w = getWidth();
+    const int h = getHeight();
+
+    g.setColour(Colours::darkgrey);
+    g.fillRect(getLocalBounds());
+
+    const double visibleLength = visibleRange.getLength();
+    const auto scheme = chooseTickScheme(visibleLength);
+    const double majorStep = scheme.majorStep;
+    const double minorStep = scheme.minorStep;
+
+    const float majorTickTop = 0.0f;
+    const float majorTickBot = static_cast<float>(h);
+    const float minorTickTop = static_cast<float>(h) * 0.55f;
+    const float minorTickBot = static_cast<float>(h);
+
+    // Minor ticks
+    g.setColour(Colours::grey.withAlpha(0.5f));
+
+    const double firstMinor = std::ceil(visibleStart / minorStep) * minorStep;
+    for (double t = firstMinor; t <= visibleEnd && t <= totalLength; t += minorStep)
+    {
+        double remainder = std::fmod(t, majorStep);
+        if (remainder < minorStep * 0.1 || (majorStep - remainder) < minorStep * 0.1)
+            continue;
+
+        const float x = static_cast<float>((t - visibleStart) * pps);
+        if (x < 0.0f || x > static_cast<float>(w))
+            continue;
+
+        g.drawVerticalLine(static_cast<int>(x), minorTickTop, minorTickBot);
+    }
+
+    // Major ticks and labels
+    g.setColour(Colours::lightgrey.withAlpha(0.9f));
+
+    const int labelH = jmin(13, h - 2);
+    g.setFont(static_cast<float>(labelH));
+
+    const double firstMajor = std::ceil(visibleStart / majorStep) * majorStep;
+    for (double t = firstMajor; t <= visibleEnd && t <= totalLength; t += majorStep)
+    {
+        const float x = static_cast<float>((t - visibleStart) * pps);
+        if (x < -60.0f || x > static_cast<float>(w) + 60.0f)
+            continue;
+
+        g.drawVerticalLine(static_cast<int>(x), majorTickTop, majorTickBot);
+
+        String label = formatTime(t, majorStep);
+        g.drawText(label,
+                   static_cast<int>(x) + 3,
+                   0,
+                   jmin(90, w - static_cast<int>(x)),
+                   h,
+                   Justification::centredLeft,
+                   true);
+    }
+}
+
 MediaDisplayComponent::MediaDisplayComponent() : MediaDisplayComponent("Media Track") {}
 
 MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -38,8 +164,11 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
 
+    timeAxisStrip = std::make_unique<TimeAxisStrip>(this);
+
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
     mediaAreaContainer.addAndMakeVisible(contentComponent);
+    mediaAreaContainer.addAndMakeVisible(*timeAxisStrip);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     addAndMakeVisible(mediaAreaContainer);
 
@@ -296,6 +425,20 @@ void MediaDisplayComponent::resized()
 
     // Media component takes remaining space
     mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1));
+
+    if (timeAxisStrip != nullptr)
+    {
+        timeAxisStrip->setVisible(horizontalScrollBar.isVisible());
+        if (timeAxisStrip->isVisible())
+        {
+            mediaAreaFlexBox.items.add(FlexItem(*timeAxisStrip)
+                                           .withHeight(timeAxisHeight)
+                                           .withMargin({ 0,
+                                                         getVerticalControlsWidth(),
+                                                         static_cast<float>(controlSpacing),
+                                                         getMediaXPos() }));
+        }
+    }
 
     if (horizontalScrollBar.isVisible())
     {
@@ -870,6 +1013,9 @@ void MediaDisplayComponent::updateVisibleRange(Range<double> r)
     updateCursorPosition();
     repositionLabels();
 
+    if (timeAxisStrip != nullptr)
+        timeAxisStrip->repaint();
+
     visibleRangeCallback();
 }
 
@@ -878,24 +1024,53 @@ void MediaDisplayComponent::horizontalMove(double deltaT)
     double visibleStart = visibleRange.getStart();
     double visibleLength = visibleRange.getLength();
 
+    const double totalLength = getTotalLengthInSecs();
+    const double maxStart = jmax(0.0, totalLength - visibleLength);
     double newStart = visibleStart - deltaT * visibleLength / 10.0;
-    newStart = jlimit(0.0, jmax(0.0, getTotalLengthInSecs() - visibleLength), newStart);
+    newStart = jlimit(0.0, maxStart, newStart);
 
     updateVisibleRange({ newStart, newStart + visibleLength });
 }
 
 void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
 {
-    horizontalZoomFactor = jlimit(1.0, 2.0, horizontalZoomFactor + deltaZoom);
+    const float mediaWidth = getMediaWidth();
+    const double totalLength = getTotalLengthInSecs();
 
-    double newScale = jmax(0.05, getTotalLengthInSecs() * (2.0 - horizontalZoomFactor));
+    if (mediaWidth <= 0.0f || totalLength <= 0.0)
+        return;
 
+    const float pps = getPixelsPerSecond();
+    if (pps <= 0.0f)
+        return;
+
+    const double minVisibleSeconds = 5.0;
+    const float minPps = static_cast<float>(mediaWidth / totalLength);
+    float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
+    maxPps = jmax(maxPps, minPps);
+
+    float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
+    newPps = jlimit(minPps, maxPps, newPps);
+
+    if (std::abs(newPps - pps) < 0.01f)
+        return;
+
+    double newVisibleLength = static_cast<double>(mediaWidth) / static_cast<double>(newPps);
+    newVisibleLength = jmin(newVisibleLength, totalLength);
+
+    double anchorRatio = 0.5;
     double visibleStart = visibleRange.getStart();
-    double visibleEnd = visibleRange.getEnd();
     double visibleLength = visibleRange.getLength();
 
-    double newStart = scrollPosT - newScale * (scrollPosT - visibleStart) / visibleLength;
-    double newEnd = scrollPosT + newScale * (visibleEnd - scrollPosT) / visibleLength;
+    if (visibleLength > 0.0)
+        anchorRatio = (scrollPosT - visibleStart) / visibleLength;
+
+    anchorRatio = jlimit(0.0, 1.0, anchorRatio);
+
+    const double maxStart = jmax(0.0, totalLength - newVisibleLength);
+    double newStart = scrollPosT - anchorRatio * newVisibleLength;
+    newStart = jlimit(0.0, maxStart, newStart);
+    double newEnd = newStart + newVisibleLength;
 
     updateVisibleRange({ newStart, newEnd });
 }
@@ -926,7 +1101,7 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
         double scrollTime = mediaXToTime(evt.position.getX());
 
-        if (! commandMod)
+        if (! commandMod && evt.eventComponent == getMediaComponent())
         {
             if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
             {
