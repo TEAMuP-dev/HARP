@@ -18,6 +18,15 @@ MainComponent::MainComponent()
     addAndMakeVisible(previewPaneWidget);
 
     mediaClipboardWidget.setPreviewPane(&previewPaneWidget);
+    // Wire minimize and close buttons to toggle the preview pane off
+    previewPaneWidget.onClose    = [this] { viewPreviewPaneCallback(); };
+
+    // Wire the resize drag to update previewPaneHeight and re-layout
+    previewPaneWidget.onResize = [this](int newHeight)
+    {
+        previewPaneHeight = newHeight;
+        resized();
+    };
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
@@ -381,7 +390,8 @@ void MainComponent::viewPreviewPaneCallback()
 
         if (showPreviewPane)
         {
-            // Scale bounds to extend window by height of status area
+            previewPaneWidget.resetMinimizeState();
+            previewPaneHeight = previewPaneWidget.getExpandedHeight();
             windowBounds.setHeight(
                 jmin(currentDisplayHeight, windowBounds.getHeight() + previewPaneHeight));
         }
