@@ -87,6 +87,29 @@ private:
     bool isActive = false;
 };
 
+class GhostTrackComponent : public Component
+{
+public:
+    void setImage(const Image& img)
+    {
+        ghostImage = img;
+        repaint();
+    }
+
+    void paint(Graphics& g) override
+    {
+        if (ghostImage.isNull()) return;
+
+        g.setOpacity(0.4f);
+        g.drawImage(ghostImage,
+                    getLocalBounds().toFloat(),
+                    RectanglePlacement::stretchToFit);
+    }
+
+private:
+    Image ghostImage;
+};
+
 class TrackAreaWidget : public Component,
                         public ChangeListener,
                         public ChangeBroadcaster,
@@ -99,6 +122,7 @@ public:
         : displayMode(mode), fixedTrackHeight(trackHeight), dragOverlay(overlay)
     {
         addMouseListener(this, true);
+        addChildComponent(ghostTrack);
     }
 
     ~TrackAreaWidget() { resetState(); }
@@ -136,12 +160,22 @@ public:
                 if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
                 {
                     FlexItem gap;
-
-                    if (fixedTrackHeight)
-                        gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
-                    else  
-                        gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
-
+                    if (isDraggingOutside)
+                    {
+                        ghostTrack.setVisible(true);
+                        if (fixedTrackHeight)
+                            gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
+                        else
+                            gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                    }
+                    else
+                    {
+                        ghostTrack.setVisible(false);
+                        if (fixedTrackHeight)
+                            gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                        else
+                            gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                    }
                     mainBox.items.add(gap);
                 }
 
@@ -165,12 +199,22 @@ public:
             if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
             {
                 FlexItem gap;
-
-                if (fixedTrackHeight)
-                    gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                if (isDraggingOutside)
+                {
+                    ghostTrack.setVisible(true);
+                    if (fixedTrackHeight)
+                        gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
+                    else
+                        gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                }
                 else
-                    gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
-
+                {
+                    ghostTrack.setVisible(false);
+                    if (fixedTrackHeight)
+                        gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                    else
+                        gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                }
                 mainBox.items.add(gap);
             }
 
@@ -572,6 +616,7 @@ private:
             if (dragOverlay != nullptr)
             {
                 Image snapshot = draggedTrack->createComponentSnapshot(draggedTrack->getLocalBounds());
+                ghostTrack.setImage(snapshot);
                 dragOverlay->startDrag(snapshot, dragClickOffset);
                 draggedTrack->setVisible(false);
             }
@@ -580,17 +625,20 @@ private:
         if (isDraggingTrack)
         {
             int newInsertIndex = -1;
+            bool wasOutside = isDraggingOutside;
 
             if (getLocalBounds().contains(posInThis))
             {
                 newInsertIndex = getInsertIndexAtY(posInThis.y);
+                isDraggingOutside = false;
             }
             else
             {
                 newInsertIndex = dragOriginIndex;
+                isDraggingOutside = true;
             }
 
-            if (newInsertIndex != dragInsertIndex)
+            if (newInsertIndex != dragInsertIndex || isDraggingOutside != wasOutside)
             {
                 dragInsertIndex = newInsertIndex;
                 resized();
@@ -634,6 +682,8 @@ private:
         dragInsertIndex = -1;
         dragOriginIndex = -1;
         isDraggingTrack = false;
+        isDraggingOutside = false;
+        ghostTrack.setVisible(false);
 
         resized();
     }
@@ -648,9 +698,11 @@ private:
     // For reordering tracks via dragging
     MediaDisplayComponent* draggedTrack = nullptr;
     DragOverlayComponent* dragOverlay = nullptr;
+    GhostTrackComponent ghostTrack;
     int dragInsertIndex = -1;
     int dragOriginIndex = -1;
     bool isDraggingTrack = false;
+    bool isDraggingOutside = false;
     Point<int> dragClickOffset { 0, 0 };
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
