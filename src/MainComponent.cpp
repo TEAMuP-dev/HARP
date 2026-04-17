@@ -207,13 +207,27 @@ void MainComponent::openSettingsWindow()
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new SettingsWindow());
+    options.content.setOwned(new SettingsWindow([this] { restoreViewDefaults(); }));
 
     options.useNativeTitleBar = true;
     options.resizable = true;
     options.escapeKeyTriggersCloseButton = true;
 
     options.launchAsync();
+}
+
+void MainComponent::restoreViewDefaults()
+{
+    // Default: status area shown — toggle if currently hidden
+    if (! showStatusArea)
+        viewStatusAreaCallback();
+
+    // Default: media clipboard shown — toggle if currently hidden
+    if (! showMediaClipboard)
+        viewMediaClipboardCallback();
+
+    // showWelcomePopup default (true) is already restored by clearing settings;
+    // it will show on the next launch automatically.
 }
 
 /* --View-- */

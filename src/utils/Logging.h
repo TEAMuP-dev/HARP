@@ -48,6 +48,14 @@ public:
 
     File getLogFile() const { return logger->getLogFile(); }
 
+    void clearLog()
+    {
+        File logFile = logger->getLogFile();
+        logger.reset();              // release file handle before truncating
+        logFile.replaceWithText(""); // truncate
+        initializeLogger();          // reopen
+    }
+
 private:
     HARPLogger() = default; // Prevents instantiation from outside
 

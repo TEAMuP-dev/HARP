@@ -16,7 +16,7 @@ using namespace juce;
 class GeneralSettingsTab : public Component
 {
 public:
-    GeneralSettingsTab();
+    GeneralSettingsTab(std::function<void()> onRestoreDefaults = {});
     ~GeneralSettingsTab() override = default;
 
     void resized() override;
@@ -24,9 +24,15 @@ public:
 private:
     void handleOpenLogFolder();
     void handleOpenSettings();
+    void handleClearLogs();
+    void handleRestoreDefaults();
+
+    std::function<void()> onRestoreDefaults;
 
     TextButton openLogFolderButton;
+    TextButton clearLogsButton;
     TextButton openSettingsButton;
+    TextButton restoreDefaultsButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GeneralSettingsTab)
 };

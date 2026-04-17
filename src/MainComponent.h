@@ -67,6 +67,7 @@ public:
     // View
     void viewStatusAreaCallback();
     void viewMediaClipboardCallback();
+    void restoreViewDefaults();
 
     // Help
     void openAboutWindow();

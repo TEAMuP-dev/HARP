@@ -1,6 +1,7 @@
 #include "GeneralSettingsTab.h"
 
-GeneralSettingsTab::GeneralSettingsTab()
+GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestoreDefaults)
+    : onRestoreDefaults(std::move(onRestoreDefaults))
 {
     // Set up button to open log folder
     openLogFolderButton.setButtonText("Open Log Folder");
@@ -11,6 +12,16 @@ GeneralSettingsTab::GeneralSettingsTab()
     openSettingsButton.setButtonText("Open Settings File");
     openSettingsButton.onClick = [this] { handleOpenSettings(); };
     addAndMakeVisible(openSettingsButton);
+
+    // Set up button to clear logs
+    clearLogsButton.setButtonText("Clear Logs");
+    clearLogsButton.onClick = [this] { handleClearLogs(); };
+    addAndMakeVisible(clearLogsButton);
+
+    // Set up button to restore default settings
+    restoreDefaultsButton.setButtonText("Restore Default Settings");
+    restoreDefaultsButton.onClick = [this] { handleRestoreDefaults(); };
+    addAndMakeVisible(restoreDefaultsButton);
 }
 
 void GeneralSettingsTab::resized()
@@ -18,10 +29,15 @@ void GeneralSettingsTab::resized()
     Rectangle<int> area = getLocalBounds().reduced(10);
 
     openLogFolderButton.setBounds(area.removeFromTop(30));
+    area.removeFromTop(10);
 
-    area.removeFromTop(10); // Filler space
+    clearLogsButton.setBounds(area.removeFromTop(30));
+    area.removeFromTop(10);
 
     openSettingsButton.setBounds(area.removeFromTop(30));
+    area.removeFromTop(10);
+
+    restoreDefaultsButton.setBounds(area.removeFromTop(30));
 }
 
 void GeneralSettingsTab::handleOpenLogFolder()
@@ -39,4 +55,25 @@ void GeneralSettingsTab::handleOpenSettings()
     {
         // TODO - handler error case
     }
+}
+
+void GeneralSettingsTab::handleClearLogs()
+{
+    HARPLogger::getInstance()->clearLog();
+}
+
+void GeneralSettingsTab::handleRestoreDefaults()
+{
+    if (auto* settings = Settings::getUserSettings())
+    {
+        StringArray allKeys = settings->getAllProperties().getAllKeys();
+
+        for (const auto& key : allKeys)
+            settings->removeValue(key);
+
+        settings->saveIfNeeded();
+    }
+
+    if (onRestoreDefaults)
+        onRestoreDefaults();
 }
