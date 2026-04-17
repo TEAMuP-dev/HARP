@@ -550,6 +550,7 @@ private:
         if (clickedDisplay)
         {
             draggedTrack = clickedDisplay;
+            dragOriginIndex = getDraggedTrackIndex();
 
             Point<int> mouseInThis = e.getEventRelativeTo(this).getPosition();
             Point<int> trackTopLeft = draggedTrack->getBounds().getTopLeft();
@@ -581,7 +582,13 @@ private:
             int newInsertIndex = -1;
 
             if (getLocalBounds().contains(posInThis))
+            {
                 newInsertIndex = getInsertIndexAtY(posInThis.y);
+            }
+            else
+            {
+                newInsertIndex = dragOriginIndex;
+            }
 
             if (newInsertIndex != dragInsertIndex)
             {
@@ -625,6 +632,7 @@ private:
         // Reset the drag state
         draggedTrack = nullptr;
         dragInsertIndex = -1;
+        dragOriginIndex = -1;
         isDraggingTrack = false;
 
         resized();
@@ -641,6 +649,7 @@ private:
     MediaDisplayComponent* draggedTrack = nullptr;
     DragOverlayComponent* dragOverlay = nullptr;
     int dragInsertIndex = -1;
+    int dragOriginIndex = -1;
     bool isDraggingTrack = false;
     Point<int> dragClickOffset { 0, 0 };
 
