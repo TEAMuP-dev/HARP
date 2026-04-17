@@ -130,6 +130,14 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioIcons.h
 )
 
+if(APPLE)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
+elseif(WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
+elseif(LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
+endif()
+
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
 # of compile definitions to switch certain features on/off, so if there's a particular feature you
@@ -195,6 +203,11 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+if(LINUX)
+    find_package(X11 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11)
+endif()
 
 if (WIN32)
     install(TARGETS ${PROJECT_NAME}

@@ -17,6 +17,8 @@
 
 using namespace juce;
 
+class MediaDisplayComponent;
+
 enum class DisplayMode
 {
     Input,
@@ -44,6 +46,17 @@ public:
 private:
     Colour defaultColor;
     Colour backgroundColor;
+};
+
+class TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override;
+
+private:
+    MediaDisplayComponent* owner = nullptr;
 };
 
 class MediaDisplayComponent : public Component,
@@ -111,10 +124,12 @@ public:
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
+    void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
+    const Range<double>& getVisibleRange() const { return visibleRange; }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -151,6 +166,7 @@ protected:
 
     const int controlSpacing = 1;
     const int scrollBarSize = 8;
+    const int timeAxisHeight = 20;
 
     // Media (audio or MIDI) content area
     Component contentComponent;
@@ -158,6 +174,8 @@ protected:
     String mediaInstructions;
 
     Range<double> visibleRange;
+
+    std::unique_ptr<TimeAxisStrip> timeAxisStrip;
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -250,6 +268,9 @@ private:
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
