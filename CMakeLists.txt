@@ -209,61 +209,16 @@ if(LINUX)
     target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11)
 endif()
 
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140.dll
 if (WIN32)
-    # Function to find the specific runtime DLLs
-    function(find_vc_runtime_dlls out_var)
-        message(STATUS "Searching for specific runtime DLLs...")
-
-        # Define the target DLLs
-        set(target_dlls
-            "msvcp140.dll"
-            "vcruntime140_1.dll"
-            "vcruntime140.dll"
-        )
-
-        # Set the base path for Visual Studio 2022 redistributable DLLs
-        set(VS_CRT_BASE_PATH
-		    "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
-		    "C:/Program Files (x86)/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT"
-		    )
-
-        # Search for the DLLs in the specified base path
-        file(GLOB_RECURSE all_runtime_dlls
-                LIST_DIRECTORIES false
-                ${VS_CRT_BASE_PATH}/*.dll
-        )
-        set(runtime_dlls)
-
-        foreach(dll ${all_runtime_dlls})
-            get_filename_component(dll_name ${dll} NAME)
-            if(dll_name IN_LIST target_dlls)
-                list(APPEND runtime_dlls ${dll})
-            endif()
-        endforeach()
-
-        if(runtime_dlls)
-            message(STATUS "Found specific runtime DLLs:")
-            foreach(dll ${runtime_dlls})
-                message(STATUS "${dll}")
-            endforeach()
-            set(${out_var} ${runtime_dlls} PARENT_SCOPE)
-        else()
-            message(FATAL_ERROR "Required specific runtime DLLs not found")
-        endif()
-    endfunction()
-
-    # Call the function to find the specific DLLs
-    find_vc_runtime_dlls(RUNTIME_DLLS)
-
-    # Add a post-build step to copy the specific DLLs to the output directory
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${RUNTIME_DLLS}
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    install(TARGETS ${PROJECT_NAME}
+        RUNTIME_DEPENDENCIES
+            PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+            POST_EXCLUDE_REGEXES "system32"
+        RUNTIME DESTINATION .
+        RESOURCE DESTINATION .
+    )
 endif()
+
 # copy the pyinstaller tools to the  bundle
 # if (APPLE)
 #     add_custom_command(TARGET ${PROJECT_NAME}
