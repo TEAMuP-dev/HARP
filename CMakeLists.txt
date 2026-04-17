@@ -198,10 +198,11 @@ target_link_libraries(${PROJECT_NAME}
 
 if (WIN32)
     install(TARGETS ${PROJECT_NAME}
-        RUNTIME DESTINATION .
         RUNTIME_DEPENDENCIES
             PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
             POST_EXCLUDE_REGEXES "system32"
+        RUNTIME DESTINATION .
+        RESOURCE DESTINATION .
     )
 endif()
 
