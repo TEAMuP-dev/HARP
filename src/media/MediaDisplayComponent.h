@@ -303,6 +303,7 @@ private:
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
+    std::unique_ptr<FileChooser> saveLabelsBrowser; // RZ: File chooser for saving labels
 
     double horizontalZoomFactor;
     ScrollBar horizontalScrollBar { false };

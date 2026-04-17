@@ -1607,17 +1607,50 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     resized(); // Remove overhead label panel
 }
 
-void MediaDisplayComponent::saveLabelsCallback()
+void MediaDisplayComponent::saveLabelsCallback() // RZ: Callback for saving labels
 {
     if (currentLabelsJson.isEmpty())
         return;
 
-    juce::File outputFile("/Users/richardzhu/Library/Caches/HARP/labels.json");
-    outputFile.getParentDirectory().createDirectory();
-    outputFile.replaceWithText(currentLabelsJson);
+    // 1. Initialize the file chooser with a default name "labels.json"
+    saveLabelsBrowser = std::make_unique<juce::FileChooser>(
+        "Select a save path for labels...", 
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("labels.json"), 
+        "*.json");
 
-    if (statusMessage != nullptr)
-    {
-        statusMessage->setMessage("Labels exported to " + outputFile.getFullPathName());
-    }
+    // 2. Launch the dialog asynchronously
+    saveLabelsBrowser->launchAsync(
+        juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+        [this](const juce::FileChooser& fc)
+        {
+            juce::File chosenFile = fc.getResult();
+            
+            // 3. If the user didn't cancel the dialog...
+            if (chosenFile != juce::File{})
+            {
+                // Ensure it ends with .json
+                if (!chosenFile.hasFileExtension(".json"))
+                {
+                    chosenFile = chosenFile.withFileExtension(".json");
+                }
+
+                // 4. Attempt to write the text to the chosen file
+                if (chosenFile.replaceWithText(currentLabelsJson))
+                {
+                    if (statusMessage != nullptr)
+                    {
+                        statusMessage->setMessage("Labels successfully exported to " + chosenFile.getFullPathName());
+                    }
+                }
+                else
+                {
+                    // Display an error popup if writing to the disk fails
+                    juce::AlertWindow::showMessageBoxAsync(
+                        juce::AlertWindow::WarningIcon,
+                        "Save Failed",
+                        "Failed to save labels to " + chosenFile.getFullPathName() + ".",
+                        "OK");
+                }
+            }
+        });
 }
