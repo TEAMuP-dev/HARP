@@ -253,6 +253,27 @@ void MediaDisplayComponent::initializeButtons()
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
 
+    // RZ: Save labels button
+   // Mode when labels exist
+    saveLabelsButtonActiveInfo = MultiButton::Mode { "SaveLabels-Active",
+                                                   "Click to export labels to JSON.",
+                                                   [this] { saveLabelsCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightgreen, // Colored green to distinguish from media save
+                                                   fontawesome::Save };
+    // Mode when no labels exist
+    saveLabelsButtonInactiveInfo = MultiButton::Mode { "SaveLabels-Inactive",
+                                                       "No labels to save.",
+                                                       [this] {},
+                                                       MultiButton::DrawingMode::IconOnly,
+                                                       Colours::lightgrey,
+                                                       fontawesome::Save };
+    saveLabelsButton.addMode(saveLabelsButtonActiveInfo);
+    saveLabelsButton.addMode(saveLabelsButtonInactiveInfo);
+    headerComponent.addAndMakeVisible(saveLabelsButton); 
+
+    saveLabelsButton.setVisible(false); // RZ: Hide the button initially
+
     resetButtonState();
 }
 
@@ -399,6 +420,12 @@ void MediaDisplayComponent::resized()
     {
         buttonsFlexBox.items.add(
             FlexItem(saveFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+
+        if (currentLabelsJson.isNotEmpty()) // RZ: Show save labels button only if there are labels to save
+        {
+            buttonsFlexBox.items.add(
+                FlexItem(saveLabelsButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+        }
         buttonsFlexBox.items.add(
             FlexItem(copyFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
@@ -1491,6 +1518,55 @@ void MediaDisplayComponent::addLabels(const LabelList& labels)
             addOverheadLabel(ol);
         }
     }
+    // RZ: Generate JSON representation of labels for export
+    juce::Array<juce::var> labelArray;
+    for (const auto& l : labels)
+    {
+        if (!shouldRenderLabel(l)) continue;
+        
+        juce::DynamicObject::Ptr labelObj = new juce::DynamicObject();
+        labelObj->setProperty("t", l->t);
+        labelObj->setProperty("label", l->label);
+
+        if (l->duration.has_value()) labelObj->setProperty("duration", l->duration.value());
+        if (l->description.has_value()) labelObj->setProperty("description", l->description.value());
+        if (l->color.has_value()) labelObj->setProperty("color", l->color.value());
+        if (l->link.has_value()) labelObj->setProperty("link", l->link.value());
+
+        if (auto* audioLabel = dynamic_cast<AudioLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "AudioLabel");
+            if (audioLabel->amplitude.has_value()) labelObj->setProperty("amplitude", audioLabel->amplitude.value());
+        }
+        else if (auto* midiLabel = dynamic_cast<MidiLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "MidiLabel");
+            if (midiLabel->pitch.has_value()) labelObj->setProperty("pitch", midiLabel->pitch.value());
+        }
+        else if (auto* specLabel = dynamic_cast<SpectrogramLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "SpectrogramLabel");
+            if (specLabel->frequency.has_value()) labelObj->setProperty("frequency", specLabel->frequency.value());
+        }
+        else
+        {
+            labelObj->setProperty("label_type", "OutputLabel");
+        }
+
+        labelArray.add(juce::var(labelObj));
+    }
+
+    juce::DynamicObject::Ptr rootObj = new juce::DynamicObject();
+    rootObj->setProperty("labels", juce::var(labelArray));
+    currentLabelsJson = juce::JSON::toString(juce::var(rootObj));
+
+    // Activate the button if we successfully generated labels
+    if (!labelArray.isEmpty()) {
+        saveLabelsButton.setMode(saveLabelsButtonActiveInfo.displayLabel);
+
+        saveLabelsButton.setVisible(true); // RZ: Show the button when there are labels to save
+        resized(); // RZ: Update layout to accommodate button
+    }
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
@@ -1523,7 +1599,25 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     if (! processingIdxCutoff)
     {
         overheadLabels.clear();
+        currentLabelsJson.clear(); // CLEAR CACHE
+        saveLabelsButton.setMode(saveLabelsButtonInactiveInfo.displayLabel); // DEACTIVATE BUTTON
+        saveLabelsButton.setVisible(false); // RZ: Hide the button when there are no labels to save
     }
 
     resized(); // Remove overhead label panel
+}
+
+void MediaDisplayComponent::saveLabelsCallback()
+{
+    if (currentLabelsJson.isEmpty())
+        return;
+
+    juce::File outputFile("/Users/richardzhu/Library/Caches/HARP/labels.json");
+    outputFile.getParentDirectory().createDirectory();
+    outputFile.replaceWithText(currentLabelsJson);
+
+    if (statusMessage != nullptr)
+    {
+        statusMessage->setMessage("Labels exported to " + outputFile.getFullPathName());
+    }
 }

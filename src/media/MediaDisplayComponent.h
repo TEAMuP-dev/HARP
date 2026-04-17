@@ -125,6 +125,8 @@ public:
 
     void saveFileCallback();
     void copyFileCallback();
+    void saveLabelsCallback(); // RZ: Callback for saving labels
+    String currentLabelsJson; // Stores the serialized JSON string for this track
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
@@ -271,6 +273,9 @@ private:
     MultiButton copyFileButton;
     MultiButton::Mode copyFileButtonActiveInfo;
     MultiButton::Mode copyFileButtonInactiveInfo;
+    MultiButton saveLabelsButton; // RZ: Save labels button
+    MultiButton::Mode saveLabelsButtonActiveInfo;
+    MultiButton::Mode saveLabelsButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
