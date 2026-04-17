@@ -126,6 +126,7 @@ public:
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
+    void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
@@ -223,7 +224,7 @@ private:
     int correctMediaXBounds(float mX, float width);
 
     void horizontalMove(double deltaT);
-    bool horizontalZoom(double deltaZoom, double scrollPosT);
+    void horizontalZoom(double deltaZoom, double scrollPosT);
 
     void scrollBarMoved(ScrollBar* scrollBarThatHasMoved, double scrollBarRangeStart) override;
 
@@ -274,6 +275,9 @@ private:
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };

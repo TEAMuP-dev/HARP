@@ -149,6 +149,9 @@ jobs:
       run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
       # dummy build
       # run: touch dummy
+    - name: Install
+      shell: bash
+      run: cmake --install ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --prefix install
 
     # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
     - name: Install Python dependencies for MACOS dmg
@@ -167,14 +170,14 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: ${{ env.ARTIFACTS_PATH }}
+        path: ${{ env.BUILD_DIR }}/install
 
     - name: Upload Zip (Linux)
       if: ${{ matrix.name == 'Linux' }}
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PRODUCT_NAME }}
-        path: ${{ env.ARTIFACTS_PATH }}
+        path: ${{ env.BUILD_DIR }}/install
 
     - name: Upload DMG (macOS)
       if: ${{ matrix.name == 'macOS' }}

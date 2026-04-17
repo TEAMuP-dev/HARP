@@ -2,6 +2,8 @@
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
 
+#include "../utils/Interface.h"
+
 #include <cmath>
 
 namespace
@@ -16,17 +18,9 @@ struct TickScheme
 TickScheme chooseTickScheme(double visibleLength)
 {
     static const TickScheme schemes[] = {
-        { 0.1,   0.02,  5 },
-        { 0.5,   0.1,   5 },
-        { 1.0,   0.25,  4 },
-        { 2.0,   0.5,   4 },
-        { 5.0,   1.0,   5 },
-        { 15.0,  5.0,   3 },
-        { 30.0,  10.0,  3 },
-        { 60.0,  15.0,  4 },
-        { 120.0, 30.0,  4 },
-        { 300.0, 60.0,  5 },
-        { 600.0, 120.0, 5 },
+        { 0.1, 0.02, 5 },   { 0.5, 0.1, 5 },    { 1.0, 0.25, 4 },    { 2.0, 0.5, 4 },
+        { 5.0, 1.0, 5 },    { 15.0, 5.0, 3 },   { 30.0, 10.0, 3 },   { 60.0, 15.0, 4 },
+        { 120.0, 30.0, 4 }, { 300.0, 60.0, 5 }, { 600.0, 120.0, 5 },
     };
 
     for (const auto& s : schemes)
@@ -243,6 +237,22 @@ void MediaDisplayComponent::initializeButtons()
     saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
 
+    // Mode when an copyable file is loaded
+    copyFileButtonActiveInfo = MultiButton::Mode { "Copy-Active",
+                                                   "Click to copy the media file.",
+                                                   [this] { copyFileCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightblue,
+                                                   fontawesome::Copy };
+    // Mode when there is nothing to copy
+    copyFileButtonInactiveInfo =
+        MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
+                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            Colours::lightgrey, fontawesome::Copy };
+    copyFileButton.addMode(copyFileButtonActiveInfo);
+    copyFileButton.addMode(copyFileButtonInactiveInfo);
+    headerComponent.addAndMakeVisible(copyFileButton);
+
     resetButtonState();
 }
 
@@ -387,16 +397,18 @@ void MediaDisplayComponent::resized()
 
     // Add buttons to flex with equal height
     buttonsFlexBox.items.add(
-        FlexItem(playStopButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+        FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     if (isInputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(chooseFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(chooseFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
     if (isOutputTrack())
     {
         buttonsFlexBox.items.add(
-            FlexItem(saveFileButton).withHeight(22).withWidth(22).withMargin({ 2, 0, 2, 0 }));
+            FlexItem(saveFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+        buttonsFlexBox.items.add(
+            FlexItem(copyFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
 
     buttonsFlexBox.performLayout(buttonsComponent.getBounds());
@@ -600,6 +612,7 @@ void MediaDisplayComponent::resetButtonState()
     playStopButton.setMode(playButtonInactiveInfo.displayLabel);
     chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -632,6 +645,7 @@ void MediaDisplayComponent::updateDisplay(const URL& filePath)
 
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
+    copyFileButton.setMode(copyFileButtonActiveInfo.displayLabel);
 }
 
 void MediaDisplayComponent::setOriginalFilePath(URL filePath)
@@ -912,6 +926,31 @@ void MediaDisplayComponent::saveFileCallback()
     }
 }
 
+void MediaDisplayComponent::copyFileCallback()
+{
+    if (isFileLoaded())
+    {
+        File file = getOriginalFilePath().getLocalFile();
+
+        if (file.exists())
+        {
+            copyFileToClipboard(file);
+
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("File copied to clipboard.");
+            }
+        }
+        else
+        {
+            if (statusMessage != nullptr)
+            {
+                statusMessage->setMessage("Failed to copy file to clipboard.");
+            }
+        }
+    }
+}
+
 float MediaDisplayComponent::getPixelsPerSecond()
 {
     if (visibleRange.getLength())
@@ -1001,41 +1040,47 @@ void MediaDisplayComponent::horizontalMove(double deltaT)
     updateVisibleRange({ newStart, newStart + visibleLength });
 }
 
-bool MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
+void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
 {
     const float mediaWidth = getMediaWidth();
     const double totalLength = getTotalLengthInSecs();
 
     if (mediaWidth <= 0.0f || totalLength <= 0.0)
-        return false;
+        return;
 
     const float pps = getPixelsPerSecond();
     if (pps <= 0.0f)
-        return false;
+        return;
 
     const double minVisibleSeconds = 5.0;
     const float minPps = static_cast<float>(mediaWidth / totalLength);
     float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
-    if (maxPps < minPps)
-        maxPps = minPps;
+    maxPps = jmax(maxPps, minPps);
 
     float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
     newPps = jlimit(minPps, maxPps, newPps);
 
     if (std::abs(newPps - pps) < 0.01f)
-        return false;
+        return;
 
     double newVisibleLength = static_cast<double>(mediaWidth) / static_cast<double>(newPps);
-    if (newVisibleLength > totalLength)
-        newVisibleLength = totalLength;
+    newVisibleLength = jmin(newVisibleLength, totalLength);
+
+    double anchorRatio = 0.5;
+    double visibleStart = visibleRange.getStart();
+    double visibleLength = visibleRange.getLength();
+
+    if (visibleLength > 0.0)
+        anchorRatio = (scrollPosT - visibleStart) / visibleLength;
+
+    anchorRatio = jlimit(0.0, 1.0, anchorRatio);
 
     const double maxStart = jmax(0.0, totalLength - newVisibleLength);
-    double newStart = scrollPosT - newVisibleLength * 0.5;
+    double newStart = scrollPosT - anchorRatio * newVisibleLength;
     newStart = jlimit(0.0, maxStart, newStart);
     double newEnd = newStart + newVisibleLength;
 
     updateVisibleRange({ newStart, newEnd });
-    return true;
 }
 
 void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
@@ -1064,7 +1109,7 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
 
         double scrollTime = mediaXToTime(evt.position.getX());
 
-        if (! commandMod)
+        if (! commandMod && evt.eventComponent == getMediaComponent())
         {
             if (std::abs(wheel.deltaX) > 2 * std::abs(wheel.deltaY))
             {
