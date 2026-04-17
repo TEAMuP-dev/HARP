@@ -211,7 +211,7 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
         case CommandIDs::viewPreviewPane:
             result.setInfo("Preview Pane", "Toggles display of track preview pane", "View", 0);
-            result.setTicked(showPreviewPane);
+            result.setTicked(mediaClipboardWidget.isPreviewPaneVisible());
 
             break;
 
@@ -287,7 +287,7 @@ bool MainComponent::perform(const InvocationInfo& info)
 
         case CommandIDs::viewPreviewPane:
             DBG_AND_LOG("MainComponent:: perform: \"ViewPreviewPane\" command invoked.");
-            viewPreviewPaneCallback();
+            mediaClipboardWidget.togglePreviewPane();
             break;
 
         /* --Help-- */

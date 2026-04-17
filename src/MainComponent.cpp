@@ -15,22 +15,9 @@ MainComponent::MainComponent()
     addAndMakeVisible(mainModelTab);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
-    addAndMakeVisible(previewPaneWidget);
-
-    mediaClipboardWidget.setPreviewPane(&previewPaneWidget);
-    // Wire minimize and close buttons to toggle the preview pane off
-    previewPaneWidget.onClose    = [this] { viewPreviewPaneCallback(); };
-
-    // Wire the resize drag to update previewPaneHeight and re-layout
-    previewPaneWidget.onResize = [this](int newHeight)
-    {
-        previewPaneHeight = newHeight;
-        resized();
-    };
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
-    showPreviewPane = Settings::getBoolValue("view.showPreviewPane", true);
 
     requiredWindowWidth = minimumWindowWidth;
     requiredWindowHeight = minimumWindowHeight;
@@ -120,15 +107,6 @@ void MainComponent::resized()
     else
     {
         statusAreaWidget.setBounds(0, 0, 0, 0);
-    }
-
-    if (showPreviewPane)
-    {
-        mainPanel.items.add(FlexItem(previewPaneWidget).withHeight(previewPaneHeight));
-    }
-    else
-    {
-        previewPaneWidget.setBounds(0, 0, 0, 0);
     }
 
     fullWindow.items.add(FlexItem(mainPanel).withFlex(1.0));
@@ -351,65 +329,6 @@ void MainComponent::viewMediaClipboardCallback()
 
     // Add view preference to persistent settings
     Settings::setValue("view.showMediaClipboard", showMediaClipboard ? "1" : "0", true);
-
-    // Send status message to add check to file menu
-    commandManager.commandStatusChanged();
-
-    updateWindowConstraints();
-}
-
-void MainComponent::viewPreviewPaneCallback()
-{
-    // Toggle preview pane visibility state
-    showPreviewPane = ! showPreviewPane;
-
-    // Find top-level window for resizing
-    if (auto* window = findParentComponentOfClass<DocumentWindow>())
-    {
-        // Determine which display contains HARP
-        auto* currentDisplay =
-            Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
-
-        // Get current bounds of top-level window
-        Rectangle<int> windowBounds = window->getBounds();
-
-        // Default display height to height of current window
-        int currentDisplayHeight = windowBounds.getHeight();
-
-        if (currentDisplay != nullptr)
-        {
-            if (window->isFullScreen())
-            {
-                currentDisplayHeight = currentDisplay->totalArea.getHeight();
-            }
-            else
-            {
-                currentDisplayHeight = currentDisplay->userArea.getHeight();
-            }
-        }
-
-        if (showPreviewPane)
-        {
-            previewPaneWidget.resetMinimizeState();
-            previewPaneHeight = previewPaneWidget.getExpandedHeight();
-            windowBounds.setHeight(
-                jmin(currentDisplayHeight, windowBounds.getHeight() + previewPaneHeight));
-        }
-        else
-        {
-            if (! window->isFullScreen())
-            {
-                // Scale bounds to reduce window to main height
-                windowBounds.setHeight(windowBounds.getHeight() - previewPaneHeight);
-            }
-        }
-
-        // Set extended or reduced bounds
-        window->setBounds(windowBounds);
-    }
-
-    // Add view preference to persistent settings
-    Settings::setValue("view.showPreviewPane", showPreviewPane ? "1" : "0", true);
 
     // Send status message to add check to file menu
     commandManager.commandStatusChanged();

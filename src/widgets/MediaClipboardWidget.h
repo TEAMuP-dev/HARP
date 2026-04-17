@@ -34,6 +34,18 @@ public:
         trackAreaWidget.addChangeListener(this);
         trackArea.setViewedComponent(&trackAreaWidget, false);
         addAndMakeVisible(trackArea);
+
+        addAndMakeVisible(previewPaneWidget);
+        previewPaneWidget.onClose = [this] 
+        {
+            showPreviewPane = false;
+            resized();
+        };
+        previewPaneWidget.onResize = [this](int newHeight)
+        {
+            previewPaneHeight = newHeight;
+            resized();
+        };
     }
 
     ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
@@ -55,6 +67,15 @@ public:
                 .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
         mainFlexBox.items.add(
             FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
+        if (showPreviewPane)
+        {
+            mainFlexBox.items.add(
+            FlexItem(previewPaneWidget).withHeight(previewPaneHeight).withMargin({ 0, marginSize, marginSize, marginSize }));
+        }
+        else
+        {
+            previewPaneWidget.setBounds(0, 0, 0, 0);
+        }
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -165,6 +186,11 @@ public:
     Rectangle<int> getSendToDAWButtonBounds() const
     {
         return getLocalArea(&buttonsComponent, sendToDAWButton.getBounds()).expanded(2);
+    }
+
+    bool isPreviewPaneVisible() const
+    {
+        return showPreviewPane;
     }
 
     void addFileCallback()
@@ -324,9 +350,15 @@ public:
             });
     }
 
-    void setPreviewPane(PreviewPaneWidget* pane)
+    void togglePreviewPane()
     {
-        previewPane = pane;
+        showPreviewPane = !showPreviewPane;
+        if (showPreviewPane)
+        {
+            previewPaneWidget.resetMinimizeState();
+            previewPaneHeight = previewPaneWidget.getExpandedHeight();
+        }
+        resized();
     }
 
 private:
@@ -491,8 +523,7 @@ private:
                 resized(); // TODO - decouple from track selection?
 
                 // Tell the preview pane about the selection
-                if (previewPane != nullptr)
-                    previewPane->showTrack(mediaDisplay);
+                previewPaneWidget.showTrack(mediaDisplay);
             }
         }
         else
@@ -501,10 +532,7 @@ private:
             resetState();
 
             // Clear the preview pane when nothing is selected
-            if (previewPane != nullptr)
-            {
-                previewPane->clearTrack();
-            }
+            previewPaneWidget.clearTrack();
         }
     }
 
@@ -645,9 +673,11 @@ private:
     Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
-    std::unique_ptr<FileChooser> chooseFileBrowser;
+    PreviewPaneWidget previewPaneWidget;
+    int previewPaneHeight = 200;
+    bool showPreviewPane = true;
 
-    PreviewPaneWidget* previewPane = nullptr;
+    std::unique_ptr<FileChooser> chooseFileBrowser;
 
     MediaDisplayComponent* currentlySelectedDisplay;
 };
