@@ -247,7 +247,7 @@ After running `package.sh`, you should have a signed and notarized `dmg` file in
     title     = {{HARP} 3.0: Generalizing {I/O} and {API} Support for Machine Learning in Digital Audio Workstations},
     author    = {Cwitkowitz, Frank and Benetatos, Christodoulos and Deng, Qixin and Yu, Huiran and Pruyne, Nathan and O'Reilly, Patrick and Garcia, Hugo Flores and Duan, Zhiyao and Pardo, Bryan},
     year      = 2025,
-    booktitle = {AI for Music Workshop}
+    booktitle = {NeurIPS AI for Music Workshop}
 }
 ```
 

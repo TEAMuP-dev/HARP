@@ -34,7 +34,7 @@ public:
         : DocumentWindow("Welcome to HARP",
                          Desktop::getInstance().getDefaultLookAndFeel().findColour(
                              ResizableWindow::backgroundColourId),
-                         DocumentWindow::allButtons),
+                         DocumentWindow::closeButton),
           mainComponent(mainComp)
     {
         setUsingNativeTitleBar(true);
@@ -43,7 +43,7 @@ public:
         content = c;
 
         setAlwaysOnTop(true);
-        setResizable(true, true); // Still need to set this to fix size with constrainer
+        setResizable(false, false);
 
         setConstrainer(&constrainer);
         constrainer.setMinimumSize(content->getWidth(), content->getHeight());
@@ -479,7 +479,6 @@ public:
         g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
     }
 
-private:
     void positionOnMainComponentDisplay()
     {
         const int width = content != nullptr ? content->getWidth() : getWidth();
@@ -504,6 +503,7 @@ private:
                            targetBounds.getCentreY() - height / 2);
     }
 
+private:
     class WelcomeContent : public Component
     {
     public:

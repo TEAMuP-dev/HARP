@@ -104,10 +104,7 @@ public:
         return bounds.expanded(2, 2);
     }
 
-    bool isModelLoaded()
-    {
-        return model->isLoaded();
-    }
+    bool isModelLoaded() { return model->isLoaded(); }
 
     void resized() override
     {
@@ -493,6 +490,9 @@ private:
         modelSelectionWidget.setDisabled();
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
+        // Switch choose-file button to inactive mode on all tracks during processing
+        inputTrackAreaWidget.setLoadTrackEnabled(false);
+
         uint64_t processID = currentProcessID;
 
         processingThreadPool.addJob(
@@ -527,6 +527,9 @@ private:
                             modelSelectionWidget
                                 .setFinishedState(); // TODO - should this be last selected?
                             processCancelButton.setMode(processButtonInfo.displayLabel);
+
+                            // Switch choose-file button back to active on all tracks
+                            inputTrackAreaWidget.setLoadTrackEnabled(true);
                         };
 
                         if (result.wasOk())
@@ -572,6 +575,9 @@ private:
 
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
+
+        // Switch choose-file button back to active on all tracks
+        inputTrackAreaWidget.setLoadTrackEnabled(true);
     }
 
     static constexpr float marginSize = 2;

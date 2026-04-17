@@ -116,7 +116,7 @@ private:
     void deinitializeMenuBar();
 
     std::unique_ptr<MenuBarComponent> menuBar;
-    std::unique_ptr<PopupMenu> macExtraMenu; // TODO - is this actually used?
+    std::unique_ptr<PopupMenu> macExtraMenu;
 
     /* Application */
 
