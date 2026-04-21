@@ -16,12 +16,6 @@ from tests.model_validation.helpers import (
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
-        "--run-network-validation",
-        action="store_true",
-        default=False,
-        help="Run model validation cases that require network access.",
-    )
-    parser.addoption(
         "--model-validation-report-dir",
         action="store",
         default=None,

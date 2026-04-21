@@ -5,20 +5,19 @@ import pytest
 from tests.model_validation.helpers import (
     build_process_inputs,
     cleanup_outputs,
-    get_required_env_value,
     import_app_module,
     iter_enabled_validation_models,
     load_registry,
     missing_python_modules,
-    network_validation_enabled,
-    query_remote_gradio_controls,
-    run_remote_gradio_validation,
-    run_stability_remote_validation,
     validate_outputs,
 )
 
 
-ENABLED_MODELS = iter_enabled_validation_models()
+ENABLED_MODELS = [
+    model
+    for model in iter_enabled_validation_models()
+    if model.get("validation", {}).get("mode") == "local_pyharp_example"
+]
 
 
 def test_model_registry_has_unique_ids_and_featured_paths() -> None:
@@ -40,21 +39,11 @@ def test_model_registry_has_unique_ids_and_featured_paths() -> None:
 
 
 @pytest.mark.parametrize("model_entry", ENABLED_MODELS, ids=[model["id"] for model in ENABLED_MODELS])
-def test_enabled_model_validation(model_entry: dict, request: pytest.FixtureRequest) -> None:
+def test_enabled_model_validation(model_entry: dict) -> None:
     missing_modules = missing_python_modules(model_entry)
 
     if missing_modules:
         pytest.skip(f"Missing optional Python dependencies: {', '.join(missing_modules)}")
-
-    if model_entry.get("validation", {}).get("requires_network") and not network_validation_enabled(
-        request.config
-    ):
-        pytest.skip("Network-backed validation is disabled for this test run.")
-
-    if model_entry.get("validation", {}).get("requires_env") and not get_required_env_value(model_entry):
-        pytest.skip(
-            f"Required environment variable {model_entry['validation']['requires_env']} is not set."
-        )
 
     mode = model_entry["validation"]["mode"]
     files_to_cleanup = []
@@ -73,14 +62,6 @@ def test_enabled_model_validation(model_entry: dict, request: pytest.FixtureRequ
 
             result = module.process_fn(*build_process_inputs(model_entry))
             files_to_cleanup = validate_outputs(result, model_entry)
-        elif mode == "remote_gradio":
-            controls = query_remote_gradio_controls(model_entry)
-            assert "card" in controls
-            assert controls.get("inputs") is not None
-            assert controls.get("outputs")
-            files_to_cleanup = run_remote_gradio_validation(model_entry)
-        elif mode == "remote_api":
-            files_to_cleanup = run_stability_remote_validation(model_entry)
         else:
             raise AssertionError(f"Unsupported validation mode: {mode}")
     finally:

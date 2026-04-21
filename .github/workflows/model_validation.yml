@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      HARP_ENABLE_NETWORK_VALIDATION: "1"
       HARP_HUGGINGFACE_TOKEN: ${{ secrets.HARP_HUGGINGFACE_TOKEN }}
       HARP_STABILITY_API_KEY: ${{ secrets.HARP_STABILITY_API_KEY }}
 
@@ -41,7 +40,21 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libsndfile1
+          sudo apt-get install -y \
+            ffmpeg \
+            libasound2-dev \
+            libcurl4-openssl-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libsndfile1 \
+            libx11-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libxrender-dev
 
       - name: Install Python dependencies
         run: |
@@ -49,15 +62,33 @@ jobs:
           python -m pip install -r requirements-model-validation.txt
           python -m pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Run model validation
-        id: validation
+      - name: Configure native tests
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build native tests
+        run: cmake --build build --target HARPRemoteModelTests --config Release
+
+      - name: Run remote model validation
+        id: remote_validation
         shell: bash
         run: |
-          mkdir -p artifacts/model_validation
+          mkdir -p artifacts/model_validation/remote
           set +e
-          python -m pytest tests/model_validation -rA --run-network-validation \
-            --model-validation-report-dir artifacts/model_validation \
-            2>&1 | tee artifacts/model_validation/pytest.log
+          build/HARPRemoteModelTests_artefacts/Release/HARPRemoteModelTests \
+            2>&1 | tee artifacts/model_validation/remote/validator.log
+          exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run local PyHARP example validation
+        id: local_validation
+        shell: bash
+        run: |
+          mkdir -p artifacts/model_validation/local
+          set +e
+          python -m pytest tests/model_validation -rA \
+            --model-validation-report-dir artifacts/model_validation/local \
+            2>&1 | tee artifacts/model_validation/local/pytest.log
           exit_code=${PIPESTATUS[0]}
           echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
           exit 0
@@ -66,12 +97,22 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f artifacts/model_validation/dashboard.md ]; then
-            cat artifacts/model_validation/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+          echo "## Remote HARP Models" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/model_validation/remote/dashboard.md ]; then
+            cat artifacts/model_validation/remote/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+          elif [ -f artifacts/model_validation/remote/validator.log ]; then
+            cat artifacts/model_validation/remote/validator.log >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "## Model Validation" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "No dashboard was generated." >> "$GITHUB_STEP_SUMMARY"
+            echo "No remote test log was generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Local PyHARP Examples" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/model_validation/local/dashboard.md ]; then
+            cat artifacts/model_validation/local/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No local dashboard was generated." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload model validation report
@@ -84,5 +125,5 @@ jobs:
           retention-days: 90
 
       - name: Fail workflow on validation failures
-        if: steps.validation.outputs.exit_code != '0'
+        if: steps.remote_validation.outputs.exit_code != '0' || steps.local_validation.outputs.exit_code != '0'
         run: exit 1

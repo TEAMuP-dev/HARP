@@ -221,7 +221,8 @@ struct GradioError
 {
     enum class Type
     {
-        RuntimeError
+        RuntimeError,
+        Timeout
     };
 
     Type type;
@@ -246,6 +247,20 @@ inline String toUserMessage(const GradioError& e)
 
             userMessage += ". If this is a Hugging Face space running on ZeroGPU, this "
                            "can also indicate a user has exceeded their daily ZeroGPU quota.";
+
+            return userMessage;
+
+        case GradioError::Type::Timeout:
+
+            userMessage = "A streamed Gradio request timed out";
+
+            if (e.endpointPath.isNotEmpty())
+            {
+                userMessage += " at endpoint \"" + e.endpointPath + "\"";
+            }
+
+            userMessage += ". The space may be stuck, overloaded, or sending heartbeat events "
+                           "without completing.";
 
             return userMessage;
     }

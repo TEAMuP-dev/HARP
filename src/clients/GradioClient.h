@@ -670,8 +670,17 @@ private:
             return result;
         }
 
+        const auto startedAt = Time::getMillisecondCounterHiRes();
+        int heartbeatCount = 0;
+
         while (! stream->isExhausted())
         {
+            if (timeoutMs > 0
+                && (Time::getMillisecondCounterHiRes() - startedAt) > static_cast<double>(timeoutMs))
+            {
+                return OpResult::fail(GradioError { GradioError::Type::Timeout, errorPath });
+            }
+
             response = stream->readNextLine();
 
             DBG_AND_LOG("GradioClient::makeGETRequest: Streamed response \"" << response << "\".");
@@ -702,10 +711,20 @@ private:
                 // - event: heartbeat
                 // - event: log
                 // - event: progress
+                if (response.containsIgnoreCase(enumToString(GradioEvents::Heartbeat)))
+                {
+                    heartbeatCount += 1;
+
+                    if (heartbeatCount % 25 == 0)
+                    {
+                        DBG_AND_LOG("GradioClient::makeGETRequest: Still waiting after "
+                                    << heartbeatCount << " heartbeat events.");
+                    }
+                }
             }
         }
 
-        return OpResult::ok();
+        return OpResult::fail(GradioError { GradioError::Type::Timeout, errorPath });
     }
 
     OpResult downloadFile(String downloadPath, File& fileToDownload) //override

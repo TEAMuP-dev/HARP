@@ -1,15 +1,14 @@
 # Model Validation
 
-This directory contains the first pass of HARP's automated model validation harness.
+This directory contains HARP's model validation tooling.
 
 ## What it does
 
 - Reads the shared registry at `resources/models/model_registry.json`
 - Verifies the registry has unique ids and featured model paths
-- Runs enabled validation entries through pytest
+- Runs local PyHARP example validations through pytest
+- Runs remote HARP dropdown-model validation through native C++ tests
 - Calls local PyHARP `process_fn` implementations with small fixture media files
-- Exercises remote Hugging Face dropdown models through the same Gradio API flow HARP uses
-- Exercises Stability dropdown models when an API key is provided
 - Verifies that outputs exist and match the expected file type
 - Writes a machine-readable report to `artifacts/model_validation/latest.json`
 - Writes a Markdown summary to `artifacts/model_validation/latest.md`
@@ -23,30 +22,36 @@ Install the base dependencies:
 python3 -m pip install -r requirements-model-validation.txt
 ```
 
-Run the validation suite:
+Run the Python local-example validations:
 
 ```bash
 python3 -m pytest tests/model_validation -rA
 ```
 
-Write reports to a custom directory:
+Write Python validation reports to a custom directory:
 
 ```bash
 python3 -m pytest tests/model_validation -rA \
   --model-validation-report-dir build/model-validation
 ```
 
-Enable validations that require network access:
+Build and run the native remote-model tests:
 
 ```bash
-python3 -m pytest tests/model_validation -rA --run-network-validation
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target HARPRemoteModelTests --config Release
+build/HARPRemoteModelTests_artefacts/Release/HARPRemoteModelTests
 ```
 
-You can also enable network-backed validation with:
+Optionally limit the native run to a single remote model:
 
 ```bash
-export HARP_ENABLE_NETWORK_VALIDATION=1
+export HARP_MODEL_VALIDATION_ID=audioseal
+build/HARPRemoteModelTests_artefacts/Release/HARPRemoteModelTests
 ```
+
+In `Debug` builds, low-level JUCE `DBG(...)` logging from the existing client code will still appear.
+Use the `Release` target above for the clean one-line-per-model output.
 
 Provide a Stability key for the Stability dropdown models:
 
@@ -58,6 +63,6 @@ export HARP_STABILITY_API_KEY=...
 
 - The registry is shared with HARP's featured model picker through bundled `BinaryData`.
 - Validation entries can declare optional Python modules; missing modules are reported as skipped instead of failing the full suite.
-- Remote Hugging Face dropdown models are smoke-tested through their `controls` and `process` endpoints when network validation is enabled.
-- Stability dropdown models are smoke-tested through the provider API when `HARP_STABILITY_API_KEY` or `STABILITY_API_KEY` is set.
+- Remote dropdown models are smoke-tested through HARP's existing C++ `Model` and client logic.
+- Python now covers only local PyHARP examples and report generation.
 - The scheduled GitHub Actions workflow uploads the report directory as an artifact and publishes `dashboard.md` to the workflow summary.

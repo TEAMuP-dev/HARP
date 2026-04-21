@@ -20,6 +20,7 @@ file(STRINGS VERSION CURRENT_VERSION)
 # directories, and the current project version. This is a standard CMake command.
 
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
+enable_testing()
 
 # Add these lines to suppress warnings for JUCE 
 # ------------------------------------------
@@ -169,6 +170,44 @@ juce_add_binary_data(stability_controls
         ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/audio-to-audio.json
         ${CMAKE_SOURCE_DIR}/resources/models/model_registry.json
 )
+
+juce_add_console_app(HARPRemoteModelTests
+    PRODUCT_NAME "HARPRemoteModelTests"
+)
+
+target_sources(HARPRemoteModelTests
+    PRIVATE
+        tests/cpp/RemoteModelValidationMain.cpp
+)
+
+target_include_directories(HARPRemoteModelTests
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+)
+
+target_compile_definitions(HARPRemoteModelTests
+    PRIVATE
+        JUCE_USE_CURL=1
+        JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
+        HARP_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+target_link_libraries(HARPRemoteModelTests
+    PRIVATE
+        juce::juce_audio_basics
+        juce::juce_audio_formats
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_gui_basics
+        stability_controls
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+)
+
+add_test(NAME HARPRemoteModelTests
+    COMMAND $<TARGET_FILE:HARPRemoteModelTests>)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_gui_extra` module. Inter-module
