@@ -19,11 +19,17 @@
 #include "../utils/Errors.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
+#include "../utils/ModelRegistry.h"
 
 using namespace juce;
 
 struct SharedChoices : public ChangeBroadcaster
 {
+    SharedChoices()
+        : savedModelPaths(ModelRegistry::getFeaturedModelPaths())
+    {
+    }
+
     int getIndexForPath(const std::string& p)
     {
         int idx = -1;
@@ -56,24 +62,7 @@ struct SharedChoices : public ChangeBroadcaster
         sendSynchronousChangeMessage();
     }
 
-    std::vector<std::string> savedModelPaths = {
-        "click here to enter a custom path...",
-        "stability/text-to-audio",
-        "stability/audio-to-audio",
-        "teamup-tech/text2midi-symbolic-music-generation",
-        "teamup-tech/demucs-source-separation",
-        "teamup-tech/solo-piano-audio-to-midi-transcription",
-        "teamup-tech/transkun", // TODO - more intuitive name
-        "teamup-tech/TRIA", // TODO - more intuitive name: (The Rhythm In Anything) conditional drum generation
-        "teamup-tech/anticipatory-music-transformer",
-        "teamup-tech/vampnet-conditional-music-generation",
-        "teamup-tech/harmonic-percussive-separation",
-        "teamup-tech/Kokoro-TTS",
-        "teamup-tech/MegaTTS3-Voice-Cloning",
-        "teamup-tech/midi-synthesizer",
-        "teamup-tech/audioseal", // TODO - more intuitive name
-        // "xribene/HARP-UI-TEST-v3"
-    };
+    std::vector<std::string> savedModelPaths;
 };
 
 class CustomPathComponent : public Component

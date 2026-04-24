@@ -64,6 +64,8 @@ temp
 cache
 dist
 
+artifacts/model_validation/
+
 testproj.RPP
 
 # Ignore all the *.md files in website/HARP
