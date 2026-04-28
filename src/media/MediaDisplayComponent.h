@@ -79,6 +79,7 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
+    void paintOverChildren(Graphics& g) override;
     virtual void resized() override;
     void repositionLabels();
 

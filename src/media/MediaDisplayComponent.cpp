@@ -315,9 +315,48 @@ void MediaDisplayComponent::paint(Graphics& g)
     }
 }
 
+void MediaDisplayComponent::paintOverChildren(Graphics& g)
+{
+    // Detect optional AND input track AND not a thumbnail
+    if (!isRequired() && isInputTrack() && !isThumbnailTrack())
+    {
+        // Grab that 24-pixel vertical slice on the far left that we reserved in resized()
+        auto bannerArea = getLocalBounds().removeFromLeft(24);
+
+        // Draw the solid orange background
+        g.setColour(Colours::darkorange);
+        g.fillRect(bannerArea);
+
+        // Setup text formatting
+        g.setColour(Colours::white);
+        g.setFont(12.0f);
+
+        // Save the graphics state before rotating
+        Graphics::ScopedSaveState state(g);
+
+        // Rotate the graphics context -90 degrees around the center of our banner
+        float cx = static_cast<float>(bannerArea.getCentreX());
+        float cy = static_cast<float>(bannerArea.getCentreY());
+        g.addTransform(AffineTransform::rotation(-MathConstants<float>::halfPi, cx, cy));
+
+        // Create a rotated bounding box for the text
+        Rectangle<float> textBounds(0, 0, static_cast<float>(bannerArea.getHeight()), static_cast<float>(bannerArea.getWidth()));
+        textBounds.setCentre(cx, cy);
+
+        // Draw the text inside our rotated box
+        g.drawText("OPTIONAL INPUT TRACK", textBounds, Justification::centred, false);
+    }
+}
+
 void MediaDisplayComponent::resized()
 {
     Rectangle<int> totalBounds = getLocalBounds();
+
+    // Reserve 24 pixels on the left edge for the vertical "Optional Input" banner.
+    if (!isRequired() && isInputTrack() && !isThumbnailTrack())
+    {
+        totalBounds.removeFromLeft(24);
+    }
 
     // Remove existing items in main flex
     mainFlexBox.items.clear();
