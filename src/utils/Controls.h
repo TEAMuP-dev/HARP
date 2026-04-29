@@ -83,6 +83,12 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
+// New struct for generic file type
+struct FileTrackComponentInfo : public TrackComponentInfo
+{
+    using TrackComponentInfo::TrackComponentInfo;
+};
+
 struct TextBoxComponentInfo : public ModelComponentInfo, public TextEditor::Listener
 {
     std::string value { "" };

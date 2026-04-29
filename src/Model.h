@@ -440,6 +440,18 @@ private:
                     DBG_AND_LOG("Model::extractInputs: MIDI track input \"" + midiTrack->label
                                 + "\" extracted.");
                 }
+                // Generic File
+                else if (type == "file_track")
+                {
+                    std::shared_ptr<ModelComponentInfo> fileTrack =
+                        std::make_shared<FileTrackComponentInfo>(controlsDict);
+
+                    newInputs.push_back(fileTrack);
+                    tempComponentIDs.push_back(fileTrack->id);
+
+                    DBG_AND_LOG("Model::extractInputs: File track input \"" + fileTrack->label
+                                + "\" extracted.");
+                }
                 else if (type == "text_box")
                 {
                     std::shared_ptr<ModelComponentInfo> textControl =
@@ -561,6 +573,17 @@ private:
                     newOutputs.push_back(midiTrack);
 
                     DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
+                                + "\" extracted.");
+                }
+                // Generic File
+                else if (type == "file_track")
+                {
+                    std::shared_ptr<ModelComponentInfo> fileTrack =
+                        std::make_shared<FileTrackComponentInfo>(controlsDict);
+
+                    newOutputs.push_back(fileTrack);
+
+                    DBG_AND_LOG("Model::extractOutputs: File track output \"" + fileTrack->label
                                 + "\" extracted.");
                 }
                 else if (type == "json")
