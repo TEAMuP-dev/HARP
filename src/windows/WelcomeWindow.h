@@ -54,7 +54,7 @@ public:
 
         if (mainComponent)
         {
-            mainComponent->getModelTab()->addChangeListener(this);
+            mainComponent->getCurrentModelTab()->addChangeListener(this);
             mainComponent->setTutorialActive(true);
         }
 
@@ -66,7 +66,7 @@ public:
     {
         if (mainComponent)
         {
-            mainComponent->getModelTab()->removeChangeListener(this);
+            mainComponent->getCurrentModelTab()->removeChangeListener(this);
             mainComponent->setTutorialActive(false);
         }
     }
@@ -78,7 +78,7 @@ public:
         {
             if (mainComponent != nullptr)
             {
-                auto model = mainComponent->getModelTab()->getModel();
+                auto model = mainComponent->getCurrentModelTab()->getModel();
                 auto loadedPath = model ? model->getLoadedPath() : String();
 
                 autoLoadedByTutorialFallback = (loadedPath == TutorialConstants::fallbackModelPath);
@@ -87,7 +87,7 @@ public:
         }
         else if (autoLoadedByTutorialFallback && mainComponent != nullptr)
         {
-            auto model = mainComponent->getModelTab()->getModel();
+            auto model = mainComponent->getCurrentModelTab()->getModel();
             auto loadedPath = model ? model->getLoadedPath() : String();
             if (loadedPath != TutorialConstants::fallbackModelPath)
                 autoLoadedByTutorialFallback = false;
@@ -134,7 +134,7 @@ public:
 
         if (mainComponent)
         {
-            auto model = mainComponent->getModelTab()->getModel();
+            auto model = mainComponent->getCurrentModelTab()->getModel();
             if (model && model->isLoaded())
             {
                 modelName = model->getMetadata().name;
@@ -178,7 +178,7 @@ public:
         // 4. Configure Parameters (Dynamic)
         if (mainComponent)
         {
-            auto model = mainComponent->getModelTab()->getModel();
+            auto model = mainComponent->getCurrentModelTab()->getModel();
             if (model && model->isLoaded())
             {
                 String controlsStepTitle = "Configure Parameters (Optional)";
@@ -714,7 +714,7 @@ private:
     {
         if (content->currentStep == 1 && mainComponent != nullptr)
         {
-            auto model = mainComponent->getModelTab()->getModel();
+            auto model = mainComponent->getCurrentModelTab()->getModel();
             if (! model || ! model->isLoaded())
             {
                 pendingTutorialFallbackLoad = true;

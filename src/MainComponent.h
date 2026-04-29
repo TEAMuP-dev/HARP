@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "ModelTab.h"
+#include "ModelTabContainer.h"
 
 #include "clients/Client.h"
 
@@ -74,13 +75,14 @@ public:
 
     /* Tutorial */
 
-    ModelTab* getModelTab() { return &mainModelTab; }
-
     void setTutorialActive(bool active);
     void setTutorialHighlight(Rectangle<int> bounds);
     void setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds);
     void ensureTutorialModelLoaded();
     void resetTutorialAutoLoadedModel();
+
+    ModelTab* getCurrentModelTab() const;
+    
 
     // Bounds accessors for tutorial steps (public for WelcomeWindow)
     Rectangle<int> getModelSelectBounds();
@@ -150,7 +152,8 @@ private:
     bool showStatusArea;
     bool showMediaClipboard;
 
-    ModelTab mainModelTab;
+    
+    ModelTabContainer modelTabs;
     StatusAreaWidget statusAreaWidget;
     MediaClipboardWidget mediaClipboardWidget;
 
@@ -158,6 +161,7 @@ private:
     Rectangle<int> tutorialHighlightRect;
     std::vector<Rectangle<int>> tutorialExtraHighlights;
     std::unique_ptr<WelcomeWindow> welcomeWindow;
+    juce::TextButton addTabButton { "+" };
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;

@@ -69,6 +69,7 @@ target_sources(${PROJECT_NAME}
         src/Main.cpp
         src/Application.cpp
         src/MainComponent.cpp
+        src/ModelTabContainer.h
         src/ModelTab.h
         src/Model.h
 

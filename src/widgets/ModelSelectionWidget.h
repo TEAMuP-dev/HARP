@@ -480,7 +480,7 @@ private:
     }
 
     /**
-     * Create callbacks for and launch the custom path popup.
+     * Create caollbacks for and launch the custom path popup.
      */
     void openCustomPathPopup(const String& prefillText = "")
     {
