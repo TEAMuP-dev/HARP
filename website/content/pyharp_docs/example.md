@@ -30,7 +30,7 @@ ests_speech = model(audio_input)  # Expected output shape: [1, num_spk, T]
 Here, `num_spk` is the estimated number of speakers in the recording. The TIGER model sets `num_spk` to two. We are going to take both outputs from the model:
 
 ```
-# Select audio of first speaker
+# Select audio of each speaker independently
 output_1 = ests_speech[:, 0, :]  # Expected output shape: [1, T]
 output_2 = ests_speech[:, 1, :]  # Expected output shape: [1, T]
 ```
@@ -205,7 +205,7 @@ demo.launch(share=True, show_error=True)
 
 ### Deploying Our App
 
-For now, we'll put `app.py` inside the `TIGER/` directory to avoid further installation steps. Note that while PyHARP's utilities use [Descript-AudioTools](https://github.com/descriptinc/audiotools) under the hood to handle audio loading and saving, you're free to use whichever libraries you want as long as they can read and produce valid audio files.
+For now, we'll put `app.py` inside the cloned `TIGER/` directory to avoid further installation steps. Note that while PyHARP's utilities use [Descript-AudioTools](https://github.com/descriptinc/audiotools) under the hood to handle audio loading and saving, you're free to use whichever libraries you want as long as they can read and produce valid audio files.
 
 With our application up and running, it's time to link it to HARP. Run:
 
