@@ -172,6 +172,14 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
     addAndMakeVisible(mediaAreaContainer);
 
+    if (isPreviewTrack())
+    {
+        previewControlsFlexBox.flexDirection = FlexBox::Direction::row;
+        previewControlsFlexBox.alignItems = FlexBox::AlignItems::center;
+        previewControlsFlexBox.justifyContent = FlexBox::JustifyContent::center;
+        addAndMakeVisible(previewControlsComponent);
+    }
+
     mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
 
     currentPositionCursor.setFill(cursorColor);
@@ -252,6 +260,42 @@ void MediaDisplayComponent::initializeButtons()
     copyFileButton.addMode(copyFileButtonActiveInfo);
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
+
+    // Modes for the preview pane
+    if (isPreviewTrack())
+    {
+        previewPlayButtonInfo = MultiButton::Mode {
+            "Preview-Play",
+            "Click to start playback.",
+            [this] { start(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::limegreen,
+            fontaudio::Play
+        };
+        previewPauseButtonInfo = MultiButton::Mode {
+            "Preview-Pause",
+            "Click to pause playback.",
+            [this] { pause(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::yellow,
+            fontaudio::Pause
+        };
+        previewStopButtonInfo = MultiButton::Mode {
+            "Preview-Stop",
+            "Click to stop playback.",
+            [this] { stop(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::orangered,
+            fontaudio::Stop
+        };
+        previewPlayPauseButton.addMode(previewPlayButtonInfo);
+        previewPlayPauseButton.addMode(previewPauseButtonInfo);
+        previewStopButton.addMode(previewStopButtonInfo);
+        previewStopButton.setMode(previewStopButtonInfo.displayLabel);
+
+        previewControlsComponent.addAndMakeVisible(previewPlayPauseButton);
+        previewControlsComponent.addAndMakeVisible(previewStopButton);
+    }
 
     resetButtonState();
 }
@@ -349,6 +393,12 @@ void MediaDisplayComponent::resized()
 
     // Media area takes remaining space
     mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
+
+    if (isPreviewTrack())
+    {
+        mainFlexBox.items.add(
+            FlexItem(previewControlsComponent).withHeight(36).withMargin({ 4, 0, 4, 0 }));
+    }
 
     mainFlexBox.performLayout(totalBounds);
 
@@ -461,6 +511,18 @@ void MediaDisplayComponent::resized()
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
+
+    // Performs layout in preview pane
+    if (isPreviewTrack())
+    {
+        previewControlsFlexBox.items.clear();
+        previewControlsFlexBox.items.add(
+            FlexItem(previewPlayPauseButton).withWidth(28).withHeight(28).withMargin({ 0, 4, 0, 4 }));
+        previewControlsFlexBox.items.add(
+            FlexItem(previewStopButton).withWidth(28).withHeight(28).withMargin({ 0, 4, 0, 4 }));
+        previewControlsFlexBox.performLayout(previewControlsComponent.getLocalBounds());
+    }
+
 
     if (! isLabelRepositioningScheduled)
     {
@@ -613,6 +675,10 @@ void MediaDisplayComponent::resetButtonState()
     chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
     copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
+    }
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -1199,6 +1265,11 @@ void MediaDisplayComponent::start()
     startTimerHz(40);
 
     playStopButton.setMode(stopButtonInfo.displayLabel);
+
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPauseButtonInfo.displayLabel);
+    }
 }
 
 void MediaDisplayComponent::stop()
@@ -1212,7 +1283,22 @@ void MediaDisplayComponent::stop()
 
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
 
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
+    }
+
     sendChangeMessage();
+}
+
+void MediaDisplayComponent::pause()
+{
+    stopPlaying();
+
+    stopTimer();
+    
+    //currentPositionCursor.setVisible(true);
+    previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
 }
 
 void MediaDisplayComponent::updateCursorPosition()

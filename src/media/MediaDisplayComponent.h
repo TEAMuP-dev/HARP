@@ -142,6 +142,7 @@ public:
 
     void start();
     void stop();
+    void pause();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
 
@@ -265,6 +266,8 @@ private:
     Component buttonsComponent;
     // Media + overhead panel (if any)
     Component mediaAreaContainer;
+    // Preview pane controls
+    Component previewControlsComponent;
 
     // Header sub-components
     Label trackNameLabel;
@@ -282,6 +285,13 @@ private:
     MultiButton::Mode copyFileButtonActiveInfo;
     MultiButton::Mode copyFileButtonInactiveInfo;
 
+    // Preview mode controls
+    MultiButton previewPlayPauseButton;
+    MultiButton::Mode previewPlayButtonInfo;
+    MultiButton::Mode previewPauseButtonInfo;
+    MultiButton previewStopButton;
+    MultiButton::Mode previewStopButtonInfo;
+
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
 
@@ -293,6 +303,8 @@ private:
     FlexBox buttonsFlexBox;
     // Flex for media / overhead panel (if any)
     FlexBox mediaAreaFlexBox;
+    // Flex for preview pane buttons
+    FlexBox previewControlsFlexBox;
 
     Uuid trackID;
     String trackName;
