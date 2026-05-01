@@ -63,8 +63,12 @@ public:
         historyEditor.setScrollbarsShown(true);
         historyEditor.setCaretVisible(false);
         historyEditor.setPopupMenuEnabled(false);
-        historyEditor.setColour(TextEditor::backgroundColourId, Colour(0x33, 0x33, 0x33));
+        // Transparent background so the parent's paint() fill shows through,
+        // giving the same appearance as the InstructionsBox (which uses a plain Label).
+        historyEditor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
         historyEditor.setColour(TextEditor::textColourId, Colour(0xE0, 0xE0, 0xE0));
+        historyEditor.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
+        historyEditor.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
 
         addAndMakeVisible(historyEditor);
 
@@ -82,6 +86,8 @@ public:
 
     void paint(Graphics& g) override
     {
+        g.setColour(Colour(0x33, 0x33, 0x33));
+        g.fillAll();
         g.setColour(Colour(0x44, 0x44, 0x44));
         g.drawRect(getLocalBounds(), 1);
     }
@@ -141,8 +147,8 @@ public:
         FlexBox statusArea;
         statusArea.flexDirection = FlexBox::Direction::row;
 
-        statusArea.items.add(FlexItem(instructionsBox).withFlex(1).withMargin(marginSize));
         statusArea.items.add(FlexItem(statusHistoryBox).withFlex(1).withMargin(marginSize));
+        statusArea.items.add(FlexItem(instructionsBox).withFlex(1).withMargin(marginSize));
 
         statusArea.performLayout(getLocalBounds());
     }

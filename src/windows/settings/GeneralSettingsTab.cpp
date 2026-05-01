@@ -76,4 +76,10 @@ void GeneralSettingsTab::handleRestoreDefaults()
 
     if (onRestoreDefaults)
         onRestoreDefaults();
+
+    AlertWindow::showMessageBoxAsync(
+        AlertWindow::InfoIcon,
+        "Settings Restored",
+        "All settings (except API tokens) have been restored to their defaults.",
+        "Ok");
 }

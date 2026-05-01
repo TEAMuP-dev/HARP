@@ -1,7 +1,7 @@
 /**
  * @file GradioClient.h
  * @brief Client specifics for Gradio and Hugging Face (simple JSON requests).
- * @author xribene, huiranyu, cwitkowitz
+ * @author xribene, huiranyu, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
@@ -623,6 +623,12 @@ private:
 
         response = stream->readEntireStreamAsString();
 
+        if (isHTMLResponse(response))
+        {
+            return OpResult::fail(HttpError {
+                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, 503 });
+        }
+
         if (statusCode != 200)
         {
             String diagnosticText = extractErrorTextFromPayload(response);
@@ -747,6 +753,12 @@ private:
         return normalizedPayload;
     }
 
+    static bool isHTMLResponse(const String& text)
+    {
+        String trimmed = text.trimStart();
+        return trimmed.startsWithIgnoreCase("<!DOCTYPE") || trimmed.startsWithIgnoreCase("<html");
+    }
+
     static bool isExplicitQuotaError(const String& text)
     {
         if (text.isEmpty())
@@ -773,48 +785,6 @@ private:
         }
 
         return false;
-    }
-
-    static String extractExceptionLabel(const String& text)
-    {
-        if (text.isEmpty())
-        {
-            return "";
-        }
-
-        for (auto label : { "NameError",
-                            "TypeError",
-                            "ImportError",
-                            "ModuleNotFoundError",
-                            "ValueError",
-                            "KeyError",
-                            "AttributeError",
-                            "RuntimeError",
-                            "AssertionError",
-                            "IndexError",
-                            "SyntaxError",
-                            "OSError" })
-        {
-            if (text.containsIgnoreCase(label))
-            {
-                return label;
-            }
-        }
-
-        StringArray tokens = StringArray::fromTokens(text, " \t\r\n,:;()[]{}<>\"'`\\/|", "");
-
-        for (auto& token : tokens)
-        {
-            String trimmedToken = token.trim();
-
-            if (trimmedToken.length() > 5 && trimmedToken.endsWithIgnoreCase("Error")
-                && ! trimmedToken.equalsIgnoreCase("error"))
-            {
-                return trimmedToken;
-            }
-        }
-
-        return "";
     }
 
     static String extractShortReason(const String& text)
@@ -1022,6 +992,8 @@ private:
         // If an error arrives before process_starts, it was likely rejected at
         // the quota-check stage rather than failing inside the function body.
         bool seenProcessStarts = false;
+        bool seenAnyDataEvent = false;
+        bool checkedFirstLine = false;
 
         while (! stream->isExhausted())
         {
@@ -1034,6 +1006,17 @@ private:
             if (eventLine.isEmpty())
             {
                 continue;
+            }
+
+            if (! checkedFirstLine)
+            {
+                checkedFirstLine = true;
+
+                if (isHTMLResponse(eventLine))
+                {
+                    return OpResult::fail(HttpError {
+                        HttpError::Type::BadStatusCode, HttpError::Request::GET, errorPath, 503 });
+                }
             }
 
             if (isEventLine(eventLine, GradioEvents::Complete))
@@ -1062,7 +1045,7 @@ private:
                 {
                     errorType = GradioError::Type::QuotaExceeded;
                 }
-                else if (diagnosticText.isEmpty() && ! seenProcessStarts)
+                else if (diagnosticText.isEmpty() && ! seenProcessStarts && ! seenAnyDataEvent)
                 {
                     errorType = GradioError::Type::QuotaExceeded;
                 }
@@ -1080,6 +1063,8 @@ private:
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
             {
+                seenAnyDataEvent = true;
+
                 String dataPayload = extractPayload(eventLine);
                 if (extractMessageTypeFromPayload(dataPayload).equalsIgnoreCase("process_starts"))
                 {

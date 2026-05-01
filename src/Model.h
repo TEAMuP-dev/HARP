@@ -1,7 +1,7 @@
 /**
  * @file Model.h
  * @brief Model state and interface for loading and processing.
- * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz
+ * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
@@ -85,19 +85,25 @@ struct ModelMetadata
 class Model
 {
 public:
-    Model() { resetState(); }
-    ~Model() { resetState(); }
+    Model() { resetState(/*suppressStatus=*/true); }
+    ~Model() { resetState(/*suppressStatus=*/true); }
 
     bool isEmpty() { return loadedPath.isEmpty() || client == nullptr; }
     bool isLoaded() { return ! isEmpty(); }
 
-    void setStatus(ModelStatus newStatus)
+    void setStatus(ModelStatus newStatus, const String& pathContext = "")
     {
         status = newStatus;
 
         if (statusMessage != nullptr)
         {
-            statusMessage->setMessage("Model Status: " + enumToString(status));
+            String msg = enumToString(status);
+
+            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
+            if (shortPath.isNotEmpty())
+                msg += " | " + shortPath;
+
+            statusMessage->setMessage(msg);
         }
     }
 
@@ -109,7 +115,7 @@ public:
     ModelComponentInfoList getInputTracks() { return inputTrackComponents; }
     ModelComponentInfoList getOutputTracks() { return outputTrackComponents; }
 
-    void resetState()
+    void resetState(bool suppressStatus = false)
     {
         metadata = ModelMetadata {};
 
@@ -124,7 +130,8 @@ public:
         loadedPath.clear();
         openablePath.clear();
 
-        setStatus(ModelStatus::EMPTY);
+        if (! suppressStatus)
+            setStatus(ModelStatus::EMPTY);
     }
 
     OpResult load(String pathToLoad)
@@ -137,12 +144,12 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, pathToLoad);
 
             return result;
         }
 
-        setStatus(ModelStatus::QUERYING_CONTROLS);
+        setStatus(ModelStatus::QUERYING_CONTROLS, pathToLoad);
 
         // Initialize empty dictionary to hold query response
         DynamicObject::Ptr controls;
@@ -152,7 +159,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, pathToLoad);
 
             return result;
         }
@@ -164,7 +171,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, pathToLoad);
 
             return result;
         }
@@ -177,7 +184,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, pathToLoad);
 
             return result;
         }
@@ -189,28 +196,26 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, pathToLoad);
 
             return result;
         }
 
-        resetState();
+        resetState(/*suppressStatus=*/true);
 
-        // Update model information if all loading operations are successful
         metadata = newMetadata;
         controlComponents = newControls;
         inputTrackComponents = newInputs;
         outputTrackComponents = newOutputs;
 
-        // Register extracted component IDs
         orderedInputComponentIDs = std::move(tempComponentIDs);
-        // Replace existing client
+
         client = std::move(tempClient);
-        // Keep track of successfully loaded path
+
         loadedPath = pathToLoad;
         openablePath = client->inferDocumentationPath(loadedPath);
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return OpResult::ok();
     }
@@ -222,7 +227,7 @@ public:
 
         OpResult result = OpResult::ok();
 
-        setStatus(ModelStatus::PREPARING_REQUEST);
+        setStatus(ModelStatus::PREPARING_REQUEST, loadedPath);
 
         for (auto& fileEntry : inputFiles)
         {
@@ -235,7 +240,7 @@ public:
 
             if (result.failed())
             {
-                setStatus(ModelStatus::FAILURE);
+                setStatus(ModelStatus::FAILURE, loadedPath);
 
                 return result;
             }
@@ -331,36 +336,36 @@ public:
 
         DBG_AND_LOG("Model::process: Payload \"" + payloadJSON + "\" prepared for processing.");
 
-        setStatus(ModelStatus::PROCESSING);
+        setStatus(ModelStatus::PROCESSING, loadedPath);
 
         result = client->process(loadedPath, payloadJSON, outputFiles, labels);
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, loadedPath);
 
             return result;
         }
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return result;
     }
 
     OpResult cancel()
     {
-        setStatus(ModelStatus::CANCELING);
+        setStatus(ModelStatus::CANCELING, loadedPath);
 
         OpResult result = client->cancel(loadedPath);
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setStatus(ModelStatus::FAILURE, loadedPath);
 
             return result;
         }
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return OpResult::ok();
     }

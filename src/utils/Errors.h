@@ -168,9 +168,9 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.request == HttpError::Request::POST)
             {
-                userMessage += " This may be a temporary connection issue. "
-                               "Click on Open URL to get the space restarted. "
-                               "If it persists, open the Space and check its logs/status.";
+                userMessage +=
+                    "\n\nThe Space may be sleeping or temporarily unavailable."
+                    "\n\nTry loading again in a few seconds or Click 'Open URL' to open and check it on Huggingface.";
             }
 
             return userMessage;
@@ -209,14 +209,7 @@ inline String toUserMessage(const HttpError& e)
             {
             }
 
-            userMessage += " request to endpoint ";
-
-            if (e.endpointPath.isNotEmpty())
-            {
-                userMessage += "\"" + e.endpointPath + "\" ";
-            }
-
-            userMessage += "failed";
+            userMessage += " request failed";
 
             if (e.statusCode != 0)
             {
@@ -227,8 +220,9 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.statusCode == 503)
             {
-                userMessage += " If this is a valid Hugging Face space, this could indicate "
-                               "the space is sleeping, paused, or down due to a build/runtime error.";
+                userMessage +=
+                    "\n\nThe Hugging Face Space may be sleeping or paused."
+                    "\n\nTry loading again in a few seconds or Click 'Open URL' to open and check it on Huggingface.";
             }
     }
 
@@ -257,14 +251,14 @@ inline String toUserMessage(const GradioError& e)
     {
         case GradioError::Type::RuntimeError:
 
-            userMessage = "The Hugging Face Space reported a runtime error";
+            userMessage = "The Hugging Face Space reported a runtime error.";
 
             if (e.reason.isNotEmpty())
             {
-                userMessage += " (" + e.reason + ")";
+                userMessage += "\n\nDetails: " + e.reason;
             }
 
-            userMessage += ". Please open the Space logs for details.";
+            userMessage += "\n\nPlease open the Space logs for more information.";
 
             return userMessage;
 

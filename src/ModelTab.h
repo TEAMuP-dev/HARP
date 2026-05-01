@@ -1,7 +1,7 @@
 /**
  * @file ModelTab.h
  * @brief Reusable component containing HARP GUI elements and state for a single model.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author hugofloresgarcia, xribene, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
@@ -191,6 +191,23 @@ public:
                         totalTracks);
 
         tabArea.performLayout(getLocalBounds());
+
+        // Re-centre the error popup when the parent is resized so it never
+        // drifts off-screen or clips against the new bounds.
+        if (errorPopupWindow != nullptr)
+        {
+            Component* topLevel = getTopLevelComponent();
+            int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
+            int popupWidth = jmin(520, windowWidth - 24);
+            int popupHeight = errorPopupWindow->getHeight();
+            Point<int> windowCentreScreen =
+                (topLevel != nullptr)
+                    ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
+                    : localPointToGlobal(getLocalBounds().getCentre());
+            Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
+            errorPopupWindow->setBounds(
+                Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
+        }
     }
 
     int getMinimumRequiredControlWidth() { return controlAreaWidget.getMinimumRequiredWidth(); }
@@ -333,8 +350,16 @@ private:
         constexpr int buttonSendReport = 3;
         constexpr int buttonOk = 0;
 
-        String popupMessage = errorMessage
-                              + "\n\nOptional: add context below before opening the issue.";
+        // Determine whether this error warrants a GitHub bug report.
+        // Quota errors, invalid paths, and expected HTTP failures are user-actionable
+        // and don't need a report; only unexpected runtime/parse errors do.
+        bool isReportableError = false;
+        if (const auto* gradioErr = std::get_if<GradioError>(&error))
+            isReportableError = (gradioErr->type == GradioError::Type::RuntimeError);
+        else if (std::get_if<JsonError>(&error) || std::get_if<ControlError>(&error))
+            isReportableError = true;
+
+        String popupMessage = errorMessage;
 
         if (errorPopupWindow != nullptr)
         {
@@ -342,10 +367,14 @@ private:
             errorPopupWindow.reset();
         }
 
-        errorPopupWindow = std::make_unique<AlertWindow>("Error", popupMessage, AlertWindow::WarningIcon);
+        errorPopupWindow = std::make_unique<BottomButtonAlertWindow>(
+            "Error", popupMessage, AlertWindow::WarningIcon);
+        centredAlertLF.messageText = popupMessage;
+        errorPopupWindow->setLookAndFeel(&centredAlertLF);
         AlertWindow* alertWindow = errorPopupWindow.get();
 
-        auto bindButtonCallback = [alertWindow](const String& buttonText, std::function<void()> callback)
+        auto bindButtonCallback =
+            [alertWindow](const String& buttonText, std::function<void()> callback)
         {
             for (int i = 0; i < alertWindow->getNumChildComponents(); ++i)
             {
@@ -363,87 +392,100 @@ private:
         if (openablePath.has_value())
         {
             alertWindow->addButton("Open URL", buttonOpenURL);
-            bindButtonCallback("Open URL", [this, openablePath, onExit]
-            {
-                URL(*openablePath).launchInDefaultBrowser();
+            bindButtonCallback("Open URL",
+                               [this, openablePath, onExit]
+                               {
+                                   URL(*openablePath).launchInDefaultBrowser();
 
-                if (onExit)
-                {
-                    onExit();
-                }
+                                   if (onExit)
+                                   {
+                                       onExit();
+                                   }
 
-                if (errorPopupWindow != nullptr)
-                {
-                    removeChildComponent(errorPopupWindow.get());
-                    errorPopupWindow.reset();
-                }
-            });
+                                   if (errorPopupWindow != nullptr)
+                                   {
+                                       removeChildComponent(errorPopupWindow.get());
+                                       errorPopupWindow.reset();
+                                   }
+                               });
         }
 
         alertWindow->addButton("Open Logs", buttonOpenLogs);
-        bindButtonCallback("Open Logs", [this, onExit]
+        bindButtonCallback("Open Logs",
+                           [this, onExit]
+                           {
+                               HARPLogger::getInstance()->getLogFile().revealToUser();
+
+                               if (onExit)
+                               {
+                                   onExit();
+                               }
+
+                               if (errorPopupWindow != nullptr)
+                               {
+                                   removeChildComponent(errorPopupWindow.get());
+                                   errorPopupWindow.reset();
+                               }
+                           });
+
+        if (isReportableError)
         {
-            HARPLogger::getInstance()->getLogFile().revealToUser();
+            alertWindow->addButton("Report", buttonSendReport);
+            bindButtonCallback("Report",
+                               [this, error, errorMessage, onExit]
+                               {
+                                   // Opens GitHub new-issue page pre-filled with error details.
+                                   openGitHubIssue(error, errorMessage, "");
 
-            if (onExit)
-            {
-                onExit();
-            }
+                                   if (onExit)
+                                   {
+                                       onExit();
+                                   }
 
-            if (errorPopupWindow != nullptr)
-            {
-                removeChildComponent(errorPopupWindow.get());
-                errorPopupWindow.reset();
-            }
-        });
-
-        alertWindow->addButton("Open GitHub Issue", buttonSendReport);
-        bindButtonCallback("Open GitHub Issue", [this, error, errorMessage, onExit]
-        {
-            if (errorPopupWindow != nullptr)
-            {
-                openGitHubIssue(
-                    error, errorMessage, errorPopupWindow->getTextEditorContents("errorReportNotes"));
-            }
-
-            if (onExit)
-            {
-                onExit();
-            }
-
-            if (errorPopupWindow != nullptr)
-            {
-                removeChildComponent(errorPopupWindow.get());
-                errorPopupWindow.reset();
-            }
-        });
+                                   if (errorPopupWindow != nullptr)
+                                   {
+                                       removeChildComponent(errorPopupWindow.get());
+                                       errorPopupWindow.reset();
+                                   }
+                               });
+        }
 
         alertWindow->addButton("Ok", buttonOk);
-        bindButtonCallback("Ok", [this, onExit]
-        {
-            if (onExit)
-            {
-                onExit();
-            }
+        bindButtonCallback("Ok",
+                           [this, onExit]
+                           {
+                               if (onExit)
+                               {
+                                   onExit();
+                               }
 
-            if (errorPopupWindow != nullptr)
-            {
-                removeChildComponent(errorPopupWindow.get());
-                errorPopupWindow.reset();
-            }
-        });
-
-        alertWindow->addTextEditor(
-            "errorReportNotes",
-            "",
-            "What were you doing when this happened? (optional)");
+                               if (errorPopupWindow != nullptr)
+                               {
+                                   removeChildComponent(errorPopupWindow.get());
+                                   errorPopupWindow.reset();
+                               }
+                           });
 
         addAndMakeVisible(*errorPopupWindow);
         errorPopupWindow->setAlwaysOnTop(true);
 
-        int popupWidth = jmax(560, jmin(getWidth() - 24, 1100));
-        int popupHeight = 280;
-        errorPopupWindow->setBounds(getLocalBounds().withSizeKeepingCentre(popupWidth, popupHeight));
+        // Size based on full window width so the popup is never squashed when
+        // the media clipboard panel is open and ModelTab is narrow.
+        Component* topLevel = getTopLevelComponent();
+        int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
+        int popupWidth = jmin(520, windowWidth - 24);
+        int popupHeight = isReportableError ? 260 : 230;
+
+        // Find the window's centre in screen space, then convert to ModelTab's
+        // local coordinate space so the popup is centred in the full window
+        // regardless of where ModelTab sits within it.
+        Point<int> windowCentreScreen =
+            (topLevel != nullptr)
+                ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
+                : localPointToGlobal(getLocalBounds().getCentre());
+        Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
+        errorPopupWindow->setBounds(
+            Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
         errorPopupWindow->toFront(true);
     }
 
@@ -494,8 +536,8 @@ private:
         String escapedTitle = URL::addEscapeChars(issueTitle, true);
         String escapedBody = URL::addEscapeChars(body, true);
         String escapedTemplate = URL::addEscapeChars(issueTemplate, true);
-        URL(issueBaseUrl + "?template=" + escapedTemplate + "&title=" + escapedTitle + "&body="
-            + escapedBody)
+        URL(issueBaseUrl + "?template=" + escapedTemplate + "&title=" + escapedTitle
+            + "&body=" + escapedBody)
             .launchInDefaultBrowser();
     }
 
@@ -680,6 +722,147 @@ private:
         inputTrackAreaWidget.setLoadTrackEnabled(true);
     }
 
+    static constexpr int popupButtonBottomPadding = 24;
+
+    /* LookAndFeel override that draws the AlertWindow message text centred.
+    We re-derive both from the ACTUAL window height here so that
+    text fills the real available space and buttons are accounted for at the
+    bottom where BottomButtonAlertWindow will move them. */
+
+    struct CentredAlertLookAndFeel : public LookAndFeel_V4
+    {
+        String messageText; // set before showing the popup
+
+        void drawAlertBox(Graphics& g,
+                          AlertWindow& alert,
+                          const Rectangle<int>& /*textArea*/,
+                          TextLayout& /*unused*/) override
+        {
+            // Background
+            auto cornerSize = 4.0f;
+            g.setColour(alert.findColour(AlertWindow::outlineColourId));
+            g.drawRoundedRectangle(alert.getLocalBounds().toFloat(), cornerSize, 2.0f);
+
+            auto bounds = alert.getLocalBounds().reduced(1);
+            g.reduceClipRegion(bounds);
+
+            g.setColour(alert.findColour(AlertWindow::backgroundColourId));
+            g.fillRoundedRectangle(bounds.toFloat(), cornerSize);
+
+            // Icon
+            auto iconSpaceUsed = 0;
+            const auto iconWidth = 80;
+            auto iconSize = jmin(iconWidth + 50, bounds.getHeight() + 20);
+
+            if (alert.containsAnyExtraComponents() || alert.getNumButtons() > 2)
+                iconSize = jmin(iconSize, 200);
+
+            Rectangle<int> iconRect(iconSize / -10, iconSize / -10, iconSize, iconSize);
+
+            if (alert.getAlertType() != MessageBoxIconType::NoIcon)
+            {
+                Path icon;
+                char character;
+                uint32 colour;
+
+                if (alert.getAlertType() == MessageBoxIconType::WarningIcon)
+                {
+                    character = '!';
+                    icon.addTriangle((float) iconRect.getX() + (float) iconRect.getWidth() * 0.5f,
+                                     (float) iconRect.getY(),
+                                     (float) iconRect.getRight(),
+                                     (float) iconRect.getBottom(),
+                                     (float) iconRect.getX(),
+                                     (float) iconRect.getBottom());
+                    icon = icon.createPathWithRoundedCorners(5.0f);
+                    colour = 0x66ff2a00;
+                }
+                else
+                {
+                    colour = Colour(0xff00b0b9).withAlpha(0.4f).getARGB();
+                    character = alert.getAlertType() == MessageBoxIconType::InfoIcon ? 'i' : '?';
+                    icon.addEllipse(iconRect.toFloat());
+                }
+
+                GlyphArrangement ga;
+                ga.addFittedText({ (float) iconRect.getHeight() * 0.9f, Font::bold },
+                                 String::charToString((juce_wchar) (uint8) character),
+                                 (float) iconRect.getX(),
+                                 (float) iconRect.getY(),
+                                 (float) iconRect.getWidth(),
+                                 (float) iconRect.getHeight(),
+                                 Justification::centred,
+                                 false);
+                ga.createPath(icon);
+                icon.setUsingNonZeroWinding(false);
+                g.setColour(Colour(colour));
+                g.fillPath(icon);
+
+                iconSpaceUsed = iconWidth;
+            }
+
+            if (messageText.isNotEmpty())
+            {
+                const int buttonH = getAlertWindowButtonHeight();
+                const int titleH = 24;
+                const int edgeGap = 10;
+                const int bottomOfText =
+                    alert.getHeight() - buttonH - popupButtonBottomPadding - 10;
+
+                const int rightPadding = edgeGap + iconSpaceUsed;
+                Rectangle<float> fullTextArea(
+                    (float) (edgeGap + iconSpaceUsed),
+                    (float) (edgeGap + titleH),
+                    (float) (alert.getWidth() - edgeGap - iconSpaceUsed - rightPadding),
+                    (float) (bottomOfText - (edgeGap + titleH)));
+
+                Font msgFont(16.0f);
+
+                AttributedString attrStr;
+                attrStr.setJustification(Justification::topLeft);
+                attrStr.append(messageText, msgFont, alert.findColour(AlertWindow::textColourId));
+
+                TextLayout layout;
+                layout.createLayout(attrStr, fullTextArea.getWidth());
+                layout.draw(g, fullTextArea);
+            }
+        }
+    };
+
+    class BottomButtonAlertWindow : public AlertWindow
+    {
+    public:
+        BottomButtonAlertWindow(const String& title,
+                                const String& message,
+                                MessageBoxIconType iconType)
+            : AlertWindow(title, message, iconType)
+        {
+        }
+
+        void resized() override
+        {
+            const int buttonH = getLookAndFeel().getAlertWindowButtonHeight();
+            const int targetY = getHeight() - popupButtonBottomPadding - buttonH;
+            const int spacer = 16;
+
+            Array<TextButton*> btns;
+            for (int i = 0; i < getNumChildComponents(); ++i)
+                if (auto* btn = dynamic_cast<TextButton*>(getChildComponent(i)))
+                    btns.add(btn);
+
+            int totalWidth = -spacer;
+            for (auto* btn : btns)
+                totalWidth += btn->getWidth() + spacer;
+
+            int x = (getWidth() - totalWidth) / 2;
+            for (auto* btn : btns)
+            {
+                btn->setTopLeftPosition(x, targetY);
+                x += btn->getWidth() + spacer;
+            }
+        }
+    };
+
     static constexpr float marginSize = 2;
 
     static constexpr int modelSelectionRowHeight = 30;
@@ -709,5 +892,6 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
-    std::unique_ptr<AlertWindow> errorPopupWindow;
+    CentredAlertLookAndFeel centredAlertLF;
+    std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;
 };
