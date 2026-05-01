@@ -190,11 +190,7 @@ private:
 
     void timerCallback() override;
     virtual void visibleRangeCallback() { repaint(); }
-    virtual void changeListenerCallback(ChangeBroadcaster*) override 
-    { 
-        repaint();
-        MessageManager::callAsync([this]() { sendChangeMessage(); });
-    }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
 
     virtual void resetMedia() = 0;
     void resetPaths();
