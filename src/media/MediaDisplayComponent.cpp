@@ -170,14 +170,22 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     mediaAreaContainer.addAndMakeVisible(contentComponent);
     mediaAreaContainer.addAndMakeVisible(*timeAxisStrip);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
-    addAndMakeVisible(mediaAreaContainer);
-
     if (isPreviewTrack())
     {
-        previewControlsFlexBox.flexDirection = FlexBox::Direction::row;
+        mediaRowComponent.addAndMakeVisible(mediaAreaContainer);
+        mediaRowComponent.addAndMakeVisible(previewControlsComponent);
+        addAndMakeVisible(mediaRowComponent);
+
+        mediaRowFlexBox.flexDirection = FlexBox::Direction::row;
+        mediaRowFlexBox.alignItems = FlexBox::AlignItems::stretch;
+
+        previewControlsFlexBox.flexDirection = FlexBox::Direction::column;
         previewControlsFlexBox.alignItems = FlexBox::AlignItems::center;
         previewControlsFlexBox.justifyContent = FlexBox::JustifyContent::center;
-        addAndMakeVisible(previewControlsComponent);
+    }
+    else
+    {
+        addAndMakeVisible(mediaAreaContainer);
     }
 
     mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
@@ -391,16 +399,26 @@ void MediaDisplayComponent::resized()
         mainFlexBox.items.add(FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
     }
 
-    // Media area takes remaining space
-    mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
-
+    // Media area takes remaining space unless preview pane is open
     if (isPreviewTrack())
     {
-        mainFlexBox.items.add(
-            FlexItem(previewControlsComponent).withHeight(36).withMargin({ 2, 0, 2, 0 }));
+        mainFlexBox.items.add(FlexItem(mediaRowComponent).withFlex(8));
+    }
+    else
+    {
+        mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
     }
 
     mainFlexBox.performLayout(totalBounds);
+
+    if (isPreviewTrack())
+    {
+        mediaRowFlexBox.items.clear();
+        mediaRowFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(1));
+        mediaRowFlexBox.items.add(
+            FlexItem(previewControlsComponent).withWidth(25).withMargin({ 0, 2, 0, 2 }));
+        mediaRowFlexBox.performLayout(mediaRowComponent.getLocalBounds());
+    }
 
     // Remove existing items in header flex
     headerFlexBox.items.clear();
@@ -517,9 +535,9 @@ void MediaDisplayComponent::resized()
     {
         previewControlsFlexBox.items.clear();
         previewControlsFlexBox.items.add(
-            FlexItem(previewPlayPauseButton).withWidth(28).withHeight(28).withMargin({ 0, 4, 0, 4 }));
+            FlexItem(previewPlayPauseButton).withWidth(25).withHeight(25).withMargin({ 2, 0, 2, 0 }));
         previewControlsFlexBox.items.add(
-            FlexItem(previewStopButton).withWidth(28).withHeight(28).withMargin({ 0, 4, 0, 4 }));
+            FlexItem(previewStopButton).withWidth(25).withHeight(25).withMargin({ 2, 0, 2, 0 }));
         previewControlsFlexBox.performLayout(previewControlsComponent.getLocalBounds());
     }
 

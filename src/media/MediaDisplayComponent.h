@@ -268,6 +268,8 @@ private:
     Component mediaAreaContainer;
     // Preview pane controls
     Component previewControlsComponent;
+    // Preview pane waveform and control row
+    Component mediaRowComponent;
 
     // Header sub-components
     Label trackNameLabel;
@@ -305,6 +307,8 @@ private:
     FlexBox mediaAreaFlexBox;
     // Flex for preview pane buttons
     FlexBox previewControlsFlexBox;
+    // Flex for preview pane waveform + control row
+    FlexBox mediaRowFlexBox;
 
     Uuid trackID;
     String trackName;

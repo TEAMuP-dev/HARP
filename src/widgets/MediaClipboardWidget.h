@@ -794,7 +794,7 @@ private:
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
     PreviewPaneWidget previewPaneWidget;
-    int previewPaneHeight = 200;
+    int previewPaneHeight = 150;
     bool showPreviewPane = true;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
