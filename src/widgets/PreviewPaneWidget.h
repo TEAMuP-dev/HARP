@@ -78,6 +78,12 @@ public:
 
         URL filePath = source->getOriginalFilePath();
 
+        if (!filePath.isLocalFile())
+        {
+            repaint();
+            return;
+        }
+
         if (dynamic_cast<AudioDisplayComponent*>(source) != nullptr)
         {
             auto* newDisplay =
@@ -138,6 +144,8 @@ public:
     }
 
     int getExpandedHeight() const { return expandedHeight; }
+
+    bool isShowingTrack() const { return currentDisplay != nullptr && currentDisplay->isFileLoaded(); }
 
     // Callbacks
 

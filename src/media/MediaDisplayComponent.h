@@ -190,7 +190,15 @@ private:
 
     void timerCallback() override;
     virtual void visibleRangeCallback() { repaint(); }
-    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override
+    {
+        repaint();
+        Component::SafePointer<MediaDisplayComponent> safeThis(this);
+        MessageManager::callAsync([safeThis]() mutable {
+            if (safeThis != nullptr)
+                safeThis->sendChangeMessage();
+        });
+    }
 
     virtual void resetMedia() = 0;
     void resetPaths();

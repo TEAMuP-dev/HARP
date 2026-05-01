@@ -559,12 +559,13 @@ private:
         {
             if (mediaDisplay != currentlySelectedDisplay)
             {
-                // Handle select events if selected display changes
                 selectTrack(mediaDisplay);
-                // Handle track area resizing after adding a track
-                resized(); // TODO - decouple from track selection?
-
-                // Tell the preview pane about the selection
+                resized();
+                previewPaneWidget.showTrack(mediaDisplay);
+            }
+            else if (!previewPaneWidget.isShowingTrack() && mediaDisplay->isFileLoaded())
+            {
+                // File finished loading after initial showTrack was called too early
                 previewPaneWidget.showTrack(mediaDisplay);
             }
         }
