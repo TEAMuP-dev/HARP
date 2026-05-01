@@ -1346,14 +1346,11 @@ void MediaDisplayComponent::updateCursorPosition()
 
     cursorPositionX = jmin(maxCursorXPos, jmax(minCursorXPos, cursorPositionX));
 
-    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
     Rectangle<int> mediaBounds = contentComponent.getBounds();
-
-    // Include offset(s) for track header
-    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
-    cursorPositionY += static_cast<float>(mediaAreaBounds.getY());
-    // Include offset for label overlay header
-    cursorPositionY += static_cast<float>(mediaBounds.getY());
+    // Get position of contentComponent in the correct coordinate space, accounting for nested parents
+    Point<int> mediaOrigin = getLocalPoint(&contentComponent, Point<int>(0, 0));
+    cursorPositionX += static_cast<float>(mediaOrigin.getX());
+    cursorPositionY += static_cast<float>(mediaOrigin.getY());
     // Offset by half of width
     cursorPositionX -= cursorWidth / 2.0f;
 
