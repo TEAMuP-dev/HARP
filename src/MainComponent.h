@@ -152,7 +152,8 @@ private:
 
     ModelTab mainModelTab;
     StatusAreaWidget statusAreaWidget;
-    MediaClipboardWidget mediaClipboardWidget;
+    DragOverlayComponent dragOverlay;
+    MediaClipboardWidget mediaClipboardWidget { &dragOverlay };
 
     bool isTutorialActive = false;
     Rectangle<int> tutorialHighlightRect;

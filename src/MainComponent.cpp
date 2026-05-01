@@ -15,9 +15,12 @@ MainComponent::MainComponent()
     addAndMakeVisible(mainModelTab);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+    addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    dragOverlay.setVisible(false);
+    dragOverlay.toFront(false);
 
     requiredWindowWidth = minimumWindowWidth;
     requiredWindowHeight = minimumWindowHeight;
@@ -126,6 +129,8 @@ void MainComponent::resized()
     {
         welcomeWindow->refreshHighlightForCurrentStep();
     }
+
+    dragOverlay.setBounds(getLocalBounds());
 }
 
 void MainComponent::updateWindowConstraints()
