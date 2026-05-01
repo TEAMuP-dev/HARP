@@ -89,7 +89,7 @@ public:
         // Add control elements to control flex
         controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
         controlsFlexBox.items.add(
-            FlexItem(buttonsComponent).withWidth(5 * (buttonWidth + marginSize)));
+            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
 
         controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
 
@@ -109,10 +109,6 @@ public:
                                      .withHeight(buttonWidth)
                                      .withMargin({ 0, 0, 0, marginSize }));
         buttonsFlexBox.items.add(FlexItem(removeSelectionButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
-        buttonsFlexBox.items.add(FlexItem(playStopButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
                                      .withMargin({ 0, 0, 0, marginSize }));
@@ -181,11 +177,6 @@ public:
     Rectangle<int> getRemoveButtonBounds() const
     {
         return getLocalArea(&buttonsComponent, removeSelectionButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getPlayButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, playStopButton.getBounds()).expanded(2);
     }
 
     Rectangle<int> getSendToDAWButtonBounds() const
@@ -457,30 +448,6 @@ private:
         removeSelectionButton.addMode(removeSelectionButtonInactiveInfo);
         buttonsComponent.addAndMakeVisible(removeSelectionButton);
 
-        // Mode when a playable track is selected (play enabled)
-        playButtonActiveInfo = MultiButton::Mode { "Play-Active",
-                                                   "Click to start playback.",
-                                                   [this] { playCallback(); },
-                                                   MultiButton::DrawingMode::IconOnly,
-                                                   Colours::limegreen,
-                                                   fontaudio::Play };
-        // Mode when there is no track selected (play disabled)
-        playButtonInactiveInfo =
-            MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                                [this] {},          MultiButton::DrawingMode::IconOnly,
-                                Colours::lightgrey, fontaudio::Play };
-        // Mode during playback (stop enabled)
-        stopButtonInfo = MultiButton::Mode { "Stop",
-                                             "Click to stop playback.",
-                                             [this] { stopCallback(); },
-                                             MultiButton::DrawingMode::IconOnly,
-                                             Colours::orangered,
-                                             fontaudio::Stop };
-        playStopButton.addMode(playButtonActiveInfo);
-        playStopButton.addMode(playButtonInactiveInfo);
-        playStopButton.addMode(stopButtonInfo);
-        buttonsComponent.addAndMakeVisible(playStopButton);
-
         // Mode when a track is selected (save file enabled)
         saveFileButtonActiveInfo =
             MultiButton::Mode { "Save-Active",
@@ -541,18 +508,9 @@ private:
     {
         MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        if (currentlySelectedDisplay)
+        if (currentlySelectedDisplay && currentlySelectedDisplay->isPlaying())
         {
-            if (currentlySelectedDisplay->isPlaying())
-            {
-                // Cancel playback and reset play/stop button state for select and stop events
-                stopCallback(currentlySelectedDisplay);
-            }
-            else
-            {
-                // Reset play/stop button state for select and stop events (avoid infinite messages)
-                playStopButton.setMode(playButtonActiveInfo.displayLabel);
-            }
+            currentlySelectedDisplay->stop();
         }
 
         if (mediaDisplay)
@@ -602,33 +560,6 @@ private:
 
             // Handle track area resizing after removing a track
             resized();
-        }
-    }
-
-    void playCallback()
-    {
-        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-
-        if (mediaDisplay)
-        {
-            mediaDisplay->start();
-
-            playStopButton.setMode(stopButtonInfo.displayLabel);
-        }
-    }
-
-    void stopCallback(MediaDisplayComponent* mediaDisplay = nullptr)
-    {
-        if (! mediaDisplay)
-        {
-            mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-        }
-
-        if (mediaDisplay)
-        {
-            mediaDisplay->stop();
-
-            playStopButton.setMode(playButtonActiveInfo.displayLabel);
         }
     }
 
@@ -715,7 +646,6 @@ private:
         //renameSelectionButton.setMode(renameSelectionButtonInactiveInfo.label);
         addFileButton.setMode(addFileButtonInfo.displayLabel);
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.displayLabel);
-        playStopButton.setMode(playButtonInactiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
         sendToDAWButton.setMode(sendToDAWButtonInactiveInfo1.displayLabel);
 
@@ -729,7 +659,6 @@ private:
 
         //renameSelectionButton.setMode(renameSelectionButtonActiveInfo.label);
         removeSelectionButton.setMode(removeSelectionButtonActiveInfo.displayLabel);
-        playStopButton.setMode(playButtonActiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
 
         int nOtherDAWLinkedTracks =
@@ -772,11 +701,6 @@ private:
     MultiButton removeSelectionButton;
     MultiButton::Mode removeSelectionButtonActiveInfo;
     MultiButton::Mode removeSelectionButtonInactiveInfo;
-
-    MultiButton playStopButton;
-    MultiButton::Mode playButtonActiveInfo;
-    MultiButton::Mode playButtonInactiveInfo;
-    MultiButton::Mode stopButtonInfo;
 
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;

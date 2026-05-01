@@ -536,16 +536,6 @@ Rectangle<int> MainComponent::getClipboardRemoveButtonBounds()
     return {};
 }
 
-Rectangle<int> MainComponent::getClipboardPlayButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getPlayButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
 Rectangle<int> MainComponent::getClipboardSendToDAWButtonBounds()
 {
     if (showMediaClipboard && mediaClipboardWidget.isVisible())
