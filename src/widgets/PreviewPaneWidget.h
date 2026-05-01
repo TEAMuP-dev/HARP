@@ -251,11 +251,6 @@ public:
     {
         dragStartY = -1;
         dragStartHeight = -1;
-
-        if (dragStartY >= 0)
-        {
-            expandedHeight = getHeight();
-        }
     }
 
 private:
