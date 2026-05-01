@@ -90,9 +90,6 @@ public:
             if (filePath.isLocalFile())
             {
                 newDisplay->initializeDisplay(filePath);
-                MessageManager::callAsync([this]() {
-                    repaint();
-                });
             }
         }
         else
@@ -112,10 +109,6 @@ public:
 
         resized();
         repaint();
-        MessageManager::callAsync([this]() {
-            resized();
-            repaint();
-        });
     }
 
     void clearTrack()
