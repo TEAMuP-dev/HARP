@@ -24,7 +24,8 @@ enum class DisplayMode
     Input,
     Output,
     Hybrid, // All functionality
-    Thumbnail // Reduced functionality
+    Thumbnail, // Reduced functionality
+    Preview // For preview pane
 };
 
 class ColorablePanel : public Component
@@ -95,6 +96,7 @@ public:
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
+    bool isPreviewTrack() { return displayMode == DisplayMode::Preview; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -140,6 +142,7 @@ public:
 
     void start();
     void stop();
+    void pause();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
 
@@ -188,7 +191,15 @@ private:
 
     void timerCallback() override;
     virtual void visibleRangeCallback() { repaint(); }
-    virtual void changeListenerCallback(ChangeBroadcaster*) override { repaint(); }
+    virtual void changeListenerCallback(ChangeBroadcaster*) override
+    {
+        repaint();
+        Component::SafePointer<MediaDisplayComponent> safeThis(this);
+        MessageManager::callAsync([safeThis]() mutable {
+            if (safeThis != nullptr)
+                safeThis->sendChangeMessage();
+        });
+    }
 
     virtual void resetMedia() = 0;
     void resetPaths();
@@ -255,6 +266,10 @@ private:
     Component buttonsComponent;
     // Media + overhead panel (if any)
     Component mediaAreaContainer;
+    // Preview pane controls
+    Component previewControlsComponent;
+    // Preview pane waveform and control row
+    Component mediaRowComponent;
 
     // Header sub-components
     Label trackNameLabel;
@@ -272,6 +287,13 @@ private:
     MultiButton::Mode copyFileButtonActiveInfo;
     MultiButton::Mode copyFileButtonInactiveInfo;
 
+    // Preview mode controls
+    MultiButton previewPlayPauseButton;
+    MultiButton::Mode previewPlayButtonInfo;
+    MultiButton::Mode previewPauseButtonInfo;
+    MultiButton previewStopButton;
+    MultiButton::Mode previewStopButtonInfo;
+
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
 
@@ -283,6 +305,10 @@ private:
     FlexBox buttonsFlexBox;
     // Flex for media / overhead panel (if any)
     FlexBox mediaAreaFlexBox;
+    // Flex for preview pane buttons
+    FlexBox previewControlsFlexBox;
+    // Flex for preview pane waveform + control row
+    FlexBox mediaRowFlexBox;
 
     Uuid trackID;
     String trackName;

@@ -170,7 +170,23 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     mediaAreaContainer.addAndMakeVisible(contentComponent);
     mediaAreaContainer.addAndMakeVisible(*timeAxisStrip);
     mediaAreaContainer.addAndMakeVisible(horizontalScrollBar);
-    addAndMakeVisible(mediaAreaContainer);
+    if (isPreviewTrack())
+    {
+        mediaRowComponent.addAndMakeVisible(mediaAreaContainer);
+        mediaRowComponent.addAndMakeVisible(previewControlsComponent);
+        addAndMakeVisible(mediaRowComponent);
+
+        mediaRowFlexBox.flexDirection = FlexBox::Direction::row;
+        mediaRowFlexBox.alignItems = FlexBox::AlignItems::stretch;
+
+        previewControlsFlexBox.flexDirection = FlexBox::Direction::column;
+        previewControlsFlexBox.alignItems = FlexBox::AlignItems::center;
+        previewControlsFlexBox.justifyContent = FlexBox::JustifyContent::center;
+    }
+    else
+    {
+        addAndMakeVisible(mediaAreaContainer);
+    }
 
     mediaAreaFlexBox.flexDirection = FlexBox::Direction::column;
 
@@ -253,6 +269,42 @@ void MediaDisplayComponent::initializeButtons()
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
 
+    // Modes for the preview pane
+    if (isPreviewTrack())
+    {
+        previewPlayButtonInfo = MultiButton::Mode {
+            "Preview-Play",
+            "Click to start playback.",
+            [this] { start(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::limegreen,
+            fontaudio::Play
+        };
+        previewPauseButtonInfo = MultiButton::Mode {
+            "Preview-Pause",
+            "Click to pause playback.",
+            [this] { pause(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::yellow,
+            fontaudio::Pause
+        };
+        previewStopButtonInfo = MultiButton::Mode {
+            "Preview-Stop",
+            "Click to stop playback.",
+            [this] { stop(); },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::orangered,
+            fontaudio::Stop
+        };
+        previewPlayPauseButton.addMode(previewPlayButtonInfo);
+        previewPlayPauseButton.addMode(previewPauseButtonInfo);
+        previewStopButton.addMode(previewStopButtonInfo);
+        previewStopButton.setMode(previewStopButtonInfo.displayLabel);
+
+        previewControlsComponent.addAndMakeVisible(previewPlayPauseButton);
+        previewControlsComponent.addAndMakeVisible(previewStopButton);
+    }
+
     resetButtonState();
 }
 
@@ -331,6 +383,14 @@ void MediaDisplayComponent::resized()
                                   .withHeight(trackNameLabel.getFont().getHeight())
                                   .withMargin(1));
     }
+    else if (isPreviewTrack())
+    {
+        // Place header over media
+        mainFlexBox.flexDirection = FlexBox::Direction::column;
+        mainFlexBox.items.add(FlexItem(headerComponent)
+                                  .withHeight(trackNameLabel.getFont().getHeight())
+                                  .withMargin(1));
+    }
     else
     {
         // Place header beside media
@@ -339,10 +399,26 @@ void MediaDisplayComponent::resized()
         mainFlexBox.items.add(FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
     }
 
-    // Media area takes remaining space
-    mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
+    // Media area takes remaining space unless preview pane is open
+    if (isPreviewTrack())
+    {
+        mainFlexBox.items.add(FlexItem(mediaRowComponent).withFlex(8));
+    }
+    else
+    {
+        mainFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(8));
+    }
 
     mainFlexBox.performLayout(totalBounds);
+
+    if (isPreviewTrack())
+    {
+        mediaRowFlexBox.items.clear();
+        mediaRowFlexBox.items.add(FlexItem(mediaAreaContainer).withFlex(1));
+        mediaRowFlexBox.items.add(
+            FlexItem(previewControlsComponent).withWidth(25).withMargin({ 0, 2, 0, 2 }));
+        mediaRowFlexBox.performLayout(mediaRowComponent.getLocalBounds());
+    }
 
     // Remove existing items in header flex
     headerFlexBox.items.clear();
@@ -350,7 +426,7 @@ void MediaDisplayComponent::resized()
     // Add track label to header flex
     headerFlexBox.items.add(FlexItem(trackNameLabel).withFlex(1).withMargin({ 0, 2, 0, 0 }));
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && ! isPreviewTrack())
     {
         // Add buttons to header flex
         headerFlexBox.items.add(FlexItem(buttonsComponent).withFlex(2).withMargin({ 0, 0, 0, 1 }));
@@ -363,7 +439,7 @@ void MediaDisplayComponent::resized()
     float trackNameLabelWidth = labelBounds.getWidth();
     float trackNameLabelHeight = labelBounds.getHeight();
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && ! isPreviewTrack())
     {
         Point<float> labelCenter = labelBounds.getCentre();
         // Rotate track name label 90 degrees
@@ -453,6 +529,18 @@ void MediaDisplayComponent::resized()
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
+
+    // Performs layout in preview pane
+    if (isPreviewTrack())
+    {
+        previewControlsFlexBox.items.clear();
+        previewControlsFlexBox.items.add(
+            FlexItem(previewPlayPauseButton).withWidth(25).withHeight(25).withMargin({ 2, 0, 2, 0 }));
+        previewControlsFlexBox.items.add(
+            FlexItem(previewStopButton).withWidth(25).withHeight(25).withMargin({ 2, 0, 2, 0 }));
+        previewControlsFlexBox.performLayout(previewControlsComponent.getLocalBounds());
+    }
+
 
     if (! isLabelRepositioningScheduled)
     {
@@ -605,6 +693,10 @@ void MediaDisplayComponent::resetButtonState()
     chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
     copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
+    }
 }
 
 void MediaDisplayComponent::initializeDisplay(const URL& filePath)
@@ -1191,6 +1283,11 @@ void MediaDisplayComponent::start()
     startTimerHz(40);
 
     playStopButton.setMode(stopButtonInfo.displayLabel);
+
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPauseButtonInfo.displayLabel);
+    }
 }
 
 void MediaDisplayComponent::stop()
@@ -1204,7 +1301,22 @@ void MediaDisplayComponent::stop()
 
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
 
+    if (isPreviewTrack())
+    {
+        previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
+    }
+
     sendChangeMessage();
+}
+
+void MediaDisplayComponent::pause()
+{
+    stopPlaying();
+
+    stopTimer();
+    
+    //currentPositionCursor.setVisible(true);
+    previewPlayPauseButton.setMode(previewPlayButtonInfo.displayLabel);
 }
 
 void MediaDisplayComponent::updateCursorPosition()
@@ -1234,14 +1346,11 @@ void MediaDisplayComponent::updateCursorPosition()
 
     cursorPositionX = jmin(maxCursorXPos, jmax(minCursorXPos, cursorPositionX));
 
-    Rectangle<int> mediaAreaBounds = mediaAreaContainer.getBounds();
     Rectangle<int> mediaBounds = contentComponent.getBounds();
-
-    // Include offset(s) for track header
-    cursorPositionX += static_cast<float>(mediaAreaBounds.getX());
-    cursorPositionY += static_cast<float>(mediaAreaBounds.getY());
-    // Include offset for label overlay header
-    cursorPositionY += static_cast<float>(mediaBounds.getY());
+    // Get position of contentComponent in the correct coordinate space, accounting for nested parents
+    Point<int> mediaOrigin = getLocalPoint(&contentComponent, Point<int>(0, 0));
+    cursorPositionX += static_cast<float>(mediaOrigin.getX());
+    cursorPositionY += static_cast<float>(mediaOrigin.getY());
     // Offset by half of width
     cursorPositionX -= cursorWidth / 2.0f;
 

@@ -17,6 +17,7 @@ enum CommandIDs
     // View
     viewStatusArea = 0x2000,
     viewMediaClipboard = 0x2001,
+    viewPreviewPane = 0x2002,
 
     // Help
     about = 0x3000,
@@ -71,6 +72,7 @@ PopupMenu MainComponent::getMenuForIndex([[maybe_unused]] int menuIndex, const S
     {
         menu.addCommandItem(&commandManager, CommandIDs::viewStatusArea);
         menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        menu.addCommandItem(&commandManager, CommandIDs::viewPreviewPane);
     }
     else if (menuName == "Help")
     {
@@ -135,7 +137,7 @@ void MainComponent::getAllCommands(Array<CommandID>& commands)
 
     commands.addArray(editIDs, numElementsInArray(editIDs));
 
-    const CommandID viewIDs[] = { CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard };
+    const CommandID viewIDs[] = { CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard, CommandIDs::viewPreviewPane };
 
     commands.addArray(viewIDs, numElementsInArray(viewIDs));
 
@@ -207,6 +209,12 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
             break;
 
+        case CommandIDs::viewPreviewPane:
+            result.setInfo("Preview Pane", "Toggles display of track preview pane", "View", 0);
+            result.setTicked(mediaClipboardWidget.isPreviewPaneVisible());
+
+            break;
+
         /* --Help-- */
         case CommandIDs::about:
             result.setInfo(
@@ -275,6 +283,11 @@ bool MainComponent::perform(const InvocationInfo& info)
             DBG_AND_LOG("MainComponent::perform: \"viewStatusArea\" command invoked.");
             viewStatusAreaCallback();
 
+            break;
+
+        case CommandIDs::viewPreviewPane:
+            DBG_AND_LOG("MainComponent:: perform: \"ViewPreviewPane\" command invoked.");
+            mediaClipboardWidget.togglePreviewPane();
             break;
 
         /* --Help-- */
