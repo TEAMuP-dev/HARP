@@ -397,7 +397,7 @@ void MediaDisplayComponent::resized()
     if (isPreviewTrack())
     {
         mainFlexBox.items.add(
-            FlexItem(previewControlsComponent).withHeight(36).withMargin({ 4, 0, 4, 0 }));
+            FlexItem(previewControlsComponent).withHeight(36).withMargin({ 2, 0, 2, 0 }));
     }
 
     mainFlexBox.performLayout(totalBounds);

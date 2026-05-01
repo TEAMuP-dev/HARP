@@ -22,6 +22,10 @@ public:
         minimizeButton.setTooltip("Minimize preview pane");
         minimizeButton.onClick = [this]
         {
+            if (currentDisplay != nullptr && currentDisplay->isPlaying())
+            {
+                currentDisplay->stop();
+            }
             if (isMinimized)
             {
                 isMinimized = false;
@@ -49,6 +53,11 @@ public:
         closeButton.setTooltip("Close preview pane");
         closeButton.onClick = [this]
         {
+            if (currentDisplay != nullptr && currentDisplay->isPlaying())
+            {
+                currentDisplay->stop();
+            }
+
             isMinimized = false;
             minimizeButton.setButtonText("-");
 
