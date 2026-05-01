@@ -131,10 +131,8 @@ public:
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        DBG_AND_LOG("PreviewPaneWidget::changeListenerCallback fired");
         if (source == currentDisplay.get())
         {
-            DBG_AND_LOG("PreviewPaneWidget: source matches currentDisplay, calling resized/repaint");
             resized();
             repaint();
         }

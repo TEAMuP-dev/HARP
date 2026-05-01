@@ -193,7 +193,6 @@ private:
     virtual void changeListenerCallback(ChangeBroadcaster*) override 
     { 
         repaint();
-        DBG_AND_LOG("MediaDisplayComponent::changeListenerCallback fired, scheduling sendChangeMessage");
         MessageManager::callAsync([this]() { sendChangeMessage(); });
     }
 
