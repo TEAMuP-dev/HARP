@@ -393,60 +393,21 @@ private:
         {
             alertWindow->addButton("Open URL", buttonOpenURL);
             bindButtonCallback("Open URL",
-                               [this, openablePath, onExit]
-                               {
-                                   URL(*openablePath).launchInDefaultBrowser();
-
-                                   if (onExit)
-                                   {
-                                       onExit();
-                                   }
-
-                                   if (errorPopupWindow != nullptr)
-                                   {
-                                       removeChildComponent(errorPopupWindow.get());
-                                       errorPopupWindow.reset();
-                                   }
-                               });
+                               [openablePath] { URL(*openablePath).launchInDefaultBrowser(); });
         }
 
         alertWindow->addButton("Open Logs", buttonOpenLogs);
         bindButtonCallback("Open Logs",
-                           [this, onExit]
-                           {
-                               HARPLogger::getInstance()->getLogFile().revealToUser();
-
-                               if (onExit)
-                               {
-                                   onExit();
-                               }
-
-                               if (errorPopupWindow != nullptr)
-                               {
-                                   removeChildComponent(errorPopupWindow.get());
-                                   errorPopupWindow.reset();
-                               }
-                           });
+                           [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
 
         if (isReportableError)
         {
             alertWindow->addButton("Report", buttonSendReport);
             bindButtonCallback("Report",
-                               [this, error, errorMessage, onExit]
+                               [this, error, errorMessage]
                                {
-                                   // Opens GitHub new-issue page pre-filled with error details.
+                                   // Open GitHub issue but keep the popup open
                                    openGitHubIssue(error, errorMessage, "");
-
-                                   if (onExit)
-                                   {
-                                       onExit();
-                                   }
-
-                                   if (errorPopupWindow != nullptr)
-                                   {
-                                       removeChildComponent(errorPopupWindow.get());
-                                       errorPopupWindow.reset();
-                                   }
                                });
         }
 
