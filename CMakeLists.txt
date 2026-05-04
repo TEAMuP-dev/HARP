@@ -219,6 +219,61 @@ if (WIN32)
     )
 endif()
 
+include(CTest)
+
+juce_add_console_app(HARPRemoteModelTests
+    PRODUCT_NAME "HARPRemoteModelTests")
+
+juce_generate_juce_header(HARPRemoteModelTests)
+
+target_sources(HARPRemoteModelTests
+    PRIVATE
+        tests/ModelValidationMain.cpp
+        src/Model.h
+        src/clients/Client.h
+        src/clients/GradioClient.h
+        src/utils/Logging.h
+        src/utils/Settings.h
+        src/utils/Interface.h
+        src/utils/Controls.h
+        src/utils/Labels.h
+        src/utils/Clients.h
+        src/utils/Errors.h
+        src/utils/Enums.h
+)
+
+target_include_directories(HARPRemoteModelTests
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+)
+
+target_compile_definitions(HARPRemoteModelTests
+    PRIVATE
+        JUCE_USE_CURL=1
+        JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
+        HARP_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+target_link_libraries(HARPRemoteModelTests
+    PRIVATE
+        juce::juce_audio_basics
+        juce::juce_audio_formats
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_gui_basics
+        juce::juce_graphics
+        stability_controls
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
+
+if(BUILD_TESTING)
+    add_test(NAME HARPRemoteModelTests COMMAND HARPRemoteModelTests)
+endif()
+
 # copy the pyinstaller tools to the  bundle
 # if (APPLE)
 #     add_custom_command(TARGET ${PROJECT_NAME}
