@@ -323,8 +323,8 @@ void MediaDisplayComponent::paintOverChildren(Graphics& g)
         // Grab that 24-pixel vertical slice on the far left that we reserved in resized()
         auto bannerArea = getLocalBounds().removeFromLeft(24);
 
-        // Draw the solid orange background
-        g.setColour(Colours::darkorange);
+        // Draw the background color
+        g.setColour(Colour::fromRGB(90, 105, 105));
         g.fillRect(bannerArea);
 
         // Setup text formatting
@@ -344,7 +344,7 @@ void MediaDisplayComponent::paintOverChildren(Graphics& g)
         textBounds.setCentre(cx, cy);
 
         // Draw the text inside our rotated box
-        g.drawText("OPTIONAL INPUT TRACK", textBounds, Justification::centred, false);
+        g.drawText("OPTIONAL", textBounds, Justification::centred, false);
     }
 }
 
@@ -352,7 +352,7 @@ void MediaDisplayComponent::resized()
 {
     Rectangle<int> totalBounds = getLocalBounds();
 
-    // Reserve 24 pixels on the left edge for the vertical "Optional Input" banner.
+    // Reserve 24 pixels on the left edge for the vertical "Optional" banner.
     if (!isRequired() && isInputTrack() && !isThumbnailTrack())
     {
         totalBounds.removeFromLeft(24);
