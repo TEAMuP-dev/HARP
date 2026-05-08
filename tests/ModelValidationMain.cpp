@@ -90,6 +90,35 @@ int getPerModelTimeoutMs()
     return parsed > 0 ? parsed : defaultPerModelTimeoutMs;
 }
 
+constexpr int defaultMaxRetries = 0;
+constexpr int defaultRetryDelayMs = 15000;
+
+int getMaxRetries()
+{
+    const auto value = getEnvValue("HARP_MODEL_VALIDATION_RETRIES");
+
+    if (value.isEmpty())
+    {
+        return defaultMaxRetries;
+    }
+
+    const auto parsed = value.getIntValue();
+    return parsed >= 0 ? parsed : defaultMaxRetries;
+}
+
+int getRetryDelayMs()
+{
+    const auto value = getEnvValue("HARP_MODEL_VALIDATION_RETRY_DELAY_MS");
+
+    if (value.isEmpty())
+    {
+        return defaultRetryDelayMs;
+    }
+
+    const auto parsed = value.getIntValue();
+    return parsed > 0 ? parsed : defaultRetryDelayMs;
+}
+
 File getReportDir()
 {
     const auto envValue = getEnvValue("HARP_MODEL_VALIDATION_REPORT_DIR");
@@ -519,7 +548,21 @@ bool parseResultRowFromOutput(const String& output, ValidationResultRow& result)
     return false;
 }
 
-ValidationResultRow runEntryInChildProcess(const ValidationEntry& entry)
+bool isRetryableFailure(const ValidationResultRow& result)
+{
+    if (result.outcome != "failed")
+        return false;
+
+    const auto& reason = result.reason;
+    return reason.containsIgnoreCase("sleeping")
+        || reason.containsIgnoreCase("restarting")
+        || reason.containsIgnoreCase("try again")
+        || reason.containsIgnoreCase("timed out")
+        || reason.containsIgnoreCase("503")
+        || reason.containsIgnoreCase("Unable to make POST request");
+}
+
+ValidationResultRow runEntryInChildProcessOnce(const ValidationEntry& entry)
 {
     StringArray command;
     command.add("env");
@@ -573,6 +616,25 @@ ValidationResultRow runEntryInChildProcess(const ValidationEntry& entry)
 
     return { entry.id, entry.name, entry.path, "failed", fallbackReason };
 }
+
+ValidationResultRow runEntryInChildProcess(const ValidationEntry& entry)
+{
+    const auto maxRetries = getMaxRetries();
+    const auto retryDelayMs = getRetryDelayMs();
+
+    auto result = runEntryInChildProcessOnce(entry);
+
+    for (int attempt = 1; attempt <= maxRetries && isRetryableFailure(result); ++attempt)
+    {
+        std::cout << "  retry " << attempt << "/" << maxRetries
+                  << " (waiting " << retryDelayMs / 1000 << "s)...\n";
+
+        Thread::sleep(retryDelayMs);
+        result = runEntryInChildProcessOnce(entry);
+    }
+
+    return result;
+}
 } // namespace
 
 int main(int argc, char* argv[])
@@ -599,31 +661,81 @@ int main(int argc, char* argv[])
             return result.outcome == "failed" ? 1 : 0;
         }
 
+        const auto totalEntries = static_cast<int>(entries.size());
+
+        std::cout << "\n";
+        std::cout << "========================================\n";
+        std::cout << "  HARP Remote Model Validation\n";
+        std::cout << "========================================\n";
+        std::cout << "  Models to validate: " << totalEntries << "\n";
+        std::cout << "  Timeout per model:  " << getPerModelTimeoutMs() / 1000 << "s\n";
+        std::cout << "  Max retries:        " << getMaxRetries() << "\n";
+        std::cout << "----------------------------------------\n\n";
+
         std::vector<ValidationResultRow> results;
         results.reserve(entries.size());
 
-        for (const auto& entry : entries)
+        for (int i = 0; i < totalEntries; ++i)
         {
+            const auto& entry = entries[static_cast<size_t>(i)];
+
+            std::cout << "[" << (i + 1) << "/" << totalEntries << "] "
+                      << entry.path << " ... " << std::flush;
+
             const auto result = runEntryInChildProcess(entry);
             results.push_back(result);
 
-            std::cout << result.path << " - " << result.outcome;
-
-            if (result.reason.isNotEmpty())
-            {
-                std::cout << ": " << result.reason;
-            }
-
-            std::cout << '\n';
+            if (result.outcome == "passed")
+                std::cout << "PASSED\n";
+            else if (result.outcome == "skipped")
+                std::cout << "SKIPPED (" << result.reason << ")\n";
+            else
+                std::cout << "FAILED\n";
         }
+
+        int passed = 0;
+        int failed = 0;
+        int skipped = 0;
+        std::vector<const ValidationResultRow*> failedResults;
+
+        for (const auto& result : results)
+        {
+            if (result.outcome == "passed")
+                passed += 1;
+            else if (result.outcome == "skipped")
+                skipped += 1;
+            else
+            {
+                failed += 1;
+                failedResults.push_back(&result);
+            }
+        }
+
+        std::cout << "\n";
+        std::cout << "========================================\n";
+        std::cout << "  Summary\n";
+        std::cout << "========================================\n";
+        std::cout << "  Passed:  " << passed << " / " << totalEntries << "\n";
+        std::cout << "  Failed:  " << failed << " / " << totalEntries << "\n";
+        std::cout << "  Skipped: " << skipped << " / " << totalEntries << "\n";
+        std::cout << "----------------------------------------\n";
+
+        if (! failedResults.empty())
+        {
+            std::cout << "\n  Failed models:\n\n";
+
+            for (const auto* result : failedResults)
+            {
+                std::cout << "    " << result->path << "\n";
+                std::cout << "      Reason: " << result->reason << "\n\n";
+            }
+        }
+
+        std::cout << "========================================\n\n";
 
         writeReport(reportDir, results);
 
-        const auto hasFailures = std::any_of(results.begin(), results.end(), [](const auto& result) {
-            return result.outcome == "failed";
-        });
-
-        return hasFailures ? 1 : 0;
+        return failed > 0 ? 1 : 0;
     }
     catch (const std::exception& exception)
     {
