@@ -15,6 +15,11 @@ MainComponent::MainComponent()
     addAndMakeVisible(mainModelTab);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+    mediaClipboardWidget.onResize = [this](int newWidth)
+    {
+        clipboardWidth = newWidth;
+        resized();
+    };
     addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
@@ -116,7 +121,7 @@ void MainComponent::resized()
 
     if (showMediaClipboard)
     {
-        fullWindow.items.add(FlexItem(mediaClipboardWidget).withFlex(mediaClipboardFlex));
+        fullWindow.items.add(FlexItem(mediaClipboardWidget).withWidth(clipboardWidth));
     }
     else
     {
@@ -138,8 +143,9 @@ void MainComponent::updateWindowConstraints()
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
         // Compute percentage of total window width given to main panel
-        const float mainPanelRatio = showMediaClipboard ? (1.0f / mediaClipboardScale) : 1.0f;
-
+        const float mainPanelRatio = showMediaClipboard
+            ? (float(getWidth() - clipboardWidth) / float(jmax(1, getWidth())))
+            : 1.0f;
         // Determine minimum width needed to display controls plus padding
         const int requiredMainPanelWidth =
             jmax(minimumMainPanelWidth,
@@ -313,20 +319,19 @@ void MainComponent::viewMediaClipboardCallback()
 
         if (showMediaClipboard)
         {
-            // Scale bounds to extend window by 40% of main width
+            clipboardWidth = mediaClipboardWidget.getDefaultWidth();
             windowBounds.setWidth(
-                jmin(currentDisplayWidth,
-                     static_cast<int>(mediaClipboardScale * windowBounds.getWidth())));
+                jmin(currentDisplayWidth, windowBounds.getWidth() + clipboardWidth));
         }
         else
         {
             if (! window->isFullScreen())
             {
-                // Scale bounds to reduce window to main width
                 windowBounds.setWidth(
-                    static_cast<int>(windowBounds.getWidth() / mediaClipboardScale));
+                    jmax(minimumWindowWidth, windowBounds.getWidth() - clipboardWidth));
             }
         }
+
 
         // Set extended or reduced bounds
         window->setBounds(windowBounds);

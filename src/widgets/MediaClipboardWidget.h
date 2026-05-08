@@ -16,6 +16,34 @@
 
 using namespace juce;
 
+class MediaClipboardWidget;
+
+class ResizeEdgeComponent : public Component
+{
+public:
+    ResizeEdgeComponent(MediaClipboardWidget* ownerIn) : owner(ownerIn) {}
+
+    void mouseMove(const MouseEvent&) override
+    {
+        setMouseCursor(MouseCursor::LeftRightResizeCursor);
+    }
+
+    void mouseDown(const MouseEvent& e) override;
+
+    void mouseDrag(const MouseEvent& e) override;
+
+    void mouseUp(const MouseEvent&) override
+    {
+        dragStartX = -1;
+        dragStartWidth = -1;
+    }
+
+private:
+    MediaClipboardWidget* owner = nullptr;
+    int dragStartX = -1;
+    int dragStartWidth = -1;
+};
+
 class MediaClipboardWidget : public Component, public ChangeListener
 {
 public:
@@ -34,6 +62,7 @@ public:
         trackAreaWidget.addChangeListener(this);
         trackArea.setViewedComponent(&trackAreaWidget, false);
         addAndMakeVisible(trackArea);
+        addAndMakeVisible(resizeEdge);
     }
 
     ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
@@ -42,6 +71,8 @@ public:
 
     void resized() override
     {
+        resizeEdge.setBounds(0, 0, resizeEdgeWidth, getHeight());
+
         Rectangle<int> totalBounds = getLocalBounds();
 
         // Flex for whole media clipboard
@@ -169,6 +200,10 @@ public:
     {
         return getLocalArea(&buttonsComponent, sendToDAWButton.getBounds()).expanded(2);
     }
+
+    std::function<void(int)> onResize;
+
+    int getDefaultWidth() const { return defaultWidth; }
 
     void addFileCallback()
     {
@@ -705,8 +740,13 @@ private:
         currentlySelectedDisplay = mediaDisplay;
     }
 
+    friend class ResizeEdgeComponent;
+
     const float marginSize = 2;
     const float buttonWidth = 26;
+    const int resizeEdgeWidth = 6;
+    const int defaultWidth = 250;
+    const int minimumWidth = 150;
 
     // Main controls component
     Component controlsComponent;
@@ -714,6 +754,8 @@ private:
     TextEditor selectionTextBox;
     // Buttons area subcomponent
     Component buttonsComponent;
+    // Draggable edge component
+    ResizeEdgeComponent resizeEdge { this };
 
     // Button components
     /*MultiButton renameSelectionButton;
@@ -751,3 +793,26 @@ private:
 
     MediaDisplayComponent* currentlySelectedDisplay;
 };
+
+inline void ResizeEdgeComponent::mouseDown(const MouseEvent& e)
+{
+    dragStartX = e.getScreenX();
+    dragStartWidth = owner->getWidth();
+}
+
+inline void ResizeEdgeComponent::mouseDrag(const MouseEvent& e)
+{
+    if (dragStartX < 0)
+    {
+        return;
+    }
+    // Dragging left (negative delta) widens,
+    // Dragging right (positive delta) narrows.
+    int delta = e.getScreenX() - dragStartX;
+    int newWidth = jmax(owner->minimumWidth, dragStartWidth - delta);
+
+    if (owner->onResize)
+    {
+        owner->onResize(newWidth);
+    }
+}
