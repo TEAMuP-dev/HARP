@@ -6,6 +6,9 @@
 
 #include <cmath>
 
+// RZ: Initialize JUCE SafePointer for drag-and-drop label creation
+Component::SafePointer<MediaDisplayComponent> MediaDisplayComponent::currentlyDraggedComponent = nullptr;
+
 namespace
 {
 struct TickScheme
@@ -1346,6 +1349,10 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
         {
             //performExternalDragDropOfFiles(
             //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
+
+            // RZ: Set the tracker before the blocking OS drag
+            currentlyDraggedComponent = this;
+
             performExternalDragDropOfFiles(
                 StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
         }
@@ -1447,6 +1454,11 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
 
 void MediaDisplayComponent::addLabels(const LabelList& labels)
 {
+    // RZ: save a copy of the incoming labels
+    for (const auto& l : labels) {
+        cachedLabels.push_back(l->clone());
+    }
+    
     for (const auto& l : labels)
     {
         if (! shouldRenderLabel(l))
@@ -1600,6 +1612,7 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     {
         overheadLabels.clear();
         currentLabelsJson.clear(); // CLEAR CACHE
+        cachedLabels.clear(); // RZ: Clear memory cache
         saveLabelsButton.setMode(saveLabelsButtonInactiveInfo.displayLabel); // DEACTIVATE BUTTON
         saveLabelsButton.setVisible(false); // RZ: Hide the button when there are no labels to save
     }

@@ -159,6 +159,18 @@ public:
     void addLabels(const LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
 
+    // RZ: JUCE SafePointer to the currently dragged component, used for drag-and-drop label creation
+    static Component::SafePointer<MediaDisplayComponent> currentlyDraggedComponent;
+    
+    // Returns a fresh, deep-copied list of this track's labels
+    LabelList getClonedLabels() const
+    {
+        LabelList clones;
+        for (const auto& l : cachedLabels)
+            clones.push_back(l->clone());
+        return clones;
+    }
+
 protected:
     void resetTransport();
 
@@ -318,4 +330,6 @@ private:
 
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
     SharedResourcePointer<StatusMessage> statusMessage;
+    
+    LabelList cachedLabels; // RZ: Cache of this track's labels
 };
