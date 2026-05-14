@@ -125,6 +125,8 @@ public:
 
     void saveFileCallback();
     void copyFileCallback();
+    void saveLabelsCallback(); // RZ: Callback for saving labels
+    String currentLabelsJson; // Stores the serialized JSON string for this track
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
@@ -156,6 +158,18 @@ public:
 
     void addLabels(const LabelList& labels);
     void clearLabels(int processingIdxCutoff = 0);
+
+    // RZ: JUCE SafePointer to the currently dragged component, used for drag-and-drop label creation
+    static Component::SafePointer<MediaDisplayComponent> currentlyDraggedComponent;
+    
+    // Returns a fresh, deep-copied list of this track's labels
+    LabelList getClonedLabels() const
+    {
+        LabelList clones;
+        for (const auto& l : cachedLabels)
+            clones.push_back(l->clone());
+        return clones;
+    }
 
 protected:
     void resetTransport();
@@ -271,6 +285,9 @@ private:
     MultiButton copyFileButton;
     MultiButton::Mode copyFileButtonActiveInfo;
     MultiButton::Mode copyFileButtonInactiveInfo;
+    MultiButton saveLabelsButton; // RZ: Save labels button
+    MultiButton::Mode saveLabelsButtonActiveInfo;
+    MultiButton::Mode saveLabelsButtonInactiveInfo;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
@@ -298,6 +315,7 @@ private:
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;
+    std::unique_ptr<FileChooser> saveLabelsBrowser; // RZ: File chooser for saving labels
 
     double horizontalZoomFactor;
     ScrollBar horizontalScrollBar { false };
@@ -312,4 +330,6 @@ private:
 
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
     SharedResourcePointer<StatusMessage> statusMessage;
+    
+    LabelList cachedLabels; // RZ: Cache of this track's labels
 };

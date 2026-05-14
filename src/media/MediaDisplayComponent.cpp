@@ -6,6 +6,9 @@
 
 #include <cmath>
 
+// RZ: Initialize JUCE SafePointer for drag-and-drop label creation
+Component::SafePointer<MediaDisplayComponent> MediaDisplayComponent::currentlyDraggedComponent = nullptr;
+
 namespace
 {
 struct TickScheme
@@ -253,6 +256,27 @@ void MediaDisplayComponent::initializeButtons()
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
 
+    // RZ: Save labels button
+   // Mode when labels exist
+    saveLabelsButtonActiveInfo = MultiButton::Mode { "SaveLabels-Active",
+                                                   "Click to export labels to JSON.",
+                                                   [this] { saveLabelsCallback(); },
+                                                   MultiButton::DrawingMode::IconOnly,
+                                                   Colours::lightgreen, // Colored green to distinguish from media save
+                                                   fontawesome::Save };
+    // Mode when no labels exist
+    saveLabelsButtonInactiveInfo = MultiButton::Mode { "SaveLabels-Inactive",
+                                                       "No labels to save.",
+                                                       [this] {},
+                                                       MultiButton::DrawingMode::IconOnly,
+                                                       Colours::lightgrey,
+                                                       fontawesome::Save };
+    saveLabelsButton.addMode(saveLabelsButtonActiveInfo);
+    saveLabelsButton.addMode(saveLabelsButtonInactiveInfo);
+    headerComponent.addAndMakeVisible(saveLabelsButton); 
+
+    saveLabelsButton.setVisible(false); // RZ: Hide the button initially
+
     resetButtonState();
 }
 
@@ -399,6 +423,12 @@ void MediaDisplayComponent::resized()
     {
         buttonsFlexBox.items.add(
             FlexItem(saveFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+
+        if (currentLabelsJson.isNotEmpty()) // RZ: Show save labels button only if there are labels to save
+        {
+            buttonsFlexBox.items.add(
+                FlexItem(saveLabelsButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+        }
         buttonsFlexBox.items.add(
             FlexItem(copyFileButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
     }
@@ -1319,6 +1349,10 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
         {
             //performExternalDragDropOfFiles(
             //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
+
+            // RZ: Set the tracker before the blocking OS drag
+            currentlyDraggedComponent = this;
+
             performExternalDragDropOfFiles(
                 StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
         }
@@ -1420,6 +1454,11 @@ void MediaDisplayComponent::removeLabelOverlay(LabelOverlayComponent* l)
 
 void MediaDisplayComponent::addLabels(const LabelList& labels)
 {
+    // RZ: save a copy of the incoming labels
+    for (const auto& l : labels) {
+        cachedLabels.push_back(l->clone());
+    }
+    
     for (const auto& l : labels)
     {
         if (! shouldRenderLabel(l))
@@ -1491,6 +1530,55 @@ void MediaDisplayComponent::addLabels(const LabelList& labels)
             addOverheadLabel(ol);
         }
     }
+    // RZ: Generate JSON representation of labels for export
+    juce::Array<juce::var> labelArray;
+    for (const auto& l : labels)
+    {
+        if (!shouldRenderLabel(l)) continue;
+        
+        juce::DynamicObject::Ptr labelObj = new juce::DynamicObject();
+        labelObj->setProperty("t", l->t);
+        labelObj->setProperty("label", l->label);
+
+        if (l->duration.has_value()) labelObj->setProperty("duration", l->duration.value());
+        if (l->description.has_value()) labelObj->setProperty("description", l->description.value());
+        if (l->color.has_value()) labelObj->setProperty("color", l->color.value());
+        if (l->link.has_value()) labelObj->setProperty("link", l->link.value());
+
+        if (auto* audioLabel = dynamic_cast<AudioLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "AudioLabel");
+            if (audioLabel->amplitude.has_value()) labelObj->setProperty("amplitude", audioLabel->amplitude.value());
+        }
+        else if (auto* midiLabel = dynamic_cast<MidiLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "MidiLabel");
+            if (midiLabel->pitch.has_value()) labelObj->setProperty("pitch", midiLabel->pitch.value());
+        }
+        else if (auto* specLabel = dynamic_cast<SpectrogramLabel*>(l.get()))
+        {
+            labelObj->setProperty("label_type", "SpectrogramLabel");
+            if (specLabel->frequency.has_value()) labelObj->setProperty("frequency", specLabel->frequency.value());
+        }
+        else
+        {
+            labelObj->setProperty("label_type", "OutputLabel");
+        }
+
+        labelArray.add(juce::var(labelObj));
+    }
+
+    juce::DynamicObject::Ptr rootObj = new juce::DynamicObject();
+    rootObj->setProperty("labels", juce::var(labelArray));
+    currentLabelsJson = juce::JSON::toString(juce::var(rootObj));
+
+    // Activate the button if we successfully generated labels
+    if (!labelArray.isEmpty()) {
+        saveLabelsButton.setMode(saveLabelsButtonActiveInfo.displayLabel);
+
+        saveLabelsButton.setVisible(true); // RZ: Show the button when there are labels to save
+        resized(); // RZ: Update layout to accommodate button
+    }
 }
 
 void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
@@ -1523,7 +1611,59 @@ void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
     if (! processingIdxCutoff)
     {
         overheadLabels.clear();
+        currentLabelsJson.clear(); // CLEAR CACHE
+        cachedLabels.clear(); // RZ: Clear memory cache
+        saveLabelsButton.setMode(saveLabelsButtonInactiveInfo.displayLabel); // DEACTIVATE BUTTON
+        saveLabelsButton.setVisible(false); // RZ: Hide the button when there are no labels to save
     }
 
     resized(); // Remove overhead label panel
+}
+
+void MediaDisplayComponent::saveLabelsCallback() // RZ: Callback for saving labels
+{
+    if (currentLabelsJson.isEmpty())
+        return;
+
+    // 1. Initialize the file chooser with a default name "labels.json"
+    saveLabelsBrowser = std::make_unique<juce::FileChooser>(
+        "Select a save path for labels...", 
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("labels.json"), 
+        "*.json");
+
+    // 2. Launch the dialog asynchronously
+    saveLabelsBrowser->launchAsync(
+        juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+        [this](const juce::FileChooser& fc)
+        {
+            juce::File chosenFile = fc.getResult();
+            
+            // 3. If the user didn't cancel the dialog...
+            if (chosenFile != juce::File{})
+            {
+                // Ensure it ends with .json
+                if (!chosenFile.hasFileExtension(".json"))
+                {
+                    chosenFile = chosenFile.withFileExtension(".json");
+                }
+
+                // 4. Attempt to write the text to the chosen file
+                if (chosenFile.replaceWithText(currentLabelsJson))
+                {
+                    if (statusMessage != nullptr)
+                    {
+                        statusMessage->setMessage("Labels successfully exported to " + chosenFile.getFullPathName());
+                    }
+                }
+                else
+                {
+                    // Display an error popup if writing to the disk fails
+                    juce::AlertWindow::showMessageBoxAsync(
+                        juce::AlertWindow::WarningIcon,
+                        "Save Failed",
+                        "Failed to save labels to " + chosenFile.getFullPathName() + ".",
+                        "OK");
+                }
+            }
+        });
 }

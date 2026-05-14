@@ -522,8 +522,25 @@ public:
         for (String f : files)
         {
             URL droppedFilePath = URL(File(f));
-
             addTrackFromFilePath(droppedFilePath);
+            
+            // RZ: update the clipboard to look for that static pointer when a file is dropped.
+            if (MediaDisplayComponent::currentlyDraggedComponent != nullptr)
+            {
+                // Verify the file paths match to ensure we are applying labels to the correct track
+                if (MediaDisplayComponent::currentlyDraggedComponent->getOriginalFilePath() == droppedFilePath)
+                {
+                    if (!mediaDisplays.empty())
+                    {
+                        // Get the newly created track in the clipboard
+                        auto* newTrack = mediaDisplays.back().get();
+                        
+                        // Deep copy the labels over!
+                        newTrack->addLabels(MediaDisplayComponent::currentlyDraggedComponent->getClonedLabels());
+                    }
+                }
+                MediaDisplayComponent::currentlyDraggedComponent = nullptr; // RZ: Clear the tracker when the drag finishes
+            }
         }
     }
 
