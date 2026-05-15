@@ -27,6 +27,23 @@ enum class DisplayMode
     Thumbnail // Reduced functionality
 };
 
+class OptionalBannerComponent : public Component
+{
+public:
+    void paint(Graphics& g) override;
+};
+
+class TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override;
+
+private:
+    MediaDisplayComponent* owner = nullptr;
+};
+
 class ColorablePanel : public Component
 {
 public:
@@ -46,17 +63,6 @@ public:
 private:
     Colour defaultColor;
     Colour backgroundColor;
-};
-
-class TimeAxisStrip : public Component
-{
-public:
-    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
-
-    void paint(Graphics& g) override;
-
-private:
-    MediaDisplayComponent* owner = nullptr;
 };
 
 class MediaDisplayComponent : public Component,
@@ -271,6 +277,9 @@ private:
     MultiButton copyFileButton;
     MultiButton::Mode copyFileButtonActiveInfo;
     MultiButton::Mode copyFileButtonInactiveInfo;
+
+    // Banner shown on left edge of optional input tracks
+    OptionalBannerComponent optionalBanner;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
