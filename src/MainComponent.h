@@ -31,6 +31,7 @@ class WelcomeWindow;
 class MainComponent : public Component,
                       public MenuBarModel,
                       public ApplicationCommandTarget,
+                      public DragAndDropContainer,
                       private ChangeListener
 
 {

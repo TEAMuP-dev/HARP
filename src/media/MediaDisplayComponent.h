@@ -62,8 +62,8 @@ private:
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
+                              public DragAndDropTarget,
                               public FileDragAndDropTarget,
-                              public DragAndDropContainer,
                               private Timer,
                               private ScrollBar::Listener
 {
@@ -120,6 +120,20 @@ public:
     //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
+
+    bool isInterestedInDragSource(const DragAndDropTarget::SourceDetails& details) override
+    {
+        return isInputTrack() && details.description.isString();
+    }
+
+    void itemDropped(const DragAndDropTarget::SourceDetails& details) override
+    {
+        String filePath = details.description.toString();
+        if (filePath.isNotEmpty())
+        {
+            initializeDisplay(URL(File(filePath)));
+        }
+    }
 
     bool isDuplicateFile(const URL& fileParth);
 
