@@ -5,7 +5,7 @@
 ![herofig_revised](https://github.com/TEAMuP-dev/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
 <!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main) -->
-<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp-plugin/deploys) -->
+<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp3/deploys) -->
 <!-- TODO - Replaced with HARP 3.0 paper link -->
 <!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
 
@@ -25,7 +25,7 @@ HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocess
     * **[Distribution](#distribution)**
 * **[Citations](#citations)**
 
-For more information on HARP, please see [our website](https://harp-plugin.netlify.app) or our most recent [NeurIPS workshop paper](https://openreview.net/pdf?id=Ha2z921r51).
+For more information on HARP, please see [our website](https://harp3.netlify.app) or our most recent [NeurIPS workshop paper](https://openreview.net/pdf?id=Ha2z921r51).
 
 
 <!-- website/content/supported_os.md -->
@@ -39,7 +39,7 @@ HARP has been tested on the following operating systems:
 
 <!-- website/content/install/ -->
 <!-- website/content/setup/ -->
-Please visit [our website](https://harp-plugin.netlify.app/content/install/macos.html) for instructions on installing HARP and setting it up as an external sample editor for specific operating systems and DAWs.
+Please visit [our website](https://harp3.netlify.app/content/install/macos.html) for instructions on installing HARP and setting it up as an external sample editor for specific operating systems and DAWs.
 
 
 # Usage
@@ -67,7 +67,7 @@ HARP processes full regions in the DAW. Therefore, to edit a portion of an audio
 <!-- website/content/usage/models.md -->
 ## Models
 
-Please visit [our website](https://harp-plugin.netlify.app/content/usage/models.html) for a full list of supported models.
+Please visit [our website](https://harp3.netlify.app/content/usage/models.html) for a full list of supported models.
 
 <!-- website/content/usage/workflow.md -->
 ## Workflow
