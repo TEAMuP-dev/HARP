@@ -1337,7 +1337,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
                 {
                     container->performExternalDragDropOfFiles(
                         StringArray(getOriginalFilePath().getLocalFile().getFullPathName()),
-                        true,
+                        false,
                         this);
                 }
             }
