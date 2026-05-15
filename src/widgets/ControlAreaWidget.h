@@ -16,6 +16,7 @@
 #include "../gui/SliderWithLabel.h"
 #include "../gui/TextBoxWithLabel.h"
 #include "../gui/ToggleWithLabel.h"
+#include "../gui/FilePickerWithLabel.h"
 
 #include "../utils/Controls.h"
 #include "../utils/Logging.h"
@@ -81,7 +82,7 @@ public:
     int getNumControls() const
     {
         return sliderComponents.size() + toggleComponents.size() + dropdownComponents.size()
-               + textComponents.size();
+            + textComponents.size() + filePickerComponents.size();
     }
 
     int getMinimumRequiredWidth() const
@@ -100,6 +101,7 @@ public:
         checkGroup(toggleComponents);
         checkGroup(dropdownComponents);
         checkGroup(textComponents);
+        checkGroup(filePickerComponents);
 
         return requiredWidth + 2 * (marginSize + minEdgeGap);
     }
@@ -156,6 +158,12 @@ public:
         }
         dropdownComponents.clear();
 
+        for (auto& c : filePickerComponents)
+        {
+            removeChildComponent(c.get());
+        }
+        filePickerComponents.clear();
+
         handlers.clear();
     }
 
@@ -181,6 +189,10 @@ public:
             else if (auto* dropdownInfo = dynamic_cast<ComboBoxComponentInfo*>(info.get()))
             {
                 addDropdown(dropdownInfo);
+            }
+            else if (auto* filePickerInfo = dynamic_cast<FilePickerComponentInfo*>(info.get()))
+            {
+                addFilePicker(filePickerInfo);
             }
             else
             {
@@ -287,6 +299,18 @@ private:
         dropdownComponents.push_back(std::move(dropdownComponent));
     }
 
+    void addFilePicker(FilePickerComponentInfo* info)
+    {
+        std::unique_ptr<FilePickerWithLabel> filePickerComponent =
+            std::make_unique<FilePickerWithLabel>(info);
+
+        addHandler(filePickerComponent.get(), info);
+
+        addAndMakeVisible(*filePickerComponent);
+
+        filePickerComponents.push_back(std::move(filePickerComponent));
+    }
+
     void addHandler(Component* comp, ModelComponentInfo* info)
     {
         std::unique_ptr<HoverHandler> handler = std::make_unique<HoverHandler>(*comp);
@@ -341,14 +365,16 @@ private:
         addGroupToRows(rows, toggleComponents, 1, width);
         addGroupToRows(rows, dropdownComponents, 2, width);
         addGroupToRows(rows, textComponents, 3, width);
+        addGroupToRows(rows, filePickerComponents, 4, width);
 
         return rows;
     }
 
+    template <typename ComponentList>
     void addGroupToRows(std::vector<std::vector<RowEntry>>& rows,
-                        const auto& components,
-                        int type,
-                        int availableWidth) const
+                const ComponentList& components,
+                int type,
+                int availableWidth) const
     {
         auto spec = getLayoutSpec(type);
 
@@ -403,6 +429,8 @@ private:
                 return { preferredDropdownWidth, minDropdownHeight };
             case 3:
                 return { preferredTextBoxWidth, minTextBoxHeight };
+            case 4:
+                return { preferredFilePickerWidth, minFilePickerHeight };
         }
 
         return { preferredDropdownWidth, minDropdownHeight };
@@ -426,11 +454,13 @@ private:
     static constexpr int minToggleHeight = 34;
     static constexpr int minDropdownHeight = 44;
     static constexpr int minTextBoxHeight = 84;
+    static constexpr int minFilePickerHeight = 64;
 
     static constexpr int preferredSliderWidth = 108;
     static constexpr int preferredToggleWidth = 112;
     static constexpr int preferredDropdownWidth = 140;
     static constexpr int preferredTextBoxWidth = 200;
+    static constexpr int preferredFilePickerWidth = 260;
 
     static constexpr int minInterItemGap = 6;
     static constexpr int minEdgeGap = 4;
@@ -441,6 +471,7 @@ private:
     std::vector<std::unique_ptr<ToggleWithLabel>> toggleComponents;
     std::vector<std::unique_ptr<SliderWithLabel>> sliderComponents;
     std::vector<std::unique_ptr<ComboBoxWithLabel>> dropdownComponents;
+    std::vector<std::unique_ptr<FilePickerWithLabel>> filePickerComponents;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
 

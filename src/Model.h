@@ -314,6 +314,22 @@ public:
             {
                 controlValue = var(comboBoxComponentInfo->value);
             }
+            else if (auto filePickerComponentInfo =
+                         dynamic_cast<FilePickerComponentInfo*>(componentInfo.get()))
+            {
+                if (filePickerComponentInfo->path.empty())
+                {
+                    controlValue = var();
+                }
+                else
+                {
+                    DynamicObject::Ptr fileObj = new DynamicObject();
+                    fileObj->setProperty("path", var(filePickerComponentInfo->path));
+                    controlValue = var(fileObj);
+                }
+
+                wasFile = true;
+            }
             else
             {
                 // Unsupported control was added
@@ -441,15 +457,15 @@ private:
                                 + "\" extracted.");
                 }
                 // Generic File
-                else if (type == "file_track")
+                else if (type == "file_picker")
                 {
-                    std::shared_ptr<ModelComponentInfo> fileTrack =
-                        std::make_shared<FileTrackComponentInfo>(controlsDict);
+                    std::shared_ptr<ModelComponentInfo> filePicker =
+                        std::make_shared<FilePickerComponentInfo>(controlsDict);
 
-                    newInputs.push_back(fileTrack);
-                    tempComponentIDs.push_back(fileTrack->id);
+                    newControls.push_back(filePicker);
+                    tempComponentIDs.push_back(filePicker->id);
 
-                    DBG_AND_LOG("Model::extractInputs: File track input \"" + fileTrack->label
+                    DBG_AND_LOG("Model::extractInputs: File picker control \"" + filePicker->label
                                 + "\" extracted.");
                 }
                 else if (type == "text_box")
@@ -573,17 +589,6 @@ private:
                     newOutputs.push_back(midiTrack);
 
                     DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
-                                + "\" extracted.");
-                }
-                // Generic File
-                else if (type == "file_track")
-                {
-                    std::shared_ptr<ModelComponentInfo> fileTrack =
-                        std::make_shared<FileTrackComponentInfo>(controlsDict);
-
-                    newOutputs.push_back(fileTrack);
-
-                    DBG_AND_LOG("Model::extractOutputs: File track output \"" + fileTrack->label
                                 + "\" extracted.");
                 }
                 else if (type == "json")

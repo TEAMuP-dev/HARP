@@ -11,7 +11,6 @@
 #include "../media/AudioDisplayComponent.h"
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
-#include "../media/FileDisplayComponent.h"
 
 #include "../utils/Controls.h"
 #include "../utils/Interface.h"
@@ -215,11 +214,6 @@ public:
             m = std::make_unique<MidiDisplayComponent>(
                 label, midiTrackInfo->required, fromDAW, displayMode);
         }
-        else if (auto fileTrackInfo = dynamic_cast<FileTrackComponentInfo*>(trackInfo))
-        {
-            m = std::make_unique<FileDisplayComponent>(
-                label, fileTrackInfo->required, fromDAW, displayMode);
-        }
         else
         {
             DBG_AND_LOG(
@@ -311,15 +305,6 @@ public:
             midiTrackInfo->label = label.toStdString();
 
             trackInfo = std::move(midiTrackInfo);
-        }
-        else if (FileDisplayComponent::getSupportedExtensions().contains(ext))
-        {
-            auto fileTrackInfo = std::make_unique<FileTrackComponentInfo>();
-
-            fileTrackInfo->required = false;
-            fileTrackInfo->label = label.toStdString();
-
-            trackInfo = std::move(fileTrackInfo);
         }
         else
         {

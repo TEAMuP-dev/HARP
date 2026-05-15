@@ -83,10 +83,32 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
-// New struct for generic file type
-struct FileTrackComponentInfo : public TrackComponentInfo
+struct FilePickerComponentInfo : public ModelComponentInfo
 {
-    using TrackComponentInfo::TrackComponentInfo;
+    bool required = true;
+    std::string path { "" };
+    std::vector<std::string> fileTypes;
+
+    FilePickerComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
+    {
+        if (input->hasProperty("required"))
+        {
+            required = stringToBool(input->getProperty("required").toString());
+        }
+
+        if (input->hasProperty("file_types"))
+        {
+            Array<var>* types = input->getProperty("file_types").getArray();
+
+            if (types != nullptr)
+            {
+                for (int i = 0; i < types->size(); ++i)
+                {
+                    fileTypes.push_back(types->getReference(i).toString().toStdString());
+                }
+            }
+        }
+    }
 };
 
 struct TextBoxComponentInfo : public ModelComponentInfo, public TextEditor::Listener
