@@ -1,0 +1,71 @@
+name: Remote Model Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: "Optional single model id from model_registry.json"
+        required: false
+        type: string
+  schedule:
+    - cron: "0 8 * * 1"
+
+concurrency:
+  group: remote-model-validation
+  cancel-in-progress: false
+
+env:
+  BUILD_TYPE: Release
+  BUILD_DIR: Builds
+  DISPLAY: :0
+  HARP_MODEL_VALIDATION_TIMEOUT_MS: 180000
+  HARP_MODEL_VALIDATION_RETRIES: 1
+  HARP_MODEL_VALIDATION_RETRY_DELAY_MS: 30000
+  HARP_MODEL_VALIDATION_REPORT_DIR: artifacts/model_validation/remote
+  HARP_HUGGINGFACE_TOKEN: ${{ secrets.HARP_HUGGINGFACE_TOKEN }}
+  HARP_STABILITY_API_KEY: ${{ secrets.HARP_STABILITY_API_KEY }}
+
+jobs:
+  validate-remote-models:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Install JUCE Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            libasound2-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libfreetype6-dev \
+            libwebkit2gtk-4.0-dev \
+            libglu1-mesa-dev \
+            libcurl4-openssl-dev \
+            xvfb
+          sudo /usr/bin/Xvfb "$DISPLAY" &
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" .
+
+      - name: Build model validation runner
+        run: cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target HARPRemoteModelTests --parallel 4
+
+      - name: Run remote model validation
+        env:
+          HARP_MODEL_VALIDATION_ID: ${{ inputs.model_id }}
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure -R HARPRemoteModelTests
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: remote-model-validation-report
+          path: artifacts/model_validation/remote
