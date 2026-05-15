@@ -13,7 +13,7 @@ git clone https://github.com/JusperLee/TIGER.git
 cd TIGER
 ```
 
-In the `requirements.txt`, remove `triton==3.1.0` to avoid dependency issues. Then pip install:
+In the `requirements.txt`, remove `triton==3.1.0` and add `typer==0.16.1` to avoid dependency issues. Then pip install:
 
 ```
 pip install -r requirements.txt
