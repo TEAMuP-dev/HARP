@@ -615,12 +615,10 @@ private:
         if (!isThumbnailWidget() || draggedTrack == nullptr) return;
 
         Point<int> posInThis = e.getEventRelativeTo(this).getPosition();
-        DBG_AND_LOG("mouseDrag called, pos: " << posInThis.x << ", " << posInThis.y);
 
         if (!isDraggingTrack && e.getDistanceFromDragStart() > 5)
         {
             isDraggingTrack = true;
-            DBG_AND_LOG("drag started");
 
             // Takes a snapshot of the track at the moment dragging starts
             if (dragOverlay != nullptr)
@@ -634,7 +632,6 @@ private:
 
         if (isDraggingTrack)
         {
-            DBG_AND_LOG("isDraggingTrack true, processing...");
             int newInsertIndex = -1;
             bool wasOutside = isDraggingOutside;
 
@@ -666,7 +663,6 @@ private:
 
     void mouseUp(const MouseEvent& e) override
     {
-        DBG_AND_LOG("mouseUp called, isDraggingTrack: " << (int)isDraggingTrack);
         if (!isThumbnailWidget()) return;
 
         // Tracks the release position of the mouse
