@@ -6,6 +6,27 @@
 
 #include <cmath>
 
+void OptionalBannerComponent::paint(Graphics& g)
+{
+    const float cx = static_cast<float>(getWidth()) / 2.0f;
+    const float cy = static_cast<float>(getHeight()) / 2.0f;
+
+    g.setColour(Colour::fromRGB(90, 105, 105));
+    g.fillAll();
+
+    g.setColour(Colours::white);
+    g.setFont(12.0f);
+
+    Graphics::ScopedSaveState state(g);
+    g.addTransform(AffineTransform::rotation(-MathConstants<float>::halfPi, cx, cy));
+
+    Rectangle<float> textBounds(
+        0, 0, static_cast<float>(getHeight()), static_cast<float>(getWidth()));
+    textBounds.setCentre(cx, cy);
+
+    g.drawText("OPTIONAL", textBounds, Justification::centred, false);
+}
+
 namespace
 {
 struct TickScheme
@@ -164,6 +185,8 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
 
+    addAndMakeVisible(optionalBanner);
+
     timeAxisStrip = std::make_unique<TimeAxisStrip>(this);
 
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
@@ -315,48 +338,9 @@ void MediaDisplayComponent::paint(Graphics& g)
     }
 }
 
-void MediaDisplayComponent::paintOverChildren(Graphics& g)
-{
-    // Detect optional AND input track AND not a thumbnail
-    if (!isRequired() && isInputTrack() && !isThumbnailTrack())
-    {
-        // Grab that 24-pixel vertical slice on the far left that we reserved in resized()
-        auto bannerArea = getLocalBounds().removeFromLeft(24);
-
-        // Draw the background color
-        g.setColour(Colour::fromRGB(90, 105, 105));
-        g.fillRect(bannerArea);
-
-        // Setup text formatting
-        g.setColour(Colours::white);
-        g.setFont(12.0f);
-
-        // Save the graphics state before rotating
-        Graphics::ScopedSaveState state(g);
-
-        // Rotate the graphics context -90 degrees around the center of our banner
-        float cx = static_cast<float>(bannerArea.getCentreX());
-        float cy = static_cast<float>(bannerArea.getCentreY());
-        g.addTransform(AffineTransform::rotation(-MathConstants<float>::halfPi, cx, cy));
-
-        // Create a rotated bounding box for the text
-        Rectangle<float> textBounds(0, 0, static_cast<float>(bannerArea.getHeight()), static_cast<float>(bannerArea.getWidth()));
-        textBounds.setCentre(cx, cy);
-
-        // Draw the text inside our rotated box
-        g.drawText("OPTIONAL", textBounds, Justification::centred, false);
-    }
-}
-
 void MediaDisplayComponent::resized()
 {
     Rectangle<int> totalBounds = getLocalBounds();
-
-    // Reserve 24 pixels on the left edge for the vertical "Optional" banner.
-    if (!isRequired() && isInputTrack() && !isThumbnailTrack())
-    {
-        totalBounds.removeFromLeft(24);
-    }
 
     // Remove existing items in main flex
     mainFlexBox.items.clear();
@@ -374,6 +358,16 @@ void MediaDisplayComponent::resized()
     {
         // Place header beside media
         mainFlexBox.flexDirection = FlexBox::Direction::row;
+
+        if (! isRequired() && isInputTrack() && ! isThumbnailTrack())
+        {
+            mainFlexBox.items.add(FlexItem(optionalBanner).withWidth(24));
+        }
+        else
+        {
+            optionalBanner.setBounds(0, 0, 0, 0);
+        }
+
         // Fixed area for track label and buttons
         mainFlexBox.items.add(FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
     }
