@@ -534,7 +534,32 @@ private:
 
     SharedResourcePointer<SharedChoices> sharedChoices;
 
-    ComboBox modelPathComboBox;
+    // A ComboBox that always opens its popup from the top of the list, showing all
+    // items without scrolling to the currently-selected one first.
+    struct FullListComboBox : public ComboBox
+    {
+        void showPopup() override
+        {
+            auto& lf = getLookAndFeel();
+            auto label = std::unique_ptr<Label>(lf.createComboBoxTextBox(*this));
+
+            auto menu = getRootMenu() ? *getRootMenu() : PopupMenu();
+
+            // Build options without withItemThatMustBeVisible so the popup
+            // always opens at the top, showing every item.
+            PopupMenu::Options opts = lf.getOptionsForComboBoxPopupMenu(*this, *label)
+                                         .withItemThatMustBeVisible(0);
+
+            menu.showMenuAsync(opts,
+                               [this](int result)
+                               {
+                                   if (result != 0)
+                                       setSelectedId(result, sendNotification);
+                               });
+        }
+    };
+
+    FullListComboBox modelPathComboBox;
     HoverHandler modelPathComboBoxHandler { modelPathComboBox };
 
     int lastLoadedPathIndex; // Keep track of last loaded index for load failure cases

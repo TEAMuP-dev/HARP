@@ -51,9 +51,14 @@ public:
     void clearLog()
     {
         File logFile = logger->getLogFile();
-        logger.reset();              // release file handle before truncating
+        logger.reset(); // release file handle before truncating
         logFile.replaceWithText(""); // truncate
-        initializeLogger();          // reopen
+        initializeLogger(); // reopen
+
+        File launchLog =
+            FileLogger::getSystemLogFileFolder().getChildFile("HARP").getChildFile("launch.log");
+        if (launchLog.existsAsFile())
+            launchLog.replaceWithText("");
     }
 
 private:

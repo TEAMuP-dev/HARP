@@ -911,17 +911,56 @@ private:
         return "[" + severity + "] " + message;
     }
 
-    static String formatProcessMessage(const String& messageType)
+    // Formats a "log" SSE event payload (e.g. {"log": "...", "level": "info"})
+    // into a user-visible status string like "[info] Starting inference...".
+    // Returns empty string if the payload is not a valid log event.
+    static String formatLogEventPayload(const String& payload)
+    {
+        String normalizedPayload = payload.trim();
+
+        if (normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null"))
+        {
+            return "";
+        }
+
+        var parsed = JSON::parse(normalizedPayload);
+        auto* dict = parsed.getDynamicObject();
+
+        if (dict == nullptr)
+        {
+            return "";
+        }
+
+        String message = extractFirstNonEmptyField(dict, { "log", "message", "detail" });
+
+        if (message.isEmpty())
+        {
+            return "";
+        }
+
+        String level =
+            extractFirstNonEmptyField(dict, { "level", "type", "severity" }).toLowerCase();
+
+        if (level.isEmpty())
+        {
+            level = "info";
+        }
+
+        return "[" + level + "] " + message;
+    }
+
+    static String formatProcessMessage(const String& messageType, const String& dataPayload = "")
     {
         if (messageType.isEmpty())
         {
             return "";
         }
 
-        // "log" messages carry info/warning text
+        // Modern Gradio "log" SSE event: parse the data payload for message + level.
+        // Emitted when the server calls gr.Info() or gr.Warning().
         if (messageType.equalsIgnoreCase("log"))
         {
-            return "";
+            return formatLogEventPayload(dataPayload);
         }
 
         if (messageType.equalsIgnoreCase("process_starts"))
@@ -941,35 +980,67 @@ private:
             return "[process] " + detail;
         }
 
+        if (messageType.equalsIgnoreCase("heartbeat") || messageType.equalsIgnoreCase("complete")
+            || messageType.equalsIgnoreCase("error"))
+        {
+            return "";
+        }
+
         return "[status] " + messageType.replace("_", " ");
     }
 
-    void appendProcessMessageFromDataLine(const String& dataLine)
+    // currentSseEventType: the value from the preceding "event: <type>" line, e.g. "log",
+    //                       "process_starts", "heartbeat". Empty if no event: line preceded this.
+    void appendProcessMessageFromDataLine(const String& dataLine,
+                                          const String& currentSseEventType = "")
     {
         if (statusMessage == nullptr)
         {
+            DBG_AND_LOG(
+                "GradioClient::appendProcessMessageFromDataLine: statusMessage is null, skipping.");
             return;
         }
 
         String payload = extractPayload(dataLine);
-        String messageType = extractMessageTypeFromPayload(payload);
         String statusText;
+
+        // Prefer the SSE event type from the preceding "event:" line (modern Gradio API).
+        // Fall back to extracting a "msg" field from the JSON payload (old queue API).
+        String messageType = currentSseEventType.isNotEmpty()
+                                 ? currentSseEventType
+                                 : extractMessageTypeFromPayload(payload);
+
+        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: payload=\""
+                    << payload << "\" sseEventType=\"" << currentSseEventType << "\" messageType=\""
+                    << messageType << "\".");
 
         if (messageType.isNotEmpty())
         {
-            statusText = formatProcessMessage(messageType);
+            // For "log" events, pass the full data payload so we can extract the message text.
+            statusText = formatProcessMessage(messageType, payload);
+
+            DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: formatProcessMessage -> \""
+                        << statusText << "\".");
         }
 
         if (statusText.isEmpty())
         {
             statusText = extractGradioAlertStatusFromPayload(payload);
+
+            DBG_AND_LOG(
+                "GradioClient::appendProcessMessageFromDataLine: extractGradioAlertStatus -> \""
+                << statusText << "\".");
         }
 
         if (statusText.isEmpty())
         {
+            DBG_AND_LOG(
+                "GradioClient::appendProcessMessageFromDataLine: statusText is empty, message dropped.");
             return;
         }
 
+        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: setting statusMessage -> \""
+                    << statusText << "\".");
         statusMessage->setMessage(statusText);
     }
 
@@ -995,6 +1066,10 @@ private:
         bool seenAnyDataEvent = false;
         bool checkedFirstLine = false;
 
+        // Track the most recent SSE "event: <type>" line so we can pass it to
+        // appendProcessMessageFromDataLine when the next "data:" line arrives.
+        String currentSseEventType;
+
         while (! stream->isExhausted())
         {
             response = stream->readNextLine();
@@ -1005,6 +1080,8 @@ private:
 
             if (eventLine.isEmpty())
             {
+                // Blank line signals the end of one SSE message block
+                currentSseEventType = "";
                 continue;
             }
 
@@ -1017,6 +1094,14 @@ private:
                     return OpResult::fail(HttpError {
                         HttpError::Type::BadStatusCode, HttpError::Request::GET, errorPath, 503 });
                 }
+            }
+
+            // Capture the SSE event type from "event: <type>" lines.
+            if (eventLine.startsWithIgnoreCase("event:"))
+            {
+                currentSseEventType = eventLine.fromFirstOccurrenceOf(":", false, false).trim();
+                DBG_AND_LOG("GradioClient::makeGETRequest: SSE event type \"" << currentSseEventType
+                                                                              << "\".");
             }
 
             if (isEventLine(eventLine, GradioEvents::Complete))
@@ -1065,20 +1150,17 @@ private:
             {
                 seenAnyDataEvent = true;
 
+                // Check for process_starts using old-API msg field as fallback.
                 String dataPayload = extractPayload(eventLine);
-                if (extractMessageTypeFromPayload(dataPayload).equalsIgnoreCase("process_starts"))
+                if (currentSseEventType.equalsIgnoreCase("process_starts")
+                    || extractMessageTypeFromPayload(dataPayload)
+                           .equalsIgnoreCase("process_starts"))
                 {
                     seenProcessStarts = true;
                 }
 
-                appendProcessMessageFromDataLine(eventLine);
-            }
-            else
-            {
-                // TODO - what other information is available?
-                // Unhandled SSE events (e.g., heartbeat)
-                // Examples:
-                // - event: heartbeat
+                // Pass the current SSE event type so "log" events are not dropped.
+                appendProcessMessageFromDataLine(eventLine, currentSseEventType);
             }
         }
 

@@ -68,8 +68,21 @@ void GeneralSettingsTab::handleRestoreDefaults()
     {
         StringArray allKeys = settings->getAllProperties().getAllKeys();
 
+        // Preserve any API token keys (prefix "apikeys.") so the user's
+        // credentials are not wiped by a settings restore.
+        StringPairArray tokenValues;
+        for (const auto& key : allKeys)
+        {
+            if (key.startsWith("apikeys."))
+                tokenValues.set(key, settings->getValue(key));
+        }
+
         for (const auto& key : allKeys)
             settings->removeValue(key);
+
+        // Restore saved tokens
+        for (int i = 0; i < tokenValues.size(); ++i)
+            settings->setValue(tokenValues.getAllKeys()[i], tokenValues.getAllValues()[i]);
 
         settings->saveIfNeeded();
     }

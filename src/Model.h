@@ -107,6 +107,27 @@ public:
         }
     }
 
+    void setFailure(const OpResult& result, const String& pathContext = "")
+    {
+        status = ModelStatus::FAILURE;
+
+        if (statusMessage != nullptr)
+        {
+            String errMsg = toUserMessage(result.getError());
+            // Keep only the first line so the status bar stays readable
+            String shortMsg = errMsg.upToFirstOccurrenceOf("\n", false, false).trim();
+            if (shortMsg.isEmpty())
+                shortMsg = errMsg.trim();
+
+            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
+            String msg = "[error] " + shortMsg;
+            if (shortPath.isNotEmpty())
+                msg += " | " + shortPath;
+
+            statusMessage->setMessage(msg);
+        }
+    }
+
     String getLoadedPath() { return loadedPath; }
     String getOpenablePath() { return openablePath; }
 
@@ -144,7 +165,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, pathToLoad);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -159,7 +180,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, pathToLoad);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -171,7 +192,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, pathToLoad);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -184,7 +205,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, pathToLoad);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -196,7 +217,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, pathToLoad);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -240,7 +261,7 @@ public:
 
             if (result.failed())
             {
-                setStatus(ModelStatus::FAILURE, loadedPath);
+                setFailure(result, loadedPath);
 
                 return result;
             }
@@ -342,7 +363,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, loadedPath);
+            setFailure(result, loadedPath);
 
             return result;
         }
@@ -360,7 +381,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE, loadedPath);
+            setFailure(result, loadedPath);
 
             return result;
         }

@@ -157,20 +157,13 @@ inline String toUserMessage(const HttpError& e)
             {
             }
 
-            userMessage += " request to endpoint";
-
-            if (e.endpointPath.isNotEmpty())
-            {
-                userMessage += " \"" + e.endpointPath + "\"";
-            }
-
-            userMessage += ".";
+            userMessage += " request.";
 
             if (e.request == HttpError::Request::POST)
             {
                 userMessage +=
-                    "\n\nThe Space may be sleeping or temporarily unavailable."
-                    "\n\nTry loading again in a few seconds or Click 'Open URL' to open and check it on Huggingface.";
+                    "\n\nThe server may be sleeping or temporarily unavailable."
+                    "\n\nTry loading again in a few seconds, or click 'Open URL' to view the model's page.";
             }
 
             return userMessage;
@@ -221,8 +214,8 @@ inline String toUserMessage(const HttpError& e)
             if (e.statusCode == 503)
             {
                 userMessage +=
-                    "\n\nThe Hugging Face Space may be sleeping or paused."
-                    "\n\nTry loading again in a few seconds or Click 'Open URL' to open and check it on Huggingface.";
+                    "\n\nThe server may be sleeping, paused, or down due to a build or runtime error."
+                    "\n\nTry loading again in a few seconds, or click 'Open URL' to view the model's page.";
             }
     }
 
@@ -251,14 +244,14 @@ inline String toUserMessage(const GradioError& e)
     {
         case GradioError::Type::RuntimeError:
 
-            userMessage = "The Hugging Face Space reported a runtime error.";
+            userMessage = "The Gradio server reported a runtime error.";
 
             if (e.reason.isNotEmpty())
             {
                 userMessage += "\n\nDetails: " + e.reason;
             }
 
-            userMessage += "\n\nPlease open the Space logs for more information.";
+            userMessage += "\n\nClick 'Open URL' to view the model's page for more information.";
 
             return userMessage;
 
