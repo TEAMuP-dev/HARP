@@ -192,22 +192,7 @@ public:
 
         tabArea.performLayout(getLocalBounds());
 
-        // Re-centre the error popup when the parent is resized so it never
-        // drifts off-screen or clips against the new bounds.
-        if (errorPopupWindow != nullptr)
-        {
-            Component* topLevel = getTopLevelComponent();
-            int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
-            int popupWidth = jmin(520, windowWidth - 24);
-            int popupHeight = errorPopupWindow->getHeight();
-            Point<int> windowCentreScreen =
-                (topLevel != nullptr)
-                    ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
-                    : localPointToGlobal(getLocalBounds().getCentre());
-            Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
-            errorPopupWindow->setBounds(
-                Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
-        }
+        positionErrorPopup();
     }
 
     int getMinimumRequiredControlWidth() { return controlAreaWidget.getMinimumRequiredWidth(); }
@@ -430,12 +415,25 @@ private:
         addAndMakeVisible(*errorPopupWindow);
         errorPopupWindow->setAlwaysOnTop(true);
 
+        errorPopupWindow->setSize(errorPopupWindow->getWidth(), isReportableError ? 260 : 230);
+        positionErrorPopup();
+        errorPopupWindow->toFront(true);
+    }
+
+    void positionErrorPopup()
+    {
+        if (errorPopupWindow == nullptr)
+        {
+            return;
+        }
+
+        Component* topLevel = getTopLevelComponent();
+
         // Size based on full window width so the popup is never squashed when
         // the media clipboard panel is open and ModelTab is narrow.
-        Component* topLevel = getTopLevelComponent();
         int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
         int popupWidth = jmin(520, windowWidth - 24);
-        int popupHeight = isReportableError ? 260 : 230;
+        int popupHeight = errorPopupWindow->getHeight();
 
         // Find the window's centre in screen space, then convert to ModelTab's
         // local coordinate space so the popup is centred in the full window
@@ -445,9 +443,9 @@ private:
                 ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
                 : localPointToGlobal(getLocalBounds().getCentre());
         Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
+
         errorPopupWindow->setBounds(
             Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
-        errorPopupWindow->toFront(true);
     }
 
     void openGitHubIssue(const Error& error, const String& errorMessage, const String& notes)

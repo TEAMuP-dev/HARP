@@ -74,9 +74,9 @@ struct StatusMessage : SharedMessage
             const ScopedLock lock(messageLock);
             message.clear();
             history.clear();
-            ++revision;
-            ++clearRevision;
-            lastEntry.clear();
+            ++snapshot.revision;
+            ++snapshot.clearRevision;
+            snapshot.lastEntry.clear();
         }
 
         sendChangeMessage();
@@ -91,7 +91,7 @@ struct StatusMessage : SharedMessage
     StatusHistorySnapshot getHistorySnapshot()
     {
         const ScopedLock lock(messageLock);
-        return StatusHistorySnapshot { revision, lastEntry, trimRevision, clearRevision };
+        return snapshot;
     }
 
 private:
@@ -104,8 +104,8 @@ private:
 
         String timestamp = Time::getCurrentTime().formatted("%H:%M:%S");
 
-        lastEntry = "[" + timestamp + "] " + entryText;
-        history.add(lastEntry);
+        snapshot.lastEntry = "[" + timestamp + "] " + entryText;
+        history.add(snapshot.lastEntry);
 
         bool didTrim = false;
 
@@ -115,18 +115,15 @@ private:
             didTrim = true;
         }
 
-        ++revision;
+        ++snapshot.revision;
 
         if (didTrim)
         {
-            ++trimRevision;
+            ++snapshot.trimRevision;
         }
     }
 
-    uint64 revision = 0;
-    uint64 trimRevision = 0;
-    uint64 clearRevision = 0;
-    String lastEntry;
+    StatusHistorySnapshot snapshot;
     StringArray history;
 };
 
