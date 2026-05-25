@@ -94,6 +94,33 @@ struct StatusMessage : SharedMessage
         return snapshot;
     }
 
+    // Returns history entries added after sinceRevision, in order
+    // Thread-safe, handles coalesced setMessage() calls correctly
+    StringArray getEntriesSince(uint64 sinceRevision) const
+    {
+        const ScopedLock lock(messageLock);
+
+        if (history.isEmpty())
+            return {};
+        // history[0] was the (snapshot.revision - history.size() + 1)-th entry added.
+        // Compute the 0-based index of the first entry we need (revision > sinceRevision).
+        // startIdx = sinceRevision - (snapshot.revision - history.size())
+        //          = sinceRevision + history.size() - snapshot.revision
+        int64 startIdx =
+            (int64) sinceRevision + (int64) history.size() - (int64) snapshot.revision;
+
+        if (startIdx < 0)
+            startIdx = 0; // All stored entries are newer than sinceRevision
+
+        if (startIdx >= (int64) history.size())
+            return {};
+
+        StringArray result;
+        for (int i = (int) startIdx; i < history.size(); ++i)
+            result.add(history[i]);
+        return result;
+    }
+
 private:
     void appendHistoryEntryUnsafe(const String& entryText)
     {

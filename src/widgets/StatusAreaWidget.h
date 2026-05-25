@@ -100,21 +100,24 @@ public:
 
         bool trimChanged = snapshot.trimRevision != lastTrimRevisionSeen;
         bool clearChanged = snapshot.clearRevision != lastClearRevisionSeen;
-        bool shouldRebuild = (snapshot.revision <= lastRevisionSeen) || trimChanged || clearChanged
-                             || snapshot.revision != (lastRevisionSeen + 1);
+        bool noProgress = snapshot.revision <= lastRevisionSeen;
 
-        if (shouldRebuild)
+        if (clearChanged || noProgress || trimChanged)
         {
             historyEditor.setText(sharedMessage->getHistoryText(), false);
         }
-        else if (snapshot.lastEntry.isNotEmpty())
+        else
         {
-            if (historyEditor.getText().isNotEmpty())
-            {
-                historyEditor.insertTextAtCaret("\n");
-            }
+            // Append only entries missed since the last UI callback.
+            StringArray newEntries = sharedMessage->getEntriesSince(lastRevisionSeen);
 
-            historyEditor.insertTextAtCaret(snapshot.lastEntry);
+            for (const auto& entry : newEntries)
+            {
+                if (historyEditor.getText().isNotEmpty())
+                    historyEditor.insertTextAtCaret("\n");
+
+                historyEditor.insertTextAtCaret(entry);
+            }
         }
 
         lastRevisionSeen = snapshot.revision;

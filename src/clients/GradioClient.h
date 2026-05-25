@@ -637,9 +637,19 @@ private:
             {
                 String reason = extractShortReason(diagnosticText);
 
-                if (statusMessage != nullptr && reason.isNotEmpty())
+                if (statusMessage != nullptr)
                 {
                     statusMessage->setMessage("[error] " + reason);
+                }
+
+                // Space-level infra error (build/config failure) — report as 503
+                if (isSpaceStatusError(diagnosticText))
+                {
+                    return OpResult::fail(HttpError {
+                        HttpError::Type::BadStatusCode,
+                        HttpError::Request::POST,
+                        errorPath,
+                        503 });
                 }
 
                 GradioError::Type errorType = isExplicitQuotaError(diagnosticText)
@@ -759,6 +769,15 @@ private:
         return trimmed.startsWithIgnoreCase("<!DOCTYPE") || trimmed.startsWithIgnoreCase("<html");
     }
 
+    // Returns true when the HF proxy reports that the Space itself is broken
+    static bool isSpaceStatusError(const String& text)
+    {
+        String lower = text.toLowerCase();
+        return lower.contains("your space is in error")
+               || lower.contains("space is in error")
+               || lower.contains("check its status on hf");
+    }
+
     static bool isExplicitQuotaError(const String& text)
     {
         if (text.isEmpty())
@@ -791,9 +810,9 @@ private:
     {
         String firstLine = text.upToFirstOccurrenceOf("\n", false, false).trim();
 
-        if (firstLine.length() > 120)
+        if (firstLine.length() > 200)
         {
-            firstLine = firstLine.substring(0, 120).trimEnd() + "...";
+            firstLine = firstLine.substring(0, 200).trimEnd() + "...";
         }
 
         return firstLine;
@@ -1124,6 +1143,20 @@ private:
 
                 String reason = extractShortReason(diagnosticText);
 
+                if (statusMessage != nullptr && diagnosticText.isNotEmpty())
+                {
+                    statusMessage->setMessage("[error] " + reason);
+                }
+
+                if (isSpaceStatusError(diagnosticText))
+                {
+                    return OpResult::fail(HttpError {
+                        HttpError::Type::BadStatusCode,
+                        HttpError::Request::GET,
+                        errorPath,
+                        503 });
+                }
+
                 GradioError::Type errorType;
 
                 if (isExplicitQuotaError(diagnosticText))
@@ -1132,16 +1165,14 @@ private:
                 }
                 else if (diagnosticText.isEmpty() && ! seenProcessStarts && ! seenAnyDataEvent)
                 {
+                    /* ZeroGPU quota rejections arrive before any data: events with an empty error payload.
+                    A network drop before any data arrives matches this same signature but is downgraded
+                    to RuntimeError for non-ZeroGPU spaces downstream in makeRequest(). */
                     errorType = GradioError::Type::QuotaExceeded;
                 }
                 else
                 {
                     errorType = GradioError::Type::RuntimeError;
-                }
-
-                if (statusMessage != nullptr && diagnosticText.isNotEmpty())
-                {
-                    statusMessage->setMessage("[error] " + extractShortReason(diagnosticText));
                 }
 
                 return OpResult::fail(GradioError { errorType, errorPath, reason });

@@ -214,8 +214,8 @@ inline String toUserMessage(const HttpError& e)
             if (e.statusCode == 503)
             {
                 userMessage +=
-                    "\n\nThe server may be sleeping, paused, or down due to a build or runtime error."
-                    "\n\nTry loading again in a few seconds, or click 'Open URL' to view the model's page.";
+                    "\n\nIf this is a valid Hugging Face Space, this could indicate "
+                    "the Space is paused or down due to a build or runtime error.";
             }
     }
 
@@ -250,8 +250,13 @@ inline String toUserMessage(const GradioError& e)
             {
                 userMessage += "\n\nDetails: " + e.reason;
             }
+            else
+            {
+                userMessage += "\n\nNo error details were provided by the Space."
+                               " Check the Space page for the specific error message.";
+            }
 
-            userMessage += "\n\nClick 'Open URL' to view the model's page for more information.";
+            userMessage += "\n\nClick 'Open URL' to open the Space on Hugging Face for more information.";
 
             return userMessage;
 
