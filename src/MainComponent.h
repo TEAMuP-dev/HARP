@@ -129,7 +129,7 @@ private:
 
     // Miscellaneous
     //void focusCallback();
-    void changeListenerCallback(ChangeBroadcaster* source);
+    void changeListenerCallback(ChangeBroadcaster* source) override;
 
     /* Interface */
 

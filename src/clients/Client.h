@@ -180,7 +180,7 @@ class Client
 {
 public:
     Client() = default;
-    virtual ~Client() {};
+    virtual ~Client() = default;
 
     virtual String inferHostSlashModel(String modelPath) = 0;
     virtual String inferEndpointPath(String modelPath) = 0;
@@ -271,7 +271,11 @@ public:
                              String& payloadJSON,
                              std::vector<File>& outputFiles,
                              LabelList& labels) = 0;
-    virtual OpResult cancel(String modelPath) { return OpResult::ok(); }
+    virtual OpResult cancel(String modelPath)
+    {
+        ignoreUnused(modelPath);
+        return OpResult::ok();
+    }
 
     const String emptyJSONBody = R"({"data": []})";
 

@@ -16,6 +16,7 @@
 #include "widgets/TrackAreaWidget.h"
 
 #include "utils/Errors.h"
+#include "utils/Interface.h"
 #include "utils/Logging.h"
 #include "utils/Tutorial.h"
 
@@ -130,5 +131,7 @@ private:
         }
     }
 
-    const Colour tabBackgroundColour { Colour(0xff4a4a4a) };
+    const Colour tabBackgroundColour {
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground)
+    };
 };
