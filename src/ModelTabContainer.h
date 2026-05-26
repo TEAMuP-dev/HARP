@@ -18,6 +18,7 @@
 #include "utils/Errors.h"
 #include "utils/Interface.h"
 #include "utils/Logging.h"
+#include "utils/ModelRegistry.h"
 #include "utils/Tutorial.h"
 
 using namespace juce;
@@ -39,14 +40,22 @@ public:
         createHomeTab();
     }
 
-    ModelTab* createNewTab(const String& modelPath = {})
+    ModelTab* createNewTab(const String& modelPath = {}, const String& modelName = {})
     {
         int index = getNumTabs();
 
         auto* tab = new ModelTab();
         tab->addChangeListener(this);
 
-        addTab("Model " + String(index),
+        auto tabName = modelName;
+
+        if (tabName.isEmpty() && modelPath.isNotEmpty())
+            tabName = ModelRegistry::getEntryForPath(modelPath).displayName;
+
+        if (tabName.isEmpty())
+            tabName = "Model " + String(index);
+
+        addTab(tabName,
                tabBackgroundColour,
                tab,
                true);
@@ -109,9 +118,9 @@ private:
     void createHomeTab()
     {
         auto* homeTab = new HomeTab();
-        homeTab->onModelLoadRequested = [this, homeTab](String modelPath)
+        homeTab->onModelLoadRequested = [this, homeTab](String modelPath, String modelName)
         {
-            createNewTab(modelPath);
+            createNewTab(modelPath, modelName);
             homeTab->resetSelection();
         };
 

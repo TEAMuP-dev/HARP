@@ -113,6 +113,7 @@ target_sources(${PROJECT_NAME}
         src/utils/Logging.h
         src/utils/Settings.h
         src/utils/Interface.h
+        src/utils/ModelRegistry.h
         src/utils/Controls.h
         src/utils/Labels.h
         src/utils/Clients.h
