@@ -6,6 +6,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "HomeTab.h"
 #include "Model.h"
 #include "ModelTab.h"
 
@@ -28,12 +29,12 @@ public:
     ModelTabContainer()
         : TabbedComponent(TabbedButtonBar::TabsAtTop)
     {
-        createNewTab(); // start with one
+        createHomeTab();
     }
 
-    void createNewTab()
+    ModelTab* createNewTab(const String& modelPath = {})
     {
-        int index = getNumTabs() + 1;
+        int index = getNumTabs();
 
         auto* tab = new ModelTab();
         tab->addChangeListener(this);
@@ -43,7 +44,12 @@ public:
                tab,
                true);
 
-        setCurrentTabIndex(index - 1);
+        setCurrentTabIndex(getNumTabs() - 1);
+
+        if (modelPath.isNotEmpty())
+            tab->loadModelPath(modelPath);
+
+        return tab;
     }
 
     ModelTab* getCurrentModelTab() const
@@ -52,6 +58,23 @@ public:
     }
 
 private:
+    void createHomeTab()
+    {
+        auto* homeTab = new HomeTab();
+        homeTab->onModelLoadRequested = [this, homeTab](String modelPath)
+        {
+            createNewTab(modelPath);
+            homeTab->resetSelection();
+        };
+
+        addTab("Home",
+               Colours::lightgrey,
+               homeTab,
+               false);
+
+        setCurrentTabIndex(0);
+    }
+
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
         if (dynamic_cast<ModelTab*>(source))

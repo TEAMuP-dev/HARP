@@ -28,7 +28,6 @@ public:
     {
         modelSelectionWidget.addChangeListener(this);
 
-        addAndMakeVisible(modelSelectionWidget);
         addAndMakeVisible(modelInfoWidget);
         addAndMakeVisible(controlAreaWidget);
 
@@ -56,6 +55,11 @@ public:
     void loadDefaultModel()
     {
         modelSelectionWidget.loadModelBypass(TutorialConstants::fallbackModelPath);
+    }
+
+    void loadModelPath(const String& modelPath)
+    {
+        modelSelectionWidget.loadModelBypass(modelPath);
     }
 
     // Bounds accessors for tutorial steps
@@ -115,12 +119,7 @@ public:
 
         /* Model Selection */
 
-        tabArea.items.add(FlexItem(modelSelectionWidget)
-                              .withHeight(modelSelectionRowHeight)
-                              .withMinHeight(modelSelectionRowHeight)
-                              .withMaxHeight(modelSelectionRowHeight)
-                              .withFlex(0)
-                              .withMargin(marginSize));
+        modelSelectionWidget.setBounds(0, 0, 0, 0);
 
         /* Model Info */
 
@@ -198,7 +197,6 @@ public:
     {
         int height = 0;
 
-        height += modelSelectionRowHeight + 2 * marginSize;
         height += modelInfoWidget.getPreferredHeightForWidth(width) + 2 * marginSize;
 
         if (controlAreaWidget.getNumControls() > 0)
