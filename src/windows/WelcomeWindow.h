@@ -54,7 +54,8 @@ public:
 
         if (mainComponent)
         {
-            mainComponent->getCurrentModelTab()->addChangeListener(this);
+            if (auto* tab = mainComponent->getFirstModelTab())
+                tab->addChangeListener(this);
             mainComponent->setTutorialActive(true);
         }
 
@@ -66,7 +67,8 @@ public:
     {
         if (mainComponent)
         {
-            mainComponent->getCurrentModelTab()->removeChangeListener(this);
+            if (auto* tab = mainComponent->getFirstModelTab())
+                tab->removeChangeListener(this);
             mainComponent->setTutorialActive(false);
         }
     }
@@ -78,7 +80,8 @@ public:
         {
             if (mainComponent != nullptr)
             {
-                auto model = mainComponent->getCurrentModelTab()->getModel();
+                auto* tab = mainComponent->getFirstModelTab();
+                auto model = tab != nullptr ? tab->getModel() : nullptr;
                 auto loadedPath = model ? model->getLoadedPath() : String();
 
                 autoLoadedByTutorialFallback = (loadedPath == TutorialConstants::fallbackModelPath);
@@ -87,7 +90,8 @@ public:
         }
         else if (autoLoadedByTutorialFallback && mainComponent != nullptr)
         {
-            auto model = mainComponent->getCurrentModelTab()->getModel();
+            auto* tab = mainComponent->getFirstModelTab();
+            auto model = tab != nullptr ? tab->getModel() : nullptr;
             auto loadedPath = model ? model->getLoadedPath() : String();
             if (loadedPath != TutorialConstants::fallbackModelPath)
                 autoLoadedByTutorialFallback = false;
@@ -134,7 +138,8 @@ public:
 
         if (mainComponent)
         {
-            auto model = mainComponent->getCurrentModelTab()->getModel();
+            auto* tab = mainComponent->getFirstModelTab();
+            auto model = tab != nullptr ? tab->getModel() : nullptr;
             if (model && model->isLoaded())
             {
                 modelName = model->getMetadata().name;
@@ -178,7 +183,8 @@ public:
         // 4. Configure Parameters (Dynamic)
         if (mainComponent)
         {
-            auto model = mainComponent->getCurrentModelTab()->getModel();
+            auto* tab = mainComponent->getFirstModelTab();
+            auto model = tab != nullptr ? tab->getModel() : nullptr;
             if (model && model->isLoaded())
             {
                 String controlsStepTitle = "Configure Parameters (Optional)";
@@ -714,7 +720,8 @@ private:
     {
         if (content->currentStep == 1 && mainComponent != nullptr)
         {
-            auto model = mainComponent->getCurrentModelTab()->getModel();
+            auto* tab = mainComponent->getFirstModelTab();
+            auto model = tab != nullptr ? tab->getModel() : nullptr;
             if (! model || ! model->isLoaded())
             {
                 pendingTutorialFallbackLoad = true;

@@ -29,6 +29,12 @@ public:
     ModelTabContainer()
         : TabbedComponent(TabbedButtonBar::TabsAtTop)
     {
+        setColour(TabbedComponent::backgroundColourId, tabBackgroundColour);
+        getTabbedButtonBar().setColour(TabbedButtonBar::tabTextColourId, Colours::white);
+        getTabbedButtonBar().setColour(TabbedButtonBar::frontTextColourId, Colours::white);
+        getTabbedButtonBar().setColour(TabbedButtonBar::tabOutlineColourId, tabBackgroundColour.darker(0.35f));
+        getTabbedButtonBar().setColour(TabbedButtonBar::frontOutlineColourId, tabBackgroundColour.darker(0.35f));
+
         createHomeTab();
     }
 
@@ -40,9 +46,11 @@ public:
         tab->addChangeListener(this);
 
         addTab("Model " + String(index),
-               Colours::lightgrey,
+               tabBackgroundColour,
                tab,
                true);
+
+        addCloseButtonToModelTab(tab);
 
         setCurrentTabIndex(getNumTabs() - 1);
 
@@ -57,7 +65,46 @@ public:
         return dynamic_cast<ModelTab*>(getCurrentContentComponent());
     }
 
+    ModelTab* getFirstModelTab() const
+    {
+        for (int i = 0; i < getNumTabs(); ++i)
+        {
+            if (auto* tab = dynamic_cast<ModelTab*>(getTabContentComponent(i)))
+                return tab;
+        }
+
+        return nullptr;
+    }
+
 private:
+    void addCloseButtonToModelTab(ModelTab* tab)
+    {
+        auto* closeButton = new TextButton("x");
+        closeButton->setTooltip("Close model tab");
+        closeButton->setSize(18, 18);
+        closeButton->setColour(TextButton::buttonColourId, tabBackgroundColour);
+        closeButton->setColour(TextButton::buttonOnColourId, tabBackgroundColour.brighter(0.1f));
+        closeButton->setColour(TextButton::textColourOffId, Colours::white);
+        closeButton->setColour(TextButton::textColourOnId, Colours::white);
+        closeButton->onClick = [this, tab] { closeModelTab(tab); };
+
+        if (auto* tabButton = getTabbedButtonBar().getTabButton(getNumTabs() - 1))
+            tabButton->setExtraComponent(closeButton, TabBarButton::afterText);
+    }
+
+    void closeModelTab(ModelTab* tabToClose)
+    {
+        for (int i = 1; i < getNumTabs(); ++i)
+        {
+            if (getTabContentComponent(i) == tabToClose)
+            {
+                removeTab(i);
+                sendChangeMessage();
+                return;
+            }
+        }
+    }
+
     void createHomeTab()
     {
         auto* homeTab = new HomeTab();
@@ -68,7 +115,7 @@ private:
         };
 
         addTab("Home",
-               Colours::lightgrey,
+               tabBackgroundColour,
                homeTab,
                false);
 
@@ -82,4 +129,6 @@ private:
             sendChangeMessage(); // bubble up to MainComponent
         }
     }
+
+    const Colour tabBackgroundColour { Colour(0xff4a4a4a) };
 };

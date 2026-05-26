@@ -55,6 +55,11 @@ public:
         modelSelectionWidget.resetState();
     }
 
+    Rectangle<int> getModelSelectBounds() const
+    {
+        return modelSelectionWidget.getBounds().expanded(2, 2);
+    }
+
     std::function<void(String)> onModelLoadRequested;
 
 private:

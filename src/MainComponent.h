@@ -82,6 +82,7 @@ public:
     void resetTutorialAutoLoadedModel();
 
     ModelTab* getCurrentModelTab() const;
+    ModelTab* getFirstModelTab() const;
     
 
     // Bounds accessors for tutorial steps (public for WelcomeWindow)
@@ -161,7 +162,6 @@ private:
     Rectangle<int> tutorialHighlightRect;
     std::vector<Rectangle<int>> tutorialExtraHighlights;
     std::unique_ptr<WelcomeWindow> welcomeWindow;
-    juce::TextButton addTabButton { "+" };
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;

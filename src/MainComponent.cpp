@@ -16,13 +16,6 @@ MainComponent::MainComponent()
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
 
-    addAndMakeVisible(addTabButton);
-
-    addTabButton.onClick = [this]
-    {
-        modelTabs.createNewTab();
-    };
-
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
 
@@ -95,6 +88,11 @@ ModelTab* MainComponent::getCurrentModelTab() const
     return modelTabs.getCurrentModelTab();
 }
 
+ModelTab* MainComponent::getFirstModelTab() const
+{
+    return modelTabs.getFirstModelTab();
+}
+
 void MainComponent::resized()
 {
     Rectangle<int> fullArea = getLocalBounds();
@@ -118,17 +116,6 @@ void MainComponent::resized()
 
     // Give full area to tabs
     modelTabs.setBounds(bounds);
-
-    // Get tab bar height
-    int tabBarHeight = modelTabs.getTabBarDepth();
-
-    // Position "+" button inside tab bar
-    addTabButton.setBounds(
-        bounds.getRight() - 35,   // right edge
-        bounds.getY() + 2,        // small padding from top
-        30,
-        tabBarHeight - 4          // match tab height nicely
-    );
 
     if (showStatusArea)
     {
@@ -443,31 +430,42 @@ void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bound
 
 void MainComponent::ensureTutorialModelLoaded()
 {
-if (auto* tab = getCurrentModelTab())
-{
-    if (!tab->isModelLoaded())
+    auto* tab = getCurrentModelTab();
+
+    if (tab == nullptr)
+    {
+        tab = modelTabs.createNewTab();
+        modelTabs.setCurrentTabIndex(0);
+
+        if (welcomeWindow != nullptr)
+            tab->addChangeListener(welcomeWindow.get());
+
+        if (tab != nullptr)
+            tab->loadDefaultModel();
+        return;
+    }
+
+    if (! tab->isModelLoaded())
         tab->loadDefaultModel();
-}
 }
 
 void MainComponent::resetTutorialAutoLoadedModel()
 {
     if (auto* tab = getCurrentModelTab())
-{
-    if (!tab->isModelLoaded())
-        return;
-}
-    if (auto* tab = getCurrentModelTab())
-{
-    if (tab->getLoadedPath() == TutorialConstants::fallbackModelPath)
     {
-        tab->resetState();
+        if (tab->isModelLoaded() && tab->getLoadedPath() == TutorialConstants::fallbackModelPath)
+            tab->resetState();
     }
-}
 }
 
 Rectangle<int> MainComponent::getModelSelectBounds()
 {
+    if (auto* homeTab = dynamic_cast<HomeTab*>(modelTabs.getCurrentContentComponent()))
+    {
+        auto bounds = homeTab->getModelSelectBounds();
+        return getLocalArea(homeTab, bounds);
+    }
+
     if (auto* tab = getCurrentModelTab())
     {
         auto bounds = tab->getModelSelectBounds();
