@@ -1,24 +1,24 @@
+/**
+ * @file FileChooserWithLabel.h
+ * @brief Custom file chooser component with label.
+ * @author derekllanes, cwitkowitz
+ */
+
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
+#include <string>
+#include <vector>
 
 #include "ControlComponent.h"
-#include "../utils/Controls.h"
 
 using namespace juce;
 
-class FilePickerWithLabel : public ControlComponent, private Button::Listener
+class FileChooserWithLabel : public ControlComponent, private Button::Listener
 {
 public:
-    explicit FilePickerWithLabel(FilePickerComponentInfo* infoToUse)
-        : info(infoToUse),
-          browseButton("Browse...")
+    FileChooserWithLabel(const String& labelText = {})
     {
-        if (info != nullptr)
-        {
-            label.setText(info->label, dontSendNotification);
-        }
-
+        label.setText(labelText, dontSendNotification);
         label.setJustificationType(Justification::centred);
 
         pathBox.setReadOnly(true);
@@ -34,7 +34,7 @@ public:
         addAndMakeVisible(browseButton);
     }
 
-    ~FilePickerWithLabel() override
+    ~FileChooserWithLabel() override
     {
         browseButton.removeListener(this);
     }
@@ -43,50 +43,61 @@ public:
     {
         auto area = getLocalBounds();
 
-        auto labelArea = area.removeFromTop(20);
-        label.setBounds(labelArea);
+        label.setBounds(area.removeFromTop(labelHeight));
 
-        area.removeFromTop(4);
+        area.removeFromTop(labelGap);
 
-        auto buttonArea = area.removeFromLeft(90);
-        browseButton.setBounds(buttonArea);
+        browseButton.setBounds(area.removeFromLeft(browseButtonWidth));
 
-        area.removeFromLeft(6);
+        area.removeFromLeft(browseButtonGap);
         pathBox.setBounds(area);
+    }
+
+    void setPath(const String& path)
+    {
+        pathBox.setText(path, dontSendNotification);
+    }
+
+    void setFileTypes(const std::vector<std::string>& types)
+    {
+        fileTypes = types;
     }
 
     int getMinimumRequiredWidth() const override
     {
         const int labelWidth = getLabelWidth(label);
-        return jmax(260, labelWidth + defaultPadding);
+        return jmax(minFilePickerWidth, labelWidth + defaultPadding);
     }
+
+    TextEditor& getPathBox() { return pathBox; }
+
+    /** Called with full path after successful file choice. */
+    std::function<void(const String&)> onFileSelected;
 
 private:
     void buttonClicked(Button* button) override
     {
-        if (button != &browseButton || info == nullptr)
-        {
+        if (button != &browseButton)
             return;
-        }
-
-        String pattern = buildWildcardPattern();
 
         fileChooser = std::make_unique<FileChooser>(
             "Select file",
             File(),
-            pattern
+            buildWildcardPattern()
         );
 
         fileChooser->launchAsync(
             FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
             [this](const FileChooser& chooser)
             {
-                File selectedFile = chooser.getResult();
+                const File selectedFile = chooser.getResult();
 
                 if (selectedFile.existsAsFile())
                 {
-                    info->path = selectedFile.getFullPathName().toStdString();
                     pathBox.setText(selectedFile.getFullPathName(), dontSendNotification);
+
+                    if (onFileSelected)
+                        onFileSelected(selectedFile.getFullPathName());
                 }
             }
         );
@@ -94,21 +105,17 @@ private:
 
     String buildWildcardPattern() const
     {
-        if (info == nullptr || info->fileTypes.empty())
-        {
+        if (fileTypes.empty())
             return "*";
-        }
 
         StringArray patterns;
 
-        for (const auto& ext : info->fileTypes)
+        for (const auto& ext : fileTypes)
         {
             String extension(ext);
 
             if (! extension.startsWithChar('.'))
-            {
                 extension = "." + extension;
-            }
 
             patterns.add("*" + extension);
         }
@@ -116,11 +123,17 @@ private:
         return patterns.joinIntoString(";");
     }
 
-    FilePickerComponentInfo* info = nullptr;
+    static constexpr int minFilePickerWidth = 260;
+    static constexpr int labelHeight = 20;
+    static constexpr int labelGap = 4;
+    static constexpr int browseButtonWidth = 90;
+    static constexpr int browseButtonGap = 6;
+
+    std::vector<std::string> fileTypes;
 
     Label label;
     TextEditor pathBox;
-    TextButton browseButton;
+    TextButton browseButton { "Browse..." };
 
     std::unique_ptr<FileChooser> fileChooser;
 };

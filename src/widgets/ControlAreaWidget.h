@@ -12,11 +12,11 @@
 #include "../widgets/StatusAreaWidget.h"
 
 #include "../gui/ComboBoxWithLabel.h"
+#include "../gui/FileChooserWithLabel.h"
 #include "../gui/HoverHandler.h"
 #include "../gui/SliderWithLabel.h"
 #include "../gui/TextBoxWithLabel.h"
 #include "../gui/ToggleWithLabel.h"
-#include "../gui/FilePickerWithLabel.h"
 
 #include "../utils/Controls.h"
 #include "../utils/Logging.h"
@@ -82,7 +82,7 @@ public:
     int getNumControls() const
     {
         return sliderComponents.size() + toggleComponents.size() + dropdownComponents.size()
-            + textComponents.size() + filePickerComponents.size();
+               + textComponents.size() + fileChooserComponents.size();
     }
 
     int getMinimumRequiredWidth() const
@@ -101,7 +101,7 @@ public:
         checkGroup(toggleComponents);
         checkGroup(dropdownComponents);
         checkGroup(textComponents);
-        checkGroup(filePickerComponents);
+        checkGroup(fileChooserComponents);
 
         return requiredWidth + 2 * (marginSize + minEdgeGap);
     }
@@ -158,11 +158,11 @@ public:
         }
         dropdownComponents.clear();
 
-        for (auto& c : filePickerComponents)
+        for (auto& c : fileChooserComponents)
         {
             removeChildComponent(c.get());
         }
-        filePickerComponents.clear();
+        fileChooserComponents.clear();
 
         handlers.clear();
     }
@@ -190,9 +190,9 @@ public:
             {
                 addDropdown(dropdownInfo);
             }
-            else if (auto* filePickerInfo = dynamic_cast<FilePickerComponentInfo*>(info.get()))
+            else if (auto* fileChooserInfo = dynamic_cast<FileComponentInfo*>(info.get()))
             {
-                addFilePicker(filePickerInfo);
+                addFileChooser(fileChooserInfo);
             }
             else
             {
@@ -299,16 +299,28 @@ private:
         dropdownComponents.push_back(std::move(dropdownComponent));
     }
 
-    void addFilePicker(FilePickerComponentInfo* info)
+    void addFileChooser(FileComponentInfo* info)
     {
-        std::unique_ptr<FilePickerWithLabel> filePickerComponent =
-            std::make_unique<FilePickerWithLabel>(info);
+        std::unique_ptr<FileChooserWithLabel> fileChooserComponent =
+            std::make_unique<FileChooserWithLabel>(info->label);
 
-        addHandler(filePickerComponent.get(), info);
+        auto& pathBox = fileChooserComponent->getPathBox();
 
-        addAndMakeVisible(*filePickerComponent);
+        if (! info->path.empty())
+            fileChooserComponent->setPath(info->path);
 
-        filePickerComponents.push_back(std::move(filePickerComponent));
+        fileChooserComponent->setFileTypes(info->fileTypes);
+
+        fileChooserComponent->onFileSelected = [info](const String& path)
+        {
+            info->path = path.toStdString();
+        };
+
+        addHandler(&pathBox, info);
+
+        addAndMakeVisible(*fileChooserComponent);
+
+        fileChooserComponents.push_back(std::move(fileChooserComponent));
     }
 
     void addHandler(Component* comp, ModelComponentInfo* info)
@@ -365,16 +377,16 @@ private:
         addGroupToRows(rows, toggleComponents, 1, width);
         addGroupToRows(rows, dropdownComponents, 2, width);
         addGroupToRows(rows, textComponents, 3, width);
-        addGroupToRows(rows, filePickerComponents, 4, width);
+        addGroupToRows(rows, fileChooserComponents, 4, width);
 
         return rows;
     }
 
     template <typename ComponentList>
     void addGroupToRows(std::vector<std::vector<RowEntry>>& rows,
-                const ComponentList& components,
-                int type,
-                int availableWidth) const
+                        const ComponentList& components,
+                        int type,
+                        int availableWidth) const
     {
         auto spec = getLayoutSpec(type);
 
@@ -471,7 +483,7 @@ private:
     std::vector<std::unique_ptr<ToggleWithLabel>> toggleComponents;
     std::vector<std::unique_ptr<SliderWithLabel>> sliderComponents;
     std::vector<std::unique_ptr<ComboBoxWithLabel>> dropdownComponents;
-    std::vector<std::unique_ptr<FilePickerWithLabel>> filePickerComponents;
+    std::vector<std::unique_ptr<FileChooserWithLabel>> fileChooserComponents;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
 

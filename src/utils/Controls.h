@@ -83,29 +83,39 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
-struct FilePickerComponentInfo : public ModelComponentInfo
+struct FileComponentInfo : public ModelComponentInfo // TODO - Listener?
 {
-    bool required = true;
     std::string path { "" };
     std::vector<std::string> fileTypes;
 
-    FilePickerComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
+    FileComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        if (input->hasProperty("required"))
+        if (input->hasProperty("path"))
         {
-            required = stringToBool(input->getProperty("required").toString());
+            path = input->getProperty("path").toString().toStdString();
         }
 
         if (input->hasProperty("file_types"))
         {
             Array<var>* types = input->getProperty("file_types").getArray();
 
-            if (types != nullptr)
+            if (types == nullptr)
             {
-                for (int i = 0; i < types->size(); ++i)
+                // TODO - handle error case: couldn't load types
+            }
+
+            int numTypes = types->size();
+
+            if (numTypes > 0)
+            {
+                for (int j = 0; j < numTypes; j++)
                 {
-                    fileTypes.push_back(types->getReference(i).toString().toStdString());
+                    fileTypes.push_back(types->getReference(j).toString().toStdString());
                 }
+            }
+            else
+            {
+                // TODO - handle error case: no types
             }
         }
     }

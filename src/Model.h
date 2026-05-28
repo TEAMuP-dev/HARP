@@ -314,17 +314,18 @@ public:
             {
                 controlValue = var(comboBoxComponentInfo->value);
             }
-            else if (auto filePickerComponentInfo =
-                         dynamic_cast<FilePickerComponentInfo*>(componentInfo.get()))
+            else if (auto fileComponentInfo = dynamic_cast<FileComponentInfo*>(componentInfo.get()))
             {
-                if (filePickerComponentInfo->path.empty())
+                if (fileComponentInfo->path.empty())
                 {
                     controlValue = var();
                 }
                 else
                 {
                     DynamicObject::Ptr fileObj = new DynamicObject();
-                    fileObj->setProperty("path", var(filePickerComponentInfo->path));
+
+                    fileObj->setProperty("path", var(fileComponentInfo->path));
+
                     controlValue = var(fileObj);
                 }
 
@@ -456,16 +457,15 @@ private:
                     DBG_AND_LOG("Model::extractInputs: MIDI track input \"" + midiTrack->label
                                 + "\" extracted.");
                 }
-                // Generic File
-                else if (type == "file_picker")
+                else if (type == "generic_file")
                 {
-                    std::shared_ptr<ModelComponentInfo> filePicker =
-                        std::make_shared<FilePickerComponentInfo>(controlsDict);
+                    std::shared_ptr<ModelComponentInfo> fileChooser =
+                        std::make_shared<FileComponentInfo>(controlsDict);
 
-                    newControls.push_back(filePicker);
-                    tempComponentIDs.push_back(filePicker->id);
+                    newControls.push_back(fileChooser);
+                    tempComponentIDs.push_back(fileChooser->id);
 
-                    DBG_AND_LOG("Model::extractInputs: File picker control \"" + filePicker->label
+                    DBG_AND_LOG("Model::extractInputs: File chooser control \"" + fileChooser->label
                                 + "\" extracted.");
                 }
                 else if (type == "text_box")
@@ -590,6 +590,10 @@ private:
 
                     DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
                                 + "\" extracted.");
+                }
+                else if (type == "generic_file")
+                {
+                    // TODO
                 }
                 else if (type == "json")
                 {
