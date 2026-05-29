@@ -16,6 +16,7 @@ public:
     TextBoxWithLabel(const String& labelText)
     {
         label.setText(labelText, dontSendNotification);
+        label.setJustificationType(Justification::centred);
 
         textBox.setMultiLine(true, true);
         textBox.setReadOnly(false);

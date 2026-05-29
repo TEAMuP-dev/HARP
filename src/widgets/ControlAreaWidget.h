@@ -304,8 +304,6 @@ private:
         std::unique_ptr<FileChooserWithLabel> fileChooserComponent =
             std::make_unique<FileChooserWithLabel>(info->label);
 
-        auto& pathBox = fileChooserComponent->getPathBox();
-
         if (! info->path.empty())
             fileChooserComponent->setPath(info->path);
 
@@ -316,7 +314,7 @@ private:
             info->path = path.toStdString();
         };
 
-        addHandler(&pathBox, info);
+        addHandler(fileChooserComponent.get(), info);
 
         addAndMakeVisible(*fileChooserComponent);
 
@@ -466,7 +464,7 @@ private:
     static constexpr int minToggleHeight = 34;
     static constexpr int minDropdownHeight = 44;
     static constexpr int minTextBoxHeight = 84;
-    static constexpr int minFilePickerHeight = 64;
+    static constexpr int minFilePickerHeight = 50;
 
     static constexpr int preferredSliderWidth = 108;
     static constexpr int preferredToggleWidth = 112;

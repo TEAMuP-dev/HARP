@@ -10,58 +10,80 @@
 #include <vector>
 
 #include "ControlComponent.h"
+#include "MultiButton.h"
 
 using namespace juce;
 
-class FileChooserWithLabel : public ControlComponent, private Button::Listener
+class FileChooserWithLabel : public ControlComponent, public FileDragAndDropTarget
 {
 public:
+    ~FileChooserWithLabel() { actionButton.setLookAndFeel(nullptr); }
+
     FileChooserWithLabel(const String& labelText = {})
     {
         label.setText(labelText, dontSendNotification);
         label.setJustificationType(Justification::centred);
-
-        pathBox.setReadOnly(true);
-        pathBox.setText("No file selected", dontSendNotification);
-        pathBox.setMultiLine(false);
-        pathBox.setScrollbarsShown(false);
-        pathBox.setCaretVisible(false);
-
-        browseButton.addListener(this);
-
         addAndMakeVisible(label);
-        addAndMakeVisible(pathBox);
-        addAndMakeVisible(browseButton);
-    }
 
-    ~FileChooserWithLabel() override
-    {
-        browseButton.removeListener(this);
+        initializeButton();
+        addAndMakeVisible(actionButton);
     }
 
     void resized() override
     {
         auto area = getLocalBounds();
-
         label.setBounds(area.removeFromTop(labelHeight));
+        int buttonSize = area.getHeight();
+        actionButton.setBounds(area.removeFromRight(buttonSize));
+    }
 
-        area.removeFromTop(labelGap);
+    void paint(Graphics& g) override
+    {
+        auto body = getLocalBounds().withTrimmedTop(labelHeight).toFloat();
+        auto bodyInt = body.toNearestInt();
+        float r = 3.0f;
 
-        browseButton.setBounds(area.removeFromLeft(browseButtonWidth));
+        auto bg = findColour(ComboBox::backgroundColourId);
+        auto outline = findColour(ComboBox::outlineColourId);
+        auto textCol = findColour(ComboBox::textColourId);
 
-        area.removeFromLeft(browseButtonGap);
-        pathBox.setBounds(area);
+        g.setColour(bg);
+        g.fillRoundedRectangle(body.reduced(0.5f), r);
+        g.setColour(outline);
+        g.drawRoundedRectangle(body.reduced(0.5f), r, 1.0f);
+
+        auto textArea = bodyInt.withTrimmedRight(bodyInt.getHeight()).withTrimmedLeft(4);
+
+        g.setFont(Font(13.0f));
+        g.setColour(currentPath.isEmpty() ? textCol.withAlpha(0.4f) : textCol.withAlpha(0.85f));
+        g.drawText(currentPath.isEmpty() ? getPlaceholderText() : File(currentPath).getFileName(),
+                   textArea,
+                   Justification::centredLeft,
+                   true);
+    }
+
+    bool isInterestedInFileDrag(const StringArray&) override { return currentPath.isEmpty(); }
+
+    void filesDropped(const StringArray& files, int, int) override
+    {
+        if (! files.isEmpty())
+        {
+            File f(files[0]);
+
+            if (f.existsAsFile())
+                setAndNotify(f.getFullPathName());
+        }
     }
 
     void setPath(const String& path)
     {
-        pathBox.setText(path, dontSendNotification);
+        currentPath = path;
+        actionButton.setMode(currentPath.isEmpty() ? chooseFileModeInfo.displayLabel
+                                                   : removeFileModeInfo.displayLabel);
+        repaint();
     }
 
-    void setFileTypes(const std::vector<std::string>& types)
-    {
-        fileTypes = types;
-    }
+    void setFileTypes(const std::vector<std::string>& types) { fileTypes = types; }
 
     int getMinimumRequiredWidth() const override
     {
@@ -69,38 +91,77 @@ public:
         return jmax(minFilePickerWidth, labelWidth + defaultPadding);
     }
 
-    TextEditor& getPathBox() { return pathBox; }
-
-    /** Called with full path after successful file choice. */
     std::function<void(const String&)> onFileSelected;
 
 private:
-    void buttonClicked(Button* button) override
+    void initializeButton()
     {
-        if (button != &browseButton)
-            return;
+        chooseFileModeInfo = MultiButton::Mode { "ChooseFile",
+                                                 "Click to choose a file.",
+                                                 [this] { launchFileChooser(); },
+                                                 MultiButton::DrawingMode::IconOnly,
+                                                 Colours::lightblue,
+                                                 fontawesome::Folder };
 
-        fileChooser = std::make_unique<FileChooser>(
-            "Select file",
-            File(),
-            buildWildcardPattern()
-        );
+        removeFileModeInfo = MultiButton::Mode { "RemoveFile",
+                                                 "Click to remove the selected file.",
+                                                 [this] { clearFile(); },
+                                                 MultiButton::DrawingMode::IconOnly,
+                                                 Colours::orangered,
+                                                 fontawesome::Remove };
 
-        fileChooser->launchAsync(
-            FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles,
-            [this](const FileChooser& chooser)
-            {
-                const File selectedFile = chooser.getResult();
+        actionButton.addMode(chooseFileModeInfo);
+        actionButton.addMode(removeFileModeInfo);
+        actionButton.setMode(chooseFileModeInfo.displayLabel);
 
-                if (selectedFile.existsAsFile())
-                {
-                    pathBox.setText(selectedFile.getFullPathName(), dontSendNotification);
+        actionButton.setLookAndFeel(&noBorderLAF);
+    }
 
-                    if (onFileSelected)
-                        onFileSelected(selectedFile.getFullPathName());
-                }
-            }
-        );
+    String getPlaceholderText() const
+    {
+        if (fileTypes.empty())
+            return "No file selected";
+
+        StringArray exts;
+
+        for (const auto& ext : fileTypes)
+        {
+            String e(ext);
+            exts.add(e.startsWithChar('.') ? e : "." + e);
+        }
+
+        return "No file selected (" + exts.joinIntoString(", ") + ")";
+    }
+
+    void clearFile()
+    {
+        setPath({});
+
+        if (onFileSelected)
+            onFileSelected({});
+    }
+
+    void setAndNotify(const String& path)
+    {
+        setPath(path);
+
+        if (onFileSelected)
+            onFileSelected(path);
+    }
+
+    void launchFileChooser()
+    {
+        fileChooser = std::make_unique<FileChooser>("Select file", File(), buildWildcardPattern());
+
+        fileChooser->launchAsync(FileBrowserComponent::openMode
+                                     | FileBrowserComponent::canSelectFiles,
+                                 [this](const FileChooser& chooser)
+                                 {
+                                     const File f = chooser.getResult();
+
+                                     if (f.existsAsFile())
+                                         setAndNotify(f.getFullPathName());
+                                 });
     }
 
     String buildWildcardPattern() const
@@ -112,28 +173,32 @@ private:
 
         for (const auto& ext : fileTypes)
         {
-            String extension(ext);
+            String e(ext);
 
-            if (! extension.startsWithChar('.'))
-                extension = "." + extension;
+            if (! e.startsWithChar('.'))
+                e = "." + e;
 
-            patterns.add("*" + extension);
+            patterns.add("*" + e);
         }
 
         return patterns.joinIntoString(";");
     }
 
+    struct NoBorderLookAndFeel : public LookAndFeel_V4
+    {
+        void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
+    };
+
     static constexpr int minFilePickerWidth = 260;
     static constexpr int labelHeight = 20;
-    static constexpr int labelGap = 4;
-    static constexpr int browseButtonWidth = 90;
-    static constexpr int browseButtonGap = 6;
 
-    std::vector<std::string> fileTypes;
-
+    NoBorderLookAndFeel noBorderLAF;
     Label label;
-    TextEditor pathBox;
-    TextButton browseButton { "Browse..." };
+    MultiButton actionButton;
+    MultiButton::Mode chooseFileModeInfo;
+    MultiButton::Mode removeFileModeInfo;
 
+    String currentPath;
+    std::vector<std::string> fileTypes;
     std::unique_ptr<FileChooser> fileChooser;
 };
