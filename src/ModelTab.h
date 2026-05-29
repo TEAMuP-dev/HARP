@@ -487,6 +487,23 @@ private:
             }
         }
 
+        for (const auto& controlInfo : model->getControls())
+        {
+            if (auto* fileInfo = dynamic_cast<FileComponentInfo*>(controlInfo.get()))
+            {
+                if (fileInfo->required && fileInfo->path.empty())
+                {
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon,
+                        "Error",
+                        "Required file input \"" + String(fileInfo->label)
+                            + "\" is empty. Please select a file before processing.");
+
+                    return;
+                }
+            }
+        }
+
         modelSelectionWidget.setDisabled();
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 

@@ -85,11 +85,18 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
 
 struct FileComponentInfo : public ModelComponentInfo // TODO - Listener?
 {
+    bool required = true;
+
     std::string path { "" };
     std::vector<std::string> fileTypes;
 
     FileComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
+        if (input->hasProperty("required"))
+        {
+            required = stringToBool(input->getProperty("required").toString());
+        }
+
         if (input->hasProperty("path"))
         {
             path = input->getProperty("path").toString().toStdString();

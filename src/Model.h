@@ -259,6 +259,32 @@ public:
             }
         }
 
+        std::map<Uuid, std::string> fileControlRemotePaths;
+
+        for (const auto& controlComponent : controlComponents)
+        {
+            if (auto* fileComponentInfo =
+                    dynamic_cast<FileComponentInfo*>(controlComponent.get()))
+            {
+                if (fileComponentInfo->path.empty())
+                    continue;
+
+                String remoteFilePath;
+
+                result = client->uploadFile(
+                    loadedPath, File(fileComponentInfo->path), remoteFilePath);
+
+                if (result.failed())
+                {
+                    setStatus(ModelStatus::FAILURE);
+
+                    return result;
+                }
+
+                fileControlRemotePaths[fileComponentInfo->id] = remoteFilePath.toStdString();
+            }
+        }
+
         /* Extract control values for JSON payload in order */
 
         Array<var> controlValues;
@@ -316,7 +342,9 @@ public:
             }
             else if (auto fileComponentInfo = dynamic_cast<FileComponentInfo*>(componentInfo.get()))
             {
-                if (fileComponentInfo->path.empty())
+                auto it = fileControlRemotePaths.find(fileComponentInfo->id);
+
+                if (it == fileControlRemotePaths.end() || it->second.empty())
                 {
                     controlValue = var();
                 }
@@ -324,7 +352,7 @@ public:
                 {
                     DynamicObject::Ptr fileObj = new DynamicObject();
 
-                    fileObj->setProperty("path", var(fileComponentInfo->path));
+                    fileObj->setProperty("path", var(it->second));
 
                     controlValue = var(fileObj);
                 }
