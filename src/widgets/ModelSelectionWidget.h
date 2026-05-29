@@ -553,10 +553,15 @@ private:
             menu.showMenuAsync(opts,
                                [this](int result)
                                {
+                                   // Match JUCE's standard comboBoxPopupMenuFinishedCallback:
+                                   // clear the popup-active flag before updating selection.
+                                   hidePopup();
+
                                    if (result != 0)
                                        setSelectedId(result, sendNotification);
                                });
         }
+
     };
 
     FullListComboBox modelPathComboBox;
