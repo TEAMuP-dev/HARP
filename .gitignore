@@ -64,6 +64,11 @@ temp
 cache
 dist
 
+# Python bytecode / caches
+__pycache__/
+*.pyc
+*.pyo
+
 testproj.RPP
 
 # Ignore all the *.md files in website/HARP

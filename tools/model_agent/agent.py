@@ -14,6 +14,37 @@ from urllib.request import Request, urlopen
 
 JSON = Dict[str, Any]
 HUGGING_FACE_BASE = "https://huggingface.co"
+KNOWN_HYPHENATED_SPACE_ORGS = ("teamup-tech",)
+
+HARP_FRIENDLY_TASKS = {
+    "audio-to-audio",
+    "audio-classification",
+    "automatic-speech-recognition",
+    "text-to-audio",
+    "text-to-speech",
+}
+
+PERMISSIVE_LICENSES = {
+    "apache-2.0",
+    "mit",
+    "bsd",
+    "bsd-2-clause",
+    "bsd-3-clause",
+    "cc-by-4.0",
+    "cc-by-sa-4.0",
+    "openrail",
+    "openrail++",
+}
+
+NONCOMMERCIAL_LICENSES = {
+    "cc-by-nc-4.0",
+    "cc-by-nc-sa-4.0",
+    "cc-by-nc-nd-4.0",
+}
+
+WEIGHT_FILE_SUFFIXES = (".bin", ".safetensors", ".pt", ".ckpt", ".onnx")
+_SR_RE = re.compile(r"(\d{2,3})[ ._-]?k(?:hz| ?Hz)", re.IGNORECASE)
+_CHANNELS_RE = re.compile(r"\b(mono|stereo)\b", re.IGNORECASE)
 
 
 class EndpointProbeError(RuntimeError):
@@ -88,6 +119,281 @@ class ModelPackage:
         return data
 
 
+@dataclass
+class GeneratedAppPackage:
+    """Files for a generated pyharp wrapper around a raw Hugging Face model."""
+
+    repo_id: str
+    task: str
+    score: JSON
+    io: JSON
+    app_py: str
+    requirements: str
+    manifest: JSON
+
+
+def classify_task(card: Mapping[str, Any]) -> str:
+    """Classify a Hugging Face model card into a HARP-relevant task bucket."""
+
+    meta = _model_meta(card)
+    pipeline_tag = str(meta.get("pipeline_tag") or "")
+    if pipeline_tag in HARP_FRIENDLY_TASKS:
+        return pipeline_tag
+
+    tags = {str(tag).lower() for tag in meta.get("tags", []) if tag}
+    for candidate in HARP_FRIENDLY_TASKS:
+        if candidate in tags:
+            return candidate
+
+    blob = " ".join(sorted(tags)) + " " + str(card.get("readme") or "").lower()
+    if "source separation" in blob or "stem" in blob or "audio enhancement" in blob:
+        return "audio-to-audio"
+    if "speech recognition" in blob or "transcribe" in blob:
+        return "automatic-speech-recognition"
+    if "music generation" in blob or "text-to-music" in blob:
+        return "text-to-audio"
+    if "text to speech" in blob or "tts" in tags:
+        return "text-to-speech"
+    if "midi" in blob:
+        return "midi"
+    return "unknown"
+
+
+def evaluate_license(license_name: str) -> JSON:
+    """Classify a license string for automatic packaging decisions."""
+
+    normalized = license_name.strip().lower()
+    if not normalized:
+        return {
+            "status": "missing",
+            "license": "",
+            "is_blocking": False,
+            "reason": "license missing; manual review required",
+        }
+    if normalized in NONCOMMERCIAL_LICENSES:
+        return {
+            "status": "noncommercial",
+            "license": normalized,
+            "is_blocking": True,
+            "reason": "non-commercial license blocks automatic packaging",
+        }
+    if normalized in PERMISSIVE_LICENSES:
+        return {
+            "status": "permissive",
+            "license": normalized,
+            "is_blocking": False,
+            "reason": "permissive license",
+        }
+    return {
+        "status": "unknown",
+        "license": normalized,
+        "is_blocking": False,
+        "reason": "license is not recognized; manual review required",
+    }
+
+
+def extract_io_signature(card: Mapping[str, Any]) -> JSON:
+    """Infer simple audio I/O hints from model metadata and README text."""
+
+    meta = _model_meta(card)
+    text = str(card.get("readme") or "")
+    signature: JSON = {
+        "sample_rate_hz": None,
+        "channels": None,
+        "fixed_length_s": None,
+        "needs_text_input": "text-to" in str(meta.get("pipeline_tag") or ""),
+        "source": "regex",
+    }
+
+    sr_match = _SR_RE.search(text)
+    if sr_match:
+        signature["sample_rate_hz"] = int(sr_match.group(1)) * 1000
+
+    ch_match = _CHANNELS_RE.search(text)
+    if ch_match:
+        signature["channels"] = ch_match.group(1).lower()
+
+    return signature
+
+
+def score_compatibility(card: Mapping[str, Any]) -> JSON:
+    """Score whether a raw Hugging Face model is a good HARP wrapper candidate."""
+
+    meta = _model_meta(card)
+    files = [str(file_name) for file_name in card.get("files", [])]
+    readme = str(card.get("readme") or "")
+    task = classify_task(card)
+    license_result = evaluate_license(str(meta.get("license") or ""))
+
+    blockers: List[str] = []
+    notes: List[str] = []
+    score = 0.5
+
+    if task == "unknown":
+        blockers.append("task_not_audio")
+    elif task == "midi":
+        score += 0.05
+        notes.append("MIDI-related; useful for HARP but needs a MIDI template")
+    elif task == "audio-to-audio":
+        score += 0.25
+        notes.append("audio-to-audio is the cleanest pyharp template fit")
+    else:
+        score += 0.05
+        notes.append(f"{task} is relevant but needs a specialized template")
+
+    if license_result["is_blocking"]:
+        blockers.append(f"license_{license_result['status']}:{license_result['license']}")
+    elif license_result["status"] == "permissive":
+        score += 0.15
+        notes.append(f"permissive license: {license_result['license']}")
+    else:
+        notes.append(license_result["reason"])
+
+    has_config = any(file_name.endswith("config.json") for file_name in files)
+    has_weights = any(file_name.endswith(WEIGHT_FILE_SUFFIXES) for file_name in files)
+    if has_config and has_weights:
+        score += 0.05
+        notes.append("standard model layout with config and weights")
+    elif files and not has_weights:
+        blockers.append("no_weight_files")
+    elif not files:
+        notes.append("file list missing; cannot verify weights")
+
+    if len(readme) > 500:
+        score += 0.05
+        notes.append("substantial README/model card")
+    else:
+        notes.append("README/model card is sparse")
+
+    return {
+        "score": round(max(0.0, min(1.0, score)), 3),
+        "blockers": blockers,
+        "rationale": "; ".join(notes),
+        "task": task,
+        "license": license_result,
+    }
+
+
+def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, Any]] = None) -> str:
+    """Render a starter pyharp `app.py` for supported raw Hugging Face models."""
+
+    task = classify_task(card)
+    if task != "audio-to-audio":
+        raise NotImplementedError(
+            f"No app.py template is available for task '{task}' yet."
+        )
+
+    meta = _model_meta(card)
+    sig = dict(signature or extract_io_signature(card))
+    repo_id = str(meta.get("id") or "unknown/unknown")
+    model_name = repo_id.split("/")[-1].replace("_", " ").replace("-", " ").title()
+    author = str(meta.get("author") or repo_id.split("/", 1)[0] or "unknown")
+    description = _short_description(card)
+    tags = meta.get("tags") if isinstance(meta.get("tags"), list) else []
+    target_sr = sig.get("sample_rate_hz") or 16000
+
+    return f'''from __future__ import annotations
+
+import tempfile
+
+import gradio as gr
+import numpy as np
+import soundfile as sf
+from transformers import pipeline
+
+from pyharp import ModelCard, build_endpoint
+
+
+REPO_ID = {json.dumps(repo_id)}
+TARGET_SAMPLE_RATE = {json.dumps(target_sr)}
+
+model_card = ModelCard(
+    name={json.dumps(model_name)},
+    description={json.dumps(description)},
+    author={json.dumps(author)},
+    tags={json.dumps(tags)},
+)
+
+pipe = pipeline("audio-to-audio", model=REPO_ID)
+
+
+def process_fn(input_audio_path: str) -> str:
+    result = pipe(input_audio_path)
+    if isinstance(result, list):
+        result = result[0]
+
+    if not isinstance(result, dict):
+        raise ValueError(f"Expected pipeline output dict, got {{type(result).__name__}}")
+
+    audio = result.get("audio")
+    if audio is None:
+        audio = result.get("array")
+    sample_rate = result.get("sampling_rate") or TARGET_SAMPLE_RATE
+    if audio is None:
+        raise ValueError("Pipeline output did not include audio data.")
+
+    audio = np.asarray(audio)
+    output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    output.close()
+    sf.write(output.name, audio, int(sample_rate))
+    return output.name
+
+
+with gr.Blocks() as demo:
+    input_components = [
+        gr.Audio(type="filepath", label="Input Audio").harp_required(True),
+    ]
+    output_components = [
+        gr.Audio(type="filepath", label="Output Audio").set_info("Processed audio."),
+    ]
+    build_endpoint(
+        model_card=model_card,
+        input_components=input_components,
+        output_components=output_components,
+        process_fn=process_fn,
+    )
+
+demo.queue().launch(share=True, show_error=False, pwa=True)
+'''
+
+
+def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
+    """Build in-memory files for a generated pyharp wrapper."""
+
+    task = classify_task(card)
+    score = score_compatibility(card)
+    signature = extract_io_signature(card)
+    app_py = render_pyharp_app(card, signature)
+    repo_id = str(_model_meta(card).get("id") or "unknown/unknown")
+    requirements = "\n".join(
+        [
+            "pyharp @ git+https://github.com/TEAMuP-dev/pyharp.git",
+            "gradio==5.28.0",
+            "transformers>=4.40",
+            "numpy",
+            "soundfile",
+            "",
+        ]
+    )
+    manifest = {
+        "repo_id": repo_id,
+        "task": task,
+        "score": score,
+        "io": signature,
+        "entry": "app.py",
+        "generated": True,
+    }
+    return GeneratedAppPackage(
+        repo_id=repo_id,
+        task=task,
+        score=score,
+        io=signature,
+        app_py=app_py,
+        requirements=requirements,
+        manifest=manifest,
+    )
+
+
 class HuggingFaceSpaceScraper:
     """Small Hugging Face Hub API client for Space discovery."""
 
@@ -134,7 +440,7 @@ class HuggingFaceSpaceScraper:
         return SpaceCandidate.from_api(payload)
 
     def _get_json(self, url: str) -> Any:
-        headers = {"User-Agent": "harp-model-agent/0.1"}
+        headers = {"User-Agent": "model-agent/0.1"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         request = Request(url, headers=headers)
@@ -155,9 +461,10 @@ class HarpEndpointClient:
             return path.removeprefix("https://huggingface.co/spaces/")
         if path.startswith("https://") and path.endswith(".hf.space"):
             host = path.removeprefix("https://").removesuffix(".hf.space")
-            # Short Space URLs flatten "org/model" into "org-model". Known
-            # hyphenated orgs need to be restored before the generic split.
-            for org in ("teamup-tech",):
+            # Short Space URLs flatten "org/model" into "org-model". HARP has
+            # existing Spaces under a hyphenated org, so handle those before
+            # the generic split.
+            for org in KNOWN_HYPHENATED_SPACE_ORGS:
                 prefix = f"{org}-"
                 if host.startswith(prefix):
                     return f"{org}/{host.removeprefix(prefix)}"
@@ -218,7 +525,7 @@ class HarpEndpointClient:
             headers={
                 "Accept": "*/*",
                 "Content-Type": "application/json",
-                "User-Agent": "harp-model-agent/0.1",
+                "User-Agent": "model-agent/0.1",
             },
             method="POST",
         )
@@ -229,7 +536,7 @@ class HarpEndpointClient:
             raise EndpointProbeError(f"POST {url} failed: {exc}") from exc
 
     def _get_text(self, url: str) -> str:
-        request = Request(url, headers={"Accept": "*/*", "User-Agent": "harp-model-agent/0.1"})
+        request = Request(url, headers={"Accept": "*/*", "User-Agent": "model-agent/0.1"})
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 return response.read().decode("utf-8")
@@ -314,13 +621,40 @@ class HarpModelAgent:
         (folder / "README.md").write_text(_render_readme(package), encoding="utf-8")
         return folder
 
+    def write_generated_app_package(
+        self,
+        package: GeneratedAppPackage,
+        output_dir: Path,
+    ) -> Path:
+        folder = output_dir / _slug(package.repo_id)
+        folder.mkdir(parents=True, exist_ok=True)
+
+        (folder / "app.py").write_text(package.app_py, encoding="utf-8")
+        (folder / "requirements.txt").write_text(package.requirements, encoding="utf-8")
+        _write_json(folder / "manifest.json", package.manifest)
+        return folder
+
 
 def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _model_meta(card: Mapping[str, Any]) -> Mapping[str, Any]:
+    meta = card.get("meta")
+    return meta if isinstance(meta, Mapping) else card
+
+
 def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip("-").lower()
+
+
+def _short_description(card: Mapping[str, Any]) -> str:
+    readme = str(card.get("readme") or "")
+    for line in readme.splitlines():
+        line = line.strip()
+        if line and not line.startswith(("#", "<!--", "---", "license", "tags:")):
+            return line[:200]
+    return "Auto-generated HARP wrapper."
 
 
 def _render_readme(package: ModelPackage) -> str:

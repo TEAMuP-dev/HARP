@@ -6,12 +6,19 @@ import sys
 from pathlib import Path
 from typing import Iterable, List
 
-from .agent import EndpointProbeError, HarpModelAgent, _write_json
+from .agent import (
+    EndpointProbeError,
+    HarpModelAgent,
+    build_generated_app_package,
+    render_pyharp_app,
+    score_compatibility,
+    _write_json,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="harp-model-agent",
+        prog="model-agent",
         description="Discover, probe, and package HARP-compatible open-source models.",
     )
     parser.add_argument("--timeout", type=float, default=120.0, help="Network timeout in seconds.")
@@ -40,13 +47,33 @@ def build_parser() -> argparse.ArgumentParser:
     package.add_argument(
         "--output",
         type=Path,
-        default=Path("artifacts/harp_model_agent/packages"),
+        default=Path("artifacts/model_agent/packages"),
         help="Package output directory.",
     )
     package.add_argument(
         "--no-space-metadata",
         action="store_true",
         help="Skip Hugging Face Space metadata lookup while packaging.",
+    )
+
+    score = subparsers.add_parser("score-card", help="Score a raw Hugging Face model card JSON file.")
+    score.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
+    score.add_argument("--output", type=Path, help="Optional JSON output path.")
+
+    render = subparsers.add_parser("render-app", help="Render a starter pyharp app.py from a model card.")
+    render.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
+    render.add_argument("--output", type=Path, help="Optional app.py output path.")
+
+    generate = subparsers.add_parser(
+        "generate-package",
+        help="Write app.py, requirements.txt, and manifest.json for a raw model card.",
+    )
+    generate.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
+    generate.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/model_agent/generated"),
+        help="Generated package output directory.",
     )
 
     return parser
@@ -101,9 +128,31 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json({"packages": written}, None)
             return 0
 
+        if args.command == "score-card":
+            result = score_compatibility(_read_json(args.card))
+            _emit_json(result, args.output)
+            return 0
+
+        if args.command == "render-app":
+            app_py = render_pyharp_app(_read_json(args.card))
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(app_py, encoding="utf-8")
+            print(app_py)
+            return 0
+
+        if args.command == "generate-package":
+            package = build_generated_app_package(_read_json(args.card))
+            folder = agent.write_generated_app_package(package, args.output)
+            _emit_json({"package": str(folder)}, None)
+            return 0
+
     except EndpointProbeError as exc:
         print(f"Endpoint probe failed: {exc}", file=sys.stderr)
         return 2
+    except NotImplementedError as exc:
+        print(f"Template generation failed: {exc}", file=sys.stderr)
+        return 3
 
     return 1
 
@@ -113,6 +162,10 @@ def _emit_json(payload: object, output: Path | None) -> None:
         output.parent.mkdir(parents=True, exist_ok=True)
         _write_json(output, payload)
     print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _read_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _models_from_file(path: Path) -> List[str]:
@@ -127,4 +180,3 @@ def _models_from_file(path: Path) -> List[str]:
             if model:
                 models.append(str(model))
     return models
-
