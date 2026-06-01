@@ -263,16 +263,15 @@ public:
 
         for (const auto& controlComponent : controlComponents)
         {
-            if (auto* fileComponentInfo =
-                    dynamic_cast<FileComponentInfo*>(controlComponent.get()))
+            if (auto* fileComponentInfo = dynamic_cast<FileComponentInfo*>(controlComponent.get()))
             {
                 if (fileComponentInfo->path.empty())
                     continue;
 
                 String remoteFilePath;
 
-                result = client->uploadFile(
-                    loadedPath, File(fileComponentInfo->path), remoteFilePath);
+                result =
+                    client->uploadFile(loadedPath, File(fileComponentInfo->path), remoteFilePath);
 
                 if (result.failed())
                 {
@@ -621,7 +620,13 @@ private:
                 }
                 else if (type == "generic_file")
                 {
-                    // TODO
+                    std::shared_ptr<ModelComponentInfo> fileOutput =
+                        std::make_shared<FileComponentInfo>(controlsDict);
+
+                    newOutputs.push_back(fileOutput);
+
+                    DBG_AND_LOG("Model::extractOutputs: File output \"" + fileOutput->label
+                                + "\" extracted.");
                 }
                 else if (type == "json")
                 {

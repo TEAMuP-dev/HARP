@@ -16,10 +16,34 @@ public:
 
     StringArray getInstanceExtensions() override;
 
+    int getFixedHeight() const override { return fixedHeight; }
+
     double getTotalLengthInSecs() override;
+
+    void paint(Graphics& g) override;
+    void resized() override;
 
     void loadMediaFile(const URL& filePath) override;
     void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
+
+    void setInstanceFileTypes(const std::vector<std::string>& types);
+
+private:
+    struct NoBorderLookAndFeel : public LookAndFeel_V4
+    {
+        void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
+    };
+
+    NoBorderLookAndFeel noBorderLAF;
+
+    MultiButton downloadButton;
+    MultiButton::Mode downloadActiveMode;
+    MultiButton::Mode downloadInactiveMode;
+
+    StringArray instanceFileTypes;
+
+    static constexpr int fixedHeight = 50;
+    static constexpr int labelHeight = 20;
 };

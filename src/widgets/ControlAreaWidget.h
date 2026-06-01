@@ -310,9 +310,7 @@ private:
         fileChooserComponent->setFileTypes(info->fileTypes);
 
         fileChooserComponent->onFileSelected = [info](const String& path)
-        {
-            info->path = path.toStdString();
-        };
+        { info->path = path.toStdString(); };
 
         addHandler(fileChooserComponent.get(), info);
 

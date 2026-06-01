@@ -89,6 +89,9 @@ public:
     String getTrackName() { return trackName; }
 
     bool isRequired() const { return required; }
+
+    // Returns a fixed height in pixels this display should occupy, or 0 to use flex sizing.
+    virtual int getFixedHeight() const { return 0; }
     bool isLinkedToDAW() const { return linkedToDAW; }
 
     bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }

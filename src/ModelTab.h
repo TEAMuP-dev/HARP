@@ -553,7 +553,9 @@ private:
                         {
                             auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
 
-                            for (size_t i = 0; i < outputMediaDisplays.size(); ++i)
+                            for (size_t i = 0;
+                                 i < outputMediaDisplays.size() && i < outputFilesPtr->size();
+                                 ++i)
                             {
                                 outputMediaDisplays[i]->initializeDisplay(
                                     URL((*outputFilesPtr)[i]));
