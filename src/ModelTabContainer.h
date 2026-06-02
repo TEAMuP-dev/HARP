@@ -23,6 +23,80 @@
 
 using namespace juce;
 
+class ModelTabsLookAndFeel : public LookAndFeel_V4
+{
+public:
+    void drawTabbedButtonBarBackground(TabbedButtonBar& bar, Graphics& g) override
+    {
+        g.fillAll(tabBarColour);
+        g.setColour(separatorColour);
+        g.fillRect(0, bar.getHeight() - 1, bar.getWidth(), 1);
+    }
+
+    void drawTabAreaBehindFrontButton(TabbedButtonBar&, Graphics& g, int w, int h) override
+    {
+        g.setColour(separatorColour);
+        g.fillRect(0, h - 1, w, 1);
+    }
+
+    void drawTabButton(TabBarButton& button,
+                       Graphics& g,
+                       bool isMouseOver,
+                       bool isMouseDown) override
+    {
+        const auto isActive = button.isFrontTab();
+        auto area = button.getActiveArea();
+
+        const auto fill = isActive
+                              ? activeTabColour
+                              : inactiveTabColour.brighter(isMouseOver || isMouseDown ? 0.08f : 0.0f);
+
+        g.setColour(fill);
+        g.fillRect(area);
+
+        if (button.getIndex() > 0)
+        {
+            g.setColour(separatorColour);
+            g.fillRect(area.getX(), area.getY() + 2, 1, area.getHeight() - 4);
+        }
+
+        auto textArea = button.getTextArea().reduced(tabTextInset, 0);
+
+        g.setColour(isActive ? activeTextColour
+                     : inactiveTextColour);
+
+        g.drawText(button.getButtonText(),
+                textArea,
+                Justification::centred,
+                true);
+    }
+
+    int getTabButtonBestWidth(TabBarButton& button, int tabDepth) override
+    {
+        return button.getButtonText() == "Home"
+           ? homeTabWidth
+           : fixedTabWidth;
+    }
+
+    void drawTabButtonText(TabBarButton&,
+                           Graphics&,
+                           bool /*isMouseOver*/,
+                           bool /*isMouseDown*/) override
+    {
+    }
+
+private:
+    const Colour tabBarColour { Colour(0xff1f1f1f) };
+    const Colour inactiveTabColour { Colour(0xff242424) };
+    const Colour activeTabColour { Colour(0xff343434) };
+    const Colour separatorColour { Colour(0xff4a4a4a) };
+    const Colour activeTextColour { Colours::white };
+    const Colour inactiveTextColour { Colour(0xffaeb0b4) };
+    static constexpr int fixedTabWidth = 140;
+    static constexpr int homeTabWidth = 64;
+    static constexpr int tabTextInset = 10;
+};
+
 class ModelTabContainer : public TabbedComponent,
                           private ChangeListener,
                           public ChangeBroadcaster
@@ -31,6 +105,8 @@ public:
     ModelTabContainer()
         : TabbedComponent(TabbedButtonBar::TabsAtTop)
     {
+        getTabbedButtonBar().setLookAndFeel(&tabsLookAndFeel);
+
         setColour(TabbedComponent::backgroundColourId, tabBackgroundColour);
         getTabbedButtonBar().setColour(TabbedButtonBar::tabTextColourId, Colours::white);
         getTabbedButtonBar().setColour(TabbedButtonBar::frontTextColourId, Colours::white);
@@ -38,6 +114,11 @@ public:
         getTabbedButtonBar().setColour(TabbedButtonBar::frontOutlineColourId, tabBackgroundColour.darker(0.35f));
 
         createHomeTab();
+    }
+
+    ~ModelTabContainer() override
+    {
+        getTabbedButtonBar().setLookAndFeel(nullptr);
     }
 
     ModelTab* createNewTab(const String& modelPath = {}, const String& modelName = {})
@@ -92,8 +173,8 @@ private:
         auto* closeButton = new TextButton("x");
         closeButton->setTooltip("Close model tab");
         closeButton->setSize(18, 18);
-        closeButton->setColour(TextButton::buttonColourId, tabBackgroundColour);
-        closeButton->setColour(TextButton::buttonOnColourId, tabBackgroundColour.brighter(0.1f));
+        closeButton->setColour(TextButton::buttonColourId, Colours::transparentBlack);
+        closeButton->setColour(TextButton::buttonOnColourId, Colours::transparentBlack);
         closeButton->setColour(TextButton::textColourOffId, Colours::white);
         closeButton->setColour(TextButton::textColourOnId, Colours::white);
         closeButton->onClick = [this, tab] { closeModelTab(tab); };
@@ -108,7 +189,16 @@ private:
         {
             if (getTabContentComponent(i) == tabToClose)
             {
+                const auto currentIndex = getCurrentTabIndex();
+                const auto targetIndex = currentIndex == i ? jmax(0, i - 1)
+                                                           : (currentIndex > i ? currentIndex - 1
+                                                                               : currentIndex);
+
                 removeTab(i);
+
+                if (getNumTabs() > 0)
+                    setCurrentTabIndex(jlimit(0, getNumTabs() - 1, targetIndex));
+
                 sendChangeMessage();
                 return;
             }
@@ -143,4 +233,6 @@ private:
     const Colour tabBackgroundColour {
         getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground)
     };
+
+    ModelTabsLookAndFeel tabsLookAndFeel;
 };
