@@ -150,7 +150,9 @@ class TemplateGenerationTest(unittest.TestCase):
 
             self.assertTrue((folder / "app.py").exists())
             self.assertTrue((folder / "requirements.txt").exists())
-            self.assertTrue((folder / "manifest.json").exists())
+            self.assertTrue((folder / "README.md").exists())
+            self.assertTrue((folder / "packages.txt").exists())
+            self.assertTrue((folder / ".harp" / "manifest.json").exists())
 
 
 class PackageWriterTest(unittest.TestCase):

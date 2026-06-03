@@ -341,6 +341,20 @@ void MainComponent::viewMediaClipboardCallback()
     updateWindowConstraints();
 }
 
+void MainComponent::openModelDeploymentWindow()
+{
+    DialogWindow::LaunchOptions options;
+    options.dialogTitle = "Deploy Model";
+    options.dialogBackgroundColour = Colours::darkgrey;
+    options.content.setOwned(new ModelDeploymentWidget());
+
+    options.useNativeTitleBar = true;
+    options.resizable = true;
+    options.escapeKeyTriggersCloseButton = true;
+
+    options.launchAsync();
+}
+
 /* --Help-- */
 
 void MainComponent::openAboutWindow()

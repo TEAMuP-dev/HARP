@@ -80,6 +80,7 @@ target_sources(${PROJECT_NAME}
 
         src/widgets/ModelSelectionWidget.h
         src/widgets/ModelInfoWidget.h
+        src/widgets/ModelDeploymentWidget.h
         src/widgets/ControlAreaWidget.h
         src/widgets/TrackAreaWidget.h
         src/widgets/StatusAreaWidget.h

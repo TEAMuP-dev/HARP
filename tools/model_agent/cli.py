@@ -76,6 +76,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generated package output directory.",
     )
 
+    package_repo = subparsers.add_parser(
+        "package-repo",
+        help="Fetch a Hugging Face model repo and write a HARP Space package.",
+    )
+    package_repo.add_argument("repo", help="Hugging Face model repo id or URL.")
+    package_repo.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/model_agent/hf_spaces"),
+        help="Generated Hugging Face Space repo output directory.",
+    )
+
     return parser
 
 
@@ -147,8 +159,17 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json({"package": str(folder)}, None)
             return 0
 
+        if args.command == "package-repo":
+            package = agent.build_generated_app_package_for_repo(args.repo)
+            folder = agent.write_generated_app_package(package, args.output)
+            _emit_json({"package": str(folder), "repo_id": package.repo_id}, None)
+            return 0
+
     except EndpointProbeError as exc:
         print(f"Endpoint probe failed: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
+        print(f"Packaging failed: {exc}", file=sys.stderr)
         return 2
     except NotImplementedError as exc:
         print(f"Template generation failed: {exc}", file=sys.stderr)

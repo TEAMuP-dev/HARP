@@ -120,6 +120,70 @@ class ModelPackage:
 
 
 @dataclass
+class ModelCandidate:
+    """A raw Hugging Face model repo that may be wrapped for HARP."""
+
+    id: str
+    author: str = ""
+    pipeline_tag: str = ""
+    library_name: str = ""
+    license: str = ""
+    downloads: int = 0
+    likes: int = 0
+    private: bool = False
+    gated: bool = False
+    tags: List[str] = field(default_factory=list)
+    files: List[str] = field(default_factory=list)
+    url: str = ""
+
+    @classmethod
+    def from_api(cls, payload: Mapping[str, Any]) -> "ModelCandidate":
+        repo_id = str(payload.get("id") or payload.get("modelId") or payload.get("repo_id") or "")
+        author, _, _name = repo_id.partition("/")
+        card_data = payload.get("cardData") if isinstance(payload.get("cardData"), dict) else {}
+        siblings = payload.get("siblings") if isinstance(payload.get("siblings"), list) else []
+        files = [
+            str(item.get("rfilename"))
+            for item in siblings
+            if isinstance(item, Mapping) and item.get("rfilename")
+        ]
+
+        return cls(
+            id=repo_id,
+            author=str(payload.get("author") or author),
+            pipeline_tag=str(payload.get("pipeline_tag") or card_data.get("pipeline_tag") or ""),
+            library_name=str(payload.get("library_name") or card_data.get("library_name") or ""),
+            license=str(card_data.get("license") or payload.get("license") or ""),
+            downloads=int(payload.get("downloads") or 0),
+            likes=int(payload.get("likes") or 0),
+            private=bool(payload.get("private")),
+            gated=bool(payload.get("gated")),
+            tags=[str(tag) for tag in payload.get("tags", []) if tag],
+            files=files,
+            url=f"{HUGGING_FACE_BASE}/{repo_id}" if repo_id else "",
+        )
+
+    def to_card(self, readme: str = "") -> JSON:
+        return {
+            "meta": {
+                "id": self.id,
+                "author": self.author,
+                "pipeline_tag": self.pipeline_tag,
+                "library_name": self.library_name,
+                "license": self.license,
+                "tags": self.tags,
+                "downloads": self.downloads,
+                "likes": self.likes,
+                "private": self.private,
+                "gated": self.gated,
+                "url": self.url,
+            },
+            "files": self.files,
+            "readme": readme,
+        }
+
+
+@dataclass
 class GeneratedAppPackage:
     """Files for a generated pyharp wrapper around a raw Hugging Face model."""
 
@@ -129,6 +193,8 @@ class GeneratedAppPackage:
     io: JSON
     app_py: str
     requirements: str
+    readme: str
+    packages_txt: str
     manifest: JSON
 
 
@@ -367,20 +433,22 @@ def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
     repo_id = str(_model_meta(card).get("id") or "unknown/unknown")
     requirements = "\n".join(
         [
-            "pyharp @ git+https://github.com/TEAMuP-dev/pyharp.git",
-            "gradio==5.28.0",
+            "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
             "transformers>=4.40",
             "numpy",
             "soundfile",
             "",
         ]
     )
+    readme = _render_generated_space_readme(card, task)
+    packages_txt = "\n".join(["ffmpeg", "libsndfile1", ""]) if task == "audio-to-audio" else ""
     manifest = {
         "repo_id": repo_id,
         "task": task,
         "score": score,
         "io": signature,
         "entry": "app.py",
+        "space_layout": "huggingface-gradio",
         "generated": True,
     }
     return GeneratedAppPackage(
@@ -390,6 +458,8 @@ def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
         io=signature,
         app_py=app_py,
         requirements=requirements,
+        readme=readme,
+        packages_txt=packages_txt,
         manifest=manifest,
     )
 
@@ -439,11 +509,40 @@ class HuggingFaceSpaceScraper:
             return None
         return SpaceCandidate.from_api(payload)
 
-    def _get_json(self, url: str) -> Any:
+    def get_model_card(self, repo_id: str) -> Optional[JSON]:
+        normalized_repo_id = _normalize_hf_model_repo_id(repo_id)
+        try:
+            payload = self._get_json(f"{HUGGING_FACE_BASE}/api/models/{quote(normalized_repo_id, safe='/')}")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise
+
+        if not isinstance(payload, dict):
+            return None
+
+        candidate = ModelCandidate.from_api(payload)
+        return candidate.to_card(self.get_model_readme(normalized_repo_id))
+
+    def get_model_readme(self, repo_id: str) -> str:
+        url = f"{HUGGING_FACE_BASE}/{quote(repo_id, safe='/')}/raw/main/README.md"
+        request = Request(url, headers=self._headers())
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return ""
+            raise
+
+    def _headers(self) -> Dict[str, str]:
         headers = {"User-Agent": "model-agent/0.1"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-        request = Request(url, headers=headers)
+        return headers
+
+    def _get_json(self, url: str) -> Any:
+        request = Request(url, headers=self._headers())
         with urlopen(request, timeout=self.timeout) as response:
             return json.loads(response.read().decode("utf-8"))
 
@@ -591,6 +690,18 @@ class HarpModelAgent:
             if candidate.looks_open_source() and candidate.looks_gradio()
         ]
 
+    def build_generated_app_package_for_repo(self, repo_id: str) -> GeneratedAppPackage:
+        normalized_repo_id = _normalize_hf_model_repo_id(repo_id)
+        card = self.scraper.get_model_card(normalized_repo_id)
+        if card is None:
+            raise ValueError(f"Hugging Face model repo not found: {normalized_repo_id}")
+
+        score = score_compatibility(card)
+        if score["blockers"]:
+            raise ValueError(f"Model cannot be packaged automatically: {', '.join(score['blockers'])}")
+
+        return build_generated_app_package(card)
+
     def package_model(self, model_path: str, *, include_space_metadata: bool = True) -> ModelPackage:
         controls = self.endpoint_client.fetch_controls(model_path)
         host_slash_model = self.endpoint_client.infer_host_slash_model(model_path)
@@ -631,7 +742,11 @@ class HarpModelAgent:
 
         (folder / "app.py").write_text(package.app_py, encoding="utf-8")
         (folder / "requirements.txt").write_text(package.requirements, encoding="utf-8")
-        _write_json(folder / "manifest.json", package.manifest)
+        (folder / "README.md").write_text(package.readme, encoding="utf-8")
+        (folder / "packages.txt").write_text(package.packages_txt, encoding="utf-8")
+        metadata_dir = folder / ".harp"
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        _write_json(metadata_dir / "manifest.json", package.manifest)
         return folder
 
 
@@ -648,6 +763,19 @@ def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip("-").lower()
 
 
+def _normalize_hf_model_repo_id(value: str) -> str:
+    repo_id = value.strip().rstrip("/")
+    if repo_id.startswith(f"{HUGGING_FACE_BASE}/"):
+        repo_id = repo_id.removeprefix(f"{HUGGING_FACE_BASE}/")
+    if repo_id.startswith("models/"):
+        repo_id = repo_id.removeprefix("models/")
+    if repo_id.startswith("spaces/"):
+        raise ValueError("Expected a Hugging Face model repo, not a Space repo.")
+    if repo_id.count("/") != 1:
+        raise ValueError("Expected a Hugging Face repo id like 'author/model-name'.")
+    return repo_id
+
+
 def _short_description(card: Mapping[str, Any]) -> str:
     readme = str(card.get("readme") or "")
     for line in readme.splitlines():
@@ -655,6 +783,39 @@ def _short_description(card: Mapping[str, Any]) -> str:
         if line and not line.startswith(("#", "<!--", "---", "license", "tags:")):
             return line[:200]
     return "Auto-generated HARP wrapper."
+
+
+def _render_generated_space_readme(card: Mapping[str, Any], task: str) -> str:
+    meta = _model_meta(card)
+    repo_id = str(meta.get("id") or "unknown/unknown")
+    model_name = repo_id.split("/")[-1].replace("_", " ").replace("-", " ").title()
+    license_name = str(meta.get("license") or "").strip().lower() or "other"
+    description = _short_description(card)
+
+    return "\n".join(
+        [
+            "---",
+            f"title: {model_name}",
+            "colorFrom: indigo",
+            "colorTo: gray",
+            "sdk: gradio",
+            "sdk_version: 5.28.0",
+            "app_file: app.py",
+            "pinned: false",
+            f"license: {license_name}",
+            "---",
+            "",
+            f"# {model_name}",
+            "",
+            f"Generated HARP wrapper for `{repo_id}`.",
+            "",
+            f"- Source model: {HUGGING_FACE_BASE}/{repo_id}",
+            f"- Task: `{task}`",
+            "",
+            description,
+            "",
+        ]
+    )
 
 
 def _render_readme(package: ModelPackage) -> str:

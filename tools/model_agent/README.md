@@ -72,6 +72,14 @@ Write a generated wrapper package:
 python3 -m tools.model_agent generate-package artifacts/model_agent/cards/example.json
 ```
 
+Fetch a raw Hugging Face model repository and package it as a HARP-compatible
+Hugging Face Space:
+
+```bash
+python3 -m tools.model_agent package-repo Awais/Audio_Source_Separation \
+  --output artifacts/model_agent/hf_spaces
+```
+
 The package command creates one folder per model containing:
 
 - `manifest.json`: normalized source, endpoint, license, and HARP controls data;
@@ -81,5 +89,7 @@ The package command creates one folder per model containing:
 Generated wrapper packages contain:
 
 - `app.py`: starter pyharp wrapper;
+- `README.md`: Hugging Face Space metadata using HARP's Gradio layout;
 - `requirements.txt`: dependencies for the generated wrapper;
-- `manifest.json`: score, task, I/O hints, and entrypoint metadata.
+- `packages.txt`: system package hints for the generated wrapper;
+- `.harp/manifest.json`: score, task, I/O hints, and entrypoint metadata.

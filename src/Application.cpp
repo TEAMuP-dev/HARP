@@ -17,6 +17,7 @@ enum CommandIDs
     // View
     viewStatusArea = 0x2000,
     viewMediaClipboard = 0x2001,
+    modelDeployment = 0x2002,
 
     // Help
     about = 0x3000,
@@ -71,6 +72,8 @@ PopupMenu MainComponent::getMenuForIndex([[maybe_unused]] int menuIndex, const S
     {
         menu.addCommandItem(&commandManager, CommandIDs::viewStatusArea);
         menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        menu.addSeparator();
+        menu.addCommandItem(&commandManager, CommandIDs::modelDeployment);
     }
     else if (menuName == "Help")
     {
@@ -135,7 +138,9 @@ void MainComponent::getAllCommands(Array<CommandID>& commands)
 
     commands.addArray(editIDs, numElementsInArray(editIDs));
 
-    const CommandID viewIDs[] = { CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard };
+    const CommandID viewIDs[] = {
+        CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard, CommandIDs::modelDeployment
+    };
 
     commands.addArray(viewIDs, numElementsInArray(viewIDs));
 
@@ -207,6 +212,11 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
             break;
 
+        case CommandIDs::modelDeployment:
+            result.setInfo("Deploy Model", "Open temporary model deployment widget", "View", 0);
+
+            break;
+
         /* --Help-- */
         case CommandIDs::about:
             result.setInfo(
@@ -274,6 +284,12 @@ bool MainComponent::perform(const InvocationInfo& info)
         case CommandIDs::viewStatusArea:
             DBG_AND_LOG("MainComponent::perform: \"viewStatusArea\" command invoked.");
             viewStatusAreaCallback();
+
+            break;
+
+        case CommandIDs::modelDeployment:
+            DBG_AND_LOG("MainComponent::perform: \"modelDeployment\" command invoked.");
+            openModelDeploymentWindow();
 
             break;
 
