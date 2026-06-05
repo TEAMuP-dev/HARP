@@ -60,6 +60,12 @@ void GeneralSettingsTab::handleOpenSettings()
 void GeneralSettingsTab::handleClearLogs()
 {
     HARPLogger::getInstance()->clearLog();
+
+    AlertWindow::showMessageBoxAsync(
+        AlertWindow::InfoIcon,
+        "Logs Cleared",
+        "All logs (main.log and launch.log) have been successfully cleared.",
+        "Ok");
 }
 
 void GeneralSettingsTab::handleRestoreDefaults()
