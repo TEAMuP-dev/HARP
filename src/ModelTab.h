@@ -415,12 +415,11 @@ private:
         addAndMakeVisible(*errorPopupWindow);
         errorPopupWindow->setAlwaysOnTop(true);
 
-        errorPopupWindow->setSize(errorPopupWindow->getWidth(), isReportableError ? 260 : 230);
-        positionErrorPopup();
+        positionErrorPopup(isReportableError ? 260 : 230);
         errorPopupWindow->toFront(true);
     }
 
-    void positionErrorPopup()
+    void positionErrorPopup(int desiredHeight = -1)
     {
         if (errorPopupWindow == nullptr)
         {
@@ -433,7 +432,7 @@ private:
         // the media clipboard panel is open and ModelTab is narrow.
         int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
         int popupWidth = jmin(520, windowWidth - 24);
-        int popupHeight = errorPopupWindow->getHeight();
+        int popupHeight = (desiredHeight > 0) ? desiredHeight : errorPopupWindow->getHeight();
 
         // Find the window's centre in screen space, then convert to ModelTab's
         // local coordinate space so the popup is centred in the full window
