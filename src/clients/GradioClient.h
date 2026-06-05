@@ -132,7 +132,7 @@ public:
 
         if (isValidLocalPath(modelPath) || isValidGradioPath(modelPath))
         {
-            documentationPath = inferEndpointPath(documentationPath);
+            documentationPath = inferEndpointPath(modelPath);
         }
         else if (isValidHuggingFacePath(modelPath))
         {
@@ -1067,7 +1067,8 @@ private:
     OpResult makeGETRequest(const URL endpoint,
                             String& response,
                             const String errorPath = "",
-                            const int timeoutMs = -1)
+                            const int timeoutMs = -1,
+                            const String modelPathForQuotaCheck = "")
     {
         std::unique_ptr<InputStream> stream;
 
@@ -1078,10 +1079,6 @@ private:
             return result;
         }
 
-        // Track whether ZeroGPU allocated the GPU and started the process.
-        // If an error arrives before process_starts, it was likely rejected at
-        // the quota-check stage rather than failing inside the function body.
-        bool seenProcessStarts = false;
         bool seenAnyDataEvent = false;
         bool checkedFirstLine = false;
 
@@ -1163,11 +1160,10 @@ private:
                 {
                     errorType = GradioError::Type::QuotaExceeded;
                 }
-                else if (diagnosticText.isEmpty() && ! seenProcessStarts && ! seenAnyDataEvent)
+                else if (diagnosticText.isEmpty() && ! seenAnyDataEvent
+                         && isZeroGPUSpace(modelPathForQuotaCheck))
                 {
-                    /* ZeroGPU quota rejections arrive before any data: events with an empty error payload.
-                    A network drop before any data arrives matches this same signature but is downgraded
-                    to RuntimeError for non-ZeroGPU spaces downstream in makeRequest(). */
+                    // ZeroGPU quota rejections arrive before any data: events with an empty error payload & GPU space
                     errorType = GradioError::Type::QuotaExceeded;
                 }
                 else
@@ -1180,15 +1176,6 @@ private:
             else if (eventLine.startsWithIgnoreCase("data:"))
             {
                 seenAnyDataEvent = true;
-
-                // Check for process_starts using old-API msg field as fallback.
-                String dataPayload = extractPayload(eventLine);
-                if (currentSseEventType.equalsIgnoreCase("process_starts")
-                    || extractMessageTypeFromPayload(dataPayload)
-                           .equalsIgnoreCase("process_starts"))
-                {
-                    seenProcessStarts = true;
-                }
 
                 // Pass the current SSE event type so "log" events are not dropped.
                 appendProcessMessageFromDataLine(eventLine, currentSseEventType);
@@ -1301,23 +1288,10 @@ private:
 
         /* Note: it's very important to give Gradio enough time to yield a response
            (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
-        result = makeGETRequest(endpoint, response, inferDocumentationPath(modelPath), 120000);
+        result = makeGETRequest(endpoint, response, inferDocumentationPath(modelPath), 120000, modelPath);
 
         if (result.failed())
-        {
-            if (const auto* gradioErr = std::get_if<GradioError>(&result.getError()))
-            {
-                if (gradioErr->type == GradioError::Type::QuotaExceeded
-                    && gradioErr->reason.isEmpty() && ! isZeroGPUSpace(modelPath))
-                {
-                    return OpResult::fail(GradioError { GradioError::Type::RuntimeError,
-                                                        gradioErr->endpointPath,
-                                                        gradioErr->reason });
-                }
-            }
-
             return result;
-        }
 
         return OpResult::ok();
     }
