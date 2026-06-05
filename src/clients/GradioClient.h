@@ -652,9 +652,7 @@ private:
                         503 });
                 }
 
-                GradioError::Type errorType = isExplicitQuotaError(diagnosticText)
-                                                  ? GradioError::Type::QuotaExceeded
-                                                  : GradioError::Type::RuntimeError;
+                GradioError::Type errorType = GradioError::Type::RuntimeError;
 
                 return OpResult::fail(GradioError { errorType, errorPath, reason });
             }
@@ -776,34 +774,6 @@ private:
         return lower.contains("your space is in error")
                || lower.contains("space is in error")
                || lower.contains("check its status on hf");
-    }
-
-    static bool isExplicitQuotaError(const String& text)
-    {
-        if (text.isEmpty())
-        {
-            return false;
-        }
-
-        if ((text.containsIgnoreCase("exceeded your") && text.containsIgnoreCase("gpu quota"))
-            || text.containsIgnoreCase("zerogpu quota exceeded"))
-        {
-            return true;
-        }
-
-        if (text.containsIgnoreCase("gradio_client.exceptions.apperror")
-            && text.containsIgnoreCase("usage quota"))
-        {
-            return true;
-        }
-
-        if (text.containsIgnoreCase("spaces.zero.gradio.htmlerror")
-            && text.containsIgnoreCase("gpu quota"))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     static String extractShortReason(const String& text)
@@ -1156,14 +1126,11 @@ private:
 
                 GradioError::Type errorType;
 
-                if (isExplicitQuotaError(diagnosticText))
+                if (diagnosticText.isEmpty() && ! seenAnyDataEvent
+                    && isZeroGPUSpace(modelPathForQuotaCheck))
                 {
-                    errorType = GradioError::Type::QuotaExceeded;
-                }
-                else if (diagnosticText.isEmpty() && ! seenAnyDataEvent
-                         && isZeroGPUSpace(modelPathForQuotaCheck))
-                {
-                    // ZeroGPU quota rejections arrive before any data: events with an empty error payload & GPU space
+                    // ZeroGPU quota rejections arrive before any data: events
+                    // with an empty error payload. Confirmed ZeroGPU space before concluding.
                     errorType = GradioError::Type::QuotaExceeded;
                 }
                 else
