@@ -10,7 +10,13 @@ The agent is intentionally conservative:
 - it treats Hugging Face search results as candidates until a Space is probed;
 - it packages metadata and endpoint contracts, not model weights;
 - it can score raw Hugging Face model cards before spending time on wrappers;
-- it can render a starter `app.py` for `audio-to-audio` models;
+- it can render a starter `app.py` for `audio-to-audio` models whose framework
+  has a runnable template (currently SpeechBrain), and refuses to emit a wrapper
+  it cannot actually run;
+- it can optionally smoke-test a generated wrapper by launching it and verifying
+  the endpoint exposes HARP controls;
+- it resolves a model's canonical `author/name` from the live Gradio config so
+  documentation links keep the correct `_` vs `-` spelling;
 - it writes deterministic package folders that can be reviewed before models are
   added to HARP's featured list.
 
@@ -71,6 +77,17 @@ Write a generated wrapper package:
 ```bash
 python3 -m tools.model_agent generate-package artifacts/model_agent/cards/example.json
 ```
+
+Smoke-test a generated package (launches `app.py` and verifies HARP controls).
+This runs downloaded third-party code, so only do it after review or inside a
+sandbox/venv:
+
+```bash
+python3 -m tools.model_agent smoke-test artifacts/model_agent/generated/example
+```
+
+`generate-package` and `package-repo` also accept `--smoke-test` to run the same
+check immediately after writing the package.
 
 Fetch a raw Hugging Face model repository and package it as a HARP-compatible
 Hugging Face Space:

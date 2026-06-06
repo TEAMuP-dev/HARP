@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import queue
 import re
 import socket
+import subprocess
+import sys
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -45,6 +49,8 @@ NONCOMMERCIAL_LICENSES = {
 WEIGHT_FILE_SUFFIXES = (".bin", ".safetensors", ".pt", ".ckpt", ".onnx")
 _SR_RE = re.compile(r"(\d{2,3})[ ._-]?k(?:hz| ?Hz)", re.IGNORECASE)
 _CHANNELS_RE = re.compile(r"\b(mono|stereo)\b", re.IGNORECASE)
+_LOCAL_URL_RE = re.compile(r"https?://(?:127\.0\.0\.1|0\.0\.0\.0|localhost):\d+")
+_PUBLIC_URL_RE = re.compile(r"https?://[\w.-]+\.gradio\.live")
 
 
 class EndpointProbeError(RuntimeError):
@@ -189,6 +195,7 @@ class GeneratedAppPackage:
 
     repo_id: str
     task: str
+    framework: str
     score: JSON
     io: JSON
     app_py: str
@@ -196,6 +203,20 @@ class GeneratedAppPackage:
     readme: str
     packages_txt: str
     manifest: JSON
+
+
+@dataclass
+class SmokeTestResult:
+    """Outcome of launching a generated package and probing its endpoint."""
+
+    ok: bool
+    endpoint_url: str = ""
+    startup_seconds: Optional[float] = None
+    controls_ok: bool = False
+    error: str = ""
+
+    def to_json(self) -> JSON:
+        return asdict(self)
 
 
 def classify_task(card: Mapping[str, Any]) -> str:
@@ -340,14 +361,79 @@ def score_compatibility(card: Mapping[str, Any]) -> JSON:
     }
 
 
+SUPPORTED_GENERATION_FRAMEWORKS = ("speechbrain",)
+
+
+def detect_inference_framework(card: Mapping[str, Any]) -> str:
+    """Detect the Python framework needed to run a raw Hugging Face audio model.
+
+    Different ``audio-to-audio`` models load through completely different APIs,
+    so there is no single universal inference call. We only claim support for
+    frameworks that expose a clean, documented ``from_pretrained``/``from_hparams``
+    inference path; everything else is reported as ``unknown`` so the caller can
+    refuse to emit a wrapper it cannot actually run.
+    """
+
+    meta = _model_meta(card)
+    library = str(meta.get("library_name") or "").strip().lower()
+    tags = {str(tag).strip().lower() for tag in meta.get("tags", []) if tag}
+    blob = " ".join(sorted(tags)) + " " + str(card.get("readme") or "").lower()
+
+    if library == "speechbrain" or "speechbrain" in tags or "speechbrain" in blob:
+        return "speechbrain"
+    if library == "asteroid" or "asteroid" in tags:
+        return "asteroid"
+    if library == "transformers" or "transformers" in tags:
+        return "transformers"
+    return "unknown"
+
+
+def _speechbrain_kind(card: Mapping[str, Any]) -> str:
+    """Pick the SpeechBrain inference interface that matches the model."""
+
+    meta = _model_meta(card)
+    blob = " ".join(str(tag).lower() for tag in meta.get("tags", []) if tag)
+    blob += " " + str(meta.get("id") or "").lower()
+    blob += " " + str(card.get("readme") or "").lower()
+
+    enhancement_markers = ("enhance", "denois", "metricgan", "mtl-mimic", "dereverb")
+    if any(marker in blob for marker in enhancement_markers):
+        return "enhancement"
+    return "separation"
+
+
 def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, Any]] = None) -> str:
-    """Render a starter pyharp `app.py` for supported raw Hugging Face models."""
+    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models.
+
+    Only frameworks in :data:`SUPPORTED_GENERATION_FRAMEWORKS` produce a wrapper.
+    Emitting code we cannot run (the previous behavior, which called the
+    nonexistent ``pipeline("audio-to-audio")`` task) is worse than refusing, so
+    unsupported models raise :class:`NotImplementedError`.
+    """
 
     task = classify_task(card)
     if task != "audio-to-audio":
         raise NotImplementedError(
             f"No app.py template is available for task '{task}' yet."
         )
+
+    framework = detect_inference_framework(card)
+    if framework == "speechbrain":
+        return _render_speechbrain_app(card, signature)
+
+    raise NotImplementedError(
+        f"No runnable app.py template for framework '{framework}'. "
+        f"Supported frameworks: {', '.join(SUPPORTED_GENERATION_FRAMEWORKS)}. "
+        "Wire up a model-specific template, or package the model's existing "
+        "Gradio Space with the `package` command instead."
+    )
+
+
+def _render_speechbrain_app(
+    card: Mapping[str, Any],
+    signature: Optional[Mapping[str, Any]] = None,
+) -> str:
+    """Render a SpeechBrain-based pyharp wrapper using real inference APIs."""
 
     meta = _model_meta(card)
     sig = dict(signature or extract_io_signature(card))
@@ -356,22 +442,27 @@ def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, 
     author = str(meta.get("author") or repo_id.split("/", 1)[0] or "unknown")
     description = _short_description(card)
     tags = meta.get("tags") if isinstance(meta.get("tags"), list) else []
-    target_sr = sig.get("sample_rate_hz") or 16000
+    kind = _speechbrain_kind(card)
+    # SpeechBrain separation checkpoints (e.g. SepFormer/WSJ0-2mix) are usually
+    # 8 kHz; enhancement checkpoints are usually 16 kHz. The README sample rate,
+    # when present, wins over these defaults.
+    default_sr = 8000 if kind == "separation" else 16000
+    target_sr = sig.get("sample_rate_hz") or default_sr
 
-    return f'''from __future__ import annotations
+    header = f'''from __future__ import annotations
 
 import tempfile
 
 import gradio as gr
-import numpy as np
-import soundfile as sf
-from transformers import pipeline
+import torch
+import torchaudio
 
 from pyharp import ModelCard, build_endpoint
 
 
 REPO_ID = {json.dumps(repo_id)}
 TARGET_SAMPLE_RATE = {json.dumps(target_sr)}
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 model_card = ModelCard(
     name={json.dumps(model_name)},
@@ -379,38 +470,71 @@ model_card = ModelCard(
     author={json.dumps(author)},
     tags={json.dumps(tags)},
 )
+'''
 
-pipe = pipeline("audio-to-audio", model=REPO_ID)
+    if kind == "enhancement":
+        body = '''
+
+from speechbrain.inference.enhancement import SpectralMaskEnhancement
+
+enhancer = SpectralMaskEnhancement.from_hparams(
+    source=REPO_ID,
+    savedir=tempfile.mkdtemp(prefix="harp_speechbrain_"),
+    run_opts={"device": DEVICE},
+)
 
 
 def process_fn(input_audio_path: str) -> str:
-    result = pipe(input_audio_path)
-    if isinstance(result, list):
-        result = result[0]
+    enhanced = enhancer.enhance_file(input_audio_path)
+    if enhanced.dim() == 1:
+        enhanced = enhanced.unsqueeze(0)
+    else:
+        enhanced = enhanced[:1]
 
-    if not isinstance(result, dict):
-        raise ValueError(f"Expected pipeline output dict, got {{type(result).__name__}}")
-
-    audio = result.get("audio")
-    if audio is None:
-        audio = result.get("array")
-    sample_rate = result.get("sampling_rate") or TARGET_SAMPLE_RATE
-    if audio is None:
-        raise ValueError("Pipeline output did not include audio data.")
-
-    audio = np.asarray(audio)
     output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     output.close()
-    sf.write(output.name, audio, int(sample_rate))
+    torchaudio.save(output.name, enhanced.detach().cpu(), TARGET_SAMPLE_RATE)
     return output.name
 
+
+OUTPUT_LABEL = "Enhanced Audio"
+OUTPUT_INFO = "Speech enhanced by " + REPO_ID
+'''
+    else:
+        body = '''
+
+from speechbrain.inference.separation import SepformerSeparation
+
+separator = SepformerSeparation.from_hparams(
+    source=REPO_ID,
+    savedir=tempfile.mkdtemp(prefix="harp_speechbrain_"),
+    run_opts={"device": DEVICE},
+)
+
+
+def process_fn(input_audio_path: str) -> str:
+    # est_sources has shape [batch, time, n_sources]; return the first source.
+    est_sources = separator.separate_file(path=input_audio_path)
+    first_source = est_sources[0, :, 0].detach().cpu().unsqueeze(0)
+
+    output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    output.close()
+    torchaudio.save(output.name, first_source, TARGET_SAMPLE_RATE)
+    return output.name
+
+
+OUTPUT_LABEL = "Separated Source"
+OUTPUT_INFO = "First separated source from " + REPO_ID
+'''
+
+    footer = '''
 
 with gr.Blocks() as demo:
     input_components = [
         gr.Audio(type="filepath", label="Input Audio").harp_required(True),
     ]
     output_components = [
-        gr.Audio(type="filepath", label="Output Audio").set_info("Processed audio."),
+        gr.Audio(type="filepath", label=OUTPUT_LABEL).set_info(OUTPUT_INFO),
     ]
     build_endpoint(
         model_card=model_card,
@@ -422,29 +546,40 @@ with gr.Blocks() as demo:
 demo.queue().launch(share=True, show_error=False, pwa=True)
 '''
 
+    return header + body + footer
+
+
+def _requirements_for_framework(framework: str) -> str:
+    base = [
+        "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
+        "gradio>=4.0",
+    ]
+    if framework == "speechbrain":
+        base += ["speechbrain>=1.0.0", "torch", "torchaudio", "soundfile"]
+    return "\n".join(base + [""])
+
 
 def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
-    """Build in-memory files for a generated pyharp wrapper."""
+    """Build in-memory files for a generated pyharp wrapper.
+
+    Raises :class:`NotImplementedError` (via :func:`render_pyharp_app`) when the
+    model's framework has no runnable template, so we never write a wrapper that
+    is known to fail at startup.
+    """
 
     task = classify_task(card)
+    framework = detect_inference_framework(card)
     score = score_compatibility(card)
     signature = extract_io_signature(card)
     app_py = render_pyharp_app(card, signature)
     repo_id = str(_model_meta(card).get("id") or "unknown/unknown")
-    requirements = "\n".join(
-        [
-            "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
-            "transformers>=4.40",
-            "numpy",
-            "soundfile",
-            "",
-        ]
-    )
+    requirements = _requirements_for_framework(framework)
     readme = _render_generated_space_readme(card, task)
     packages_txt = "\n".join(["ffmpeg", "libsndfile1", ""]) if task == "audio-to-audio" else ""
     manifest = {
         "repo_id": repo_id,
         "task": task,
+        "framework": framework,
         "score": score,
         "io": signature,
         "entry": "app.py",
@@ -454,6 +589,7 @@ def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
     return GeneratedAppPackage(
         repo_id=repo_id,
         task=task,
+        framework=framework,
         score=score,
         io=signature,
         app_py=app_py,
@@ -597,6 +733,59 @@ class HarpEndpointClient:
             return f"{HUGGING_FACE_BASE}/spaces/{host_slash_model}"
         return HarpEndpointClient.infer_endpoint_url(model_path)
 
+    def fetch_space_id(self, model_path: str) -> str:
+        """Query the live Gradio config for the authoritative ``author/name``.
+
+        Short ``*.hf.space`` URLs flatten ``author/model`` to ``author-model`` and
+        turn ``_`` into ``-``, so the canonical id cannot be recovered by string
+        manipulation alone (the same ambiguity HARP's C++ client resolves). The
+        Gradio config endpoint reports the real ``space_id``; we try both the
+        modern and legacy config paths.
+        """
+
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        last_error: Optional[EndpointProbeError] = None
+        for config_path in ("gradio_api/config", "config"):
+            try:
+                text = self._get_text(f"{endpoint}/{config_path}")
+            except EndpointProbeError as exc:
+                last_error = exc
+                continue
+
+            try:
+                config = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+
+            if isinstance(config, dict):
+                space_id = config.get("space_id")
+                if isinstance(space_id, str) and "/" in space_id:
+                    return space_id
+
+        if last_error is not None:
+            raise last_error
+        return ""
+
+    def resolve_canonical_path(self, model_path: str) -> str:
+        """Return the canonical ``author/name`` for a model path.
+
+        Full ``huggingface.co/spaces/...`` URLs already carry the exact id and are
+        trusted as-is. For abbreviated paths and short ``*.hf.space`` URLs we ask
+        the endpoint for its real ``space_id`` so documentation/source links keep
+        the correct ``_`` vs ``-`` spelling, falling back to the best-effort
+        string inference when the config is unavailable.
+        """
+
+        guess = self.infer_host_slash_model(model_path)
+        if model_path.strip().rstrip("/").startswith("https://huggingface.co/spaces/"):
+            return guess
+
+        try:
+            space_id = self.fetch_space_id(model_path)
+        except EndpointProbeError:
+            space_id = ""
+        return space_id or guess
+
     def fetch_controls(self, model_path: str) -> JSON:
         endpoint = self.infer_endpoint_url(model_path).rstrip("/")
         call_url = f"{endpoint}/gradio_api/call/controls"
@@ -704,17 +893,25 @@ class HarpModelAgent:
 
     def package_model(self, model_path: str, *, include_space_metadata: bool = True) -> ModelPackage:
         controls = self.endpoint_client.fetch_controls(model_path)
-        host_slash_model = self.endpoint_client.infer_host_slash_model(model_path)
-        space = self.scraper.get_space(host_slash_model) if include_space_metadata and "/" in host_slash_model else None
+        # Resolve the canonical author/name so documentation and source links use
+        # the real "_" vs "-" spelling rather than a lossy string guess.
+        canonical_path = self.endpoint_client.resolve_canonical_path(model_path)
+        has_canonical = "/" in canonical_path
+        space = self.scraper.get_space(canonical_path) if include_space_metadata and has_canonical else None
         card = controls.get("card") if isinstance(controls.get("card"), dict) else {}
         inputs = controls.get("inputs") if isinstance(controls.get("inputs"), list) else []
         outputs = controls.get("outputs") if isinstance(controls.get("outputs"), list) else []
+        documentation_url = (
+            f"{HUGGING_FACE_BASE}/spaces/{canonical_path}"
+            if has_canonical
+            else self.endpoint_client.infer_documentation_url(model_path)
+        )
 
         return ModelPackage(
-            model_path=host_slash_model,
-            source_url=f"{HUGGING_FACE_BASE}/spaces/{host_slash_model}" if "/" in host_slash_model else "",
+            model_path=canonical_path,
+            source_url=f"{HUGGING_FACE_BASE}/spaces/{canonical_path}" if has_canonical else "",
             endpoint_url=self.endpoint_client.infer_endpoint_url(model_path),
-            documentation_url=self.endpoint_client.infer_documentation_url(model_path),
+            documentation_url=documentation_url,
             scraped_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             card=card,
             inputs=inputs,
@@ -749,9 +946,113 @@ class HarpModelAgent:
         _write_json(metadata_dir / "manifest.json", package.manifest)
         return folder
 
+    def smoke_test_package(
+        self,
+        package_dir: Path,
+        *,
+        python_executable: Optional[str] = None,
+        startup_timeout_s: float = 180.0,
+    ) -> SmokeTestResult:
+        """Launch a generated ``app.py`` and verify it exposes HARP controls.
 
-def _write_json(path: Path, payload: Any) -> None:
+        WARNING: this executes the generated wrapper, which downloads and runs
+        third-party model code. Only call it after manual review or inside a
+        sandbox/venv. It is opt-in and never invoked by discovery or packaging.
+
+        The launched process is always terminated before returning.
+        """
+
+        folder = Path(package_dir)
+        app_py = folder / "app.py"
+        if not app_py.exists():
+            return SmokeTestResult(ok=False, error=f"app.py not found in {folder}")
+
+        executable = python_executable or sys.executable
+        process = subprocess.Popen(
+            [executable, "app.py"],
+            cwd=str(folder),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        output_lines: "queue.Queue[str]" = queue.Queue()
+
+        def _pump() -> None:
+            assert process.stdout is not None
+            for line in process.stdout:
+                output_lines.put(line)
+            process.stdout.close()
+
+        reader = threading.Thread(target=_pump, daemon=True)
+        reader.start()
+
+        start = time.monotonic()
+        captured: List[str] = []
+        endpoint_url = ""
+        try:
+            while time.monotonic() - start < startup_timeout_s:
+                if process.poll() is not None and output_lines.empty():
+                    detail = _tail("".join(captured))
+                    return SmokeTestResult(
+                        ok=False,
+                        error=f"app.py exited early (code {process.returncode}): {detail}",
+                    )
+                try:
+                    line = output_lines.get(timeout=1.0)
+                except queue.Empty:
+                    continue
+
+                captured.append(line)
+                match = _LOCAL_URL_RE.search(line) or _PUBLIC_URL_RE.search(line)
+                if match:
+                    endpoint_url = match.group(0)
+                    break
+
+            if not endpoint_url:
+                return SmokeTestResult(
+                    ok=False,
+                    error="timed out waiting for the Gradio URL",
+                )
+
+            startup_seconds = round(time.monotonic() - start, 2)
+            try:
+                self.endpoint_client.fetch_controls(endpoint_url)
+            except EndpointProbeError as exc:
+                return SmokeTestResult(
+                    ok=False,
+                    endpoint_url=endpoint_url,
+                    startup_seconds=startup_seconds,
+                    controls_ok=False,
+                    error=str(exc),
+                )
+
+            return SmokeTestResult(
+                ok=True,
+                endpoint_url=endpoint_url,
+                startup_seconds=startup_seconds,
+                controls_ok=True,
+            )
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+
+
+def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+# Backwards-compatible internal alias.
+_write_json = write_json
+
+
+def _tail(text: str, limit: int = 500) -> str:
+    text = text.strip()
+    return text if len(text) <= limit else "..." + text[-limit:]
 
 
 def _model_meta(card: Mapping[str, Any]) -> Mapping[str, Any]:

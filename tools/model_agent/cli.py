@@ -9,10 +9,11 @@ from typing import Iterable, List
 from .agent import (
     EndpointProbeError,
     HarpModelAgent,
+    SmokeTestResult,
     build_generated_app_package,
     render_pyharp_app,
     score_compatibility,
-    _write_json,
+    write_json,
 )
 
 
@@ -75,6 +76,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("artifacts/model_agent/generated"),
         help="Generated package output directory.",
     )
+    generate.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
+    )
 
     package_repo = subparsers.add_parser(
         "package-repo",
@@ -86,6 +92,29 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/model_agent/hf_spaces"),
         help="Generated Hugging Face Space repo output directory.",
+    )
+    package_repo.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
+    )
+
+    smoke = subparsers.add_parser(
+        "smoke-test",
+        help="Launch a generated package's app.py and verify it exposes HARP controls.",
+    )
+    smoke.add_argument("package", type=Path, help="Path to a generated package folder.")
+    smoke.add_argument(
+        "--python",
+        dest="python_executable",
+        default=None,
+        help="Python interpreter to run app.py with (defaults to the current one).",
+    )
+    smoke.add_argument(
+        "--startup-timeout",
+        type=float,
+        default=180.0,
+        help="Seconds to wait for the Gradio URL before failing.",
     )
 
     return parser
@@ -156,14 +185,34 @@ def main(argv: Iterable[str] | None = None) -> int:
         if args.command == "generate-package":
             package = build_generated_app_package(_read_json(args.card))
             folder = agent.write_generated_app_package(package, args.output)
-            _emit_json({"package": str(folder)}, None)
-            return 0
+            result = {"package": str(folder), "framework": package.framework}
+            if args.smoke_test:
+                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+            _emit_json(result, None)
+            return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
         if args.command == "package-repo":
             package = agent.build_generated_app_package_for_repo(args.repo)
             folder = agent.write_generated_app_package(package, args.output)
-            _emit_json({"package": str(folder), "repo_id": package.repo_id}, None)
-            return 0
+            result = {
+                "package": str(folder),
+                "repo_id": package.repo_id,
+                "framework": package.framework,
+            }
+            if args.smoke_test:
+                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+            _emit_json(result, None)
+            return 0 if result.get("smoke_test", {}).get("ok", True) else 4
+
+        if args.command == "smoke-test":
+            result = _run_smoke_test(
+                agent,
+                args.package,
+                python_executable=args.python_executable,
+                startup_timeout_s=args.startup_timeout,
+            )
+            _emit_json(result.to_json(), None)
+            return 0 if result.ok else 4
 
     except EndpointProbeError as exc:
         print(f"Endpoint probe failed: {exc}", file=sys.stderr)
@@ -178,10 +227,29 @@ def main(argv: Iterable[str] | None = None) -> int:
     return 1
 
 
+def _run_smoke_test(
+    agent: HarpModelAgent,
+    package_dir: Path,
+    *,
+    python_executable: str | None = None,
+    startup_timeout_s: float = 180.0,
+) -> SmokeTestResult:
+    print(
+        "WARNING: smoke-test launches the generated app.py, which downloads and "
+        "runs third-party model code. Only do this after review or in a sandbox.",
+        file=sys.stderr,
+    )
+    return agent.smoke_test_package(
+        package_dir,
+        python_executable=python_executable,
+        startup_timeout_s=startup_timeout_s,
+    )
+
+
 def _emit_json(payload: object, output: Path | None) -> None:
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
-        _write_json(output, payload)
+        write_json(output, payload)
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 

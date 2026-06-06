@@ -4,12 +4,14 @@ import unittest
 from pathlib import Path
 
 from tools.model_agent.agent import (
+    EndpointProbeError,
     HarpEndpointClient,
     HarpModelAgent,
     ModelPackage,
     SpaceCandidate,
     build_generated_app_package,
     classify_task,
+    detect_inference_framework,
     evaluate_license,
     extract_io_signature,
     render_pyharp_app,
@@ -43,6 +45,45 @@ class EndpointInferenceTest(unittest.TestCase):
         payload = [{"card": {"name": "Demo"}, "inputs": [], "outputs": []}]
         response = "event: complete\ndata: " + json.dumps(payload) + "\n\n"
         self.assertEqual(HarpEndpointClient._parse_gradio_response(response), payload)
+
+
+class CanonicalPathResolutionTest(unittest.TestCase):
+    def test_recovers_underscores_from_gradio_config(self):
+        # A short *.hf.space URL flattens "example/audio_model" into
+        # "example-audio-model" and loses the underscore; the live config
+        # endpoint reports the authoritative id and lets us recover it.
+        class FakeConfigClient(HarpEndpointClient):
+            def _get_text(self, url):
+                if url.endswith("/gradio_api/config"):
+                    return json.dumps({"space_id": "example/audio_model"})
+                raise EndpointProbeError(f"unexpected GET {url}")
+
+        client = FakeConfigClient()
+        self.assertEqual(
+            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
+            "example/audio_model",
+        )
+
+    def test_falls_back_to_string_inference_without_config(self):
+        class FailingConfigClient(HarpEndpointClient):
+            def _get_text(self, url):
+                raise EndpointProbeError(f"no config at {url}")
+
+        client = FailingConfigClient()
+        self.assertEqual(
+            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
+            "example/audio-model",
+        )
+
+    def test_trusts_full_hf_spaces_url(self):
+        # Full HF Space URLs carry the exact id, so no network call is needed.
+        client = HarpEndpointClient()
+        self.assertEqual(
+            client.resolve_canonical_path(
+                "https://huggingface.co/spaces/example/audio_model"
+            ),
+            "example/audio_model",
+        )
 
 
 class SpaceCandidateTest(unittest.TestCase):
@@ -111,8 +152,35 @@ class CompatibilityScoringTest(unittest.TestCase):
         self.assertEqual(extract_io_signature(card)["sample_rate_hz"], 48000)
 
 
+def _speechbrain_card():
+    return {
+        "meta": {
+            "id": "example/sepformer-model",
+            "author": "example",
+            "pipeline_tag": "audio-to-audio",
+            "library_name": "speechbrain",
+            "tags": ["audio-to-audio", "speechbrain", "Source Separation"],
+            "license": "apache-2.0",
+        },
+        "files": ["hyperparams.yaml", "model.ckpt"],
+        "readme": "A SpeechBrain source separation model trained at 8 kHz.",
+    }
+
+
 class TemplateGenerationTest(unittest.TestCase):
-    def test_renders_audio_to_audio_pyharp_app(self):
+    def test_detects_speechbrain_framework(self):
+        self.assertEqual(detect_inference_framework(_speechbrain_card()), "speechbrain")
+
+    def test_renders_speechbrain_pyharp_app(self):
+        app_py = render_pyharp_app(_speechbrain_card())
+
+        self.assertIn('REPO_ID = "example/sepformer-model"', app_py)
+        self.assertIn("build_endpoint", app_py)
+        self.assertIn("SepformerSeparation", app_py)
+        # The old, non-runnable transformers pipeline must not be emitted.
+        self.assertNotIn('pipeline("audio-to-audio"', app_py)
+
+    def test_refuses_unsupported_framework(self):
         card = {
             "meta": {
                 "id": "example/audio-model",
@@ -122,34 +190,21 @@ class TemplateGenerationTest(unittest.TestCase):
                 "license": "mit",
             },
             "files": ["config.json", "model.safetensors"],
-            "readme": "A test model.",
+            "readme": "A test model with no recognized framework.",
         }
 
-        app_py = render_pyharp_app(card)
-
-        self.assertIn('REPO_ID = "example/audio-model"', app_py)
-        self.assertIn("build_endpoint", app_py)
-        self.assertIn('pipeline("audio-to-audio"', app_py)
+        with self.assertRaises(NotImplementedError):
+            render_pyharp_app(card)
 
     def test_writes_generated_app_package(self):
-        card = {
-            "meta": {
-                "id": "example/audio-model",
-                "author": "example",
-                "pipeline_tag": "audio-to-audio",
-                "tags": ["audio-to-audio"],
-                "license": "mit",
-            },
-            "files": ["config.json", "model.safetensors"],
-            "readme": "A test model.",
-        }
-
         with tempfile.TemporaryDirectory() as tmp:
-            package = build_generated_app_package(card)
+            package = build_generated_app_package(_speechbrain_card())
+            self.assertEqual(package.framework, "speechbrain")
             folder = HarpModelAgent().write_generated_app_package(package, Path(tmp))
 
             self.assertTrue((folder / "app.py").exists())
             self.assertTrue((folder / "requirements.txt").exists())
+            self.assertIn("speechbrain", (folder / "requirements.txt").read_text(encoding="utf-8"))
             self.assertTrue((folder / "README.md").exists())
             self.assertTrue((folder / "packages.txt").exists())
             self.assertTrue((folder / ".harp" / "manifest.json").exists())
