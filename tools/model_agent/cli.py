@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Iterable, List
+from urllib.error import HTTPError, URLError
 
 from .agent import (
     EndpointProbeError,
@@ -15,6 +16,7 @@ from .agent import (
     score_compatibility,
     write_json,
 )
+from .analyze import analyze_path
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -97,6 +99,50 @@ def build_parser() -> argparse.ArgumentParser:
         "--smoke-test",
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
+    )
+
+    harvest = subparsers.add_parser(
+        "harvest",
+        help="Download app.py from an author's HF Spaces for offline review.",
+    )
+    harvest.add_argument(
+        "--author",
+        default="teamup-tech",
+        help="Hugging Face author/org whose Spaces to harvest.",
+    )
+    harvest.add_argument("--query", default="", help="Optional search query.")
+    harvest.add_argument("--limit", type=int, default=100, help="Maximum Spaces to fetch.")
+    harvest.add_argument(
+        "--filename",
+        default="app.py",
+        help="File to download from each Space.",
+    )
+    harvest.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/model_agent/harvest"),
+        help="Directory to write harvested files into.",
+    )
+
+    analyze = subparsers.add_parser(
+        "analyze",
+        help="Statically analyze harvested app.py files and report I/O shapes.",
+    )
+    analyze.add_argument(
+        "path",
+        type=Path,
+        help="A harvested directory (searched recursively) or a single app.py file.",
+    )
+    analyze.add_argument(
+        "--filename",
+        default="app.py",
+        help="File name to look for when PATH is a directory.",
+    )
+    analyze.add_argument("--output", type=Path, help="Optional JSON output path.")
+    analyze.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Emit only the aggregate summary, not the per-app records.",
     )
 
     smoke = subparsers.add_parser(
@@ -204,6 +250,30 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
+        if args.command == "harvest":
+            results = agent.harvest_space_apps(
+                args.output,
+                author=args.author,
+                query=args.query,
+                limit=args.limit,
+                filename=args.filename,
+            )
+            summary = {"ok": 0, "missing": 0, "error": 0}
+            for record in results:
+                summary[record["status"]] = summary.get(record["status"], 0) + 1
+            _emit_json(
+                {"output": str(args.output), "summary": summary, "results": results},
+                None,
+            )
+            return 0
+
+        if args.command == "analyze":
+            report = analyze_path(args.path, filename=args.filename)
+            if args.summary_only:
+                report = report["summary"]
+            _emit_json(report, args.output)
+            return 0
+
         if args.command == "smoke-test":
             result = _run_smoke_test(
                 agent,
@@ -223,6 +293,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     except NotImplementedError as exc:
         print(f"Template generation failed: {exc}", file=sys.stderr)
         return 3
+    except (HTTPError, URLError, OSError) as exc:
+        print(f"Network request failed: {exc}", file=sys.stderr)
+        return 2
 
     return 1
 

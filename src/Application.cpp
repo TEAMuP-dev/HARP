@@ -213,7 +213,8 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
             break;
 
         case CommandIDs::modelDeployment:
-            result.setInfo("Deploy Model", "Open temporary model deployment widget", "View", 0);
+            result.setInfo("Model Agent", "Open the model agent panel (discover, probe, package)",
+                           "View", 0);
 
             break;
 

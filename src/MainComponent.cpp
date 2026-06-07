@@ -344,9 +344,9 @@ void MainComponent::viewMediaClipboardCallback()
 void MainComponent::openModelDeploymentWindow()
 {
     DialogWindow::LaunchOptions options;
-    options.dialogTitle = "Deploy Model";
+    options.dialogTitle = "Model Agent";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new ModelDeploymentWidget());
+    options.content.setOwned(new ModelAgentWidget());
 
     options.useNativeTitleBar = true;
     options.resizable = true;

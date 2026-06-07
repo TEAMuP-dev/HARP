@@ -671,6 +671,27 @@ class HuggingFaceSpaceScraper:
                 return ""
             raise
 
+    def get_space_file(
+        self,
+        space_id: str,
+        filename: str = "app.py",
+        revision: str = "main",
+    ) -> Optional[str]:
+        """Download a raw file from a Hugging Face Space, or None if absent."""
+
+        url = (
+            f"{HUGGING_FACE_BASE}/spaces/{quote(space_id, safe='/')}"
+            f"/raw/{quote(revision)}/{quote(filename)}"
+        )
+        request = Request(url, headers=self._headers())
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise
+
     def _headers(self) -> Dict[str, str]:
         headers = {"User-Agent": "model-agent/0.1"}
         if self.token:
@@ -1040,6 +1061,61 @@ class HarpModelAgent:
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+
+    def harvest_space_apps(
+        self,
+        output_dir: Path,
+        *,
+        author: str = "",
+        query: str = "",
+        limit: int = 100,
+        filename: str = "app.py",
+    ) -> List[JSON]:
+        """Download `app.py` (or another file) from an author's HF Spaces.
+
+        Read-only review helper: it discovers Spaces and saves each Space's
+        wrapper file under ``output_dir/<slug>/<filename>`` so a corpus of real
+        HARP wrappers can be studied offline. A per-Space ``index.json`` summary
+        is written alongside. One unreachable Space never aborts the batch.
+        """
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        candidates = self.scraper.discover(query=query, author=author, limit=limit)
+        results: List[JSON] = []
+
+        for candidate in candidates:
+            record: JSON = {
+                "id": candidate.id,
+                "url": candidate.url,
+                "status": "",
+                "path": "",
+                "error": "",
+            }
+            try:
+                text = self.scraper.get_space_file(candidate.id, filename=filename)
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError) as exc:
+                record["status"] = "error"
+                record["error"] = str(exc)
+                results.append(record)
+                continue
+
+            if text is None:
+                record["status"] = "missing"
+                results.append(record)
+                continue
+
+            folder = output_dir / _slug(candidate.id)
+            folder.mkdir(parents=True, exist_ok=True)
+            destination = folder / filename
+            destination.write_text(text, encoding="utf-8")
+            record["status"] = "ok"
+            record["path"] = str(destination)
+            results.append(record)
+
+        write_json(output_dir / "index.json", results)
+        return results
 
 
 def write_json(path: Path, payload: Any) -> None:

@@ -25,6 +25,8 @@ The agent is intentionally conservative:
 - `agent.py` contains the core behavior: Hugging Face discovery, HARP endpoint
   probing, task classification, license checks, compatibility scoring, template
   generation, package data structures, and package writing.
+- `analyze.py` statically parses harvested `app.py` wrappers and reports the
+  input/output component shapes across the corpus (no code execution).
 - `cli.py` exposes the core behavior as terminal commands.
 - `__main__.py` lets you run the package with `python3 -m tools.model_agent`.
 - `tests/test_agent.py` protects the behavior that is easiest to break while
@@ -34,6 +36,55 @@ The tests use fake model names such as `example/audio-model`. They do not define
 which models HARP supports; they only check that the agent can transform URLs,
 parse Gradio responses, score candidates, render starter wrappers, and write
 package files.
+
+## Workflow
+
+The commands fall into three groups by what they touch:
+
+- **Offline (safe anywhere):** `score-card`, `render-app`, `generate-package`.
+  They read a local model-card JSON and write files; they never use the network
+  or run model code.
+- **Network (reads metadata only):** `discover`, `probe`, `package`,
+  `package-repo`. These call the Hugging Face / Gradio APIs but do not execute
+  any model code.
+- **Sandbox recommended:** `smoke-test` (and the `--smoke-test` flag). This
+  launches a generated `app.py`, which downloads and runs third-party model
+  code, so only run it after review or inside a venv/container.
+
+**Where do model-card JSON files come from?** No command writes one for you. The
+file-based commands (`score-card` / `render-app` / `generate-package`) expect a
+card you supply, shaped like this:
+
+```json
+{
+  "meta": {
+    "id": "author/model-name",
+    "author": "author",
+    "pipeline_tag": "audio-to-audio",
+    "library_name": "speechbrain",
+    "license": "apache-2.0",
+    "tags": ["audio-to-audio", "speechbrain"]
+  },
+  "files": ["hyperparams.yaml", "model.ckpt"],
+  "readme": "..."
+}
+```
+
+A ready-to-use example lives at `tools/model_agent/examples/example_card.json` (a
+SpeechBrain `audio-to-audio` card). To work from a real model instead, use
+`package-repo <hf-repo-id>`, which fetches the card from Hugging Face and
+packages it in one step — no hand-authored card needed.
+
+## Running the tests
+
+From the repository root (the directory that contains `tools/`):
+
+```bash
+python3 -m unittest discover -s tools/model_agent/tests -v
+```
+
+The suite is offline and uses only the standard library, so no network access or
+extra dependencies are required.
 
 ## Examples
 
@@ -50,6 +101,31 @@ Probe a known HARP endpoint:
 python3 -m tools.model_agent probe teamup-tech/demucs-source-separation
 ```
 
+Harvest the `app.py` wrappers from an author's Spaces for offline study (the
+`teamup-tech` org is a corpus of real, working HARP wrappers):
+
+```bash
+python3 -m tools.model_agent harvest --author teamup-tech --output artifacts/model_agent/harvest
+```
+
+This writes `artifacts/model_agent/harvest/<slug>/app.py` for each Space plus an
+`index.json` summary (`ok` / `missing` / `error` per Space). It only downloads
+files; it never runs them.
+
+Analyze a harvested folder (or a single `app.py`) to report the input/output
+shapes real HARP wrappers use. This statically parses the files with `ast` and
+never executes them:
+
+```bash
+python3 -m tools.model_agent analyze artifacts/model_agent/harvest
+```
+
+The report lists a per-app record (resolved `inputs` / `outputs` component types,
+`@spaces.GPU` usage, pyharp import paths) plus an aggregate `summary`:
+distribution of component types, how many inputs/outputs each wrapper uses, and
+how many rely on GPU. Use `--summary-only` for just the aggregate view. This is
+the data that validates the wrapper "recipe" schema against the real corpus.
+
 Package endpoints into folders:
 
 ```bash
@@ -62,20 +138,20 @@ python3 -m tools.model_agent package \
 Score a raw Hugging Face model-card JSON file:
 
 ```bash
-python3 -m tools.model_agent score-card artifacts/model_agent/cards/example.json
+python3 -m tools.model_agent score-card tools/model_agent/examples/example_card.json
 ```
 
 Render a starter `app.py` for a raw `audio-to-audio` model card:
 
 ```bash
-python3 -m tools.model_agent render-app artifacts/model_agent/cards/example.json \
+python3 -m tools.model_agent render-app tools/model_agent/examples/example_card.json \
   --output artifacts/model_agent/generated/example/app.py
 ```
 
 Write a generated wrapper package:
 
 ```bash
-python3 -m tools.model_agent generate-package artifacts/model_agent/cards/example.json
+python3 -m tools.model_agent generate-package tools/model_agent/examples/example_card.json
 ```
 
 Smoke-test a generated package (launches `app.py` and verifies HARP controls).

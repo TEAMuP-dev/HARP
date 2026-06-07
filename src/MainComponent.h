@@ -13,7 +13,7 @@
 #include "clients/Client.h"
 
 #include "widgets/MediaClipboardWidget.h"
-#include "widgets/ModelDeploymentWidget.h"
+#include "widgets/ModelAgentWidget.h"
 #include "widgets/StatusAreaWidget.h"
 
 #include "windows/AboutWindow.h"
