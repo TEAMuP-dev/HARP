@@ -114,13 +114,53 @@ def _resolve_components(
     return resolved
 
 
+UNRESOLVED_TYPES = {"dynamic", "unknown"}
+
+
+def _annotate_eligibility(record: JSON) -> JSON:
+    """Mark whether a record is usable as recipe-design input.
+
+    A wrapper is "recipe eligible" only when its input/output component shapes
+    are fully resolved statically. Wrappers whose components are passed as a
+    variable (``dynamic``) or that expose no resolvable components are skipped
+    automatically so the recipe corpus is built only from clean wrappers.
+    """
+
+    if record.get("error"):
+        record["recipe_eligible"] = False
+        record["unresolved_reason"] = "parse error"
+        return record
+
+    if not record.get("build_endpoint_found"):
+        record["recipe_eligible"] = False
+        record["unresolved_reason"] = "no build_endpoint"
+        return record
+
+    inputs = record.get("inputs", [])
+    outputs = record.get("outputs", [])
+
+    if not inputs or not outputs:
+        record["recipe_eligible"] = False
+        record["unresolved_reason"] = "no resolvable components"
+        return record
+
+    if any(component in UNRESOLVED_TYPES for component in inputs + outputs):
+        record["recipe_eligible"] = False
+        record["unresolved_reason"] = "dynamic/unresolved component types"
+        return record
+
+    record["recipe_eligible"] = True
+    record["unresolved_reason"] = ""
+    return record
+
+
 def analyze_app_source(source: str) -> JSON:
     """Analyze a single ``app.py`` source string into a shape descriptor."""
 
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
-        return {"error": f"syntax error: {exc}"}
+        return _annotate_eligibility({"error": f"syntax error: {exc}"})
 
     var_components: Dict[str, JSON] = {}
     pyharp_imports: List[str] = []
@@ -167,17 +207,19 @@ def analyze_app_source(source: str) -> JSON:
             elif keyword.arg == "output_components":
                 outputs = _resolve_components(keyword.value, var_components)
 
-    return {
-        "build_endpoint_found": build_endpoint_call is not None,
-        "inputs": [component["type"] for component in inputs],
-        "outputs": [component["type"] for component in outputs],
-        "input_details": inputs,
-        "output_details": outputs,
-        "uses_spaces_gpu": uses_spaces_gpu,
-        "imports_spaces": imports_spaces,
-        "uses_labellist": uses_labellist,
-        "pyharp_imports": sorted(set(pyharp_imports)),
-    }
+    return _annotate_eligibility(
+        {
+            "build_endpoint_found": build_endpoint_call is not None,
+            "inputs": [component["type"] for component in inputs],
+            "outputs": [component["type"] for component in outputs],
+            "input_details": inputs,
+            "output_details": outputs,
+            "uses_spaces_gpu": uses_spaces_gpu,
+            "imports_spaces": imports_spaces,
+            "uses_labellist": uses_labellist,
+            "pyharp_imports": sorted(set(pyharp_imports)),
+        }
+    )
 
 
 def analyze_app_file(path: Path) -> JSON:
@@ -185,7 +227,7 @@ def analyze_app_file(path: Path) -> JSON:
     try:
         source = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
-        return {"path": str(path), "error": f"read failed: {exc}"}
+        return _annotate_eligibility({"path": str(path), "error": f"read failed: {exc}"})
 
     record = analyze_app_source(source)
     record["path"] = str(path)
@@ -203,8 +245,20 @@ def summarize(records: List[JSON]) -> JSON:
     gpu = 0
     labels = 0
     missing_endpoint = 0
+    eligible = 0
+    unresolved_apps: List[JSON] = []
 
     for record in records:
+        if record.get("recipe_eligible"):
+            eligible += 1
+        elif not record.get("error"):
+            unresolved_apps.append(
+                {
+                    "path": record.get("path", ""),
+                    "reason": record.get("unresolved_reason", "unresolved"),
+                }
+            )
+
         if record.get("error"):
             errors += 1
             continue
@@ -228,6 +282,9 @@ def summarize(records: List[JSON]) -> JSON:
         "apps_analyzed": parsed,
         "apps_with_errors": errors,
         "apps_without_build_endpoint": missing_endpoint,
+        "recipe_eligible": eligible,
+        "unresolved": len(unresolved_apps),
+        "unresolved_apps": unresolved_apps,
         "input_component_types": dict(input_types),
         "output_component_types": dict(output_types),
         "input_count_distribution": {str(k): v for k, v in sorted(input_counts.items())},

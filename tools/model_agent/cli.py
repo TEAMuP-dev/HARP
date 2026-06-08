@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import sys
 from pathlib import Path
@@ -144,6 +145,23 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit only the aggregate summary, not the per-app records.",
     )
+    analyze.add_argument(
+        "--check-health",
+        action="store_true",
+        help="Also probe each harvested Space's endpoint (uses index.json; network).",
+    )
+    analyze.add_argument(
+        "--health-timeout",
+        type=float,
+        default=20.0,
+        help="Per-Space timeout in seconds for --check-health probes.",
+    )
+    analyze.add_argument(
+        "--health-workers",
+        type=int,
+        default=8,
+        help="Number of concurrent --check-health probes.",
+    )
 
     smoke = subparsers.add_parser(
         "smoke-test",
@@ -269,6 +287,14 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "analyze":
             report = analyze_path(args.path, filename=args.filename)
+            if args.check_health:
+                attach_health(
+                    agent,
+                    args.path,
+                    report,
+                    timeout=args.health_timeout,
+                    max_workers=args.health_workers,
+                )
             if args.summary_only:
                 report = report["summary"]
             _emit_json(report, args.output)
@@ -317,6 +343,102 @@ def _run_smoke_test(
         python_executable=python_executable,
         startup_timeout_s=startup_timeout_s,
     )
+
+
+def _harvest_ids_by_slug(path: Path) -> dict:
+    """Map a harvest folder slug -> canonical Space id, using index.json."""
+
+    path = Path(path)
+    index_file = (path / "index.json") if path.is_dir() else (path.parent / "index.json")
+    if not index_file.exists():
+        return {}
+
+    data = json.loads(index_file.read_text(encoding="utf-8"))
+    entries = data.get("results", data) if isinstance(data, dict) else data
+
+    mapping: dict = {}
+    if isinstance(entries, list):
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            entry_path = entry.get("path") or ""
+            model_id = entry.get("id")
+            if entry_path and model_id:
+                mapping[Path(entry_path).parent.name] = model_id
+    return mapping
+
+
+def attach_health(
+    agent: HarpModelAgent,
+    path: Path,
+    report: dict,
+    *,
+    timeout: float = 20.0,
+    max_workers: int = 8,
+) -> None:
+    """Add a liveness probe to each analyzed app, joined via harvest index.json.
+
+    Probes run concurrently with a short per-Space timeout so a handful of
+    sleeping/dead Spaces don't serialize into a multi-minute wait.
+    """
+
+    ids_by_slug = _harvest_ids_by_slug(path)
+
+    # Use a short timeout for liveness so dead Spaces fail fast rather than
+    # blocking for the full discovery/probe timeout.
+    agent.endpoint_client.timeout = timeout
+
+    jobs = []
+    for record in report.get("apps", []):
+        record_path = record.get("path") or ""
+        slug = Path(record_path).parent.name if record_path else ""
+        model_id = ids_by_slug.get(slug)
+        if model_id:
+            jobs.append((record, model_id))
+        else:
+            record["health"] = {"status": "unknown", "reason": "no Space id in index.json"}
+
+    total = len(jobs)
+    print(
+        f"Probing {total} Space endpoint(s) with timeout {timeout:.0f}s "
+        f"across {max_workers} worker(s)...",
+        file=sys.stderr,
+    )
+
+    def probe(job):
+        record, model_id = job
+        health = agent.check_endpoint_health(model_id)
+        health["model_id"] = model_id
+        return record, health
+
+    done = 0
+    if jobs:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
+            futures = [executor.submit(probe, job) for job in jobs]
+            for future in concurrent.futures.as_completed(futures):
+                record, health = future.result()
+                record["health"] = health
+                done += 1
+                print(
+                    f"  [{done}/{total}] {health['model_id']}: {health['status']}",
+                    file=sys.stderr,
+                )
+
+    alive = dead = unknown = 0
+    for record in report.get("apps", []):
+        status = record.get("health", {}).get("status")
+        if status == "alive":
+            alive += 1
+        elif status == "dead":
+            dead += 1
+        else:
+            unknown += 1
+
+    report.setdefault("summary", {})["health"] = {
+        "alive": alive,
+        "dead": dead,
+        "unknown": unknown,
+    }
 
 
 def _emit_json(payload: object, output: Path | None) -> None:

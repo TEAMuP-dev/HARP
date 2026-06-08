@@ -102,7 +102,7 @@ python3 -m tools.model_agent probe teamup-tech/demucs-source-separation
 ```
 
 Harvest the `app.py` wrappers from an author's Spaces for offline study (the
-`teamup-tech` org is a corpus of real, working HARP wrappers):
+`teamup-tech` org is a corpus of real HARP wrappers):
 
 ```bash
 python3 -m tools.model_agent harvest --author teamup-tech --output artifacts/model_agent/harvest
@@ -125,6 +125,29 @@ The report lists a per-app record (resolved `inputs` / `outputs` component types
 distribution of component types, how many inputs/outputs each wrapper uses, and
 how many rely on GPU. Use `--summary-only` for just the aggregate view. This is
 the data that validates the wrapper "recipe" schema against the real corpus.
+
+Each record also carries a `recipe_eligible` flag. A wrapper is eligible only
+when its input/output shapes are fully resolved statically; wrappers whose
+components are passed as a variable (`dynamic`) or expose no resolvable
+components are flagged with an `unresolved_reason` and excluded from the recipe
+corpus automatically. The `summary` reports `recipe_eligible`, `unresolved`, and
+the list of `unresolved_apps`.
+
+Static analysis tells you what good wrappers *look like*; it does not tell you
+whether a Space is *alive* right now (a working wrapper can go down after a
+Hugging Face/runtime update). Add `--check-health` to also probe each harvested
+Space's endpoint and fold a per-app `health` (`alive` / `dead` with control
+counts and reason) plus a `summary.health` tally into the report. This needs
+network access and the harvest folder's `index.json` (to recover Space ids):
+
+```bash
+python3 -m tools.model_agent analyze artifacts/model_agent/harvest --check-health
+```
+
+Probes run concurrently with a short per-Space timeout so a few sleeping/dead
+Spaces don't serialize into a long wait, and progress is printed to stderr. Tune
+with `--health-timeout` (default 20s) and `--health-workers` (default 8); e.g.
+`--health-timeout 10 --health-workers 12` for a faster, more aggressive sweep.
 
 Package endpoints into folders:
 

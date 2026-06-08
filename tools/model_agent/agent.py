@@ -1117,6 +1117,28 @@ class HarpModelAgent:
         write_json(output_dir / "index.json", results)
         return results
 
+    def check_endpoint_health(self, model_path: str) -> JSON:
+        """Liveness probe: does the Space's HARP controls endpoint respond now?
+
+        This is orthogonal to static analysis: a wrapper can be well-formed yet
+        its Space may be down (e.g. after a Hugging Face/runtime update). Returns
+        ``alive`` with control counts, or ``dead`` with the failure reason.
+        """
+
+        try:
+            controls = self.endpoint_client.fetch_controls(model_path)
+        except (EndpointProbeError, ValueError, HTTPError, URLError, OSError) as exc:
+            return {"status": "dead", "reason": str(exc)}
+
+        inputs = controls.get("inputs") if isinstance(controls.get("inputs"), list) else []
+        outputs = controls.get("outputs") if isinstance(controls.get("outputs"), list) else []
+        return {
+            "status": "alive",
+            "reason": "",
+            "n_inputs": len(inputs),
+            "n_outputs": len(outputs),
+        }
+
 
 def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

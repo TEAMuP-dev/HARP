@@ -18,6 +18,7 @@ from tools.model_agent.agent import (
     score_compatibility,
 )
 from tools.model_agent.analyze import analyze_app_source, analyze_path
+from tools.model_agent.cli import attach_health
 
 
 class EndpointInferenceTest(unittest.TestCase):
@@ -266,6 +267,19 @@ with gr.Blocks() as demo:
     )
 '''
 
+    DYNAMIC_APP = (
+        "import gradio as gr\n"
+        "from pyharp import build_endpoint\n"
+        "components = make_components()\n"
+        "build_endpoint(input_components=components, output_components=components)\n"
+    )
+
+    EMPTY_APP = (
+        "import gradio as gr\n"
+        "from pyharp import build_endpoint\n"
+        "build_endpoint(model_card, process_fn)\n"
+    )
+
     def test_analyzes_input_output_shapes(self):
         record = analyze_app_source(self.SAMPLE_APP)
         self.assertTrue(record["build_endpoint_found"])
@@ -275,6 +289,23 @@ with gr.Blocks() as demo:
         self.assertTrue(record["uses_labellist"])
         self.assertIn("pyharp.core", record["pyharp_imports"])
         self.assertIn("pyharp.labels", record["pyharp_imports"])
+
+    def test_clean_wrapper_is_recipe_eligible(self):
+        record = analyze_app_source(self.SAMPLE_APP)
+        self.assertTrue(record["recipe_eligible"])
+        self.assertEqual(record["unresolved_reason"], "")
+
+    def test_dynamic_components_not_recipe_eligible(self):
+        record = analyze_app_source(self.DYNAMIC_APP)
+        self.assertEqual(record["inputs"], ["dynamic"])
+        self.assertFalse(record["recipe_eligible"])
+        self.assertEqual(record["unresolved_reason"], "dynamic/unresolved component types")
+
+    def test_missing_components_not_recipe_eligible(self):
+        record = analyze_app_source(self.EMPTY_APP)
+        self.assertEqual(record["inputs"], [])
+        self.assertFalse(record["recipe_eligible"])
+        self.assertEqual(record["unresolved_reason"], "no resolvable components")
 
     def test_resolves_inline_components(self):
         source = (
@@ -314,6 +345,80 @@ with gr.Blocks() as demo:
             self.assertEqual(summary["uses_spaces_gpu"], 1)
             self.assertEqual(summary["input_component_types"]["Audio"], 2)
             self.assertEqual(summary["output_component_types"]["Textbox"], 1)
+            self.assertEqual(summary["recipe_eligible"], 2)
+            self.assertEqual(summary["unresolved"], 0)
+
+    def test_flags_unresolved_apps_in_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "good").mkdir()
+            (root / "dyn").mkdir()
+            (root / "good" / "app.py").write_text(self.SAMPLE_APP, encoding="utf-8")
+            (root / "dyn" / "app.py").write_text(self.DYNAMIC_APP, encoding="utf-8")
+            report = analyze_path(root)
+            summary = report["summary"]
+            self.assertEqual(summary["recipe_eligible"], 1)
+            self.assertEqual(summary["unresolved"], 1)
+            self.assertEqual(len(summary["unresolved_apps"]), 1)
+
+
+class HealthCheckTest(unittest.TestCase):
+    class _FakeEndpointClient:
+        def __init__(self, alive_ids):
+            self.alive_ids = set(alive_ids)
+
+        def fetch_controls(self, model_path):
+            if model_path in self.alive_ids:
+                return {"card": {}, "inputs": [{}, {}], "outputs": [{}]}
+            raise EndpointProbeError(f"{model_path} is sleeping")
+
+    def test_agent_reports_alive_and_dead(self):
+        agent = HarpModelAgent(endpoint_client=self._FakeEndpointClient(["author/alive"]))
+        alive = agent.check_endpoint_health("author/alive")
+        dead = agent.check_endpoint_health("author/dead")
+        self.assertEqual(alive["status"], "alive")
+        self.assertEqual(alive["n_inputs"], 2)
+        self.assertEqual(alive["n_outputs"], 1)
+        self.assertEqual(dead["status"], "dead")
+        self.assertIn("sleeping", dead["reason"])
+
+    def test_attach_health_joins_index_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "teamup-tech-alive").mkdir()
+            (root / "teamup-tech-dead").mkdir()
+            (root / "teamup-tech-alive" / "app.py").write_text(
+                AnalyzeTest.SAMPLE_APP, encoding="utf-8"
+            )
+            (root / "teamup-tech-dead" / "app.py").write_text(
+                AnalyzeTest.SAMPLE_APP, encoding="utf-8"
+            )
+            index = [
+                {
+                    "id": "teamup-tech/alive",
+                    "path": str(root / "teamup-tech-alive" / "app.py"),
+                    "status": "ok",
+                },
+                {
+                    "id": "teamup-tech/dead",
+                    "path": str(root / "teamup-tech-dead" / "app.py"),
+                    "status": "ok",
+                },
+            ]
+            (root / "index.json").write_text(json.dumps(index), encoding="utf-8")
+
+            agent = HarpModelAgent(
+                endpoint_client=HealthCheckTest._FakeEndpointClient(["teamup-tech/alive"])
+            )
+            report = analyze_path(root)
+            attach_health(agent, root, report)
+
+            health_by_slug = {
+                Path(record["path"]).parent.name: record["health"] for record in report["apps"]
+            }
+            self.assertEqual(health_by_slug["teamup-tech-alive"]["status"], "alive")
+            self.assertEqual(health_by_slug["teamup-tech-dead"]["status"], "dead")
+            self.assertEqual(report["summary"]["health"], {"alive": 1, "dead": 1, "unknown": 0})
 
 
 class PackageWriterTest(unittest.TestCase):
