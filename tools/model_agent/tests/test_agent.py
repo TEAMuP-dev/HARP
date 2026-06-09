@@ -19,6 +19,13 @@ from tools.model_agent.agent import (
 )
 from tools.model_agent.analyze import analyze_app_source, analyze_path
 from tools.model_agent.cli import attach_health
+from tools.model_agent.recipe import (
+    RecipeError,
+    build_package_from_recipe,
+    recipe_skeleton_from_analysis,
+    render_app_from_recipe,
+    validate_recipe,
+)
 
 
 class EndpointInferenceTest(unittest.TestCase):
@@ -419,6 +426,127 @@ class HealthCheckTest(unittest.TestCase):
             self.assertEqual(health_by_slug["teamup-tech-alive"]["status"], "alive")
             self.assertEqual(health_by_slug["teamup-tech-dead"]["status"], "dead")
             self.assertEqual(report["summary"]["health"], {"alive": 1, "dead": 1, "unknown": 0})
+
+
+class RecipeTest(unittest.TestCase):
+    STEM_RECIPE = {
+        "model": {
+            "id": "example/demucs-stem-separation",
+            "name": "Demucs Stem Separation",
+            "description": "Separate a song into stems.",
+            "author": "example",
+            "tags": ["audio-to-audio", "stem-separation"],
+        },
+        "framework": {
+            "import": "demucs",
+            "pip": ["demucs", "torch"],
+            "apt": ["ffmpeg"],
+            "gpu": True,
+        },
+        "inputs": [
+            {"name": "input_audio", "type": "audio", "label": "Input Audio", "required": True},
+            {
+                "name": "model_name",
+                "type": "dropdown",
+                "label": "Demucs Model",
+                "choices": ["htdemucs", "mdx_extra"],
+                "default": "htdemucs",
+            },
+        ],
+        "outputs": [
+            {"name": "drums", "type": "audio", "label": "Drums"},
+            {"name": "labels", "type": "labels", "label": "Labels"},
+        ],
+        "inference": {
+            "setup": "MODEL = None",
+            "body": "return input_audio, {}",
+        },
+    }
+
+    def test_renders_runnable_app(self):
+        app = render_app_from_recipe(self.STEM_RECIPE)
+        # Compiles as valid Python.
+        compile(app, "<recipe-app>", "exec")
+        self.assertIn("import spaces", app)
+        self.assertIn("@spaces.GPU", app)
+        self.assertIn("from pyharp import ModelCard, build_endpoint, LabelList", app)
+        self.assertIn("def process_fn(input_audio, model_name):", app)
+        self.assertIn('gr.Audio(type="filepath", label="Input Audio").harp_required(True)', app)
+        self.assertIn('gr.Dropdown(choices=["htdemucs", "mdx_extra"], value="htdemucs"', app)
+        self.assertIn('gr.JSON(label="Labels")', app)
+
+    def test_no_gpu_no_labels_imports(self):
+        recipe = json.loads(json.dumps(self.STEM_RECIPE))
+        recipe["framework"]["gpu"] = False
+        recipe["outputs"] = [{"name": "out", "type": "audio", "label": "Output"}]
+        app = render_app_from_recipe(recipe)
+        self.assertNotIn("import spaces", app)
+        self.assertNotIn("LabelList", app)
+        self.assertIn("from pyharp import ModelCard, build_endpoint", app)
+
+    def test_validation_rejects_bad_recipe(self):
+        with self.assertRaises(RecipeError):
+            validate_recipe({"model": {}, "inputs": [], "outputs": []})
+        with self.assertRaises(RecipeError):
+            validate_recipe(
+                {
+                    "model": {"id": "a/b", "name": "X"},
+                    "inputs": [{"name": "x", "type": "dropdown", "label": "X"}],
+                    "outputs": [{"name": "y", "type": "audio", "label": "Y"}],
+                    "inference": {"body": "return x"},
+                }
+            )
+
+    def test_builds_package_files(self):
+        package = build_package_from_recipe(self.STEM_RECIPE)
+        self.assertEqual(package.repo_id, "example/demucs-stem-separation")
+        self.assertIn("demucs", package.requirements)
+        self.assertIn("ffmpeg", package.packages_txt)
+        self.assertEqual(package.io["outputs"], ["audio", "labels"])
+        self.assertIn("pyharp", package.requirements)
+
+
+class RecipeScaffoldTest(unittest.TestCase):
+    def test_scaffold_from_clean_wrapper(self):
+        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
+        recipe = recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
+
+        # The skeleton must itself be a valid recipe and render a stub wrapper.
+        validate_recipe(recipe)
+        app = render_app_from_recipe(recipe)
+        compile(app, "<scaffold>", "exec")
+        self.assertIn("raise NotImplementedError", app)
+
+        self.assertEqual([spec["type"] for spec in recipe["inputs"]], ["audio", "dropdown"])
+        self.assertEqual(
+            [spec["type"] for spec in recipe["outputs"]], ["audio", "audio", "labels"]
+        )
+        self.assertTrue(recipe["inputs"][0]["required"])
+        self.assertTrue(recipe["framework"]["gpu"])
+        self.assertEqual(recipe["model"]["id"], "teamup-tech/demucs")
+        self.assertTrue(recipe["_todo"])
+
+    def test_scaffold_rejects_unmappable_component(self):
+        record = {
+            "build_endpoint_found": True,
+            "recipe_eligible": True,
+            "input_details": [{"type": "Image", "label": "Pic"}],
+            "output_details": [{"type": "Audio", "label": "Out"}],
+            "uses_spaces_gpu": False,
+        }
+        with self.assertRaises(RecipeError):
+            recipe_skeleton_from_analysis(record)
+
+
+class ExampleRecipeFilesTest(unittest.TestCase):
+    def test_committed_recipes_render(self):
+        examples_dir = Path(__file__).resolve().parent.parent / "examples"
+        recipe_files = sorted(examples_dir.glob("recipe_*.json"))
+        self.assertTrue(recipe_files, "expected committed example recipes")
+        for recipe_file in recipe_files:
+            recipe = json.loads(recipe_file.read_text(encoding="utf-8"))
+            app = render_app_from_recipe(recipe)
+            compile(app, str(recipe_file), "exec")
 
 
 class PackageWriterTest(unittest.TestCase):

@@ -1,0 +1,68 @@
+{
+  "_source": "artifacts/model_agent/harvest/teamup-tech-demucs-source-separation/app.py",
+  "_todo": [
+    "inputs.demucs_model.choices: set the real dropdown options",
+    "model.description: describe what the model does",
+    "model.tags: add Hugging Face/HARP tags",
+    "framework.import / framework.pip: set the real package(s)",
+    "inference.setup / inference.body: fill in model loading and inference"
+  ],
+  "framework": {
+    "apt": [],
+    "gpu": true,
+    "import": "TODO_package",
+    "pip": [
+      "TODO-package"
+    ]
+  },
+  "inference": {
+    "body": "# TODO: run inference on the inputs above and return the outputs in order.\nraise NotImplementedError(\"Fill in the inference body for this recipe.\")",
+    "setup": "# TODO: import the model package and load the model here."
+  },
+  "inputs": [
+    {
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "TODO_option_1",
+        "TODO_option_2"
+      ],
+      "label": "Demucs Model",
+      "name": "demucs_model",
+      "type": "dropdown"
+    }
+  ],
+  "model": {
+    "author": "teamup-tech",
+    "description": "TODO: describe this model.",
+    "id": "teamup-tech/demucs-source-separation",
+    "name": "Demucs Source Separation",
+    "tags": []
+  },
+  "outputs": [
+    {
+      "label": "Drums",
+      "name": "drums",
+      "type": "audio"
+    },
+    {
+      "label": "Bass",
+      "name": "bass",
+      "type": "audio"
+    },
+    {
+      "label": "Vocals",
+      "name": "vocals",
+      "type": "audio"
+    },
+    {
+      "label": "Other",
+      "name": "other",
+      "type": "audio"
+    }
+  ]
+}

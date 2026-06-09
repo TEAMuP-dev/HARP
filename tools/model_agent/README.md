@@ -27,6 +27,9 @@ The agent is intentionally conservative:
   generation, package data structures, and package writing.
 - `analyze.py` statically parses harvested `app.py` wrappers and reports the
   input/output component shapes across the corpus (no code execution).
+- `recipe.py` renders a runnable pyharp `app.py` (and the rest of a Space
+  package) from a declarative recipe JSON describing inputs, outputs, framework,
+  and inference glue.
 - `cli.py` exposes the core behavior as terminal commands.
 - `__main__.py` lets you run the package with `python3 -m tools.model_agent`.
 - `tests/test_agent.py` protects the behavior that is easiest to break while
@@ -102,7 +105,7 @@ python3 -m tools.model_agent probe teamup-tech/demucs-source-separation
 ```
 
 Harvest the `app.py` wrappers from an author's Spaces for offline study (the
-`teamup-tech` org is a corpus of real HARP wrappers):
+`teamup-tech` org is a corpus of real, working HARP wrappers):
 
 ```bash
 python3 -m tools.model_agent harvest --author teamup-tech --output artifacts/model_agent/harvest
@@ -176,6 +179,53 @@ Write a generated wrapper package:
 ```bash
 python3 -m tools.model_agent generate-package tools/model_agent/examples/example_card.json
 ```
+
+### Recipe-driven wrappers
+
+Most real HARP wrappers are custom pip packages (Demucs, Matchering, Kokoro,
+...), not a single `transformers` pipeline. A **recipe** is a declarative JSON
+spec — model card, framework/dependencies, ordered input/output components, and
+the model-specific inference glue — that the agent renders into a runnable
+`app.py` plus `requirements.txt`, `packages.txt`, `README.md`, and a manifest.
+The recipe shape is derived from the component shapes `analyze` reports across
+the real corpus.
+
+Input component types: `audio`, `file`, `dropdown`, `slider`, `textbox`,
+`number`, `checkbox`. Output types: `audio`, `file`, `labels` (a `gr.JSON` /
+`LabelList` track).
+
+Render an `app.py` from a recipe, or write the whole package:
+
+```bash
+python3 -m tools.model_agent render-recipe tools/model_agent/examples/recipe_stem_separation.json
+python3 -m tools.model_agent generate-recipe tools/model_agent/examples/recipe_stem_separation.json
+```
+
+Two example recipes are committed under `examples/`: `recipe_stem_separation.json`
+(audio + dropdown -> 4 audio stems + labels) and
+`recipe_audio_to_audio_labels.json` (audio + slider -> audio + labels). Like the
+other generators, `generate-recipe` accepts `--smoke-test` to launch and verify
+the wrapper (runs downloaded code; review/sandbox first).
+
+#### Scaffolding a recipe from a harvested wrapper
+
+To start a recipe from an existing, well-formed wrapper rather than from
+scratch, `scaffold-recipe` reads a harvested `app.py`, fills in the model card
+and the input/output components from the statically-resolved shapes, and leaves
+the parts that can't be derived (dependencies, dropdown choices, slider ranges,
+and the inference glue) as clearly-marked `_todo` placeholders:
+
+```bash
+python3 -m tools.model_agent scaffold-recipe \
+  artifacts/model_agent/harvest/teamup-tech-demucs-source-separation/app.py \
+  --output my_recipe.json
+```
+
+The Space id is recovered from the harvest `index.json` when present. Only
+recipe-eligible wrappers can be scaffolded (the ones `analyze` resolves
+cleanly); `dynamic`/unresolved wrappers are refused with the reason. The result
+is itself a valid recipe that renders to a stub wrapper raising
+`NotImplementedError`, so you can fill in the `_todo` items incrementally.
 
 Smoke-test a generated package (launches `app.py` and verifies HARP controls).
 This runs downloaded third-party code, so only do it after review or inside a

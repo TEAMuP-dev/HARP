@@ -17,7 +17,13 @@ from .agent import (
     score_compatibility,
     write_json,
 )
-from .analyze import analyze_path
+from .analyze import analyze_app_file, analyze_path
+from .recipe import (
+    RecipeError,
+    build_package_from_recipe,
+    recipe_skeleton_from_analysis,
+    render_app_from_recipe,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -80,6 +86,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generated package output directory.",
     )
     generate.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
+    )
+
+    scaffold_recipe = subparsers.add_parser(
+        "scaffold-recipe",
+        help="Generate a recipe skeleton from a harvested app.py (fills I/O; stubs inference).",
+    )
+    scaffold_recipe.add_argument("path", type=Path, help="Path to a harvested app.py file.")
+    scaffold_recipe.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
+
+    render_recipe = subparsers.add_parser(
+        "render-recipe",
+        help="Render a pyharp app.py from a wrapper recipe JSON file.",
+    )
+    render_recipe.add_argument("recipe", type=Path, help="Recipe JSON file.")
+    render_recipe.add_argument("--output", type=Path, help="Optional app.py output path.")
+
+    generate_recipe = subparsers.add_parser(
+        "generate-recipe",
+        help="Write app.py, requirements, and manifest from a wrapper recipe JSON file.",
+    )
+    generate_recipe.add_argument("recipe", type=Path, help="Recipe JSON file.")
+    generate_recipe.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/model_agent/generated"),
+        help="Generated package output directory.",
+    )
+    generate_recipe.add_argument(
         "--smoke-test",
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
@@ -255,6 +292,37 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
+        if args.command == "scaffold-recipe":
+            record = analyze_app_file(args.path)
+            if not record.get("recipe_eligible"):
+                reason = record.get("unresolved_reason", "components could not be resolved")
+                print(
+                    f"Cannot scaffold a recipe from {args.path}: {reason}.",
+                    file=sys.stderr,
+                )
+                return 2
+            model_id = _harvest_ids_by_slug(args.path).get(Path(args.path).parent.name, "")
+            recipe = recipe_skeleton_from_analysis(record, model_id=model_id)
+            _emit_json(recipe, args.output)
+            return 0
+
+        if args.command == "render-recipe":
+            app_py = render_app_from_recipe(_read_json(args.recipe))
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(app_py, encoding="utf-8")
+            print(app_py)
+            return 0
+
+        if args.command == "generate-recipe":
+            package = build_package_from_recipe(_read_json(args.recipe))
+            folder = agent.write_generated_app_package(package, args.output)
+            result = {"package": str(folder), "framework": package.framework}
+            if args.smoke_test:
+                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+            _emit_json(result, None)
+            return 0 if result.get("smoke_test", {}).get("ok", True) else 4
+
         if args.command == "package-repo":
             package = agent.build_generated_app_package_for_repo(args.repo)
             folder = agent.write_generated_app_package(package, args.output)
@@ -313,6 +381,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     except EndpointProbeError as exc:
         print(f"Endpoint probe failed: {exc}", file=sys.stderr)
         return 2
+    except RecipeError as exc:
+        print(f"Recipe invalid: {exc}", file=sys.stderr)
+        return 2
     except ValueError as exc:
         print(f"Packaging failed: {exc}", file=sys.stderr)
         return 2
@@ -346,11 +417,20 @@ def _run_smoke_test(
 
 
 def _harvest_ids_by_slug(path: Path) -> dict:
-    """Map a harvest folder slug -> canonical Space id, using index.json."""
+    """Map a harvest folder slug -> canonical Space id, using index.json.
+
+    Locates ``index.json`` at ``path`` (when it is the harvest dir) or among its
+    ancestors (when ``path`` points at a single harvested ``app.py``).
+    """
 
     path = Path(path)
-    index_file = (path / "index.json") if path.is_dir() else (path.parent / "index.json")
-    if not index_file.exists():
+    candidates = []
+    if path.is_dir():
+        candidates.append(path / "index.json")
+    candidates.extend(parent / "index.json" for parent in path.parents)
+
+    index_file = next((candidate for candidate in candidates if candidate.exists()), None)
+    if index_file is None:
         return {}
 
     data = json.loads(index_file.read_text(encoding="utf-8"))

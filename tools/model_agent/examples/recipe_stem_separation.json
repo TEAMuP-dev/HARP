@@ -1,0 +1,42 @@
+{
+  "model": {
+    "id": "example/demucs-stem-separation",
+    "name": "Demucs Stem Separation",
+    "description": "Separate a song into drums, bass, vocals, and other stems.",
+    "author": "example",
+    "license": "mit",
+    "tags": ["audio-to-audio", "stem-separation"],
+    "task": "audio-to-audio"
+  },
+  "framework": {
+    "import": "demucs",
+    "pip": ["demucs", "torch", "torchaudio", "soundfile"],
+    "apt": ["ffmpeg", "libsndfile1"],
+    "gpu": true
+  },
+  "inputs": [
+    {
+      "name": "input_audio",
+      "type": "audio",
+      "label": "Input Audio",
+      "required": true
+    },
+    {
+      "name": "model_name",
+      "type": "dropdown",
+      "label": "Demucs Model",
+      "choices": ["htdemucs", "htdemucs_ft", "mdx_extra"],
+      "default": "htdemucs"
+    }
+  ],
+  "outputs": [
+    { "name": "drums", "type": "audio", "label": "Drums" },
+    { "name": "bass", "type": "audio", "label": "Bass" },
+    { "name": "vocals", "type": "audio", "label": "Vocals" },
+    { "name": "other", "type": "audio", "label": "Other" }
+  ],
+  "inference": {
+    "setup": "import tempfile\n\nimport torch\nimport torchaudio\nfrom demucs.apply import apply_model\nfrom demucs.pretrained import get_model\n\nDEVICE = \"cuda\" if torch.cuda.is_available() else \"cpu\"\n_models = {}\n\n\ndef _load(name):\n    if name not in _models:\n        model = get_model(name)\n        model.to(DEVICE)\n        model.eval()\n        _models[name] = model\n    return _models[name]\n\n\ndef _save(tensor, sample_rate):\n    out = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False)\n    out.close()\n    torchaudio.save(out.name, tensor.detach().cpu(), sample_rate)\n    return out.name",
+    "body": "model = _load(model_name)\nwav, sample_rate = torchaudio.load(input_audio)\nif wav.shape[0] == 1:\n    wav = wav.repeat(2, 1)\nwith torch.no_grad():\n    sources = apply_model(model, wav[None].to(DEVICE), split=True)[0]\nstems = {name: source for name, source in zip(model.sources, sources)}\nreturn (\n    _save(stems[\"drums\"], sample_rate),\n    _save(stems[\"bass\"], sample_rate),\n    _save(stems[\"vocals\"], sample_rate),\n    _save(stems[\"other\"], sample_rate),\n)"
+  }
+}
