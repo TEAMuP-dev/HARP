@@ -26,7 +26,10 @@ The agent is intentionally conservative:
   probing, task classification, license checks, compatibility scoring, template
   generation, package data structures, and package writing.
 - `analyze.py` statically parses harvested `app.py` wrappers and reports the
-  input/output component shapes across the corpus (no code execution).
+  input/output component shapes across the corpus (no code execution). Per
+  component it resolves the type, label, the `harp_required(...)` boolean,
+  tooltips (`info=` / `.set_info(...)`), dropdown `choices`, `file_types`, and
+  slider ranges/defaults when they are literals.
 - `recipe.py` renders a runnable pyharp `app.py` (and the rest of a Space
   package) from a declarative recipe JSON describing inputs, outputs, framework,
   and inference glue.
@@ -194,6 +197,16 @@ Input component types: `audio`, `file`, `dropdown`, `slider`, `textbox`,
 `number`, `checkbox`. Output types: `audio`, `file`, `labels` (a `gr.JSON` /
 `LabelList` track).
 
+Each component may carry an optional `info` tooltip. It is rendered the way
+HARP's own reference wrappers do: as a native `info=` kwarg on standard Gradio
+components and as a chained pyharp `.set_info(...)` on media components
+(`audio` / `file`). A `file` component may also set `file_types` (e.g.
+`[".mid", ".midi"]`). Generated wrappers use `from pyharp import *`, matching the
+reference template, so inference glue can call any pyharp helper (`load_audio`,
+`save_audio`, `AudioLabel`, `MidiLabel`, ...) without managing imports.
+`examples/recipe_ui_test.json` reproduces HARP's canonical 3.0.0 UI-test
+wrapper end to end and is a good reference for the full schema.
+
 Render an `app.py` from a recipe, or write the whole package:
 
 ```bash
@@ -201,19 +214,23 @@ python3 -m tools.model_agent render-recipe tools/model_agent/examples/recipe_ste
 python3 -m tools.model_agent generate-recipe tools/model_agent/examples/recipe_stem_separation.json
 ```
 
-Two example recipes are committed under `examples/`: `recipe_stem_separation.json`
-(audio + dropdown -> 4 audio stems + labels) and
-`recipe_audio_to_audio_labels.json` (audio + slider -> audio + labels). Like the
-other generators, `generate-recipe` accepts `--smoke-test` to launch and verify
-the wrapper (runs downloaded code; review/sandbox first).
+Example recipes are committed under `examples/`: `recipe_stem_separation.json`
+(audio + dropdown -> 4 audio stems + labels), `recipe_audio_to_audio_labels.json`
+(audio + slider -> audio + labels), and `recipe_ui_test.json` (the full HARP
+3.0.0 UI-test wrapper exercising every component type, tooltips, `file_types`,
+and audio + MIDI + label outputs). Like the other generators, `generate-recipe`
+accepts `--smoke-test` to launch and verify the wrapper (runs downloaded code;
+review/sandbox first).
 
 #### Scaffolding a recipe from a harvested wrapper
 
 To start a recipe from an existing, well-formed wrapper rather than from
 scratch, `scaffold-recipe` reads a harvested `app.py`, fills in the model card
-and the input/output components from the statically-resolved shapes, and leaves
-the parts that can't be derived (dependencies, dropdown choices, slider ranges,
-and the inference glue) as clearly-marked `_todo` placeholders:
+and the input/output components from the statically-resolved shapes — including
+dropdown `choices`, slider `min`/`max`/`step`, defaults, tooltips, and
+`file_types` whenever they are literals in the source — and leaves the parts
+that can't be derived statically (dependencies and the inference glue, plus any
+ranges/choices that weren't literals) as clearly-marked `_todo` placeholders:
 
 ```bash
 python3 -m tools.model_agent scaffold-recipe \

@@ -328,6 +328,50 @@ with gr.Blocks() as demo:
         self.assertEqual(record["outputs"], ["Audio"])
         self.assertFalse(record["uses_spaces_gpu"])
 
+    def test_harp_required_reads_boolean_argument(self):
+        # ``.harp_required(False)`` must read as *not* required (the canonical
+        # HARP 3.0.0 template uses it on an optional audio input).
+        source = (
+            "import gradio as gr\n"
+            "from pyharp import *\n"
+            "build_endpoint(\n"
+            "    input_components=[\n"
+            "        gr.Audio(type='filepath', label='Optional')"
+            ".harp_required(False).set_info('not used'),\n"
+            "        gr.Textbox(label='Prompt').harp_required(True),\n"
+            "    ],\n"
+            "    output_components=[gr.Audio(label='Out')],\n"
+            ")\n"
+        )
+        record = analyze_app_source(source)
+        audio, textbox = record["input_details"]
+        self.assertFalse(audio["harp_required"])
+        self.assertEqual(audio["info"], "not used")
+        self.assertTrue(textbox["harp_required"])
+
+    def test_extracts_choices_info_and_file_types(self):
+        source = (
+            "import gradio as gr\n"
+            "from pyharp import *\n"
+            "build_endpoint(\n"
+            "    input_components=[\n"
+            "        gr.Dropdown(choices=['a', 'b'], value='b', label='Pick', info='hint'),\n"
+            "        gr.Slider(minimum=0, maximum=20, step=2, value=4, label='Amt'),\n"
+            "    ],\n"
+            "    output_components=[\n"
+            "        gr.File(type='filepath', label='MIDI', file_types=['.mid', '.midi']),\n"
+            "    ],\n"
+            ")\n"
+        )
+        record = analyze_app_source(source)
+        dropdown, slider = record["input_details"]
+        self.assertEqual(dropdown["choices"], ["a", "b"])
+        self.assertEqual(dropdown["default"], "b")
+        self.assertEqual(dropdown["info"], "hint")
+        self.assertEqual((slider["min"], slider["max"], slider["step"]), (0, 20, 2))
+        self.assertEqual(slider["default"], 4)
+        self.assertEqual(record["output_details"][0]["file_types"], [".mid", ".midi"])
+
     def test_reports_syntax_errors(self):
         record = analyze_app_source("def broken(:\n    pass\n")
         self.assertIn("error", record)
@@ -469,20 +513,65 @@ class RecipeTest(unittest.TestCase):
         compile(app, "<recipe-app>", "exec")
         self.assertIn("import spaces", app)
         self.assertIn("@spaces.GPU", app)
-        self.assertIn("from pyharp import ModelCard, build_endpoint, LabelList", app)
+        # Match HARP's reference wrappers: a star import exposes every helper.
+        self.assertIn("from pyharp import *", app)
         self.assertIn("def process_fn(input_audio, model_name):", app)
         self.assertIn('gr.Audio(type="filepath", label="Input Audio").harp_required(True)', app)
         self.assertIn('gr.Dropdown(choices=["htdemucs", "mdx_extra"], value="htdemucs"', app)
         self.assertIn('gr.JSON(label="Labels")', app)
 
-    def test_no_gpu_no_labels_imports(self):
+    def test_no_gpu_imports(self):
         recipe = json.loads(json.dumps(self.STEM_RECIPE))
         recipe["framework"]["gpu"] = False
         recipe["outputs"] = [{"name": "out", "type": "audio", "label": "Output"}]
         app = render_app_from_recipe(recipe)
         self.assertNotIn("import spaces", app)
-        self.assertNotIn("LabelList", app)
-        self.assertIn("from pyharp import ModelCard, build_endpoint", app)
+        self.assertNotIn("@spaces.GPU", app)
+        self.assertIn("from pyharp import *", app)
+
+    def test_renders_info_and_file_types(self):
+        recipe = {
+            "model": {"id": "example/m", "name": "M"},
+            "inputs": [
+                {
+                    "name": "input_audio",
+                    "type": "audio",
+                    "label": "In",
+                    "required": False,
+                    "info": "optional input track",
+                },
+                {
+                    "name": "intensity",
+                    "type": "slider",
+                    "label": "Intensity",
+                    "min": 0,
+                    "max": 10,
+                    "info": "how strong",
+                },
+            ],
+            "outputs": [
+                {
+                    "name": "midi",
+                    "type": "file",
+                    "label": "MIDI",
+                    "file_types": [".mid", ".midi"],
+                    "info": "the rendered midi",
+                },
+            ],
+            "inference": {"body": "return None"},
+        }
+        app = render_app_from_recipe(recipe)
+        compile(app, "<info-app>", "exec")
+        # Native components carry tooltips via info=, media via .set_info().
+        self.assertIn('gr.Slider(minimum=0, maximum=10, label="Intensity", info="how strong")', app)
+        self.assertIn(
+            'gr.Audio(type="filepath", label="In").set_info("optional input track")', app
+        )
+        self.assertIn(
+            'gr.File(type="filepath", label="MIDI", file_types=[".mid", ".midi"])'
+            '.set_info("the rendered midi")',
+            app,
+        )
 
     def test_validation_rejects_bad_recipe(self):
         with self.assertRaises(RecipeError):
@@ -525,6 +614,18 @@ class RecipeScaffoldTest(unittest.TestCase):
         self.assertTrue(recipe["framework"]["gpu"])
         self.assertEqual(recipe["model"]["id"], "teamup-tech/demucs")
         self.assertTrue(recipe["_todo"])
+
+    def test_scaffold_fills_choices_from_analysis(self):
+        # The SAMPLE_APP dropdown has concrete choices/value; the scaffold must
+        # carry them through instead of emitting TODO placeholders.
+        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
+        recipe = recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
+        dropdown = recipe["inputs"][1]
+        self.assertEqual(dropdown["type"], "dropdown")
+        self.assertEqual(dropdown["choices"], ["a", "b"])
+        self.assertEqual(dropdown["default"], "a")
+        # No leftover TODO for choices resolved.
+        self.assertFalse(any("choices" in todo for todo in recipe["_todo"]))
 
     def test_scaffold_rejects_unmappable_component(self):
         record = {

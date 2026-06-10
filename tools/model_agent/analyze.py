@@ -33,23 +33,42 @@ def _kw_str(call: ast.Call, name: str) -> Optional[str]:
     return None
 
 
-def _unwrap_chain(call: ast.Call) -> Tuple[ast.AST, set]:
-    """Descend a method chain like ``gr.Audio(...).harp_required(True)``.
+def _literal(node: Optional[ast.AST]) -> Any:
+    """Best-effort literal value of an AST node (``None`` if not a literal)."""
 
-    Returns the base call (``gr.Audio(...)``) and the set of chained method
-    names (e.g. ``{"harp_required"}``).
+    if node is None:
+        return None
+    try:
+        return ast.literal_eval(node)
+    except (ValueError, SyntaxError):
+        return None
+
+
+def _kw_literal(call: ast.Call, name: str) -> Any:
+    for keyword in call.keywords:
+        if keyword.arg == name:
+            return _literal(keyword.value)
+    return None
+
+
+def _unwrap_chain(call: ast.Call) -> Tuple[ast.AST, Dict[str, Optional[ast.AST]]]:
+    """Descend a method chain like ``gr.Audio(...).harp_required(False)``.
+
+    Returns the base call (``gr.Audio(...)``) and a mapping of each chained
+    method name to its first positional argument node (or ``None`` when the
+    method was called with no arguments), e.g. ``{"harp_required": <Constant>}``.
     """
 
-    flags: set = set()
+    methods: Dict[str, Optional[ast.AST]] = {}
     node: ast.AST = call
     while (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and isinstance(node.func.value, ast.Call)
     ):
-        flags.add(node.func.attr)
+        methods[node.func.attr] = node.args[0] if node.args else None
         node = node.func.value
-    return node, flags
+    return node, methods
 
 
 def _gradio_component(node: ast.AST) -> Optional[JSON]:
@@ -58,21 +77,55 @@ def _gradio_component(node: ast.AST) -> Optional[JSON]:
     if not isinstance(node, ast.Call):
         return None
 
-    base, flags = _unwrap_chain(node)
-    if (
+    base, methods = _unwrap_chain(node)
+    if not (
         isinstance(base, ast.Call)
         and isinstance(base.func, ast.Attribute)
         and isinstance(base.func.value, ast.Name)
         and base.func.value.id in GRADIO_MODULES
     ):
-        kwargs = {kw.arg for kw in base.keywords if kw.arg}
-        return {
-            "type": base.func.attr,
-            "label": _kw_str(base, "label"),
-            "harp_required": "harp_required" in flags,
-            "has_choices": "choices" in kwargs,
-        }
-    return None
+        return None
+
+    kwargs = {kw.arg for kw in base.keywords if kw.arg}
+
+    # ``.harp_required(False)`` must read as *not* required: inspect the
+    # boolean argument rather than the mere presence of the method.
+    required = False
+    if "harp_required" in methods:
+        arg = methods["harp_required"]
+        required = bool(_literal(arg)) if isinstance(arg, ast.Constant) else True
+
+    descriptor: JSON = {
+        "type": base.func.attr,
+        "label": _kw_str(base, "label"),
+        "harp_required": required,
+        "has_choices": "choices" in kwargs,
+    }
+
+    # Tooltips appear either as a native ``info=`` kwarg or as a chained
+    # pyharp ``.set_info("...")`` on media components.
+    info = _kw_str(base, "info")
+    if info is None and "set_info" in methods:
+        set_info_arg = _literal(methods["set_info"])
+        if isinstance(set_info_arg, str):
+            info = set_info_arg
+    if info:
+        descriptor["info"] = info
+
+    choices = _kw_literal(base, "choices")
+    if isinstance(choices, (list, tuple)):
+        descriptor["choices"] = list(choices)
+
+    file_types = _kw_literal(base, "file_types")
+    if isinstance(file_types, (list, tuple)):
+        descriptor["file_types"] = list(file_types)
+
+    for src, dst in (("minimum", "min"), ("maximum", "max"), ("step", "step"), ("value", "default")):
+        value = _kw_literal(base, src)
+        if value is not None:
+            descriptor[dst] = value
+
+    return descriptor
 
 
 def _is_spaces_gpu(decorator: ast.AST) -> bool:

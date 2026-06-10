@@ -12,13 +12,20 @@ Schema (all string code fields are inlined into the generated module)::
     {
       "model":    {"id", "name", "description", "author", "tags": [...]},
       "framework":{"import", "pip": [...], "apt": [...], "gpu": bool},
-      "inputs":   [{"name","type","label","required",  ...type-specific}],
-      "outputs":  [{"name","type","label"}],
+      "inputs":   [{"name","type","label","required","info",  ...type-specific}],
+      "outputs":  [{"name","type","label","info","file_types": [...]}],
       "inference":{"setup": "<module-level code>", "body": "<process body>"}
     }
 
 Input types:  audio, file, dropdown, slider, textbox, number, checkbox
 Output types: audio, file, labels
+
+The optional ``info`` field is a tooltip. It is rendered the way HARP's own
+reference wrappers do: as a native ``info=`` kwarg on standard Gradio components
+and as a chained pyharp ``.set_info(...)`` on media components (audio/file). A
+``file`` component may also carry ``file_types`` (e.g. ``[".mid", ".midi"]``).
+The generated module uses ``from pyharp import *`` so inference glue can freely
+call pyharp helpers (``load_audio``, ``save_audio``, ``AudioLabel``, ...).
 """
 
 from __future__ import annotations
@@ -126,22 +133,41 @@ def _validate_component(
         if spec.get("min") is None or spec.get("max") is None:
             errors.append(f"{prefix} (slider) requires 'min' and 'max'")
 
+    if "info" in spec and not isinstance(spec.get("info"), str):
+        errors.append(f"{prefix}.info must be a string")
+    if "file_types" in spec and not isinstance(spec.get("file_types"), list):
+        errors.append(f"{prefix}.file_types must be a list")
+
     return errors
+
+
+_MEDIA_TYPES = {"audio", "file"}
 
 
 def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
     comp_type = str(spec.get("type"))
     label = json.dumps(str(spec.get("label") or spec.get("name")))
 
+    info = str(spec.get("info") or "").strip()
+    # Standard Gradio components take a tooltip via the info= kwarg; media
+    # components (audio/file) use the chained pyharp .set_info(...) instead.
+    info_kwarg = f", info={json.dumps(info)}" if info and comp_type not in _MEDIA_TYPES else ""
+
     if comp_type == "audio":
         code = f'gr.Audio(type="filepath", label={label})'
     elif comp_type == "file":
-        code = f"gr.File(label={label})"
+        file_types = spec.get("file_types")
+        types = (
+            f", file_types={json.dumps([str(item) for item in file_types])}"
+            if isinstance(file_types, list) and file_types
+            else ""
+        )
+        code = f'gr.File(type="filepath", label={label}{types})'
     elif comp_type == "dropdown":
         choices = json.dumps(list(spec.get("choices", [])))
         default = spec.get("default")
         value = f", value={json.dumps(default)}" if default is not None else ""
-        code = f"gr.Dropdown(choices={choices}{value}, label={label})"
+        code = f"gr.Dropdown(choices={choices}{value}, label={label}{info_kwarg})"
     elif comp_type == "slider":
         minimum = json.dumps(spec.get("min"))
         maximum = json.dumps(spec.get("max"))
@@ -149,20 +175,20 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
         default = (
             f", value={json.dumps(spec.get('default'))}" if spec.get("default") is not None else ""
         )
-        code = f"gr.Slider(minimum={minimum}, maximum={maximum}{step}{default}, label={label})"
+        code = f"gr.Slider(minimum={minimum}, maximum={maximum}{step}{default}, label={label}{info_kwarg})"
     elif comp_type == "textbox":
         default = (
             f", value={json.dumps(spec.get('default'))}" if spec.get("default") is not None else ""
         )
-        code = f"gr.Textbox(label={label}{default})"
+        code = f"gr.Textbox(label={label}{default}{info_kwarg})"
     elif comp_type == "number":
         default = (
             f"value={json.dumps(spec.get('default'))}, " if spec.get("default") is not None else ""
         )
-        code = f"gr.Number({default}label={label})"
+        code = f"gr.Number({default}label={label}{info_kwarg})"
     elif comp_type == "checkbox":
         default = "True" if bool(spec.get("default", False)) else "False"
-        code = f"gr.Checkbox(value={default}, label={label})"
+        code = f"gr.Checkbox(value={default}, label={label}{info_kwarg})"
     elif comp_type == "labels":
         code = f"gr.JSON(label={label})"
     else:  # pragma: no cover - guarded by validation
@@ -170,6 +196,8 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
 
     if is_input and spec.get("required"):
         code += ".harp_required(True)"
+    if info and comp_type in _MEDIA_TYPES:
+        code += f".set_info({json.dumps(info)})"
     return code
 
 
@@ -190,16 +218,15 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
     inference = recipe["inference"]
 
     uses_gpu = bool(framework.get("gpu"))
-    uses_labels = any(spec.get("type") == "labels" for spec in outputs)
 
     import_lines = ["import gradio as gr"]
     if uses_gpu:
         import_lines.append("import spaces")
     import_lines.append("")
-    pyharp_import = "from pyharp import ModelCard, build_endpoint"
-    if uses_labels:
-        pyharp_import += ", LabelList"
-    import_lines.append(pyharp_import)
+    # Match HARP's reference wrappers: a star import exposes every pyharp
+    # helper (ModelCard, build_endpoint, LabelList, AudioLabel, MidiLabel,
+    # load_audio, save_audio, ...) that inference glue may reach for.
+    import_lines.append("from pyharp import *")
 
     setup = str(inference.get("setup") or "").strip()
     arg_names = ", ".join(str(spec["name"]) for spec in inputs)
@@ -367,14 +394,33 @@ def recipe_skeleton_from_analysis(record: Mapping[str, Any], *, model_id: str = 
         }
         if detail.get("harp_required"):
             spec["required"] = True
+        if detail.get("info"):
+            spec["info"] = str(detail["info"])
         if recipe_type == "dropdown":
-            spec["choices"] = ["TODO_option_1", "TODO_option_2"]
-            todos.append(f"inputs.{spec['name']}.choices: set the real dropdown options")
+            choices = detail.get("choices")
+            if isinstance(choices, list) and choices:
+                spec["choices"] = list(choices)
+                if detail.get("default") is not None:
+                    spec["default"] = detail["default"]
+            else:
+                spec["choices"] = ["TODO_option_1", "TODO_option_2"]
+                todos.append(f"inputs.{spec['name']}.choices: set the real dropdown options")
         if recipe_type == "slider":
-            spec["min"] = 0.0
-            spec["max"] = 1.0
-            spec["step"] = 0.1
-            todos.append(f"inputs.{spec['name']}: set the real slider min/max/step/default")
+            has_range = detail.get("min") is not None and detail.get("max") is not None
+            spec["min"] = detail["min"] if detail.get("min") is not None else 0.0
+            spec["max"] = detail["max"] if detail.get("max") is not None else 1.0
+            if detail.get("step") is not None:
+                spec["step"] = detail["step"]
+            elif not has_range:
+                spec["step"] = 0.1
+            if detail.get("default") is not None:
+                spec["default"] = detail["default"]
+            if not has_range:
+                todos.append(f"inputs.{spec['name']}: set the real slider min/max/step/default")
+        if recipe_type in {"textbox", "number", "checkbox"} and detail.get("default") is not None:
+            spec["default"] = detail["default"]
+        if recipe_type == "file" and isinstance(detail.get("file_types"), list):
+            spec["file_types"] = list(detail["file_types"])
         inputs.append(spec)
 
     outputs: List[JSON] = []
@@ -386,13 +432,16 @@ def recipe_skeleton_from_analysis(record: Mapping[str, Any], *, model_id: str = 
                 f"output component type '{gradio_type}' has no recipe mapping"
             )
         label = detail.get("label")
-        outputs.append(
-            {
-                "name": _identifier(label, f"output_{index}", used_names),
-                "type": recipe_type,
-                "label": str(label) if label else recipe_type.title(),
-            }
-        )
+        out_spec: JSON = {
+            "name": _identifier(label, f"output_{index}", used_names),
+            "type": recipe_type,
+            "label": str(label) if label else recipe_type.title(),
+        }
+        if detail.get("info"):
+            out_spec["info"] = str(detail["info"])
+        if recipe_type == "file" and isinstance(detail.get("file_types"), list):
+            out_spec["file_types"] = list(detail["file_types"])
+        outputs.append(out_spec)
 
     identifier = model_id or "TODO-author/TODO-model"
     parts = identifier.split("/")
