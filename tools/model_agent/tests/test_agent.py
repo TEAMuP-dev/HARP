@@ -22,6 +22,7 @@ from tools.model_agent.agent import (
 from tools.model_agent.analyze import analyze_app_source, analyze_path
 from tools.model_agent.cli import attach_health
 from tools.model_agent.llm import (
+    GeminiProvider,
     LLMError,
     RecipeGenerationContext,
     build_recipe_user_prompt,
@@ -743,6 +744,23 @@ class LLMRecipeTest(unittest.TestCase):
             provider = provider_from_env()
             self.assertEqual(provider.name, "openai")
 
+    def test_gemini_default_model_is_not_retired_1_5(self):
+        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "k"}, clear=True):
+            provider = provider_from_env()
+            self.assertEqual(provider.name, "gemini")
+            self.assertNotIn("1.5", provider.model)
+
+    def test_gemini_list_models_filters_generate_content(self):
+        payload = {
+            "models": [
+                {"name": "models/gemini-2.5-flash", "supportedGenerationMethods": ["generateContent"]},
+                {"name": "models/embedding-001", "supportedGenerationMethods": ["embedContent"]},
+            ]
+        }
+        with mock.patch("tools.model_agent.llm._http_get_json", return_value=payload):
+            provider = GeminiProvider(api_key="k", model="gemini-2.5-flash")
+            self.assertEqual(provider.list_models(), ["gemini-2.5-flash"])
+
     def test_default_examples_load_and_render(self):
         examples = default_examples()
         self.assertTrue(examples)
@@ -761,7 +779,7 @@ class CompleteRecipeTest(unittest.TestCase):
         base_inputs = [(spec["name"], spec["type"]) for spec in scaffold["inputs"]]
         base_outputs = [(spec["name"], spec["type"]) for spec in scaffold["outputs"]]
 
-        # The LLM tries to change the I/O contract and fill the glue; the
+        # The LLM tries to *change* the I/O contract and fill the glue; the
         # completion must keep the scaffold's I/O while taking the inference glue.
         llm_response = {
             "model": {"description": "Real description from the LLM."},

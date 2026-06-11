@@ -53,9 +53,11 @@ class LLMError(Exception):
 # Providers (urllib only; no third-party SDKs)
 # --------------------------------------------------------------------------- #
 
+# Model names move fast; these are sane defaults but a key/region may differ.
+# Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
     "gemini": "gemini-2.5-flash",
-    "anthropic": "claude-3-5-sonnet-latest",
+    "anthropic": "claude-sonnet-4-latest",
     "openai": "gpt-4o",
 }
 
@@ -68,14 +70,26 @@ def _http_post_json(url: str, payload: JSON, headers: Mapping[str, str], timeout
         headers={"Content-Type": "application/json", **dict(headers)},
         method="POST",
     )
+    return _send(request, timeout)
+
+
+def _http_get_json(url: str, headers: Mapping[str, str], timeout: float) -> JSON:
+    request = urllib.request.Request(url, headers=dict(headers), method="GET")
+    return _send(request, timeout)
+
+
+def _send(request: urllib.request.Request, timeout: float) -> JSON:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")
-        raise LLMError(f"{url} returned HTTP {exc.code}: {detail[:500]}") from exc
+        hint = ""
+        if exc.code == 404 and request.method == "POST":
+            hint = " (model not found for this key/region; run `list-models` or pass --llm-model)"
+        raise LLMError(f"{request.full_url} returned HTTP {exc.code}{hint}: {detail[:500]}") from exc
     except urllib.error.URLError as exc:
-        raise LLMError(f"request to {url} failed: {exc}") from exc
+        raise LLMError(f"request to {request.full_url} failed: {exc}") from exc
 
 
 def _loads_lenient(text: str) -> JSON:
@@ -111,9 +125,23 @@ class LLMProvider:
     def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
         raise NotImplementedError
 
+    def list_models(self) -> List[str]:
+        """List model names usable for content generation with this provider."""
+        raise NotImplementedError
+
 
 class GeminiProvider(LLMProvider):
     name = "gemini"
+
+    def list_models(self) -> List[str]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={self.api_key}"
+        data = _http_get_json(url, {}, self.timeout)
+        models: List[str] = []
+        for entry in data.get("models", []) if isinstance(data, Mapping) else []:
+            methods = entry.get("supportedGenerationMethods") or []
+            if "generateContent" in methods:
+                models.append(str(entry.get("name", "")).split("/")[-1])
+        return [name for name in models if name]
 
     def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
         url = (
@@ -142,6 +170,11 @@ class GeminiProvider(LLMProvider):
 class AnthropicProvider(LLMProvider):
     name = "anthropic"
 
+    def list_models(self) -> List[str]:
+        headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
+        data = _http_get_json("https://api.anthropic.com/v1/models", headers, self.timeout)
+        return [str(item.get("id")) for item in (data.get("data") or []) if item.get("id")]
+
     def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
         url = "https://api.anthropic.com/v1/messages"
         headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
@@ -162,6 +195,11 @@ class AnthropicProvider(LLMProvider):
 
 class OpenAIProvider(LLMProvider):
     name = "openai"
+
+    def list_models(self) -> List[str]:
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        data = _http_get_json("https://api.openai.com/v1/models", headers, self.timeout)
+        return [str(item.get("id")) for item in (data.get("data") or []) if item.get("id")]
 
     def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
         url = "https://api.openai.com/v1/chat/completions"

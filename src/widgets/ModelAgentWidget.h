@@ -343,6 +343,11 @@ private:
                 { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "recipe.json", false } } });
 
         specs.push_back(
+            { "list-models",
+              "List LLM models available for your configured provider/API key.",
+              { { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false } } });
+
+        specs.push_back(
             { "complete-recipe",
               "LLM-fill the _todo stubs of a scaffolded recipe (preserves I/O).",
               { { "", "Scaffold recipe", Field::Text, Browse::OpenFile, "", "recipe.json with _todo", true },

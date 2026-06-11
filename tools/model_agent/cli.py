@@ -183,6 +183,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
 
+    list_models = subparsers.add_parser(
+        "list-models",
+        help="List LLM models that support content generation for the configured provider.",
+    )
+    list_models.add_argument(
+        "--provider",
+        choices=["gemini", "anthropic", "openai"],
+        help="LLM provider (default: auto-detect from API key env vars).",
+    )
+    list_models.add_argument("--llm-timeout", type=float, default=60.0, help="API timeout (s).")
+
     complete = subparsers.add_parser(
         "complete-recipe",
         help="Use an LLM to fill the _todo stubs of a scaffolded recipe (preserves I/O).",
@@ -423,12 +434,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
         if args.command == "generate-recipe-from-llm":
-            if args.card:
-                card = _read_json(args.card)
-            else:
-                card = agent.scraper.get_model_card(args.repo)
-                if card is None:
-                    raise SystemExit(f"Hugging Face model repo not found: {args.repo}")
+            card = _read_json(args.card) if args.card else _fetch_card_or_exit(agent, args.repo)
 
             context = RecipeGenerationContext.from_card(
                 card,
@@ -445,16 +451,18 @@ def main(argv: Iterable[str] | None = None) -> int:
             draft = generate_recipe(context, provider, max_repairs=args.max_repairs)
             return _emit_recipe_draft(agent, draft, args)
 
+        if args.command == "list-models":
+            provider = provider_from_env(args.provider, timeout=args.llm_timeout)
+            _emit_json({"provider": provider.name, "models": provider.list_models()}, None)
+            return 0
+
         if args.command == "complete-recipe":
             base = _read_json(args.recipe)
             context = None
             if args.card:
                 context = RecipeGenerationContext.from_card(_read_json(args.card))
             elif args.repo:
-                card = agent.scraper.get_model_card(args.repo)
-                if card is None:
-                    raise SystemExit(f"Hugging Face model repo not found: {args.repo}")
-                context = RecipeGenerationContext.from_card(card)
+                context = RecipeGenerationContext.from_card(_fetch_card_or_exit(agent, args.repo))
             provider = provider_from_env(
                 args.provider,
                 model=args.llm_model,
@@ -541,6 +549,25 @@ def main(argv: Iterable[str] | None = None) -> int:
         return 2
 
     return 1
+
+
+def _fetch_card_or_exit(agent: HarpModelAgent, repo: str) -> object:
+    """Fetch a Hugging Face model card, with a clear message for auth failures."""
+
+    try:
+        card = agent.scraper.get_model_card(repo)
+    except HTTPError as exc:
+        if exc.code in (401, 403):
+            raise SystemExit(
+                f"Could not fetch the model card for '{repo}' (HTTP {exc.code}). "
+                "Hugging Face returns this for private/gated/nonexistent model repos "
+                "(e.g. libraries like Demucs that are not a HF model card). Use a public "
+                "model repo id, or pass a local card with --card <file.json>."
+            )
+        raise
+    if card is None:
+        raise SystemExit(f"Hugging Face model repo not found: {repo}")
+    return card
 
 
 def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:

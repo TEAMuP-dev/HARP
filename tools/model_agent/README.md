@@ -262,7 +262,7 @@ for a bounded number of repairs. The LLM proposes; the pipeline disposes:
 ```bash
 export GEMINI_API_KEY=...        # or ANTHROPIC_API_KEY / OPENAI_API_KEY
 python3 -m tools.model_agent generate-recipe-from-llm \
-  --repo facebook/demucs --inputs audio --outputs audio,labels \
+  --repo speechbrain/sepformer-wsj02mix --inputs audio --outputs audio,labels \
   --output artifacts/model_agent/recipes/demucs.json
 ```
 
@@ -272,6 +272,15 @@ API key env var is set, or forced with `--provider gemini|anthropic|openai` and
 `--llm-model <name>`. The drafted recipe is grounded with the real model card,
 the repo file list, your desired I/O types, and a couple of committed example
 recipes as few-shot exemplars (disable with `--no-examples`).
+
+LLM model names change often and vary by key/region, so the built-in defaults can
+go stale. If a call fails with an HTTP 404 about the model, list what your key can
+actually use and pass it with `--llm-model`:
+
+```bash
+python3 -m tools.model_agent list-models               # uses the auto-detected provider
+python3 -m tools.model_agent generate-recipe-from-llm --card card.json --llm-model gemini-2.5-flash ...
+```
 
 The result is a normal recipe — reviewable, diffable, and re-renderable offline —
 not opaque generated code. Add `--generate-package` to also write the wrapper
@@ -295,7 +304,7 @@ python3 -m tools.model_agent scaffold-recipe \
   --output demucs_scaffold.json
 
 python3 -m tools.model_agent complete-recipe demucs_scaffold.json \
-  --repo facebook/demucs --output demucs_recipe.json
+  --repo speechbrain/sepformer-wsj02mix --output demucs_recipe.json
 ```
 
 This is usually more reliable than `generate-recipe-from-llm` from scratch,
