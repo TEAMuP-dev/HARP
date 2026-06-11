@@ -1,7 +1,9 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.model_agent.agent import (
     EndpointProbeError,
@@ -19,6 +21,15 @@ from tools.model_agent.agent import (
 )
 from tools.model_agent.analyze import analyze_app_source, analyze_path
 from tools.model_agent.cli import attach_health
+from tools.model_agent.llm import (
+    LLMError,
+    RecipeGenerationContext,
+    build_recipe_user_prompt,
+    complete_recipe,
+    default_examples,
+    generate_recipe,
+    provider_from_env,
+)
 from tools.model_agent.recipe import (
     RecipeError,
     build_package_from_recipe,
@@ -624,7 +635,7 @@ class RecipeScaffoldTest(unittest.TestCase):
         self.assertEqual(dropdown["type"], "dropdown")
         self.assertEqual(dropdown["choices"], ["a", "b"])
         self.assertEqual(dropdown["default"], "a")
-        # No leftover TODO for choices resolved.
+        # No leftover TODO for choices we resolved.
         self.assertFalse(any("choices" in todo for todo in recipe["_todo"]))
 
     def test_scaffold_rejects_unmappable_component(self):
@@ -637,6 +648,179 @@ class RecipeScaffoldTest(unittest.TestCase):
         }
         with self.assertRaises(RecipeError):
             recipe_skeleton_from_analysis(record)
+
+
+class _FakeProvider:
+    """A provider stub that replays canned JSON responses (no network)."""
+
+    name = "fake"
+    model = "fake-1"
+
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.calls = []
+
+    def complete_json(self, system, user, *, schema=None):
+        self.calls.append({"system": system, "user": user, "schema": schema})
+        if not self._responses:
+            raise AssertionError("no more canned responses")
+        return self._responses.pop(0)
+
+
+class LLMRecipeTest(unittest.TestCase):
+    CARD = {
+        "meta": {
+            "id": "example/demucs",
+            "author": "example",
+            "pipeline_tag": "audio-to-audio",
+            "library_name": "demucs",
+            "license": "mit",
+            "tags": ["audio-to-audio"],
+        },
+        "files": ["app.py", "model.th"],
+        "readme": "Demucs separates a song into stems.",
+    }
+
+    VALID_RECIPE = {
+        # No "model" key on purpose: the agent must backfill it from the card.
+        "framework": {"import": "demucs", "pip": ["demucs"], "gpu": True},
+        "inputs": [{"name": "input_audio", "type": "audio", "label": "In", "required": True}],
+        "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+        "inference": {"setup": "MODEL = None", "body": "return input_audio"},
+    }
+
+    def _context(self):
+        return RecipeGenerationContext.from_card(
+            self.CARD, target_inputs=["audio"], target_outputs=["audio"]
+        )
+
+    def test_from_card_extracts_grounding(self):
+        context = self._context()
+        self.assertEqual(context.model_id, "example/demucs")
+        self.assertEqual(context.author, "example")
+        self.assertEqual(context.pipeline_tag, "audio-to-audio")
+        self.assertEqual(context.target_inputs, ["audio"])
+        prompt = build_recipe_user_prompt(context)
+        self.assertIn("example/demucs", prompt)
+        self.assertIn("audio-to-audio", prompt)
+
+    def test_generates_and_backfills_on_first_try(self):
+        provider = _FakeProvider([self.VALID_RECIPE])
+        draft = generate_recipe(self._context(), provider, max_repairs=2)
+
+        self.assertEqual(draft.attempts, 1)
+        self.assertEqual(draft.provider, "fake")
+        # Model card fields were backfilled from the card.
+        self.assertEqual(draft.recipe["model"]["id"], "example/demucs")
+        self.assertEqual(draft.recipe["model"]["author"], "example")
+        # The rendered wrapper compiles and reflects the recipe.
+        compile(draft.app_py, "<llm>", "exec")
+        self.assertIn("from pyharp import *", draft.app_py)
+        self.assertIn("@spaces.GPU", draft.app_py)
+
+    def test_repairs_an_invalid_first_response(self):
+        invalid = {"framework": {}, "inputs": [], "outputs": []}  # missing inference + components
+        provider = _FakeProvider([invalid, self.VALID_RECIPE])
+        draft = generate_recipe(self._context(), provider, max_repairs=2)
+
+        self.assertEqual(draft.attempts, 2)
+        # The repair prompt fed the validation error back to the model.
+        self.assertIn("failed validation", provider.calls[1]["user"])
+
+    def test_raises_after_exhausting_repairs(self):
+        invalid = {"inputs": [], "outputs": [], "inference": {}}
+        provider = _FakeProvider([invalid, invalid])
+        with self.assertRaises(LLMError):
+            generate_recipe(self._context(), provider, max_repairs=1)
+
+    def test_provider_from_env_requires_configuration(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(LLMError):
+                provider_from_env()
+
+    def test_provider_from_env_auto_detects_key(self):
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
+            provider = provider_from_env()
+            self.assertEqual(provider.name, "openai")
+
+    def test_default_examples_load_and_render(self):
+        examples = default_examples()
+        self.assertTrue(examples)
+        for example in examples:
+            render_app_from_recipe(example)
+
+
+class CompleteRecipeTest(unittest.TestCase):
+    def _scaffold(self):
+        # Mimic scaffold-recipe output: resolved I/O + TODO stubs.
+        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
+        return recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
+
+    def test_completion_fills_stubs_and_preserves_io(self):
+        scaffold = self._scaffold()
+        base_inputs = [(spec["name"], spec["type"]) for spec in scaffold["inputs"]]
+        base_outputs = [(spec["name"], spec["type"]) for spec in scaffold["outputs"]]
+
+        # The LLM tries to change the I/O contract and fill the glue; the
+        # completion must keep the scaffold's I/O while taking the inference glue.
+        llm_response = {
+            "model": {"description": "Real description from the LLM."},
+            "framework": {"import": "demucs", "pip": ["demucs", "torch"], "gpu": True},
+            "inputs": [{"name": "rogue", "type": "textbox", "label": "Rogue"}],
+            "outputs": [{"name": "rogue_out", "type": "audio", "label": "Rogue"}],
+            "inference": {
+                "setup": "import demucs\nMODEL = None",
+                "body": "return input_audio, input_audio, LabelList().to_json()",
+            },
+        }
+        provider = _FakeProvider([llm_response])
+        draft = complete_recipe(scaffold, provider, max_repairs=1)
+
+        self.assertEqual(draft.attempts, 1)
+        # I/O contract preserved from the scaffold (not the LLM's rogue shapes).
+        self.assertEqual([(s["name"], s["type"]) for s in draft.recipe["inputs"]], base_inputs)
+        self.assertEqual([(s["name"], s["type"]) for s in draft.recipe["outputs"]], base_outputs)
+        # Glue + framework taken from the LLM.
+        self.assertEqual(draft.recipe["framework"]["pip"], ["demucs", "torch"])
+        self.assertIn("import demucs", draft.recipe["inference"]["setup"])
+        self.assertEqual(draft.recipe["model"]["description"], "Real description from the LLM.")
+        # No scaffold meta leaks into the finished recipe.
+        self.assertNotIn("_todo", draft.recipe)
+        compile(draft.app_py, "<complete>", "exec")
+
+    def test_completion_fills_dropdown_choices_when_scaffold_stubbed_them(self):
+        # A scaffold whose dropdown choices could not be resolved statically.
+        scaffold = {
+            "_todo": ["inputs.mode.choices: set the real dropdown options"],
+            "model": {"id": "ex/m", "name": "M"},
+            "framework": {"import": "TODO", "pip": ["TODO"], "gpu": False},
+            "inputs": [
+                {"name": "audio", "type": "audio", "label": "In", "required": True},
+                {
+                    "name": "mode",
+                    "type": "dropdown",
+                    "label": "Mode",
+                    "choices": ["TODO_option_1", "TODO_option_2"],
+                },
+            ],
+            "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+            "inference": {"setup": "x", "body": "y"},
+        }
+        llm_response = {
+            "framework": {"import": "pkg", "pip": ["pkg"]},
+            "inputs": [
+                {"name": "audio", "type": "audio", "label": "In"},
+                {"name": "mode", "type": "dropdown", "label": "Mode", "choices": ["fast", "slow"], "default": "fast"},
+            ],
+            "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+            "inference": {"setup": "MODEL = None", "body": "return audio"},
+        }
+        provider = _FakeProvider([llm_response])
+        draft = complete_recipe(scaffold, provider, max_repairs=1)
+
+        mode = draft.recipe["inputs"][1]
+        self.assertEqual(mode["choices"], ["fast", "slow"])
+        self.assertEqual(mode["default"], "fast")
 
 
 class ExampleRecipeFilesTest(unittest.TestCase):

@@ -18,6 +18,14 @@ from .agent import (
     write_json,
 )
 from .analyze import analyze_app_file, analyze_path
+from .llm import (
+    LLMError,
+    RecipeGenerationContext,
+    complete_recipe,
+    default_examples,
+    generate_recipe,
+    provider_from_env,
+)
 from .recipe import (
     RecipeError,
     build_package_from_recipe,
@@ -120,6 +128,97 @@ def build_parser() -> argparse.ArgumentParser:
         "--smoke-test",
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
+    )
+
+    llm_recipe = subparsers.add_parser(
+        "generate-recipe-from-llm",
+        help="Use an LLM to draft a recipe for any model, then validate + render it.",
+    )
+    llm_source = llm_recipe.add_mutually_exclusive_group(required=True)
+    llm_source.add_argument("--card", type=Path, help="Model-card JSON file (meta/readme/files).")
+    llm_source.add_argument("--repo", help="Hugging Face model repo id to fetch the card from (network).")
+    llm_recipe.add_argument(
+        "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
+    )
+    llm_recipe.add_argument(
+        "--outputs", default="", help="Comma-separated desired output types (e.g. audio,labels)."
+    )
+    llm_recipe.add_argument(
+        "--provider",
+        choices=["gemini", "anthropic", "openai"],
+        help="LLM provider (default: auto-detect from API key env vars).",
+    )
+    llm_recipe.add_argument(
+        "--llm-model", default=None, help="Provider model name (default: provider's default)."
+    )
+    llm_recipe.add_argument(
+        "--llm-timeout", type=float, default=120.0, help="LLM API timeout in seconds."
+    )
+    llm_recipe.add_argument(
+        "--temperature", type=float, default=0.2, help="LLM sampling temperature."
+    )
+    llm_recipe.add_argument(
+        "--max-repairs", type=int, default=2, help="Max validate/repair iterations."
+    )
+    llm_recipe.add_argument(
+        "--no-examples",
+        action="store_true",
+        help="Do not include corpus few-shot examples in the prompt.",
+    )
+    llm_recipe.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
+    llm_recipe.add_argument(
+        "--generate-package",
+        action="store_true",
+        help="Also render and write the wrapper package from the drafted recipe.",
+    )
+    llm_recipe.add_argument(
+        "--package-output",
+        type=Path,
+        default=Path("artifacts/model_agent/generated"),
+        help="Package output directory for --generate-package/--smoke-test.",
+    )
+    llm_recipe.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
+    )
+
+    complete = subparsers.add_parser(
+        "complete-recipe",
+        help="Use an LLM to fill the _todo stubs of a scaffolded recipe (preserves I/O).",
+    )
+    complete.add_argument("recipe", type=Path, help="Scaffolded recipe JSON (from scaffold-recipe).")
+    complete.add_argument(
+        "--card", type=Path, help="Optional model-card JSON to enrich the prompt with the README."
+    )
+    complete.add_argument(
+        "--repo", help="Optional Hugging Face repo id to fetch the card from (network)."
+    )
+    complete.add_argument(
+        "--provider",
+        choices=["gemini", "anthropic", "openai"],
+        help="LLM provider (default: auto-detect from API key env vars).",
+    )
+    complete.add_argument("--llm-model", default=None, help="Provider model name.")
+    complete.add_argument("--llm-timeout", type=float, default=120.0, help="LLM API timeout (s).")
+    complete.add_argument("--temperature", type=float, default=0.2, help="LLM sampling temperature.")
+    complete.add_argument("--max-repairs", type=int, default=2, help="Max validate/repair iterations.")
+    complete.add_argument("--output", type=Path, help="Optional completed recipe JSON output path.")
+    complete.add_argument(
+        "--generate-package",
+        action="store_true",
+        help="Also render and write the wrapper package from the completed recipe.",
+    )
+    complete.add_argument(
+        "--package-output",
+        type=Path,
+        default=Path("artifacts/model_agent/generated"),
+        help="Package output directory for --generate-package/--smoke-test.",
+    )
+    complete.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
 
     package_repo = subparsers.add_parser(
@@ -323,6 +422,50 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
+        if args.command == "generate-recipe-from-llm":
+            if args.card:
+                card = _read_json(args.card)
+            else:
+                card = agent.scraper.get_model_card(args.repo)
+                if card is None:
+                    raise SystemExit(f"Hugging Face model repo not found: {args.repo}")
+
+            context = RecipeGenerationContext.from_card(
+                card,
+                target_inputs=_split_csv(args.inputs),
+                target_outputs=_split_csv(args.outputs),
+                examples=[] if args.no_examples else default_examples(),
+            )
+            provider = provider_from_env(
+                args.provider,
+                model=args.llm_model,
+                timeout=args.llm_timeout,
+                temperature=args.temperature,
+            )
+            draft = generate_recipe(context, provider, max_repairs=args.max_repairs)
+            return _emit_recipe_draft(agent, draft, args)
+
+        if args.command == "complete-recipe":
+            base = _read_json(args.recipe)
+            context = None
+            if args.card:
+                context = RecipeGenerationContext.from_card(_read_json(args.card))
+            elif args.repo:
+                card = agent.scraper.get_model_card(args.repo)
+                if card is None:
+                    raise SystemExit(f"Hugging Face model repo not found: {args.repo}")
+                context = RecipeGenerationContext.from_card(card)
+            provider = provider_from_env(
+                args.provider,
+                model=args.llm_model,
+                timeout=args.llm_timeout,
+                temperature=args.temperature,
+            )
+            draft = complete_recipe(
+                base, provider, context=context, max_repairs=args.max_repairs
+            )
+            return _emit_recipe_draft(agent, draft, args)
+
         if args.command == "package-repo":
             package = agent.build_generated_app_package_for_repo(args.repo)
             folder = agent.write_generated_app_package(package, args.output)
@@ -384,6 +527,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     except RecipeError as exc:
         print(f"Recipe invalid: {exc}", file=sys.stderr)
         return 2
+    except LLMError as exc:
+        print(f"LLM recipe generation failed: {exc}", file=sys.stderr)
+        return 2
     except ValueError as exc:
         print(f"Packaging failed: {exc}", file=sys.stderr)
         return 2
@@ -395,6 +541,30 @@ def main(argv: Iterable[str] | None = None) -> int:
         return 2
 
     return 1
+
+
+def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
+    """Shared output for the LLM recipe commands: write/print + optional package."""
+
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        write_json(args.output, draft.recipe)
+
+    result = {
+        "recipe": draft.recipe,
+        "provider": draft.provider,
+        "llm_model": draft.model,
+        "attempts": draft.attempts,
+        "recipe_output": str(args.output) if args.output else None,
+    }
+    if getattr(args, "generate_package", False) or getattr(args, "smoke_test", False):
+        package = build_package_from_recipe(draft.recipe)
+        folder = agent.write_generated_app_package(package, args.package_output)
+        result["package"] = str(folder)
+        if args.smoke_test:
+            result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+    _emit_json(result, None)
+    return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
 
 def _run_smoke_test(
@@ -530,6 +700,10 @@ def _emit_json(payload: object, output: Path | None) -> None:
 
 def _read_json(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _split_csv(value: str) -> List[str]:
+    return [item.strip() for item in str(value or "").split(",") if item.strip()]
 
 
 def _models_from_file(path: Path) -> List[str]:

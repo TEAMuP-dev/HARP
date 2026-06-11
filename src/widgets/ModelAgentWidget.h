@@ -312,6 +312,47 @@ private:
                 { "--startup-timeout", "Startup timeout (s)", Field::Int, Browse::None, "180", "", false } },
               true });
 
+        specs.push_back(
+            { "scaffold-recipe",
+              "Build a recipe skeleton from a harvested app.py (fills I/O, stubs inference).",
+              { { "", "Harvested app.py", Field::Text, Browse::OpenFile, "", "path to app.py", true },
+                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "recipe.json", false } } });
+
+        specs.push_back(
+            { "render-recipe",
+              "Render a pyharp app.py from a recipe JSON.",
+              { { "", "Recipe JSON", Field::Text, Browse::OpenFile, "", "recipe.json", true },
+                { "--output", "Output app.py", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+
+        specs.push_back(
+            { "generate-recipe",
+              "Write app.py, requirements, and manifest from a recipe JSON.",
+              { { "", "Recipe JSON", Field::Text, Browse::OpenFile, "", "recipe.json", true },
+                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "package folder", false },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+              true });
+
+        specs.push_back(
+            { "generate-recipe-from-llm",
+              "LLM-draft a recipe for any model (needs GEMINI/ANTHROPIC/OPENAI API key).",
+              { { "--repo", "Repo id", Field::Text, Browse::None, "", "author/model (or use --card)", false },
+                { "--card", "Card JSON", Field::Text, Browse::OpenFile, "", "model card json", false },
+                { "--inputs", "Input types", Field::Text, Browse::None, "", "e.g. audio,slider", false },
+                { "--outputs", "Output types", Field::Text, Browse::None, "", "e.g. audio,labels", false },
+                { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },
+                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "recipe.json", false } } });
+
+        specs.push_back(
+            { "complete-recipe",
+              "LLM-fill the _todo stubs of a scaffolded recipe (preserves I/O).",
+              { { "", "Scaffold recipe", Field::Text, Browse::OpenFile, "", "recipe.json with _todo", true },
+                { "--repo", "Repo id (context)", Field::Text, Browse::None, "", "optional, for README", false },
+                { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },
+                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "completed.json", false },
+                { "--generate-package", "Write package", Field::Flag, Browse::None, "0", "", false },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+              true });
+
         return specs;
     }
 

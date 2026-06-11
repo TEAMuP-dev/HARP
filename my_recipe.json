@@ -31,6 +31,7 @@
         "TODO_option_1",
         "TODO_option_2"
       ],
+      "info": "Choose which Demucs variant to use for separation:\n1. htdemucs: High-quality Hybrid Transformer Demucs trained on MusDB + 800 songs.\n2. mdx_extra: Trained with extended data. Balanced model offering a clear trade-off between quality and speed.\n3. mdx_extra_q: Quantized lightweight version of mdx_extra.\n",
       "label": "Demucs Model",
       "name": "demucs_model",
       "type": "dropdown"

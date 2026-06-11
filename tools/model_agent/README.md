@@ -33,6 +33,10 @@ The agent is intentionally conservative:
 - `recipe.py` renders a runnable pyharp `app.py` (and the rest of a Space
   package) from a declarative recipe JSON describing inputs, outputs, framework,
   and inference glue.
+- `llm.py` is an *optional* layer that lets an LLM (Gemini/Claude/GPT) draft a
+  recipe for arbitrary frameworks, then runs it through the deterministic
+  validate -> render -> repair loop. Providers use `urllib` only; the module is
+  never imported during normal offline use of the core.
 - `cli.py` exposes the core behavior as terminal commands.
 - `__main__.py` lets you run the package with `python3 -m tools.model_agent`.
 - `tests/test_agent.py` protects the behavior that is easiest to break while
@@ -243,6 +247,61 @@ recipe-eligible wrappers can be scaffolded (the ones `analyze` resolves
 cleanly); `dynamic`/unresolved wrappers are refused with the reason. The result
 is itself a valid recipe that renders to a stub wrapper raising
 `NotImplementedError`, so you can fill in the `_todo` items incrementally.
+
+#### LLM-drafted recipes (for the long tail of frameworks)
+
+Hardcoded templates only cover a few frameworks; `render-app` raises
+`NotImplementedError` for everything else. For arbitrary models (PyTorch Hub,
+Transformers, Diffusers, custom GitHub repos, ...), `generate-recipe-from-llm`
+asks an LLM to draft a **recipe** — specifically the model-specific
+`inference.setup` (imports + model loading) and `inference.body` (the
+`process_fn` body) — and then runs the draft through the same deterministic
+`validate -> render -> compile` pipeline, feeding any error back to the model
+for a bounded number of repairs. The LLM proposes; the pipeline disposes:
+
+```bash
+export GEMINI_API_KEY=...        # or ANTHROPIC_API_KEY / OPENAI_API_KEY
+python3 -m tools.model_agent generate-recipe-from-llm \
+  --repo facebook/demucs --inputs audio --outputs audio,labels \
+  --output artifacts/model_agent/recipes/demucs.json
+```
+
+Provide the model card with `--card <file.json>` (offline) or `--repo <hf-id>`
+(fetches the card from Hugging Face). The provider is auto-detected from whichever
+API key env var is set, or forced with `--provider gemini|anthropic|openai` and
+`--llm-model <name>`. The drafted recipe is grounded with the real model card,
+the repo file list, your desired I/O types, and a couple of committed example
+recipes as few-shot exemplars (disable with `--no-examples`).
+
+The result is a normal recipe — reviewable, diffable, and re-renderable offline —
+not opaque generated code. Add `--generate-package` to also write the wrapper
+package, and `--smoke-test` to launch and verify it (runs downloaded code; review
+or sandbox first). This is the long-tail fallback; the deterministic templates
+and hand-written recipes remain the fast, reproducible, offline path.
+
+##### Filling a scaffold's TODOs with an LLM
+
+`scaffold-recipe` and the LLM compose naturally: the scaffold deterministically
+pins the input/output contract from a *real, working* wrapper and leaves the
+dependencies and inference glue as `_todo` stubs; `complete-recipe` then asks an
+LLM to fill exactly those stubs. The resolved I/O is preserved verbatim (the LLM
+cannot change component names/types/order); it only supplies `framework`,
+`inference.setup`/`body`, and any values the scaffold flagged as TODO (e.g.
+unresolved dropdown choices):
+
+```bash
+python3 -m tools.model_agent scaffold-recipe \
+  artifacts/model_agent/harvest/teamup-tech-demucs-source-separation/app.py \
+  --output demucs_scaffold.json
+
+python3 -m tools.model_agent complete-recipe demucs_scaffold.json \
+  --repo facebook/demucs --output demucs_recipe.json
+```
+
+This is usually more reliable than `generate-recipe-from-llm` from scratch,
+because the contract the LLM must satisfy is already fixed by static analysis —
+the model only has to write the loading and inference code. `--card`/`--repo`
+optionally enrich the prompt with the model's README.
 
 Smoke-test a generated package (launches `app.py` and verifies HARP controls).
 This runs downloaded third-party code, so only do it after review or inside a
