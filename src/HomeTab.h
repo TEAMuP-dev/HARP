@@ -17,6 +17,198 @@
 
 using namespace juce;
 
+class TagLabel : public Component
+{
+public:
+    TagLabel(const String& text) : tagText(text)
+    {
+        setSize(font.getStringWidth(tagText) + 12, 18);
+    }
+
+    void paint(Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat().reduced(0.5f);
+        g.setColour(Colour(0xff2d2d35));
+        g.fillRoundedRectangle(bounds, 4.0f);
+        g.setColour(Colour(0xff4f46e5).withAlpha(0.4f));
+        g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+
+        g.setColour(Colour(0xffa5b4fc));
+        g.setFont(font);
+        g.drawText(tagText, getLocalBounds(), Justification::centred, true);
+    }
+
+private:
+    String tagText;
+    Font font { 10.0f, Font::bold };
+};
+
+class CategoryChip : public Button
+{
+public:
+    CategoryChip(const String& name, bool selected)
+        : Button(name), isSelected(selected)
+    {
+    }
+
+    void setSelected(bool selected)
+    {
+        if (isSelected != selected)
+        {
+            isSelected = selected;
+            repaint();
+        }
+    }
+
+    bool getSelected() const { return isSelected; }
+
+    void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        auto bounds = getLocalBounds().toFloat().reduced(1.0f);
+        
+        Colour bg;
+        Colour textColour;
+        
+        if (isSelected)
+        {
+            bg = Colour(0xff4f46e5);
+            textColour = Colours::white;
+        }
+        else if (shouldDrawButtonAsHighlighted || shouldDrawButtonAsDown)
+        {
+            bg = Colour(0xff2d2d30);
+            textColour = Colours::white;
+        }
+        else
+        {
+            bg = Colour(0xff1e1e24);
+            textColour = Colours::lightgrey;
+        }
+
+        g.setColour(bg);
+        g.fillRoundedRectangle(bounds, bounds.getHeight() * 0.5f);
+
+        g.setColour(isSelected ? Colour(0xff818cf8) : Colours::white.withAlpha(0.1f));
+        g.drawRoundedRectangle(bounds, bounds.getHeight() * 0.5f, 1.0f);
+
+        g.setColour(textColour);
+        g.setFont(Font(13.0f, Font::bold));
+        g.drawText(getName(), getLocalBounds(), Justification::centred, true);
+    }
+
+private:
+    bool isSelected = false;
+};
+
+class CategoryFilterBar : public Component
+{
+public:
+    CategoryFilterBar(std::function<void(String)> onCategorySelectedCallback)
+        : onCategorySelected(std::move(onCategorySelectedCallback))
+    {
+        categories = {
+            "All",
+            "Generation",
+            "Performance Rendering and Synthesis",
+            "Effects",
+            "Enhancement",
+            "Production",
+            "Source Separation",
+            "Analysis",
+            "Custom"
+        };
+
+        for (int i = 0; i < categories.size(); ++i)
+        {
+            auto chip = std::make_unique<CategoryChip>(categories[i], i == 0);
+            chip->onClick = [this, category = categories[i]]
+            {
+                selectCategory(category);
+            };
+            addAndMakeVisible(*chip);
+            chips.push_back(std::move(chip));
+        }
+    }
+
+    void selectCategory(const String& category)
+    {
+        for (auto& chip : chips)
+        {
+            chip->setSelected(chip->getName() == category);
+        }
+
+        if (onCategorySelected)
+            onCategorySelected(category);
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds();
+        int x = 0;
+        int y = 0;
+        int rowHeight = 28;
+        int spacingX = 6;
+        int spacingY = 6;
+
+        for (auto& chip : chips)
+        {
+            int chipWidth = Font(13.0f, Font::bold).getStringWidth(chip->getName()) + 24;
+            
+            if (x + chipWidth > area.getWidth() && x > 0)
+            {
+                x = 0;
+                y += rowHeight + spacingY;
+            }
+
+            chip->setBounds(x, y, chipWidth, rowHeight);
+            x += chipWidth + spacingX;
+        }
+        
+        int newHeight = y + rowHeight;
+        if (newHeight != preferredHeight)
+        {
+            preferredHeight = newHeight;
+            MessageManager::callAsync([this]()
+            {
+                if (auto* parent = getParentComponent())
+                    parent->resized();
+            });
+        }
+    }
+
+    int getPreferredHeight() const { return preferredHeight; }
+
+private:
+    std::vector<String> categories;
+    std::vector<std::unique_ptr<CategoryChip>> chips;
+    std::function<void(String)> onCategorySelected;
+    int preferredHeight = 28;
+};
+
+class CategoryHeader : public Component
+{
+public:
+    CategoryHeader(const String& name) : categoryName(name) {}
+
+    void paint(Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat();
+        
+        g.setColour(Colours::white);
+        g.setFont(Font(16.0f, Font::bold));
+        g.drawText(categoryName, getLocalBounds().reduced(4, 0), Justification::centredLeft, true);
+        
+        auto textWidth = Font(16.0f, Font::bold).getStringWidth(categoryName);
+        g.setColour(Colour(0xff4f46e5).withAlpha(0.6f));
+        g.fillRect(textWidth + 12.0f, bounds.getCentreY() - 1.0f, bounds.getWidth() - textWidth - 16.0f, 2.0f);
+    }
+
+    static constexpr int preferredHeight = 32;
+
+private:
+    String categoryName;
+};
+
 class ModelRegistryCard : public Component
 {
 public:
@@ -51,6 +243,13 @@ public:
                 onLoad(entry);
         };
         addAndMakeVisible(loadButton);
+
+        for (const auto& tag : entry.tags)
+        {
+            auto label = std::make_unique<TagLabel>(tag);
+            addAndMakeVisible(*label);
+            tagLabels.push_back(std::move(label));
+        }
     }
 
     void paint(Graphics& g) override
@@ -70,7 +269,14 @@ public:
         auto buttonArea = area.removeFromRight(92);
         loadButton.setBounds(buttonArea.withSizeKeepingCentre(80, 30));
 
-        providerLabel.setBounds(area.removeFromTop(18));
+        auto topRow = area.removeFromTop(18);
+        providerLabel.setBounds(topRow.removeFromLeft(150));
+        
+        for (auto& tagLabel : tagLabels)
+        {
+            tagLabel->setBounds(topRow.removeFromRight(tagLabel->getWidth() + 4).reduced(0, 1));
+        }
+
         nameLabel.setBounds(area.removeFromTop(24));
         summaryLabel.setBounds(area.removeFromTop(24));
         pathLabel.setBounds(area.removeFromTop(18));
@@ -87,22 +293,39 @@ private:
     Label summaryLabel;
     Label pathLabel;
     TextButton loadButton;
+    std::vector<std::unique_ptr<TagLabel>> tagLabels;
 };
 
 class ModelRegistryList : public Component
 {
 public:
-    void setEntries(std::vector<ModelRegistry::Entry> newEntries,
-                    std::function<void(ModelRegistry::Entry)> loadCallback)
+    struct Section
     {
-        cards.clear();
+        String category;
+        std::vector<ModelRegistry::Entry> entries;
+    };
+
+    void setSections(std::vector<Section> newSections,
+                     std::function<void(ModelRegistry::Entry)> loadCallback)
+    {
+        items.clear();
         removeAllChildren();
 
-        for (auto& entry : newEntries)
+        for (auto& sec : newSections)
         {
-            auto card = std::make_unique<ModelRegistryCard>(std::move(entry), loadCallback);
-            addAndMakeVisible(*card);
-            cards.push_back(std::move(card));
+            if (sec.entries.empty())
+                continue;
+
+            auto header = std::make_unique<CategoryHeader>(sec.category);
+            addAndMakeVisible(*header);
+            items.push_back(std::move(header));
+
+            for (auto& entry : sec.entries)
+            {
+                auto card = std::make_unique<ModelRegistryCard>(std::move(entry), loadCallback);
+                addAndMakeVisible(*card);
+                items.push_back(std::move(card));
+            }
         }
 
         resized();
@@ -113,17 +336,30 @@ public:
     {
         auto area = getLocalBounds();
 
-        for (auto& card : cards)
-            card->setBounds(area.removeFromTop(ModelRegistryCard::preferredHeight).reduced(0, 4));
+        for (auto& item : items)
+        {
+            if (dynamic_cast<CategoryHeader*>(item.get()))
+                item->setBounds(area.removeFromTop(CategoryHeader::preferredHeight));
+            else if (dynamic_cast<ModelRegistryCard*>(item.get()))
+                item->setBounds(area.removeFromTop(ModelRegistryCard::preferredHeight).reduced(0, 4));
+        }
     }
 
     int getRequiredHeight() const
     {
-        return static_cast<int>(cards.size()) * ModelRegistryCard::preferredHeight;
+        int height = 0;
+        for (const auto& item : items)
+        {
+            if (dynamic_cast<CategoryHeader*>(item.get()))
+                height += CategoryHeader::preferredHeight;
+            else if (dynamic_cast<ModelRegistryCard*>(item.get()))
+                height += ModelRegistryCard::preferredHeight;
+        }
+        return height;
     }
 
 private:
-    std::vector<std::unique_ptr<ModelRegistryCard>> cards;
+    std::vector<std::unique_ptr<Component>> items;
 };
 
 class HomeTab : public Component,
@@ -157,6 +393,7 @@ public:
         addAndMakeVisible(subtitleLabel);
         addAndMakeVisible(searchEditor);
         addAndMakeVisible(customPathButton);
+        addAndMakeVisible(categoryFilterBar);
         addAndMakeVisible(viewport);
 
         rebuildModelList();
@@ -181,6 +418,9 @@ public:
         searchEditor.setBounds(searchRow);
 
         area.removeFromTop(10);
+        categoryFilterBar.setBounds(area.removeFromTop(categoryFilterBar.getPreferredHeight()));
+
+        area.removeFromTop(10);
         viewport.setBounds(area);
 
         updateListBounds();
@@ -190,6 +430,7 @@ public:
     {
         searchEditor.setEnabled(true);
         customPathButton.setEnabled(true);
+        categoryFilterBar.setEnabled(true);
         viewport.setEnabled(true);
     }
 
@@ -211,6 +452,7 @@ private:
     {
         searchEditor.setEnabled(false);
         customPathButton.setEnabled(false);
+        categoryFilterBar.setEnabled(false);
         viewport.setEnabled(false);
 
         if (onModelLoadRequested)
@@ -235,10 +477,84 @@ private:
                     .toLowerCase();
 
             if (searchText.isEmpty() || searchableText.contains(searchText))
-                entries.push_back(std::move(entry));
+            {
+                if (activeCategory == "All")
+                {
+                    entries.push_back(std::move(entry));
+                }
+                else if (activeCategory == "Custom")
+                {
+                    if (entry.tags.empty())
+                        entries.push_back(std::move(entry));
+                }
+                else
+                {
+                    bool matchesCategory = false;
+                    for (const auto& tag : entry.tags)
+                    {
+                        if (tag == activeCategory)
+                        {
+                            matchesCategory = true;
+                            break;
+                        }
+                    }
+                    if (matchesCategory)
+                        entries.push_back(std::move(entry));
+                }
+            }
         }
 
-        modelList.setEntries(std::move(entries),
+        std::vector<ModelRegistryList::Section> sections;
+        std::vector<String> categoriesToShow;
+        
+        if (activeCategory == "All")
+        {
+            categoriesToShow = {
+                "Generation",
+                "Performance Rendering and Synthesis",
+                "Effects",
+                "Enhancement",
+                "Production",
+                "Source Separation",
+                "Analysis",
+                "Custom"
+            };
+        }
+        else
+        {
+            categoriesToShow = { activeCategory };
+        }
+
+        for (const auto& cat : categoriesToShow)
+        {
+            ModelRegistryList::Section sec;
+            sec.category = cat;
+            
+            for (const auto& entry : entries)
+            {
+                if (cat == "Custom")
+                {
+                    if (entry.tags.empty())
+                        sec.entries.push_back(entry);
+                }
+                else
+                {
+                    for (const auto& tag : entry.tags)
+                    {
+                        if (tag == cat)
+                        {
+                            sec.entries.push_back(entry);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (! sec.entries.empty())
+                sections.push_back(std::move(sec));
+        }
+
+        modelList.setSections(std::move(sections),
                              [this](ModelRegistry::Entry entry) { requestModelLoad(entry); });
         updateListBounds();
     }
@@ -276,6 +592,8 @@ private:
     Label subtitleLabel;
     TextEditor searchEditor;
     TextButton customPathButton;
+    CategoryFilterBar categoryFilterBar { [this](String cat) { activeCategory = cat; rebuildModelList(); } };
+    String activeCategory { "All" };
     Viewport viewport;
     ModelRegistryList modelList;
 
