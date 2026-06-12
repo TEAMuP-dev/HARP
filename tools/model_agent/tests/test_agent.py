@@ -750,6 +750,23 @@ class LLMRecipeTest(unittest.TestCase):
             self.assertEqual(provider.name, "gemini")
             self.assertNotIn("1.5", provider.model)
 
+    def test_gemini_does_not_send_strict_response_schema(self):
+        # A strict responseSchema makes Gemini strip undeclared fields off our
+        # polymorphic components, yielding empty {} objects. JSON mode only.
+        captured = {}
+
+        def fake_post(url, payload, headers, timeout):
+            captured["payload"] = payload
+            return {"candidates": [{"content": {"parts": [{"text": "{}"}]}}]}
+
+        with mock.patch("tools.model_agent.llm._http_post_json", side_effect=fake_post):
+            provider = GeminiProvider(api_key="k", model="gemini-2.5-flash")
+            provider.complete_json("sys", "user", schema={"type": "object"})
+
+        config = captured["payload"]["generationConfig"]
+        self.assertNotIn("responseSchema", config)
+        self.assertEqual(config["responseMimeType"], "application/json")
+
     def test_gemini_list_models_filters_generate_content(self):
         payload = {
             "models": [

@@ -148,12 +148,15 @@ class GeminiProvider(LLMProvider):
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model}:generateContent?key={self.api_key}"
         )
+        # Use JSON mode but DO NOT attach a strict responseSchema: Gemini's
+        # structured output drops any field not declared in the schema, and our
+        # recipe components are polymorphic (different fields per type), so a
+        # strict schema would strip name/type/label and yield empty objects.
+        # The detailed system prompt + few-shot examples constrain the shape.
         generation_config: JSON = {
             "responseMimeType": "application/json",
             "temperature": self.temperature,
         }
-        if schema:
-            generation_config["responseSchema"] = schema
         payload = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}],
