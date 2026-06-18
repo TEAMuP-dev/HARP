@@ -9,9 +9,11 @@ from typing import Iterable, List
 from urllib.error import HTTPError, URLError
 
 from .agent import (
+    DeploySpaceError,
     EndpointProbeError,
     HarpModelAgent,
     SmokeTestResult,
+    VenvSetupError,
     build_generated_app_package,
     render_pyharp_app,
     score_compatibility,
@@ -32,6 +34,15 @@ from .recipe import (
     recipe_skeleton_from_analysis,
     render_app_from_recipe,
 )
+
+
+def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--venv",
+        action="store_true",
+        help="Run the smoke-test in an isolated, cached venv built from the package's "
+        "requirements.txt (never installs into your active environment).",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -98,6 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
     )
+    _add_venv_flag(generate)
 
     scaffold_recipe = subparsers.add_parser(
         "scaffold-recipe",
@@ -129,6 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
     )
+    _add_venv_flag(generate_recipe)
 
     llm_recipe = subparsers.add_parser(
         "generate-recipe-from-llm",
@@ -182,6 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
+    _add_venv_flag(llm_recipe)
 
     list_models = subparsers.add_parser(
         "list-models",
@@ -231,6 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
+    _add_venv_flag(complete)
 
     package_repo = subparsers.add_parser(
         "package-repo",
@@ -248,6 +263,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
     )
+    _add_venv_flag(package_repo)
 
     harvest = subparsers.add_parser(
         "harvest",
@@ -327,6 +343,34 @@ def build_parser() -> argparse.ArgumentParser:
         default=180.0,
         help="Seconds to wait for the Gradio URL before failing.",
     )
+    _add_venv_flag(smoke)
+
+    deploy = subparsers.add_parser(
+        "deploy-space",
+        help="Push a generated package to a Hugging Face Space (needs huggingface_hub + a write token).",
+    )
+    deploy.add_argument("package", type=Path, help="Path to a generated package folder.")
+    deploy.add_argument(
+        "--repo",
+        required=True,
+        help="Target Space id, e.g. your-username/your-space-name.",
+    )
+    deploy.add_argument(
+        "--token",
+        default=None,
+        help="HF write token (defaults to HF_TOKEN / HUGGING_FACE_HUB_TOKEN env, or cached login).",
+    )
+    deploy.add_argument(
+        "--private",
+        action="store_true",
+        help="Create the Space as private.",
+    )
+    deploy.add_argument("--sdk", default="gradio", help="Space SDK (default: gradio).")
+    deploy.add_argument(
+        "--message",
+        default="Deploy HARP wrapper via model agent",
+        help="Commit message for the upload.",
+    )
 
     return parser
 
@@ -398,7 +442,9 @@ def main(argv: Iterable[str] | None = None) -> int:
             folder = agent.write_generated_app_package(package, args.output)
             result = {"package": str(folder), "framework": package.framework}
             if args.smoke_test:
-                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+                result["smoke_test"] = _run_smoke_test(
+                    agent, folder, use_venv=getattr(args, "venv", False)
+                ).to_json()
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
@@ -429,7 +475,9 @@ def main(argv: Iterable[str] | None = None) -> int:
             folder = agent.write_generated_app_package(package, args.output)
             result = {"package": str(folder), "framework": package.framework}
             if args.smoke_test:
-                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+                result["smoke_test"] = _run_smoke_test(
+                    agent, folder, use_venv=getattr(args, "venv", False)
+                ).to_json()
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
@@ -483,7 +531,9 @@ def main(argv: Iterable[str] | None = None) -> int:
                 "framework": package.framework,
             }
             if args.smoke_test:
-                result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+                result["smoke_test"] = _run_smoke_test(
+                    agent, folder, use_venv=getattr(args, "venv", False)
+                ).to_json()
             _emit_json(result, None)
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
@@ -525,10 +575,32 @@ def main(argv: Iterable[str] | None = None) -> int:
                 args.package,
                 python_executable=args.python_executable,
                 startup_timeout_s=args.startup_timeout,
+                use_venv=args.venv,
             )
             _emit_json(result.to_json(), None)
             return 0 if result.ok else 4
 
+        if args.command == "deploy-space":
+            print(
+                "Deploying to a Hugging Face Space (creates/updates a remote repo "
+                "under your account)...",
+                file=sys.stderr,
+            )
+            result = agent.deploy_space(
+                args.package,
+                args.repo,
+                token=args.token,
+                private=args.private,
+                space_sdk=args.sdk,
+                commit_message=args.message,
+                log=lambda message: print(f"  [deploy] {message}", file=sys.stderr),
+            )
+            _emit_json(result, None)
+            return 0
+
+    except DeploySpaceError as exc:
+        print(f"Space deploy failed: {exc}", file=sys.stderr)
+        return 2
     except EndpointProbeError as exc:
         print(f"Endpoint probe failed: {exc}", file=sys.stderr)
         return 2
@@ -589,7 +661,9 @@ def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
         folder = agent.write_generated_app_package(package, args.package_output)
         result["package"] = str(folder)
         if args.smoke_test:
-            result["smoke_test"] = _run_smoke_test(agent, folder).to_json()
+            result["smoke_test"] = _run_smoke_test(
+                agent, folder, use_venv=getattr(args, "venv", False)
+            ).to_json()
     _emit_json(result, None)
     return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
@@ -600,12 +674,26 @@ def _run_smoke_test(
     *,
     python_executable: str | None = None,
     startup_timeout_s: float = 180.0,
+    use_venv: bool = False,
 ) -> SmokeTestResult:
     print(
         "WARNING: smoke-test launches the generated app.py, which downloads and "
         "runs third-party model code. Only do this after review or in a sandbox.",
         file=sys.stderr,
     )
+    if use_venv and not python_executable:
+        print(
+            "Preparing isolated venv (first run installs requirements.txt; this can "
+            "take several minutes)...",
+            file=sys.stderr,
+        )
+        try:
+            python_executable = agent.ensure_package_venv(
+                package_dir,
+                log=lambda message: print(f"  [venv] {message}", file=sys.stderr),
+            )
+        except VenvSetupError as exc:
+            return SmokeTestResult(ok=False, error=f"venv setup failed: {exc}")
     return agent.smoke_test_package(
         package_dir,
         python_executable=python_executable,

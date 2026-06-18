@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import queue
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -10,7 +13,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -55,6 +58,14 @@ _PUBLIC_URL_RE = re.compile(r"https?://[\w.-]+\.gradio\.live")
 
 class EndpointProbeError(RuntimeError):
     """Raised when a candidate endpoint does not expose HARP controls."""
+
+
+class VenvSetupError(RuntimeError):
+    """Raised when building the isolated smoke-test venv fails (e.g. pip error)."""
+
+
+class DeploySpaceError(RuntimeError):
+    """Raised when deploying a generated package to a Hugging Face Space fails."""
 
 
 @dataclass
@@ -1062,6 +1073,197 @@ class HarpModelAgent:
             except subprocess.TimeoutExpired:
                 process.kill()
 
+    def ensure_package_venv(
+        self,
+        package_dir: Path,
+        *,
+        log: Optional[Callable[[str], None]] = None,
+    ) -> str:
+        """Build (or reuse) an isolated venv with the package's requirements.
+
+        Returns the path to the venv's Python interpreter. The venv lives in
+        ``<package_dir>/.venv`` and is keyed by a hash of ``requirements.txt``
+        (plus the host Python version) via a sentinel file, so repeated
+        smoke-tests reuse it instead of reinstalling heavy dependencies such as
+        torch. When the requirements change, the venv is rebuilt.
+
+        This NEVER installs into the active interpreter -- everything lands in
+        the throwaway venv. The dependency list is third-party/LLM-authored, so
+        callers should still treat the resulting smoke-test as running
+        untrusted code (review or sandbox first).
+        """
+
+        folder = Path(package_dir)
+        req_file = folder / "requirements.txt"
+        req_text = req_file.read_text(encoding="utf-8") if req_file.exists() else ""
+
+        digest = hashlib.sha256(
+            (sys.version + "\n" + req_text).encode("utf-8")
+        ).hexdigest()[:16]
+
+        venv_dir = folder / ".venv"
+        if os.name == "nt":
+            python_path = venv_dir / "Scripts" / "python.exe"
+        else:
+            python_path = venv_dir / "bin" / "python"
+        sentinel = venv_dir / ".harp-requirements.sha256"
+
+        def emit(message: str) -> None:
+            if log is not None:
+                log(message)
+
+        if (
+            python_path.exists()
+            and sentinel.exists()
+            and sentinel.read_text(encoding="utf-8").strip() == digest
+        ):
+            emit(f"reusing cached venv at {venv_dir}")
+            return str(python_path)
+
+        if venv_dir.exists():
+            emit(f"requirements changed; rebuilding venv at {venv_dir}")
+            shutil.rmtree(venv_dir, ignore_errors=True)
+
+        emit(f"creating venv at {venv_dir}")
+        self._run_pip([sys.executable, "-m", "venv", str(venv_dir)], log=emit)
+
+        # Upgrading pip is best-effort; an old pip should still install most wheels.
+        self._run_pip(
+            [str(python_path), "-m", "pip", "install", "--upgrade", "pip"],
+            log=emit,
+            check=False,
+        )
+
+        if req_text.strip():
+            emit("installing requirements.txt (first run may take several minutes)...")
+            self._run_pip(
+                [str(python_path), "-m", "pip", "install", "-r", str(req_file)],
+                log=emit,
+            )
+        else:
+            emit("requirements.txt is empty; venv created with no extra packages")
+
+        sentinel.write_text(digest, encoding="utf-8")
+        return str(python_path)
+
+    @staticmethod
+    def _run_pip(
+        cmd: List[str],
+        *,
+        log: Optional[Callable[[str], None]] = None,
+        check: bool = True,
+    ) -> None:
+        """Run a pip/venv subprocess, streaming output and raising on failure."""
+
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if log is not None and proc.stdout:
+            for line in proc.stdout.splitlines():
+                log(line)
+        if check and proc.returncode != 0:
+            raise VenvSetupError(
+                f"command failed (exit {proc.returncode}): {' '.join(cmd)}\n"
+                f"{_tail(proc.stdout or '')}"
+            )
+
+    def deploy_space(
+        self,
+        package_dir: Path,
+        repo_id: str,
+        *,
+        token: Optional[str] = None,
+        private: bool = False,
+        space_sdk: str = "gradio",
+        commit_message: str = "Deploy HARP wrapper via model agent",
+        log: Optional[Callable[[str], None]] = None,
+    ) -> JSON:
+        """Create (or reuse) a Hugging Face Space and upload a generated package.
+
+        The package folder already carries everything a Space needs (``app.py``,
+        ``requirements.txt``, a ``README.md`` with ``sdk: gradio`` front matter,
+        and ``packages.txt``), so deploying is: create the Space repo, then
+        upload the folder. The Space's own container installs the dependencies,
+        which lets users with Hugging Face access verify a wrapper without
+        installing anything locally.
+
+        Requires the optional ``huggingface_hub`` package and a write token
+        (passed via ``token`` or the ``HF_TOKEN`` / ``HUGGING_FACE_HUB_TOKEN``
+        environment variables, or an existing cached login).
+        """
+
+        folder = Path(package_dir)
+        app_py = folder / "app.py"
+        if not app_py.exists():
+            raise DeploySpaceError(f"app.py not found in {folder}")
+
+        repo_id = _normalize_space_repo_id(repo_id)
+        if repo_id.count("/") != 1 or not all(repo_id.split("/")):
+            raise DeploySpaceError(
+                f"Space id must look like 'username/space-name' (got '{repo_id}')."
+            )
+
+        try:
+            from huggingface_hub import HfApi
+        except ImportError as exc:  # optional dependency
+            raise DeploySpaceError(
+                "huggingface_hub is required to deploy to a Space. Install it with "
+                "`pip install huggingface_hub` (it is intentionally optional so the "
+                "rest of the agent stays dependency-free)."
+            ) from exc
+
+        resolved_token = (
+            token
+            or os.environ.get("HF_TOKEN")
+            or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        )
+
+        def emit(message: str) -> None:
+            if log is not None:
+                log(message)
+
+        api = HfApi(token=resolved_token)
+        try:
+            emit(f"creating/reusing Space {repo_id} (sdk={space_sdk}, private={private})")
+            api.create_repo(
+                repo_id=repo_id,
+                repo_type="space",
+                space_sdk=space_sdk,
+                private=private,
+                exist_ok=True,
+            )
+            emit("uploading package files...")
+            api.upload_folder(
+                repo_id=repo_id,
+                repo_type="space",
+                folder_path=str(folder),
+                commit_message=commit_message,
+                ignore_patterns=[
+                    ".venv/*",
+                    "**/.venv/*",
+                    "__pycache__/*",
+                    "**/__pycache__/*",
+                    "*.pyc",
+                ],
+            )
+        except DeploySpaceError:
+            raise
+        except Exception as exc:  # network/auth/permission errors from the hub
+            raise DeploySpaceError(f"Hugging Face Space deploy failed: {exc}") from exc
+
+        space_url = f"{HUGGING_FACE_BASE}/spaces/{repo_id}"
+        emit(f"deployed: {space_url}")
+        return {
+            "repo_id": repo_id,
+            "space_url": space_url,
+            "private": private,
+            "sdk": space_sdk,
+            "authenticated": bool(resolved_token),
+        }
+
     def harvest_space_apps(
         self,
         output_dir: Path,
@@ -1172,6 +1374,17 @@ def _normalize_hf_model_repo_id(value: str) -> str:
         raise ValueError("Expected a Hugging Face model repo, not a Space repo.")
     if repo_id.count("/") != 1:
         raise ValueError("Expected a Hugging Face repo id like 'author/model-name'.")
+    return repo_id
+
+
+def _normalize_space_repo_id(value: str) -> str:
+    """Reduce a Space URL/path to a bare ``username/space-name`` id."""
+
+    repo_id = value.strip().rstrip("/")
+    if repo_id.startswith(f"{HUGGING_FACE_BASE}/"):
+        repo_id = repo_id.removeprefix(f"{HUGGING_FACE_BASE}/")
+    if repo_id.startswith("spaces/"):
+        repo_id = repo_id.removeprefix("spaces/")
     return repo_id
 
 

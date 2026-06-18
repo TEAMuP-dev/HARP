@@ -269,7 +269,8 @@ private:
               "Write app.py, requirements, and manifest for a model card.",
               { { "", "Card JSON", Field::Text, Browse::OpenFile, "", "path to card.json", true },
                 { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "package folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
@@ -277,7 +278,8 @@ private:
               "Fetch a HF model repo and write a HARP Space package.",
               { { "", "Repo id", Field::Text, Browse::None, "", "author/model-name", true },
                 { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "Space folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
@@ -309,8 +311,18 @@ private:
             { "smoke-test",
               "Launch a generated package's app.py and verify HARP controls.",
               { { "", "Package dir", Field::Text, Browse::OpenDir, "", "generated package folder", true },
-                { "--startup-timeout", "Startup timeout (s)", Field::Int, Browse::None, "180", "", false } },
+                { "--startup-timeout", "Startup timeout (s)", Field::Int, Browse::None, "180", "", false },
+                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
               true });
+
+        specs.push_back(
+            { "deploy-space",
+              "Push a generated package to a Hugging Face Space (needs huggingface_hub + token).",
+              { { "", "Package dir", Field::Text, Browse::OpenDir, "", "generated package folder", true },
+                { "--repo", "Space id", Field::Text, Browse::None, "", "your-username/your-space", true },
+                { "--token", "HF token", Field::Text, Browse::None, "", "or set HF_TOKEN env", false },
+                { "--private", "Private Space", Field::Flag, Browse::None, "0", "", false },
+                { "--sdk", "SDK", Field::Text, Browse::None, "gradio", "", false } } });
 
         specs.push_back(
             { "scaffold-recipe",
@@ -329,7 +341,8 @@ private:
               "Write app.py, requirements, and manifest from a recipe JSON.",
               { { "", "Recipe JSON", Field::Text, Browse::OpenFile, "", "recipe.json", true },
                 { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "package folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
@@ -355,7 +368,8 @@ private:
                 { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },
                 { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "completed.json", false },
                 { "--generate-package", "Write package", Field::Flag, Browse::None, "0", "", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false } },
+                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         return specs;
@@ -371,7 +385,7 @@ private:
         bool active = false;
     };
 
-    static constexpr int maxRows = 6;
+    static constexpr int maxRows = 7;
 
     /* ---- Process thread ---- */
 

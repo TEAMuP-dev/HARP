@@ -1,5 +1,9 @@
 # HARP Model Agent
 
+> New here? Read [`OVERVIEW.md`](./OVERVIEW.md) first — a plain-language tour of
+> how model deployment works in HARP, with a pipeline diagram and a glossary.
+> This README is the command reference.
+
 `model_agent` discovers Hugging Face Spaces, probes HARP-compatible Gradio
 endpoints, scores raw Hugging Face models, and packages model metadata into
 reviewable artifacts.
@@ -320,8 +324,59 @@ sandbox/venv:
 python3 -m tools.model_agent smoke-test artifacts/model_agent/generated/example
 ```
 
-`generate-package` and `package-repo` also accept `--smoke-test` to run the same
-check immediately after writing the package.
+`generate-package`, `package-repo`, `generate-recipe`, `generate-recipe-from-llm`,
+and `complete-recipe` also accept `--smoke-test` to run the same check immediately
+after writing the package.
+
+**Dependencies for the smoke-test.** A wrapper only boots if its dependencies
+(`torch`, `speechbrain`, …) are importable. Rather than installing them into your
+active interpreter — which risks breaking your base/conda environment with a
+heavy, third-party/LLM-authored dependency list — add `--venv`:
+
+```bash
+python3 -m tools.model_agent smoke-test artifacts/model_agent/generated/example --venv
+```
+
+`--venv` builds an isolated virtual environment under `<package>/.venv`, installs
+the package's `requirements.txt` into it, and runs the wrapper there. It is keyed
+by a hash of `requirements.txt`, so it is created once and reused on later runs
+(no reinstalling `torch` every time) and rebuilt automatically when the
+requirements change. Your active environment is never touched. Use `--python
+/path/to/python` instead if you want to point at an interpreter you manage
+yourself.
+
+For the real deployment target — a Hugging Face Space — you do not install
+anything locally: the Space installs `requirements.txt` in its own clean
+container. The local `--venv` smoke-test is a fast pre-flight before pushing.
+
+### Deploying to a Hugging Face Space
+
+If you (or a teammate) have Hugging Face access, deploying the package to a
+Space is often the easiest way to verify everything end-to-end without
+installing any dependencies locally — the Space's container installs
+`requirements.txt` and runs `app.py` for you:
+
+```bash
+python3 -m tools.model_agent deploy-space \
+  artifacts/model_agent/generated/speechbrain-sepformer-wsj02mix \
+  --repo your-username/sepformer-harp
+```
+
+This creates (or reuses) the Space, then uploads the package folder. The
+generated `README.md` already carries the `sdk: gradio` / `app_file: app.py`
+front matter a Space needs, so the build starts automatically. `.venv/` and
+`__pycache__/` are skipped during upload.
+
+Requirements:
+
+- `pip install huggingface_hub` (an intentionally optional dependency — the rest
+  of the agent stays SDK-free);
+- a **write** token, passed via `--token` or the `HF_TOKEN` /
+  `HUGGING_FACE_HUB_TOKEN` environment variable (or an existing `huggingface-cli
+  login`). Never paste a token where it can be logged or shared.
+
+Other flags: `--private` (create a private Space), `--sdk` (defaults to
+`gradio`), and `--message` (commit message).
 
 Fetch a raw Hugging Face model repository and package it as a HARP-compatible
 Hugging Face Space:

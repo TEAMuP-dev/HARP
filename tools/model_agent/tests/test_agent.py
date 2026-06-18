@@ -6,11 +6,13 @@ from pathlib import Path
 from unittest import mock
 
 from tools.model_agent.agent import (
+    DeploySpaceError,
     EndpointProbeError,
     HarpEndpointClient,
     HarpModelAgent,
     ModelPackage,
     SpaceCandidate,
+    VenvSetupError,
     build_generated_app_package,
     classify_task,
     detect_inference_framework,
@@ -255,6 +257,151 @@ class HarvestTest(unittest.TestCase):
             self.assertEqual(statuses["teamup-tech/beta"], "missing")
             self.assertTrue((Path(tmp) / "teamup-tech-alpha" / "app.py").exists())
             self.assertTrue((Path(tmp) / "index.json").exists())
+
+
+class VenvTest(unittest.TestCase):
+    """Verify the isolated smoke-test venv builds, caches, and rebuilds.
+
+    pip/venv calls are stubbed so the test stays offline and fast; only the
+    caching/invalidation logic is exercised.
+    """
+
+    @staticmethod
+    def _interpreter_path(venv_dir: Path) -> Path:
+        if os.name == "nt":
+            return venv_dir / "Scripts" / "python.exe"
+        return venv_dir / "bin" / "python"
+
+    def _patch_pip(self, agent: HarpModelAgent, calls: list):
+        def fake_pip(cmd, *, log=None, check=True):
+            calls.append(list(cmd))
+            # Simulate `python -m venv <dir>` by materializing the interpreter.
+            if "venv" in cmd:
+                interpreter = self._interpreter_path(Path(cmd[-1]))
+                interpreter.parent.mkdir(parents=True, exist_ok=True)
+                interpreter.write_text("", encoding="utf-8")
+
+        agent._run_pip = fake_pip  # type: ignore[assignment]
+
+    def test_builds_then_reuses_then_rebuilds(self):
+        agent = HarpModelAgent()
+        calls: list = []
+        self._patch_pip(agent, calls)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "pkg"
+            pkg.mkdir()
+            (pkg / "requirements.txt").write_text("pyharp\n", encoding="utf-8")
+
+            python_a = agent.ensure_package_venv(pkg)
+            self.assertTrue(Path(python_a).exists())
+            self.assertTrue(calls, "first run should build the venv")
+
+            calls.clear()
+            python_b = agent.ensure_package_venv(pkg)
+            self.assertEqual(python_a, python_b)
+            self.assertEqual(calls, [], "unchanged requirements should reuse the venv")
+
+            (pkg / "requirements.txt").write_text("pyharp\ntorch\n", encoding="utf-8")
+            agent.ensure_package_venv(pkg)
+            self.assertTrue(calls, "changed requirements should rebuild the venv")
+
+    def test_pip_failure_raises_venv_setup_error(self):
+        agent = HarpModelAgent()
+
+        def failing_pip(cmd, *, log=None, check=True):
+            if "venv" in cmd:
+                interpreter = self._interpreter_path(Path(cmd[-1]))
+                interpreter.parent.mkdir(parents=True, exist_ok=True)
+                interpreter.write_text("", encoding="utf-8")
+                return
+            if check:
+                raise VenvSetupError("pip exploded")
+
+        agent._run_pip = failing_pip  # type: ignore[assignment]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp) / "pkg"
+            pkg.mkdir()
+            (pkg / "requirements.txt").write_text("pyharp\n", encoding="utf-8")
+            with self.assertRaises(VenvSetupError):
+                agent.ensure_package_venv(pkg)
+
+
+class DeploySpaceTest(unittest.TestCase):
+    """Verify Space deployment wiring with a stubbed huggingface_hub."""
+
+    @staticmethod
+    def _fake_hub(calls: dict):
+        import types
+
+        module = types.ModuleType("huggingface_hub")
+
+        class FakeApi:
+            def __init__(self, token=None):
+                calls["token"] = token
+
+            def create_repo(self, **kwargs):
+                calls["create"] = kwargs
+
+            def upload_folder(self, **kwargs):
+                calls["upload"] = kwargs
+
+        module.HfApi = FakeApi  # type: ignore[attr-defined]
+        return module
+
+    def _make_package(self, root: Path) -> Path:
+        pkg = root / "pkg"
+        pkg.mkdir()
+        (pkg / "app.py").write_text("print('hi')\n", encoding="utf-8")
+        (pkg / "README.md").write_text("---\nsdk: gradio\n---\n", encoding="utf-8")
+        (pkg / "requirements.txt").write_text("pyharp\n", encoding="utf-8")
+        return pkg
+
+    def test_creates_space_and_uploads_folder(self):
+        import sys
+
+        calls: dict = {}
+        with mock.patch.dict(sys.modules, {"huggingface_hub": self._fake_hub(calls)}):
+            with tempfile.TemporaryDirectory() as tmp:
+                pkg = self._make_package(Path(tmp))
+                result = HarpModelAgent().deploy_space(
+                    pkg, "https://huggingface.co/spaces/me/cool-space", token="tok"
+                )
+
+        self.assertEqual(result["repo_id"], "me/cool-space")
+        self.assertEqual(result["space_url"], "https://huggingface.co/spaces/me/cool-space")
+        self.assertTrue(result["authenticated"])
+        self.assertEqual(calls["token"], "tok")
+        self.assertEqual(calls["create"].get("repo_id"), "me/cool-space")
+        self.assertEqual(calls["create"].get("repo_type"), "space")
+        self.assertEqual(calls["create"].get("space_sdk"), "gradio")
+        self.assertEqual(calls["upload"].get("repo_id"), "me/cool-space")
+        self.assertEqual(calls["upload"].get("repo_type"), "space")
+        self.assertIn(".venv/*", calls["upload"].get("ignore_patterns", []))
+
+    def test_missing_app_py_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = Path(tmp) / "empty"
+            empty.mkdir()
+            with self.assertRaises(DeploySpaceError):
+                HarpModelAgent().deploy_space(empty, "me/space")
+
+    def test_bad_repo_id_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = self._make_package(Path(tmp))
+            with self.assertRaises(DeploySpaceError):
+                HarpModelAgent().deploy_space(pkg, "no-slash-here")
+
+    def test_missing_library_raises_clear_error(self):
+        import sys
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = self._make_package(Path(tmp))
+            with mock.patch.dict(sys.modules, {"huggingface_hub": None}):
+                with self.assertRaises(DeploySpaceError) as ctx:
+                    HarpModelAgent().deploy_space(pkg, "me/space")
+        self.assertIn("huggingface_hub", str(ctx.exception))
 
 
 class AnalyzeTest(unittest.TestCase):
@@ -525,6 +672,9 @@ class RecipeTest(unittest.TestCase):
         compile(app, "<recipe-app>", "exec")
         self.assertIn("import spaces", app)
         self.assertIn("@spaces.GPU", app)
+        # GPU wrappers must import `spaces` defensively so they still run where
+        # the Hugging Face-only package is absent (local smoke-tests, etc.).
+        self.assertIn("except ImportError", app)
         # Match HARP's reference wrappers: a star import exposes every helper.
         self.assertIn("from pyharp import *", app)
         self.assertIn("def process_fn(input_audio, model_name):", app)

@@ -41,6 +41,26 @@ JSON = Dict[str, Any]
 INPUT_TYPES = {"audio", "file", "dropdown", "slider", "textbox", "number", "checkbox"}
 OUTPUT_TYPES = {"audio", "file", "labels"}
 
+# The `spaces` package only exists on Hugging Face Spaces (ZeroGPU). Import it
+# defensively with a no-op `@spaces.GPU` fallback so generated GPU wrappers also
+# run locally (e.g. for smoke-tests) and on non-ZeroGPU hosts.
+_SPACES_IMPORT_BLOCK = """\
+try:
+    import spaces
+except ImportError:  # 'spaces' is only provided by Hugging Face Spaces
+    import types as _types
+
+    def _gpu(*args, **kwargs):
+        if len(args) == 1 and callable(args[0]) and not kwargs:
+            return args[0]
+
+        def _decorator(func):
+            return func
+
+        return _decorator
+
+    spaces = _types.SimpleNamespace(GPU=_gpu)"""
+
 _BASE_REQUIREMENTS = [
     "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
     "gradio>=4.0",
@@ -221,7 +241,7 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
 
     import_lines = ["import gradio as gr"]
     if uses_gpu:
-        import_lines.append("import spaces")
+        import_lines.append(_SPACES_IMPORT_BLOCK)
     import_lines.append("")
     # Match HARP's reference wrappers: a star import exposes every pyharp
     # helper (ModelCard, build_endpoint, LabelList, AudioLabel, MidiLabel,
