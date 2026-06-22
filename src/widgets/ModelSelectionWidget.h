@@ -70,6 +70,7 @@ struct SharedChoices : public ChangeBroadcaster
         "teamup-tech/harmonic-percussive-separation",
         "teamup-tech/Kokoro-TTS",
         "harp-dev/general-purpose-audio-effect-removal",
+        "harp-dev/generalizable-accompaniment-generation",
         "teamup-tech/MegaTTS3-Voice-Cloning",
         "teamup-tech/midi-synthesizer",
         "teamup-tech/audioseal", // TODO - more intuitive name
