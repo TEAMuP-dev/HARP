@@ -21,12 +21,18 @@ file(STRINGS VERSION CURRENT_VERSION)
 
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
 
+# grants access to ctests
+enable_testing() 
+include(CTest)
+
 # Add these lines to suppress warnings for JUCE 
 # ------------------------------------------
 # For macOS Xcode deprecation warnings
 set(JUCE_SILENCE_XCODE_DEPRECATION_WARNINGS ON)
 
 add_subdirectory(JUCE)                    # If you've put JUCE in a subdirectory called JUCE
+add_subdirectory(src)                     
+add_subdirectory(tests)
 
 # Reset warning levels
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
