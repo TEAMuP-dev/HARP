@@ -1,0 +1,108 @@
+{
+  "model": {
+    "id": "Soul-AILab/SoulX-Singer",
+    "name": "SoulX-Singer",
+    "description": "Zero-shot singing voice synthesis. Clones a singer's timbre from a short reference vocal and re-sings a target song (lyrics and melody are transcribed from the target audio). This recipe wraps the original Space's existing pipeline (preprocessing + SVS) instead of reimplementing it, so it must be deployed into a duplicate of the Soul-AILab/SoulX-Singer Space, where the webui module and pretrained weights are present.",
+    "author": "Soul-AILab",
+    "tags": ["singing-voice-synthesis", "audio-to-audio", "zero-shot", "svs"],
+    "license": "apache-2.0"
+  },
+  "framework": {
+    "import": "torch",
+    "pip": [
+      "accelerate==1.11.0",
+      "beartype==0.22.9",
+      "einops==0.8.2",
+      "funasr==1.3.0",
+      "g2p_en==2.1.0",
+      "g2pM==0.1.2.5",
+      "gradio==6.3.0",
+      "huggingface_hub>=0.20.0",
+      "librosa==0.11.0",
+      "loralib==0.1.2",
+      "matplotlib==3.10.8",
+      "mido==1.3.3",
+      "ml_collections==1.1.0",
+      "nemo_toolkit[asr]",
+      "nltk==3.9.2",
+      "numba==0.63.1",
+      "numpy<2.0.0",
+      "omegaconf==2.3.0",
+      "packaging==24.2",
+      "praat-parselmouth==0.4.7",
+      "pretty_midi==0.2.11",
+      "pyloudnorm==0.2.0",
+      "pyworld==0.3.5",
+      "rotary_embedding_torch==0.8.9",
+      "sageattention==1.0.6",
+      "scikit_learn==1.7.2",
+      "scipy==1.15.3",
+      "six==1.17.0",
+      "scikit_image==0.25.2",
+      "soundfile==0.13.1",
+      "ToJyutping==3.2.0",
+      "torch==2.8.0",
+      "torchaudio==2.8.0",
+      "torchcodec==0.8.0",
+      "tqdm==4.67.1",
+      "transformers==4.53.0",
+      "wandb==0.24.2",
+      "webrtcvad==2.0.10",
+      "setuptools==79.0.0"
+    ],
+    "apt": ["ffmpeg"],
+    "gpu": false
+  },
+  "inputs": [
+    {
+      "name": "prompt_audio",
+      "type": "audio",
+      "label": "Prompt audio (reference voice, <=30s)",
+      "required": true,
+      "info": "Short clip of the singer whose timbre you want to clone (max 30s)."
+    },
+    {
+      "name": "target_audio",
+      "type": "audio",
+      "label": "Target audio (song / melody source, <=60s)",
+      "required": true,
+      "info": "The song to re-sing; its lyrics and melody are transcribed automatically (max 60s)."
+    },
+    {
+      "name": "control",
+      "type": "dropdown",
+      "choices": ["melody", "score"],
+      "default": "melody",
+      "label": "Control type",
+      "info": "melody = follow the target's F0 contour; score = follow transcribed MIDI notes."
+    },
+    {
+      "name": "auto_shift",
+      "type": "checkbox",
+      "default": true,
+      "label": "Auto pitch shift",
+      "info": "Automatically shift pitch to fit the reference singer's range."
+    },
+    {
+      "name": "pitch_shift",
+      "type": "slider",
+      "min": -36,
+      "max": 36,
+      "step": 1,
+      "default": 0,
+      "label": "Pitch shift (semitones)",
+      "info": "Manual pitch shift applied when auto pitch shift is off."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "generated",
+      "type": "audio",
+      "label": "Generated singing"
+    }
+  ],
+  "inference": {
+    "setup": "import os\n\n# Headless matplotlib backend, mirroring the original Space's app.py.\nos.environ.setdefault(\"MPLBACKEND\", \"Agg\")\n\n# Importing the Space's own module downloads the pretrained weights and builds\n# the SVS + preprocessing pipeline exactly as the original SoulX-Singer app does.\n# (synthesis_function already carries its own @spaces.GPU decorator.)\nfrom webui import synthesis_function",
+    "body": "merged, _prompt_meta, _target_meta = synthesis_function(\n    prompt_audio,\n    target_audio,\n    prompt_metadata=None,\n    target_metadata=None,\n    control=control,\n    auto_shift=auto_shift,\n    pitch_shift=int(pitch_shift),\n)\nif not merged:\n    raise gr.Error(\"Synthesis failed - check the Space logs for the backend error.\")\nreturn merged"
+  }
+}

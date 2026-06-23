@@ -43,6 +43,7 @@ from .recipe import render_app_from_recipe, validate_recipe
 JSON = Dict[str, Any]
 
 _README_LIMIT = 6000
+_SPACE_SOURCE_LIMIT = 4000
 
 
 class LLMError(Exception):
@@ -56,7 +57,7 @@ class LLMError(Exception):
 # Model names move fast; these are sane defaults but a key/region may differ.
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
     "anthropic": "claude-sonnet-4-latest",
     "openai": "gpt-4o",
 }
@@ -312,7 +313,16 @@ inference.body rules:
     Return a filepath string for audio/file outputs; return a LabelList (or its
     .to_json()) for a labels output.
   - set framework.gpu true only if the model needs a GPU; if true the renderer
-    adds `import spaces` and an `@spaces.GPU` decorator.
+    adds `import spaces` and an `@spaces.GPU` decorator. Do NOT set gpu true if
+    you are reusing a Space function that already has its own @spaces.GPU
+    decorator (avoid nested GPU allocation).
+
+When a "# Original Space source" section is provided, it is the GROUND TRUTH:
+  - the wrapper is deployed INTO that Space, so its modules are importable;
+    prefer `from <module> import <function>` and CALLING the existing inference
+    function over reimplementing the model from the README.
+  - mirror the REAL input/output components from the Space's UI code (labels,
+    types, defaults, choices), not what the task name suggests.
 
 Output ONLY the JSON object. No markdown, no commentary.
 """
@@ -351,6 +361,9 @@ class RecipeGenerationContext:
     target_inputs: List[str] = field(default_factory=list)
     target_outputs: List[str] = field(default_factory=list)
     examples: List[JSON] = field(default_factory=list)
+    # {filename: source} for the original Space's app.py and its first-party
+    # modules -- the ground truth for the real loading/inference API and UI.
+    space_sources: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_card(
@@ -423,6 +436,20 @@ def build_recipe_user_prompt(context: RecipeGenerationContext) -> str:
         if len(readme) > _README_LIMIT:
             readme = readme[:_README_LIMIT] + "\n...[truncated]"
         lines.append("# Model card (README.md)\n" + readme)
+
+    if context.space_sources:
+        lines.append(
+            "# Original Space source (GROUND TRUTH for the real API and UI)\n"
+            "Reuse this code: import and call the Space's own modules/functions, "
+            "and mirror its REAL input/output components. Do NOT invent a different "
+            "interface from the README. The wrapper is deployed into this Space, so "
+            "its modules are importable."
+        )
+        for filename, source in context.space_sources.items():
+            snippet = source.strip()
+            if len(snippet) > _SPACE_SOURCE_LIMIT:
+                snippet = snippet[:_SPACE_SOURCE_LIMIT] + "\n...[truncated]"
+            lines.append(f"## {filename}\n```python\n{snippet}\n```")
 
     if context.examples:
         lines.append(

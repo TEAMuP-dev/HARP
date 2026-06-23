@@ -277,6 +277,27 @@ API key env var is set, or forced with `--provider gemini|anthropic|openai` and
 the repo file list, your desired I/O types, and a couple of committed example
 recipes as few-shot exemplars (disable with `--no-examples`).
 
+**Ground on an existing Space's source with `--space <author/space>`.** The model
+card alone is often *not enough* for app-like Spaces (e.g. multi-stage pipelines
+whose real inference lives in `webui.py`/`cli.py` modules, not in a one-call API).
+A card-only draft tends to invent a plausible-but-wrong interface. With `--space`,
+the agent downloads the Space's `app.py` and the first-party modules it imports
+(stdlib/third-party imports are skipped, bounded crawl) and feeds them to the LLM
+as ground truth, so the wrapper **reuses the real functions and mirrors the real
+input/output components** instead of guessing:
+
+```bash
+python3 -m tools.model_agent generate-recipe-from-llm \
+  --repo Soul-AILab/SoulX-Singer \
+  --space Soul-AILab/SoulX-Singer \
+  --output artifacts/model_agent/recipes/soulx-singer.json
+```
+
+Because the wrapper reuses the Space's own modules, deploy it **into a duplicate
+of that Space** (HF → *Duplicate this Space*), where those modules and the
+pretrained weights are present. A hand-authored reference for exactly this case
+ships at `examples/soulx_singer_recipe.json`.
+
 LLM model names change often and vary by key/region, so the built-in defaults can
 go stale. If a call fails with an HTTP 404 about the model, list what your key can
 actually use and pass it with `--llm-model`:

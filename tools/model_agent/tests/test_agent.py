@@ -1019,6 +1019,92 @@ class ExampleRecipeFilesTest(unittest.TestCase):
             compile(app, str(recipe_file), "exec")
 
 
+class SoulXSingerRecipeTest(unittest.TestCase):
+    """The hand-authored SoulX-Singer wrapper recipe must render correctly."""
+
+    def _recipe(self):
+        path = Path(__file__).resolve().parent.parent / "examples" / "soulx_singer_recipe.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_renders_and_wraps_real_function(self):
+        recipe = self._recipe()
+        validate_recipe(recipe)
+        app = render_app_from_recipe(recipe)
+        compile(app, "soulx_singer_recipe.json", "exec")
+
+        # Reuses the original Space's pipeline rather than reimplementing it.
+        self.assertIn("from webui import synthesis_function", app)
+        self.assertIn("synthesis_function(", app)
+        # Correct two-audio interface (the whole point of the fix).
+        self.assertEqual(app.count('gr.Audio(type="filepath"'), 3)  # 2 inputs + 1 output
+        self.assertIn("def process_fn(prompt_audio, target_audio, control, auto_shift, pitch_shift):", app)
+        # gpu false -> must NOT add a second @spaces.GPU (synthesis_function has its own).
+        self.assertNotIn("@spaces.GPU", app)
+
+
+class SpaceSourceTest(unittest.TestCase):
+    """fetch_space_sources crawls the entry file and its first-party imports."""
+
+    class _FakeScraper:
+        FILES = {
+            "app.py": (
+                "import os\n"
+                "import gradio as gr\n"
+                "from ensure_models import ensure_pretrained_models\n"
+                "from webui import synthesis_function\n"
+            ),
+            "ensure_models.py": "def ensure_pretrained_models():\n    pass\n",
+            "webui.py": (
+                "import torch\n"
+                "import numpy as np\n"
+                "from cli.inference import process\n"
+                "def synthesis_function(a, b):\n    return None\n"
+            ),
+            "cli/inference.py": "def process(*a, **k):\n    return None\n",
+        }
+
+        def get_space_file(self, space_id, filename="app.py"):
+            return self.FILES.get(filename)
+
+    def test_crawls_first_party_modules_and_skips_libs(self):
+        agent = HarpModelAgent(scraper=self._FakeScraper())
+        sources = agent.fetch_space_sources("me/space")
+
+        # app.py + the first-party modules it (transitively) imports.
+        self.assertIn("app.py", sources)
+        self.assertIn("ensure_models.py", sources)
+        self.assertIn("webui.py", sources)
+        self.assertIn("cli/inference.py", sources)
+        # stdlib (os) and third-party (gradio, torch, numpy) are never fetched.
+        self.assertNotIn("os.py", sources)
+        self.assertNotIn("gradio.py", sources)
+        self.assertNotIn("torch.py", sources)
+
+    def test_respects_max_files(self):
+        agent = HarpModelAgent(scraper=self._FakeScraper())
+        sources = agent.fetch_space_sources("me/space", max_files=2)
+        self.assertEqual(len(sources), 2)
+        self.assertIn("app.py", sources)
+
+
+class SpaceGroundingPromptTest(unittest.TestCase):
+    def test_space_sources_appear_in_prompt(self):
+        context = RecipeGenerationContext(
+            model_id="me/model",
+            readme="A model.",
+            space_sources={"webui.py": "def synthesis_function(a, b):\n    return None\n"},
+        )
+        prompt = build_recipe_user_prompt(context)
+        self.assertIn("Original Space source", prompt)
+        self.assertIn("## webui.py", prompt)
+        self.assertIn("synthesis_function", prompt)
+
+    def test_no_space_section_without_sources(self):
+        context = RecipeGenerationContext(model_id="me/model", readme="A model.")
+        prompt = build_recipe_user_prompt(context)
+        self.assertNotIn("Original Space source", prompt)
+
+
 class PackageWriterTest(unittest.TestCase):
     def test_writes_package_artifacts(self):
         package = ModelPackage(

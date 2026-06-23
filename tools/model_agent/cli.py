@@ -151,6 +151,12 @@ def build_parser() -> argparse.ArgumentParser:
     llm_source.add_argument("--card", type=Path, help="Model-card JSON file (meta/readme/files).")
     llm_source.add_argument("--repo", help="Hugging Face model repo id to fetch the card from (network).")
     llm_recipe.add_argument(
+        "--space",
+        default="",
+        help="Ground the LLM on an existing Space's source (its app.py + local modules). "
+        "Strongly recommended for app-like Spaces so the wrapper reuses the real API/UI.",
+    )
+    llm_recipe.add_argument(
         "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
     )
     llm_recipe.add_argument(
@@ -490,6 +496,18 @@ def main(argv: Iterable[str] | None = None) -> int:
                 target_outputs=_split_csv(args.outputs),
                 examples=[] if args.no_examples else default_examples(),
             )
+            if args.space:
+                print(
+                    f"Grounding on the original Space source: {args.space} ...",
+                    file=sys.stderr,
+                )
+                context.space_sources = agent.fetch_space_sources(args.space)
+                if not context.space_sources:
+                    print(
+                        f"  (no readable source found for Space '{args.space}'; "
+                        "falling back to the model card only)",
+                        file=sys.stderr,
+                    )
             provider = provider_from_env(
                 args.provider,
                 model=args.llm_model,

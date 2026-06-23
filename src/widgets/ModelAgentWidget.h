@@ -350,6 +350,7 @@ private:
               "LLM-draft a recipe for any model (needs GEMINI/ANTHROPIC/OPENAI API key).",
               { { "--repo", "Repo id", Field::Text, Browse::None, "", "author/model (or use --card)", false },
                 { "--card", "Card JSON", Field::Text, Browse::OpenFile, "", "model card json", false },
+                { "--space", "Ground on Space", Field::Text, Browse::None, "", "author/space (reuse real API)", false },
                 { "--inputs", "Input types", Field::Text, Browse::None, "", "e.g. audio,slider", false },
                 { "--outputs", "Output types", Field::Text, Browse::None, "", "e.g. audio,labels", false },
                 { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },

@@ -58,7 +58,10 @@ three ways:
   inputs/outputs stay locked to what the real wrapper used; the LLM only writes
   the missing dependencies and inference code.
 - `generate-recipe-from-llm` — have an **LLM write an entire recipe from
-  scratch** for *any* model, even frameworks we have no template for.
+  scratch** for *any* model, even frameworks we have no template for. Add
+  `--space <author/space>` to ground the LLM on an existing Space's real source
+  (its `app.py` + modules) so the wrapper reuses the actual functions and UI
+  instead of guessing from the README — essential for app-like Spaces.
 - `list-models` — see which LLM models your API key is allowed to use (handy when
   a model name is rejected).
 
@@ -85,6 +88,9 @@ Turn a recipe (or a model card) into the actual files.
   model card → `smoke-test`.
 - **Any model (LLM-assisted):** `generate-recipe-from-llm --repo <id>` →
   `generate-recipe --smoke-test`.
+- **App-like Space (reuse its real pipeline):** `generate-recipe-from-llm --repo
+  <id> --space <author/space>` → `generate-recipe`, then deploy into a *duplicate*
+  of that Space.
 - **Refine from a proven wrapper (most reliable):** `harvest` → `scaffold-recipe`
   → `complete-recipe` → `generate-recipe --smoke-test`.
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -1264,6 +1265,51 @@ class HarpModelAgent:
             "authenticated": bool(resolved_token),
         }
 
+    def fetch_space_sources(
+        self,
+        space_id: str,
+        *,
+        entry: str = "app.py",
+        max_files: int = 6,
+        max_chars: int = 6000,
+    ) -> Dict[str, str]:
+        """Download a Space's entry file and the first-party modules it imports.
+
+        Best-effort grounding for LLM recipe generation: returns
+        ``{filename: source}`` for ``app.py`` plus the local modules it (and they)
+        import, so the LLM can reuse the model's REAL loading/inference API and UI
+        instead of guessing from the model card. Stdlib and well-known third-party
+        imports are skipped; the crawl is bounded by ``max_files`` and each file is
+        truncated to ``max_chars``. One unreachable file never aborts the rest.
+        """
+
+        space_id = _normalize_space_repo_id(space_id)
+        sources: Dict[str, str] = {}
+        seen: set = set()
+        queue_: List[str] = [entry]
+        attempts = 0
+
+        while queue_ and len(sources) < max_files and attempts < max_files * 6:
+            filename = queue_.pop(0)
+            if filename in seen:
+                continue
+            seen.add(filename)
+            attempts += 1
+            try:
+                text = self.scraper.get_space_file(space_id, filename=filename)
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+                continue
+            if text is None:
+                continue
+
+            sources[filename] = text[:max_chars]
+            for module in _local_import_modules(text):
+                candidate = module.replace(".", "/") + ".py"
+                if candidate not in seen and candidate not in queue_:
+                    queue_.append(candidate)
+
+        return sources
+
     def harvest_space_apps(
         self,
         output_dir: Path,
@@ -1375,6 +1421,65 @@ def _normalize_hf_model_repo_id(value: str) -> str:
     if repo_id.count("/") != 1:
         raise ValueError("Expected a Hugging Face repo id like 'author/model-name'.")
     return repo_id
+
+
+_THIRD_PARTY_IMPORT_DENYLIST = frozenset(
+    {
+        "gradio",
+        "spaces",
+        "torch",
+        "torchaudio",
+        "numpy",
+        "np",
+        "scipy",
+        "pandas",
+        "librosa",
+        "soundfile",
+        "sf",
+        "matplotlib",
+        "transformers",
+        "diffusers",
+        "huggingface_hub",
+        "pyharp",
+        "PIL",
+        "cv2",
+        "tqdm",
+        "yaml",
+        "requests",
+        "einops",
+        "safetensors",
+        "sklearn",
+        "pydub",
+    }
+)
+
+
+def _local_import_modules(source: str) -> List[str]:
+    """Return module names imported by ``source`` that look first-party.
+
+    Stdlib and well-known third-party packages are filtered out so a Space-source
+    crawl follows only the repo's own modules (e.g. ``webui``, ``ensure_models``).
+    """
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    stdlib = getattr(sys, "stdlib_module_names", frozenset())
+    modules: List[str] = []
+    for node in ast.walk(tree):
+        names: List[str] = []
+        if isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            names.append(node.module)
+        elif isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+        for name in names:
+            top = name.split(".")[0]
+            if not top or top in stdlib or top in _THIRD_PARTY_IMPORT_DENYLIST:
+                continue
+            modules.append(name)
+    return modules
 
 
 def _normalize_space_repo_id(value: str) -> str:
