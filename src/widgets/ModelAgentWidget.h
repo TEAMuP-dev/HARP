@@ -321,6 +321,8 @@ private:
               { { "", "Package dir", Field::Text, Browse::OpenDir, "", "generated package folder", true },
                 { "--repo", "Space id", Field::Text, Browse::None, "", "your-username/your-space", true },
                 { "--token", "HF token", Field::Text, Browse::None, "", "or set HF_TOKEN env", false },
+                { "--into-space", "Overlay onto existing Space", Field::Flag, Browse::None, "0", "", false },
+                { "--gradio-version", "Gradio version", Field::Text, Browse::None, "5.28.0", "for --into-space", false },
                 { "--private", "Private Space", Field::Flag, Browse::None, "0", "", false },
                 { "--sdk", "SDK", Field::Text, Browse::None, "gradio", "", false } } });
 

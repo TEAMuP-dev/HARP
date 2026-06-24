@@ -6,6 +6,8 @@ from pathlib import Path
 from unittest import mock
 
 from tools.model_agent.agent import (
+    HARP_GRADIO_VERSION,
+    PYHARP_REQUIREMENT,
     DeploySpaceError,
     EndpointProbeError,
     HarpEndpointClient,
@@ -14,6 +16,8 @@ from tools.model_agent.agent import (
     SpaceCandidate,
     VenvSetupError,
     build_generated_app_package,
+    reconcile_readme,
+    reconcile_requirements,
     classify_task,
     detect_inference_framework,
     evaluate_license,
@@ -402,6 +406,126 @@ class DeploySpaceTest(unittest.TestCase):
                 with self.assertRaises(DeploySpaceError) as ctx:
                     HarpModelAgent().deploy_space(pkg, "me/space")
         self.assertIn("huggingface_hub", str(ctx.exception))
+
+
+class ReconcileTest(unittest.TestCase):
+    """Dependency reconciliation aligns a Space on pyharp's gradio pin."""
+
+    def test_requirements_pins_gradio_and_adds_pyharp(self):
+        new, changes = reconcile_requirements("gradio==6.3.0\nnumpy\n")
+        self.assertIn(f"gradio=={HARP_GRADIO_VERSION}", new)
+        self.assertNotIn("6.3.0", new)
+        self.assertIn("pyharp", new)
+        self.assertTrue(changes)
+
+    def test_requirements_preserves_extras(self):
+        new, _ = reconcile_requirements("gradio[oauth,mcp]==6.3.0\n")
+        self.assertIn(f"gradio[oauth,mcp]=={HARP_GRADIO_VERSION}", new)
+
+    def test_requirements_adds_gradio_when_absent(self):
+        new, _ = reconcile_requirements("torch\n")
+        self.assertIn(f"gradio=={HARP_GRADIO_VERSION}", new)
+        self.assertIn("torch", new)
+
+    def test_requirements_does_not_duplicate_pyharp(self):
+        new, _ = reconcile_requirements(f"{PYHARP_REQUIREMENT}\ngradio==6.3.0\n")
+        self.assertEqual(new.count("TEAMuP-dev/pyharp"), 1)
+
+    def test_requirements_preserves_directives_and_comments(self):
+        new, _ = reconcile_requirements("# deps\n-r base.txt\ntorch\n")
+        self.assertIn("# deps", new)
+        self.assertIn("-r base.txt", new)
+
+    def test_readme_sets_sdk_version(self):
+        readme = '---\nsdk: gradio\nsdk_version: "6.3.0"\napp_file: app.py\n---\n# title\n'
+        new, changes = reconcile_readme(readme)
+        self.assertIn(f'sdk_version: "{HARP_GRADIO_VERSION}"', new)
+        self.assertNotIn('"6.3.0"', new)
+        self.assertTrue(changes)
+
+    def test_readme_adds_sdk_version_when_missing(self):
+        new, _ = reconcile_readme("---\nsdk: gradio\napp_file: app.py\n---\n")
+        self.assertIn(f'sdk_version: "{HARP_GRADIO_VERSION}"', new)
+
+    def test_readme_noop_without_frontmatter(self):
+        new, changes = reconcile_readme("# just a readme\n")
+        self.assertEqual(changes, [])
+        self.assertEqual(new, "# just a readme\n")
+
+
+class DeployIntoSpaceTest(unittest.TestCase):
+    """Overlaying onto an existing Space reconciles deps and uploads per-file."""
+
+    @staticmethod
+    def _fake_hub(calls: dict, files: dict):
+        import tempfile
+        import types
+
+        module = types.ModuleType("huggingface_hub")
+        tmpdir = tempfile.mkdtemp()
+
+        def hf_hub_download(repo_id, filename, repo_type=None, token=None):
+            if filename not in files:
+                raise FileNotFoundError(filename)
+            path = Path(tmpdir) / filename.replace("/", "_")
+            path.write_text(files[filename], encoding="utf-8")
+            return str(path)
+
+        class FakeApi:
+            def __init__(self, token=None):
+                calls["token"] = token
+
+            def upload_file(self, path_or_fileobj=None, path_in_repo=None, **_kwargs):
+                calls.setdefault("uploads", {})[path_in_repo] = path_or_fileobj
+
+        module.HfApi = FakeApi  # type: ignore[attr-defined]
+        module.hf_hub_download = hf_hub_download  # type: ignore[attr-defined]
+        return module
+
+    def test_reconciles_and_uploads_per_file(self):
+        import sys
+
+        calls: dict = {}
+        files = {
+            "requirements.txt": "gradio==6.3.0\ntorch\n",
+            "README.md": '---\nsdk: gradio\nsdk_version: "6.3.0"\napp_file: app.py\n---\n# x\n',
+        }
+        module = self._fake_hub(calls, files)
+        with mock.patch.dict(sys.modules, {"huggingface_hub": module}):
+            with tempfile.TemporaryDirectory() as tmp:
+                pkg = Path(tmp) / "pkg"
+                pkg.mkdir()
+                (pkg / "app.py").write_text("print('wrapper')\n", encoding="utf-8")
+                result = HarpModelAgent().deploy_into_space(pkg, "me/dup", token="tok")
+
+        self.assertEqual(result["mode"], "into-space")
+        uploads = calls["uploads"]
+        self.assertEqual(set(uploads), {"app.py", "requirements.txt", "README.md"})
+
+        req = uploads["requirements.txt"].decode("utf-8")
+        self.assertIn(f"gradio=={HARP_GRADIO_VERSION}", req)
+        self.assertNotIn("6.3.0", req)
+        self.assertIn("pyharp", req)
+        self.assertIn("torch", req)
+
+        readme = uploads["README.md"].decode("utf-8")
+        self.assertIn(f'sdk_version: "{HARP_GRADIO_VERSION}"', readme)
+
+        # app.py uploaded verbatim from the package folder.
+        self.assertEqual(uploads["app.py"], b"print('wrapper')\n")
+
+    def test_requires_existing_space(self):
+        import sys
+
+        calls: dict = {}
+        module = self._fake_hub(calls, {})  # download always raises -> Space absent
+        with mock.patch.dict(sys.modules, {"huggingface_hub": module}):
+            with tempfile.TemporaryDirectory() as tmp:
+                pkg = Path(tmp) / "pkg"
+                pkg.mkdir()
+                (pkg / "app.py").write_text("x\n", encoding="utf-8")
+                with self.assertRaises(DeploySpaceError):
+                    HarpModelAgent().deploy_into_space(pkg, "me/dup", token="tok")
 
 
 class AnalyzeTest(unittest.TestCase):

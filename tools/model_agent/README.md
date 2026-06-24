@@ -399,6 +399,30 @@ Requirements:
 Other flags: `--private` (create a private Space), `--sdk` (defaults to
 `gradio`), and `--message` (commit message).
 
+#### Overlaying onto an existing Space (`--into-space`)
+
+The plain `deploy-space` above suits a *self-contained* package. But a wrapper
+that **reuses an existing Space's own code** (e.g. `from webui import
+synthesis_function`) must be deployed into a place that already has that code —
+duplicate the model's original Space (HF → *Duplicate this Space*), then overlay:
+
+```bash
+python3 -m tools.model_agent deploy-space \
+  artifacts/model_agent/generated/<package> \
+  --repo your-username/<duplicated-space> --into-space
+```
+
+`--into-space` uploads **only** `app.py` plus a *reconciled* `requirements.txt` /
+`README.md` (every other repo file — the model's modules and weights — is left
+untouched). The reconciliation fixes the predictable HARP build conflict:
+**pyharp pins `gradio==5.28.0`, but a Gradio Space's README `sdk_version` (which
+Hugging Face force-installs) and its `requirements.txt` usually pin a different
+gradio**, producing a `ResolutionImpossible` error. Both are realigned to
+pyharp's gradio (override with `--gradio-version`), the pyharp requirement is
+ensured, and any conflicts it *can't* safely resolve (e.g. two unrelated packages
+pinned incompatibly) are reported under `unresolved_conflicts` rather than
+hidden.
+
 Fetch a raw Hugging Face model repository and package it as a HARP-compatible
 Hugging Face Space:
 

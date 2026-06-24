@@ -9,6 +9,7 @@ from typing import Iterable, List
 from urllib.error import HTTPError, URLError
 
 from .agent import (
+    HARP_GRADIO_VERSION,
     DeploySpaceError,
     EndpointProbeError,
     HarpModelAgent,
@@ -373,6 +374,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     deploy.add_argument("--sdk", default="gradio", help="Space SDK (default: gradio).")
     deploy.add_argument(
+        "--into-space",
+        action="store_true",
+        help="Overlay app.py onto an EXISTING Space (e.g. a duplicate of the model's "
+        "original Space), reconciling gradio/sdk_version with pyharp and preserving "
+        "the Space's own code. Use this for wrappers that import the Space's modules.",
+    )
+    deploy.add_argument(
+        "--gradio-version",
+        default=HARP_GRADIO_VERSION,
+        help=f"Gradio version to reconcile to with --into-space (default: {HARP_GRADIO_VERSION}, "
+        "pyharp's pin).",
+    )
+    deploy.add_argument(
         "--message",
         default="Deploy HARP wrapper via model agent",
         help="Commit message for the upload.",
@@ -599,20 +613,36 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 0 if result.ok else 4
 
         if args.command == "deploy-space":
-            print(
-                "Deploying to a Hugging Face Space (creates/updates a remote repo "
-                "under your account)...",
-                file=sys.stderr,
-            )
-            result = agent.deploy_space(
-                args.package,
-                args.repo,
-                token=args.token,
-                private=args.private,
-                space_sdk=args.sdk,
-                commit_message=args.message,
-                log=lambda message: print(f"  [deploy] {message}", file=sys.stderr),
-            )
+            log = lambda message: print(f"  [deploy] {message}", file=sys.stderr)
+            if args.into_space:
+                print(
+                    f"Overlaying HARP wrapper onto existing Space {args.repo} "
+                    "(reconciling dependencies, preserving its code)...",
+                    file=sys.stderr,
+                )
+                result = agent.deploy_into_space(
+                    args.package,
+                    args.repo,
+                    token=args.token,
+                    gradio_version=args.gradio_version,
+                    commit_message=args.message,
+                    log=log,
+                )
+            else:
+                print(
+                    "Deploying to a Hugging Face Space (creates/updates a remote repo "
+                    "under your account)...",
+                    file=sys.stderr,
+                )
+                result = agent.deploy_space(
+                    args.package,
+                    args.repo,
+                    token=args.token,
+                    private=args.private,
+                    space_sdk=args.sdk,
+                    commit_message=args.message,
+                    log=log,
+                )
             _emit_json(result, None)
             return 0
 

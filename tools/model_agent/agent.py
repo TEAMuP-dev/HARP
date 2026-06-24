@@ -14,7 +14,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -23,6 +23,13 @@ from urllib.request import Request, urlopen
 JSON = Dict[str, Any]
 HUGGING_FACE_BASE = "https://huggingface.co"
 KNOWN_HYPHENATED_SPACE_ORGS = ("teamup-tech",)
+
+# pyharp v0.3.0 hard-pins gradio==5.28.0. HARP wrappers must therefore align the
+# Space on this exact gradio version (both the README sdk_version that Hugging
+# Face force-installs and any gradio pin in requirements.txt), or the build fails
+# with a ResolutionImpossible conflict.
+HARP_GRADIO_VERSION = "5.28.0"
+PYHARP_REQUIREMENT = "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0"
 
 HARP_FRIENDLY_TASKS = {
     "audio-to-audio",
@@ -1265,6 +1272,145 @@ class HarpModelAgent:
             "authenticated": bool(resolved_token),
         }
 
+    def deploy_into_space(
+        self,
+        package_dir: Path,
+        repo_id: str,
+        *,
+        token: Optional[str] = None,
+        gradio_version: str = HARP_GRADIO_VERSION,
+        commit_message: str = "Add HARP pyharp endpoint via model agent",
+        log: Optional[Callable[[str], None]] = None,
+    ) -> JSON:
+        """Overlay a HARP wrapper onto an EXISTING Space, reconciling dependencies.
+
+        Unlike :meth:`deploy_space` (which uploads a self-contained package), this
+        targets a Space that already contains the model's code (e.g. a *duplicate*
+        of the original Space). It uploads only ``app.py`` plus a reconciled
+        ``requirements.txt`` / ``README.md`` -- every other repo file is left
+        untouched -- so the model's own modules and weights stay in place.
+
+        The reconciliation fixes the predictable HARP conflict: pyharp pins
+        ``gradio==<gradio_version>``, but a Gradio Space's README ``sdk_version``
+        (which Hugging Face force-installs) and its ``requirements.txt`` usually
+        pin a different gradio. Both are realigned to ``gradio_version`` and the
+        pyharp requirement is ensured. Conflicts it cannot safely touch (e.g. two
+        unrelated packages pinned incompatibly) are reported, not silently
+        "fixed".
+
+        Requires ``huggingface_hub`` and a write token; the Space must already
+        exist.
+        """
+
+        folder = Path(package_dir)
+        app_py = folder / "app.py"
+        if not app_py.exists():
+            raise DeploySpaceError(f"app.py not found in {folder}")
+
+        repo_id = _normalize_space_repo_id(repo_id)
+        if repo_id.count("/") != 1 or not all(repo_id.split("/")):
+            raise DeploySpaceError(
+                f"Space id must look like 'username/space-name' (got '{repo_id}')."
+            )
+
+        try:
+            from huggingface_hub import HfApi, hf_hub_download
+        except ImportError as exc:  # optional dependency
+            raise DeploySpaceError(
+                "huggingface_hub is required to deploy to a Space. Install it with "
+                "`pip install huggingface_hub`."
+            ) from exc
+
+        resolved_token = (
+            token
+            or os.environ.get("HF_TOKEN")
+            or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        )
+
+        def emit(message: str) -> None:
+            if log is not None:
+                log(message)
+
+        existing_req = self._download_space_text(
+            hf_hub_download, repo_id, "requirements.txt", resolved_token
+        )
+        if existing_req is None:
+            raise DeploySpaceError(
+                f"Could not read requirements.txt from Space '{repo_id}'. For "
+                "--into-space the Space must already exist (duplicate the model's "
+                "original Space first), and your token must have access to it."
+            )
+
+        new_req, changes = reconcile_requirements(existing_req, gradio_version)
+        uploads: List[Tuple[str, bytes]] = [
+            ("app.py", app_py.read_bytes()),
+            ("requirements.txt", new_req.encode("utf-8")),
+        ]
+
+        existing_readme = self._download_space_text(
+            hf_hub_download, repo_id, "README.md", resolved_token
+        )
+        if existing_readme is not None:
+            new_readme, readme_changes = reconcile_readme(existing_readme, gradio_version)
+            changes.extend(readme_changes)
+            uploads.append(("README.md", new_readme.encode("utf-8")))
+
+        unresolved = _duplicate_pin_conflicts(new_req)
+
+        api = HfApi(token=resolved_token)
+        try:
+            for path_in_repo, data in uploads:
+                emit(f"uploading {path_in_repo}...")
+                api.upload_file(
+                    path_or_fileobj=data,
+                    path_in_repo=path_in_repo,
+                    repo_id=repo_id,
+                    repo_type="space",
+                    commit_message=commit_message,
+                )
+        except DeploySpaceError:
+            raise
+        except Exception as exc:  # network/auth/permission errors from the hub
+            raise DeploySpaceError(f"Hugging Face upload failed: {exc}") from exc
+
+        space_url = f"{HUGGING_FACE_BASE}/spaces/{repo_id}"
+        emit(f"deployed into Space: {space_url}")
+        if unresolved:
+            emit("WARNING: unresolved dependency conflicts remain: " + "; ".join(unresolved))
+        return {
+            "repo_id": repo_id,
+            "space_url": space_url,
+            "mode": "into-space",
+            "gradio_version": gradio_version,
+            "uploaded": [path for path, _ in uploads],
+            "changes": changes,
+            "unresolved_conflicts": unresolved,
+            "authenticated": bool(resolved_token),
+        }
+
+    @staticmethod
+    def _download_space_text(
+        downloader: Callable[..., str],
+        repo_id: str,
+        filename: str,
+        token: Optional[str],
+    ) -> Optional[str]:
+        """Download one text file from a Space via huggingface_hub, or None."""
+
+        try:
+            local = downloader(
+                repo_id=repo_id,
+                filename=filename,
+                repo_type="space",
+                token=token,
+            )
+        except Exception:  # missing file / auth / network -> treat as absent
+            return None
+        try:
+            return Path(local).read_text(encoding="utf-8")
+        except OSError:
+            return None
+
     def fetch_space_sources(
         self,
         space_id: str,
@@ -1480,6 +1626,132 @@ def _local_import_modules(source: str) -> List[str]:
                 continue
             modules.append(name)
     return modules
+
+
+_GRADIO_REQ_RE = re.compile(r"^\s*gradio(\[[^\]]*\])?\s*([<>=!~].*)?\s*$", re.IGNORECASE)
+_SDK_VERSION_RE = re.compile(r"^(\s*sdk_version\s*:\s*).*$", re.IGNORECASE)
+_SDK_GRADIO_RE = re.compile(r"^\s*sdk\s*:\s*gradio\s*$", re.IGNORECASE)
+_PINNED_REQ_RE = re.compile(r"^([A-Za-z0-9_.\-]+)(\[[^\]]*\])?==([^\s;#]+)")
+
+
+def reconcile_requirements(
+    text: str,
+    gradio_version: str = HARP_GRADIO_VERSION,
+    *,
+    ensure_pyharp: bool = True,
+) -> Tuple[str, List[str]]:
+    """Align a requirements.txt with pyharp: pin gradio and ensure pyharp.
+
+    Returns ``(new_text, changes)``. Any ``gradio`` requirement (with or without
+    extras / version spec) is rewritten to ``gradio[extras]==<gradio_version>``;
+    if none is present one is added. The pyharp git requirement is appended when
+    missing. Comments, blank lines, and ``-r``/``-e`` directives are preserved.
+    """
+
+    changes: List[str] = []
+    out: List[str] = []
+    has_pyharp = False
+    pinned_gradio = False
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "-")):
+            out.append(line)
+            continue
+        if "pyharp" in stripped.lower():
+            has_pyharp = True
+        match = _GRADIO_REQ_RE.match(line)
+        if match:
+            extras = match.group(1) or ""
+            new_line = f"gradio{extras}=={gradio_version}"
+            if new_line != stripped:
+                changes.append(f"pinned gradio to {gradio_version} (was '{stripped}')")
+            out.append(new_line)
+            pinned_gradio = True
+            continue
+        out.append(line)
+
+    if not pinned_gradio:
+        out.append(f"gradio=={gradio_version}")
+        changes.append(f"added gradio=={gradio_version}")
+    if ensure_pyharp and not has_pyharp:
+        out.append(PYHARP_REQUIREMENT)
+        changes.append("added the pyharp requirement")
+
+    new_text = "\n".join(out)
+    if not new_text.endswith("\n"):
+        new_text += "\n"
+    return new_text, changes
+
+
+def reconcile_readme(
+    text: str,
+    gradio_version: str = HARP_GRADIO_VERSION,
+) -> Tuple[str, List[str]]:
+    """Set a Space README's ``sdk_version`` front-matter to ``gradio_version``.
+
+    Hugging Face force-installs ``gradio==<sdk_version>``, so this must match
+    pyharp's gradio. Returns ``(new_text, changes)``; a no-op when there is no
+    YAML front matter.
+    """
+
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return text, []
+
+    end = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end = index
+            break
+    if end is None:
+        return text, []
+
+    changes: List[str] = []
+    replaced = False
+    for index in range(1, end):
+        prefix_match = _SDK_VERSION_RE.match(lines[index])
+        if prefix_match:
+            new_line = f'{prefix_match.group(1)}"{gradio_version}"'
+            if new_line.strip() != lines[index].strip():
+                changes.append(f'set README sdk_version to "{gradio_version}"')
+            lines[index] = new_line
+            replaced = True
+
+    if not replaced:
+        insert_at = 1
+        for index in range(1, end):
+            if _SDK_GRADIO_RE.match(lines[index]):
+                insert_at = index + 1
+                break
+        lines.insert(insert_at, f'sdk_version: "{gradio_version}"')
+        changes.append(f'added README sdk_version "{gradio_version}"')
+
+    new_text = "\n".join(lines)
+    if text.endswith("\n") and not new_text.endswith("\n"):
+        new_text += "\n"
+    return new_text, changes
+
+
+def _duplicate_pin_conflicts(text: str) -> List[str]:
+    """Report packages pinned with ``==`` to two different versions in one file."""
+
+    pins: Dict[str, str] = {}
+    conflicts: List[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "-")):
+            continue
+        match = _PINNED_REQ_RE.match(stripped)
+        if not match:
+            continue
+        name = match.group(1).lower()
+        version = match.group(3)
+        if name in pins and pins[name] != version:
+            conflicts.append(f"{name}: {pins[name]} vs {version}")
+        else:
+            pins.setdefault(name, version)
+    return conflicts
 
 
 def _normalize_space_repo_id(value: str) -> str:
