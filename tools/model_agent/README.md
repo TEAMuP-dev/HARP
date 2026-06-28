@@ -298,6 +298,19 @@ of that Space** (HF → *Duplicate this Space*), where those modules and the
 pretrained weights are present. A hand-authored reference for exactly this case
 ships at `examples/soulx_singer_recipe.json`.
 
+**Reuse the single high-level entry point, don't re-implement the pipeline.** For
+app-like Spaces the wrapper should import and call the one function the Space's UI
+button calls (e.g. `synthesis_function`) and pass *every* parameter through —
+mirroring the UI's default values (vocal-separation flags, language selections,
+etc.) exactly. Re-implementing a multi-stage pipeline (calling a `run_preprocess`
+step plus a separate `run_svs`/inference step, or reloading audio with
+`librosa.load(..., sr=None)`) silently diverges from the original preprocessing
+and produces subtle corruption — classically *correct melody/timbre but gibberish
+words*, because the lyric/ASR path got different audio or options. The generators
+(`render-recipe`, `generate-recipe`, `generate-recipe-from-llm`, `complete-recipe`)
+run a heuristic linter that prints `[lint] WARNING:` to stderr when they detect
+these anti-patterns in the generated `app.py`.
+
 LLM model names change often and vary by key/region, so the built-in defaults can
 go stale. If a call fails with an HTTP 404 about the model, list what your key can
 actually use and pass it with `--llm-model`:

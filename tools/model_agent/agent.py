@@ -1973,6 +1973,43 @@ def merge_frozen_pins(
     return new_text, changes
 
 
+def lint_generated_app(source: str) -> List[str]:
+    """Heuristic warnings for a generated wrapper's ``app.py``.
+
+    Catches the most common ways an auto-generated wrapper silently diverges from
+    a Space's real behavior. The headline failure mode it targets: re-implementing
+    a model's multi-stage pipeline (e.g. a ``run_preprocess`` step plus a separate
+    ``run_svs``/inference step) instead of calling the Space's single high-level
+    entry point. That divergence changes preprocessing defaults (sample rate,
+    mono, trimming, language, vocal separation) and produces subtle, hard-to-debug
+    output corruption -- classically "right melody/timbre, gibberish words".
+    """
+
+    warnings: List[str] = []
+
+    has_preprocess = re.search(r"\brun_preprocess\b|\bPreprocessPipeline\b", source)
+    has_synth_stage = re.search(
+        r"\brun_svs\b|\brun_svs_from_paths\b|\bsvs_process\b", source
+    )
+    if has_preprocess and has_synth_stage:
+        warnings.append(
+            "wrapper appears to re-implement the model's multi-stage pipeline (it "
+            "calls a preprocess step AND a separate synthesis/SVS step). Prefer "
+            "importing and calling the Space's single high-level entry point -- the "
+            "function its UI button calls, e.g. `synthesis_function` -- and passing "
+            "every parameter through, so preprocessing defaults (sample rate, mono, "
+            "trimming, language, vocal separation) match the original exactly."
+        )
+    if re.search(r"librosa\.load\([^)]*\bsr\s*=\s*None", source):
+        warnings.append(
+            "wrapper loads audio with `librosa.load(..., sr=None)`, skipping the "
+            "resampling/normalization the original app may rely on; a mismatched "
+            "sample rate or channel layout can corrupt the downstream lyric/ASR path "
+            "(right melody, wrong words)."
+        )
+    return warnings
+
+
 def _duplicate_pin_conflicts(text: str) -> List[str]:
     """Report packages pinned with ``==`` to two different versions in one file."""
 

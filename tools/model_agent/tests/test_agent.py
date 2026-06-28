@@ -16,6 +16,7 @@ from tools.model_agent.agent import (
     SpaceCandidate,
     VenvSetupError,
     build_generated_app_package,
+    lint_generated_app,
     merge_frozen_pins,
     parse_freeze,
     reconcile_readme,
@@ -1281,9 +1282,52 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         self.assertIn("synthesis_function(", app)
         # Correct two-audio interface (the whole point of the fix).
         self.assertEqual(app.count('gr.Audio(type="filepath"'), 3)  # 2 inputs + 1 output
-        self.assertIn("def process_fn(prompt_audio, target_audio, control, auto_shift, pitch_shift):", app)
+        self.assertIn(
+            "def process_fn(prompt_audio, target_audio, control, prompt_lyric_lang, "
+            "target_lyric_lang, prompt_vocal_sep, target_vocal_sep, auto_shift, pitch_shift):",
+            app,
+        )
         # gpu false -> must NOT add a second @spaces.GPU (synthesis_function has its own).
         self.assertNotIn("@spaces.GPU", app)
+
+    def test_mirrors_original_ui_defaults_for_lyric_path(self):
+        app = render_app_from_recipe(self._recipe())
+        # Language + vocal-separation flags are passed through (NOT left to
+        # synthesis_function's own defaults), so the lyric/ASR path matches the
+        # original UI: prompt_vocal_sep defaults False, target_vocal_sep True,
+        # languages default English.
+        self.assertIn("prompt_lyric_lang=prompt_lyric_lang", app)
+        self.assertIn("target_lyric_lang=target_lyric_lang", app)
+        self.assertIn("prompt_vocal_sep=prompt_vocal_sep", app)
+        self.assertIn("target_vocal_sep=target_vocal_sep", app)
+        # Wrapping the single entry point cleanly => no lint warnings.
+        self.assertEqual(lint_generated_app(app), [])
+
+
+class LintGeneratedAppTest(unittest.TestCase):
+    """The generated-wrapper linter flags pipeline-reimplementation anti-patterns."""
+
+    def test_flags_multistage_reimplementation(self):
+        source = (
+            "ok, msg = app_state.run_preprocess(prompt_path=p, target_path=t)\n"
+            "ok, msg, out = app_state.run_svs(control=control, session_base=s)\n"
+        )
+        warnings = lint_generated_app(source)
+        self.assertTrue(warnings)
+        self.assertTrue(any("re-implement" in w for w in warnings))
+
+    def test_flags_sr_none_load(self):
+        source = "y, sr = librosa.load(prompt_audio, sr=None)\n"
+        warnings = lint_generated_app(source)
+        self.assertTrue(any("sr=None" in w for w in warnings))
+
+    def test_clean_single_entry_wrapper_has_no_warnings(self):
+        source = (
+            "from webui import synthesis_function\n"
+            "merged, _p, _t = synthesis_function(prompt_audio, target_audio)\n"
+            "return merged\n"
+        )
+        self.assertEqual(lint_generated_app(source), [])
 
 
 class SpaceSourceTest(unittest.TestCase):

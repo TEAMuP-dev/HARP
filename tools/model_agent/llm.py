@@ -57,7 +57,7 @@ class LLMError(Exception):
 # Model names move fast; these are sane defaults but a key/region may differ.
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
-    "gemini": "gemini-3.5-flash",
+    "gemini": "gemini-2.5-flash",
     "anthropic": "claude-sonnet-4-latest",
     "openai": "gpt-4o",
 }
@@ -318,11 +318,22 @@ inference.body rules:
     decorator (avoid nested GPU allocation).
 
 When a "# Original Space source" section is provided, it is the GROUND TRUTH:
-  - the wrapper is deployed INTO that Space, so its modules are importable;
-    prefer `from <module> import <function>` and CALLING the existing inference
-    function over reimplementing the model from the README.
-  - mirror the REAL input/output components from the Space's UI code (labels,
-    types, defaults, choices), not what the task name suggests.
+  - the wrapper is deployed INTO that Space, so its modules are importable.
+  - Find the SINGLE highest-level inference entry point: the one function the
+    Space's UI button calls to go from raw inputs to the final output (often
+    named like `synthesis_function` / `infer` / `predict` / `generate`). Import
+    THAT and call it, passing every parameter through. Do NOT re-call its
+    internal multi-stage helpers (e.g. a `run_preprocess` step plus a separate
+    `run_svs`/inference step) and do NOT reimplement audio preprocessing
+    (sample-rate resampling, mono conversion, trimming): doing so silently
+    changes results. A common, hard-to-debug failure is correct melody/timbre but
+    GIBBERISH WORDS, caused by feeding the lyric/ASR path audio or options that
+    differ from what the entry function would have prepared.
+  - Mirror the Space UI's REAL components AND their DEFAULT VALUES exactly
+    (labels, types, choices, and especially defaults such as vocal-separation
+    flags and language selections). Pass option strings through verbatim.
+  - If that entry function already carries an @spaces.GPU decorator, set
+    framework.gpu false to avoid nested GPU allocation.
 
 Output ONLY the JSON object. No markdown, no commentary.
 """

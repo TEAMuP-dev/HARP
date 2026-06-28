@@ -12,6 +12,7 @@ from .agent import (
     HARP_GRADIO_VERSION,
     DeploySpaceError,
     EndpointProbeError,
+    lint_generated_app,
     HarpModelAgent,
     SmokeTestResult,
     VenvSetupError,
@@ -492,6 +493,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "render-recipe":
             app_py = render_app_from_recipe(_read_json(args.recipe))
+            _warn_app_lint(app_py)
             if args.output:
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(app_py, encoding="utf-8")
@@ -500,6 +502,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "generate-recipe":
             package = build_package_from_recipe(_read_json(args.recipe))
+            _warn_app_lint(package.app_py)
             folder = agent.write_generated_app_package(package, args.output)
             result = {"package": str(folder), "framework": package.framework}
             if args.smoke_test:
@@ -704,8 +707,18 @@ def _fetch_card_or_exit(agent: HarpModelAgent, repo: str) -> object:
     return card
 
 
+def _warn_app_lint(app_py: str) -> None:
+    """Print heuristic warnings about a generated app.py to stderr."""
+
+    for warning in lint_generated_app(app_py):
+        print(f"  [lint] WARNING: {warning}", file=sys.stderr)
+
+
 def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
     """Shared output for the LLM recipe commands: write/print + optional package."""
+
+    _warn_app_lint(draft.app_py)
+
 
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
