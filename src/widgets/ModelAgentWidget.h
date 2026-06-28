@@ -323,6 +323,7 @@ private:
                 { "--token", "HF token", Field::Text, Browse::None, "", "or set HF_TOKEN env", false },
                 { "--into-space", "Overlay onto existing Space", Field::Flag, Browse::None, "0", "", false },
                 { "--gradio-version", "Gradio version", Field::Text, Browse::None, "5.28.0", "for --into-space", false },
+                { "--freeze-from", "Freeze file", Field::Text, Browse::OpenFile, "", "known-good pip freeze (--into-space)", false },
                 { "--private", "Private Space", Field::Flag, Browse::None, "0", "", false },
                 { "--sdk", "SDK", Field::Text, Browse::None, "gradio", "", false } } });
 
@@ -388,7 +389,7 @@ private:
         bool active = false;
     };
 
-    static constexpr int maxRows = 7;
+    static constexpr int maxRows = 8;
 
     /* ---- Process thread ---- */
 

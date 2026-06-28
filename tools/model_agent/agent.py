@@ -1279,6 +1279,7 @@ class HarpModelAgent:
         *,
         token: Optional[str] = None,
         gradio_version: str = HARP_GRADIO_VERSION,
+        freeze_from: Optional[Path] = None,
         commit_message: str = "Add HARP pyharp endpoint via model agent",
         log: Optional[Callable[[str], None]] = None,
     ) -> JSON:
@@ -1297,6 +1298,11 @@ class HarpModelAgent:
         pyharp requirement is ensured. Conflicts it cannot safely touch (e.g. two
         unrelated packages pinned incompatibly) are reported, not silently
         "fixed".
+
+        When ``freeze_from`` points at a known-good ``pip freeze`` file, the
+        requirements are additionally locked to that exact closure (see
+        :func:`merge_frozen_pins`) so unpinned ML deps cannot drift when gradio
+        is forced down -- the usual cause of "right melody, gibberish words".
 
         Requires ``huggingface_hub`` and a write token; the Space must already
         exist.
@@ -1341,7 +1347,18 @@ class HarpModelAgent:
                 "original Space first), and your token must have access to it."
             )
 
-        new_req, changes = reconcile_requirements(existing_req, gradio_version)
+        if freeze_from is not None:
+            freeze_path = Path(freeze_from)
+            if not freeze_path.exists():
+                raise DeploySpaceError(
+                    f"--freeze-from file not found: {freeze_path}"
+                )
+            freeze_text = freeze_path.read_text(encoding="utf-8")
+            new_req, changes = merge_frozen_pins(
+                existing_req, freeze_text, gradio_version=gradio_version
+            )
+        else:
+            new_req, changes = reconcile_requirements(existing_req, gradio_version)
         uploads: List[Tuple[str, bytes]] = [
             ("app.py", app_py.read_bytes()),
             ("requirements.txt", new_req.encode("utf-8")),
@@ -1729,6 +1746,229 @@ def reconcile_readme(
 
     new_text = "\n".join(lines)
     if text.endswith("\n") and not new_text.endswith("\n"):
+        new_text += "\n"
+    return new_text, changes
+
+
+_REQ_NAME_RE = re.compile(r"^([A-Za-z0-9_.\-]+)(\[[^\]]*\])?")
+
+# Audio/text ML libraries whose version drift is the usual cause of "right
+# melody/timbre, gibberish words" regressions, and which gradio itself does NOT
+# depend on -- so re-pinning them from a known-good freeze is safe. We
+# deliberately exclude gradio's own transitive deps (huggingface_hub, numpy,
+# pydantic, fastapi, pandas, ...): pinning those from a gradio-6 freeze would
+# just reintroduce the gradio==5.28.0 resolution conflict.
+_ML_PIN_ALLOWLIST = frozenset(
+    {
+        "transformers",
+        "tokenizers",
+        "torch",
+        "torchaudio",
+        "torchvision",
+        "safetensors",
+        "sentencepiece",
+        "einops",
+        "accelerate",
+        "librosa",
+        "soundfile",
+        "soxr",
+        "resampy",
+        "encodec",
+        "descript-audiotools",
+        "descript-audio-codec",
+        "phonemizer",
+        "g2p-en",
+        "pypinyin",
+        "jieba",
+        "inflect",
+        "unidecode",
+        "num2words",
+    }
+)
+
+
+# Packages that must NEVER be pinned from a freeze -- even when the Space declares
+# them. These are gradio's own dependency closure plus transport/serialization
+# infra. A freeze captured against a *different* gradio (e.g. gradio 6) carries
+# versions of these that conflict with gradio==5.28.0 (the classic case:
+# huggingface_hub 1.x from a gradio-6 env vs gradio 5.28.0 + transformers needing
+# huggingface_hub<1.0). We leave them as the Space declared them so pip can
+# resolve a set compatible with gradio 5.28.0.
+_FREEZE_BLOCKLIST = frozenset(
+    {
+        "gradio",
+        "gradio-client",
+        "huggingface-hub",
+        "hf-xet",
+        "hf-transfer",
+        "numpy",
+        "pandas",
+        "pillow",
+        "pydantic",
+        "pydantic-core",
+        "fastapi",
+        "starlette",
+        "anyio",
+        "sniffio",
+        "h11",
+        "httpx",
+        "httpcore",
+        "uvicorn",
+        "websockets",
+        "python-multipart",
+        "orjson",
+        "aiofiles",
+        "ffmpy",
+        "jinja2",
+        "markupsafe",
+        "typer",
+        "click",
+        "rich",
+        "shellingham",
+        "typing-extensions",
+        "typing-inspection",
+        "packaging",
+        "pyyaml",
+        "ruff",
+        "semantic-version",
+        "tomlkit",
+        "safehttpx",
+        "groovy",
+        "markdown-it-py",
+        "mdurl",
+        "pygments",
+        "requests",
+        "certifi",
+        "urllib3",
+        "charset-normalizer",
+        "idna",
+        "setuptools",
+        "wheel",
+        "pip",
+    }
+)
+
+
+def _canon(name: str) -> str:
+    """Canonicalize a distribution name for case/underscore-insensitive matching."""
+
+    return name.strip().lower().replace("_", "-")
+
+
+def parse_freeze(text: str) -> Dict[str, Tuple[str, str]]:
+    """Parse ``pip freeze`` output into ``{canonical_name: (name, version)}``.
+
+    Editable installs, VCS/URL pins, and lines without an exact ``==`` are
+    skipped (they cannot be safely transplanted as a plain version pin).
+    """
+
+    frozen: Dict[str, Tuple[str, str]] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "-")):
+            continue
+        if " @ " in stripped or stripped.startswith(("git+", "http", "file:")):
+            continue
+        match = re.match(r"^([A-Za-z0-9_.\-]+)==([^\s;#]+)", stripped)
+        if not match:
+            continue
+        # Drop local build tags (e.g. torch 2.4.0+cu121) -- they are
+        # environment-specific and usually have "no matching distribution" on a
+        # Space's default index.
+        version = match.group(2).split("+", 1)[0]
+        frozen[_canon(match.group(1))] = (match.group(1), version)
+    return frozen
+
+
+def merge_frozen_pins(
+    requirements_text: str,
+    freeze_text: str,
+    *,
+    gradio_version: str = HARP_GRADIO_VERSION,
+    ensure_pyharp: bool = True,
+) -> Tuple[str, List[str]]:
+    """Lock a requirements.txt to a known-good ``pip freeze`` closure.
+
+    Every package the Space already declares is re-pinned to its exact version
+    from ``freeze_text`` (so nothing drifts when gradio is forced down), a curated
+    set of audio/text ML libraries (:data:`_ML_PIN_ALLOWLIST`) is added from the
+    freeze even if undeclared (the usual hidden culprits behind gibberish
+    output), and gradio/pyharp are still managed exactly like
+    :func:`reconcile_requirements`. gradio and pyharp are intentionally *not*
+    taken from the freeze. Returns ``(new_text, changes)``.
+    """
+
+    frozen = parse_freeze(freeze_text)
+    frozen.pop("gradio", None)
+    for key in [name for name in frozen if "pyharp" in name]:
+        frozen.pop(key)
+
+    changes: List[str] = []
+    out: List[str] = []
+    has_pyharp = False
+    pinned_gradio = False
+    declared: set = set()
+
+    for line in requirements_text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "-")):
+            out.append(line)
+            continue
+        if "pyharp" in stripped.lower():
+            has_pyharp = True
+        gradio_match = _GRADIO_REQ_RE.match(line)
+        if gradio_match:
+            new_line = f"gradio{gradio_match.group(1) or ''}=={gradio_version}"
+            if new_line != stripped:
+                changes.append(f"pinned gradio to {gradio_version} (was '{stripped}')")
+            out.append(new_line)
+            pinned_gradio = True
+            continue
+        name_match = _REQ_NAME_RE.match(stripped)
+        if name_match:
+            name = name_match.group(1)
+            extras = name_match.group(2) or ""
+            canon = _canon(name)
+            declared.add(canon)
+            if canon in _FREEZE_BLOCKLIST:
+                # gradio-coupled / infra: keep the Space's OWN declared constraint
+                # verbatim and never transplant the freeze version. The Space's
+                # constraints are deliberate and correct (e.g. 'numpy<2.0.0' for
+                # NumPy-1.x C-extensions like numba/pyworld, or 'huggingface_hub>=0.20.0'),
+                # whereas a gradio-6-era freeze pin (e.g. huggingface_hub==1.x, numpy 2.x)
+                # would either break those extensions or conflict with gradio==<version>.
+                if canon in frozen:
+                    changes.append(
+                        f"kept '{stripped}' as declared (gradio-coupled; not locked from freeze)"
+                    )
+                out.append(line)
+                continue
+            if canon in frozen:
+                _, version = frozen[canon]
+                new_line = f"{name}{extras}=={version}"
+                if new_line != stripped:
+                    changes.append(f"pinned {name} to {version} (was '{stripped}')")
+                out.append(new_line)
+                continue
+        out.append(line)
+
+    for canon in sorted(_ML_PIN_ALLOWLIST):
+        if canon in _FREEZE_BLOCKLIST:
+            continue
+        if canon in frozen and canon not in declared:
+            fname, version = frozen[canon]
+            out.append(f"{fname}=={version}")
+            changes.append(f"added {fname}=={version} (from freeze)")
+
+    if not pinned_gradio:
+        out.append(f"gradio=={gradio_version}")
+        changes.append(f"added gradio=={gradio_version}")
+    if ensure_pyharp and not has_pyharp:
+        out.append(PYHARP_REQUIREMENT)
+        changes.append("added the pyharp requirement")
+
+    new_text = "\n".join(out)
+    if not new_text.endswith("\n"):
         new_text += "\n"
     return new_text, changes
 

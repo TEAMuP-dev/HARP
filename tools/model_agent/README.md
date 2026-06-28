@@ -423,6 +423,45 @@ ensured, and any conflicts it *can't* safely resolve (e.g. two unrelated package
 pinned incompatibly) are reported under `unresolved_conflicts` rather than
 hidden.
 
+#### Locking a known-good closure (`--freeze-from`)
+
+Forcing gradio down to 5.28.0 satisfies the *resolver*, but pip then re-resolves
+the whole graph — so a model's **unpinned** ML libraries (`transformers`,
+`tokenizers`, etc.) can silently drift to different versions. That is the usual
+cause of a wrapper that produces the **right melody/timbre but gibberish words**:
+the audio path is fine, but the text/phoneme frontend changed underneath you.
+
+If you have an environment where the model works correctly, capture it and feed
+it in:
+
+```bash
+pip freeze > working.txt        # in the known-good environment
+
+python3 -m tools.model_agent deploy-space \
+  artifacts/model_agent/generated/<package> \
+  --repo your-username/<duplicated-space> --into-space \
+  --freeze-from working.txt
+```
+
+`--freeze-from` re-pins every package the Space declares to its exact version
+from the freeze, and additionally pins a curated set of audio/text ML libraries
+(transformers, tokenizers, torch/torchaudio, sentencepiece, librosa,
+phonemizer/g2p, …) even when undeclared. gradio is still forced to 5.28.0 and
+pyharp is still ensured.
+
+Crucially, gradio's *own* dependency closure and transport/serialization infra
+(`huggingface_hub`, `numpy`, `pydantic`, `fastapi`, `starlette`, `httpx`,
+`uvicorn`, `requests`, …) are **never** pinned from the freeze. The Space's own
+declared constraint on them is kept **verbatim**, because those constraints are
+usually deliberate and correct — e.g. `numpy<2.0.0` (required for NumPy-1.x
+C-extensions like `numba`/`pyworld`; transplanting the freeze's NumPy 2.x would
+make them fail to import) or `huggingface_hub>=0.20.0` (resolvable against
+`gradio 5.28.0 + transformers`). Transplanting a gradio-6-era freeze pin for
+these (e.g. `huggingface_hub==1.x`, which clashes with `transformers`' need for
+`<1.0`) is exactly what would break the build, so we don't. Local CUDA build tags
+(e.g. `torch==2.4.0+cu121`) are stripped to avoid "no matching distribution", and
+editable/VCS lines are ignored.
+
 Fetch a raw Hugging Face model repository and package it as a HARP-compatible
 Hugging Face Space:
 

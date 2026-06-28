@@ -16,6 +16,8 @@ from tools.model_agent.agent import (
     SpaceCandidate,
     VenvSetupError,
     build_generated_app_package,
+    merge_frozen_pins,
+    parse_freeze,
     reconcile_readme,
     reconcile_requirements,
     classify_task,
@@ -453,6 +455,80 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(new, "# just a readme\n")
 
 
+class FreezeMergeTest(unittest.TestCase):
+    """Locking requirements to a known-good freeze closure."""
+
+    FREEZE = (
+        "gradio==6.3.0\n"
+        "transformers==4.46.0\n"
+        "tokenizers==0.20.1\n"
+        "huggingface-hub==0.26.0\n"
+        "numpy==2.1.0\n"
+        "torch==2.4.0\n"
+        "pyharp @ git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0\n"
+        "-e git+https://example.com/x.git#egg=x\n"
+    )
+
+    def test_parse_freeze_skips_vcs_and_editable(self):
+        frozen = parse_freeze(self.FREEZE)
+        self.assertEqual(frozen["transformers"], ("transformers", "4.46.0"))
+        self.assertEqual(frozen["huggingface-hub"], ("huggingface-hub", "0.26.0"))
+        self.assertNotIn("x", frozen)
+        self.assertNotIn("pyharp", frozen)
+
+    def test_repins_declared_deps_to_frozen_versions(self):
+        req = "transformers\ntokenizers==0.19.0\nsoundfile\n"
+        new, changes = merge_frozen_pins(req, self.FREEZE)
+        self.assertIn("transformers==4.46.0", new)
+        self.assertIn("tokenizers==0.20.1", new)
+        self.assertNotIn("0.19.0", new)
+        self.assertTrue(any("tokenizers" in c for c in changes))
+
+    def test_forces_gradio_and_ignores_frozen_gradio(self):
+        new, _ = merge_frozen_pins("gradio==6.3.0\n", self.FREEZE)
+        self.assertIn(f"gradio=={HARP_GRADIO_VERSION}", new)
+        self.assertNotIn("gradio==6.3.0", new)
+        self.assertIn("pyharp", new)
+
+    def test_adds_critical_ml_libs_even_if_undeclared(self):
+        # torch/transformers/tokenizers are in the allowlist; numpy is not (it is a
+        # gradio dep, so we must not transplant gradio-6's numpy).
+        new, _ = merge_frozen_pins("soundfile\n", self.FREEZE)
+        self.assertIn("torch==2.4.0", new)
+        self.assertIn("transformers==4.46.0", new)
+        self.assertNotIn("numpy==2.1.0", new)
+        self.assertNotIn("huggingface-hub==0.26.0", new)
+
+    def test_canonicalizes_names(self):
+        frozen = parse_freeze("Torch_Audio==2.4.0\n")
+        self.assertIn("torch-audio", frozen)
+
+    def test_strips_local_build_tag(self):
+        frozen = parse_freeze("torch==2.4.0+cu121\n")
+        self.assertEqual(frozen["torch"], ("torch", "2.4.0"))
+
+    def test_keeps_gradio_coupled_dep_as_declared(self):
+        # huggingface_hub is gradio-coupled: the freeze (gradio-6 era) has 0.26.0,
+        # but the Space's own '>=0.20.0' is correct and resolvable with
+        # gradio==5.28.0 + transformers. We must keep the declared constraint and
+        # never transplant the frozen version.
+        req = "huggingface_hub>=0.20.0\ntransformers\n"
+        new, _ = merge_frozen_pins(req, self.FREEZE)
+        self.assertIn("huggingface_hub>=0.20.0", new)
+        self.assertNotIn("huggingface-hub==0.26.0", new)
+        self.assertNotIn("huggingface_hub==0.26.0", new)
+        # the genuinely model-critical lib is still locked
+        self.assertIn("transformers==4.46.0", new)
+
+    def test_preserves_numpy_upper_bound(self):
+        # 'numpy<2.0.0' is a deliberate constraint for NumPy-1.x C-extensions;
+        # it must survive untouched (NOT be repinned to the freeze's numpy 2.x,
+        # NOT be loosened away).
+        new, _ = merge_frozen_pins("numpy<2.0.0\n", self.FREEZE)
+        self.assertIn("numpy<2.0.0", new)
+        self.assertNotIn("numpy==2.1.0", new)
+
+
 class DeployIntoSpaceTest(unittest.TestCase):
     """Overlaying onto an existing Space reconciles deps and uploads per-file."""
 
@@ -526,6 +602,50 @@ class DeployIntoSpaceTest(unittest.TestCase):
                 (pkg / "app.py").write_text("x\n", encoding="utf-8")
                 with self.assertRaises(DeploySpaceError):
                     HarpModelAgent().deploy_into_space(pkg, "me/dup", token="tok")
+
+    def test_freeze_from_locks_closure(self):
+        import sys
+
+        calls: dict = {}
+        files = {"requirements.txt": "transformers\ngradio==6.3.0\n"}
+        module = self._fake_hub(calls, files)
+        with mock.patch.dict(sys.modules, {"huggingface_hub": module}):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                pkg = root / "pkg"
+                pkg.mkdir()
+                (pkg / "app.py").write_text("print('x')\n", encoding="utf-8")
+                freeze = root / "working.txt"
+                freeze.write_text(
+                    "transformers==4.46.0\ntokenizers==0.20.1\ngradio==6.3.0\n",
+                    encoding="utf-8",
+                )
+                result = HarpModelAgent().deploy_into_space(
+                    pkg, "me/dup", token="tok", freeze_from=freeze
+                )
+
+        req = calls["uploads"]["requirements.txt"].decode("utf-8")
+        self.assertIn("transformers==4.46.0", req)
+        self.assertIn("tokenizers==0.20.1", req)
+        self.assertIn(f"gradio=={HARP_GRADIO_VERSION}", req)
+        self.assertNotIn("gradio==6.3.0", req)
+        self.assertTrue(any("transformers" in change for change in result["changes"]))
+
+    def test_freeze_from_missing_file_raises(self):
+        import sys
+
+        calls: dict = {}
+        files = {"requirements.txt": "torch\n"}
+        module = self._fake_hub(calls, files)
+        with mock.patch.dict(sys.modules, {"huggingface_hub": module}):
+            with tempfile.TemporaryDirectory() as tmp:
+                pkg = Path(tmp) / "pkg"
+                pkg.mkdir()
+                (pkg / "app.py").write_text("x\n", encoding="utf-8")
+                with self.assertRaises(DeploySpaceError):
+                    HarpModelAgent().deploy_into_space(
+                        pkg, "me/dup", token="tok", freeze_from=Path(tmp) / "nope.txt"
+                    )
 
 
 class AnalyzeTest(unittest.TestCase):

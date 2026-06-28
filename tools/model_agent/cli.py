@@ -387,6 +387,14 @@ def build_parser() -> argparse.ArgumentParser:
         "pyharp's pin).",
     )
     deploy.add_argument(
+        "--freeze-from",
+        default=None,
+        help="With --into-space: path to a known-good `pip freeze` file. Locks the "
+        "Space's requirements to that exact closure (re-pinning declared deps and "
+        "common audio/text ML libs) so they can't drift when gradio is forced down "
+        "-- the usual cause of correct melody but gibberish words.",
+    )
+    deploy.add_argument(
         "--message",
         default="Deploy HARP wrapper via model agent",
         help="Commit message for the upload.",
@@ -625,10 +633,16 @@ def main(argv: Iterable[str] | None = None) -> int:
                     args.repo,
                     token=args.token,
                     gradio_version=args.gradio_version,
+                    freeze_from=args.freeze_from,
                     commit_message=args.message,
                     log=log,
                 )
             else:
+                if args.freeze_from:
+                    print(
+                        "  [deploy] note: --freeze-from only applies with --into-space; ignoring.",
+                        file=sys.stderr,
+                    )
                 print(
                     "Deploying to a Hugging Face Space (creates/updates a remote repo "
                     "under your account)...",
