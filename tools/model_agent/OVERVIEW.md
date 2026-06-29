@@ -61,7 +61,12 @@ three ways:
   scratch** for *any* model, even frameworks we have no template for. Add
   `--space <author/space>` to ground the LLM on an existing Space's real source
   (its `app.py` + modules) so the wrapper reuses the actual functions and UI
-  instead of guessing from the README — essential for app-like Spaces.
+  instead of guessing from the README — essential for app-like Spaces. Use
+  `--github <owner/repo>` (optionally `--ref <branch/tag>`) to port a model
+  **straight from a GitHub repository**: its README seeds the model card, its
+  source files ground the inference glue, and the generated wrapper installs the
+  repo as a `git+https://…` pip dependency. Set `GITHUB_TOKEN` to lift the API
+  rate limit / reach private repos.
 - `list-models` — see which LLM models your API key is allowed to use (handy when
   a model name is rejected).
 
@@ -91,6 +96,9 @@ Turn a recipe (or a model card) into the actual files.
 - **App-like Space (reuse its real pipeline):** `generate-recipe-from-llm --repo
   <id> --space <author/space>` → `generate-recipe`, then deploy into a *duplicate*
   of that Space.
+- **GitHub model (no Hugging Face presence):** `generate-recipe-from-llm --github
+  <owner/repo>` → `generate-recipe --smoke-test`. The wrapper pip-installs the repo
+  from git, so the same package smoke-tests locally and deploys to a fresh Space.
 - **Refine from a proven wrapper (most reliable):** `harvest` → `scaffold-recipe`
   → `complete-recipe` → `generate-recipe --smoke-test`.
 

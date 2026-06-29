@@ -22,6 +22,8 @@ from urllib.request import Request, urlopen
 
 JSON = Dict[str, Any]
 HUGGING_FACE_BASE = "https://huggingface.co"
+GITHUB_API_BASE = "https://api.github.com"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 KNOWN_HYPHENATED_SPACE_ORGS = ("teamup-tech",)
 
 # pyharp v0.3.0 hard-pins gradio==5.28.0. HARP wrappers must therefore align the
@@ -723,6 +725,89 @@ class HuggingFaceSpaceScraper:
             return json.loads(response.read().decode("utf-8"))
 
 
+class GitHubRepoScraper:
+    """Minimal read-only GitHub client used to ground LLM recipe generation.
+
+    Mirrors :class:`HuggingFaceSpaceScraper`, but for source that lives on
+    GitHub rather than a Hugging Face Space. It uses the public REST API plus
+    ``raw.githubusercontent.com``, so no ``git`` binary is required. An optional
+    token (``GITHUB_TOKEN`` / ``GH_TOKEN``) raises the unauthenticated rate
+    limit (60 req/h) and allows private repos.
+    """
+
+    def __init__(self, timeout: float = 30.0, token: Optional[str] = None):
+        self.timeout = timeout
+        self.token = (
+            token
+            or os.environ.get("GITHUB_TOKEN")
+            or os.environ.get("GH_TOKEN")
+            or None
+        )
+
+    def _headers(self, *, api: bool) -> Dict[str, str]:
+        headers = {"User-Agent": "model-agent/0.1"}
+        if api:
+            headers["Accept"] = "application/vnd.github+json"
+            headers["X-GitHub-Api-Version"] = "2022-11-28"
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        return headers
+
+    def _get_json(self, url: str) -> Any:
+        request = Request(url, headers=self._headers(api=True))
+        with urlopen(request, timeout=self.timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def get_repo_info(self, owner: str, repo: str) -> Optional[JSON]:
+        """Repo metadata (default_branch, topics, license, ...), or None if 404."""
+
+        try:
+            payload = self._get_json(f"{GITHUB_API_BASE}/repos/{quote(owner)}/{quote(repo)}")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise
+        return payload if isinstance(payload, dict) else None
+
+    def list_tree(self, owner: str, repo: str, ref: str) -> List[str]:
+        """Return every blob path in the repo tree at ``ref`` (recursive)."""
+
+        url = (
+            f"{GITHUB_API_BASE}/repos/{quote(owner)}/{quote(repo)}"
+            f"/git/trees/{quote(ref)}?recursive=1"
+        )
+        try:
+            payload = self._get_json(url)
+        except HTTPError as exc:
+            if exc.code == 404:
+                return []
+            raise
+        tree = payload.get("tree") if isinstance(payload, dict) else None
+        if not isinstance(tree, list):
+            return []
+        return [
+            str(item.get("path"))
+            for item in tree
+            if isinstance(item, dict) and item.get("type") == "blob" and item.get("path")
+        ]
+
+    def get_file(self, owner: str, repo: str, ref: str, path: str) -> Optional[str]:
+        """Download one raw text file from the repo at ``ref``, or None if absent."""
+
+        url = (
+            f"{GITHUB_RAW_BASE}/{quote(owner)}/{quote(repo)}"
+            f"/{quote(ref)}/{quote(path)}"
+        )
+        request = Request(url, headers=self._headers(api=False))
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise
+
+
 class HarpEndpointClient:
     """Client for the HARP controls endpoint exposed by pyharp apps."""
 
@@ -908,9 +993,11 @@ class HarpModelAgent:
         self,
         scraper: Optional[HuggingFaceSpaceScraper] = None,
         endpoint_client: Optional[HarpEndpointClient] = None,
+        github_scraper: Optional[GitHubRepoScraper] = None,
     ):
         self.scraper = scraper or HuggingFaceSpaceScraper()
         self.endpoint_client = endpoint_client or HarpEndpointClient()
+        self.github_scraper = github_scraper or GitHubRepoScraper()
 
     def discover_open_gradio_spaces(self, **kwargs: Any) -> List[SpaceCandidate]:
         return [
@@ -1473,6 +1560,135 @@ class HarpModelAgent:
 
         return sources
 
+    # ---- GitHub grounding (mirror of the Space-source path above) ----
+
+    def resolve_github_target(
+        self, repo_url: str, *, ref: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        """Return ``(owner, repo, ref)`` for a GitHub URL, resolving the default
+        branch via the API when no ref is given in the URL or by the caller."""
+
+        owner, repo, url_ref, _subpath = _parse_github_url(repo_url)
+        resolved = (ref or url_ref or "").strip()
+        if not resolved:
+            try:
+                info = self.github_scraper.get_repo_info(owner, repo) or {}
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+                info = {}
+            resolved = str(info.get("default_branch") or "main")
+        return owner, repo, resolved
+
+    def github_pip_requirement(self, repo_url: str, *, ref: Optional[str] = None) -> str:
+        """Build the ``git+https://...`` pip requirement for a GitHub repo."""
+
+        owner, repo, resolved = self.resolve_github_target(repo_url, ref=ref)
+        return f"git+https://github.com/{owner}/{repo}.git@{resolved}"
+
+    def get_github_card(self, repo_url: str, *, ref: Optional[str] = None) -> JSON:
+        """Synthesize a model-card-shaped dict from a GitHub repo.
+
+        Mirrors the Hugging Face card shape (``meta`` / ``readme`` / ``files``)
+        so :class:`RecipeGenerationContext.from_card` can consume it unchanged.
+        """
+
+        owner, repo, resolved = self.resolve_github_target(repo_url, ref=ref)
+        try:
+            info = self.github_scraper.get_repo_info(owner, repo) or {}
+        except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+            info = {}
+
+        readme = ""
+        for candidate in ("README.md", "README.rst", "README.txt", "readme.md", "README"):
+            try:
+                text = self.github_scraper.get_file(owner, repo, resolved, candidate)
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+                text = None
+            if text:
+                readme = text
+                break
+
+        try:
+            files = self.github_scraper.list_tree(owner, repo, resolved)
+        except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+            files = []
+
+        license_obj = info.get("license") if isinstance(info.get("license"), Mapping) else {}
+        license_name = str(license_obj.get("spdx_id") or license_obj.get("key") or "")
+        if license_name.upper() in ("NOASSERTION", "NONE"):
+            license_name = ""
+
+        return {
+            "meta": {
+                "id": f"{owner}/{repo}",
+                "name": repo,
+                "author": owner,
+                "tags": [str(topic) for topic in (info.get("topics") or [])],
+                "license": license_name,
+                "library_name": "",
+                "pipeline_tag": "",
+            },
+            "readme": readme,
+            "files": files[:200],
+        }
+
+    def fetch_github_sources(
+        self,
+        repo_url: str,
+        *,
+        ref: Optional[str] = None,
+        entry_hints: Iterable[str] = (),
+        max_files: int = 8,
+        max_chars: int = 6000,
+    ) -> Dict[str, str]:
+        """Download a GitHub repo's entry/inference files and their first-party
+        imports, returning ``{path: source}`` for LLM grounding.
+
+        The repo tree is listed once; promising python files (app/inference/
+        pipeline modules, shallow paths, skipping test/doc trees) seed a bounded
+        BFS that follows only the repo's own imports. Stdlib/third-party imports
+        are skipped. One unreachable file never aborts the rest.
+        """
+
+        owner, repo, resolved = self.resolve_github_target(repo_url, ref=ref)
+        _o, _r, _url_ref, subpath = _parse_github_url(repo_url)
+
+        try:
+            tree = self.github_scraper.list_tree(owner, repo, resolved)
+        except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+            return {}
+
+        py_files = {path for path in tree if path.endswith(".py")}
+        seeds = _github_seed_files(py_files, subpath=subpath, entry_hints=entry_hints)
+
+        sources: Dict[str, str] = {}
+        seen: set = set()
+        queue_: List[str] = list(seeds)
+        attempts = 0
+
+        while queue_ and len(sources) < max_files and attempts < max_files * 8:
+            path = queue_.pop(0)
+            if path in seen:
+                continue
+            seen.add(path)
+            attempts += 1
+            if path not in py_files:
+                continue
+            try:
+                text = self.github_scraper.get_file(owner, repo, resolved, path)
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+                continue
+            if text is None:
+                continue
+
+            sources[path] = text[:max_chars]
+            current_dir = path.rsplit("/", 1)[0] if "/" in path else ""
+            for module in _local_import_modules(text):
+                for candidate in _module_path_candidates(module, (current_dir, subpath)):
+                    if candidate in py_files and candidate not in seen and candidate not in queue_:
+                        queue_.append(candidate)
+
+        return sources
+
     def harvest_space_apps(
         self,
         output_dir: Path,
@@ -1643,6 +1859,158 @@ def _local_import_modules(source: str) -> List[str]:
                 continue
             modules.append(name)
     return modules
+
+
+# Common entry/inference module basenames, highest-signal first. Used to seed
+# the GitHub source crawl when the repo isn't a Gradio app with an obvious app.py.
+_GITHUB_ENTRY_BASENAMES = (
+    "app.py",
+    "gradio_app.py",
+    "demo.py",
+    "webui.py",
+    "web_ui.py",
+    "inference.py",
+    "infer.py",
+    "predict.py",
+    "pipeline.py",
+    "api.py",
+    "model.py",
+    "run.py",
+    "main.py",
+    "cli.py",
+    "__init__.py",
+)
+
+_GITHUB_PATH_SKIP_DIRS = (
+    "test",
+    "tests",
+    "example",
+    "examples",
+    "docs",
+    "doc",
+    "scripts",
+    "benchmark",
+    "benchmarks",
+    ".github",
+)
+
+
+def _parse_github_url(url: str) -> Tuple[str, str, Optional[str], str]:
+    """Parse a GitHub repo reference into ``(owner, repo, ref, subpath)``.
+
+    Accepts the common shapes::
+
+        https://github.com/owner/repo
+        https://github.com/owner/repo.git
+        https://github.com/owner/repo/tree/<ref>/<subpath>
+        https://github.com/owner/repo/blob/<ref>/<file.py>
+        git@github.com:owner/repo.git
+        owner/repo
+
+    ``ref`` and ``subpath`` are ``None``/``""`` when not present in the URL. A
+    ref containing slashes (e.g. ``feature/x``) is not disambiguated from the
+    subpath; pass ``--ref`` explicitly for such branches.
+    """
+
+    text = (url or "").strip()
+    if not text:
+        raise ValueError("empty GitHub repository URL")
+
+    # git@github.com:owner/repo(.git)
+    if text.startswith("git@"):
+        text = text.split(":", 1)[-1]
+    else:
+        for prefix in ("https://", "http://", "ssh://", "git://"):
+            if text.startswith(prefix):
+                text = text[len(prefix) :]
+                break
+        if text.startswith("github.com/"):
+            text = text[len("github.com/") :]
+        elif text.startswith("www.github.com/"):
+            text = text[len("www.github.com/") :]
+
+    text = text.strip("/")
+    parts = [segment for segment in text.split("/") if segment]
+    if len(parts) < 2:
+        raise ValueError(f"could not parse GitHub owner/repo from '{url}'")
+
+    owner = parts[0]
+    repo = parts[1]
+    if repo.endswith(".git"):
+        repo = repo[: -len(".git")]
+
+    ref: Optional[str] = None
+    subpath = ""
+    if len(parts) >= 4 and parts[2] in ("tree", "blob"):
+        ref = parts[3]
+        subpath = "/".join(parts[4:])
+    return owner, repo, ref, subpath
+
+
+def _module_path_candidates(module: str, search_dirs: Iterable[str]) -> List[str]:
+    """Map an imported module name to candidate file paths within a repo tree."""
+
+    rel = module.replace(".", "/")
+    bases = ["", *[d for d in search_dirs if d]]
+    candidates: List[str] = []
+    for base in bases:
+        prefix = f"{base}/" if base else ""
+        candidates.append(f"{prefix}{rel}.py")
+        candidates.append(f"{prefix}{rel}/__init__.py")
+    # Preserve order while removing duplicates.
+    seen: set = set()
+    unique: List[str] = []
+    for candidate in candidates:
+        if candidate not in seen:
+            seen.add(candidate)
+            unique.append(candidate)
+    return unique
+
+
+def _github_seed_files(
+    py_files: Iterable[str], *, subpath: str = "", entry_hints: Iterable[str] = ()
+) -> List[str]:
+    """Pick the most promising python files to seed the GitHub source crawl."""
+
+    files = list(py_files)
+    fileset = set(files)
+    seeds: List[str] = []
+
+    def _add(path: str) -> None:
+        if path in fileset and path not in seeds:
+            seeds.append(path)
+
+    for hint in entry_hints:
+        _add(hint)
+
+    # A subpath pointing straight at a file or directory is a strong hint.
+    if subpath:
+        if subpath.endswith(".py"):
+            _add(subpath)
+        for path in files:
+            if path == subpath or path.startswith(subpath.rstrip("/") + "/"):
+                _add(path)
+
+    def _depth(path: str) -> int:
+        return path.count("/")
+
+    def _is_skippable(path: str) -> bool:
+        return any(seg in _GITHUB_PATH_SKIP_DIRS for seg in path.split("/")[:-1])
+
+    # Known entry basenames, shallowest first, skipping test/doc/example trees.
+    for basename in _GITHUB_ENTRY_BASENAMES:
+        matches = sorted(
+            (p for p in files if p.split("/")[-1] == basename and not _is_skippable(p)),
+            key=_depth,
+        )
+        for path in matches:
+            _add(path)
+
+    # Fallback: the shallowest remaining python files (still skipping tests/docs).
+    for path in sorted((p for p in files if not _is_skippable(p)), key=_depth):
+        _add(path)
+
+    return seeds
 
 
 _GRADIO_REQ_RE = re.compile(r"^\s*gradio(\[[^\]]*\])?\s*([<>=!~].*)?\s*$", re.IGNORECASE)

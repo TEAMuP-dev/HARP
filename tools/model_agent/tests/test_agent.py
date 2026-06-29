@@ -15,6 +15,7 @@ from tools.model_agent.agent import (
     ModelPackage,
     SpaceCandidate,
     VenvSetupError,
+    _parse_github_url,
     build_generated_app_package,
     lint_generated_app,
     merge_frozen_pins,
@@ -1139,6 +1140,18 @@ class LLMRecipeTest(unittest.TestCase):
             provider = provider_from_env()
             self.assertEqual(provider.name, "openai")
 
+    def test_provider_from_env_generic_key_defaults_provider(self):
+        with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
+            provider = provider_from_env()
+            self.assertEqual(provider.name, "gemini")
+            self.assertEqual(provider.api_key, "generic")
+
+    def test_provider_from_env_generic_key_honors_explicit_provider(self):
+        with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
+            provider = provider_from_env("anthropic")
+            self.assertEqual(provider.name, "anthropic")
+            self.assertEqual(provider.api_key, "generic")
+
     def test_gemini_default_model_is_not_retired_1_5(self):
         with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "k"}, clear=True):
             provider = provider_from_env()
@@ -1390,6 +1403,120 @@ class SpaceGroundingPromptTest(unittest.TestCase):
     def test_no_space_section_without_sources(self):
         context = RecipeGenerationContext(model_id="me/model", readme="A model.")
         prompt = build_recipe_user_prompt(context)
+        self.assertNotIn("Original Space source", prompt)
+
+
+class GitHubUrlParseTest(unittest.TestCase):
+    def test_parses_common_shapes(self):
+        self.assertEqual(_parse_github_url("https://github.com/o/r"), ("o", "r", None, ""))
+        self.assertEqual(_parse_github_url("https://github.com/o/r.git"), ("o", "r", None, ""))
+        self.assertEqual(_parse_github_url("http://www.github.com/o/r/"), ("o", "r", None, ""))
+        self.assertEqual(_parse_github_url("git@github.com:o/r.git"), ("o", "r", None, ""))
+        self.assertEqual(_parse_github_url("o/r"), ("o", "r", None, ""))
+
+    def test_parses_tree_and_blob_refs(self):
+        self.assertEqual(
+            _parse_github_url("https://github.com/o/r/tree/dev/sub/dir"),
+            ("o", "r", "dev", "sub/dir"),
+        )
+        self.assertEqual(
+            _parse_github_url("https://github.com/o/r/blob/main/pkg/model.py"),
+            ("o", "r", "main", "pkg/model.py"),
+        )
+
+    def test_rejects_incomplete(self):
+        with self.assertRaises(ValueError):
+            _parse_github_url("https://github.com/just-owner")
+
+
+class _FakeGitHubScraper:
+    TREE = [
+        "app.py",
+        "pkg/__init__.py",
+        "pkg/model.py",
+        "pkg/utils.py",
+        "tests/test_x.py",
+        "scripts/run.py",
+        "README.md",
+        "requirements.txt",
+    ]
+    FILES = {
+        "app.py": "import gradio as gr\nfrom pkg.model import load_model\nimport numpy as np\n",
+        "pkg/model.py": "from pkg.utils import helper\nimport torch\n",
+        "pkg/utils.py": "def helper():\n    return 1\n",
+        "README.md": "# Cool Model\n\nDoes audio things.\n",
+    }
+
+    def get_repo_info(self, owner, repo):
+        return {
+            "default_branch": "main",
+            "topics": ["audio", "tts"],
+            "license": {"spdx_id": "MIT"},
+        }
+
+    def list_tree(self, owner, repo, ref):
+        return list(self.TREE)
+
+    def get_file(self, owner, repo, ref, path):
+        return self.FILES.get(path)
+
+
+class GitHubSourceTest(unittest.TestCase):
+    """fetch_github_sources crawls entry/inference files and their imports."""
+
+    def _agent(self):
+        return HarpModelAgent(github_scraper=_FakeGitHubScraper())
+
+    def test_crawls_first_party_modules_and_skips_libs_and_tests(self):
+        sources = self._agent().fetch_github_sources("owner/repo")
+        self.assertIn("app.py", sources)
+        self.assertIn("pkg/model.py", sources)  # imported by app.py
+        self.assertIn("pkg/utils.py", sources)  # imported by pkg/model.py
+        self.assertNotIn("tests/test_x.py", sources)  # test dir, never imported
+
+    def test_respects_max_files(self):
+        sources = self._agent().fetch_github_sources("owner/repo", max_files=2)
+        self.assertLessEqual(len(sources), 2)
+        self.assertIn("app.py", sources)
+
+    def test_get_github_card_shape(self):
+        card = self._agent().get_github_card("https://github.com/owner/repo")
+        self.assertEqual(card["meta"]["id"], "owner/repo")
+        self.assertEqual(card["meta"]["name"], "repo")
+        self.assertEqual(card["meta"]["author"], "owner")
+        self.assertEqual(card["meta"]["license"], "MIT")
+        self.assertIn("audio", card["meta"]["tags"])
+        self.assertIn("Cool Model", card["readme"])
+        self.assertIn("app.py", card["files"])
+
+    def test_resolve_and_pip_requirement(self):
+        agent = self._agent()
+        self.assertEqual(agent.resolve_github_target("owner/repo"), ("owner", "repo", "main"))
+        self.assertEqual(
+            agent.github_pip_requirement("owner/repo"),
+            "git+https://github.com/owner/repo.git@main",
+        )
+        # An explicit ref skips the default-branch lookup.
+        self.assertEqual(
+            agent.github_pip_requirement("owner/repo", ref="v1.2.0"),
+            "git+https://github.com/owner/repo.git@v1.2.0",
+        )
+
+
+class GitHubGroundingPromptTest(unittest.TestCase):
+    def test_github_sources_use_github_framing(self):
+        context = RecipeGenerationContext(
+            model_id="owner/repo",
+            readme="A model.",
+            space_sources={"pkg/model.py": "def load_model():\n    return None\n"},
+            grounding_origin="github",
+            source_repo_url="git+https://github.com/owner/repo.git@main",
+        )
+        prompt = build_recipe_user_prompt(context)
+        self.assertIn("Upstream GitHub source", prompt)
+        self.assertIn("git+https://github.com/owner/repo.git@main", prompt)
+        self.assertIn("## pkg/model.py", prompt)
+        # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
 
 

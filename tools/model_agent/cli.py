@@ -152,6 +152,18 @@ def build_parser() -> argparse.ArgumentParser:
     llm_source = llm_recipe.add_mutually_exclusive_group(required=True)
     llm_source.add_argument("--card", type=Path, help="Model-card JSON file (meta/readme/files).")
     llm_source.add_argument("--repo", help="Hugging Face model repo id to fetch the card from (network).")
+    llm_source.add_argument(
+        "--github",
+        default="",
+        help="GitHub repo URL/spec (owner/repo, full URL, or .../tree/<ref>/...). The "
+        "repo's README seeds the card and its source files ground the LLM; the wrapper "
+        "adds the repo as a git+ pip dependency. Set GITHUB_TOKEN to raise the API rate limit.",
+    )
+    llm_recipe.add_argument(
+        "--ref",
+        default="",
+        help="Git branch/tag/SHA for --github (default: the repo's default branch).",
+    )
     llm_recipe.add_argument(
         "--space",
         default="",
@@ -513,7 +525,19 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
         if args.command == "generate-recipe-from-llm":
-            card = _read_json(args.card) if args.card else _fetch_card_or_exit(agent, args.repo)
+            github_target = None
+            if args.github:
+                github_target = agent.resolve_github_target(args.github, ref=args.ref or None)
+                owner, repo, ref = github_target
+                print(
+                    f"Reading model card from GitHub repo: {owner}/{repo}@{ref} ...",
+                    file=sys.stderr,
+                )
+                card = agent.get_github_card(args.github, ref=ref)
+            elif args.card:
+                card = _read_json(args.card)
+            else:
+                card = _fetch_card_or_exit(agent, args.repo)
 
             context = RecipeGenerationContext.from_card(
                 card,
@@ -521,7 +545,22 @@ def main(argv: Iterable[str] | None = None) -> int:
                 target_outputs=_split_csv(args.outputs),
                 examples=[] if args.no_examples else default_examples(),
             )
-            if args.space:
+            if github_target is not None:
+                owner, repo, ref = github_target
+                print(
+                    f"Grounding on the GitHub source: {owner}/{repo}@{ref} ...",
+                    file=sys.stderr,
+                )
+                context.space_sources = agent.fetch_github_sources(args.github, ref=ref)
+                context.grounding_origin = "github"
+                context.source_repo_url = f"git+https://github.com/{owner}/{repo}.git@{ref}"
+                if not context.space_sources:
+                    print(
+                        "  (no readable .py source found in the repo; "
+                        "falling back to the README only)",
+                        file=sys.stderr,
+                    )
+            elif args.space:
                 print(
                     f"Grounding on the original Space source: {args.space} ...",
                     file=sys.stderr,

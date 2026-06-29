@@ -55,6 +55,15 @@ public:
         harpRootBrowse.onClick = [this] { browseInto(harpRootEditor, true); };
         addAndMakeVisible(harpRootBrowse);
 
+        // Secrets are injected into the run script's environment (not the visible
+        // command preview), so LLM/deploy commands work without exporting env vars
+        // in a terminal first.
+        setupLabel(llmKeyLabel, "LLM API key");
+        setupSecretEditor(llmKeyEditor, "Gemini/Anthropic/OpenAI key (for *-llm commands)");
+
+        setupLabel(hfTokenLabel, "HF token");
+        setupSecretEditor(hfTokenEditor, "for deploy-space (write token); overrides --token");
+
         for (auto& row : rows)
         {
             row.label.setJustificationType(Justification::centredLeft);
@@ -115,7 +124,7 @@ public:
         logEditor.setText("Command output will appear here.", dontSendNotification);
         addAndMakeVisible(logEditor);
 
-        setSize(840, 760);
+        setSize(840, 840);
 
         commandSelector.setSelectedId(1, sendNotification);
     }
@@ -152,6 +161,10 @@ public:
         layoutField(area, pythonLabel, pythonEditor, nullptr);
         area.removeFromTop(6);
         layoutField(area, harpRootLabel, harpRootEditor, &harpRootBrowse);
+        area.removeFromTop(6);
+        layoutField(area, llmKeyLabel, llmKeyEditor, nullptr);
+        area.removeFromTop(6);
+        layoutField(area, hfTokenLabel, hfTokenEditor, nullptr);
         area.removeFromTop(10);
 
         for (auto& row : rows)
@@ -353,6 +366,8 @@ private:
               "LLM-draft a recipe for any model (needs GEMINI/ANTHROPIC/OPENAI API key).",
               { { "--repo", "Repo id", Field::Text, Browse::None, "", "author/model (or use --card)", false },
                 { "--card", "Card JSON", Field::Text, Browse::OpenFile, "", "model card json", false },
+                { "--github", "GitHub repo", Field::Text, Browse::None, "", "owner/repo or full URL", false },
+                { "--ref", "Git ref", Field::Text, Browse::None, "", "branch/tag/sha (optional)", false },
                 { "--space", "Ground on Space", Field::Text, Browse::None, "", "author/space (reuse real API)", false },
                 { "--inputs", "Input types", Field::Text, Browse::None, "", "e.g. audio,slider", false },
                 { "--outputs", "Output types", Field::Text, Browse::None, "", "e.g. audio,labels", false },
@@ -389,7 +404,7 @@ private:
         bool active = false;
     };
 
-    static constexpr int maxRows = 8;
+    static constexpr int maxRows = 10;
 
     /* ---- Process thread ---- */
 
@@ -516,6 +531,16 @@ private:
     {
         editor.setMultiLine(false);
         editor.setReturnKeyStartsNewLine(false);
+        editor.setTextToShowWhenEmpty(placeholder, Colours::grey);
+        editor.setWantsKeyboardFocus(true);
+        addAndMakeVisible(editor);
+    }
+
+    void setupSecretEditor(TextEditor& editor, const String& placeholder)
+    {
+        editor.setMultiLine(false);
+        editor.setReturnKeyStartsNewLine(false);
+        editor.setPasswordCharacter((juce_wchar) 0x2022); // mask with bullets
         editor.setTextToShowWhenEmpty(placeholder, Colours::grey);
         editor.setWantsKeyboardFocus(true);
         addAndMakeVisible(editor);
@@ -700,6 +725,43 @@ private:
         return tokens.joinIntoString(" ");
     }
 
+    // Map the entered LLM key onto the right env var so the CLI's provider
+    // auto-detection picks it up. An explicit --provider chooses the matching
+    // provider var; otherwise we set the generic HARP_LLM_API_KEY (the CLI then
+    // defaults to its standard provider).
+    String llmKeyEnvVarName() const
+    {
+        String provider;
+        for (const auto& row : rows)
+            if (row.active && row.spec.flag == "--provider")
+                provider = row.editor.getText().trim().toLowerCase();
+
+        if (provider == "openai")
+            return "OPENAI_API_KEY";
+        if (provider == "anthropic")
+            return "ANTHROPIC_API_KEY";
+        if (provider == "gemini")
+            return "GEMINI_API_KEY";
+        return "HARP_LLM_API_KEY";
+    }
+
+    void appendEnvExports(String& script) const
+    {
+        const auto llmKey = llmKeyEditor.getText().trim();
+        const auto hfToken = hfTokenEditor.getText().trim();
+#if JUCE_WINDOWS
+        if (llmKey.isNotEmpty())
+            script << "set \"" << llmKeyEnvVarName() << "=" << llmKey << "\"\r\n";
+        if (hfToken.isNotEmpty())
+            script << "set \"HF_TOKEN=" << hfToken << "\"\r\n";
+#else
+        if (llmKey.isNotEmpty())
+            script << "export " << llmKeyEnvVarName() << "=" << quoteArg(llmKey) << "\n";
+        if (hfToken.isNotEmpty())
+            script << "export HF_TOKEN=" << quoteArg(hfToken) << "\n";
+#endif
+    }
+
     String buildScript(const StringArray& pythonTokens) const
     {
         String pythonLine;
@@ -714,10 +776,12 @@ private:
         script << "@echo off\r\n";
         script << "cd /d " << quoteArg(root) << "\r\n";
         script << "set PYTHONDONTWRITEBYTECODE=1\r\n";
+        appendEnvExports(script);
         script << pythonLine << "\r\n";
 #else
         script << "cd " << quoteArg(root) << " || exit 1\n";
         script << "export PYTHONDONTWRITEBYTECODE=1\n";
+        appendEnvExports(script);
         script << pythonLine << "\n";
 #endif
         return script;
@@ -869,6 +933,8 @@ private:
     Label descriptionLabel;
     Label pythonLabel;
     Label harpRootLabel;
+    Label llmKeyLabel;
+    Label hfTokenLabel;
     Label previewLabel;
     Label statusLabel;
     Label validationLabel;
@@ -877,6 +943,8 @@ private:
     TextEditor pythonEditor;
     TextEditor harpRootEditor;
     TextButton harpRootBrowse;
+    TextEditor llmKeyEditor;
+    TextEditor hfTokenEditor;
 
     std::array<ParamRow, maxRows> rows;
 

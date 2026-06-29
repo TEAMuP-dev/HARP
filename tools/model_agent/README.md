@@ -270,10 +270,17 @@ python3 -m tools.model_agent generate-recipe-from-llm \
   --output artifacts/model_agent/recipes/demucs.json
 ```
 
-Provide the model card with `--card <file.json>` (offline) or `--repo <hf-id>`
-(fetches the card from Hugging Face). The provider is auto-detected from whichever
+Provide the model card with `--card <file.json>` (offline), `--repo <hf-id>`
+(fetches the card from Hugging Face), or `--github <owner/repo>` (synthesizes the
+card from a GitHub repo — see below). The provider is auto-detected from whichever
 API key env var is set, or forced with `--provider gemini|anthropic|openai` and
-`--llm-model <name>`. The drafted recipe is grounded with the real model card,
+`--llm-model <name>`. As a provider-agnostic alternative you can set a single
+`HARP_LLM_API_KEY` (used for whichever `--provider` you pass; it defaults to
+`gemini` when no provider is given). This is what the **Model Agent GUI widget**
+sets from its "LLM API key" field — the widget injects the key (and an optional
+HF token) into the run script's environment rather than the visible command
+preview, so the LLM and `deploy-space` commands work without exporting env vars
+in a terminal first. The drafted recipe is grounded with the real model card,
 the repo file list, your desired I/O types, and a couple of committed example
 recipes as few-shot exemplars (disable with `--no-examples`).
 
@@ -297,6 +304,30 @@ Because the wrapper reuses the Space's own modules, deploy it **into a duplicate
 of that Space** (HF → *Duplicate this Space*), where those modules and the
 pretrained weights are present. A hand-authored reference for exactly this case
 ships at `examples/soulx_singer_recipe.json`.
+
+**Port a model straight from GitHub with `--github <owner/repo>`.** Many models
+live on GitHub with no Hugging Face presence at all. `--github` makes the repo the
+source *and* the grounding: the agent reads the repo's README (seeding the model
+card), lists the file tree, and crawls the most likely entry/inference modules and
+their first-party imports (skipping `tests/`, `docs/`, `examples/`; bounded crawl)
+to feed the LLM as ground truth. Unlike `--space`, the wrapper is **not deployed
+into the repo** — instead the drafted recipe adds the repo as a `git+https://…`
+pip dependency, imports its modules in `inference.setup`, and exposes fresh HARP
+input/output components (the repo usually has no UI to mirror). Pass `--ref` to pin
+a branch/tag/SHA (defaults to the repo's default branch), and set `GITHUB_TOKEN`
+to lift the API rate limit or reach private repos:
+
+```bash
+python3 -m tools.model_agent generate-recipe-from-llm \
+  --github owner/cool-audio-model --ref v1.2.0 \
+  --inputs audio --outputs audio \
+  --output artifacts/model_agent/recipes/cool-audio-model.json
+```
+
+The resulting package installs the model from git, so `generate-recipe --smoke-test`
+exercises it locally and `deploy-space` ships it to a fresh Space — no duplicate
+required (the model code comes from pip, not the Space). The repo must be
+pip-installable (a `setup.py`/`pyproject.toml`, or an importable module path).
 
 **Reuse the single high-level entry point, don't re-implement the pipeline.** For
 app-like Spaces the wrapper should import and call the one function the Space's UI

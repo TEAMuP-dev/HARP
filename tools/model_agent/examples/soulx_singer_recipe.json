@@ -92,7 +92,7 @@
     }
   ],
   "inference": {
-    "setup": "import os\n\n# Headless matplotlib backend, mirroring the original Space's app.py.\nos.environ.setdefault(\"MPLBACKEND\", \"Agg\")\n\n# Importing the Space's own module downloads the pretrained weights and builds\n# the SVS + preprocessing pipeline exactly as the original SoulX-Singer app does.\n# (synthesis_function already carries its own @spaces.GPU decorator.)\nfrom webui import synthesis_function",
+    "setup": "import os\n\n# Headless matplotlib backend, mirroring the original Space's app.py.\nos.environ.setdefault(\"MPLBACKEND\", \"Agg\")\n\n# Importing the Space's own module downloads the pretrained weights and builds\n# the SVS + preprocessing pipeline exactly as the original SoulX-Singer app does.\n# (synthesis_function already carries its own Spaces GPU decorator.)\nfrom webui import synthesis_function",
     "body": "merged, _prompt_meta, _target_meta = synthesis_function(\n    prompt_audio,\n    target_audio,\n    prompt_metadata=None,\n    target_metadata=None,\n    control=control,\n    auto_shift=auto_shift,\n    pitch_shift=int(pitch_shift),\n    prompt_lyric_lang=prompt_lyric_lang,\n    target_lyric_lang=target_lyric_lang,\n    prompt_vocal_sep=prompt_vocal_sep,\n    target_vocal_sep=target_vocal_sep,\n)\nif not merged:\n    raise gr.Error(\"Synthesis failed - check the Space logs for the backend error.\")\nreturn merged"
   }
 }

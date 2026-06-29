@@ -247,10 +247,14 @@ def provider_from_env(
             if any(os.environ.get(key) for key in keys):
                 name = candidate
                 break
+    # A generic key with no provider specified defaults to the first provider.
+    if not name and os.environ.get("HARP_LLM_API_KEY"):
+        name = next(iter(_PROVIDERS))
     if not name:
         raise LLMError(
             "No LLM provider configured. Set --provider and the matching API key "
-            "env var (GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY)."
+            "env var (GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY), or set "
+            "the generic HARP_LLM_API_KEY."
         )
     if name not in _PROVIDERS:
         raise LLMError(f"Unknown LLM provider '{name}' (expected one of {sorted(_PROVIDERS)}).")
@@ -258,7 +262,14 @@ def provider_from_env(
     provider_cls, keys = _PROVIDERS[name]
     api_key = next((os.environ[key] for key in keys if os.environ.get(key)), "")
     if not api_key:
-        raise LLMError(f"{name} selected but none of {keys} is set in the environment.")
+        # Generic fallback so a single env var works for any provider (used by the
+        # GUI widget's "LLM API key" field).
+        api_key = (os.environ.get("HARP_LLM_API_KEY") or "").strip()
+    if not api_key:
+        raise LLMError(
+            f"{name} selected but no API key found. Set one of {keys} (or the generic "
+            "HARP_LLM_API_KEY) in the environment."
+        )
     return provider_cls(
         api_key=api_key,
         model=model or _DEFAULT_MODELS[name],
@@ -372,9 +383,17 @@ class RecipeGenerationContext:
     target_inputs: List[str] = field(default_factory=list)
     target_outputs: List[str] = field(default_factory=list)
     examples: List[JSON] = field(default_factory=list)
-    # {filename: source} for the original Space's app.py and its first-party
-    # modules -- the ground truth for the real loading/inference API and UI.
+    # {filename: source} for the grounding source's entry file and its
+    # first-party modules -- the ground truth for the real loading/inference
+    # API (and UI, for Spaces).
     space_sources: Dict[str, str] = field(default_factory=dict)
+    # Where space_sources came from: "space" (deploy INTO the Space, modules
+    # already importable) or "github" (write a NEW wrapper and add the repo as a
+    # git+ pip dependency). Controls how the grounding block is framed.
+    grounding_origin: str = "space"
+    # For GitHub grounding: the pip requirement the wrapper must declare so the
+    # repo's modules are importable (e.g. "git+https://github.com/o/r.git@main").
+    source_repo_url: str = ""
 
     @classmethod
     def from_card(
@@ -449,13 +468,30 @@ def build_recipe_user_prompt(context: RecipeGenerationContext) -> str:
         lines.append("# Model card (README.md)\n" + readme)
 
     if context.space_sources:
-        lines.append(
-            "# Original Space source (GROUND TRUTH for the real API and UI)\n"
-            "Reuse this code: import and call the Space's own modules/functions, "
-            "and mirror its REAL input/output components. Do NOT invent a different "
-            "interface from the README. The wrapper is deployed into this Space, so "
-            "its modules are importable."
-        )
+        if context.grounding_origin == "github":
+            pip_hint = context.source_repo_url or "git+https://github.com/<owner>/<repo>.git"
+            lines.append(
+                "# Upstream GitHub source (GROUND TRUTH for the real inference API)\n"
+                "These files come from the model's GitHub repository. Reuse this code: "
+                "import and call the repo's REAL functions/classes for model loading and "
+                "inference instead of guessing from the README. This repo is NOT a Gradio "
+                "app you deploy into -- you are writing a NEW HARP/Gradio wrapper around its "
+                "Python API. Therefore you MUST:\n"
+                f"  - add the repo as a pip dependency in framework.pip: \"{pip_hint}\" "
+                "(plus its other pip/apt deps), so its modules are importable;\n"
+                "  - import the repo's modules in inference.setup and load the model once "
+                "there;\n"
+                "  - design HARP input/output components for the desired I/O types (the repo "
+                "has no UI to mirror)."
+            )
+        else:
+            lines.append(
+                "# Original Space source (GROUND TRUTH for the real API and UI)\n"
+                "Reuse this code: import and call the Space's own modules/functions, "
+                "and mirror its REAL input/output components. Do NOT invent a different "
+                "interface from the README. The wrapper is deployed into this Space, so "
+                "its modules are importable."
+            )
         for filename, source in context.space_sources.items():
             snippet = source.strip()
             if len(snippet) > _SPACE_SOURCE_LIMIT:
