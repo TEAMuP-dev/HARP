@@ -30,7 +30,7 @@ from tools.model_agent.agent import (
     score_compatibility,
 )
 from tools.model_agent.analyze import analyze_app_source, analyze_path
-from tools.model_agent.cli import attach_health
+from tools.model_agent.cli import attach_health, _ensure_github_pip
 from tools.model_agent.llm import (
     GeminiProvider,
     LLMError,
@@ -1518,6 +1518,34 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         self.assertIn("## pkg/model.py", prompt)
         # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
+
+
+class EnsureGitHubPipTest(unittest.TestCase):
+    REQUIREMENT = "git+https://github.com/owner/repo.git@main"
+
+    def test_injects_missing_requirement_first(self):
+        recipe = {"framework": {"pip": ["numpy"]}}
+        _ensure_github_pip(recipe, self.REQUIREMENT)
+        self.assertEqual(recipe["framework"]["pip"], [self.REQUIREMENT, "numpy"])
+
+    def test_creates_framework_and_pip_when_absent(self):
+        recipe = {}
+        _ensure_github_pip(recipe, self.REQUIREMENT)
+        self.assertEqual(recipe["framework"]["pip"], [self.REQUIREMENT])
+
+    def test_keeps_existing_pin_for_same_repo(self):
+        # The LLM already listed the repo with its own ref; do not duplicate.
+        recipe = {"framework": {"pip": ["git+https://github.com/owner/repo.git@v2", "numpy"]}}
+        _ensure_github_pip(recipe, self.REQUIREMENT)
+        self.assertEqual(
+            recipe["framework"]["pip"],
+            ["git+https://github.com/owner/repo.git@v2", "numpy"],
+        )
+
+    def test_noop_without_requirement(self):
+        recipe = {"framework": {"pip": ["numpy"]}}
+        _ensure_github_pip(recipe, "")
+        self.assertEqual(recipe["framework"]["pip"], ["numpy"])
 
 
 class PackageWriterTest(unittest.TestCase):

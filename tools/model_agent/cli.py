@@ -579,6 +579,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                 temperature=args.temperature,
             )
             draft = generate_recipe(context, provider, max_repairs=args.max_repairs)
+            if github_target is not None:
+                _ensure_github_pip(draft.recipe, context.source_repo_url)
             return _emit_recipe_draft(agent, draft, args)
 
         if args.command == "list-models":
@@ -751,6 +753,41 @@ def _warn_app_lint(app_py: str) -> None:
 
     for warning in lint_generated_app(app_py):
         print(f"  [lint] WARNING: {warning}", file=sys.stderr)
+
+
+def _ensure_github_pip(recipe: dict, requirement: str) -> None:
+    """Guarantee a GitHub-grounded recipe installs the repo as a pip dependency.
+
+    The LLM is *asked* to add the ``git+https://...`` requirement to
+    ``framework.pip``, but it sometimes omits it -- which silently produces a
+    package whose ``requirements.txt`` never installs the upstream code, so the
+    wrapper's imports fail at runtime. We therefore inject the canonical
+    requirement here unless the LLM already listed the same repo (possibly with
+    its own ``@ref``), in which case we keep the LLM's pin.
+    """
+
+    if not requirement or not isinstance(recipe, dict):
+        return
+
+    framework = recipe.get("framework")
+    if not isinstance(framework, dict):
+        framework = {}
+        recipe["framework"] = framework
+
+    pip = framework.get("pip")
+    if not isinstance(pip, list):
+        pip = []
+
+    # "git+https://github.com/owner/repo.git" without any trailing "@ref".
+    repo_prefix = requirement.rsplit("@", 1)[0]
+    already_listed = any(
+        isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix
+        for entry in pip
+    )
+    if not already_listed:
+        pip.insert(0, requirement)
+
+    framework["pip"] = pip
 
 
 def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
