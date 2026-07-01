@@ -912,6 +912,34 @@ class HarpEndpointClient:
                 raise EndpointProbeError(f"{model_path} controls are missing '{key}'")
         return controls
 
+    def fetch_api_info(self, model_path: str) -> JSON:
+        """Fetch a Space's Gradio API schema (its named/unnamed endpoints).
+
+        Reads ``/gradio_api/info`` (modern) or ``/info`` (legacy), which describes
+        every callable endpoint's positional parameters and returns. Used to
+        scaffold a remote-backend (proxy) recipe. Raises :class:`EndpointProbeError`
+        if the Space does not expose an API schema (e.g. ``show_api=False``).
+        """
+
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        last_error: Optional[EndpointProbeError] = None
+        for info_path in ("gradio_api/info", "info"):
+            try:
+                text = self._get_text(f"{endpoint}/{info_path}")
+            except EndpointProbeError as exc:
+                last_error = exc
+                continue
+            try:
+                info = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(info, dict) and isinstance(info.get("named_endpoints"), dict):
+                return info
+
+        if last_error is not None:
+            raise last_error
+        raise EndpointProbeError(f"{model_path} did not expose a Gradio API schema")
+
     def _post_json(self, url: str, payload: JSON) -> Any:
         body = json.dumps(payload).encode("utf-8")
         request = Request(
@@ -1496,6 +1524,30 @@ class HarpModelAgent:
             return Path(local).read_text(encoding="utf-8")
         except OSError:
             return None
+
+    def scaffold_remote_recipe(
+        self, space: str, *, api_name: Optional[str] = None
+    ) -> JSON:
+        """Probe a backend Space's Gradio API and scaffold a remote-backend recipe.
+
+        Fetches the Space's API schema and maps its chosen named endpoint's
+        signature to a ``framework.remote`` proxy recipe (see
+        ``recipe.remote_recipe_from_api_info``). Raises :class:`EndpointProbeError`
+        if the Space exposes no callable API.
+        """
+
+        # Imported lazily: recipe.py imports from this module, so a top-level
+        # import here would be circular.
+        from .recipe import remote_recipe_from_api_info
+
+        api_info = self.fetch_api_info(space)
+        canonical = self.endpoint_client.resolve_canonical_path(space) or space
+        return remote_recipe_from_api_info(canonical, api_info, api_name=api_name)
+
+    def fetch_api_info(self, space: str) -> JSON:
+        """Convenience passthrough to the endpoint client's API-schema fetch."""
+
+        return self.endpoint_client.fetch_api_info(space)
 
     def fetch_space_sources(
         self,

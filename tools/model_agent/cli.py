@@ -33,6 +33,7 @@ from .llm import (
 from .recipe import (
     RecipeError,
     build_package_from_recipe,
+    lint_recipe_requirements,
     recipe_skeleton_from_analysis,
     render_app_from_recipe,
 )
@@ -119,6 +120,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scaffold_recipe.add_argument("path", type=Path, help="Path to a harvested app.py file.")
     scaffold_recipe.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
+
+    scaffold_remote = subparsers.add_parser(
+        "scaffold-remote-recipe",
+        help="Probe a backend Space's Gradio API and scaffold a remote-backend "
+        "(proxy) recipe: a thin pyharp frontend that calls the Space via "
+        "gradio_client. Best for models whose deps conflict with pyharp.",
+    )
+    scaffold_remote.add_argument(
+        "space",
+        help="Backend Gradio Space id or URL (e.g. owner/space) to proxy to.",
+    )
+    scaffold_remote.add_argument(
+        "--api-name",
+        default="",
+        help="Backend named endpoint to call (e.g. /predict). Required only if the "
+        "Space exposes more than one; otherwise the sole endpoint is used.",
+    )
+    scaffold_remote.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
 
     render_recipe = subparsers.add_parser(
         "render-recipe",
@@ -503,6 +522,23 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(recipe, args.output)
             return 0
 
+        if args.command == "scaffold-remote-recipe":
+            print(
+                f"Probing the backend Space's Gradio API: {args.space} ...",
+                file=sys.stderr,
+            )
+            recipe = agent.scaffold_remote_recipe(args.space, api_name=args.api_name or None)
+            remote = recipe.get("framework", {}).get("remote", {})
+            print(
+                f"  Scaffolded remote recipe for endpoint '{remote.get('api_name')}' "
+                f"({len(recipe.get('inputs', []))} input(s), "
+                f"{len(recipe.get('outputs', []))} output(s)). Review the _todo notes "
+                "before rendering/deploying.",
+                file=sys.stderr,
+            )
+            _emit_json(recipe, args.output)
+            return 0
+
         if args.command == "render-recipe":
             app_py = render_app_from_recipe(_read_json(args.recipe))
             _warn_app_lint(app_py)
@@ -513,7 +549,9 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 0
 
         if args.command == "generate-recipe":
-            package = build_package_from_recipe(_read_json(args.recipe))
+            recipe = _read_json(args.recipe)
+            _warn_recipe_requirements(recipe)
+            package = build_package_from_recipe(recipe)
             _warn_app_lint(package.app_py)
             folder = agent.write_generated_app_package(package, args.output)
             result = {"package": str(folder), "framework": package.framework}
@@ -755,6 +793,13 @@ def _warn_app_lint(app_py: str) -> None:
         print(f"  [lint] WARNING: {warning}", file=sys.stderr)
 
 
+def _warn_recipe_requirements(recipe: dict) -> None:
+    """Print heuristic warnings about a recipe's pip dependencies to stderr."""
+
+    for warning in lint_recipe_requirements(recipe):
+        print(f"  [deps] WARNING: {warning}", file=sys.stderr)
+
+
 def _ensure_github_pip(recipe: dict, requirement: str) -> None:
     """Guarantee a GitHub-grounded recipe installs the repo as a pip dependency.
 
@@ -793,6 +838,7 @@ def _ensure_github_pip(recipe: dict, requirement: str) -> None:
 def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
     """Shared output for the LLM recipe commands: write/print + optional package."""
 
+    _warn_recipe_requirements(draft.recipe)
     _warn_app_lint(draft.app_py)
 
 

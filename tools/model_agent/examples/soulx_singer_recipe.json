@@ -1,98 +1,110 @@
 {
+  "_note": "Remote-backend (proxy) example. This frontend installs ONLY pyharp + gradio + gradio_client and forwards inference to the live Soul-AILab/SoulX-Singer Space via gradio_client, so it sidesteps the nemo/protobuf-vs-descript-audiotools conflict entirely (no fork, no requirements.txt surgery). The exact positional 'args'/'returns' below mirror the Space's synthesis_function as of authoring; ALWAYS confirm them against the live API with `python -m tools.model_agent scaffold-remote-recipe Soul-AILab/SoulX-Singer` before relying on this. Point framework.remote.space at your own duplicate for API stability / your own ZeroGPU quota.",
   "model": {
     "id": "Soul-AILab/SoulX-Singer",
     "name": "SoulX-Singer",
-    "description": "Zero-shot singing voice synthesis. Clones a singer's timbre from a short reference vocal and re-sings a target song (lyrics and melody are transcribed from the target audio). This recipe wraps the original Space's existing pipeline (preprocessing + SVS) instead of reimplementing it, so it must be deployed into a duplicate of the Soul-AILab/SoulX-Singer Space, where the webui module and pretrained weights are present.",
+    "description": "Zero-shot singing voice synthesis: sing a target melody in a reference voice. This is a thin HARP frontend that proxies to the upstream SoulX-Singer Gradio Space over gradio_client, so none of its heavy (and pyharp-conflicting) dependencies are installed here.",
     "author": "Soul-AILab",
-    "tags": ["singing-voice-synthesis", "audio-to-audio", "zero-shot", "svs"],
-    "license": "apache-2.0"
+    "tags": ["audio-to-audio", "singing-voice-synthesis", "zero-shot", "voice-conversion"],
+    "license": "other"
   },
   "framework": {
-    "import": "torch",
+    "gpu": false,
     "pip": [],
-    "apt": ["ffmpeg"],
-    "gpu": false
+    "remote": {
+      "space": "Soul-AILab/SoulX-Singer",
+      "api_name": "/synthesis_function",
+      "token_env": "HF_TOKEN",
+      "args": [
+        { "from": "prompt_audio", "file": true },
+        { "from": "target_audio", "file": true },
+        { "const": null },
+        { "const": null },
+        { "from": "control" },
+        { "from": "auto_shift" },
+        { "from": "pitch_shift", "cast": "int" },
+        { "from": "prompt_lyric_lang" },
+        { "from": "target_lyric_lang" },
+        { "from": "prompt_vocal_sep" },
+        { "from": "target_vocal_sep" }
+      ],
+      "returns": [
+        { "index": 0, "to": "generated" }
+      ]
+    }
   },
   "inputs": [
     {
       "name": "prompt_audio",
       "type": "audio",
-      "label": "Prompt audio (reference voice, <=30s)",
+      "label": "Reference voice",
       "required": true,
-      "info": "Short clip of the singer whose timbre you want to clone (max 30s)."
+      "info": "A clip of the target singer's voice (the timbre to sing with)."
     },
     {
       "name": "target_audio",
       "type": "audio",
-      "label": "Target audio (song / melody source, <=60s)",
+      "label": "Target melody",
       "required": true,
-      "info": "The song to re-sing; its lyrics and melody are transcribed automatically (max 60s)."
+      "info": "The song/melody to reproduce in the reference voice."
     },
     {
       "name": "control",
       "type": "dropdown",
-      "choices": ["melody", "score"],
-      "default": "melody",
-      "label": "Control type",
-      "info": "melody = follow the target's F0 contour; score = follow transcribed MIDI notes."
-    },
-    {
-      "name": "prompt_lyric_lang",
-      "type": "dropdown",
-      "choices": ["Mandarin", "Cantonese", "English"],
-      "default": "English",
-      "label": "Prompt lyric language",
-      "info": "Language of the reference vocal (selects the matching lyric transcriber)."
-    },
-    {
-      "name": "target_lyric_lang",
-      "type": "dropdown",
-      "choices": ["Mandarin", "Cantonese", "English"],
-      "default": "English",
-      "label": "Target lyric language",
-      "info": "Language of the target song. Must match the song or the words come out garbled."
-    },
-    {
-      "name": "prompt_vocal_sep",
-      "type": "checkbox",
-      "default": false,
-      "label": "Prompt vocal separation",
-      "info": "Separate vocals from the reference clip first. Leave off for a clean a cappella prompt."
-    },
-    {
-      "name": "target_vocal_sep",
-      "type": "checkbox",
-      "default": true,
-      "label": "Target vocal separation",
-      "info": "Separate vocals from the target song before transcription (recommended for full mixes)."
+      "label": "Control mode",
+      "choices": ["auto", "manual"],
+      "default": "auto",
+      "info": "How SoulX aligns the melody. Confirm the real options via scaffold-remote-recipe."
     },
     {
       "name": "auto_shift",
       "type": "checkbox",
-      "default": true,
       "label": "Auto pitch shift",
-      "info": "Automatically shift pitch to fit the reference singer's range."
+      "default": true,
+      "info": "Let the model choose the pitch shift automatically."
     },
     {
       "name": "pitch_shift",
-      "type": "slider",
-      "min": -36,
-      "max": 36,
-      "step": 1,
+      "type": "number",
+      "label": "Manual pitch shift (semitones)",
       "default": 0,
-      "label": "Pitch shift (semitones)",
-      "info": "Manual pitch shift applied when auto pitch shift is off."
+      "info": "Used when auto pitch shift is off."
+    },
+    {
+      "name": "prompt_lyric_lang",
+      "type": "dropdown",
+      "label": "Reference lyric language",
+      "choices": ["auto", "english", "chinese"],
+      "default": "auto"
+    },
+    {
+      "name": "target_lyric_lang",
+      "type": "dropdown",
+      "label": "Target lyric language",
+      "choices": ["auto", "english", "chinese"],
+      "default": "auto"
+    },
+    {
+      "name": "prompt_vocal_sep",
+      "type": "checkbox",
+      "label": "Separate vocals from reference",
+      "default": false,
+      "info": "Run vocal separation on the reference clip first."
+    },
+    {
+      "name": "target_vocal_sep",
+      "type": "checkbox",
+      "label": "Separate vocals from target",
+      "default": true,
+      "info": "Run vocal separation on the target melody first."
     }
   ],
   "outputs": [
     {
       "name": "generated",
       "type": "audio",
-      "label": "Generated singing"
+      "label": "Generated singing",
+      "info": "The target melody sung in the reference voice."
     }
-  ],
-  "inference": {
-    "setup": "import os\n\n# Headless matplotlib backend, mirroring the original Space's app.py.\nos.environ.setdefault(\"MPLBACKEND\", \"Agg\")\n\n# Importing the Space's own module downloads the pretrained weights and builds\n# the SVS + preprocessing pipeline exactly as the original SoulX-Singer app does.\n# (synthesis_function already carries its own Spaces GPU decorator.)\nfrom webui import synthesis_function",
-    "body": "merged, _prompt_meta, _target_meta = synthesis_function(\n    prompt_audio,\n    target_audio,\n    prompt_metadata=None,\n    target_metadata=None,\n    control=control,\n    auto_shift=auto_shift,\n    pitch_shift=int(pitch_shift),\n    prompt_lyric_lang=prompt_lyric_lang,\n    target_lyric_lang=target_lyric_lang,\n    prompt_vocal_sep=prompt_vocal_sep,\n    target_vocal_sep=target_vocal_sep,\n)\nif not merged:\n    raise gr.Error(\"Synthesis failed - check the Space logs for the backend error.\")\nreturn merged"
-  }
+  ]
 }

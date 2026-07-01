@@ -44,7 +44,9 @@ from tools.model_agent.llm import (
 from tools.model_agent.recipe import (
     RecipeError,
     build_package_from_recipe,
+    lint_recipe_requirements,
     recipe_skeleton_from_analysis,
+    remote_recipe_from_api_info,
     render_app_from_recipe,
     validate_recipe,
 )
@@ -1266,6 +1268,217 @@ class CompleteRecipeTest(unittest.TestCase):
         self.assertEqual(mode["default"], "fast")
 
 
+class RemoteRecipeRenderTest(unittest.TestCase):
+    RECIPE = {
+        "model": {"id": "owner/backend", "name": "Backend", "description": "d", "author": "owner"},
+        "framework": {
+            "gpu": False,
+            "pip": [],
+            "remote": {
+                "space": "owner/backend",
+                "api_name": "/synthesis_function",
+                "token_env": "HF_TOKEN",
+                "args": [
+                    {"from": "prompt_audio", "file": True},
+                    {"const": None},
+                    {"from": "steps", "cast": "int"},
+                ],
+                "returns": [{"index": 0, "to": "generated"}],
+            },
+        },
+        "inputs": [
+            {"name": "prompt_audio", "type": "audio", "label": "Ref", "required": True},
+            {"name": "steps", "type": "number", "label": "Steps", "default": 10},
+        ],
+        "outputs": [{"name": "generated", "type": "audio", "label": "Out"}],
+    }
+
+    def test_renders_valid_proxy_app(self):
+        app = render_app_from_recipe(self.RECIPE)
+        compile(app, "<remote-app>", "exec")
+        # Proxies via gradio_client, never imports the model or spaces GPU shim.
+        self.assertIn("from gradio_client import Client, handle_file", app)
+        self.assertNotIn("import spaces", app)
+        self.assertIn('_BACKEND_SPACE = "owner/backend"', app)
+        self.assertIn('api_name="/synthesis_function"', app)
+        # Arg mapping: file wrapped, const emitted, cast applied.
+        self.assertIn("handle_file(prompt_audio)", app)
+        self.assertIn("        None,", app)
+        self.assertIn("int(steps)", app)
+        # Return mapping + guard for the media output.
+        self.assertIn("_out_generated = _values[0]", app)
+        self.assertIn("return _out_generated", app)
+
+    def test_requirements_are_conflict_free(self):
+        package = build_package_from_recipe(self.RECIPE)
+        self.assertIn("gradio_client", package.requirements)
+        self.assertIn("pyharp", package.requirements)
+        # The whole point: none of the backend's (conflicting) deps are installed.
+        self.assertNotIn("nemo", package.requirements)
+        self.assertNotIn("torch", package.requirements)
+        self.assertEqual(package.manifest.get("deploy_mode"), "remote-backend")
+        self.assertEqual(package.manifest.get("backend_space"), "owner/backend")
+
+    def test_multiple_outputs_return_tuple(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["outputs"].append({"name": "meta", "type": "labels", "label": "Meta"})
+        recipe["framework"]["remote"]["returns"].append({"index": 1, "to": "meta"})
+        app = render_app_from_recipe(recipe)
+        compile(app, "<remote-multi>", "exec")
+        self.assertIn("return _out_generated, _out_meta", app)
+
+
+class RemoteRecipeValidationTest(unittest.TestCase):
+    def _base(self):
+        return json.loads(json.dumps(RemoteRecipeRenderTest.RECIPE))
+
+    def test_valid_recipe_passes(self):
+        validate_recipe(self._base())  # does not raise
+
+    def test_inference_not_required_for_remote(self):
+        recipe = self._base()
+        self.assertNotIn("inference", recipe)
+        validate_recipe(recipe)
+
+    def test_missing_space_fails(self):
+        recipe = self._base()
+        recipe["framework"]["remote"]["space"] = ""
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_missing_api_name_fails(self):
+        recipe = self._base()
+        del recipe["framework"]["remote"]["api_name"]
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_arg_from_must_reference_declared_input(self):
+        recipe = self._base()
+        recipe["framework"]["remote"]["args"][0] = {"from": "does_not_exist", "file": True}
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_arg_needs_exactly_one_of_from_or_const(self):
+        recipe = self._base()
+        recipe["framework"]["remote"]["args"][1] = {"from": "steps", "const": None}
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_returns_must_cover_every_output(self):
+        recipe = self._base()
+        recipe["outputs"].append({"name": "extra", "type": "audio", "label": "Extra"})
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_bad_cast_fails(self):
+        recipe = self._base()
+        recipe["framework"]["remote"]["args"][2]["cast"] = "complex"
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+
+class RemoteScaffoldTest(unittest.TestCase):
+    API_INFO = {
+        "named_endpoints": {
+            "/synthesis_function": {
+                "parameters": [
+                    {
+                        "label": "Reference",
+                        "parameter_name": "prompt_audio",
+                        "component": "Audio",
+                        "parameter_default": None,
+                    },
+                    {
+                        "label": "Steps",
+                        "parameter_name": "steps",
+                        "component": "Slider",
+                        "parameter_default": 10,
+                    },
+                    {"label": "Session", "component": "State", "parameter_default": None},
+                    {
+                        "label": "Prompt",
+                        "parameter_name": "prompt",
+                        "component": "Textbox",
+                        "parameter_default": "hi",
+                    },
+                ],
+                "returns": [
+                    {"label": "Output", "component": "Audio"},
+                    {"label": "Debug", "component": "State"},
+                ],
+            }
+        },
+        "unnamed_endpoints": {},
+    }
+
+    def test_scaffolds_valid_renderable_recipe(self):
+        recipe = remote_recipe_from_api_info("owner/backend", self.API_INFO)
+        validate_recipe(recipe)
+        compile(render_app_from_recipe(recipe), "<scaffold>", "exec")
+
+        remote = recipe["framework"]["remote"]
+        self.assertEqual(remote["api_name"], "/synthesis_function")
+        # Audio param -> input + file arg; unmapped State -> const placeholder.
+        self.assertEqual(
+            remote["args"],
+            [
+                {"from": "prompt_audio", "file": True},
+                {"from": "steps"},
+                {"const": None},
+                {"from": "prompt"},
+            ],
+        )
+        names = [i["name"] for i in recipe["inputs"]]
+        self.assertEqual(names, ["prompt_audio", "steps", "prompt"])
+        # Only the Audio return is a recognized HARP output.
+        self.assertEqual(recipe["outputs"][0]["type"], "audio")
+        self.assertEqual(remote["returns"], [{"index": 0, "to": "output"}])
+
+    def test_requires_api_name_when_multiple_endpoints(self):
+        info = {
+            "named_endpoints": {"/a": {"parameters": [], "returns": []}, "/b": {}},
+            "unnamed_endpoints": {},
+        }
+        with self.assertRaises(RecipeError):
+            remote_recipe_from_api_info("owner/backend", info)
+
+    def test_no_named_endpoints_raises(self):
+        with self.assertRaises(RecipeError):
+            remote_recipe_from_api_info(
+                "owner/backend", {"named_endpoints": {}, "unnamed_endpoints": {}}
+            )
+
+    def test_agent_scaffold_uses_endpoint_client(self):
+        class _FakeEndpoint:
+            def fetch_api_info(self, space):
+                return RemoteScaffoldTest.API_INFO
+
+            def resolve_canonical_path(self, space):
+                return "owner/backend"
+
+        agent = HarpModelAgent(endpoint_client=_FakeEndpoint())
+        recipe = agent.scaffold_remote_recipe("owner/backend")
+        validate_recipe(recipe)
+
+
+class RemoteExampleRecipeTest(unittest.TestCase):
+    def test_committed_remote_examples_render(self):
+        examples_dir = Path(__file__).resolve().parent.parent / "examples"
+        remote_files = sorted(examples_dir.glob("*_remote_recipe.json"))
+        self.assertTrue(remote_files, "expected committed remote example recipes")
+        for recipe_file in remote_files:
+            recipe = json.loads(recipe_file.read_text(encoding="utf-8"))
+            validate_recipe(recipe)
+            app = render_app_from_recipe(recipe)
+            compile(app, str(recipe_file), "exec")
+            self.assertIn("from gradio_client import Client, handle_file", app)
+            package = build_package_from_recipe(recipe)
+            self.assertIn("gradio_client", package.requirements)
+            # None of the backends' heavy/conflicting deps leak into the frontend.
+            self.assertNotIn("torch", package.requirements)
+            self.assertNotIn("nemo", package.requirements)
+
+
 class ExampleRecipeFilesTest(unittest.TestCase):
     def test_committed_recipes_render(self):
         examples_dir = Path(__file__).resolve().parent.parent / "examples"
@@ -1518,6 +1731,42 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         self.assertIn("## pkg/model.py", prompt)
         # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
+
+
+class RecipeRequirementsLintTest(unittest.TestCase):
+    def _recipe(self, pip):
+        return {"model": {"id": "a/b", "name": "b"}, "framework": {"pip": pip}}
+
+    def test_flags_bare_numpy_with_source_dep(self):
+        warnings = lint_recipe_requirements(
+            self._recipe(["git+https://github.com/o/r.git", "numpy", "soundfile"])
+        )
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("numpy", warnings[0])
+        self.assertIn("numpy<2", warnings[0])
+        # The source-dependency context should be called out.
+        self.assertIn("source", warnings[0].lower())
+
+    def test_flags_bare_numpy_without_source_dep(self):
+        warnings = lint_recipe_requirements(self._recipe(["numpy", "soundfile"]))
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("numpy<2", warnings[0])
+
+    def test_pinned_numpy_is_ok(self):
+        for entry in ("numpy<2", "numpy==1.26.4", "numpy>=1.24,<2"):
+            self.assertEqual(lint_recipe_requirements(self._recipe([entry])), [])
+
+    def test_ignores_numpy_substring_packages(self):
+        # 'numpydoc' / 'numpy-foo' must not be mistaken for bare numpy.
+        self.assertEqual(lint_recipe_requirements(self._recipe(["numpydoc"])), [])
+
+    def test_flags_other_risk_libs(self):
+        warnings = lint_recipe_requirements(self._recipe(["numba"]))
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("numba", warnings[0])
+
+    def test_no_pip_is_noop(self):
+        self.assertEqual(lint_recipe_requirements({"model": {"id": "a/b"}}), [])
 
 
 class EnsureGitHubPipTest(unittest.TestCase):

@@ -1,0 +1,51 @@
+{
+  "_note": "Remote-backend (proxy) example for SonicMaster. SonicMaster is NOT pip-installable and pins torch==2.4.0 (which failed to resolve in the build) plus a gated VAE (stabilityai/stable-audio-open-1.0). Instead of installing any of that, this thin frontend installs ONLY pyharp + gradio + gradio_client and forwards inference to the authors' official Space (amaai-lab/SonicMaster) over gradio_client -- so the heavy deps, the gated weights, and ZeroGPU all stay on the backend. The official Space's callback is `enhance_audio_ui(audio_path, prompt)` bound via run_btn.click with no explicit api_name, so Gradio auto-names it after the function. CONFIRM the exact api_name/signature against the live Space with `python -m tools.model_agent scaffold-remote-recipe amaai-lab/SonicMaster` (it auto-picks the sole endpoint), then point framework.remote.space at your own duplicate if you need API stability / your own quota.",
+  "model": {
+    "id": "AMAAI-Lab/SonicMaster",
+    "name": "SonicMaster",
+    "description": "Text-controlled all-in-one music restoration and mastering (fix reverb, clipping, EQ/tonal balance, dynamics, and stereo image) from a natural-language instruction. This is a thin HARP frontend that proxies to the authors' official SonicMaster Gradio Space via gradio_client, so none of its heavy/gated dependencies (torch, diffusers, the gated stable-audio VAE) are installed here.",
+    "author": "AMAAI-Lab",
+    "tags": ["audio-to-audio", "music-restoration", "mastering", "text-guided"],
+    "license": "other"
+  },
+  "framework": {
+    "gpu": false,
+    "pip": [],
+    "remote": {
+      "space": "amaai-lab/SonicMaster",
+      "api_name": "/enhance_audio_ui",
+      "token_env": "HF_TOKEN",
+      "args": [
+        { "from": "input_audio", "file": true },
+        { "from": "prompt" }
+      ],
+      "returns": [
+        { "index": 0, "to": "output_audio" }
+      ]
+    }
+  },
+  "inputs": [
+    {
+      "name": "input_audio",
+      "type": "audio",
+      "label": "Input audio",
+      "required": true,
+      "info": "The music/audio to restore or master."
+    },
+    {
+      "name": "prompt",
+      "type": "textbox",
+      "label": "Instruction",
+      "default": "Enhance the input audio",
+      "info": "Natural-language edit, e.g. 'reduce reverb and brighten the vocals', 'make it louder', 'dereverb', 'widen the stereo image'. Leave as-is for general restoration."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "output_audio",
+      "type": "audio",
+      "label": "Enhanced audio",
+      "info": "SonicMaster output returned by the backend Space."
+    }
+  ]
+}

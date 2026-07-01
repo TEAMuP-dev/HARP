@@ -1,0 +1,82 @@
+{
+  "framework": {
+    "apt": [
+      "libsndfile-dev"
+    ],
+    "gpu": true,
+    "import": "ddsp.training.inference",
+    "pip": [
+      "git+https://github.com/magenta/ddsp.git@main",
+      "tensorflow==2.15.0",
+      "gin-config==0.5.0",
+      "absl-py==1.4.0",
+      "soundfile==0.12.1",
+      "librosa==0.10.1"
+    ]
+  },
+  "inference": {
+    "body": "model = _load_or_update_model(model_name, length_seconds, remove_reverb)\n\n# Load input audio using pyharp helper\n# load_audio returns a numpy array and sample rate\naudio_np, input_sample_rate = load_audio(input_audio)\n\n# Convert to TF tensor and add batch dimension\naudio_tensor = tf.convert_to_tensor(audio_np, dtype=tf.float32)\naudio_tensor = audio_tensor[tf.newaxis, :]\n\n# Extract features using DDSP's utility function\nfeatures = ddsp.colab.colab_utils.get_audio_features(\n    audio_tensor, input_sample_rate, model\n)\n\n# Run inference\noutputs = model(features, training=False)\n\n# Get audio from outputs\noutput_audio_tensor = model.get_audio_from_outputs(outputs)\n\n# Save output audio. [0] to remove batch dimension\noutput_path = _save_audio(output_audio_tensor[0], model.sample_rate)\n\nreturn output_path",
+    "setup": "import gin\nimport tensorflow as tf\nimport ddsp.training.inference\nimport ddsp.colab.colab_utils\nimport tempfile\nimport soundfile as sf\nimport numpy as np\nimport os\n\n# Map model names to GCS paths\nMODEL_PATHS = {\n    \"Violin\": \"gs://ddsp/models/tf2/solo_violin\",\n    \"Flute\": \"gs://ddsp/models/tf2/solo_flute\",\n    \"Trumpet\": \"gs://ddsp/models/tf2/solo_trumpet\",\n    \"Upright Bass\": \"gs://ddsp/models/tf2/solo_upright_bass\",\n    \"GANSynth Subset\": \"gs://ddsp/models/tf2/gansynth_subset\",\n    \"Autoencoder\": \"gs://ddsp/models/tf2/autoencoder\"\n}\n\n_model = None\n_current_model_params = {}\n\ndef _load_or_update_model(model_name, length_seconds, remove_reverb):\n    global _model, _current_model_params\n\n    params_changed = (\n        _current_model_params.get('model_name') != model_name or\n        _current_model_params.get('length_seconds') != length_seconds or\n        _current_model_params.get('remove_reverb') != remove_reverb\n    )\n\n    if _model is None or params_changed:\n        print(f\"Loading/Updating model: {model_name} with length={length_seconds}, remove_reverb={remove_reverb}\")\n        model_dir = MODEL_PATHS[model_name]\n        \n        # Use a temporary directory for downloaded models. `download_model` handles caching.\n        tmp_model_dir = os.path.join(tempfile.gettempdir(), f\"ddsp_model_{model_name.replace(' ', '_').lower()}\")\n        os.makedirs(tmp_model_dir, exist_ok=True)\n        \n        ckpt_path = ddsp.colab.colab_utils.download_model(model_dir, tmp_model_dir)\n        \n        # Clear gin config before parsing a new one, crucial for dynamic parameter changes\n        gin.clear_config()\n        \n        # Instantiate the inference model\n        _model = ddsp.training.inference.AutoencoderInference(\n            ckpt=ckpt_path,\n            length_seconds=length_seconds,\n            remove_reverb=remove_reverb,\n            verbose=False # Suppress verbose output during loading\n        )\n        _current_model_params = {\n            'model_name': model_name,\n            'length_seconds': length_seconds,\n            'remove_reverb': remove_reverb\n        }\n        print(f\"Model {model_name} loaded/updated successfully.\")\n    \n    return _model\n\ndef _save_audio(audio_tensor, sample_rate):\n    out_path = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False).name\n    # DDSP outputs are usually float32 in range [-1, 1]\n    sf.write(out_path, audio_tensor.numpy(), sample_rate)\n    return out_path"
+  },
+  "inputs": [
+    {
+      "info": "Upload an audio file to transfer its timbre.",
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "Violin",
+        "Flute",
+        "Trumpet",
+        "Upright Bass",
+        "GANSynth Subset",
+        "Autoencoder"
+      ],
+      "default": "Violin",
+      "info": "Select the instrument model whose timbre you want to transfer to the input audio.",
+      "label": "Target Instrument Model",
+      "name": "model_name",
+      "type": "dropdown"
+    },
+    {
+      "default": 4,
+      "info": "Set the desired length of the output audio in seconds. The model will truncate or pad the input.",
+      "label": "Output Length (seconds)",
+      "max": 30,
+      "min": 1,
+      "name": "length_seconds",
+      "step": 1,
+      "type": "slider"
+    },
+    {
+      "default": true,
+      "info": "If checked, the model will attempt to remove reverb from the output audio.",
+      "label": "Remove Reverb",
+      "name": "remove_reverb",
+      "type": "checkbox"
+    }
+  ],
+  "model": {
+    "author": "magenta",
+    "description": "DDSP (Differentiable Digital Signal Processing) model for timbre transfer, allowing conversion of input audio into the sound of various instruments using pretrained models.",
+    "id": "magenta/ddsp",
+    "license": "Apache-2.0",
+    "name": "DDSP Timbre Transfer",
+    "tags": [
+      "audio-to-audio",
+      "timbre-transfer",
+      "synthesis"
+    ],
+    "task": "audio-to-audio"
+  },
+  "outputs": [
+    {
+      "label": "Transferred Audio",
+      "name": "output_audio",
+      "type": "audio"
+    }
+  ]
+}
