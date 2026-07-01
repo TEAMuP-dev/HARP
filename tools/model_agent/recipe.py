@@ -1,13 +1,9 @@
 """Recipe-driven generation of HARP pyharp wrappers.
 
-A *recipe* is a declarative JSON spec, derived from the shapes real HARP
-wrappers use (see ``analyze``), that fully describes a wrapper: the model card,
-the inference framework/dependencies, the ordered input/output components, and
-the model-specific inference glue. The generator renders a runnable ``app.py``
-(plus ``requirements.txt`` / ``packages.txt`` / ``README.md`` / manifest) from
-it, so adding a new model is "write a recipe", not "hand-write a wrapper".
+A recipe describes model metadata, dependencies, components, and inference glue.
+The generator renders it into a runnable Space package.
 
-Schema (all string code fields are inlined into the generated module)::
+Schema (string code fields are inlined into the generated module)::
 
     {
       "model":    {"id", "name", "description", "author", "tags": [...]},
@@ -20,12 +16,7 @@ Schema (all string code fields are inlined into the generated module)::
 Input types:  audio, file, dropdown, slider, textbox, number, checkbox
 Output types: audio, file, labels
 
-The optional ``info`` field is a tooltip. It is rendered the way HARP's own
-reference wrappers do: as a native ``info=`` kwarg on standard Gradio components
-and as a chained pyharp ``.set_info(...)`` on media components (audio/file). A
-``file`` component may also carry ``file_types`` (e.g. ``[".mid", ".midi"]``).
-The generated module uses ``from pyharp import *`` so inference glue can freely
-call pyharp helpers (``load_audio``, ``save_audio``, ``AudioLabel``, ...).
+``info`` becomes a tooltip, and ``file_types`` constrains file components.
 """
 
 from __future__ import annotations
@@ -169,8 +160,6 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
     label = json.dumps(str(spec.get("label") or spec.get("name")))
 
     info = str(spec.get("info") or "").strip()
-    # Standard Gradio components take a tooltip via the info= kwarg; media
-    # components (audio/file) use the chained pyharp .set_info(...) instead.
     info_kwarg = f", info={json.dumps(info)}" if info and comp_type not in _MEDIA_TYPES else ""
 
     if comp_type == "audio":
@@ -243,9 +232,6 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
     if uses_gpu:
         import_lines.append(_SPACES_IMPORT_BLOCK)
     import_lines.append("")
-    # Match HARP's reference wrappers: a star import exposes every pyharp
-    # helper (ModelCard, build_endpoint, LabelList, AudioLabel, MidiLabel,
-    # load_audio, save_audio, ...) that inference glue may reach for.
     import_lines.append("from pyharp import *")
 
     setup = str(inference.get("setup") or "").strip()
@@ -386,14 +372,7 @@ def _identifier(label: Any, fallback: str, used: set) -> str:
 
 
 def recipe_skeleton_from_analysis(record: Mapping[str, Any], *, model_id: str = "") -> JSON:
-    """Build a recipe *skeleton* from a (recipe-eligible) ``analyze`` record.
-
-    Input/output components are filled in from the statically-resolved shapes;
-    the parts that cannot be derived from a wrapper's surface (the model's
-    dependencies and the inference glue, plus dropdown choices and slider
-    ranges) are left as clearly-marked TODO placeholders. The result is itself a
-    valid recipe that renders to a stub wrapper which raises ``NotImplementedError``.
-    """
+    """Build a recipe skeleton from a recipe-eligible ``analyze`` record."""
 
     used_names: set = set()
     todos: List[str] = []

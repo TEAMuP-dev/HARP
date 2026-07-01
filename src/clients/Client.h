@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <array>
 #include <unordered_map>
 
 #include <juce_core/juce_core.h>
@@ -23,14 +24,30 @@ using namespace juce;
 enum class Provider
 {
     HuggingFace,
-    Stability
+    Stability,
+    // LLM providers used by the Model Agent (recipe drafting). These store an
+    // API key only; they are not used as HARP model endpoints.
+    Gemini,
+    Anthropic,
+    OpenAI
 };
+
+// Providers whose keys are persisted/loaded under the "API Keys" settings tab.
+inline const std::array<Provider, 5>& allProviders()
+{
+    static const std::array<Provider, 5> providers { Provider::HuggingFace,
+                                                      Provider::Stability,
+                                                      Provider::Gemini,
+                                                      Provider::Anthropic,
+                                                      Provider::OpenAI };
+    return providers;
+}
 
 struct SharedAPIKeys
 {
     void initializeAPIKeys()
     {
-        for (auto provider : { Provider::HuggingFace, Provider::Stability })
+        for (auto provider : allProviders())
         {
             String savedToken = Settings::getString(providerToSettingsKey(provider));
 

@@ -17,7 +17,10 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../clients/Client.h"
+#include "../utils/Enums.h"
 #include "../utils/Logging.h"
+#include "../utils/Settings.h"
 
 using namespace juce;
 
@@ -55,14 +58,16 @@ public:
         harpRootBrowse.onClick = [this] { browseInto(harpRootEditor, true); };
         addAndMakeVisible(harpRootBrowse);
 
-        // Secrets are injected into the run script's environment (not the visible
-        // command preview), so LLM/deploy commands work without exporting env vars
-        // in a terminal first.
-        setupLabel(llmKeyLabel, "LLM API key");
-        setupSecretEditor(llmKeyEditor, "Gemini/Anthropic/OpenAI key (for *-llm commands)");
-
-        setupLabel(hfTokenLabel, "HF token");
-        setupSecretEditor(hfTokenEditor, "for deploy-space (write token); overrides --token");
+        // API keys are entered once under Settings -> "API Keys" and reused here.
+        // This note tells the user where to set them; the keys themselves are
+        // injected into the run environment, never shown in the command preview.
+        keysNoteLabel.setText(
+            "Tip: set your Hugging Face / Gemini / Anthropic / OpenAI keys under "
+            "Settings -> API Keys. They are applied automatically.",
+            dontSendNotification);
+        keysNoteLabel.setColour(Label::textColourId, Colours::lightgrey);
+        keysNoteLabel.setJustificationType(Justification::centredLeft);
+        addAndMakeVisible(keysNoteLabel);
 
         for (auto& row : rows)
         {
@@ -124,7 +129,7 @@ public:
         logEditor.setText("Command output will appear here.", dontSendNotification);
         addAndMakeVisible(logEditor);
 
-        setSize(840, 840);
+        setSize(840, 830);
 
         commandSelector.setSelectedId(1, sendNotification);
     }
@@ -161,10 +166,8 @@ public:
         layoutField(area, pythonLabel, pythonEditor, nullptr);
         area.removeFromTop(6);
         layoutField(area, harpRootLabel, harpRootEditor, &harpRootBrowse);
-        area.removeFromTop(6);
-        layoutField(area, llmKeyLabel, llmKeyEditor, nullptr);
-        area.removeFromTop(6);
-        layoutField(area, hfTokenLabel, hfTokenEditor, nullptr);
+        area.removeFromTop(4);
+        keysNoteLabel.setBounds(area.removeFromTop(18));
         area.removeFromTop(10);
 
         for (auto& row : rows)
@@ -252,143 +255,142 @@ private:
 
         specs.push_back(
             { "discover",
-              "Search Hugging Face Spaces for candidate models.",
-              { { "--query", "Query", Field::Text, Browse::None, "", "e.g. audio", false },
-                { "--author", "Author/org", Field::Text, Browse::None, "", "e.g. teamup-tech", false },
-                { "--limit", "Limit", Field::Int, Browse::None, "25", "max results", false },
-                { "--output", "Output JSON", Field::Text, Browse::OpenFile, "", "optional file", false },
-                { "--all", "Include non-Gradio", Field::Flag, Browse::None, "0", "", false } } });
+              "Find candidate models on Hugging Face by topic or author.",
+              { { "--query", "Topic", Field::Text, Browse::None, "", "e.g. audio super resolution", false },
+                { "--author", "Author / org", Field::Text, Browse::None, "", "e.g. teamup-tech", false },
+                { "--limit", "Max results", Field::Int, Browse::None, "25", "", false },
+                { "--output", "Save results to", Field::Text, Browse::OpenFile, "", "optional file", false },
+                { "--all", "Include non-Gradio models", Field::Flag, Browse::None, "0", "", false } } });
 
         specs.push_back(
             { "probe",
-              "Fetch HARP controls from one or more model endpoints.",
-              { { "", "Model paths", Field::Text, Browse::None, "", "space-separated ids/urls", true, true },
-                { "--output", "Output JSON", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+              "Ask already-running models what inputs and outputs they expose.",
+              { { "", "Model links", Field::Text, Browse::None, "", "Space links or ids, separated by spaces", true, true },
+                { "--output", "Save results to", Field::Text, Browse::OpenFile, "", "optional file", false } } });
 
         specs.push_back(
             { "score-card",
-              "Score a raw Hugging Face model-card JSON file.",
-              { { "", "Card JSON", Field::Text, Browse::OpenFile, "", "path to card.json", true },
-                { "--output", "Output JSON", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+              "Rate how easily a model can be packaged for HARP.",
+              { { "", "Model details file", Field::Text, Browse::OpenFile, "", "a saved model card (.json)", true },
+                { "--output", "Save results to", Field::Text, Browse::OpenFile, "", "optional file", false } } });
 
         specs.push_back(
             { "render-app",
-              "Render a starter pyharp app.py from a model card.",
-              { { "", "Card JSON", Field::Text, Browse::OpenFile, "", "path to card.json", true },
-                { "--output", "Output app.py", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+              "Preview a starter wrapper from a model card (nothing is saved).",
+              { { "", "Model details file", Field::Text, Browse::OpenFile, "", "a saved model card (.json)", true },
+                { "--output", "Save wrapper to", Field::Text, Browse::OpenFile, "", "optional file", false } } });
 
         specs.push_back(
             { "generate-package",
-              "Write app.py, requirements, and manifest for a model card.",
-              { { "", "Card JSON", Field::Text, Browse::OpenFile, "", "path to card.json", true },
-                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "package folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
-                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
+              "Build a ready-to-deploy wrapper (app + dependencies) from a model card.",
+              { { "", "Model details file", Field::Text, Browse::OpenFile, "", "a saved model card (.json)", true },
+                { "--output", "Output folder", Field::Text, Browse::OpenDir, "", "where to write the wrapper", false },
+                { "--smoke-test", "Test it after building (runs the model)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Install in a clean sandbox first", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
             { "package-repo",
-              "Fetch a HF model repo and write a HARP Space package.",
-              { { "", "Repo id", Field::Text, Browse::None, "", "author/model-name", true },
-                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "Space folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
-                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
+              "Fetch a Hugging Face model and build a HARP wrapper for it.",
+              { { "", "Model id", Field::Text, Browse::None, "", "e.g. author/model-name", true },
+                { "--output", "Output folder", Field::Text, Browse::OpenDir, "", "where to write the wrapper", false },
+                { "--smoke-test", "Test it after building (runs the model)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Install in a clean sandbox first", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
             { "package",
-              "Package probed endpoints into reviewable folders.",
-              { { "", "Model paths", Field::Text, Browse::None, "", "space-separated ids", false, true },
-                { "--from-file", "From file", Field::Text, Browse::OpenFile, "", "discovery/probe JSON", false },
-                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "packages folder", false },
-                { "--no-space-metadata", "Skip Space metadata", Field::Flag, Browse::None, "0", "", false } } });
+              "Bundle already-running models into reviewable folders.",
+              { { "", "Model links", Field::Text, Browse::None, "", "ids, separated by spaces", false, true },
+                { "--from-file", "Read models from file", Field::Text, Browse::OpenFile, "", "a discover/probe results file", false },
+                { "--output", "Output folder", Field::Text, Browse::OpenDir, "", "where to write the folders", false },
+                { "--no-space-metadata", "Skip extra Space details", Field::Flag, Browse::None, "0", "", false } } });
 
         specs.push_back(
             { "harvest",
-              "Download app.py files from an author's Spaces (read-only).",
-              { { "--author", "Author/org", Field::Text, Browse::None, "teamup-tech", "", false },
-                { "--query", "Query", Field::Text, Browse::None, "", "optional", false },
-                { "--limit", "Limit", Field::Int, Browse::None, "100", "", false },
-                { "--filename", "Filename", Field::Text, Browse::None, "app.py", "", false },
-                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "harvest folder", false } } });
+              "Download example wrappers from an author's Spaces (read-only).",
+              { { "--author", "Author / org", Field::Text, Browse::None, "teamup-tech", "", false },
+                { "--query", "Topic (optional)", Field::Text, Browse::None, "", "", false },
+                { "--limit", "Max Spaces", Field::Int, Browse::None, "100", "", false },
+                { "--filename", "File to fetch", Field::Text, Browse::None, "app.py", "", false },
+                { "--output", "Output folder", Field::Text, Browse::OpenDir, "", "where to save them", false } } });
 
         specs.push_back(
             { "analyze",
-              "Statically analyze harvested app.py files (no execution).",
-              { { "", "Path", Field::Text, Browse::OpenDir, "", "harvest dir or app.py", true },
-                { "--filename", "Filename", Field::Text, Browse::None, "app.py", "", false },
+              "Inspect downloaded wrappers without running them.",
+              { { "", "Folder or file", Field::Text, Browse::OpenDir, "", "a harvest folder or an app.py", true },
+                { "--filename", "File name", Field::Text, Browse::None, "app.py", "", false },
                 { "--summary-only", "Summary only", Field::Flag, Browse::None, "0", "", false },
-                { "--output", "Output JSON", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+                { "--output", "Save results to", Field::Text, Browse::OpenFile, "", "optional file", false } } });
 
         specs.push_back(
             { "smoke-test",
-              "Launch a generated package's app.py and verify HARP controls.",
-              { { "", "Package dir", Field::Text, Browse::OpenDir, "", "generated package folder", true },
-                { "--startup-timeout", "Startup timeout (s)", Field::Int, Browse::None, "180", "", false },
-                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
+              "Launch a built wrapper to confirm it starts and responds.",
+              { { "", "Wrapper folder", Field::Text, Browse::OpenDir, "", "a built wrapper folder", true },
+                { "--startup-timeout", "Startup wait (seconds)", Field::Int, Browse::None, "180", "", false },
+                { "--venv", "Install in a clean sandbox first", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
             { "deploy-space",
-              "Push a generated package to a Hugging Face Space (needs huggingface_hub + token).",
-              { { "", "Package dir", Field::Text, Browse::OpenDir, "", "generated package folder", true },
-                { "--repo", "Space id", Field::Text, Browse::None, "", "your-username/your-space", true },
-                { "--token", "HF token", Field::Text, Browse::None, "", "or set HF_TOKEN env", false },
-                { "--into-space", "Overlay onto existing Space", Field::Flag, Browse::None, "0", "", false },
-                { "--gradio-version", "Gradio version", Field::Text, Browse::None, "5.28.0", "for --into-space", false },
-                { "--freeze-from", "Freeze file", Field::Text, Browse::OpenFile, "", "known-good pip freeze (--into-space)", false },
-                { "--private", "Private Space", Field::Flag, Browse::None, "0", "", false },
-                { "--sdk", "SDK", Field::Text, Browse::None, "gradio", "", false } } });
+              "Publish a built wrapper to a Hugging Face Space (created if needed; uses your saved Hugging Face key).",
+              { { "", "Wrapper folder", Field::Text, Browse::OpenDir, "", "a built wrapper folder", true },
+                { "--repo", "Space name", Field::Text, Browse::None, "", "your-username/your-space", true },
+                { "--private", "Make the Space private", Field::Flag, Browse::None, "0", "", false },
+                { "--into-space", "Add into an existing Space (advanced)", Field::Flag, Browse::None, "0", "", false },
+                { "--gradio-version", "Gradio version (advanced)", Field::Text, Browse::None, "5.28.0", "only when adding into an existing Space", false },
+                { "--freeze-from", "Known-good versions file (advanced)", Field::Text, Browse::OpenFile, "", "optional", false },
+                { "--sdk", "Space type (advanced)", Field::Text, Browse::None, "gradio", "usually gradio", false } } });
 
         specs.push_back(
             { "scaffold-recipe",
-              "Build a recipe skeleton from a harvested app.py (fills I/O, stubs inference).",
-              { { "", "Harvested app.py", Field::Text, Browse::OpenFile, "", "path to app.py", true },
-                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "recipe.json", false } } });
+              "Start a recipe from an existing wrapper (fills in what it can).",
+              { { "", "Existing wrapper (app.py)", Field::Text, Browse::OpenFile, "", "path to an app.py", true },
+                { "--output", "Save recipe to", Field::Text, Browse::OpenFile, "", "recipe file", false } } });
 
         specs.push_back(
             { "render-recipe",
-              "Render a pyharp app.py from a recipe JSON.",
-              { { "", "Recipe JSON", Field::Text, Browse::OpenFile, "", "recipe.json", true },
-                { "--output", "Output app.py", Field::Text, Browse::OpenFile, "", "optional file", false } } });
+              "Preview a wrapper from a recipe (nothing is saved).",
+              { { "", "Recipe file", Field::Text, Browse::OpenFile, "", "a recipe (.json)", true },
+                { "--output", "Save wrapper to", Field::Text, Browse::OpenFile, "", "optional file", false } } });
 
         specs.push_back(
             { "generate-recipe",
-              "Write app.py, requirements, and manifest from a recipe JSON.",
-              { { "", "Recipe JSON", Field::Text, Browse::OpenFile, "", "recipe.json", true },
-                { "--output", "Output dir", Field::Text, Browse::OpenDir, "", "package folder", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
-                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
+              "Build a ready-to-deploy wrapper from a recipe.",
+              { { "", "Recipe file", Field::Text, Browse::OpenFile, "", "a recipe (.json)", true },
+                { "--output", "Output folder", Field::Text, Browse::OpenDir, "", "where to write the wrapper", false },
+                { "--smoke-test", "Test it after building (runs the model)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Install in a clean sandbox first", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         specs.push_back(
             { "generate-recipe-from-llm",
-              "LLM-draft a recipe for any model (needs GEMINI/ANTHROPIC/OPENAI API key).",
-              { { "--repo", "Repo id", Field::Text, Browse::None, "", "author/model (or use --card)", false },
-                { "--card", "Card JSON", Field::Text, Browse::OpenFile, "", "model card json", false },
+              "Use AI to draft a wrapper for any model (uses your saved AI key from Settings).",
+              { { "--repo", "Hugging Face model", Field::Text, Browse::None, "", "e.g. author/model", false },
+                { "--card", "Model details file", Field::Text, Browse::OpenFile, "", "a saved model card, instead of a model", false },
                 { "--github", "GitHub repo", Field::Text, Browse::None, "", "owner/repo or full URL", false },
-                { "--ref", "Git ref", Field::Text, Browse::None, "", "branch/tag/sha (optional)", false },
-                { "--space", "Ground on Space", Field::Text, Browse::None, "", "author/space (reuse real API)", false },
-                { "--inputs", "Input types", Field::Text, Browse::None, "", "e.g. audio,slider", false },
-                { "--outputs", "Output types", Field::Text, Browse::None, "", "e.g. audio,labels", false },
-                { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },
-                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "recipe.json", false } } });
+                { "--ref", "Branch or tag", Field::Text, Browse::None, "", "optional", false },
+                { "--space", "Copy an existing Space's setup", Field::Text, Browse::None, "", "author/space (optional)", false },
+                { "--inputs", "Input types", Field::Text, Browse::None, "", "e.g. audio", false },
+                { "--outputs", "Output types", Field::Text, Browse::None, "", "e.g. audio", false },
+                { "--provider", "AI provider", Field::Text, Browse::None, "", "gemini, anthropic, or openai", false },
+                { "--output", "Save recipe to", Field::Text, Browse::OpenFile, "", "recipe file", false } } });
 
         specs.push_back(
             { "list-models",
-              "List LLM models available for your configured provider/API key.",
-              { { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false } } });
+              "List the AI models your saved key is allowed to use.",
+              { { "--provider", "AI provider", Field::Text, Browse::None, "", "gemini, anthropic, or openai", false } } });
 
         specs.push_back(
             { "complete-recipe",
-              "LLM-fill the _todo stubs of a scaffolded recipe (preserves I/O).",
-              { { "", "Scaffold recipe", Field::Text, Browse::OpenFile, "", "recipe.json with _todo", true },
-                { "--repo", "Repo id (context)", Field::Text, Browse::None, "", "optional, for README", false },
-                { "--provider", "Provider", Field::Text, Browse::None, "", "gemini|anthropic|openai (auto)", false },
-                { "--output", "Recipe JSON out", Field::Text, Browse::OpenFile, "", "completed.json", false },
-                { "--generate-package", "Write package", Field::Flag, Browse::None, "0", "", false },
-                { "--smoke-test", "Smoke-test (runs code)", Field::Flag, Browse::None, "0", "", false },
-                { "--venv", "Isolated venv (pip install)", Field::Flag, Browse::None, "0", "", false } },
+              "Use AI to fill in the blanks of a started recipe (uses your saved AI key from Settings).",
+              { { "", "Started recipe", Field::Text, Browse::OpenFile, "", "a recipe with blanks to fill", true },
+                { "--repo", "Model id (for context, optional)", Field::Text, Browse::None, "", "", false },
+                { "--provider", "AI provider", Field::Text, Browse::None, "", "gemini, anthropic, or openai", false },
+                { "--output", "Save recipe to", Field::Text, Browse::OpenFile, "", "recipe file", false },
+                { "--generate-package", "Also build the wrapper", Field::Flag, Browse::None, "0", "", false },
+                { "--smoke-test", "Test it after building (runs the model)", Field::Flag, Browse::None, "0", "", false },
+                { "--venv", "Install in a clean sandbox first", Field::Flag, Browse::None, "0", "", false } },
               true });
 
         return specs;
@@ -531,16 +533,6 @@ private:
     {
         editor.setMultiLine(false);
         editor.setReturnKeyStartsNewLine(false);
-        editor.setTextToShowWhenEmpty(placeholder, Colours::grey);
-        editor.setWantsKeyboardFocus(true);
-        addAndMakeVisible(editor);
-    }
-
-    void setupSecretEditor(TextEditor& editor, const String& placeholder)
-    {
-        editor.setMultiLine(false);
-        editor.setReturnKeyStartsNewLine(false);
-        editor.setPasswordCharacter((juce_wchar) 0x2022); // mask with bullets
         editor.setTextToShowWhenEmpty(placeholder, Colours::grey);
         editor.setWantsKeyboardFocus(true);
         addAndMakeVisible(editor);
@@ -725,38 +717,60 @@ private:
         return tokens.joinIntoString(" ");
     }
 
-    // Map the entered LLM key onto the right env var so the CLI's provider
-    // auto-detection picks it up. An explicit --provider chooses the matching
-    // provider var; otherwise we set the generic HARP_LLM_API_KEY (the CLI then
-    // defaults to its standard provider).
-    String llmKeyEnvVarName() const
+    // Read a stored API key from the shared settings store (Settings -> API
+    // Keys), falling back to the persisted value on disk.
+    String storedKey(Provider p) const
     {
-        String provider;
-        for (const auto& row : rows)
-            if (row.active && row.spec.flag == "--provider")
-                provider = row.editor.getText().trim().toLowerCase();
-
-        if (provider == "openai")
-            return "OPENAI_API_KEY";
-        if (provider == "anthropic")
-            return "ANTHROPIC_API_KEY";
-        if (provider == "gemini")
-            return "GEMINI_API_KEY";
-        return "HARP_LLM_API_KEY";
+        if (sharedTokens->savedTokens.contains(p))
+            return sharedTokens->savedTokens.at(p).trim();
+        return Settings::getString("apikeys." + enumToString(p)).trim();
     }
 
+    // Resolve which LLM provider the current command targets (from its provider
+    // selector, if any) and the matching env var the agent's CLI expects.
+    void selectedLlmProvider(Provider& provider, String& envVar) const
+    {
+        String choice;
+        for (const auto& row : rows)
+            if (row.active && row.spec.flag == "--provider")
+                choice = row.editor.getText().trim().toLowerCase();
+
+        if (choice == "openai")
+        {
+            provider = Provider::OpenAI;
+            envVar = "OPENAI_API_KEY";
+        }
+        else if (choice == "anthropic")
+        {
+            provider = Provider::Anthropic;
+            envVar = "ANTHROPIC_API_KEY";
+        }
+        else // empty/"gemini" -> the agent's default provider
+        {
+            provider = Provider::Gemini;
+            envVar = "GEMINI_API_KEY";
+        }
+    }
+
+    // Inject the stored keys into the run script's environment (not the visible
+    // command preview), so LLM and deploy commands work using the keys the user
+    // saved under Settings -> API Keys -- no terminal env setup required.
     void appendEnvExports(String& script) const
     {
-        const auto llmKey = llmKeyEditor.getText().trim();
-        const auto hfToken = hfTokenEditor.getText().trim();
+        Provider llmProvider;
+        String llmEnvVar;
+        selectedLlmProvider(llmProvider, llmEnvVar);
+
+        const String llmKey = storedKey(llmProvider);
+        const String hfToken = storedKey(Provider::HuggingFace);
 #if JUCE_WINDOWS
         if (llmKey.isNotEmpty())
-            script << "set \"" << llmKeyEnvVarName() << "=" << llmKey << "\"\r\n";
+            script << "set \"" << llmEnvVar << "=" << llmKey << "\"\r\n";
         if (hfToken.isNotEmpty())
             script << "set \"HF_TOKEN=" << hfToken << "\"\r\n";
 #else
         if (llmKey.isNotEmpty())
-            script << "export " << llmKeyEnvVarName() << "=" << quoteArg(llmKey) << "\n";
+            script << "export " << llmEnvVar << "=" << quoteArg(llmKey) << "\n";
         if (hfToken.isNotEmpty())
             script << "export HF_TOKEN=" << quoteArg(hfToken) << "\n";
 #endif
@@ -933,8 +947,7 @@ private:
     Label descriptionLabel;
     Label pythonLabel;
     Label harpRootLabel;
-    Label llmKeyLabel;
-    Label hfTokenLabel;
+    Label keysNoteLabel;
     Label previewLabel;
     Label statusLabel;
     Label validationLabel;
@@ -943,8 +956,8 @@ private:
     TextEditor pythonEditor;
     TextEditor harpRootEditor;
     TextButton harpRootBrowse;
-    TextEditor llmKeyEditor;
-    TextEditor hfTokenEditor;
+
+    SharedResourcePointer<SharedAPIKeys> sharedTokens;
 
     std::array<ParamRow, maxRows> rows;
 

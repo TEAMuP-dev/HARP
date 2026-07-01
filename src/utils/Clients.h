@@ -10,6 +10,7 @@
 
 #include "../clients/Client.h"
 #include "../clients/GradioClient.h"
+#include "../clients/providers/llm/LLMClient.h"
 #include "../clients/providers/stability/StabilityClient.h"
 
 #include "Errors.h"
@@ -24,6 +25,24 @@ inline std::unique_ptr<Client> multiplexClients(Provider provider)
         DBG_AND_LOG("utils::multiplexClients: Initializing Stability client.");
 
         return std::make_unique<StabilityClient>();
+    }
+    else if (provider == Provider::Gemini)
+    {
+        DBG_AND_LOG("utils::multiplexClients: Initializing Gemini client.");
+
+        return std::make_unique<GeminiClient>();
+    }
+    else if (provider == Provider::Anthropic)
+    {
+        DBG_AND_LOG("utils::multiplexClients: Initializing Anthropic client.");
+
+        return std::make_unique<AnthropicClient>();
+    }
+    else if (provider == Provider::OpenAI)
+    {
+        DBG_AND_LOG("utils::multiplexClients: Initializing OpenAI client.");
+
+        return std::make_unique<OpenAIClient>();
     }
     else
     {

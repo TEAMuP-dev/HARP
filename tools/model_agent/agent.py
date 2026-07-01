@@ -386,14 +386,7 @@ SUPPORTED_GENERATION_FRAMEWORKS = ("speechbrain",)
 
 
 def detect_inference_framework(card: Mapping[str, Any]) -> str:
-    """Detect the Python framework needed to run a raw Hugging Face audio model.
-
-    Different ``audio-to-audio`` models load through completely different APIs,
-    so there is no single universal inference call. We only claim support for
-    frameworks that expose a clean, documented ``from_pretrained``/``from_hparams``
-    inference path; everything else is reported as ``unknown`` so the caller can
-    refuse to emit a wrapper it cannot actually run.
-    """
+    """Detect the Python framework needed to run a raw Hugging Face audio model."""
 
     meta = _model_meta(card)
     library = str(meta.get("library_name") or "").strip().lower()
@@ -424,13 +417,7 @@ def _speechbrain_kind(card: Mapping[str, Any]) -> str:
 
 
 def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, Any]] = None) -> str:
-    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models.
-
-    Only frameworks in :data:`SUPPORTED_GENERATION_FRAMEWORKS` produce a wrapper.
-    Emitting code we cannot run (the previous behavior, which called the
-    nonexistent ``pipeline("audio-to-audio")`` task) is worse than refusing, so
-    unsupported models raise :class:`NotImplementedError`.
-    """
+    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models."""
 
     task = classify_task(card)
     if task != "audio-to-audio":
@@ -581,12 +568,7 @@ def _requirements_for_framework(framework: str) -> str:
 
 
 def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
-    """Build in-memory files for a generated pyharp wrapper.
-
-    Raises :class:`NotImplementedError` (via :func:`render_pyharp_app`) when the
-    model's framework has no runnable template, so we never write a wrapper that
-    is known to fail at startup.
-    """
+    """Build in-memory files for a generated pyharp wrapper."""
 
     task = classify_task(card)
     framework = detect_inference_framework(card)

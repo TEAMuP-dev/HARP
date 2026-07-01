@@ -217,6 +217,9 @@ LoginTab::LoginTab()
 
     loginPages.addPage(std::make_unique<ProviderPage>(Provider::HuggingFace, "Hugging Face"));
     loginPages.addPage(std::make_unique<ProviderPage>(Provider::Stability, "Stability AI"));
+    loginPages.addPage(std::make_unique<ProviderPage>(Provider::Gemini, "Google Gemini"));
+    loginPages.addPage(std::make_unique<ProviderPage>(Provider::Anthropic, "Anthropic Claude"));
+    loginPages.addPage(std::make_unique<ProviderPage>(Provider::OpenAI, "OpenAI"));
     addAndMakeVisible(loginPages);
 
     sidebar.updateContent();
