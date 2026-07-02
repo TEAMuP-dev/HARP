@@ -5,7 +5,7 @@ import concurrent.futures
 import json
 import sys
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Mapping
 from urllib.error import HTTPError, URLError
 
 from .agent import (
@@ -24,6 +24,7 @@ from .agent import (
 from .analyze import analyze_app_file, analyze_path
 from .llm import (
     LLMError,
+    RecipeDraft,
     RecipeGenerationContext,
     complete_recipe,
     default_examples,
@@ -188,6 +189,23 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Ground the LLM on an existing Space's source (its app.py + local modules). "
         "Strongly recommended for app-like Spaces so the wrapper reuses the real API/UI.",
+    )
+    llm_recipe.add_argument(
+        "--remote-space",
+        default="",
+        help="Emit a REMOTE-BACKEND (proxy) wrapper that calls this existing Gradio "
+        "Space via gradio_client instead of installing the model. Best for models "
+        "that aren't pip-installable or whose deps conflict with pyharp (e.g. "
+        "SonicMaster, SoulX-Singer). The recipe is scaffolded deterministically from "
+        "the Space's live API (no LLM guessing); the model card is enriched from "
+        "--card/--repo/--github. Frontend deps become just pyharp + gradio + "
+        "gradio_client -- conflict-free by construction.",
+    )
+    llm_recipe.add_argument(
+        "--remote-api-name",
+        default="",
+        help="With --remote-space: the backend named endpoint to call (e.g. "
+        "/enhance_audio_ui). Required only if the Space exposes more than one.",
     )
     llm_recipe.add_argument(
         "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
@@ -577,6 +595,31 @@ def main(argv: Iterable[str] | None = None) -> int:
             else:
                 card = _fetch_card_or_exit(agent, args.repo)
 
+            # Remote-backend (proxy) mode: skip the LLM entirely and scaffold a
+            # thin gradio_client wrapper deterministically from the Space's live
+            # API, enriching only the model card from the fetched metadata. This
+            # is the right path for models that aren't pip-installable or whose
+            # deps conflict with pyharp -- exactly the "generate something simple"
+            # case that installing a non-package git+ repo cannot satisfy.
+            if args.remote_space:
+                print(
+                    f"Remote-backend mode: scaffolding a proxy recipe from the live "
+                    f"API of {args.remote_space} (the LLM is not used) ...",
+                    file=sys.stderr,
+                )
+                recipe = agent.scaffold_remote_recipe(
+                    args.remote_space, api_name=args.remote_api_name or None
+                )
+                _apply_card_metadata(recipe, card)
+                draft = RecipeDraft(
+                    recipe=recipe,
+                    app_py=render_app_from_recipe(recipe),
+                    attempts=0,
+                    provider="scaffold",
+                    model="remote-backend",
+                )
+                return _emit_recipe_draft(agent, draft, args)
+
             context = RecipeGenerationContext.from_card(
                 card,
                 target_inputs=_split_csv(args.inputs),
@@ -618,7 +661,25 @@ def main(argv: Iterable[str] | None = None) -> int:
             )
             draft = generate_recipe(context, provider, max_repairs=args.max_repairs)
             if github_target is not None:
-                _ensure_github_pip(draft.recipe, context.source_repo_url)
+                if _repo_is_pip_installable(card):
+                    _ensure_github_pip(draft.recipe, context.source_repo_url)
+                else:
+                    # No setup.py/pyproject.toml -> `pip install git+<repo>` fails with
+                    # "does not appear to be a Python project". Strip that doomed line
+                    # (the LLM often adds it) and steer to remote-backend mode instead.
+                    _strip_repo_pip(draft.recipe, context.source_repo_url)
+                    owner, repo, _ref = github_target
+                    print(
+                        f"  [deps] WARNING: {owner}/{repo} has no setup.py/pyproject.toml, "
+                        "so it is NOT pip-installable -- a non-remote wrapper that imports "
+                        "it cannot work (this is the 'does not appear to be a Python "
+                        "project' build error). Deploy it as a remote-backend proxy to its "
+                        "Gradio Space instead, e.g.:\n"
+                        f"    python -m tools.model_agent scaffold-remote-recipe <its-hf-space>\n"
+                        f"    python -m tools.model_agent generate-recipe-from-llm --github "
+                        f"{owner}/{repo} --remote-space <its-hf-space>",
+                        file=sys.stderr,
+                    )
             return _emit_recipe_draft(agent, draft, args)
 
         if args.command == "list-models":
@@ -833,6 +894,99 @@ def _ensure_github_pip(recipe: dict, requirement: str) -> None:
         pip.insert(0, requirement)
 
     framework["pip"] = pip
+
+
+def _strip_repo_pip(recipe: dict, requirement: str) -> None:
+    """Remove any ``git+...<repo>`` pip line pointing at the same repo (any @ref)."""
+
+    if not requirement or not isinstance(recipe, dict):
+        return
+    framework = recipe.get("framework")
+    if not isinstance(framework, dict):
+        return
+    pip = framework.get("pip")
+    if not isinstance(pip, list):
+        return
+    repo_prefix = requirement.rsplit("@", 1)[0]
+    framework["pip"] = [
+        entry
+        for entry in pip
+        if not (isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix)
+    ]
+
+
+_PIP_PACKAGING_MARKERS = ("setup.py", "pyproject.toml", "setup.cfg")
+
+
+def _repo_is_pip_installable(card: object) -> bool:
+    """True if a GitHub card's file list has a root Python packaging file.
+
+    ``pip install git+<repo>`` needs ``setup.py`` / ``pyproject.toml`` /
+    ``setup.cfg`` at the repo root; without one it fails with "does not appear to
+    be a Python project". We only trust a positive signal -- if the file list is
+    empty/unknown we assume installable and let pip be the judge.
+    """
+
+    if not isinstance(card, dict):
+        return True
+    files = card.get("files")
+    if not isinstance(files, list) or not files:
+        return True
+    for entry in files:
+        path = str(entry).strip().lstrip("./")
+        if "/" in path:  # only a ROOT packaging file makes the repo installable
+            continue
+        if path.lower() in _PIP_PACKAGING_MARKERS:
+            return True
+    return False
+
+
+def _apply_card_metadata(recipe: dict, card: object) -> None:
+    """Fill a scaffolded recipe's model card fields from fetched metadata.
+
+    The remote scaffold leaves ``model.description`` as a TODO and no tags; enrich
+    them from the HF/GitHub card so the deployed wrapper shows a real card without
+    invoking the LLM.
+    """
+
+    if not isinstance(recipe, dict) or not isinstance(card, dict):
+        return
+    model = recipe.setdefault("model", {})
+    if not isinstance(model, dict):
+        return
+    meta = card.get("meta") if isinstance(card.get("meta"), Mapping) else {}
+
+    tags = [str(tag) for tag in (meta.get("tags") or []) if str(tag).strip()]
+    if tags and not model.get("tags"):
+        model["tags"] = tags
+
+    license_name = str(meta.get("license") or "").strip()
+    if license_name and not model.get("license"):
+        model["license"] = license_name
+
+    # Prefer a concise README lead paragraph over the "TODO" placeholder.
+    current = str(model.get("description") or "")
+    if not current or current.lower().startswith("todo"):
+        readme = str(card.get("readme") or "").strip()
+        summary = _readme_summary(readme)
+        pipeline = str(meta.get("pipeline_tag") or "").strip()
+        model["description"] = summary or pipeline or model.get("name") or ""
+
+
+def _readme_summary(readme: str, *, limit: int = 400) -> str:
+    """First real prose paragraph of a README (skips headings/badges/HTML)."""
+
+    for block in readme.split("\n\n"):
+        text = block.strip()
+        if not text:
+            continue
+        if text.startswith(("#", "<", "![", "[!", "---", "|")):
+            continue
+        text = " ".join(text.split())
+        if len(text) < 20:
+            continue
+        return text[:limit]
+    return ""
 
 
 def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:

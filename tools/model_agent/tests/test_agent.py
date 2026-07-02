@@ -30,7 +30,13 @@ from tools.model_agent.agent import (
     score_compatibility,
 )
 from tools.model_agent.analyze import analyze_app_source, analyze_path
-from tools.model_agent.cli import attach_health, _ensure_github_pip
+from tools.model_agent.cli import (
+    attach_health,
+    _apply_card_metadata,
+    _ensure_github_pip,
+    _repo_is_pip_installable,
+    _strip_repo_pip,
+)
 from tools.model_agent.llm import (
     GeminiProvider,
     LLMError,
@@ -1767,6 +1773,59 @@ class RecipeRequirementsLintTest(unittest.TestCase):
 
     def test_no_pip_is_noop(self):
         self.assertEqual(lint_recipe_requirements({"model": {"id": "a/b"}}), [])
+
+
+class GitHubInstallabilityTest(unittest.TestCase):
+    def test_root_pyproject_is_installable(self):
+        card = {"files": ["README.md", "pyproject.toml", "src/x.py"]}
+        self.assertTrue(_repo_is_pip_installable(card))
+
+    def test_root_setup_py_is_installable(self):
+        self.assertTrue(_repo_is_pip_installable({"files": ["setup.py", "pkg/__init__.py"]}))
+
+    def test_only_nested_packaging_is_not_installable(self):
+        # A pyproject.toml deep in the tree does NOT make the repo pip-installable.
+        card = {"files": ["infer_single.py", "sub/pyproject.toml", "README.md"]}
+        self.assertFalse(_repo_is_pip_installable(card))
+
+    def test_no_packaging_files_is_not_installable(self):
+        card = {"files": ["infer_single.py", "model.py", "README.md"]}
+        self.assertFalse(_repo_is_pip_installable(card))
+
+    def test_unknown_file_list_assumed_installable(self):
+        self.assertTrue(_repo_is_pip_installable({}))
+        self.assertTrue(_repo_is_pip_installable({"files": []}))
+
+    def test_strip_repo_pip_removes_matching_ref(self):
+        recipe = {
+            "framework": {
+                "pip": [
+                    "git+https://github.com/AMAAI-Lab/SonicMaster.git@main",
+                    "torch",
+                ]
+            }
+        }
+        _strip_repo_pip(recipe, "git+https://github.com/AMAAI-Lab/SonicMaster.git@v1")
+        self.assertEqual(recipe["framework"]["pip"], ["torch"])
+
+
+class ApplyCardMetadataTest(unittest.TestCase):
+    def test_fills_description_tags_license_from_card(self):
+        recipe = {"model": {"name": "X", "description": "TODO: describe this model.", "tags": []}}
+        card = {
+            "meta": {"tags": ["audio-to-audio"], "license": "mit", "pipeline_tag": "audio"},
+            "readme": "# Title\n\n![badge](x)\n\nThis model restores audio from a text prompt.",
+        }
+        _apply_card_metadata(recipe, card)
+        self.assertEqual(recipe["model"]["tags"], ["audio-to-audio"])
+        self.assertEqual(recipe["model"]["license"], "mit")
+        self.assertIn("restores audio", recipe["model"]["description"])
+
+    def test_does_not_overwrite_existing_description(self):
+        recipe = {"model": {"name": "X", "description": "Real desc", "tags": ["t"]}}
+        _apply_card_metadata(recipe, {"meta": {"tags": ["other"]}, "readme": "New."})
+        self.assertEqual(recipe["model"]["description"], "Real desc")
+        self.assertEqual(recipe["model"]["tags"], ["t"])
 
 
 class EnsureGitHubPipTest(unittest.TestCase):

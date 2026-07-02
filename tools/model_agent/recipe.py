@@ -1,7 +1,11 @@
 """Recipe-driven generation of HARP pyharp wrappers.
 
-A recipe describes model metadata, dependencies, components, and inference glue.
-The generator renders it into a runnable Space package.
+A *recipe* is a declarative JSON spec, derived from the shapes real HARP
+wrappers use (see ``analyze``), that fully describes a wrapper: the model card,
+the inference framework/dependencies, the ordered input/output components, and
+the model-specific inference glue. The generator renders a runnable ``app.py``
+(plus ``requirements.txt`` / ``packages.txt`` / ``README.md`` / manifest) from
+it, so adding a new model is "write a recipe", not "hand-write a wrapper".
 
 Schema (all string code fields are inlined into the generated module)::
 
@@ -473,6 +477,15 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         "    )",
         "    _values = list(_raw) if isinstance(_raw, (list, tuple)) else [_raw]",
     ]
+    has_media_output = any(str(spec.get("type")) in _MEDIA_TYPES for spec in outputs)
+    if has_media_output:
+        # Many backends return their error/status text as a sibling string output
+        # (e.g. SonicMaster returns (audio, status)); surface it so a failed call
+        # shows the backend's real reason instead of a generic "no output".
+        body_lines.append(
+            '    _detail = " | ".join(str(_v) for _v in _values '
+            "if isinstance(_v, str) and _v.strip())"
+        )
     for spec in outputs:
         name = str(spec["name"])
         idx = index_by_output[name]
@@ -480,14 +493,13 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
             f"    _out_{name} = _values[{idx}] if len(_values) > {idx} else None"
         )
         if str(spec.get("type")) in _MEDIA_TYPES:
+            fallback = (
+                f"The backend Space returned no '{name}' output. Check the backend "
+                "Space's logs; if it uses ZeroGPU it may need a moment to warm up."
+            )
             body_lines.append(f"    if not _out_{name}:")
             body_lines.append(
-                f"        raise gr.Error("
-                + json.dumps(
-                    f"The backend Space returned no '{name}' output. "
-                    "Check the backend's logs; a sleeping ZeroGPU backend may need a moment to warm up."
-                )
-                + ")"
+                f"        raise gr.Error(_detail or {json.dumps(fallback)})"
             )
     return_names = ", ".join(f"_out_{spec['name']}" for spec in outputs)
     body_lines.append(f"    return {return_names}")
@@ -729,7 +741,14 @@ def _identifier(label: Any, fallback: str, used: set) -> str:
 
 
 def recipe_skeleton_from_analysis(record: Mapping[str, Any], *, model_id: str = "") -> JSON:
-    """Build a recipe skeleton from a recipe-eligible ``analyze`` record."""
+    """Build a recipe *skeleton* from a (recipe-eligible) ``analyze`` record.
+
+    Input/output components are filled in from the statically-resolved shapes;
+    the parts that cannot be derived from a wrapper's surface (the model's
+    dependencies and the inference glue, plus dropdown choices and slider
+    ranges) are left as clearly-marked TODO placeholders. The result is itself a
+    valid recipe that renders to a stub wrapper which raises ``NotImplementedError``.
+    """
 
     used_names: set = set()
     todos: List[str] = []
