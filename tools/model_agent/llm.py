@@ -799,3 +799,216 @@ def complete_recipe(
         f"{context.model_id or '(unknown)'} after {attempts} attempt(s). "
         f"Last error: {feedback}"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Refining a remote-backend (proxy) recipe with an LLM
+# --------------------------------------------------------------------------- #
+
+REMOTE_REFINE_SYSTEM_PROMPT = """\
+You refine HARP "remote-backend" recipes as STRICT JSON. This recipe does NOT run
+the model: it deploys a thin pyharp/Gradio frontend whose process_fn proxies to an
+existing Gradio Space via gradio_client. You never write inference code or install
+the model's dependencies.
+
+You are given a deterministic scaffold (built from the backend Space's live API)
+plus the backend endpoint's exact POSITIONAL signature and the model's README.
+Improve the scaffold using that grounding.
+
+Return ONE JSON object with exactly these top-level keys:
+  - "model":     {"id","name","description","author","tags":[...]}
+  - "framework": {"gpu": false, "pip": [], "remote": {...}}
+  - "inputs":    ordered input components
+  - "outputs":   ordered output components
+Do NOT include an "inference" key.
+
+framework.remote rules (CRITICAL):
+  - KEEP "space" and "api_name" byte-for-byte from the scaffold.
+  - "args" is the backend's POSITIONAL call signature. It MUST contain exactly one
+    entry per backend parameter, in the SAME order as the numbered parameter list
+    (same length). For each entry choose ONE of:
+      * {"from": "<input name>"}  -> expose it as a HARP control the user sets.
+        Add "file": true for audio/file parameters; add "cast": "int"|"float"|
+        "str"|"bool" if the backend needs a specific type.
+      * {"const": <value>}        -> send a FIXED value the user should not set
+        (use for hidden session/state args, metadata the UI shouldn't expose, or
+        toggles that must stay at a specific value). null is a valid const.
+  - Decide expose-vs-const from the README + parameter labels (e.g. a hidden
+    "state"/"metadata"/"session" arg should be a const).
+  - Every input component you declare MUST be referenced by exactly one {"from"}.
+  - "returns" maps backend return positions to your outputs: [{"index": i, "to":
+    "<output name>"}]; keep indices valid and cover every output.
+
+Component rules: input types audio, file, dropdown, slider, textbox, number,
+checkbox; output types audio, file, labels. Fill real dropdown "choices", slider
+"min"/"max"/"step", sensible defaults, clear "label"/"info", and a real model
+description + tags from the README.
+
+Output ONLY the JSON object. No markdown, no commentary.
+"""
+
+# Structured-output schema for the refine step: like the recipe schema but with
+# NO required "inference" (remote recipes have none).
+REMOTE_RESPONSE_SCHEMA: JSON = {
+    "type": "object",
+    "properties": {
+        "model": {"type": "object"},
+        "framework": {"type": "object"},
+        "inputs": {"type": "array", "items": {"type": "object"}},
+        "outputs": {"type": "array", "items": {"type": "object"}},
+    },
+    "required": ["framework", "inputs", "outputs"],
+}
+
+
+def _remote_block(recipe: Mapping[str, Any]) -> Mapping[str, Any]:
+    framework = recipe.get("framework") if isinstance(recipe.get("framework"), Mapping) else {}
+    remote = framework.get("remote") if isinstance(framework.get("remote"), Mapping) else {}
+    return remote
+
+
+def build_remote_refine_prompt(
+    scaffold: Mapping[str, Any],
+    endpoint: Mapping[str, Any],
+    context: RecipeGenerationContext,
+) -> str:
+    remote = _remote_block(scaffold)
+    lines = [
+        "# Backend endpoint (GROUND TRUTH positional signature)",
+        f"space: {remote.get('space')}",
+        f"api_name: {remote.get('api_name')}",
+    ]
+
+    parameters = endpoint.get("parameters") or []
+    param_lines = ["parameters (args[i] maps to parameter i, in THIS exact order):"]
+    for index, param in enumerate(parameters):
+        param = param if isinstance(param, Mapping) else {}
+        component = param.get("component") or "?"
+        label = param.get("label")
+        pname = param.get("parameter_name")
+        default = param.get("parameter_default")
+        param_lines.append(
+            f"  [{index}] component={component} label={label!r} "
+            f"parameter_name={pname!r} default={default!r}"
+        )
+    lines.append("\n".join(param_lines))
+
+    returns = endpoint.get("returns") or []
+    ret_lines = ["returns:"]
+    for index, ret in enumerate(returns):
+        ret = ret if isinstance(ret, Mapping) else {}
+        ret_lines.append(f"  [{index}] component={ret.get('component') or '?'} label={ret.get('label')!r}")
+    lines.append("\n".join(ret_lines))
+
+    lines.append(
+        "# Scaffold to REFINE (keep space/api_name; keep args length & order)\n"
+        "```json\n" + json.dumps(_strip_meta(scaffold), indent=2) + "\n```"
+    )
+
+    readme = context.readme.strip()
+    if readme:
+        if len(readme) > _README_LIMIT:
+            readme = readme[:_README_LIMIT] + "\n...[truncated]"
+        lines.append("# Model card (README.md)\n" + readme)
+
+    lines.append(
+        "# Task\n"
+        "Return ONE refined remote-backend JSON recipe (keys: model, framework, "
+        "inputs, outputs; NO inference). Keep framework.remote.space and api_name "
+        f"exactly, and keep framework.remote.args at exactly {len(parameters)} "
+        "entries in the same order as the parameters above. Return only JSON."
+    )
+    return "\n\n".join(lines)
+
+
+def _remote_invariant_error(refined: Mapping[str, Any], scaffold: Mapping[str, Any]) -> Optional[str]:
+    """Guard the positional integrity the LLM must not break."""
+
+    refined_remote = _remote_block(refined)
+    scaffold_remote = _remote_block(scaffold)
+    if not refined_remote:
+        return "framework.remote is missing; this must stay a remote-backend recipe."
+    scaffold_args = scaffold_remote.get("args") or []
+    refined_args = refined_remote.get("args")
+    if not isinstance(refined_args, list) or len(refined_args) != len(scaffold_args):
+        return (
+            f"framework.remote.args must have exactly {len(scaffold_args)} entries, "
+            "one per backend parameter, in the same order."
+        )
+    return None
+
+
+def refine_remote_recipe(
+    scaffold: Mapping[str, Any],
+    endpoint: Mapping[str, Any],
+    provider: LLMProvider,
+    *,
+    context: Optional[RecipeGenerationContext] = None,
+    max_repairs: int = 2,
+) -> RecipeDraft:
+    """LLM-refine a deterministic remote scaffold, grounded on the live API schema.
+
+    The scaffold guarantees the positional ``args`` count/order (which the README
+    alone can't convey); the LLM refines the judgement calls -- which args to
+    expose vs. send as constants, dropdown choices, slider ranges, labels, and the
+    model card. ``space``/``api_name`` are pinned and the ``args`` length is
+    enforced, so the call signature stays aligned with the backend.
+    """
+
+    if not isinstance(scaffold, Mapping):
+        raise LLMError("scaffold must be a JSON object")
+
+    scaffold_copy: JSON = json.loads(json.dumps(scaffold))
+    if context is None:
+        context = _context_from_recipe(scaffold_copy)
+
+    scaffold_remote = _remote_block(scaffold_copy)
+    base_user = build_remote_refine_prompt(scaffold_copy, endpoint, context)
+    raw_responses: List[Any] = []
+    feedback: Optional[str] = None
+    last: JSON = {}
+    attempts = 0
+
+    for attempt in range(max_repairs + 1):
+        attempts = attempt + 1
+        user = base_user if feedback is None else _repair_prompt(base_user, last, feedback)
+        data = provider.complete_json(REMOTE_REFINE_SYSTEM_PROMPT, user, schema=REMOTE_RESPONSE_SCHEMA)
+        raw_responses.append(data)
+
+        recipe = _normalize_recipe(data, context)
+        # Pin the fields the LLM must not change, so a stray edit can't misroute
+        # the call (belt-and-suspenders alongside the invariant check).
+        remote = recipe.get("framework")
+        remote = remote.get("remote") if isinstance(remote, Mapping) else None
+        if isinstance(remote, dict):
+            remote["space"] = scaffold_remote.get("space")
+            remote["api_name"] = scaffold_remote.get("api_name")
+            remote.setdefault("token_env", scaffold_remote.get("token_env", "HF_TOKEN"))
+        last = recipe
+
+        invariant = _remote_invariant_error(recipe, scaffold_copy)
+        if invariant is not None:
+            feedback = invariant
+            continue
+        try:
+            validate_recipe(recipe)
+            app_py = render_app_from_recipe(recipe)
+            compile(app_py, f"<llm-remote:{context.model_id or 'recipe'}>", "exec")
+        except (ValueError, SyntaxError) as exc:
+            feedback = f"{type(exc).__name__}: {exc}"
+            continue
+
+        return RecipeDraft(
+            recipe=recipe,
+            app_py=app_py,
+            attempts=attempts,
+            raw_responses=raw_responses,
+            provider=getattr(provider, "name", ""),
+            model=getattr(provider, "model", ""),
+        )
+
+    raise LLMError(
+        f"LLM could not refine the remote recipe for "
+        f"{context.model_id or '(unknown)'} after {attempts} attempt(s). "
+        f"Last error: {feedback}"
+    )

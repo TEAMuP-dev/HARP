@@ -30,12 +30,14 @@ from .llm import (
     default_examples,
     generate_recipe,
     provider_from_env,
+    refine_remote_recipe,
 )
 from .recipe import (
     RecipeError,
     build_package_from_recipe,
     lint_recipe_requirements,
     recipe_skeleton_from_analysis,
+    remote_recipe_from_api_info,
     render_app_from_recipe,
 )
 
@@ -206,6 +208,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="With --remote-space: the backend named endpoint to call (e.g. "
         "/enhance_audio_ui). Required only if the Space exposes more than one.",
+    )
+    llm_recipe.add_argument(
+        "--remote-llm",
+        action="store_true",
+        help="With --remote-space: let the LLM REFINE the deterministic scaffold "
+        "(decide which args to expose vs. send as constants, dropdown choices, "
+        "slider ranges, labels, model card), grounded on the live API schema. The "
+        "backend space/api_name and the args count/order stay pinned, so the call "
+        "signature can't drift. Without this flag the scaffold is used verbatim.",
     )
     llm_recipe.add_argument(
         "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
@@ -422,7 +433,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Create the Space as private.",
     )
-    deploy.add_argument("--sdk", default="gradio", help="Space SDK (default: gradio).")
+    deploy.add_argument(
+        "--sdk",
+        default="gradio",
+        help="Space SDK (default: gradio). Use 'docker' for dual-interpreter bundles.",
+    )
     deploy.add_argument(
         "--into-space",
         action="store_true",
@@ -603,21 +618,53 @@ def main(argv: Iterable[str] | None = None) -> int:
             # case that installing a non-package git+ repo cannot satisfy.
             if args.remote_space:
                 print(
-                    f"Remote-backend mode: scaffolding a proxy recipe from the live "
-                    f"API of {args.remote_space} (the LLM is not used) ...",
+                    f"Remote-backend mode: probing the live API of {args.remote_space} ...",
                     file=sys.stderr,
                 )
-                recipe = agent.scaffold_remote_recipe(
-                    args.remote_space, api_name=args.remote_api_name or None
+                api_info = agent.fetch_api_info(args.remote_space)
+                canonical = (
+                    agent.endpoint_client.resolve_canonical_path(args.remote_space)
+                    or args.remote_space
                 )
-                _apply_card_metadata(recipe, card)
-                draft = RecipeDraft(
-                    recipe=recipe,
-                    app_py=render_app_from_recipe(recipe),
-                    attempts=0,
-                    provider="scaffold",
-                    model="remote-backend",
+                scaffold = remote_recipe_from_api_info(
+                    canonical, api_info, api_name=args.remote_api_name or None
                 )
+                if args.remote_llm:
+                    chosen = str(scaffold["framework"]["remote"]["api_name"])
+                    endpoint = (api_info.get("named_endpoints") or {}).get(chosen, {})
+                    print(
+                        f"  Refining the scaffold with the LLM (grounded on '{chosen}'; "
+                        "space/api_name and arg order stay pinned) ...",
+                        file=sys.stderr,
+                    )
+                    provider = provider_from_env(
+                        args.provider,
+                        model=args.llm_model,
+                        timeout=args.llm_timeout,
+                        temperature=args.temperature,
+                    )
+                    llm_context = RecipeGenerationContext.from_card(card)
+                    draft = refine_remote_recipe(
+                        scaffold,
+                        endpoint,
+                        provider,
+                        context=llm_context,
+                        max_repairs=args.max_repairs,
+                    )
+                else:
+                    print(
+                        "  Using the deterministic scaffold verbatim (pass --remote-llm "
+                        "to have the LLM refine it).",
+                        file=sys.stderr,
+                    )
+                    _apply_card_metadata(scaffold, card)
+                    draft = RecipeDraft(
+                        recipe=scaffold,
+                        app_py=render_app_from_recipe(scaffold),
+                        attempts=0,
+                        provider="scaffold",
+                        model="remote-backend",
+                    )
                 return _emit_recipe_draft(agent, draft, args)
 
             context = RecipeGenerationContext.from_card(

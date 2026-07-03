@@ -224,6 +224,9 @@ class GeneratedAppPackage:
     readme: str
     packages_txt: str
     manifest: JSON
+    # Extra files for multi-file layouts (e.g. dual-interpreter Docker Spaces:
+    # Dockerfile, start.sh, frontend_app.py, backend_worker.py, split reqs).
+    extra_files: JSON = field(default_factory=dict)
 
 
 @dataclass
@@ -386,7 +389,14 @@ SUPPORTED_GENERATION_FRAMEWORKS = ("speechbrain",)
 
 
 def detect_inference_framework(card: Mapping[str, Any]) -> str:
-    """Detect the Python framework needed to run a raw Hugging Face audio model."""
+    """Detect the Python framework needed to run a raw Hugging Face audio model.
+
+    Different ``audio-to-audio`` models load through completely different APIs,
+    so there is no single universal inference call. We only claim support for
+    frameworks that expose a clean, documented ``from_pretrained``/``from_hparams``
+    inference path; everything else is reported as ``unknown`` so the caller can
+    refuse to emit a wrapper it cannot actually run.
+    """
 
     meta = _model_meta(card)
     library = str(meta.get("library_name") or "").strip().lower()
@@ -417,7 +427,13 @@ def _speechbrain_kind(card: Mapping[str, Any]) -> str:
 
 
 def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, Any]] = None) -> str:
-    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models."""
+    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models.
+
+    Only frameworks in :data:`SUPPORTED_GENERATION_FRAMEWORKS` produce a wrapper.
+    Emitting code we cannot run (the previous behavior, which called the
+    nonexistent ``pipeline("audio-to-audio")`` task) is worse than refusing, so
+    unsupported models raise :class:`NotImplementedError`.
+    """
 
     task = classify_task(card)
     if task != "audio-to-audio":
@@ -568,7 +584,12 @@ def _requirements_for_framework(framework: str) -> str:
 
 
 def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
-    """Build in-memory files for a generated pyharp wrapper."""
+    """Build in-memory files for a generated pyharp wrapper.
+
+    Raises :class:`NotImplementedError` (via :func:`render_pyharp_app`) when the
+    model's framework has no runnable template, so we never write a wrapper that
+    is known to fail at startup.
+    """
 
     task = classify_task(card)
     framework = detect_inference_framework(card)
@@ -1074,10 +1095,20 @@ class HarpModelAgent:
         folder = output_dir / _slug(package.repo_id)
         folder.mkdir(parents=True, exist_ok=True)
 
-        (folder / "app.py").write_text(package.app_py, encoding="utf-8")
-        (folder / "requirements.txt").write_text(package.requirements, encoding="utf-8")
+        # Single-file layouts write app.py/requirements.txt/packages.txt; multi-file
+        # layouts (dual-interpreter Docker Spaces) leave these empty and ship their
+        # files via extra_files instead. Only write the non-empty ones.
+        if package.app_py:
+            (folder / "app.py").write_text(package.app_py, encoding="utf-8")
+        if package.requirements:
+            (folder / "requirements.txt").write_text(package.requirements, encoding="utf-8")
         (folder / "README.md").write_text(package.readme, encoding="utf-8")
-        (folder / "packages.txt").write_text(package.packages_txt, encoding="utf-8")
+        if package.packages_txt:
+            (folder / "packages.txt").write_text(package.packages_txt, encoding="utf-8")
+        for rel_path, contents in (package.extra_files or {}).items():
+            target = folder / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(contents, encoding="utf-8")
         metadata_dir = folder / ".harp"
         metadata_dir.mkdir(parents=True, exist_ok=True)
         _write_json(metadata_dir / "manifest.json", package.manifest)
@@ -1301,8 +1332,14 @@ class HarpModelAgent:
         """
 
         folder = Path(package_dir)
-        app_py = folder / "app.py"
-        if not app_py.exists():
+        # A Docker Space (e.g. a dual-interpreter bundle) is entered via its
+        # Dockerfile and has no top-level app.py; a Gradio Space needs app.py.
+        has_dockerfile = (folder / "Dockerfile").exists()
+        if space_sdk == "docker" or has_dockerfile:
+            if not has_dockerfile:
+                raise DeploySpaceError(f"Dockerfile not found in {folder}")
+            space_sdk = "docker"
+        elif not (folder / "app.py").exists():
             raise DeploySpaceError(f"app.py not found in {folder}")
 
         repo_id = _normalize_space_repo_id(repo_id)
@@ -2463,14 +2500,16 @@ def _render_generated_space_readme(card: Mapping[str, Any], task: str) -> str:
     return "\n".join(
         [
             "---",
-            f"title: {model_name}",
+            # Quote free-text values so a colon in the title/license does not
+            # break the YAML front matter.
+            f"title: {json.dumps(model_name)}",
             "colorFrom: indigo",
             "colorTo: gray",
             "sdk: gradio",
             "sdk_version: 5.28.0",
             "app_file: app.py",
             "pinned: false",
-            f"license: {license_name}",
+            f"license: {json.dumps(license_name)}",
             "---",
             "",
             f"# {model_name}",

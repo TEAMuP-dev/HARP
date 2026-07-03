@@ -1,0 +1,118 @@
+{
+  "model": {
+    "id": "magenta/ddsp",
+    "name": "DDSP Timbre Transfer",
+    "author": "Magenta (Google)",
+    "description": "Differentiable DSP timbre transfer: recast your audio in the timbre of a pretrained instrument (Violin, Flute, Trumpet, ...). Runs the original, unmodified DDSP stack in an isolated Python 3.9 backend.",
+    "license": "apache-2.0",
+    "tags": [
+      "audio-to-audio",
+      "timbre-transfer",
+      "ddsp"
+    ],
+    "task": "audio-to-audio"
+  },
+  "framework": {
+    "dual": {
+      "backend_python": "3.9",
+      "apt": [
+        "libsndfile1",
+        "libsndfile-dev",
+        "ffmpeg"
+      ],
+      "backend_pip": [
+        "ddsp==3.7.0",
+        "tensorflow==2.11.0",
+        "protobuf==3.19.6",
+        "numpy==1.23.5",
+        "librosa==0.10.1",
+        "crepe<=0.0.12",
+        "gin-config>=0.3.0",
+        "soundfile"
+      ],
+      "worker": {
+        "imports": "import os\nimport json as _json\nimport pickle\nimport urllib.parse\nimport urllib.request\nimport tempfile\nimport warnings\n\nwarnings.filterwarnings(\"ignore\")\nos.environ.setdefault(\"TF_CPP_MIN_LOG_LEVEL\", \"3\")\nos.environ.setdefault(\"CUDA_VISIBLE_DEVICES\", \"\")\n\nimport numpy as np\nimport soundfile as sf\nimport librosa\n\nimport ddsp\nimport ddsp.training\nfrom ddsp.training.postprocessing import detect_notes, fit_quantile_transform\nimport gin\nimport tensorflow.compat.v2 as tf\n\nSAMPLE_RATE = 16000\nPRETRAINED_MODELS = [\"Violin\", \"Flute\", \"Flute2\", \"Trumpet\", \"Tenor_Saxophone\"]\n_GCS_BUCKET = \"ddsp\"\n_GCS_PREFIX = \"models/timbre_transfer_colab/2021-07-08\"\n_MODELS_DIR = \"/tmp/ddsp_pretrained\"\nos.makedirs(_MODELS_DIR, exist_ok=True)\n\n\ndef _ensure_model(model_name):\n    dest = os.path.join(_MODELS_DIR, model_name)\n    gin_file = os.path.join(dest, \"operative_config-0.gin\")\n    if os.path.exists(gin_file):\n        return dest\n    os.makedirs(dest, exist_ok=True)\n    prefix = f\"{_GCS_PREFIX}/solo_{model_name.lower()}_ckpt/\"\n    list_url = (\n        f\"https://storage.googleapis.com/storage/v1/b/{_GCS_BUCKET}/o\"\n        f\"?prefix={urllib.parse.quote(prefix, safe='')}\"\n    )\n    with urllib.request.urlopen(list_url, timeout=60) as response:\n        listing = _json.loads(response.read().decode(\"utf-8\"))\n    items = listing.get(\"items\") or []\n    if not items:\n        raise RuntimeError(f\"Could not list checkpoint files for {model_name!r}.\")\n    for item in items:\n        obj = item.get(\"name\") or \"\"\n        fname = obj.rsplit(\"/\", 1)[-1]\n        if not fname:\n            continue\n        out = os.path.join(dest, fname)\n        if not os.path.exists(out):\n            url = f\"https://storage.googleapis.com/{_GCS_BUCKET}/{urllib.parse.quote(obj, safe='')}\"\n            urllib.request.urlretrieve(url, out)\n    if not os.path.exists(gin_file):\n        raise RuntimeError(f\"Downloaded {model_name!r} but operative_config-0.gin is missing.\")\n    return dest\n\n\ndef _shift_ld(af, ld_shift=0.0):\n    af[\"loudness_db\"] += ld_shift\n    return af\n\n\ndef _shift_f0(af, pitch_shift=0.0):\n    af[\"f0_hz\"] *= 2.0 ** (pitch_shift)\n    af[\"f0_hz\"] = np.clip(af[\"f0_hz\"], 0.0, librosa.midi_to_hz(110.0))\n    return af\n\n\ndef _get_tuning_factor(f0_midi, f0_confidence, mask_on):\n    tuning_factors = np.linspace(-0.5, 0.5, 101)\n    midi_diffs = (f0_midi[mask_on][:, np.newaxis] - tuning_factors[np.newaxis, :]) % 1.0\n    midi_diffs[midi_diffs > 0.5] -= 1.0\n    weights = f0_confidence[mask_on][:, np.newaxis]\n    cost_diffs = np.mean(weights * np.abs(midi_diffs), axis=0)\n    f0_at = f0_midi[mask_on][:, np.newaxis] - midi_diffs\n    deltas = (np.diff(f0_at, axis=0) != 0.0).astype(float)\n    cost_deltas = np.mean(weights[:-1] * deltas, axis=0)\n    norm = lambda x: (x - np.mean(x)) / np.std(x)\n    cost = norm(cost_deltas) + norm(cost_diffs)\n    return tuning_factors[np.argmin(cost)]\n\n\ndef _auto_tune(f0_midi, tuning_factor, mask_on, amount=0.0):\n    major_scale = np.ravel([np.array([0, 2, 4, 5, 7, 9, 11]) + 12 * i for i in range(10)])\n    all_scales = np.stack([major_scale + i for i in range(12)])\n    f0_on = f0_midi[mask_on]\n    f0_diff_tsn = f0_on[:, np.newaxis, np.newaxis] - all_scales[np.newaxis, :, :]\n    f0_diff_ts = np.min(np.abs(f0_diff_tsn), axis=-1)\n    f0_diff_s = np.mean(f0_diff_ts, axis=0)\n    scale_idx = np.argmin(f0_diff_s)\n    f0_diff_tn = f0_midi[:, np.newaxis] - all_scales[scale_idx][np.newaxis, :]\n    note_idx = np.argmin(np.abs(f0_diff_tn), axis=-1)\n    midi_diff = np.take_along_axis(f0_diff_tn, note_idx[:, np.newaxis], axis=-1)[:, 0]\n    return f0_midi - amount * midi_diff\n\n\ndef run_timbre_transfer(inputs):\n    audio_path = inputs[\"audio\"]\n    model_name = inputs.get(\"model_name\") or \"Violin\"\n    threshold = float(inputs.get(\"threshold\", 1.0))\n    adjust = bool(inputs.get(\"adjust\", True))\n    quiet = float(inputs.get(\"quiet\", 20.0))\n    autotune = float(inputs.get(\"autotune\", 0.0))\n    pitch_shift = float(inputs.get(\"pitch_shift\", 0.0))\n    loudness_shift = float(inputs.get(\"loudness_shift\", 0.0))\n\n    if not audio_path:\n        raise RuntimeError(\"No input audio provided.\")\n    if model_name not in PRETRAINED_MODELS:\n        raise RuntimeError(f\"Unknown model {model_name!r}; choose {PRETRAINED_MODELS}.\")\n\n    audio, _ = librosa.load(audio_path, sr=SAMPLE_RATE, mono=True)\n    audio = audio.astype(np.float32)[np.newaxis, :]\n\n    model_dir = _ensure_model(model_name)\n    gin_file = os.path.join(model_dir, \"operative_config-0.gin\")\n\n    dataset_stats = None\n    stats_file = os.path.join(model_dir, \"dataset_statistics.pkl\")\n    if os.path.exists(stats_file):\n        with open(stats_file, \"rb\") as fh:\n            dataset_stats = pickle.load(fh)\n\n    with gin.unlock_config():\n        gin.parse_config_file(gin_file, skip_unknown=True)\n\n    ddsp.spectral_ops.reset_crepe()\n    af = ddsp.training.metrics.compute_audio_features(audio)\n    af = {k: (v.numpy() if hasattr(v, \"numpy\") else v) for k, v in af.items()}\n    af[\"loudness_db\"] = af[\"loudness_db\"].astype(np.float32)\n\n    ckpt_files = [f for f in os.listdir(model_dir) if \"ckpt\" in f]\n    if not ckpt_files:\n        raise RuntimeError(f\"No checkpoint files in {model_dir}.\")\n    ckpt = os.path.join(model_dir, ckpt_files[0].split(\".\")[0])\n\n    time_steps_train = gin.query_parameter(\"F0LoudnessPreprocessor.time_steps\")\n    n_samples_train = gin.query_parameter(\"Harmonic.n_samples\")\n    hop_size = int(n_samples_train / time_steps_train)\n    time_steps = int(audio.shape[1] / hop_size)\n    n_samples = time_steps * hop_size\n\n    with gin.unlock_config():\n        gin.parse_config([\n            f\"Harmonic.n_samples = {n_samples}\",\n            f\"FilteredNoise.n_samples = {n_samples}\",\n            f\"F0LoudnessPreprocessor.time_steps = {time_steps}\",\n            \"oscillator_bank.use_angular_cumsum = True\",\n        ])\n\n    for key in [\"f0_hz\", \"f0_confidence\", \"loudness_db\"]:\n        af[key] = af[key][:time_steps]\n    af[\"audio\"] = af[\"audio\"][:, :n_samples]\n\n    af_mod = {k: (v.copy() if hasattr(v, \"copy\") else v) for k, v in af.items()}\n    if adjust and dataset_stats is not None:\n        mask_on, note_on_value = detect_notes(af[\"loudness_db\"], af[\"f0_confidence\"], threshold)\n        if np.any(mask_on):\n            target_mean_pitch = dataset_stats[\"mean_pitch\"]\n            pitch = ddsp.core.hz_to_midi(af[\"f0_hz\"])\n            mean_pitch = np.mean(pitch[mask_on])\n            p_diff = target_mean_pitch - mean_pitch\n            p_diff_octave = p_diff / 12.0\n            round_fn = np.floor if p_diff_octave > 1.5 else np.ceil\n            af_mod = _shift_f0(af_mod, round_fn(p_diff_octave))\n            _, loudness_norm = fit_quantile_transform(\n                af[\"loudness_db\"], mask_on, inv_quantile=dataset_stats[\"quantile_transform\"]\n            )\n            mask_off = np.logical_not(mask_on)\n            loudness_norm[mask_off] -= quiet * (1.0 - note_on_value[mask_off][:, np.newaxis])\n            loudness_norm = np.reshape(loudness_norm, af[\"loudness_db\"].shape)\n            af_mod[\"loudness_db\"] = loudness_norm\n            if autotune:\n                f0_midi = np.array(ddsp.core.hz_to_midi(af_mod[\"f0_hz\"]))\n                tuning_factor = _get_tuning_factor(f0_midi, af_mod[\"f0_confidence\"], mask_on)\n                f0_midi_at = _auto_tune(f0_midi, tuning_factor, mask_on, amount=autotune)\n                af_mod[\"f0_hz\"] = ddsp.core.midi_to_hz(f0_midi_at)\n\n    af_mod = _shift_ld(af_mod, loudness_shift)\n    af_mod = _shift_f0(af_mod, pitch_shift)\n\n    model = ddsp.training.models.Autoencoder()\n    model.restore(ckpt)\n    _ = model(af_mod, training=False)\n    outputs_tf = model(af_mod, training=False)\n    audio_gen = np.array(model.get_audio_from_outputs(outputs_tf))\n    if audio_gen.ndim == 2:\n        audio_gen = audio_gen[0]\n\n    out_path = os.path.join(tempfile.mkdtemp(), \"ddsp_output.wav\")\n    sf.write(out_path, audio_gen.astype(np.float32), SAMPLE_RATE)\n    return out_path",
+        "body": "outputs = {\"out_audio\": run_timbre_transfer(inputs)}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "name": "audio",
+      "type": "audio",
+      "label": "Input audio",
+      "required": true
+    },
+    {
+      "name": "model_name",
+      "type": "dropdown",
+      "label": "Instrument",
+      "choices": [
+        "Violin",
+        "Flute",
+        "Flute2",
+        "Trumpet",
+        "Tenor_Saxophone"
+      ],
+      "default": "Violin"
+    },
+    {
+      "name": "threshold",
+      "type": "slider",
+      "label": "Note-detection threshold",
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.01,
+      "default": 1.0
+    },
+    {
+      "name": "adjust",
+      "type": "checkbox",
+      "label": "Auto-adjust to model range",
+      "default": true
+    },
+    {
+      "name": "quiet",
+      "type": "slider",
+      "label": "Quiet parts (dB)",
+      "min": 0.0,
+      "max": 60.0,
+      "step": 1.0,
+      "default": 20.0
+    },
+    {
+      "name": "autotune",
+      "type": "slider",
+      "label": "Autotune amount",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.1,
+      "default": 0.0
+    },
+    {
+      "name": "pitch_shift",
+      "type": "slider",
+      "label": "Pitch shift (octaves)",
+      "min": -2.0,
+      "max": 2.0,
+      "step": 1.0,
+      "default": 0.0
+    },
+    {
+      "name": "loudness_shift",
+      "type": "slider",
+      "label": "Loudness shift (dB)",
+      "min": -20.0,
+      "max": 20.0,
+      "step": 1.0,
+      "default": 0.0
+    }
+  ],
+  "outputs": [
+    {
+      "name": "out_audio",
+      "type": "audio",
+      "label": "Timbre-transferred audio"
+    }
+  ]
+}

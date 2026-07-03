@@ -124,6 +124,8 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
     framework = framework if isinstance(framework, Mapping) else {}
     remote = framework.get("remote")
     is_remote = remote is not None
+    dual = framework.get("dual")
+    is_dual = dual is not None
 
     inputs = recipe.get("inputs")
     outputs = recipe.get("outputs")
@@ -145,10 +147,17 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
     input_names = {str(spec.get("name")) for spec in inputs if isinstance(spec, Mapping)}
     output_names = {str(spec.get("name")) for spec in outputs if isinstance(spec, Mapping)}
 
+    if is_remote and is_dual:
+        errors.append("framework may not set both 'remote' and 'dual'")
+
     if is_remote:
         # Remote-backend recipes proxy to a Space, so the inference glue is not
         # required; instead the remote block itself must be well-formed.
         errors.extend(_validate_remote(remote, input_names, output_names))
+    elif is_dual:
+        # Dual-interpreter recipes run the model in an isolated backend venv, so
+        # there is no in-process inference block; the dual block must be sound.
+        errors.extend(_validate_dual(dual))
     else:
         inference = recipe.get("inference")
         if not isinstance(inference, Mapping) or not str(inference.get("body") or "").strip():
@@ -156,6 +165,54 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
 
     if errors:
         raise RecipeError("Invalid recipe: " + "; ".join(errors))
+
+
+_PY_VERSION_RE = re.compile(r"^3\.(8|9|10|11|12|13)$")
+
+
+def _validate_dual(dual: Any) -> List[str]:
+    """Validate a ``framework.dual`` block (isolated backend + pyharp frontend)."""
+
+    if not isinstance(dual, Mapping):
+        return ["framework.dual must be an object"]
+
+    errors: List[str] = []
+
+    backend_python = str(dual.get("backend_python") or "3.9").strip()
+    if not _PY_VERSION_RE.match(backend_python):
+        errors.append(
+            "framework.dual.backend_python must be a Python version like '3.9' or '3.10'"
+        )
+
+    backend_pip = dual.get("backend_pip")
+    if not isinstance(backend_pip, list) or not backend_pip:
+        errors.append(
+            "framework.dual.backend_pip must be a non-empty list (the backend's pinned deps)"
+        )
+    elif not all(isinstance(item, str) and item.strip() for item in backend_pip):
+        errors.append("framework.dual.backend_pip entries must be non-empty strings")
+
+    for optional_list in ("apt", "backend_pip_no_deps"):
+        value = dual.get(optional_list)
+        if value is not None and (
+            not isinstance(value, list)
+            or not all(isinstance(item, str) and item.strip() for item in value)
+        ):
+            errors.append(f"framework.dual.{optional_list} must be a list of strings")
+
+    worker = dual.get("worker")
+    if not isinstance(worker, Mapping):
+        errors.append("framework.dual.worker must be an object with a 'body'")
+    else:
+        if not str(worker.get("body") or "").strip():
+            errors.append(
+                "framework.dual.worker.body is required (it reads `inputs` and must "
+                "set an `outputs` dict)"
+            )
+        if worker.get("imports") is not None and not isinstance(worker.get("imports"), str):
+            errors.append("framework.dual.worker.imports must be a string when present")
+
+    return errors
 
 
 _REMOTE_CASTS = {"int", "float", "str", "bool"}
@@ -292,11 +349,13 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
         code = f'gr.Audio(type="filepath", label={label})'
     elif comp_type == "file":
         file_types = spec.get("file_types")
-        types = (
-            f", file_types={json.dumps([str(item) for item in file_types])}"
-            if isinstance(file_types, list) and file_types
-            else ""
-        )
+        if not (isinstance(file_types, list) and file_types):
+            # pyharp only supports gr.File as a MIDI track, and get_harp_component
+            # does ``'.mid' in gr_cmp.file_types`` -- which raises TypeError when
+            # file_types is None (Gradio's default). Default to MIDI so the wrapper
+            # is valid pyharp and never crashes on an unset file_types.
+            file_types = [".mid", ".midi"]
+        types = f", file_types={json.dumps([str(item) for item in file_types])}"
         code = f'gr.File(type="filepath", label={label}{types})'
     elif comp_type == "dropdown":
         choices = json.dumps(list(spec.get("choices", [])))
@@ -349,6 +408,10 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
     framework = recipe.get("framework") or {}
     if isinstance(framework, Mapping) and framework.get("remote"):
         return _render_remote_app(recipe)
+    if isinstance(framework, Mapping) and framework.get("dual"):
+        # Dual mode's runnable frontend lives in frontend_app.py; render it here
+        # too so `render-recipe` shows the pyharp surface users will see.
+        return _render_dual_frontend(recipe)
 
     model = recipe["model"]
     inputs = recipe["inputs"]
@@ -569,6 +632,276 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
     return "\n".join(parts)
 
 
+# --------------------------------------------------------------------------- #
+# Dual-interpreter mode: one Docker Space with a modern pyharp/Gradio frontend
+# (Python 3.10) that shells out to an isolated backend venv (pinned old deps,
+# possibly an older Python) via a one-shot subprocess. IPC is JSON over
+# stdin/stdout; media are passed by file path on the shared container fs. This
+# makes "code that hasn't been touched in years" deployable *and* HARP-native in
+# a single Space, without the backend's deps ever touching pyharp/Gradio.
+# --------------------------------------------------------------------------- #
+def _render_dual_frontend(recipe: Mapping[str, Any]) -> str:
+    """Render the pyharp frontend that proxies to the isolated backend worker."""
+
+    model = recipe["model"]
+    inputs = recipe["inputs"]
+    outputs = recipe["outputs"]
+
+    arg_names = ", ".join(str(spec["name"]) for spec in inputs)
+    input_name_list = json.dumps([str(spec["name"]) for spec in inputs])
+    output_name_list = json.dumps([str(spec["name"]) for spec in outputs])
+
+    input_lines = ",\n".join(
+        "        " + _component_code(spec, is_input=True) for spec in inputs
+    )
+    output_lines = ",\n".join(
+        "        " + _component_code(spec, is_input=False) for spec in outputs
+    )
+
+    body_lines = [
+        f"    _inputs = dict(zip({input_name_list}, [{arg_names}]))",
+        "    _outputs = _call_backend({\"inputs\": _inputs})",
+    ]
+    for spec in outputs:
+        name = str(spec["name"])
+        body_lines.append(f"    _out_{name} = _outputs.get({json.dumps(name)})")
+        if str(spec.get("type")) in _MEDIA_TYPES:
+            fallback = (
+                f"The backend produced no '{name}' output. Check the Space logs "
+                "(the backend worker's stderr is captured there)."
+            )
+            body_lines.append(f"    if not _out_{name}:")
+            body_lines.append(f"        raise gr.Error({json.dumps(fallback)})")
+    return_names = ", ".join(f"_out_{spec['name']}" for spec in outputs)
+    body_lines.append(f"    return {return_names}")
+
+    parts = [
+        "from __future__ import annotations",
+        "",
+        "import json",
+        "import os",
+        "import subprocess",
+        "",
+        "import gradio as gr",
+        "",
+        "from pyharp import *",
+        "",
+        "",
+        '_BACKEND_PYTHON = os.environ.get("BACKEND_PYTHON", "/opt/backend/bin/python")',
+        '_BACKEND_SCRIPT = os.environ.get("BACKEND_SCRIPT", "/app/backend_worker.py")',
+        '_BACKEND_TIMEOUT = float(os.environ.get("BACKEND_TIMEOUT", "900"))',
+        "",
+        "",
+        "def _call_backend(payload):",
+        "    # One-shot subprocess into the isolated backend venv. The worker prints",
+        "    # exactly one JSON object as its final stdout line; all model/library",
+        "    # chatter is redirected to stderr (captured in the Space logs).",
+        "    completed = subprocess.run(",
+        "        [_BACKEND_PYTHON, _BACKEND_SCRIPT],",
+        "        input=json.dumps(payload),",
+        "        capture_output=True,",
+        "        text=True,",
+        "        timeout=_BACKEND_TIMEOUT,",
+        "    )",
+        "    _lines = [ln for ln in completed.stdout.splitlines() if ln.strip()]",
+        "    try:",
+        "        response = json.loads(_lines[-1]) if _lines else {}",
+        "    except json.JSONDecodeError as exc:",
+        "        raise gr.Error(",
+        '            "The backend returned no valid result. Last stderr: "',
+        "            + (completed.stderr[-1500:] or \"(empty)\")",
+        "        ) from exc",
+        "    if not response.get(\"ok\"):",
+        "        raise gr.Error(",
+        '            response.get("error") or completed.stderr[-1500:] or "Backend worker failed"',
+        "        )",
+        "    return response.get(\"outputs\") or {}",
+        "",
+        "",
+        "model_card = ModelCard(",
+        f"    name={json.dumps(str(model.get('name')))},",
+        f"    description={json.dumps(str(model.get('description') or ''))},",
+        f"    author={json.dumps(str(model.get('author') or ''))},",
+        f"    tags={json.dumps(list(model.get('tags') or []))},",
+        ")",
+        "",
+        "",
+        f"def process_fn({arg_names}):",
+        "\n".join(body_lines),
+        "",
+        "",
+        "with gr.Blocks() as demo:",
+        "    input_components = [",
+        input_lines + ("," if input_lines else ""),
+        "    ]",
+        "    output_components = [",
+        output_lines + ("," if output_lines else ""),
+        "    ]",
+        "    build_endpoint(",
+        "        model_card=model_card,",
+        "        input_components=input_components,",
+        "        output_components=output_components,",
+        "        process_fn=process_fn,",
+        "    )",
+        "",
+        'demo.queue().launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", "7860")), show_error=True)',
+        "",
+    ]
+    _ = output_name_list  # names are consumed positionally; kept for clarity
+    return "\n".join(parts)
+
+
+def _render_dual_backend_worker(recipe: Mapping[str, Any]) -> str:
+    """Render the one-shot backend worker that runs in the isolated venv."""
+
+    dual = recipe["framework"]["dual"]
+    worker = dual.get("worker") or {}
+    imports = str(worker.get("imports") or "").strip()
+    body = _indent(str(worker.get("body")).strip() or "outputs = {}")
+
+    parts = [
+        "#!/usr/bin/env python3",
+        '"""One-shot backend worker for the isolated interpreter.',
+        "",
+        "Reads a JSON request {\"inputs\": {...}} on stdin and prints a JSON response",
+        "{\"ok\": bool, \"outputs\": {...}} on stdout. Media are exchanged by file path.",
+        "All library stdout noise is redirected to stderr so stdout carries only the",
+        "JSON protocol.",
+        '"""',
+        "from __future__ import annotations",
+        "",
+        "import contextlib",
+        "import json",
+        "import sys",
+        "import traceback",
+    ]
+    if imports:
+        parts += ["", imports]
+    parts += [
+        "",
+        "",
+        "def _run(inputs):",
+        body,
+        "    return outputs",
+        "",
+        "",
+        "def main():",
+        "    try:",
+        "        request = json.load(sys.stdin)",
+        "    except Exception as exc:",
+        '        print(json.dumps({"ok": False, "error": f"invalid request: {exc!r}"}), flush=True)',
+        "        return 2",
+        '    inputs = request.get("inputs") or {}',
+        "    try:",
+        "        with contextlib.redirect_stdout(sys.stderr):",
+        "            outputs = _run(inputs)",
+        '        payload = {"ok": True, "outputs": outputs}',
+        "    except Exception:",
+        '        payload = {"ok": False, "error": traceback.format_exc()[-3000:]}',
+        "    print(json.dumps(payload), flush=True)",
+        '    return 0 if payload["ok"] else 1',
+        "",
+        "",
+        'if __name__ == "__main__":',
+        "    raise SystemExit(main())",
+        "",
+    ]
+    return "\n".join(parts)
+
+
+def _render_dual_dockerfile(recipe: Mapping[str, Any]) -> str:
+    dual = recipe["framework"]["dual"]
+    backend_python = str(dual.get("backend_python") or "3.9").strip()
+    apt = [str(pkg) for pkg in (dual.get("apt") or []) if str(pkg).strip()]
+    no_deps = [str(pkg) for pkg in (dual.get("backend_pip_no_deps") or []) if str(pkg).strip()]
+
+    # Frontend is always the base image's Python 3.10. The backend uses its own
+    # interpreter: the base 3.10 if requested, otherwise Debian's pythonX.Y.
+    if backend_python == "3.10":
+        backend_apt_pkgs: List[str] = []
+        backend_py_bin = "/usr/local/bin/python3.10"
+    else:
+        backend_apt_pkgs = [
+            f"python{backend_python}",
+            f"python{backend_python}-dev",
+            f"python{backend_python}-venv",
+            f"python{backend_python}-distutils",
+        ]
+        backend_py_bin = f"/usr/bin/python{backend_python}"
+
+    apt_line = " \\\n    ".join(
+        ["build-essential", "curl", "git"] + backend_apt_pkgs + apt
+    )
+
+    backend_install = [
+        f'RUN {backend_py_bin} -m venv "$BACKEND_VENV" \\',
+        '    && "$BACKEND_VENV/bin/pip" install --no-cache-dir -U pip wheel setuptools \\',
+        '    && "$BACKEND_VENV/bin/pip" install --no-cache-dir -r /tmp/requirements-backend.txt',
+    ]
+    for pkg in no_deps:
+        backend_install[-1] += " \\"
+        backend_install.append(
+            f'    && "$BACKEND_VENV/bin/pip" install --no-cache-dir --no-build-isolation --no-deps {pkg}'
+        )
+
+    lines = [
+        "# HARP dual-interpreter Space: pyharp/Gradio frontend (Python 3.10) +",
+        f"# isolated model backend (Python {backend_python}) via one-shot subprocess IPC.",
+        "FROM python:3.10-slim-bullseye",
+        "",
+        "ENV DEBIAN_FRONTEND=noninteractive \\",
+        "    PYTHONUNBUFFERED=1 \\",
+        "    PYTHONIOENCODING=UTF-8 \\",
+        "    FRONTEND_VENV=/opt/frontend \\",
+        "    BACKEND_VENV=/opt/backend \\",
+        "    BACKEND_PYTHON=/opt/backend/bin/python \\",
+        "    BACKEND_SCRIPT=/app/backend_worker.py \\",
+        "    PORT=7860",
+        "",
+        f"RUN apt-get update && apt-get install -y --no-install-recommends \\\n    {apt_line} \\",
+        "    && rm -rf /var/lib/apt/lists/*",
+        "",
+        "WORKDIR /app",
+        "",
+        "COPY requirements-backend.txt /tmp/requirements-backend.txt",
+        "\n".join(backend_install),
+        "",
+        "COPY requirements-frontend.txt /tmp/requirements-frontend.txt",
+        'RUN /usr/local/bin/python3.10 -m venv "$FRONTEND_VENV" \\',
+        '    && "$FRONTEND_VENV/bin/pip" install --no-cache-dir -U pip wheel \\',
+        '    && "$FRONTEND_VENV/bin/pip" install --no-cache-dir -r /tmp/requirements-frontend.txt',
+        "",
+        "COPY backend_worker.py frontend_app.py start.sh ./",
+        "RUN chmod +x /app/start.sh",
+        "",
+        "EXPOSE 7860",
+        'CMD ["/app/start.sh"]',
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _render_dual_start_sh() -> str:
+    return "\n".join(
+        [
+            "#!/usr/bin/env bash",
+            "set -euo pipefail",
+            "",
+            'exec "${FRONTEND_VENV:-/opt/frontend}/bin/python" -u /app/frontend_app.py',
+            "",
+        ]
+    )
+
+
+def _dual_frontend_requirements() -> str:
+    return "\n".join(list(_BASE_REQUIREMENTS) + ["gradio==5.28.0", ""])
+
+
+def _dual_backend_requirements(dual: Mapping[str, Any]) -> str:
+    pkgs = [str(pkg) for pkg in (dual.get("backend_pip") or []) if str(pkg).strip()]
+    return "\n".join(pkgs + [""])
+
+
 def _requirements_from_recipe(framework: Mapping[str, Any]) -> str:
     requirements = list(_BASE_REQUIREMENTS)
     # Remote-backend frontends call the model over the network via gradio_client
@@ -678,17 +1011,51 @@ def _readme_from_recipe(recipe: Mapping[str, Any]) -> str:
     inputs = ", ".join(f"{spec['type']}" for spec in recipe["inputs"])
     outputs = ", ".join(f"{spec['type']}" for spec in recipe["outputs"])
 
+    framework = recipe.get("framework") or {}
+    if isinstance(framework, Mapping) and framework.get("dual"):
+        backend_python = str(framework["dual"].get("backend_python") or "3.9")
+        return "\n".join(
+            [
+                "---",
+                f"title: {json.dumps(name)}",
+                "colorFrom: indigo",
+                "colorTo: gray",
+                "sdk: docker",
+                "app_port: 7860",
+                "pinned: false",
+                f"license: {json.dumps(license_name)}",
+                "---",
+                "",
+                f"# {name}",
+                "",
+                description,
+                "",
+                "Dual-interpreter HARP Space: a pyharp/Gradio frontend (Python 3.10) "
+                f"drives an isolated model backend (Python {backend_python}) via a "
+                "one-shot subprocess, so the backend's pinned dependencies never touch "
+                "pyharp/Gradio.",
+                "",
+                f"- Inputs: {inputs}",
+                f"- Outputs: {outputs}",
+                "",
+                "Generated by the HARP model agent from a recipe.",
+                "",
+            ]
+        )
+
     return "\n".join(
         [
             "---",
-            f"title: {name}",
+            # Quote free-text values: a title/license containing a colon (e.g.
+            # "SoulX-Singer: SVS") would otherwise break the YAML front matter.
+            f"title: {json.dumps(name)}",
             "colorFrom: indigo",
             "colorTo: gray",
             "sdk: gradio",
             "sdk_version: 5.28.0",
             "app_file: app.py",
             "pinned: false",
-            f"license: {license_name}",
+            f"license: {json.dumps(license_name)}",
             "---",
             "",
             f"# {name}",
@@ -1029,10 +1396,16 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
     model = recipe["model"]
     framework = recipe.get("framework") or {}
     remote = framework.get("remote") if isinstance(framework, Mapping) else None
+    dual = framework.get("dual") if isinstance(framework, Mapping) else None
     repo_id = str(model.get("id"))
     tags = list(model.get("tags") or [])
     task = str(model.get("task") or (tags[0] if tags else "custom"))
-    framework_name = "gradio_client" if remote else str(framework.get("import") or "custom")
+    if dual:
+        framework_name = "dual-interpreter"
+    elif remote:
+        framework_name = "gradio_client"
+    else:
+        framework_name = str(framework.get("import") or "custom")
 
     io = {
         "inputs": [str(spec.get("type")) for spec in recipe["inputs"]],
@@ -1043,14 +1416,47 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
         "task": task,
         "framework": framework_name,
         "io": io,
-        "entry": "app.py",
-        "space_layout": "huggingface-gradio",
+        "entry": "frontend_app.py" if dual else "app.py",
+        "space_layout": "huggingface-docker" if dual else "huggingface-gradio",
         "generated": True,
         "source": "recipe",
     }
     if remote:
         manifest["deploy_mode"] = "remote-backend"
         manifest["backend_space"] = str(remote.get("space") or "")
+
+    if dual:
+        # A dual package is a Docker Space bundle: the modern pyharp frontend, the
+        # isolated backend worker, the two split requirement sets, the Dockerfile
+        # that builds both venvs, and start.sh. There is no top-level app.py.
+        manifest["deploy_mode"] = "dual-interpreter"
+        manifest["space_sdk"] = "docker"
+        extra_files = {
+            "frontend_app.py": _render_dual_frontend(recipe),
+            "backend_worker.py": _render_dual_backend_worker(recipe),
+            "Dockerfile": _render_dual_dockerfile(recipe),
+            "start.sh": _render_dual_start_sh(),
+            "requirements-frontend.txt": _dual_frontend_requirements(),
+            "requirements-backend.txt": _dual_backend_requirements(dual),
+        }
+        return GeneratedAppPackage(
+            repo_id=repo_id,
+            task=task,
+            framework=framework_name,
+            score={
+                "score": None,
+                "blockers": [],
+                "rationale": "generated from recipe",
+                "task": task,
+            },
+            io=io,
+            app_py="",
+            requirements="",
+            readme=_readme_from_recipe(recipe),
+            packages_txt="",
+            manifest=manifest,
+            extra_files=extra_files,
+        )
 
     return GeneratedAppPackage(
         repo_id=repo_id,

@@ -46,6 +46,7 @@ from tools.model_agent.llm import (
     default_examples,
     generate_recipe,
     provider_from_env,
+    refine_remote_recipe,
 )
 from tools.model_agent.recipe import (
     RecipeError,
@@ -989,6 +990,24 @@ class RecipeTest(unittest.TestCase):
             app,
         )
 
+    def test_file_component_defaults_file_types_when_unset(self):
+        # pyharp's get_harp_component crashes (TypeError) on a gr.File whose
+        # file_types is None, so a recipe that omits file_types must still render
+        # a gr.File with a concrete file_types list.
+        recipe = {
+            "model": {"id": "example/m", "name": "M"},
+            "inputs": [{"name": "melody", "type": "file", "label": "Melody"}],
+            "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+            "inference": {"body": "return None"},
+        }
+        app = render_app_from_recipe(recipe)
+        compile(app, "<file-default>", "exec")
+        self.assertIn(
+            'gr.File(type="filepath", label="Melody", file_types=[".mid", ".midi"])',
+            app,
+        )
+        self.assertNotIn("gr.File(type=\"filepath\", label=\"Melody\")", app)
+
     def test_validation_rejects_bad_recipe(self):
         with self.assertRaises(RecipeError):
             validate_recipe({"model": {}, "inputs": [], "outputs": []})
@@ -1467,6 +1486,124 @@ class RemoteScaffoldTest(unittest.TestCase):
         validate_recipe(recipe)
 
 
+class RefineRemoteRecipeTest(unittest.TestCase):
+    SCAFFOLD = {
+        "_todo": ["inputs.control.choices: set the real dropdown options"],
+        "model": {"id": "owner/backend", "name": "Backend", "description": "TODO"},
+        "framework": {
+            "gpu": False,
+            "pip": [],
+            "remote": {
+                "space": "owner/backend",
+                "api_name": "/synthesis_function",
+                "token_env": "HF_TOKEN",
+                "args": [
+                    {"from": "prompt_audio", "file": True},
+                    {"from": "session"},
+                    {"from": "control"},
+                ],
+                "returns": [{"index": 0, "to": "generated"}],
+            },
+        },
+        "inputs": [
+            {"name": "prompt_audio", "type": "audio", "label": "Ref"},
+            {"name": "session", "type": "textbox", "label": "Session"},
+            {"name": "control", "type": "dropdown", "label": "Control",
+             "choices": ["TODO_option_1", "TODO_option_2"]},
+        ],
+        "outputs": [{"name": "generated", "type": "audio", "label": "Out"}],
+    }
+
+    ENDPOINT = {
+        "parameters": [
+            {"label": "Ref", "parameter_name": "prompt_audio", "component": "Audio"},
+            {"label": "Session", "parameter_name": "session", "component": "Textbox"},
+            {"label": "Control", "parameter_name": "control", "component": "Dropdown"},
+        ],
+        "returns": [{"label": "Out", "component": "Audio"}],
+    }
+
+    def test_llm_refines_but_keeps_call_signature(self):
+        # The LLM turns the hidden 'session' arg into a const, fills dropdown
+        # choices, and writes a real description -- while keeping args length/order.
+        llm_response = {
+            "model": {"description": "Zero-shot singing voice synthesis.", "tags": ["svs"]},
+            "framework": {
+                "gpu": False,
+                "pip": [],
+                "remote": {
+                    "space": "owner/backend",
+                    "api_name": "/synthesis_function",
+                    "args": [
+                        {"from": "prompt_audio", "file": True},
+                        {"const": None},
+                        {"from": "control"},
+                    ],
+                    "returns": [{"index": 0, "to": "generated"}],
+                },
+            },
+            "inputs": [
+                {"name": "prompt_audio", "type": "audio", "label": "Reference voice"},
+                {"name": "control", "type": "dropdown", "label": "Control",
+                 "choices": ["auto", "manual"], "default": "auto"},
+            ],
+            "outputs": [{"name": "generated", "type": "audio", "label": "Generated"}],
+        }
+        provider = _FakeProvider([llm_response])
+        draft = refine_remote_recipe(self.SCAFFOLD, self.ENDPOINT, provider, max_repairs=1)
+
+        remote = draft.recipe["framework"]["remote"]
+        self.assertEqual(remote["space"], "owner/backend")
+        self.assertEqual(remote["api_name"], "/synthesis_function")
+        # args length/order preserved; 'session' is now a const.
+        self.assertEqual(len(remote["args"]), 3)
+        self.assertEqual(remote["args"][1], {"const": None})
+        self.assertEqual(remote["args"][0], {"from": "prompt_audio", "file": True})
+        # Dropdown choices refined; description filled.
+        control = next(i for i in draft.recipe["inputs"] if i["name"] == "control")
+        self.assertEqual(control["choices"], ["auto", "manual"])
+        self.assertEqual(draft.recipe["model"]["description"], "Zero-shot singing voice synthesis.")
+        compile(draft.app_py, "<refine>", "exec")
+
+    def test_wrong_args_length_is_repaired(self):
+        # First response drops an arg (breaks positional integrity) -> rejected;
+        # second response is correct.
+        bad = {
+            "framework": {"remote": {"space": "owner/backend", "api_name": "/synthesis_function",
+                                     "args": [{"from": "prompt_audio", "file": True}],
+                                     "returns": [{"index": 0, "to": "generated"}]}},
+            "inputs": [{"name": "prompt_audio", "type": "audio", "label": "R"}],
+            "outputs": [{"name": "generated", "type": "audio", "label": "O"}],
+        }
+        good = {
+            "framework": {"remote": {"space": "owner/backend", "api_name": "/synthesis_function",
+                                     "args": [{"from": "prompt_audio", "file": True},
+                                              {"const": None}, {"const": "auto"}],
+                                     "returns": [{"index": 0, "to": "generated"}]}},
+            "inputs": [{"name": "prompt_audio", "type": "audio", "label": "R"}],
+            "outputs": [{"name": "generated", "type": "audio", "label": "O"}],
+        }
+        provider = _FakeProvider([bad, good])
+        draft = refine_remote_recipe(self.SCAFFOLD, self.ENDPOINT, provider, max_repairs=2)
+        self.assertEqual(draft.attempts, 2)
+        self.assertEqual(len(draft.recipe["framework"]["remote"]["args"]), 3)
+
+    def test_space_api_name_are_pinned_even_if_llm_changes_them(self):
+        rogue = {
+            "framework": {"remote": {"space": "evil/other", "api_name": "/wrong",
+                                     "args": [{"from": "prompt_audio", "file": True},
+                                              {"const": None}, {"const": "x"}],
+                                     "returns": [{"index": 0, "to": "generated"}]}},
+            "inputs": [{"name": "prompt_audio", "type": "audio", "label": "R"}],
+            "outputs": [{"name": "generated", "type": "audio", "label": "O"}],
+        }
+        provider = _FakeProvider([rogue])
+        draft = refine_remote_recipe(self.SCAFFOLD, self.ENDPOINT, provider, max_repairs=1)
+        remote = draft.recipe["framework"]["remote"]
+        self.assertEqual(remote["space"], "owner/backend")
+        self.assertEqual(remote["api_name"], "/synthesis_function")
+
+
 class RemoteExampleRecipeTest(unittest.TestCase):
     def test_committed_remote_examples_render(self):
         examples_dir = Path(__file__).resolve().parent.parent / "examples"
@@ -1483,6 +1620,95 @@ class RemoteExampleRecipeTest(unittest.TestCase):
             # None of the backends' heavy/conflicting deps leak into the frontend.
             self.assertNotIn("torch", package.requirements)
             self.assertNotIn("nemo", package.requirements)
+
+
+class DualRecipeTest(unittest.TestCase):
+    RECIPE = {
+        "model": {"id": "owner/legacy", "name": "Legacy Model", "license": "mit"},
+        "framework": {
+            "dual": {
+                "backend_python": "3.9",
+                "apt": ["libsndfile-dev"],
+                "backend_pip": ["oldlib==1.2.3", "numpy==1.23.5"],
+                "backend_pip_no_deps": ["madmom"],
+                "worker": {
+                    "imports": "import os",
+                    "body": 'outputs = {"out_audio": inputs["audio"]}',
+                },
+            }
+        },
+        "inputs": [{"name": "audio", "type": "audio", "label": "In", "required": True}],
+        "outputs": [{"name": "out_audio", "type": "audio", "label": "Out"}],
+    }
+
+    def test_validates_and_builds_docker_bundle(self):
+        validate_recipe(self.RECIPE)
+        package = build_package_from_recipe(self.RECIPE)
+        # No top-level app.py/requirements/packages; a Docker bundle instead.
+        self.assertEqual(package.app_py, "")
+        self.assertEqual(package.requirements, "")
+        self.assertEqual(package.framework, "dual-interpreter")
+        for name in (
+            "Dockerfile",
+            "start.sh",
+            "frontend_app.py",
+            "backend_worker.py",
+            "requirements-frontend.txt",
+            "requirements-backend.txt",
+        ):
+            self.assertIn(name, package.extra_files)
+
+    def test_generated_python_compiles_and_isolates_backend_deps(self):
+        package = build_package_from_recipe(self.RECIPE)
+        compile(package.extra_files["frontend_app.py"], "<dual-frontend>", "exec")
+        compile(package.extra_files["backend_worker.py"], "<dual-worker>", "exec")
+        # Frontend is pyharp; it must NOT carry the backend's pinned deps.
+        frontend_reqs = package.extra_files["requirements-frontend.txt"]
+        self.assertIn("gradio", frontend_reqs)
+        self.assertNotIn("oldlib", frontend_reqs)
+        self.assertNotIn("numpy", frontend_reqs)
+        # Backend requirements carry exactly the pins.
+        backend_reqs = package.extra_files["requirements-backend.txt"]
+        self.assertIn("oldlib==1.2.3", backend_reqs)
+        self.assertIn("numpy==1.23.5", backend_reqs)
+        # The frontend shells out to the backend worker over subprocess IPC.
+        self.assertIn("subprocess.run", package.extra_files["frontend_app.py"])
+        self.assertIn("build_endpoint", package.extra_files["frontend_app.py"])
+
+    def test_dockerfile_pins_backend_python_and_no_deps_installs(self):
+        package = build_package_from_recipe(self.RECIPE)
+        dockerfile = package.extra_files["Dockerfile"]
+        self.assertIn("sdk: docker", package.readme)
+        self.assertIn("app_port: 7860", package.readme)
+        self.assertIn("python3.9", dockerfile)
+        self.assertIn("/usr/bin/python3.9 -m venv", dockerfile)
+        # --no-deps escape hatch rendered for madmom.
+        self.assertIn("--no-build-isolation --no-deps madmom", dockerfile)
+
+    def test_rejects_both_remote_and_dual(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["remote"] = {"space": "x/y", "api_name": "/predict"}
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+    def test_requires_worker_body(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["dual"]["worker"]["body"] = ""
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+
+class DualExampleRecipeTest(unittest.TestCase):
+    def test_committed_dual_examples_build(self):
+        examples_dir = Path(__file__).resolve().parent.parent / "examples"
+        dual_files = sorted(examples_dir.glob("*_dual_recipe.json"))
+        self.assertTrue(dual_files, "expected a committed dual example recipe")
+        for recipe_file in dual_files:
+            recipe = json.loads(recipe_file.read_text(encoding="utf-8"))
+            validate_recipe(recipe)
+            package = build_package_from_recipe(recipe)
+            compile(package.extra_files["frontend_app.py"], str(recipe_file), "exec")
+            compile(package.extra_files["backend_worker.py"], str(recipe_file), "exec")
 
 
 class ExampleRecipeFilesTest(unittest.TestCase):
