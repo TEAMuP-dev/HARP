@@ -913,6 +913,13 @@ framework.remote rules (CRITICAL):
         toggles that must stay at a specific value). null is a valid const.
   - Decide expose-vs-const from the README + parameter labels (e.g. a hidden
     "state"/"metadata"/"session" arg should be a const).
+  - When a "# Backend Space UI source" section is provided, it is the GROUND TRUTH
+    and OVERRIDES guesses: read the Space's Gradio code to (1) fill each dropdown's
+    REAL choices and default; (2) decide expose-vs-const -- any positional arg the
+    UI computes internally or leaves OPTIONAL (e.g. a metadata/state/session slot
+    that defaults to None and is produced by another step) MUST be {"const": null}
+    (or its real fixed default) and MUST NOT be exposed as an input; (3) mirror the
+    real component labels and default values.
   - Every input component you declare MUST be referenced by exactly one {"from"}.
   - "returns" maps backend return positions to your outputs: [{"index": i, "to":
     "<output name>"}]; keep indices valid and cover every output.
@@ -988,6 +995,22 @@ def build_remote_refine_prompt(
         if len(readme) > _README_LIMIT:
             readme = readme[:_README_LIMIT] + "\n...[truncated]"
         lines.append("# Model card (README.md)\n" + readme)
+
+    if context.space_sources:
+        lines.append(
+            "# Backend Space UI source (GROUND TRUTH for choices & expose-vs-const)\n"
+            "This is the backend Space's own Gradio UI code. Use it to fill REAL "
+            "dropdown choices/defaults, mirror real labels/defaults, and decide which "
+            "positional args to expose vs. send as constants. Args the UI computes "
+            "internally or leaves OPTIONAL (metadata/state/session slots that default "
+            "to None) must be {\"const\": null} and must NOT be exposed as inputs. Keep "
+            "framework.remote.args length and order unchanged."
+        )
+        for filename, source in context.space_sources.items():
+            snippet = source.strip()
+            if len(snippet) > _SPACE_SOURCE_LIMIT:
+                snippet = snippet[:_SPACE_SOURCE_LIMIT] + "\n...[truncated]"
+            lines.append(f"## {filename}\n```python\n{snippet}\n```")
 
     lines.append(
         "# Task\n"

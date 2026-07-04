@@ -42,6 +42,7 @@ from tools.model_agent.llm import (
     LLMError,
     RecipeGenerationContext,
     build_recipe_user_prompt,
+    build_remote_refine_prompt,
     complete_recipe,
     default_examples,
     generate_recipe,
@@ -1578,6 +1579,24 @@ class RefineRemoteRecipeTest(unittest.TestCase):
         self.assertEqual(control["choices"], ["auto", "manual"])
         self.assertEqual(draft.recipe["model"]["description"], "Zero-shot singing voice synthesis.")
         compile(draft.app_py, "<refine>", "exec")
+
+    def test_refine_prompt_includes_space_source_grounding(self):
+        # When Space UI source is attached, the refine prompt must surface it as
+        # ground truth so the LLM can fill real choices and const-out hidden args.
+        context = RecipeGenerationContext(
+            model_id="owner/backend",
+            space_sources={"webui.py": "prompt_lyric_lang = gr.Dropdown(choices=['English'])"},
+        )
+        prompt = build_remote_refine_prompt(self.SCAFFOLD, self.ENDPOINT, context)
+        self.assertIn("Backend Space UI source", prompt)
+        self.assertIn("webui.py", prompt)
+        self.assertIn("prompt_lyric_lang = gr.Dropdown", prompt)
+        self.assertIn("const", prompt.lower())
+
+    def test_refine_prompt_omits_source_section_when_absent(self):
+        context = RecipeGenerationContext(model_id="owner/backend")
+        prompt = build_remote_refine_prompt(self.SCAFFOLD, self.ENDPOINT, context)
+        self.assertNotIn("Backend Space UI source", prompt)
 
     def test_wrong_args_length_is_repaired(self):
         # First response drops an arg (breaks positional integrity) -> rejected;

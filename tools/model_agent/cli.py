@@ -672,6 +672,24 @@ def main(argv: Iterable[str] | None = None) -> int:
                         temperature=args.temperature,
                     )
                     llm_context = RecipeGenerationContext.from_card(card)
+                    # Ground the refinement on the backend Space's own UI source so
+                    # the LLM can fill REAL dropdown choices and tell which optional/
+                    # internal args (e.g. metadata slots) to send as constants rather
+                    # than expose. The /info schema alone lacks both. Default to the
+                    # backend Space; --space can override the grounding source.
+                    source_space = args.space or args.remote_space
+                    print(
+                        f"  Grounding the refinement on the Space UI source: {source_space} ...",
+                        file=sys.stderr,
+                    )
+                    llm_context.space_sources = agent.fetch_space_sources(source_space)
+                    if not llm_context.space_sources:
+                        print(
+                            "  (no readable Space source found; refining from the "
+                            "/info schema + README only -- dropdown choices and "
+                            "hidden-arg decisions may need manual review)",
+                            file=sys.stderr,
+                        )
                     draft = refine_remote_recipe(
                         scaffold,
                         endpoint,
