@@ -1142,6 +1142,20 @@ class LLMRecipeTest(unittest.TestCase):
         self.assertIn("from pyharp import *", draft.app_py)
         self.assertIn("@spaces.GPU", draft.app_py)
 
+    def test_backend_recipe_marks_framework_and_omits_pyharp(self):
+        provider = _FakeProvider([self.VALID_RECIPE])
+        draft = generate_recipe(self._context(), provider, max_repairs=2, backend=True)
+
+        # The recipe is flagged so the renderer emits a plain-Gradio backend.
+        self.assertTrue(draft.recipe["framework"]["backend"])
+        # The backend prompt (not the pyharp one) was used, and the rendered app
+        # is a plain gr.Interface with no pyharp import.
+        self.assertIn("DOES NOT USE PYHARP", provider.calls[0]["system"])
+        self.assertIn("PLAIN-GRADIO BACKEND", provider.calls[0]["user"])
+        self.assertNotIn("from pyharp import *", draft.app_py)
+        self.assertIn("gr.Interface", draft.app_py)
+        compile(draft.app_py, "<llm-backend>", "exec")
+
     def test_repairs_an_invalid_first_response(self):
         invalid = {"framework": {}, "inputs": [], "outputs": []}  # missing inference + components
         provider = _FakeProvider([invalid, self.VALID_RECIPE])
@@ -1622,6 +1636,75 @@ class RemoteExampleRecipeTest(unittest.TestCase):
             self.assertNotIn("nemo", package.requirements)
 
 
+class BackendRecipeTest(unittest.TestCase):
+    RECIPE = {
+        "model": {
+            "id": "magenta/ddsp",
+            "name": "DDSP Timbre Transfer",
+            "description": "DDSP timbre transfer.",
+            "license": "apache-2.0",
+        },
+        "framework": {
+            "import": "ddsp",
+            "backend": True,
+            "gpu": True,
+            "pip": ["ddsp==3.7.0", "tensorflow==2.11.0", "gradio==3.50.2", "soundfile"],
+            "apt": ["libsndfile1"],
+        },
+        "inputs": [
+            {"name": "audio", "type": "audio", "label": "In", "required": True, "info": "clip"},
+            {"name": "instrument", "type": "dropdown", "label": "Instrument",
+             "choices": ["Violin", "Flute"], "default": "Violin"},
+        ],
+        "outputs": [{"name": "out_audio", "type": "audio", "label": "Out"}],
+        "inference": {"setup": "MODEL = None", "body": "return audio"},
+    }
+
+    def test_renders_plain_gradio_backend_without_pyharp(self):
+        app_py = render_app_from_recipe(self.RECIPE)
+        compile(app_py, "<backend>", "exec")
+        # No pyharp anywhere; a plain gr.Interface publishes the /predict endpoint.
+        self.assertNotIn("pyharp", app_py)
+        self.assertNotIn("build_endpoint", app_py)
+        self.assertNotIn(".harp_required", app_py)
+        self.assertIn("gr.Interface(", app_py)
+        self.assertIn("def predict(audio, instrument):", app_py)
+        # GPU flag still adds the spaces shim + decorator.
+        self.assertIn("@spaces.GPU", app_py)
+
+    def test_backend_requirements_exclude_pyharp(self):
+        package = build_package_from_recipe(self.RECIPE)
+        self.assertEqual(package.framework, "gradio-backend")
+        self.assertEqual(package.manifest["deploy_mode"], "backend")
+        self.assertNotIn("pyharp", package.requirements)
+        # The model's own (legacy) pins are preserved verbatim.
+        self.assertIn("ddsp==3.7.0", package.requirements)
+        self.assertIn("tensorflow==2.11.0", package.requirements)
+        self.assertIn("gradio==3.50.2", package.requirements)
+        self.assertIn("libsndfile1", package.packages_txt)
+
+    def test_backend_readme_pins_sdk_version_to_recipe_gradio(self):
+        package = build_package_from_recipe(self.RECIPE)
+        self.assertIn("sdk: gradio", package.readme)
+        # sdk_version follows the recipe's gradio pin so HF doesn't force 5.x.
+        self.assertIn("sdk_version: 3.50.2", package.readme)
+        self.assertIn("/predict", package.readme)
+
+    def test_backend_readme_defaults_sdk_version_when_unpinned(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["pip"] = ["ddsp", "soundfile"]  # no gradio pin
+        package = build_package_from_recipe(recipe)
+        self.assertIn("sdk_version: 5.28.0", package.readme)
+        # gradio is still installed even when the recipe doesn't list it.
+        self.assertIn("gradio>=4.0", package.requirements)
+
+    def test_backend_cannot_combine_with_remote(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["remote"] = {"space": "x/y", "api_name": "/predict"}
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
+
 class DualRecipeTest(unittest.TestCase):
     RECIPE = {
         "model": {"id": "owner/legacy", "name": "Legacy Model", "license": "mit"},
@@ -1684,6 +1767,18 @@ class DualRecipeTest(unittest.TestCase):
         self.assertIn("/usr/bin/python3.9 -m venv", dockerfile)
         # --no-deps escape hatch rendered for madmom.
         self.assertIn("--no-build-isolation --no-deps madmom", dockerfile)
+        # Legacy-sdist build fix: an older setuptools (with pkg_resources) is pinned
+        # in the venv AND constrained into pip's isolated build environments.
+        self.assertIn('"setuptools<81"', dockerfile)
+        self.assertIn("PIP_CONSTRAINT=/tmp/backend-build-constraints.txt", dockerfile)
+        self.assertIn("setuptools<81", dockerfile)
+
+    def test_build_constraints_field_is_rendered(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["dual"]["build_constraints"] = ["Cython<3", "numpy==1.23.5"]
+        dockerfile = build_package_from_recipe(recipe).extra_files["Dockerfile"]
+        self.assertIn("Cython<3", dockerfile)
+        self.assertIn("numpy==1.23.5", dockerfile)
 
     def test_rejects_both_remote_and_dual(self):
         recipe = json.loads(json.dumps(self.RECIPE))

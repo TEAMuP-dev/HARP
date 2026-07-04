@@ -350,6 +350,62 @@ Output ONLY the JSON object. No markdown, no commentary.
 """
 
 
+BACKEND_SYSTEM_PROMPT = """\
+You generate plain-Gradio "backend" recipes as STRICT JSON. A deterministic
+renderer turns your recipe into a standalone Gradio app.py that RUNS the model
+and exposes its inference function at the "/predict" API endpoint. This backend
+is the model-running half of a two-Space deployment: a separate thin HARP
+frontend will later proxy to it over the network. THIS APP DOES NOT USE PYHARP.
+
+Return ONE JSON object with exactly these top-level keys:
+  - "model":     {"id", "name", "description", "author", "tags": [...]}
+  - "framework": {"import": "<top pip import name>", "pip": [...], "apt": [...], "gpu": bool}
+  - "inputs":    ordered list of input components
+  - "outputs":   ordered list of output components
+  - "inference": {"setup": "<module-level python>", "body": "<predict() body>"}
+
+Input component types: audio, file, dropdown, slider, textbox, number, checkbox.
+Output component types: audio, file, labels.
+Every component needs "name" (a valid python identifier) and "type"; most need
+"label". Extra fields:
+  - dropdown: "choices": [...], optional "default"
+  - slider:   "min", "max", optional "step", "default"
+  - textbox/number/checkbox: optional "default"
+  - any component: optional "info" (tooltip string)
+  - file: optional "file_types": [".mid", ".midi"]
+
+CRITICAL -- no pyharp:
+  - The generated module begins with ONLY `import gradio as gr`. pyharp is NOT
+    installed. Do NOT use ModelCard, build_endpoint, LabelList, AudioLabel,
+    MidiLabel, OutputLabel, load_audio, load_midi, save_audio, save_midi, or any
+    other pyharp helper. Use plain libraries instead (soundfile / librosa /
+    numpy for audio I/O), and declare them in framework.pip.
+
+inference.setup rules:
+  - module-level python that runs once at import: imports for your framework and
+    one-time model loading (assign the loaded model to a module-level variable).
+  - put every third-party dependency in framework.pip (and OS packages in
+    framework.apt). Use only real, importable packages. Do NOT list pyharp.
+
+inference.body rules:
+  - this is the BODY of predict() ONLY (no "def" line, no surrounding
+    indentation). The function parameters are exactly the input components'
+    "name" values, in order; each audio/file input arrives as a string path.
+  - it MUST end with a `return` of the outputs in the SAME ORDER as "outputs".
+    For an audio/file output, write the result to a file (e.g. with soundfile)
+    and return its path STRING. For a labels output, return a JSON-serializable
+    dict/list.
+  - set framework.gpu true only if the model needs a GPU; if true the renderer
+    adds `import spaces` and an `@spaces.GPU` decorator on predict().
+
+When a "# Upstream GitHub source" section is provided it is the GROUND TRUTH for
+the real loading/inference API: import and call the repo's real functions rather
+than guessing from the README, and add the repo (plus its deps) to framework.pip.
+
+Output ONLY the JSON object. No markdown, no commentary.
+"""
+
+
 # A permissive structured-output schema (providers that ignore it still work).
 RECIPE_RESPONSE_SCHEMA: JSON = {
     "type": "object",
@@ -439,7 +495,7 @@ def default_examples(limit: int = 2) -> List[JSON]:
     return examples
 
 
-def build_recipe_user_prompt(context: RecipeGenerationContext) -> str:
+def build_recipe_user_prompt(context: RecipeGenerationContext, *, backend: bool = False) -> str:
     lines: List[str] = ["# Target model", f"id: {context.model_id or '(unknown)'}"]
     if context.name:
         lines.append(f"name: {context.name}")
@@ -505,11 +561,20 @@ def build_recipe_user_prompt(context: RecipeGenerationContext) -> str:
         for example in context.examples:
             lines.append("```json\n" + json.dumps(example, indent=2) + "\n```")
 
-    lines.append(
-        "# Task\n"
-        "Return ONE JSON recipe for the target model with real, importable "
-        "setup/body code specific to THIS model. Return only JSON."
-    )
+    if backend:
+        lines.append(
+            "# Task\n"
+            "Return ONE JSON recipe for a PLAIN-GRADIO BACKEND (no pyharp) that runs "
+            "THIS model with real, importable setup/body code. Do not use any pyharp "
+            "helper; use plain libraries (soundfile/librosa/numpy) for audio I/O and "
+            "return filepath strings for audio/file outputs. Return only JSON."
+        )
+    else:
+        lines.append(
+            "# Task\n"
+            "Return ONE JSON recipe for the target model with real, importable "
+            "setup/body code specific to THIS model. Return only JSON."
+        )
     return "\n\n".join(lines)
 
 
@@ -567,10 +632,17 @@ def generate_recipe(
     provider: LLMProvider,
     *,
     max_repairs: int = 2,
+    backend: bool = False,
 ) -> RecipeDraft:
-    """Ask ``provider`` for a recipe and validate/render/repair until it is runnable."""
+    """Ask ``provider`` for a recipe and validate/render/repair until it is runnable.
 
-    base_user = build_recipe_user_prompt(context)
+    When ``backend`` is true, the LLM is prompted to author a plain-Gradio backend
+    (no pyharp) and the resulting recipe is marked ``framework.backend = true`` so
+    the renderer emits a standalone ``/predict`` Space for the two-Space workflow.
+    """
+
+    system_prompt = BACKEND_SYSTEM_PROMPT if backend else RECIPE_SYSTEM_PROMPT
+    base_user = build_recipe_user_prompt(context, backend=backend)
     raw_responses: List[Any] = []
     feedback: Optional[str] = None
     last_recipe: JSON = {}
@@ -579,10 +651,16 @@ def generate_recipe(
     for attempt in range(max_repairs + 1):
         attempts = attempt + 1
         user = base_user if feedback is None else _repair_prompt(base_user, last_recipe, feedback)
-        data = provider.complete_json(RECIPE_SYSTEM_PROMPT, user, schema=RECIPE_RESPONSE_SCHEMA)
+        data = provider.complete_json(system_prompt, user, schema=RECIPE_RESPONSE_SCHEMA)
         raw_responses.append(data)
 
         recipe = _normalize_recipe(data, context)
+        if backend:
+            framework = recipe.get("framework")
+            if not isinstance(framework, dict):
+                framework = {}
+                recipe["framework"] = framework
+            framework["backend"] = True
         last_recipe = recipe
         try:
             validate_recipe(recipe)

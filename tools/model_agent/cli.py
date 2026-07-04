@@ -165,6 +165,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
     )
+    generate_recipe.add_argument(
+        "--backend",
+        action="store_true",
+        help="Render a plain-Gradio BACKEND Space (no pyharp) exposing /predict, for the "
+        "two-Space workflow. Forces framework.backend on the recipe before rendering.",
+    )
     _add_venv_flag(generate_recipe)
 
     llm_recipe = subparsers.add_parser(
@@ -217,6 +223,14 @@ def build_parser() -> argparse.ArgumentParser:
         "slider ranges, labels, model card), grounded on the live API schema. The "
         "backend space/api_name and the args count/order stay pinned, so the call "
         "signature can't drift. Without this flag the scaffold is used verbatim.",
+    )
+    llm_recipe.add_argument(
+        "--backend",
+        action="store_true",
+        help="Generate a plain-Gradio BACKEND recipe (no pyharp) that RUNS the model and "
+        "exposes /predict, for the two-Space workflow. Best for a GitHub model with no "
+        "existing Space (e.g. magenta/ddsp): deploy this backend, then point a "
+        "remote-backend frontend at it. Mutually exclusive with --remote-space.",
     )
     llm_recipe.add_argument(
         "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
@@ -583,6 +597,12 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "generate-recipe":
             recipe = _read_json(args.recipe)
+            if getattr(args, "backend", False) and isinstance(recipe, dict):
+                framework = recipe.get("framework")
+                if not isinstance(framework, dict):
+                    framework = {}
+                    recipe["framework"] = framework
+                framework["backend"] = True
             _warn_recipe_requirements(recipe)
             package = build_package_from_recipe(recipe)
             _warn_app_lint(package.app_py)
@@ -596,6 +616,14 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
         if args.command == "generate-recipe-from-llm":
+            if getattr(args, "backend", False) and args.remote_space:
+                print(
+                    "error: --backend and --remote-space are mutually exclusive. Use "
+                    "--remote-space to PROXY an existing Space, or --backend to build a "
+                    "new plain-Gradio backend that runs the model.",
+                    file=sys.stderr,
+                )
+                return 2
             github_target = None
             if args.github:
                 github_target = agent.resolve_github_target(args.github, ref=args.ref or None)
@@ -706,7 +734,12 @@ def main(argv: Iterable[str] | None = None) -> int:
                 timeout=args.llm_timeout,
                 temperature=args.temperature,
             )
-            draft = generate_recipe(context, provider, max_repairs=args.max_repairs)
+            draft = generate_recipe(
+                context,
+                provider,
+                max_repairs=args.max_repairs,
+                backend=getattr(args, "backend", False),
+            )
             if github_target is not None:
                 if _repo_is_pip_installable(card):
                     _ensure_github_pip(draft.recipe, context.source_repo_url)

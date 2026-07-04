@@ -126,6 +126,7 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
     is_remote = remote is not None
     dual = framework.get("dual")
     is_dual = dual is not None
+    is_backend = bool(framework.get("backend"))
 
     inputs = recipe.get("inputs")
     outputs = recipe.get("outputs")
@@ -149,6 +150,11 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
 
     if is_remote and is_dual:
         errors.append("framework may not set both 'remote' and 'dual'")
+    if is_backend and (is_remote or is_dual):
+        errors.append(
+            "framework.backend (a plain-Gradio backend Space) cannot be combined "
+            "with 'remote' or 'dual'"
+        )
 
     if is_remote:
         # Remote-backend recipes proxy to a Space, so the inference glue is not
@@ -192,7 +198,7 @@ def _validate_dual(dual: Any) -> List[str]:
     elif not all(isinstance(item, str) and item.strip() for item in backend_pip):
         errors.append("framework.dual.backend_pip entries must be non-empty strings")
 
-    for optional_list in ("apt", "backend_pip_no_deps"):
+    for optional_list in ("apt", "backend_pip_no_deps", "build_constraints"):
         value = dual.get(optional_list)
         if value is not None and (
             not isinstance(value, list)
@@ -336,7 +342,7 @@ def _validate_component(
 _MEDIA_TYPES = {"audio", "file"}
 
 
-def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
+def _component_code(spec: Mapping[str, Any], *, is_input: bool, pyharp: bool = True) -> str:
     comp_type = str(spec.get("type"))
     label = json.dumps(str(spec.get("label") or spec.get("name")))
 
@@ -388,9 +394,11 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool) -> str:
     else:  # pragma: no cover - guarded by validation
         raise RecipeError(f"Unsupported component type: {comp_type}")
 
-    if is_input and spec.get("required"):
+    # .harp_required(...) and .set_info(...) are pyharp component extensions; a
+    # plain-Gradio backend (pyharp=False) has no pyharp installed, so skip them.
+    if pyharp and is_input and spec.get("required"):
         code += ".harp_required(True)"
-    if info and comp_type in _MEDIA_TYPES:
+    if pyharp and info and comp_type in _MEDIA_TYPES:
         code += f".set_info({json.dumps(info)})"
     return code
 
@@ -412,6 +420,10 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
         # Dual mode's runnable frontend lives in frontend_app.py; render it here
         # too so `render-recipe` shows the pyharp surface users will see.
         return _render_dual_frontend(recipe)
+    if isinstance(framework, Mapping) and framework.get("backend"):
+        # Plain-Gradio backend Space (no pyharp): the model-running half of the
+        # two-Space workflow. A remote-backend frontend proxies to it later.
+        return _render_backend_app(recipe)
 
     model = recipe["model"]
     inputs = recipe["inputs"]
@@ -478,6 +490,77 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
         "    )",
         "",
         "demo.queue().launch(share=True, show_error=False, pwa=True)",
+        "",
+    ]
+    return "\n".join(parts)
+
+
+def _render_backend_app(recipe: Mapping[str, Any]) -> str:
+    """Render a plain-Gradio backend ``app.py`` (no pyharp) exposing ``/predict``.
+
+    This is the model-running half of the two-Space workflow: it installs the
+    model's own (often legacy, pyharp-incompatible) dependencies and publishes
+    the inference function as a Gradio API endpoint. A separate remote-backend
+    frontend then proxies to it via ``gradio_client``. ``gr.Interface`` names its
+    endpoint ``/predict`` -- exactly what ``scaffold-remote-recipe`` probes for.
+
+    Unlike the pyharp renderer, the module does NOT ``from pyharp import *``: the
+    backend must not depend on pyharp (isolating pyharp's deps from the model's is
+    the whole point). Inference glue therefore uses plain libraries (soundfile,
+    librosa, ...) for audio I/O rather than pyharp helpers.
+    """
+
+    model = recipe["model"]
+    inputs = recipe["inputs"]
+    outputs = recipe["outputs"]
+    inference = recipe["inference"]
+    framework = recipe.get("framework") or {}
+    uses_gpu = bool(framework.get("gpu"))
+
+    import_lines = ["import gradio as gr"]
+    if uses_gpu:
+        import_lines.append(_SPACES_IMPORT_BLOCK)
+
+    setup = str(inference.get("setup") or "").strip()
+    arg_names = ", ".join(str(spec["name"]) for spec in inputs)
+    body = _indent(str(inference["body"]).strip() or "pass")
+    decorator = "@spaces.GPU\n" if uses_gpu else ""
+
+    input_lines = ",\n".join(
+        "        " + _component_code(spec, is_input=True, pyharp=False) for spec in inputs
+    )
+    output_lines = ",\n".join(
+        "        " + _component_code(spec, is_input=False, pyharp=False) for spec in outputs
+    )
+
+    parts = [
+        "from __future__ import annotations",
+        "",
+        "\n".join(import_lines),
+        "",
+        "",
+    ]
+    if setup:
+        parts += [setup, "", ""]
+    parts += [
+        f"{decorator}def predict({arg_names}):",
+        body,
+        "",
+        "",
+        "demo = gr.Interface(",
+        "    fn=predict,",
+        "    inputs=[",
+        input_lines + ("," if input_lines else ""),
+        "    ],",
+        "    outputs=[",
+        output_lines + ("," if output_lines else ""),
+        "    ],",
+        f"    title={json.dumps(str(model.get('name')))},",
+        f"    description={json.dumps(str(model.get('description') or ''))},",
+        ")",
+        "",
+        'if __name__ == "__main__":',
+        '    demo.queue().launch(server_name="0.0.0.0", server_port=7860, show_error=True)',
         "",
     ]
     return "\n".join(parts)
@@ -833,15 +916,28 @@ def _render_dual_dockerfile(recipe: Mapping[str, Any]) -> str:
         ["build-essential", "curl", "git"] + backend_apt_pkgs + apt
     )
 
+    # Legacy sdists (e.g. crepe) import pkg_resources at build time, which modern
+    # setuptools has removed -- breaking their PEP517 build. Pin an older setuptools
+    # both IN the venv (so pkg_resources exists at runtime too) and, via
+    # PIP_CONSTRAINT, in the *isolated build environments* pip creates (so the build
+    # backend itself gets pkg_resources). Extra pins from the recipe let a specific
+    # tricky sdist get a compatible Cython/numpy at build time.
+    build_constraints = ["setuptools<81", "wheel"] + [
+        str(item) for item in (dual.get("build_constraints") or []) if str(item).strip()
+    ]
+    constraints_printf = "\\n".join(build_constraints) + "\\n"
+
     backend_install = [
         f'RUN {backend_py_bin} -m venv "$BACKEND_VENV" \\',
-        '    && "$BACKEND_VENV/bin/pip" install --no-cache-dir -U pip wheel setuptools \\',
-        '    && "$BACKEND_VENV/bin/pip" install --no-cache-dir -r /tmp/requirements-backend.txt',
+        f"    && printf '{constraints_printf}' > /tmp/backend-build-constraints.txt \\",
+        '    && "$BACKEND_VENV/bin/pip" install --no-cache-dir -U pip wheel "setuptools<81" \\',
+        '    && PIP_CONSTRAINT=/tmp/backend-build-constraints.txt "$BACKEND_VENV/bin/pip" install --no-cache-dir -r /tmp/requirements-backend.txt',
     ]
     for pkg in no_deps:
         backend_install[-1] += " \\"
         backend_install.append(
-            f'    && "$BACKEND_VENV/bin/pip" install --no-cache-dir --no-build-isolation --no-deps {pkg}'
+            "    && PIP_CONSTRAINT=/tmp/backend-build-constraints.txt "
+            f'"$BACKEND_VENV/bin/pip" install --no-cache-dir --no-build-isolation --no-deps {pkg}'
         )
 
     lines = [
@@ -900,6 +996,36 @@ def _dual_frontend_requirements() -> str:
 def _dual_backend_requirements(dual: Mapping[str, Any]) -> str:
     pkgs = [str(pkg) for pkg in (dual.get("backend_pip") or []) if str(pkg).strip()]
     return "\n".join(pkgs + [""])
+
+
+_GRADIO_PIN_RE = re.compile(r"^gradio\s*==\s*([0-9][0-9A-Za-z.\-]*)", re.IGNORECASE)
+
+
+def _recipe_gradio_pin(framework: Mapping[str, Any]) -> Optional[str]:
+    """Return the exact gradio version pinned in ``framework.pip`` (or None)."""
+
+    for entry in framework.get("pip") or []:
+        match = _GRADIO_PIN_RE.match(str(entry).strip())
+        if match:
+            return match.group(1)
+    return None
+
+
+def _backend_requirements_from_recipe(framework: Mapping[str, Any]) -> str:
+    """Requirements for a plain-Gradio backend Space.
+
+    A backend must NOT install pyharp -- keeping the model's (often legacy) deps
+    isolated from pyharp is the entire reason for the two-Space split. So this
+    installs gradio + the model's own ``framework.pip`` and nothing else.
+    """
+
+    pip = [str(pkg) for pkg in (framework.get("pip") or []) if str(pkg).strip()]
+    has_gradio = any(_requirement_name_and_pinned(pkg)[0] == "gradio" for pkg in pip)
+    requirements: List[str] = [] if has_gradio else ["gradio>=4.0"]
+    for package in pip:
+        if package not in requirements:
+            requirements.append(package)
+    return "\n".join(requirements + [""])
 
 
 def _requirements_from_recipe(framework: Mapping[str, Any]) -> str:
@@ -1012,6 +1138,41 @@ def _readme_from_recipe(recipe: Mapping[str, Any]) -> str:
     outputs = ", ".join(f"{spec['type']}" for spec in recipe["outputs"])
 
     framework = recipe.get("framework") or {}
+    if isinstance(framework, Mapping) and framework.get("backend"):
+        # Plain-Gradio backend Space: pin the Space runtime's gradio to whatever
+        # the recipe pins (so HF doesn't force a version that fights the model's
+        # deps); fall back to the standard version when the recipe leaves it open.
+        sdk_version = _recipe_gradio_pin(framework) or "5.28.0"
+        return "\n".join(
+            [
+                "---",
+                f"title: {json.dumps(name)}",
+                "colorFrom: indigo",
+                "colorTo: gray",
+                "sdk: gradio",
+                f"sdk_version: {sdk_version}",
+                "app_file: app.py",
+                "pinned: false",
+                f"license: {json.dumps(license_name)}",
+                "---",
+                "",
+                f"# {name} (backend)",
+                "",
+                description,
+                "",
+                "Plain-Gradio **backend** Space for the two-Space HARP workflow: it runs "
+                "the model and exposes inference at the `/predict` API endpoint. It does "
+                "NOT depend on pyharp. Deploy a thin HARP remote-backend frontend "
+                "(`scaffold-remote-recipe <this-space>`) that proxies to it.",
+                "",
+                f"- Inputs: {inputs}",
+                f"- Outputs: {outputs}",
+                "",
+                "Generated by the HARP model agent from a recipe.",
+                "",
+            ]
+        )
+
     if isinstance(framework, Mapping) and framework.get("dual"):
         backend_python = str(framework["dual"].get("backend_python") or "3.9")
         return "\n".join(
@@ -1397,6 +1558,7 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
     framework = recipe.get("framework") or {}
     remote = framework.get("remote") if isinstance(framework, Mapping) else None
     dual = framework.get("dual") if isinstance(framework, Mapping) else None
+    is_backend = bool(framework.get("backend")) if isinstance(framework, Mapping) else False
     repo_id = str(model.get("id"))
     tags = list(model.get("tags") or [])
     task = str(model.get("task") or (tags[0] if tags else "custom"))
@@ -1404,6 +1566,8 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
         framework_name = "dual-interpreter"
     elif remote:
         framework_name = "gradio_client"
+    elif is_backend:
+        framework_name = "gradio-backend"
     else:
         framework_name = str(framework.get("import") or "custom")
 
@@ -1424,6 +1588,8 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
     if remote:
         manifest["deploy_mode"] = "remote-backend"
         manifest["backend_space"] = str(remote.get("space") or "")
+    if is_backend:
+        manifest["deploy_mode"] = "backend"
 
     if dual:
         # A dual package is a Docker Space bundle: the modern pyharp frontend, the
@@ -1458,6 +1624,11 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
             extra_files=extra_files,
         )
 
+    requirements = (
+        _backend_requirements_from_recipe(framework)
+        if is_backend
+        else _requirements_from_recipe(framework)
+    )
     return GeneratedAppPackage(
         repo_id=repo_id,
         task=task,
@@ -1465,7 +1636,7 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
         score={"score": None, "blockers": [], "rationale": "generated from recipe", "task": task},
         io=io,
         app_py=render_app_from_recipe(recipe),
-        requirements=_requirements_from_recipe(framework),
+        requirements=requirements,
         readme=_readme_from_recipe(recipe),
         packages_txt=_packages_from_recipe(framework),
         manifest=manifest,
