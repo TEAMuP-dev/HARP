@@ -1563,7 +1563,7 @@ class HarpModelAgent:
             return None
 
     def scaffold_remote_recipe(
-        self, space: str, *, api_name: Optional[str] = None
+        self, space: str, *, api_name: Optional[str] = None, user_token: bool = False
     ) -> JSON:
         """Probe a backend Space's Gradio API and scaffold a remote-backend recipe.
 
@@ -1579,7 +1579,9 @@ class HarpModelAgent:
 
         api_info = self.fetch_api_info(space)
         canonical = self.endpoint_client.resolve_canonical_path(space) or space
-        return remote_recipe_from_api_info(canonical, api_info, api_name=api_name)
+        return remote_recipe_from_api_info(
+            canonical, api_info, api_name=api_name, user_token=user_token
+        )
 
     def fetch_api_info(self, space: str) -> JSON:
         """Convenience passthrough to the endpoint client's API-schema fetch."""

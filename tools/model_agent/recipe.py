@@ -243,6 +243,10 @@ def _validate_remote(remote: Any, input_names: set, output_names: set) -> List[s
     if token_env is not None and (not isinstance(token_env, str) or not token_env.strip()):
         errors.append("framework.remote.token_env must be a non-empty string when present")
 
+    user_token = remote.get("user_token")
+    if user_token is not None and not isinstance(user_token, bool):
+        errors.append("framework.remote.user_token must be a boolean when present")
+
     args = remote.get("args")
     if not isinstance(args, list):
         errors.append(
@@ -602,8 +606,19 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
     space = str(remote.get("space"))
     api_name = str(remote.get("api_name"))
     token_env = str(remote.get("token_env") or "HF_TOKEN")
+    # When true, the frontend exposes an optional masked "Hugging Face token"
+    # control; if a user provides one, ZeroGPU usage on the backend is attributed
+    # to THAT user instead of falling back to the Space's own HF_TOKEN secret
+    # (which otherwise funds/bottlenecks everyone, and is anonymous -- ~0 ZeroGPU
+    # quota -- if the secret is unset).
+    accept_user_token = bool(remote.get("user_token"))
 
+    # The token control is appended AFTER the model inputs so it is never part of
+    # the backend's positional args; it only selects which identity makes the call.
+    _token_param = "_hf_user_token"
     arg_names = ", ".join(str(spec["name"]) for spec in inputs)
+    if accept_user_token:
+        arg_names = f"{arg_names}, {_token_param}=''" if arg_names else f"{_token_param}=''"
 
     call_args = ",\n".join(
         "        " + _remote_arg_expr(entry) for entry in remote.get("args", [])
@@ -613,14 +628,30 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         str(entry["to"]): int(entry["index"]) for entry in remote.get("returns", [])
     }
 
-    body_lines = [
-        "    _raw = _backend_client().predict(",
+    body_lines: List[str] = []
+    if accept_user_token:
+        # Per-call client for a user token (NOT cached: never retain a user's
+        # secret in a shared global). Fall back to the Space's cached client.
+        body_lines += [
+            f"    _tok = ({_token_param} or '').strip()",
+            "    if _tok:",
+            "        _conn = Client(_BACKEND_SPACE, hf_token=_tok)",
+            "    else:",
+            "        _conn = _backend_client()",
+        ]
+    else:
+        body_lines.append("    _conn = _backend_client()")
+    body_lines += [
+        "    try:",
+        "        _raw = _conn.predict(",
     ]
     if call_args:
-        body_lines.append(call_args + ",")
+        body_lines.append(_indent(call_args, 4) + ",")
     body_lines += [
-        f"        api_name={json.dumps(api_name)},",
-        "    )",
+        f"            api_name={json.dumps(api_name)},",
+        "        )",
+        "    except Exception as _exc:  # surface a token-aware hint, never the token",
+        "        raise gr.Error(_quota_hint(str(_exc)))",
         "    _values = list(_raw) if isinstance(_raw, (list, tuple)) else [_raw]",
     ]
     has_media_output = any(str(spec.get("type")) in _MEDIA_TYPES for spec in outputs)
@@ -650,12 +681,44 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
     return_names = ", ".join(f"_out_{spec['name']}" for spec in outputs)
     body_lines.append(f"    return {return_names}")
 
-    input_lines = ",\n".join(
-        "        " + _component_code(spec, is_input=True) for spec in inputs
-    )
+    input_component_lines = ["        " + _component_code(spec, is_input=True) for spec in inputs]
+    if accept_user_token:
+        # Masked, optional token control. Appended last so it is never forwarded
+        # to the backend's positional call -- it only picks the calling identity.
+        token_info = (
+            "Optional. Paste a Hugging Face token (Settings -> Access Tokens, read "
+            "scope) so ZeroGPU usage on the backend is charged to YOUR account. "
+            "Used only for this call; not stored. Leave blank to use this Space's "
+            "own token."
+        )
+        input_component_lines.append(
+            "        gr.Textbox(label=\"Hugging Face token (optional)\", "
+            f"type=\"password\", info={json.dumps(token_info)})"
+        )
+    input_lines = ",\n".join(input_component_lines)
     output_lines = ",\n".join(
         "        " + _component_code(spec, is_input=False) for spec in outputs
     )
+
+    quota_hint_lines = [
+        "def _quota_hint(message):",
+        "    # Turn a backend ZeroGPU quota error into an actionable message.",
+        "    # NOTE: 'message' is the backend's error text; it never contains our token.",
+        "    _low = (message or \"\").lower()",
+        "    if \"quota\" in _low or \"zerogpu\" in _low:",
+        "        if _ACCEPT_USER_TOKEN:",
+        "            return (",
+        "                \"The backend's ZeroGPU quota is exhausted for the identity making \"",
+        "                \"this call. Paste your own Hugging Face token in the token field \"",
+        "                \"(read scope) so usage is attributed to your account.\"",
+        "            )",
+        "        return (",
+        "            \"The backend's ZeroGPU quota is exhausted. This Space's calls are \"",
+        "            \"anonymous unless an HF_TOKEN secret is set (Settings -> Variables \"",
+        "            \"and secrets); use a token from a PRO account or a ZeroGPU-enabled org.\"",
+        "        )",
+        "    return message or \"Backend call failed.\"",
+    ]
 
     parts = [
         "from __future__ import annotations",
@@ -671,16 +734,22 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         f"_BACKEND_SPACE = {json.dumps(space)}",
         f"_BACKEND_API_NAME = {json.dumps(api_name)}",
         f"_BACKEND_TOKEN_ENV = {json.dumps(token_env)}",
+        f"_ACCEPT_USER_TOKEN = {accept_user_token!r}",
         "_client = None",
         "",
         "",
         "def _backend_client():",
-        "    # Lazily create and cache one warm connection to the backend Space.",
+        "    # Lazily create and cache one warm connection using this Space's own",
+        "    # token (from the HF_TOKEN secret) or anonymous if none is set. User",
+        "    # tokens are NOT cached here -- they get a fresh per-call connection.",
         "    global _client",
         "    if _client is None:",
         "        _token = os.environ.get(_BACKEND_TOKEN_ENV) or None",
         "        _client = Client(_BACKEND_SPACE, hf_token=_token)",
         "    return _client",
+        "",
+        "",
+        "\n".join(quota_hint_lines),
         "",
         "",
         "model_card = ModelCard(",
@@ -1398,6 +1467,7 @@ def remote_recipe_from_api_info(
     *,
     api_name: Optional[str] = None,
     model_name: str = "",
+    user_token: bool = False,
 ) -> JSON:
     """Scaffold a remote-backend recipe from a Gradio ``/info`` API schema.
 
@@ -1523,6 +1593,22 @@ def remote_recipe_from_api_info(
         ]
     )
 
+    remote: JSON = {
+        "space": str(space),
+        "api_name": chosen,
+        "token_env": "HF_TOKEN",
+        "args": args,
+        "returns": ret_map,
+    }
+    if user_token:
+        # Expose a masked per-user token control so ZeroGPU usage is charged to the
+        # calling user instead of this Space's (shared/anonymous) identity.
+        remote["user_token"] = True
+        todos.append(
+            "framework.remote.user_token is on: the UI shows an optional HF token "
+            "field; usage is attributed to the user's account when they provide one."
+        )
+
     return {
         "_source": f"{space} :: {chosen}",
         "_todo": todos,
@@ -1536,13 +1622,7 @@ def remote_recipe_from_api_info(
         "framework": {
             "gpu": False,
             "pip": [],
-            "remote": {
-                "space": str(space),
-                "api_name": chosen,
-                "token_env": "HF_TOKEN",
-                "args": args,
-                "returns": ret_map,
-            },
+            "remote": remote,
         },
         "inputs": inputs,
         "outputs": outputs,

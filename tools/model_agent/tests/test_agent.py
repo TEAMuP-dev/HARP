@@ -1474,6 +1474,45 @@ class RemoteScaffoldTest(unittest.TestCase):
         self.assertEqual(recipe["outputs"][0]["type"], "audio")
         self.assertEqual(remote["returns"], [{"index": 0, "to": "output"}])
 
+    def test_default_scaffold_has_no_user_token_field(self):
+        app = render_app_from_recipe(remote_recipe_from_api_info("owner/backend", self.API_INFO))
+        self.assertNotIn('type="password"', app)
+        self.assertNotIn("_hf_user_token", app)
+
+    def test_user_token_adds_masked_field_and_per_user_client(self):
+        recipe = remote_recipe_from_api_info("owner/backend", self.API_INFO, user_token=True)
+        validate_recipe(recipe)
+        self.assertTrue(recipe["framework"]["remote"]["user_token"])
+        # The token control does NOT add a positional backend arg (args unchanged).
+        self.assertEqual(
+            recipe["framework"]["remote"]["args"],
+            [
+                {"from": "prompt_audio", "file": True},
+                {"from": "steps"},
+                {"const": None},
+                {"from": "prompt"},
+            ],
+        )
+        app = render_app_from_recipe(recipe)
+        compile(app, "<user-token>", "exec")
+        # Masked, optional token control appended as the LAST input.
+        self.assertIn('type="password"', app)
+        self.assertIn("_hf_user_token=''", app)
+        # A user token gets a fresh per-call client (never the shared cache).
+        self.assertIn("Client(_BACKEND_SPACE, hf_token=_tok)", app)
+        self.assertIn("_ACCEPT_USER_TOKEN = True", app)
+        # Quota errors are turned into an actionable, token-free hint.
+        self.assertIn("_quota_hint", app)
+        # The token is not forwarded into the backend predict() args.
+        predict_region = app.split("_conn.predict(")[1].split("api_name=")[0]
+        self.assertNotIn("_hf_user_token", predict_region)
+
+    def test_user_token_must_be_boolean(self):
+        recipe = remote_recipe_from_api_info("owner/backend", self.API_INFO)
+        recipe["framework"]["remote"]["user_token"] = "yes"
+        with self.assertRaises(RecipeError):
+            validate_recipe(recipe)
+
     def test_requires_api_name_when_multiple_endpoints(self):
         info = {
             "named_endpoints": {"/a": {"parameters": [], "returns": []}, "/b": {}},

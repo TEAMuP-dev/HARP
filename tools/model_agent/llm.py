@@ -1085,6 +1085,9 @@ def refine_remote_recipe(
             remote["space"] = scaffold_remote.get("space")
             remote["api_name"] = scaffold_remote.get("api_name")
             remote.setdefault("token_env", scaffold_remote.get("token_env", "HF_TOKEN"))
+            # user_token is a deployment decision the LLM shouldn't toggle; keep it.
+            if scaffold_remote.get("user_token"):
+                remote["user_token"] = True
         last = recipe
 
         invariant = _remote_invariant_error(recipe, scaffold_copy)

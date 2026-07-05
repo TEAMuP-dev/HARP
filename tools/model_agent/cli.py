@@ -140,6 +140,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Backend named endpoint to call (e.g. /predict). Required only if the "
         "Space exposes more than one; otherwise the sole endpoint is used.",
     )
+    scaffold_remote.add_argument(
+        "--user-token",
+        action="store_true",
+        help="Add an optional masked 'Hugging Face token' control to the frontend UI. "
+        "When a user supplies a token, the backend call is made as that user, so "
+        "ZeroGPU quota is charged to their account (with fallback to this Space's "
+        "HF_TOKEN secret). Use for public/multi-user frontends of a ZeroGPU backend.",
+    )
     scaffold_remote.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
 
     render_recipe = subparsers.add_parser(
@@ -214,6 +222,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="With --remote-space: the backend named endpoint to call (e.g. "
         "/enhance_audio_ui). Required only if the Space exposes more than one.",
+    )
+    llm_recipe.add_argument(
+        "--user-token",
+        action="store_true",
+        help="With --remote-space: add an optional masked 'Hugging Face token' control "
+        "to the frontend so ZeroGPU usage on the backend is attributed to the calling "
+        "user's account (fallback: this Space's HF_TOKEN secret).",
     )
     llm_recipe.add_argument(
         "--remote-llm",
@@ -574,7 +589,11 @@ def main(argv: Iterable[str] | None = None) -> int:
                 f"Probing the backend Space's Gradio API: {args.space} ...",
                 file=sys.stderr,
             )
-            recipe = agent.scaffold_remote_recipe(args.space, api_name=args.api_name or None)
+            recipe = agent.scaffold_remote_recipe(
+                args.space,
+                api_name=args.api_name or None,
+                user_token=getattr(args, "user_token", False),
+            )
             remote = recipe.get("framework", {}).get("remote", {})
             print(
                 f"  Scaffolded remote recipe for endpoint '{remote.get('api_name')}' "
@@ -655,7 +674,10 @@ def main(argv: Iterable[str] | None = None) -> int:
                     or args.remote_space
                 )
                 scaffold = remote_recipe_from_api_info(
-                    canonical, api_info, api_name=args.remote_api_name or None
+                    canonical,
+                    api_info,
+                    api_name=args.remote_api_name or None,
+                    user_token=getattr(args, "user_token", False),
                 )
                 if args.remote_llm:
                     chosen = str(scaffold["framework"]["remote"]["api_name"])
