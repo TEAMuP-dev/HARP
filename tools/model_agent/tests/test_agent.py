@@ -2043,6 +2043,8 @@ class _FakeGitHubScraper:
         "pkg/model.py": "from pkg.utils import helper\nimport torch\n",
         "pkg/utils.py": "def helper():\n    return 1\n",
         "README.md": "# Cool Model\n\nDoes audio things.\n",
+        "requirements.txt": "numpy<1.24\ntorch==2.0.1\n",
+        "setup.py": "setup(install_requires=['numpy<1.24', 'librosa<=0.10'])\n",
     }
 
     def get_repo_info(self, owner, repo):
@@ -2087,6 +2089,15 @@ class GitHubSourceTest(unittest.TestCase):
         self.assertIn("Cool Model", card["readme"])
         self.assertIn("app.py", card["files"])
 
+    def test_fetch_github_dependencies_returns_declared_manifests(self):
+        manifests = self._agent().fetch_github_dependencies("owner/repo")
+        self.assertIn("requirements.txt", manifests)
+        self.assertIn("setup.py", manifests)
+        self.assertIn("numpy<1.24", manifests["requirements.txt"])
+        self.assertIn("install_requires", manifests["setup.py"])
+        # A repo without pyproject/setup.cfg simply omits them (no crash).
+        self.assertNotIn("pyproject.toml", manifests)
+
     def test_resolve_and_pip_requirement(self):
         agent = self._agent()
         self.assertEqual(agent.resolve_github_target("owner/repo"), ("owner", "repo", "main"))
@@ -2116,6 +2127,26 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         self.assertIn("## pkg/model.py", prompt)
         # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
+
+    def test_declared_dependencies_are_grounded_in_prompt(self):
+        context = RecipeGenerationContext(
+            model_id="owner/repo",
+            readme="A model.",
+            dependency_manifests={
+                "setup.py": "setup(install_requires=['numpy<1.24', 'tensorflow<=2.11'])",
+                "requirements.txt": "numpy<1.24\n",
+            },
+        )
+        prompt = build_recipe_user_prompt(context)
+        self.assertIn("Declared dependencies", prompt)
+        self.assertIn("## setup.py", prompt)
+        self.assertIn("numpy<1.24", prompt)
+        self.assertIn("tensorflow<=2.11", prompt)
+
+    def test_declared_dependencies_section_omitted_when_absent(self):
+        context = RecipeGenerationContext(model_id="owner/repo", readme="A model.")
+        prompt = build_recipe_user_prompt(context)
+        self.assertNotIn("Declared dependencies", prompt)
 
 
 class RecipeRequirementsLintTest(unittest.TestCase):

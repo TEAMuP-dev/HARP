@@ -1762,6 +1762,36 @@ class HarpModelAgent:
 
         return sources
 
+    def fetch_github_dependencies(
+        self,
+        repo_url: str,
+        *,
+        ref: Optional[str] = None,
+        max_chars: int = 6000,
+    ) -> Dict[str, str]:
+        """Fetch a repo's declared dependency manifests for recipe grounding.
+
+        Returns ``{filename: text}`` for whichever of ``requirements.txt`` /
+        ``setup.py`` / ``pyproject.toml`` / ``setup.cfg`` exist at the repo root
+        (or the ``--github`` subpath). These declare the model's REAL dependency
+        versions/bounds -- the source of truth the LLM should pin from instead of
+        guessing. One unreachable file never aborts the rest.
+        """
+
+        owner, repo, resolved = self.resolve_github_target(repo_url, ref=ref)
+        _o, _r, _url_ref, subpath = _parse_github_url(repo_url)
+
+        manifests: Dict[str, str] = {}
+        for name in _DEP_MANIFEST_FILES:
+            path = f"{subpath}/{name}" if subpath else name
+            try:
+                text = self.github_scraper.get_file(owner, repo, resolved, path)
+            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError):
+                continue
+            if text:
+                manifests[name] = text[:max_chars]
+        return manifests
+
     def harvest_space_apps(
         self,
         output_dir: Path,
@@ -1936,6 +1966,10 @@ def _local_import_modules(source: str) -> List[str]:
 
 # Common entry/inference module basenames, highest-signal first. Used to seed
 # the GitHub source crawl when the repo isn't a Gradio app with an obvious app.py.
+# Root dependency manifests fetched to ground recipe generation on the repo's
+# REAL declared dependency versions/bounds instead of the LLM's guesses.
+_DEP_MANIFEST_FILES = ("requirements.txt", "setup.py", "pyproject.toml", "setup.cfg")
+
 _GITHUB_ENTRY_BASENAMES = (
     "app.py",
     "gradio_app.py",

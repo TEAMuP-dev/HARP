@@ -756,6 +756,18 @@ def main(argv: Iterable[str] | None = None) -> int:
                         "falling back to the README only)",
                         file=sys.stderr,
                     )
+                # Ground framework.pip on the repo's declared dependency versions
+                # (setup.py install_requires / requirements.txt / pyproject) so pins
+                # come from the source of truth instead of the LLM's guess.
+                context.dependency_manifests = agent.fetch_github_dependencies(
+                    args.github, ref=ref
+                )
+                if context.dependency_manifests:
+                    print(
+                        "  Grounding dependencies on declared manifests: "
+                        + ", ".join(sorted(context.dependency_manifests)),
+                        file=sys.stderr,
+                    )
             elif args.space:
                 print(
                     f"Grounding on the original Space source: {args.space} ...",

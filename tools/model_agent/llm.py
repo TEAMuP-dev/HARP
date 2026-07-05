@@ -386,6 +386,10 @@ inference.setup rules:
     one-time model loading (assign the loaded model to a module-level variable).
   - put every third-party dependency in framework.pip (and OS packages in
     framework.apt). Use only real, importable packages. Do NOT list pyharp.
+  - When a "# Declared dependencies" section is provided, pin framework.pip to the
+    versions/bounds declared there (honor every upper bound); include only the
+    packages inference + the Gradio UI actually need (drop training/data/cloud/export
+    extras). Also add the repo itself if a git+ dependency is required.
 
 inference.body rules:
   - this is the BODY of predict() ONLY (no "def" line, no surrounding
@@ -443,6 +447,11 @@ class RecipeGenerationContext:
     # first-party modules -- the ground truth for the real loading/inference
     # API (and UI, for Spaces).
     space_sources: Dict[str, str] = field(default_factory=dict)
+    # {filename: text} for the repo's declared dependency manifests (setup.py's
+    # install_requires, requirements.txt, pyproject.toml, setup.cfg) -- the ground
+    # truth for dependency VERSIONS/BOUNDS, so framework.pip is pinned from source
+    # rather than guessed.
+    dependency_manifests: Dict[str, str] = field(default_factory=dict)
     # Where space_sources came from: "space" (deploy INTO the Space, modules
     # already importable) or "github" (write a NEW wrapper and add the repo as a
     # git+ pip dependency). Controls how the grounding block is framed.
@@ -553,6 +562,22 @@ def build_recipe_user_prompt(context: RecipeGenerationContext, *, backend: bool 
             if len(snippet) > _SPACE_SOURCE_LIMIT:
                 snippet = snippet[:_SPACE_SOURCE_LIMIT] + "\n...[truncated]"
             lines.append(f"## {filename}\n```python\n{snippet}\n```")
+
+    if context.dependency_manifests:
+        lines.append(
+            "# Declared dependencies (GROUND TRUTH for framework.pip versions)\n"
+            "These are the repo's own dependency manifests. Pin framework.pip to the "
+            "versions/bounds declared here rather than guessing (respect every upper "
+            "bound, e.g. 'numpy<1.24', 'tensorflow<=2.11'). Include ONLY packages needed "
+            "for INFERENCE and the Gradio UI: drop training/data-pipeline/cloud/export "
+            "extras (e.g. apache-beam, google-cloud-storage, tensorflow-datasets, "
+            "tensorflowjs, tflite_support, hypertune) that a wrapper never calls."
+        )
+        for filename, text in context.dependency_manifests.items():
+            snippet = text.strip()
+            if len(snippet) > _SPACE_SOURCE_LIMIT:
+                snippet = snippet[:_SPACE_SOURCE_LIMIT] + "\n...[truncated]"
+            lines.append(f"## {filename}\n```\n{snippet}\n```")
 
     if context.examples:
         lines.append(
