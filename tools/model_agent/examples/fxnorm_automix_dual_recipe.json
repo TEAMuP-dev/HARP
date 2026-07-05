@@ -1,0 +1,73 @@
+{
+  "model": {
+    "id": "sony/FxNorm-automix",
+    "name": "FxNorm-automix (Automatic Mixing)",
+    "author": "Sony (Marco A. Martinez-Ramirez et al., ISMIR 2022)",
+    "description": "Automatic music mixing with deep learning. Upload dry stems (vocals, bass, drums, other) and the model effect-normalizes and mixes them into a single stereo master. Runs the original, unmodified FxNorm-automix stack (torch 1.9) in an isolated Python 3.9 backend, on CPU. Reverb augmentation is disabled (the impulse responses are not publicly released). Audio is capped at 30 seconds per mix for CPU runtime.",
+    "license": "other",
+    "tags": [
+      "audio-to-audio",
+      "automatic-mixing",
+      "music-production"
+    ],
+    "task": "audio-to-audio"
+  },
+  "framework": {
+    "dual": {
+      "backend_python": "3.9",
+      "apt": [
+        "libsndfile1",
+        "ffmpeg"
+      ],
+      "backend_pip": [
+        "--extra-index-url https://download.pytorch.org/whl/cpu",
+        "torch==1.9.0+cpu",
+        "numpy==1.23.5",
+        "scipy==1.10.1",
+        "numba==0.56.4",
+        "llvmlite==0.39.1",
+        "librosa==0.9.2",
+        "resampy==0.4.2",
+        "soundfile>=0.12.1",
+        "scikit-learn==1.1.3",
+        "pyloudnorm==0.1.1",
+        "git+https://github.com/csteinmetz1/pymixconsole",
+        "sty",
+        "git+https://github.com/sony/FxNorm-automix"
+      ],
+      "worker": {
+        "imports": "import os\nimport sys\nimport types\nimport tempfile\nimport urllib.request\n\n# Force CPU: the upstream inference.py hard-codes .to('cuda'); this worker\n# reimplements it on CPU so it runs on a free Space.\nos.environ[\"CUDA_VISIBLE_DEVICES\"] = \"\"\nos.environ.setdefault(\"OMP_NUM_THREADS\", \"4\")\n\nimport numpy as np\nimport librosa\n\n\ndef _stub_module(name):\n    \"\"\"Install a harmless stand-in for a native lib FxNorm imports but never\n    calls on the mixing-inference path (SoX pitch/time/speed effects and aubio\n    onset detection are training-time augmentation only). Stubbing them keeps\n    the backend a pure-wheel install (no C-extension builds).\"\"\"\n    module = types.ModuleType(name)\n\n    def _unavailable(*_args, **_kwargs):\n        raise RuntimeError(\n            f\"'{name}' is stubbed in this CPU inference build; it is only used by \"\n            f\"FxNorm-automix's training-time augmentation, not by mixing inference.\"\n        )\n\n    module.__getattr__ = lambda _attr: _unavailable\n    return module\n\n\nfor _native in (\"aubio\", \"sox\", \"soxbindings\"):\n    if _native not in sys.modules:\n        sys.modules[_native] = _stub_module(_native)\n\nimport torch\n\n# FxNorm's pretrained net + config + features live in the repo tree (NOT in the\n# pip package), so fetch them once from GitHub and cache under /tmp.\n_REPO_RAW = \"https://raw.githubusercontent.com/sony/FxNorm-automix/main\"\n_NET_NAME = \"ours_S_Lb\"\n_ASSET_DIR = \"/tmp/fxnorm_assets\"\n_ASSETS = {\n    \"config\": f\"configs/ISMIR/{_NET_NAME}.py\",\n    \"net\": f\"trainings/results/{_NET_NAME}/net_mixture.dump\",\n    \"weights\": f\"trainings/results/{_NET_NAME}/current_model_for_mixture.params\",\n    \"features\": \"trainings/features/features_MUSDB18.npy\",\n}\n_STEMS = [\"vocals\", \"bass\", \"drums\", \"other\"]\n_MAX_SECONDS = 30  # CPU guardrail: cap each mix at 30s of audio.\n_STATE = {}\n\n\ndef _fetch(rel_path):\n    os.makedirs(_ASSET_DIR, exist_ok=True)\n    dest = os.path.join(_ASSET_DIR, rel_path.replace(\"/\", \"__\"))\n    if not os.path.exists(dest) or os.path.getsize(dest) == 0:\n        urllib.request.urlretrieve(f\"{_REPO_RAW}/{rel_path}\", dest)\n    return dest\n\n\ndef _load_model():\n    if _STATE:\n        return _STATE\n    from automix.common_supernet import SuperNet\n    from automix.common_datatypes import DataType\n\n    cfg_path = _fetch(_ASSETS[\"config\"])\n    net_path = _fetch(_ASSETS[\"net\"])\n    weights_path = _fetch(_ASSETS[\"weights\"])\n    features_path = _fetch(_ASSETS[\"features\"])\n\n    cfg_ns = {}\n    with open(cfg_path) as fh:\n        exec(compile(fh.read(), cfg_path, \"exec\"), cfg_ns)\n    config = cfg_ns[\"config\"]\n    sr = min(config[\"ACCEPTED_SAMPLING_RATES\"])\n\n    net = torch.load(net_path, map_location=\"cpu\")\n    net.load_state_dict(torch.load(weights_path, map_location=\"cpu\"))\n\n    super_net = SuperNet(\n        net,\n        stft_window=torch.from_numpy(config[\"STFT_WINDOW\"].astype(np.float32)),\n        stft_hop_length=config[\"HOP_LENGTH\"],\n        batched_valid=config[\"BATCHED_TEST\"],\n        unfolding_params=None,\n        training_length=config[\"TRAINING_SEQ_LENGTH\"],\n        training_batch_size=config[\"BATCH_SIZE\"],\n        use_amp=False,\n    )\n    super_net.to(\"cpu\")\n    super_net.eval()\n\n    features_mean = np.load(features_path, allow_pickle=True)[()]\n    _STATE.update(\n        config=config,\n        sr=sr,\n        super_net=super_net,\n        features_mean=features_mean,\n        DataType=DataType,\n    )\n    return _STATE\n\n\ndef run_mix(inputs):\n    import automix.inference as inf\n\n    state = _load_model()\n    config = state[\"config\"]\n    sr = state[\"sr\"]\n    super_net = state[\"super_net\"]\n    DataType = state[\"DataType\"]\n    n_channels = config[\"N_CHANNELS\"]\n\n    # inference.py sets these module globals inside its __main__; wire them up.\n    # No IRs are shipped, so reverb is dropped -- exactly what inference.py does\n    # when --impulse-responses is omitted.\n    effects = [\"eq\", \"compression\", \"panning\", \"loudness\"]\n    inf.SR = sr\n    inf.STEMS = list(_STEMS)\n    inf.EFFECTS = list(effects)\n    features_mean = inf.smooth_feature(state[\"features_mean\"])\n\n    stems_audio = []\n    lengths = []\n    provided = 0\n    for stem in _STEMS:\n        path = inputs.get(stem)\n        if path:\n            provided += 1\n            wav, _ = librosa.load(path, sr=sr, mono=False)\n            if wav.ndim == 1:\n                wav = np.stack([wav, wav])\n            audio = np.ascontiguousarray(wav.T, dtype=np.float32)\n        else:\n            audio = np.zeros((sr, n_channels), dtype=np.float32)\n        audio = audio[: int(_MAX_SECONDS * sr)]\n        stems_audio.append(audio)\n        lengths.append(audio.shape[0])\n\n    if provided == 0:\n        raise RuntimeError(\"Provide at least one stem (vocals, bass, drums or other).\")\n\n    max_samples = max(lengths)\n    data = np.zeros((len(_STEMS), 1, max_samples, n_channels), dtype=np.float32)\n    for k, audio in enumerate(stems_audio):\n        length = min(audio.shape[0], max_samples)\n        data[k, 0, :length, :] = audio[:length]\n\n    kernel = config[\"KERNEL_SIZE_ENCODER\"]\n    padded = (1 + max_samples // kernel) * kernel\n    data = np.pad(data, [(0, 0), (0, 0), (0, padded - max_samples), (0, 0)])\n\n    for k, stem in enumerate(_STEMS):\n        data[k][0] = inf.normalize_audio_wave((data[k][0], effects, stem, features_mean))\n\n    with torch.no_grad():\n        test_out = super_net.inference(torch.from_numpy(data).to(\"cpu\"))\n    audio_out = test_out[DataType.TIME_SAMPLES].cpu().numpy()[..., :max_samples]\n\n    out_path = os.path.join(tempfile.mkdtemp(), \"fxnorm_mix.wav\")\n    inf.save_wav(out_path, sr, audio_out[0, 0, ...].T, subtype=\"PCM_16\")\n    return out_path\n",
+        "body": "outputs = {\"mix\": run_mix(inputs)}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "name": "vocals",
+      "type": "audio",
+      "label": "Vocals stem (dry)"
+    },
+    {
+      "name": "bass",
+      "type": "audio",
+      "label": "Bass stem (dry)"
+    },
+    {
+      "name": "drums",
+      "type": "audio",
+      "label": "Drums stem (dry)"
+    },
+    {
+      "name": "other",
+      "type": "audio",
+      "label": "Other stem (dry)"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "mix",
+      "type": "audio",
+      "label": "Automatic mix (stereo)"
+    }
+  ]
+}

@@ -1792,6 +1792,50 @@ class HarpModelAgent:
                 manifests[name] = text[:max_chars]
         return manifests
 
+    def pypi_requires_dist(self, name: str, version: str) -> Optional[List[str]]:
+        """Best-effort declared dependencies of ``name==version`` from PyPI.
+
+        Returns the ``requires_dist`` list (e.g. ``['librosa (<=0.10)', ...]``)
+        or None when the metadata can't be fetched. Used to detect recipe pins
+        that violate a sibling package's declared constraints before deploy.
+        """
+
+        info = self._pypi_json(f"{quote(name)}/{quote(version)}")
+        if info is None:
+            return None
+        return list((info.get("info") or {}).get("requires_dist") or [])
+
+    def pypi_available_versions(self, name: str) -> List[str]:
+        """Best-effort list of all released versions of ``name`` on PyPI."""
+
+        info = self._pypi_json(quote(name))
+        if info is None:
+            return []
+        return list((info.get("releases") or {}).keys())
+
+    def _pypi_json(self, path: str) -> Optional[JSON]:
+        if path in _PYPI_CACHE:
+            return _PYPI_CACHE[path]
+        # Once the network is clearly unreachable, stop retrying (each miss would
+        # otherwise cost a full timeout) -- the dep check is best-effort anyway.
+        if _PYPI_STATE.get("unreachable"):
+            return None
+        result: Optional[JSON] = None
+        try:
+            req = Request(
+                f"https://pypi.org/pypi/{path}/json",
+                headers={"User-Agent": "harp-model-agent"},
+            )
+            with urlopen(req, timeout=10) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except HTTPError:
+            result = None  # a real 404 (no such package/version) -- cache the miss
+        except (URLError, TimeoutError, socket.timeout, OSError, ValueError):
+            _PYPI_STATE["unreachable"] = True
+            return None
+        _PYPI_CACHE[path] = result
+        return result
+
     def harvest_space_apps(
         self,
         output_dir: Path,
@@ -1969,6 +2013,11 @@ def _local_import_modules(source: str) -> List[str]:
 # Root dependency manifests fetched to ground recipe generation on the repo's
 # REAL declared dependency versions/bounds instead of the LLM's guesses.
 _DEP_MANIFEST_FILES = ("requirements.txt", "setup.py", "pyproject.toml", "setup.cfg")
+
+# Best-effort PyPI metadata cache for the pre-deploy dependency conflict check.
+# ``_PYPI_STATE['unreachable']`` short-circuits repeated lookups when offline.
+_PYPI_CACHE: Dict[str, Any] = {}
+_PYPI_STATE: Dict[str, Any] = {}
 
 _GITHUB_ENTRY_BASENAMES = (
     "app.py",

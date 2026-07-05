@@ -34,7 +34,10 @@ from .llm import (
 )
 from .recipe import (
     RecipeError,
+    apply_dependency_fixes,
     build_package_from_recipe,
+    collect_pip_requirements,
+    find_dependency_conflicts,
     lint_recipe_requirements,
     recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
@@ -179,6 +182,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Render a plain-Gradio BACKEND Space (no pyharp) exposing /predict, for the "
         "two-Space workflow. Forces framework.backend on the recipe before rendering.",
     )
+    generate_recipe.add_argument(
+        "--no-fix-deps",
+        action="store_true",
+        help="Do NOT auto-repair pins that violate a sibling package's declared "
+        "constraints (checked against PyPI metadata before build). Conflicts are "
+        "still reported.",
+    )
     _add_venv_flag(generate_recipe)
 
     llm_recipe = subparsers.add_parser(
@@ -291,6 +301,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--smoke-test",
         action="store_true",
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
+    )
+    llm_recipe.add_argument(
+        "--no-fix-deps",
+        action="store_true",
+        help="Do NOT auto-repair pins that violate a sibling package's declared "
+        "constraints (checked against PyPI metadata). Conflicts are still reported.",
     )
     _add_venv_flag(llm_recipe)
 
@@ -623,6 +639,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                     recipe["framework"] = framework
                 framework["backend"] = True
             _warn_recipe_requirements(recipe)
+            if not getattr(args, "no_fix_deps", False):
+                _resolve_dependency_conflicts(recipe, agent, fix=True)
             package = build_package_from_recipe(recipe)
             _warn_app_lint(package.app_py)
             folder = agent.write_generated_app_package(package, args.output)
@@ -993,6 +1011,53 @@ def _warn_recipe_requirements(recipe: dict) -> None:
         print(f"  [deps] WARNING: {warning}", file=sys.stderr)
 
 
+def _resolve_dependency_conflicts(recipe: dict, agent: HarpModelAgent, *, fix: bool = True) -> None:
+    """Detect (and by default auto-repair) pins that violate a sibling package's
+    declared constraints, using PyPI metadata. Best-effort: silently no-ops when
+    offline. This is what turns 'librosa==0.10.1 vs ddsp needs librosa<=0.10'
+    into an up-front, auto-fixed problem instead of a failed 10-minute build.
+    """
+
+    requirements = collect_pip_requirements(recipe)
+    if not requirements:
+        return
+    try:
+        conflicts = find_dependency_conflicts(
+            requirements,
+            requires_dist_of=agent.pypi_requires_dist,
+            available_versions=agent.pypi_available_versions,
+        )
+    except Exception:
+        return
+
+    fixes: dict = {}
+    for conflict in conflicts:
+        sources = "; ".join(
+            f"{src} requires {conflict['package']}{spec}"
+            for src, spec in conflict["violations"]
+        )
+        message = (
+            f"{conflict['package']}=={conflict['pinned']} conflicts with declared "
+            f"constraints ({sources})."
+        )
+        if conflict["suggestion"]:
+            message += f" Newest compatible version: {conflict['package']}=={conflict['suggestion']}."
+            if fix:
+                fixes[conflict["package"]] = conflict["suggestion"]
+        else:
+            message += f" Pin a version satisfying: {conflict['combined']}."
+        print(f"  [deps] CONFLICT: {message}", file=sys.stderr)
+
+    if fix and fixes:
+        apply_dependency_fixes(recipe, fixes)
+        applied = ", ".join(f"{name}=={version}" for name, version in fixes.items())
+        print(
+            f"  [deps] auto-repaired conflicting pins: {applied} "
+            "(the package built here is fixed; the source recipe file is unchanged)",
+            file=sys.stderr,
+        )
+
+
 def _ensure_github_pip(recipe: dict, requirement: str) -> None:
     """Guarantee a GitHub-grounded recipe installs the repo as a pip dependency.
 
@@ -1125,6 +1190,8 @@ def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
     """Shared output for the LLM recipe commands: write/print + optional package."""
 
     _warn_recipe_requirements(draft.recipe)
+    if not getattr(args, "no_fix_deps", False):
+        _resolve_dependency_conflicts(draft.recipe, agent, fix=True)
     _warn_app_lint(draft.app_py)
 
 

@@ -57,7 +57,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
 from .agent import GeneratedAppPackage
 
@@ -1191,6 +1191,232 @@ def lint_recipe_requirements(recipe: Mapping[str, Any]) -> List[str]:
                 )
             warnings.append(message)
     return warnings
+
+
+# --- Dependency conflict detection -------------------------------------------
+# A recipe can pin a package to a version that a *sibling* package forbids (e.g.
+# `librosa==0.10.1` while `ddsp==3.7.0` declares `librosa<=0.10`). pip only
+# discovers this at install time -- after a long Docker build. These helpers
+# detect such pin-vs-declared-constraint conflicts up front (from package
+# metadata) and can auto-repair them, so the agent doesn't need a human to
+# hand-feed the right version. Version logic is a small PEP 440 subset (enough
+# for the numeric release pins ML recipes use); no third-party 'packaging' dep.
+
+_VERSION_OP_RE = re.compile(r"^(===|~=|==|!=|<=|>=|<|>)\s*(.+)$")
+_CORE_VERSION_RE = re.compile(r"^\s*v?(\d+(?:\.\d+)*)")
+
+
+def _release_tuple(version: str) -> Tuple[int, ...]:
+    """Numeric release part of a version (epoch/pre/post/dev/local stripped)."""
+
+    core = _CORE_VERSION_RE.match(str(version).split("+", 1)[0])
+    if not core:
+        return (0,)
+    return tuple(int(part) for part in core.group(1).split("."))
+
+
+def _cmp_release(a: Tuple[int, ...], b: Tuple[int, ...]) -> int:
+    width = max(len(a), len(b))
+    a = a + (0,) * (width - len(a))
+    b = b + (0,) * (width - len(b))
+    return (a > b) - (a < b)
+
+
+def _satisfies_one(version: str, op: str, ref: str) -> bool:
+    va = _release_tuple(version)
+    if op in ("==", "==="):
+        if ref.endswith(".*"):
+            base = _release_tuple(ref[:-2])
+            return _cmp_release(va[: len(base)], base) == 0
+        return _cmp_release(va, _release_tuple(ref)) == 0
+    if op == "~=":  # compatible release: >= ref and same leading components
+        vb = _release_tuple(ref)
+        if _cmp_release(va, vb) < 0:
+            return False
+        base = vb[:-1] if len(vb) > 1 else vb
+        return _cmp_release(va[: len(base)], base) == 0
+    cmp = _cmp_release(va, _release_tuple(ref))
+    if op == "!=":
+        return cmp != 0
+    if op == "<=":
+        return cmp <= 0
+    if op == ">=":
+        return cmp >= 0
+    if op == "<":
+        return cmp < 0
+    if op == ">":
+        return cmp > 0
+    return True
+
+
+def _parse_specifier(spec: str) -> List[Tuple[str, str]]:
+    clauses: List[Tuple[str, str]] = []
+    for part in str(spec).split(","):
+        part = part.strip().strip("()")
+        if not part:
+            continue
+        match = _VERSION_OP_RE.match(part)
+        if match:
+            clauses.append((match.group(1), match.group(2).strip()))
+    return clauses
+
+
+def _satisfies(version: str, spec: str) -> bool:
+    return all(_satisfies_one(version, op, ref) for op, ref in _parse_specifier(spec))
+
+
+_INSTALL_LINE_RE = re.compile(r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*(.*)$")
+_REQUIRES_DIST_RE = re.compile(
+    r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*(\([^)]*\)|[<>=!~][^;]*)?\s*(;.*)?$"
+)
+
+
+def _parse_install_line(line: str) -> Optional[Tuple[str, str, Optional[str]]]:
+    """Return ``(canonical_name, specifier, exact_version_or_None)`` for a pip
+    line, or None for options/comments/URL requirements (which we can't check)."""
+
+    text = str(line).strip()
+    if not text or text.startswith("#") or text.startswith("-"):
+        return None
+    if text.startswith(_VCS_REQ_PREFIXES) or "://" in text:
+        return None
+    text = text.split(";", 1)[0].strip()
+    match = _INSTALL_LINE_RE.match(text)
+    if not match:
+        return None
+    name = match.group(1).lower().replace("_", "-")
+    spec = match.group(2).strip()
+    exact = None
+    for op, ref in _parse_specifier(spec):
+        if op in ("==", "==="):
+            exact = ref
+    return name, spec, exact
+
+
+def _parse_requires_dist(entry: str) -> Optional[Tuple[str, str, str]]:
+    """Parse a PyPI ``requires_dist`` line into ``(name, specifier, marker)``."""
+
+    match = _REQUIRES_DIST_RE.match(str(entry).strip())
+    if not match:
+        return None
+    name = match.group(1).lower().replace("_", "-")
+    spec = (match.group(2) or "").strip()
+    marker = (match.group(3) or "").strip().lstrip(";").strip()
+    return name, spec, marker
+
+
+def collect_pip_requirements(recipe: Mapping[str, Any]) -> List[str]:
+    """The pip lines that will actually be installed for the model, by mode.
+
+    Dual → the isolated backend's ``backend_pip``; remote → nothing (the
+    frontend installs none of the model's deps); otherwise ``framework.pip``.
+    """
+
+    framework = (recipe or {}).get("framework") or {}
+    if not isinstance(framework, Mapping):
+        return []
+    dual = framework.get("dual")
+    if isinstance(dual, Mapping):
+        return [str(x) for x in (dual.get("backend_pip") or []) if str(x).strip()]
+    if framework.get("remote"):
+        return []
+    return [str(x) for x in (framework.get("pip") or []) if str(x).strip()]
+
+
+def find_dependency_conflicts(
+    requirements: List[str],
+    requires_dist_of: Callable[[str, str], Optional[List[str]]],
+    available_versions: Optional[Callable[[str], Optional[List[str]]]] = None,
+) -> List[Dict[str, Any]]:
+    """Find pins that violate a sibling package's declared constraints.
+
+    ``requires_dist_of(name, version)`` returns the declared dependency strings
+    for a pinned package (e.g. from PyPI metadata), or None if unknown.
+    ``available_versions(name)`` (optional) lets us suggest the newest version
+    that satisfies every declared constraint. Returns one entry per conflicting
+    package: ``{package, pinned, violations:[(source, specifier)], combined,
+    suggestion}``.
+    """
+
+    parsed = [p for p in (_parse_install_line(line) for line in requirements) if p]
+    pinned = {name: exact for (name, _spec, exact) in parsed if exact}
+    explicit_spec = {name: spec for (name, spec, _exact) in parsed if spec}
+
+    declared: Dict[str, List[Tuple[str, str]]] = {}
+    for name, _spec, exact in parsed:
+        if not exact:
+            continue
+        for entry in requires_dist_of(name, exact) or []:
+            dep = _parse_requires_dist(entry)
+            if not dep:
+                continue
+            dep_name, dep_spec, marker = dep
+            if "extra" in marker:  # optional-extra deps aren't installed here
+                continue
+            declared.setdefault(dep_name, []).append((name, dep_spec))
+
+    conflicts: List[Dict[str, Any]] = []
+    for dep_name, sources in declared.items():
+        if dep_name not in pinned:
+            continue
+        pin = pinned[dep_name]
+        violations = [(src, spec) for (src, spec) in sources if spec and not _satisfies(pin, spec)]
+        if not violations:
+            continue
+        specs = [spec for (_src, spec) in sources if spec]
+        # Keep only NON-exact clauses of the package's own line (e.g. a '>=0.8'
+        # range) -- never its '==' pin, which is exactly what we're replacing.
+        self_spec = explicit_spec.get(dep_name)
+        if self_spec:
+            kept = [
+                f"{op}{ref}"
+                for op, ref in _parse_specifier(self_spec)
+                if op not in ("==", "===")
+            ]
+            specs.extend(kept)
+        suggestion = None
+        if available_versions is not None:
+            candidates = available_versions(dep_name) or []
+            ok = [v for v in candidates if all(_satisfies(v, s) for s in specs)]
+            if ok:
+                suggestion = max(ok, key=_release_tuple)
+        conflicts.append(
+            {
+                "package": dep_name,
+                "pinned": pin,
+                "violations": violations,
+                "combined": ",".join(specs),
+                "suggestion": suggestion,
+            }
+        )
+    return conflicts
+
+
+def _rewrite_pins(lines: List[str], fixes: Mapping[str, str]) -> List[str]:
+    out: List[str] = []
+    for line in lines:
+        parsed = _parse_install_line(line)
+        if parsed and parsed[0] in fixes and parsed[2] is not None:
+            out.append(f"{parsed[0]}=={fixes[parsed[0]]}")
+        else:
+            out.append(line)
+    return out
+
+
+def apply_dependency_fixes(recipe: MutableMapping[str, Any], fixes: Mapping[str, str]) -> None:
+    """Rewrite exact pins in ``framework.pip``/``framework.dual.backend_pip`` to
+    the versions in ``fixes`` (``{package: version}``). Mutates ``recipe``."""
+
+    if not fixes:
+        return
+    framework = recipe.get("framework")
+    if not isinstance(framework, MutableMapping):
+        return
+    dual = framework.get("dual")
+    if isinstance(dual, MutableMapping) and isinstance(dual.get("backend_pip"), list):
+        dual["backend_pip"] = _rewrite_pins(dual["backend_pip"], fixes)
+    if isinstance(framework.get("pip"), list):
+        framework["pip"] = _rewrite_pins(framework["pip"], fixes)
 
 
 def _packages_from_recipe(framework: Mapping[str, Any]) -> str:

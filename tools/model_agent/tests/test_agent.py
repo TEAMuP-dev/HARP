@@ -51,7 +51,11 @@ from tools.model_agent.llm import (
 )
 from tools.model_agent.recipe import (
     RecipeError,
+    _satisfies,
+    apply_dependency_fixes,
     build_package_from_recipe,
+    collect_pip_requirements,
+    find_dependency_conflicts,
     lint_recipe_requirements,
     recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
@@ -2183,6 +2187,95 @@ class RecipeRequirementsLintTest(unittest.TestCase):
 
     def test_no_pip_is_noop(self):
         self.assertEqual(lint_recipe_requirements({"model": {"id": "a/b"}}), [])
+
+
+class DependencyConflictTest(unittest.TestCase):
+    """The pre-deploy checker catches pins that violate a sibling's declared
+    constraints (the exact 'librosa==0.10.1 vs ddsp needs librosa<=0.10' bug)."""
+
+    # Fake package metadata so tests never touch the network.
+    _REQUIRES_DIST = {
+        ("ddsp", "3.7.0"): [
+            "librosa (<=0.10)",
+            "crepe (<=0.0.12)",
+            "numpy (<1.24)",
+            "pytest ; extra == 'test'",  # optional extra -> must be ignored
+        ],
+    }
+    _VERSIONS = {
+        "librosa": ["0.8.1", "0.9.2", "0.10.0", "0.10.1", "0.11.0"],
+        "numpy": ["1.23.5", "1.24.0", "2.0.0"],
+    }
+
+    def _requires_dist(self, name, version):
+        return self._REQUIRES_DIST.get((name, version))
+
+    def _versions(self, name):
+        return self._VERSIONS.get(name, [])
+
+    def _find(self, requirements):
+        return find_dependency_conflicts(
+            requirements, self._requires_dist, self._versions
+        )
+
+    def test_detects_violation_and_suggests_newest_compatible(self):
+        conflicts = self._find(["ddsp==3.7.0", "librosa==0.10.1", "numpy==1.23.5"])
+        self.assertEqual(len(conflicts), 1)
+        conflict = conflicts[0]
+        self.assertEqual(conflict["package"], "librosa")
+        self.assertEqual(conflict["pinned"], "0.10.1")
+        # 0.10.0 is the newest version that satisfies '<=0.10'.
+        self.assertEqual(conflict["suggestion"], "0.10.0")
+
+    def test_satisfying_pin_has_no_conflict(self):
+        # numpy 1.23.5 satisfies '<1.24'; librosa 0.9.2 satisfies '<=0.10'.
+        self.assertEqual(
+            self._find(["ddsp==3.7.0", "librosa==0.9.2", "numpy==1.23.5"]), []
+        )
+
+    def test_optional_extra_dependencies_are_ignored(self):
+        # pytest is only an [test] extra; pinning it must not trigger a conflict.
+        self.assertEqual(self._find(["ddsp==3.7.0", "pytest==999.0"]), [])
+
+    def test_version_specifier_semantics(self):
+        self.assertFalse(_satisfies("0.10.1", "<=0.10"))
+        self.assertTrue(_satisfies("0.10.0", "<=0.10"))
+        self.assertTrue(_satisfies("1.23.5", "<1.24"))
+        self.assertFalse(_satisfies("1.24.0", "<1.24"))
+        self.assertTrue(_satisfies("2.11.0", "<=2.11"))
+        self.assertTrue(_satisfies("0.4.2", ">=0.3.0,<=0.10"))
+
+    def test_collect_pip_requirements_by_mode(self):
+        dual = {"framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}}
+        self.assertEqual(
+            collect_pip_requirements(dual), ["ddsp==3.7.0", "librosa==0.10.1"]
+        )
+        remote = {"framework": {"remote": {"space": "a/b"}, "pip": ["x==1"]}}
+        self.assertEqual(collect_pip_requirements(remote), [])
+        plain = {"framework": {"pip": ["torch==2.0"]}}
+        self.assertEqual(collect_pip_requirements(plain), ["torch==2.0"])
+
+    def test_apply_dependency_fixes_rewrites_backend_pip(self):
+        recipe = {
+            "framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}
+        }
+        apply_dependency_fixes(recipe, {"librosa": "0.10.0"})
+        self.assertEqual(
+            recipe["framework"]["dual"]["backend_pip"],
+            ["ddsp==3.7.0", "librosa==0.10.0"],
+        )
+
+    def test_url_and_option_lines_are_skipped(self):
+        # git+/URL and pip option lines can't be checked and must not crash.
+        conflicts = self._find(
+            [
+                "--extra-index-url https://download.pytorch.org/whl/cpu",
+                "git+https://github.com/sony/FxNorm-automix",
+                "ddsp==3.7.0",
+                "librosa==0.10.1",
+            ]
+        )
+        self.assertEqual([c["package"] for c in conflicts], ["librosa"])
 
 
 class GitHubInstallabilityTest(unittest.TestCase):
