@@ -22,6 +22,13 @@ from .agent import (
     write_json,
 )
 from .analyze import analyze_app_file, analyze_path
+from .classifier import recommend_mode
+from .knowledge import (
+    KnowledgeBase,
+    fingerprint_for_recipe,
+    match_repair_rules,
+)
+from .resolver import resolve_requirements
 from .llm import (
     LLMError,
     RecipeDraft,
@@ -43,6 +50,10 @@ from .recipe import (
     remote_recipe_from_api_info,
     render_app_from_recipe,
 )
+
+
+_DEFAULT_TARGET_PY = "3.10"
+_DEFAULT_TARGET_PLATFORM = "manylinux2014_x86_64"
 
 
 def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
@@ -509,6 +520,72 @@ def build_parser() -> argparse.ArgumentParser:
         default="Deploy HARP wrapper via model agent",
         help="Commit message for the upload.",
     )
+    deploy.add_argument(
+        "--no-record",
+        action="store_true",
+        help="Do not record this deployment in the knowledge base on success.",
+    )
+
+    recommend = subparsers.add_parser(
+        "recommend-mode",
+        help="Analyze a repo and recommend a deployment mode (single / remote / "
+        "dual / two-space) from deterministic signals, plus similar past deployments.",
+    )
+    rec_source = recommend.add_mutually_exclusive_group(required=True)
+    rec_source.add_argument("--github", default="", help="GitHub repo URL/spec (owner/repo or URL).")
+    rec_source.add_argument("--card", type=Path, help="Model-card JSON file (meta/readme/files).")
+    rec_source.add_argument("--repo", help="Hugging Face model repo id to fetch the card from.")
+    recommend.add_argument("--ref", default="", help="Git branch/tag/SHA for --github.")
+    recommend.add_argument(
+        "--existing-space",
+        default="",
+        help="An existing backend Space id that could serve this model (enables the "
+        "remote fallback). Pass the Space you'd proxy to.",
+    )
+    recommend.add_argument("--output", type=Path, help="Optional JSON output path.")
+
+    resolve = subparsers.add_parser(
+        "resolve-check",
+        help="Pre-check dependency resolution: the deterministic PyPI conflict check "
+        "plus an optional `pip install --dry-run` (target the deploy env with --target).",
+    )
+    resolve_source = resolve.add_mutually_exclusive_group(required=True)
+    resolve_source.add_argument("recipe", nargs="?", type=Path, help="Recipe JSON file.")
+    resolve_source.add_argument(
+        "--requirements", type=Path, help="A requirements.txt-style file to resolve instead."
+    )
+    resolve.add_argument(
+        "--dry-run-pip",
+        action="store_true",
+        help="Also run `pip install --dry-run` (needs pip + network). Off by default.",
+    )
+    resolve.add_argument(
+        "--target",
+        action="store_true",
+        help="With --dry-run-pip: resolve wheels-only for the deploy environment "
+        f"(Python {_DEFAULT_TARGET_PY}, {_DEFAULT_TARGET_PLATFORM}) instead of the host.",
+    )
+    resolve.add_argument("--python-version", default=_DEFAULT_TARGET_PY, help="Target Python for --target.")
+    resolve.add_argument("--platform", default=_DEFAULT_TARGET_PLATFORM, help="Target platform for --target.")
+    resolve.add_argument("--output", type=Path, help="Optional JSON output path.")
+
+    knowledge = subparsers.add_parser(
+        "knowledge",
+        help="Query the deployment knowledge base (past deployments, similar stacks, "
+        "and error->fix repair rules).",
+    )
+    knowledge.add_argument("--find-repo", default="", help="List past deployments for a repo id.")
+    knowledge.add_argument(
+        "--similar",
+        type=Path,
+        help="A recipe JSON: list past deployments with the same dependency fingerprint.",
+    )
+    knowledge.add_argument(
+        "--diagnose",
+        default="",
+        help="An error message/log: return matching repair rules and past failure cases.",
+    )
+    knowledge.add_argument("--output", type=Path, help="Optional JSON output path.")
 
     return parser
 
@@ -950,7 +1027,23 @@ def main(argv: Iterable[str] | None = None) -> int:
                     commit_message=args.message,
                     log=log,
                 )
+            if not getattr(args, "no_record", False):
+                _record_deployment(args.package, result, log=log)
             _emit_json(result, None)
+            return 0
+
+        if args.command == "recommend-mode":
+            decision = _recommend_mode(agent, args)
+            _emit_json(decision, args.output)
+            return 0
+
+        if args.command == "resolve-check":
+            report = _resolve_check(agent, args)
+            _emit_json(report, args.output)
+            return 0 if report.get("ok", True) else 4
+
+        if args.command == "knowledge":
+            _emit_json(_knowledge_query(args), args.output)
             return 0
 
     except DeploySpaceError as exc:
@@ -1056,6 +1149,144 @@ def _resolve_dependency_conflicts(recipe: dict, agent: HarpModelAgent, *, fix: b
             "(the package built here is fixed; the source recipe file is unchanged)",
             file=sys.stderr,
         )
+
+
+def _recommend_mode(agent: HarpModelAgent, args) -> dict:
+    """Analyze a repo and recommend a deployment mode, with similar past deploys."""
+
+    manifests: dict = {}
+    sources: dict = {}
+    card = None
+    repo_key = ""
+    if args.github:
+        owner, repo, ref = agent.resolve_github_target(args.github, ref=args.ref or None)
+        repo_key = f"{owner}/{repo}"
+        print(f"Analyzing GitHub repo {owner}/{repo}@{ref} ...", file=sys.stderr)
+        card = agent.get_github_card(args.github, ref=ref)
+        manifests = agent.fetch_github_dependencies(args.github, ref=ref)
+        sources = agent.fetch_github_sources(args.github, ref=ref)
+    elif args.card:
+        card = _read_json(args.card)
+        meta = card.get("meta") if isinstance(card, dict) else {}
+        repo_key = str((meta or {}).get("id") or "")
+    else:
+        card = _fetch_card_or_exit(agent, args.repo)
+        repo_key = str(args.repo)
+
+    decision = recommend_mode(
+        manifests=manifests,
+        sources=sources,
+        card=card if isinstance(card, dict) else None,
+        has_existing_space=bool(args.existing_space),
+    )
+    payload = decision.to_dict()
+    payload["repo"] = repo_key
+
+    kb = KnowledgeBase()
+    similar = kb.find_similar(
+        repo=repo_key,
+        requirements=list(manifests.get("requirements.txt", "").splitlines()) or None,
+    )
+    if similar:
+        payload["similar_past_deployments"] = [
+            {k: rec.get(k) for k in ("repo", "mode", "python", "outcome", "notes")}
+            for rec in similar
+        ]
+    return payload
+
+
+def _resolve_check(agent: HarpModelAgent, args) -> dict:
+    """Run the deterministic PyPI conflict check, then optionally pip --dry-run."""
+
+    if args.requirements:
+        requirements = [
+            line for line in args.requirements.read_text(encoding="utf-8").splitlines()
+        ]
+        recipe = None
+    else:
+        recipe = _read_json(args.recipe)
+        requirements = collect_pip_requirements(recipe)
+
+    report: dict = {"ok": True, "requirements_checked": len(requirements)}
+
+    # Layer 1: deterministic PyPI metadata check (no install).
+    conflicts = []
+    try:
+        conflicts = find_dependency_conflicts(
+            requirements,
+            requires_dist_of=agent.pypi_requires_dist,
+            available_versions=agent.pypi_available_versions,
+        )
+    except Exception:
+        conflicts = []
+    if conflicts:
+        report["ok"] = False
+        report["metadata_conflicts"] = [
+            {
+                "package": c["package"],
+                "pinned": c["pinned"],
+                "violations": [f"{src} requires {c['package']}{spec}" for src, spec in c["violations"]],
+                "suggestion": c.get("suggestion"),
+            }
+            for c in conflicts
+        ]
+
+    # Layer 2: pip --dry-run (opt-in).
+    if args.dry_run_pip:
+        result = resolve_requirements(
+            requirements,
+            target_python=args.python_version if args.target else None,
+            target_platform=args.platform if args.target else None,
+        )
+        report["pip_dry_run"] = result.to_dict()
+        if not result.ok:
+            report["ok"] = False
+    return report
+
+
+def _knowledge_query(args) -> dict:
+    kb = KnowledgeBase()
+    if args.diagnose:
+        return {
+            "repair_rules": match_repair_rules(args.diagnose),
+            "past_failures": kb.find_failures_for_error(args.diagnose),
+        }
+    if args.similar is not None:
+        recipe = _read_json(args.similar)
+        fingerprint = fingerprint_for_recipe(recipe) if isinstance(recipe, dict) else ""
+        return {
+            "deps_fingerprint": fingerprint,
+            "matches": kb.find_by_fingerprint(fingerprint),
+        }
+    if args.find_repo:
+        return {"repo": args.find_repo, "matches": kb.find_by_repo(args.find_repo)}
+    return {"deployments": kb.deployments()}
+
+
+def _record_deployment(package_dir: Path, result: dict, *, log=None) -> None:
+    """Best-effort: record a successful deploy in the knowledge base."""
+
+    try:
+        manifest_path = Path(package_dir) / ".harp" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        mode = str(manifest.get("deploy_mode") or "pip")
+        record = {
+            "repo": str(manifest.get("repo_id") or result.get("repo_id") or ""),
+            "model_id": str(manifest.get("repo_id") or ""),
+            "mode": {"remote-backend": "remote", "dual-interpreter": "dual"}.get(mode, mode),
+            "sdk": str(result.get("sdk") or manifest.get("space_sdk") or "gradio"),
+            "space_url": str(result.get("space_url") or ""),
+            "backend_space": str(manifest.get("backend_space") or ""),
+            "outcome": "success",
+        }
+        if not record["repo"]:
+            return
+        KnowledgeBase().record_deployment(record)
+        if log is not None:
+            log(f"recorded deployment in the knowledge base ({record['repo']} / {record['mode']})")
+    except Exception:
+        # Recording is a convenience; never fail a real deploy over it.
+        pass
 
 
 def _ensure_github_pip(recipe: dict, requirement: str) -> None:

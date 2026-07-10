@@ -1,0 +1,62 @@
+{
+  "model": {
+    "id": "SonyResearch/Woosh",
+    "name": "Woosh-DFlow (Text-to-Audio SFX)",
+    "author": "Sony AI (Hadjeres, Ferras, Koutini, Weck, Bittar, Hummel, Lahrichi, Missoum, Serra, Mitsufuji)",
+    "description": "Generate a ~5s, 48kHz sound effect from a text prompt using Sony AI's Woosh-DFlow, the distilled (4-step) text-to-audio model from the Woosh sound-effect foundation model family. This is a thin HARP frontend that proxies to a Woosh-DFlow backend Space over its /generate API; the heavy model (Python 3.12, torch 2.8, Gradio 6) runs there, unmodified. Open weights are CC-BY-NC 4.0 (non-commercial).",
+    "license": "cc-by-nc-4.0",
+    "tags": [
+      "text-to-audio",
+      "sound-effects",
+      "sfx",
+      "generative-audio"
+    ],
+    "task": "text-to-audio"
+  },
+  "framework": {
+    "remote": {
+      "space": "REPLACE_WITH_YOUR_BACKEND_SPACE",
+      "api_name": "/generate",
+      "args": [
+        {"from": "prompt"},
+        {"from": "cfg_scale", "cast": "float"},
+        {"from": "seed", "cast": "int"}
+      ],
+      "returns": [
+        {"index": 0, "to": "audio"}
+      ]
+    }
+  },
+  "inputs": [
+    {
+      "name": "prompt",
+      "type": "textbox",
+      "label": "Prompt",
+      "info": "Describe the sound effect to generate, e.g. 'sportscar engine revving and driving away quickly'."
+    },
+    {
+      "name": "cfg_scale",
+      "type": "slider",
+      "label": "CFG scale",
+      "min": 0.0,
+      "max": 15.0,
+      "step": 0.1,
+      "default": 4.5,
+      "info": "Classifier-free guidance strength: higher follows the prompt more closely."
+    },
+    {
+      "name": "seed",
+      "type": "number",
+      "label": "Seed",
+      "default": -1,
+      "info": "Random seed; use -1 for a new random result each run."
+    }
+  ],
+  "outputs": [
+    {
+      "name": "audio",
+      "type": "audio",
+      "label": "Generated sound effect"
+    }
+  ]
+}

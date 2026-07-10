@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "deployments": [
+    {
+      "repo": "AMAAI-Lab/SonicMaster",
+      "model_id": "AMAAI-Lab/SonicMaster",
+      "mode": "remote",
+      "python": "3.10",
+      "gpu": false,
+      "sdk": "gradio",
+      "deps_fingerprint": "e3b0c44298fc1c14",
+      "recipe": "examples/sonicmaster_remote_recipe.json",
+      "lock": null,
+      "backend_space": "amaai-lab/SonicMaster",
+      "signals": {
+        "pip_installable": false,
+        "has_existing_space": true,
+        "gradio_conflict": true,
+        "notes": "pins torch==2.4.0 (unresolvable) + gated stable-audio VAE"
+      },
+      "outcome": "success",
+      "notes": "Thin pyharp frontend proxies to the authors' official ZeroGPU Space. --user-token added so ZeroGPU quota is attributed to the caller."
+    },
+    {
+      "repo": "Soul-AILab/SoulX-Singer",
+      "model_id": "Soul-AILab/SoulX-Singer",
+      "mode": "remote",
+      "python": "3.10",
+      "gpu": false,
+      "sdk": "gradio",
+      "deps_fingerprint": "e3b0c44298fc1c14",
+      "recipe": "examples/soulx_singer_remote_recipe.json",
+      "lock": null,
+      "backend_space": "Soul-AILab/SoulX-Singer",
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": true,
+        "gradio_conflict": true,
+        "notes": "pyharp's descript-audiotools forces protobuf<3.20, which downgrades nemo-toolkit and produced gibberish output when co-installed"
+      },
+      "outcome": "success",
+      "notes": "Proxy to live /synthesis_function; refined with --remote-llm grounded on the Space's webui.py (real dropdown choices, hidden metadata args as const null)."
+    },
+    {
+      "repo": "magenta/ddsp",
+      "model_id": "magenta/ddsp",
+      "mode": "dual",
+      "python": "3.9",
+      "gpu": false,
+      "sdk": "docker",
+      "deps_fingerprint": "adaf8c3b9c0a71ba",
+      "recipe": "examples/ddsp_dual_recipe.json",
+      "lock": "knowledge/locks/magenta-ddsp.txt",
+      "backend_space": null,
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": false,
+        "native_fragile": true,
+        "notes": "crepe<=0.0.12 imports imp (gone in 3.12) and pkg_resources (gone in setuptools>=81); librosa pin conflicts with ddsp<=0.10"
+      },
+      "outcome": "success",
+      "notes": "One Space via dual-interpreter. setuptools<81 build constraint + auto-repaired librosa==0.9.2."
+    },
+    {
+      "repo": "sony/FxNorm-automix",
+      "model_id": "sony/FxNorm-automix",
+      "mode": "dual",
+      "python": "3.9",
+      "gpu": false,
+      "sdk": "docker",
+      "deps_fingerprint": "416c83128cc5966d",
+      "recipe": "examples/fxnorm_automix_dual_recipe.json",
+      "lock": "knowledge/locks/sony-fxnorm-automix.txt",
+      "backend_space": null,
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": false,
+        "native_fragile": true,
+        "cuda_hardcoded": true,
+        "notes": "inference.py hard-codes .to('cuda'); reimplemented on CPU. aubio/sox/soxbindings stubbed (unused in mixing). psutil was undeclared but imported."
+      },
+      "outcome": "success",
+      "notes": "One Space via dual-interpreter, CPU-only, weights fetched from GitHub at runtime."
+    },
+    {
+      "repo": "SonyResearch/Woosh",
+      "model_id": "SonyResearch/Woosh",
+      "mode": "two-space",
+      "python": "3.12",
+      "gpu": true,
+      "sdk": "docker",
+      "deps_fingerprint": "860a2c57b1f0088a",
+      "recipe": "examples/woosh_dflow_remote_recipe.json",
+      "backend": "examples/woosh_dflow_backend",
+      "lock": "knowledge/locks/sonyresearch-woosh.txt",
+      "backend_space": "REPLACE_WITH_YOUR_BACKEND_SPACE",
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": false,
+        "python_ok": false,
+        "python_floor": "3.12",
+        "gradio_conflict": true,
+        "weights_noncommercial": true,
+        "notes": "requires Python 3.12 + torch 2.8 + Gradio 6 (dual base image tops out ~3.10), ~3.4 GB CC-BY-NC weights"
+      },
+      "outcome": "success",
+      "notes": "Hand-authored Docker backend (reuses Sony's inference) deployed on GPU + CPU; agent-built pyharp remote frontend proxies to it. Two Spaces only because dual can't build Python 3.12."
+    },
+    {
+      "repo": "Music-and-Culture-Technology-Lab/omnizart",
+      "model_id": "Music-and-Culture-Technology-Lab/omnizart",
+      "mode": "two-space",
+      "python": "3.8",
+      "gpu": false,
+      "sdk": "docker",
+      "deps_fingerprint": "111cb07feba3692a",
+      "recipe": "examples/omnizart_remote_recipe.json",
+      "backend": "examples/omnizart_backend",
+      "lock": "knowledge/locks/music-and-culture-technology-lab-omnizart.txt",
+      "backend_space": "REPLACE_WITH_YOUR_BACKEND_SPACE",
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": false,
+        "native_fragile": true,
+        "notes": "tensorflow + madmom/Cython + vamp + pyfluidsynth + system libs; maintainers publish a working Docker image"
+      },
+      "outcome": "success",
+      "notes": "Docker backend built FROM mctlab/omnizart:latest (native stack prebuilt) + a Gradio /transcribe endpoint; agent-built pyharp remote frontend proxies to it."
+    }
+  ]
+}

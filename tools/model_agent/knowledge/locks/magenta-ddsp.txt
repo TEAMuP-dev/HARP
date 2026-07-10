@@ -1,0 +1,12 @@
+# Known-good backend (isolated Python 3.9) install set for magenta/ddsp.
+# Dual-interpreter Docker Space; frontend installs pyharp + gradio==5.28.0.
+# librosa is pinned to 0.9.2 because ddsp==3.7.0 declares librosa<=0.10 AND the
+# audio stack (numba 0.56/llvmlite via numpy 1.23) needs the older wheel.
+ddsp==3.7.0
+tensorflow==2.11.0
+protobuf==3.19.6
+numpy==1.23.5
+librosa==0.9.2
+crepe<=0.0.12
+gin-config>=0.3.0
+soundfile

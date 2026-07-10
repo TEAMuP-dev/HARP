@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "model": "magenta/ddsp",
+      "mode": "dual",
+      "error_signature": "No module named 'imp'",
+      "error_excerpt": "File \"<string>\", line 2, in <module> ModuleNotFoundError: No module named 'imp' ... ERROR: Failed to build 'crepe' when getting requirements to build wheel",
+      "diagnosis": "crepe<=0.0.12's legacy setup.py imports the 'imp' module, removed in Python 3.12. A gradio-SDK Space runs Python 3.12, so the build fails.",
+      "fix": "Deploy in dual-interpreter mode with an older backend_python (3.9) so 'imp' still exists.",
+      "rule": "imp-removed"
+    },
+    {
+      "model": "magenta/ddsp",
+      "mode": "dual",
+      "error_signature": "No module named 'pkg_resources'",
+      "error_excerpt": "ModuleNotFoundError: No module named 'pkg_resources' ... ERROR: Failed to build 'crepe' when getting requirements to build wheel",
+      "diagnosis": "crepe imports pkg_resources at build time; setuptools>=81 removed it, and pip's isolated build env used a modern setuptools.",
+      "fix": "Pin setuptools<81 both in the venv and via PIP_CONSTRAINT for pip's isolated build environments (the dual Dockerfile does this).",
+      "rule": "pkg-resources-removed"
+    },
+    {
+      "model": "magenta/ddsp",
+      "mode": "dual",
+      "error_signature": "librosa==0.10.1 because these package versions have conflicting dependencies",
+      "error_excerpt": "The user requested librosa==0.10.1; ddsp 3.7.0 depends on librosa<=0.10",
+      "diagnosis": "A pinned librosa version violated ddsp's declared librosa<=0.10 constraint; the pin was an LLM guess, not from ddsp's metadata.",
+      "fix": "Auto-repair via the PyPI dependency-conflict check: re-pin to librosa==0.9.2 (newest satisfying every declared bound + the numpy/numba floor).",
+      "rule": "dependency-conflict"
+    },
+    {
+      "model": "sony/FxNorm-automix",
+      "mode": "dual",
+      "error_signature": "No module named 'psutil'",
+      "error_excerpt": "ModuleNotFoundError: No module named 'psutil' (from automix.common_miscellaneous)",
+      "diagnosis": "psutil is imported on the inference path but not declared in the repo's dependency manifests, so it was missing from backend_pip.",
+      "fix": "Add psutil==5.9.8 to backend_pip. A static import-graph scan of the inference entrypoint would have caught this before deploy.",
+      "rule": "missing-module"
+    },
+    {
+      "model": "AMAAI-Lab/SonicMaster",
+      "mode": "pip",
+      "error_signature": "does not appear to be a Python project",
+      "error_excerpt": "git+https://github.com/AMAAI-Lab/SonicMaster.git@main does not appear to be a Python project: neither 'setup.py' nor 'pyproject.toml' found.",
+      "diagnosis": "The repo has no root packaging file, so `pip install git+<repo>` cannot build it. A self-contained pyharp wrapper that imports it can't work.",
+      "fix": "Strip the doomed git+ line and deploy as a remote-backend proxy to the model's existing Gradio Space.",
+      "rule": "not-pip-installable"
+    },
+    {
+      "model": "AMAAI-Lab/SonicMaster",
+      "mode": "pip",
+      "error_signature": "No matching distribution found for torch==2.4.0",
+      "error_excerpt": "ERROR: No matching distribution found for torch==2.4.0",
+      "diagnosis": "The authored recipe pinned a torch build not available on the Space's default index.",
+      "fix": "Proxy to the existing backend Space (remote mode) so the heavy/fragile torch pin stays on the backend.",
+      "rule": "torch-no-distribution"
+    },
+    {
+      "model": "Soul-AILab/SoulX-Singer",
+      "mode": "pip",
+      "error_signature": "gradio and huggingface_hub==1.20.1 because these package versions have conflicting dependencies",
+      "error_excerpt": "ERROR: Cannot install -r requirements.txt, gradio and huggingface_hub==1.20.1 because these package versions have conflicting dependencies.",
+      "diagnosis": "A freeze captured against gradio 6 carried huggingface_hub 1.x, which conflicts with pyharp's gradio==5.28.0.",
+      "fix": "Never transplant gradio-coupled infra packages from a freeze (the _FREEZE_BLOCKLIST); keep the Space's own declared constraints so pip resolves against gradio 5.28.0.",
+      "rule": "gradio-huggingface-hub-conflict"
+    }
+  ]
+}
