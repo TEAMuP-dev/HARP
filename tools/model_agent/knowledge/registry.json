@@ -79,8 +79,29 @@
         "cuda_hardcoded": true,
         "notes": "inference.py hard-codes .to('cuda'); reimplemented on CPU. aubio/sox/soxbindings stubbed (unused in mixing). psutil was undeclared but imported."
       },
-      "outcome": "success",
-      "notes": "One Space via dual-interpreter, CPU-only, weights fetched from GitHub at runtime."
+      "outcome": "failed",
+      "notes": "Dual-interpreter build did not produce working inference (user-reported). A working backend Space exists at teamup-tech/FxNorm-automix -- prefer the remote-proxy record below over rebuilding this."
+    },
+    {
+      "repo": "sony/FxNorm-automix",
+      "model_id": "sony/FxNorm-automix",
+      "mode": "remote",
+      "python": "3.10",
+      "gpu": false,
+      "sdk": "gradio",
+      "deps_fingerprint": "e3b0c44298fc1c14",
+      "recipe": null,
+      "lock": null,
+      "backend_space": "teamup-tech/FxNorm-automix",
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": true,
+        "cuda_hardcoded": true,
+        "native_fragile": true,
+        "notes": "dual build did not work; a working backend Space is available, so proxy to it (frontend installs only pyharp + gradio + gradio_client)"
+      },
+      "outcome": "backend-available",
+      "notes": "Recommended path now that a working backend Space exists: scaffold-remote-recipe teamup-tech/FxNorm-automix and deploy a thin pyharp frontend."
     },
     {
       "repo": "SonyResearch/Woosh",
@@ -124,8 +145,8 @@
         "native_fragile": true,
         "notes": "tensorflow + madmom/Cython + vamp + pyfluidsynth + system libs; maintainers publish a working Docker image"
       },
-      "outcome": "success",
-      "notes": "Docker backend built FROM mctlab/omnizart:latest (native stack prebuilt) + a Gradio /transcribe endpoint; agent-built pyharp remote frontend proxies to it."
+      "outcome": "unverified",
+      "notes": "Docker backend built FROM mctlab/omnizart:latest (native stack prebuilt) + a Gradio /transcribe endpoint; agent-built pyharp remote frontend proxies to it. Not yet end-to-end tested by the user."
     }
   ]
 }
