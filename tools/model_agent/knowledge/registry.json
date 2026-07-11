@@ -130,8 +130,29 @@
     {
       "repo": "Music-and-Culture-Technology-Lab/omnizart",
       "model_id": "Music-and-Culture-Technology-Lab/omnizart",
+      "mode": "dual",
+      "python": "3.6",
+      "gpu": false,
+      "sdk": "docker",
+      "deps_fingerprint": "111cb07feba3692a",
+      "recipe": null,
+      "backend": "examples/omnizart_pyharp",
+      "lock": "knowledge/locks/music-and-culture-technology-lab-omnizart.txt",
+      "backend_space": null,
+      "signals": {
+        "pip_installable": true,
+        "has_existing_space": false,
+        "native_fragile": true,
+        "notes": "base image mctlab/omnizart:latest is Python 3.6 (FROM tensorflow/tensorflow:2.5.0-gpu); modern Gradio/pyharp need Python >=3.10, so the frontend runs in a separate 3.10 venv and IPCs to the 3.6 model."
+      },
+      "outcome": "unverified",
+      "notes": "PREFERRED single-Space path: one Docker Space FROM mctlab/omnizart:latest with a Python 3.10 pyharp frontend venv + Python 3.6 Omnizart backend over subprocess JSON IPC (hand-authored, not LLM-rendered). See examples/omnizart_pyharp."
+    },
+    {
+      "repo": "Music-and-Culture-Technology-Lab/omnizart",
+      "model_id": "Music-and-Culture-Technology-Lab/omnizart",
       "mode": "two-space",
-      "python": "3.8",
+      "python": "3.6",
       "gpu": false,
       "sdk": "docker",
       "deps_fingerprint": "111cb07feba3692a",
@@ -143,10 +164,10 @@
         "pip_installable": true,
         "has_existing_space": false,
         "native_fragile": true,
-        "notes": "tensorflow + madmom/Cython + vamp + pyfluidsynth + system libs; maintainers publish a working Docker image"
+        "notes": "tensorflow + madmom/Cython + vamp + pyfluidsynth + system libs; maintainers publish a working Docker image. CAVEAT: the base image is Python 3.6, so the plain backend cannot install gradio==5.28.0 -- prefer the single-Space 'dual' record above."
       },
-      "outcome": "unverified",
-      "notes": "Docker backend built FROM mctlab/omnizart:latest (native stack prebuilt) + a Gradio /transcribe endpoint; agent-built pyharp remote frontend proxies to it. Not yet end-to-end tested by the user."
+      "outcome": "superseded",
+      "notes": "Two-Space Docker backend + pyharp remote frontend. Superseded by the single-Space dual variant (examples/omnizart_pyharp) because the plain backend's gradio==5.28.0 pin can't run on the base image's Python 3.6."
     }
   ]
 }

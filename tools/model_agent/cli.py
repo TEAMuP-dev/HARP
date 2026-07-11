@@ -5,7 +5,7 @@ import concurrent.futures
 import json
 import sys
 from pathlib import Path
-from typing import Iterable, List, Mapping
+from typing import Iterable, List, Mapping, Optional
 from urllib.error import HTTPError, URLError
 
 from .agent import (
@@ -296,6 +296,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not include corpus few-shot examples in the prompt.",
     )
+    llm_recipe.add_argument(
+        "--emit-anyway",
+        action="store_true",
+        help="With --github: write the drafted recipe even when the deterministic "
+        "classifier judges the repo won't deploy as a single self-contained Space "
+        "(native-fragile deps, gradio/python conflicts, or not pip-installable). By "
+        "default such a doomed draft is NOT written; the tool prints the recommended "
+        "fallback mode instead.",
+    )
     llm_recipe.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
     llm_recipe.add_argument(
         "--generate-package",
@@ -524,6 +533,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-record",
         action="store_true",
         help="Do not record this deployment in the knowledge base on success.",
+    )
+    deploy.add_argument(
+        "--skip-resolve-check",
+        action="store_true",
+        help="Skip the pre-deploy dependency-resolution gate. By default a Gradio "
+        "Space's requirements.txt is checked (PyPI metadata conflicts + a pip "
+        f"--dry-run for Python {_DEFAULT_TARGET_PY}/{_DEFAULT_TARGET_PLATFORM}) and "
+        "deployment is refused on a genuine conflict, so you don't push a Space that "
+        "can't build. Docker/dual bundles are skipped automatically.",
     )
 
     recommend = subparsers.add_parser(
@@ -888,25 +906,31 @@ def main(argv: Iterable[str] | None = None) -> int:
                 backend=getattr(args, "backend", False),
             )
             if github_target is not None:
-                if _repo_is_pip_installable(card):
+                owner, repo, _ref = github_target
+                manifests = context.dependency_manifests or {}
+                # Authoritative pip-installability: a root packaging file fetched by
+                # the dependency grounding proves installability even when the card's
+                # (often partial) file listing misses it. Fall back to the card only
+                # when no packaging manifest was fetched.
+                if _pip_installable_from_signals(card, manifests):
                     _ensure_github_pip(draft.recipe, context.source_repo_url)
                 else:
                     # No setup.py/pyproject.toml -> `pip install git+<repo>` fails with
                     # "does not appear to be a Python project". Strip that doomed line
                     # (the LLM often adds it) and steer to remote-backend mode instead.
                     _strip_repo_pip(draft.recipe, context.source_repo_url)
-                    owner, repo, _ref = github_target
-                    print(
-                        f"  [deps] WARNING: {owner}/{repo} has no setup.py/pyproject.toml, "
-                        "so it is NOT pip-installable -- a non-remote wrapper that imports "
-                        "it cannot work (this is the 'does not appear to be a Python "
-                        "project' build error). Deploy it as a remote-backend proxy to its "
-                        "Gradio Space instead, e.g.:\n"
-                        f"    python -m tools.model_agent scaffold-remote-recipe <its-hf-space>\n"
-                        f"    python -m tools.model_agent generate-recipe-from-llm --github "
-                        f"{owner}/{repo} --remote-space <its-hf-space>",
-                        file=sys.stderr,
+                # Single-Space feasibility gate: don't hand back a recipe that the
+                # deterministic classifier says can't deploy as one self-contained
+                # pyharp Space (unless the user asked for a backend or --emit-anyway).
+                if not getattr(args, "backend", False):
+                    decision = recommend_mode(
+                        manifests=manifests,
+                        sources=context.space_sources or {},
+                        card=card if isinstance(card, dict) else None,
                     )
+                    if decision.mode != "single" and not getattr(args, "emit_anyway", False):
+                        _print_single_space_gate(owner, repo, decision)
+                        return 2
             return _emit_recipe_draft(agent, draft, args)
 
         if args.command == "list-models":
@@ -992,6 +1016,16 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "deploy-space":
             log = lambda message: print(f"  [deploy] {message}", file=sys.stderr)
+            if not getattr(args, "skip_resolve_check", False) and args.sdk != "docker":
+                gate = _predeploy_resolve_gate(agent, args.package, log=log)
+                if gate is not None and not gate["ok"]:
+                    print(
+                        "  [deploy] ABORTED: the wrapper's dependencies do not resolve; "
+                        "deploying would produce a Space that fails to build.",
+                        file=sys.stderr,
+                    )
+                    _emit_json(gate, None)
+                    return 4
             if args.into_space:
                 print(
                     f"Overlaying HARP wrapper onto existing Space {args.repo} "
@@ -1244,6 +1278,96 @@ def _resolve_check(agent: HarpModelAgent, args) -> dict:
     return report
 
 
+def _predeploy_resolve_gate(
+    agent: HarpModelAgent, package_dir: Path, *, log=None, resolve_fn=resolve_requirements
+) -> Optional[dict]:
+    """Pre-deploy dependency-resolution gate for a Gradio Space package.
+
+    Reads the package's ``requirements.txt`` and runs two cheap-first checks:
+      1. deterministic PyPI metadata conflicts (``find_dependency_conflicts``);
+      2. ``pip install --dry-run`` for the deploy target (Linux / Python 3.10,
+         wheels-only).
+
+    Returns a report dict (``ok`` False => a *genuine* conflict was found and the
+    deploy should be refused), or ``None`` when there's nothing to check (no
+    requirements.txt). We only fail the deploy on real conflicts
+    (resolution-impossible / cannot-install / a pinned-vs-declared metadata
+    clash); a wheels-only "no matching distribution" is reported as a non-blocking
+    warning (the package may still build from sdist on the Space), and an
+    inconclusive/offline run never blocks.
+    """
+
+    req_path = Path(package_dir) / "requirements.txt"
+    if not req_path.exists():
+        return None  # docker/dual bundles or nothing to check
+
+    def _emit(message: str) -> None:
+        if log:
+            log(message)
+
+    _emit("checking that the wrapper's dependencies resolve before deploying ...")
+    requirements = [
+        line for line in req_path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
+    report: dict = {"ok": True, "requirements_checked": len(requirements)}
+
+    # Layer 1: deterministic PyPI metadata check (a pin vs a sibling's bound).
+    try:
+        conflicts = find_dependency_conflicts(
+            requirements,
+            requires_dist_of=agent.pypi_requires_dist,
+            available_versions=agent.pypi_available_versions,
+        )
+    except Exception:
+        conflicts = []
+    if conflicts:
+        report["ok"] = False
+        report["metadata_conflicts"] = [
+            {
+                "package": c["package"],
+                "pinned": c["pinned"],
+                "violations": [f"{src} requires {c['package']}{spec}" for src, spec in c["violations"]],
+                "suggestion": c.get("suggestion"),
+            }
+            for c in conflicts
+        ]
+
+    # Layer 2: pip --dry-run for the deploy target (wheels-only).
+    result = resolve_fn(
+        requirements,
+        target_python=_DEFAULT_TARGET_PY,
+        target_platform=_DEFAULT_TARGET_PLATFORM,
+    )
+    report["pip_dry_run"] = result.to_dict()
+    blocking_kinds = {"resolution-impossible", "cannot-install"}
+    hard = [c for c in result.conflicts if c.get("kind") in blocking_kinds]
+    soft = [c for c in result.conflicts if c.get("kind") not in blocking_kinds]
+    if hard:
+        report["ok"] = False
+    if soft:
+        report["warnings"] = (
+            "wheels-only 'no matching distribution' for: "
+            + ", ".join(c.get("requirement", "?") for c in soft)
+            + " (may still build from sdist on the Space; not blocking)"
+        )
+
+    if report["ok"]:
+        note = "dependencies resolve"
+        if result.skipped:
+            note = "dependency check inconclusive (offline/unbuildable dry-run) -- proceeding"
+        elif result.unchecked:
+            note = (
+                "dependencies resolve (git/URL lines "
+                + f"[{len(result.unchecked)}] can't be pre-checked wheels-only)"
+            )
+        _emit(note + ".")
+    else:
+        _emit("dependency conflict detected -- see the report below.")
+        _emit("re-run with --skip-resolve-check to deploy anyway, or diagnose with:")
+        _emit("  python -m tools.model_agent knowledge --diagnose \"<paste the conflict>\"")
+    return report
+
+
 def _knowledge_query(args) -> dict:
     kb = KnowledgeBase()
     if args.diagnose:
@@ -1367,6 +1491,64 @@ def _repo_is_pip_installable(card: object) -> bool:
         if path.lower() in _PIP_PACKAGING_MARKERS:
             return True
     return False
+
+
+def _pip_installable_from_signals(card: object, manifests: Mapping[str, str]) -> bool:
+    """Authoritative pip-installability: trust a fetched root packaging manifest.
+
+    ``fetch_github_dependencies`` GETs ``setup.py`` / ``pyproject.toml`` /
+    ``setup.cfg`` directly, so their presence proves the repo is installable even
+    when the card's (frequently partial) file listing omits them -- the false
+    negative that made omnizart, a PyPI package, look non-installable. Only when no
+    packaging manifest was fetched do we fall back to the card's file-list heuristic.
+    """
+
+    if manifests and any(name in _PIP_PACKAGING_MARKERS for name in manifests):
+        return True
+    return _repo_is_pip_installable(card)
+
+
+def _print_single_space_gate(owner: str, repo: str, decision) -> None:
+    """Explain why a --github draft was withheld and point to the right fallback."""
+
+    blockers = "; ".join(decision.blockers) or "unknown"
+    print(
+        f"  [gate] Not writing a single-Space recipe for {owner}/{repo}: it is not "
+        "expected to deploy as one self-contained pyharp Space.\n"
+        f"  Blockers: {blockers}\n"
+        f"  Recommended mode: {decision.mode}.",
+        file=sys.stderr,
+    )
+    if decision.mode == "remote":
+        print(
+            "  An existing backend Space can serve it -- proxy to it instead:\n"
+            "    python -m tools.model_agent scaffold-remote-recipe <owner/space>\n"
+            "    python -m tools.model_agent generate-recipe-from-llm --github "
+            f"{owner}/{repo} --remote-space <owner/space> --remote-llm",
+            file=sys.stderr,
+        )
+    elif decision.mode == "dual":
+        print(
+            "  Use a dual-interpreter Docker recipe (one Space, isolated envs). The "
+            "LLM path can't author these; start from a hand-authored example such as "
+            "examples/ddsp_dual_recipe.json or examples/fxnorm_automix_dual_recipe.json.",
+            file=sys.stderr,
+        )
+    else:  # two-space
+        print(
+            "  Deploy a backend Space, then a thin remote frontend that proxies to it:\n"
+            "    python -m tools.model_agent generate-recipe-from-llm --github "
+            f"{owner}/{repo} --backend        # build the backend recipe\n"
+            "    python -m tools.model_agent scaffold-remote-recipe <your-backend-space>\n"
+            "  (If the maintainers publish a Docker image, a backend built FROM it is "
+            "less work -- see the omnizart example.)",
+            file=sys.stderr,
+        )
+    print(
+        "  Re-run with --emit-anyway to write the draft regardless (it will likely "
+        "fail to build).",
+        file=sys.stderr,
+    )
 
 
 def _apply_card_metadata(recipe: dict, card: object) -> None:
