@@ -277,6 +277,87 @@ def _detect_noncommercial(card: Optional[Mapping[str, Any]]) -> bool:
     return bool(_NONCOMMERCIAL_RE.search(license_name))
 
 
+# A single artifact this large won't fit a free/ZeroGPU Space comfortably (build
+# storage + ephemeral runtime), so it's worth a heads-up before you deploy.
+LARGE_WEIGHTS_GB = 5.0
+
+_SIZE_RE = re.compile(r"(?P<num>\d+(?:\.\d+)?)\s*(?P<unit>TB|GiB|GB|MiB|MB)\b", re.IGNORECASE)
+# Strong GPU-requirement cues: accelerator model names, VRAM, explicit "needs a GPU".
+_GPU_RE = re.compile(
+    r"\b(A100|H100|H200|V100|A6000|A40|A10G?|L4|L40S?|T4|RTX\s?\d{3,4}|VRAM|"
+    r"requires?\s+(?:a\s+)?gpu|gpu\s+(?:is\s+)?required|needs?\s+(?:a\s+)?gpu)\b",
+    re.IGNORECASE,
+)
+# A size followed by one of these is a memory spec, not a weight/download size.
+_MEMORY_TRAILER_RE = re.compile(r"^\s*(?:of\s+)?(?:v?ram|memory)\b", re.IGNORECASE)
+
+
+def _size_to_gb(num: float, unit: str) -> float:
+    unit = unit.lower()
+    if unit == "tb":
+        return num * 1024.0
+    if unit in ("gb", "gib"):
+        return num
+    return num / 1024.0  # mb / mib
+
+
+def detect_resource_warnings(text: str) -> Dict[str, Any]:
+    """Scan README/manifest/source text for size + GPU-requirement cues.
+
+    Pure and deterministic. Returns the largest advertised weight/download size
+    (in GB, memory specs like "24 GB VRAM" excluded) plus raw size/GPU evidence.
+    """
+
+    text = text or ""
+    largest_gb: Optional[float] = None
+    size_evidence: List[str] = []
+    for match in _SIZE_RE.finditer(text):
+        trailing = text[match.end() : match.end() + 12]
+        if _MEMORY_TRAILER_RE.match(trailing):
+            continue  # "24 GB VRAM" / "16 GB RAM" -> a memory spec, not an artifact
+        gb = _size_to_gb(float(match.group("num")), match.group("unit"))
+        if gb < LARGE_WEIGHTS_GB:
+            continue
+        size_evidence.append(match.group(0).strip())
+        if largest_gb is None or gb > largest_gb:
+            largest_gb = gb
+
+    gpu_evidence: List[str] = []
+    seen = set()
+    for match in _GPU_RE.finditer(text):
+        token = re.sub(r"\s+", " ", match.group(0).strip())
+        key = token.lower()
+        if key not in seen:
+            seen.add(key)
+            gpu_evidence.append(token)
+
+    return {
+        "largest_size_gb": round(largest_gb, 1) if largest_gb is not None else None,
+        "size_evidence": size_evidence[:5],
+        "gpu_evidence": gpu_evidence[:5],
+    }
+
+
+def resource_headsup(warnings: Mapping[str, Any]) -> Optional[str]:
+    """Compose a one-line, non-blocking heads-up from ``detect_resource_warnings``."""
+
+    parts: List[str] = []
+    size_gb = warnings.get("largest_size_gb")
+    if isinstance(size_gb, (int, float)) and size_gb >= LARGE_WEIGHTS_GB:
+        parts.append(f"~{size_gb:g} GB of weights/assets advertised")
+    gpu = list(warnings.get("gpu_evidence") or [])
+    if gpu:
+        parts.append("GPU cues (" + ", ".join(gpu[:3]) + ")")
+    if not parts:
+        return None
+    return (
+        "this model looks heavy: "
+        + "; ".join(parts)
+        + ". A free/ZeroGPU Space likely can't host it -- target a paid GPU Space, "
+        "or prefer a remote proxy to an existing GPU Space. (Not a blocker.)"
+    )
+
+
 @dataclass
 class ModeDecision:
     mode: str

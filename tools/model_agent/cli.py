@@ -22,7 +22,7 @@ from .agent import (
     write_json,
 )
 from .analyze import analyze_app_file, analyze_path
-from .classifier import recommend_mode
+from .classifier import detect_resource_warnings, recommend_mode, resource_headsup
 from .knowledge import (
     KnowledgeBase,
     fingerprint_for_recipe,
@@ -931,6 +931,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                     if decision.mode != "single" and not getattr(args, "emit_anyway", False):
                         _print_single_space_gate(owner, repo, decision)
                         return 2
+            _print_resource_headsup(card, context)
             return _emit_recipe_draft(agent, draft, args)
 
         if args.command == "list-models":
@@ -1215,6 +1216,15 @@ def _recommend_mode(agent: HarpModelAgent, args) -> dict:
     )
     payload = decision.to_dict()
     payload["repo"] = repo_key
+
+    readme = str(card.get("readme") or "") if isinstance(card, dict) else ""
+    resource_blob = "\n".join([readme] + list(manifests.values()) + list(sources.values()))
+    warnings = detect_resource_warnings(resource_blob)
+    if warnings.get("largest_size_gb") or warnings.get("gpu_evidence"):
+        payload["resource_warnings"] = warnings
+        headsup = resource_headsup(warnings)
+        if headsup:
+            payload.setdefault("recommendations", []).append(headsup)
 
     kb = KnowledgeBase()
     similar = kb.find_similar(
@@ -1549,6 +1559,27 @@ def _print_single_space_gate(owner: str, repo: str, decision) -> None:
         "fail to build).",
         file=sys.stderr,
     )
+
+
+def _resource_headsup_text(card: object, context) -> str:
+    """Concatenate the readable text used to sniff size/GPU cues."""
+
+    chunks: List[str] = []
+    if isinstance(card, dict):
+        chunks.append(str(card.get("readme") or ""))
+    manifests = getattr(context, "dependency_manifests", None) or {}
+    sources = getattr(context, "space_sources", None) or {}
+    chunks.extend(str(v) for v in manifests.values())
+    chunks.extend(str(v) for v in sources.values())
+    return "\n".join(chunks)
+
+
+def _print_resource_headsup(card: object, context) -> None:
+    """Print a non-blocking size/GPU heads-up before emitting a local recipe."""
+
+    message = resource_headsup(detect_resource_warnings(_resource_headsup_text(card, context)))
+    if message:
+        print("  [heads-up] " + message, file=sys.stderr)
 
 
 def _apply_card_metadata(recipe: dict, card: object) -> None:

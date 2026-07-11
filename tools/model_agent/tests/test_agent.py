@@ -73,7 +73,9 @@ from tools.model_agent.knowledge import (
 from tools.model_agent.classifier import (
     analyze_signals,
     classify,
+    detect_resource_warnings,
     recommend_mode,
+    resource_headsup,
 )
 from tools.model_agent.resolver import (
     ResolutionResult,
@@ -2354,6 +2356,41 @@ class GitHubInstallabilityTest(unittest.TestCase):
         }
         _strip_repo_pip(recipe, "git+https://github.com/AMAAI-Lab/SonicMaster.git@v1")
         self.assertEqual(recipe["framework"]["pip"], ["torch"])
+
+
+class ResourceHeadsupTest(unittest.TestCase):
+    def test_detects_large_weight_size(self):
+        # Audio-Omni regression: "~21 GB" checkpoint should trip the heads-up.
+        warnings = detect_resource_warnings("Model checkpoint (~21 GB) and a 3.4 GB extra.")
+        self.assertEqual(warnings["largest_size_gb"], 21.0)
+        self.assertIsNotNone(resource_headsup(warnings))
+
+    def test_terabytes_scale_to_gb(self):
+        warnings = detect_resource_warnings("weights are 1.5 TB total")
+        self.assertEqual(warnings["largest_size_gb"], 1536.0)
+
+    def test_small_sizes_are_ignored(self):
+        warnings = detect_resource_warnings("a tiny 200 MB model and a 1.2 GB file")
+        self.assertIsNone(warnings["largest_size_gb"])
+        self.assertEqual(warnings["gpu_evidence"], [])
+        self.assertIsNone(resource_headsup(warnings))
+
+    def test_memory_specs_are_not_weight_sizes(self):
+        # "24 GB VRAM" is a memory requirement, not a download size -> GPU cue only.
+        warnings = detect_resource_warnings("Requires 24 GB VRAM on an A100.")
+        self.assertIsNone(warnings["largest_size_gb"])
+        self.assertTrue(any("VRAM" in e or "A100" in e for e in warnings["gpu_evidence"]))
+
+    def test_docker_gpu_tag_is_not_a_false_positive(self):
+        # A base-image tag like "tensorflow:2.5.0-gpu" must not be read as a GPU need.
+        warnings = detect_resource_warnings("FROM tensorflow/tensorflow:2.5.0-gpu")
+        self.assertEqual(warnings["gpu_evidence"], [])
+        self.assertIsNone(resource_headsup(warnings))
+
+    def test_gpu_requirement_phrase_detected(self):
+        warnings = detect_resource_warnings("This model requires a GPU to run.")
+        self.assertTrue(warnings["gpu_evidence"])
+        self.assertIsNotNone(resource_headsup(warnings))
 
 
 class PredeployResolveGateTest(unittest.TestCase):
