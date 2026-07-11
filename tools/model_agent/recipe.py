@@ -620,38 +620,40 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
     if accept_user_token:
         arg_names = f"{arg_names}, {_token_param}=''" if arg_names else f"{_token_param}=''"
 
-    call_args = ",\n".join(
-        "        " + _remote_arg_expr(entry) for entry in remote.get("args", [])
-    )
+    call_arg_exprs = [_remote_arg_expr(entry) for entry in remote.get("args", [])]
 
     index_by_output = {
         str(entry["to"]): int(entry["index"]) for entry in remote.get("returns", [])
     }
 
     body_lines: List[str] = []
+    # _tok selects the calling identity (a user token gets a fresh per-call client;
+    # otherwise the Space's cached client). Always defined so _make_conn is uniform.
     if accept_user_token:
-        # Per-call client for a user token (NOT cached: never retain a user's
-        # secret in a shared global). Fall back to the Space's cached client.
-        body_lines += [
-            f"    _tok = ({_token_param} or '').strip()",
-            "    if _tok:",
-            "        _conn = Client(_BACKEND_SPACE, hf_token=_tok)",
-            "    else:",
-            "        _conn = _backend_client()",
-        ]
+        body_lines.append(f"    _tok = ({_token_param} or '').strip()")
     else:
-        body_lines.append("    _conn = _backend_client()")
+        body_lines.append("    _tok = ''")
     body_lines += [
-        "    try:",
-        "        _raw = _conn.predict(",
+        "    # Call the backend, waking it and retrying if it was asleep (a cold",
+        "    # start otherwise fails the first hit with 'read operation timed out').",
+        "    _raw = None",
+        "    for _attempt in range(_CALL_RETRIES + 1):",
+        "        try:",
+        "            _conn = _make_conn(_tok)",
+        "            _raw = _conn.predict(",
     ]
-    if call_args:
-        body_lines.append(_indent(call_args, 4) + ",")
+    for expr in call_arg_exprs:
+        body_lines.append("                " + expr + ",")
     body_lines += [
-        f"            api_name={json.dumps(api_name)},",
-        "        )",
-        "    except Exception as _exc:  # surface a token-aware hint, never the token",
-        "        raise gr.Error(_quota_hint(str(_exc)))",
+        f"                api_name={json.dumps(api_name)},",
+        "            )",
+        "            break",
+        "        except Exception as _exc:  # never surfaces the token",
+        "            if _attempt < _CALL_RETRIES and _is_cold_start(str(_exc)):",
+        "                _reset_client()",
+        "                _wake_backend()",
+        "                continue",
+        "            raise gr.Error(_quota_hint(str(_exc)))",
         "    _values = list(_raw) if isinstance(_raw, (list, tuple)) else [_raw]",
     ]
     has_media_output = any(str(spec.get("type")) in _MEDIA_TYPES for spec in outputs)
@@ -724,6 +726,8 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         "from __future__ import annotations",
         "",
         "import os",
+        "import time",
+        "import urllib.request",
         "",
         "import gradio as gr",
         "",
@@ -735,6 +739,10 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         f"_BACKEND_API_NAME = {json.dumps(api_name)}",
         f"_BACKEND_TOKEN_ENV = {json.dumps(token_env)}",
         f"_ACCEPT_USER_TOKEN = {accept_user_token!r}",
+        "# How many times to wake+retry a sleeping backend, and how long to wait for",
+        "# it to boot (a free Space cold start can take a few minutes).",
+        '_CALL_RETRIES = int(os.environ.get("BACKEND_CALL_RETRIES", "4"))',
+        '_WAKE_TIMEOUT = float(os.environ.get("BACKEND_WAKE_TIMEOUT", "420"))',
         "_client = None",
         "",
         "",
@@ -747,6 +755,54 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         "        _token = os.environ.get(_BACKEND_TOKEN_ENV) or None",
         "        _client = Client(_BACKEND_SPACE, hf_token=_token)",
         "    return _client",
+        "",
+        "",
+        "def _reset_client():",
+        "    # Drop the cached connection so the next attempt reconnects to a Space",
+        "    # that has since finished waking.",
+        "    global _client",
+        "    _client = None",
+        "",
+        "",
+        "def _make_conn(tok):",
+        "    tok = (tok or '').strip()",
+        "    if tok:",
+        "        return Client(_BACKEND_SPACE, hf_token=tok)",
+        "    return _backend_client()",
+        "",
+        "",
+        "def _space_url(space):",
+        "    slug = space.strip().lower().replace('/', '-').replace('_', '-')",
+        "    return f'https://{slug}.hf.space/'",
+        "",
+        "",
+        "def _is_cold_start(message):",
+        "    # Errors that mean 'the backend was asleep/booting', worth waking+retrying",
+        "    # (vs. a real application error, which we surface immediately).",
+        "    _low = (message or '').lower()",
+        "    return any(s in _low for s in (",
+        "        'read operation timed out', 'timed out', 'timeout', 'starting',",
+        "        'building', 'not ready', 'no application', 'connection', '503', '502',",
+        "    ))",
+        "",
+        "",
+        "def _wake_backend():",
+        "    # A sleeping Space boots when its URL is hit; poll until it answers (or",
+        "    # the budget expires) so the retried call lands on a running backend.",
+        "    _url = _space_url(_BACKEND_SPACE)",
+        "    _deadline = time.time() + _WAKE_TIMEOUT",
+        "    _delay = 5.0",
+        "    while time.time() < _deadline:",
+        "        try:",
+        "            _req = urllib.request.Request(_url, headers={'User-Agent': 'harp-frontend'})",
+        "            with urllib.request.urlopen(_req, timeout=30) as _resp:",
+        "                if getattr(_resp, 'status', 200) < 500:",
+        "                    return True",
+        "        except Exception:",
+        "            pass",
+        "        time.sleep(_delay)",
+        "        _delay = min(_delay * 1.5, 30.0)",
+        "    return False",
         "",
         "",
         "\n".join(quota_hint_lines),

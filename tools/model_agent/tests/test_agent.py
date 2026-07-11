@@ -1378,6 +1378,19 @@ class RemoteRecipeRenderTest(unittest.TestCase):
         self.assertIn("_out_generated = _values[0]", app)
         self.assertIn("return _out_generated", app)
 
+    def test_wakes_and_retries_a_sleeping_backend(self):
+        app = render_app_from_recipe(self.RECIPE)
+        compile(app, "<remote-wake>", "exec")
+        # A sleeping backend is woken + retried instead of failing the first hit.
+        self.assertIn("def _wake_backend()", app)
+        self.assertIn("def _is_cold_start(message)", app)
+        self.assertIn("read operation timed out", app)
+        self.assertIn(".hf.space/", app)
+        self.assertIn("for _attempt in range(_CALL_RETRIES + 1)", app)
+        self.assertIn("_reset_client()", app)
+        # The retry only fires for cold-start-style errors, not real app errors.
+        self.assertIn("if _attempt < _CALL_RETRIES and _is_cold_start(str(_exc)):", app)
+
     def test_requirements_are_conflict_free(self):
         package = build_package_from_recipe(self.RECIPE)
         self.assertIn("gradio_client", package.requirements)
@@ -1527,8 +1540,10 @@ class RemoteScaffoldTest(unittest.TestCase):
         # Masked, optional token control appended as the LAST input.
         self.assertIn('type="password"', app)
         self.assertIn("_hf_user_token=''", app)
-        # A user token gets a fresh per-call client (never the shared cache).
-        self.assertIn("Client(_BACKEND_SPACE, hf_token=_tok)", app)
+        # A user token gets a fresh per-call client (never the shared cache),
+        # created in _make_conn from the per-call token.
+        self.assertIn("_tok = (_hf_user_token or '').strip()", app)
+        self.assertIn("Client(_BACKEND_SPACE, hf_token=tok)", app)
         self.assertIn("_ACCEPT_USER_TOKEN = True", app)
         # Quota errors are turned into an actionable, token-free hint.
         self.assertIn("_quota_hint", app)
