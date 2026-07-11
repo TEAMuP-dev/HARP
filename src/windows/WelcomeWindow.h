@@ -526,7 +526,7 @@ private:
 
             addAndMakeVisible(learnMoreLink);
             learnMoreLink.setButtonText("Learn more");
-            learnMoreLink.setURL(URL("https://harp-plugin.netlify.app/content/intro.html"));
+            learnMoreLink.setURL(URL("https://harp3.netlify.app/content/intro.html"));
 
             addAndMakeVisible(copyrightLabel);
             copyrightLabel.setText("Copyright 2026 TEAMuP. All rights reserved.",
@@ -640,7 +640,7 @@ private:
 
         Label pageIndicator;
         HyperlinkButton learnMoreLink { "Learn more",
-                                        URL("https://harp-plugin.netlify.app/content/intro.html") };
+                                        URL("https://harp3.netlify.app/content/intro.html") };
         Label copyrightLabel;
 
         TextButton showDetailsButton { "Show detailed control descriptions" };
