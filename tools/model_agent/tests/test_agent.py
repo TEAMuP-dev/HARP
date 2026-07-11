@@ -48,6 +48,7 @@ from tools.model_agent.llm import (
     complete_recipe,
     default_examples,
     generate_recipe,
+    pick_remote_endpoint,
     provider_from_env,
     refine_remote_recipe,
 )
@@ -58,7 +59,9 @@ from tools.model_agent.recipe import (
     build_package_from_recipe,
     collect_pip_requirements,
     find_dependency_conflicts,
+    guess_primary_endpoint,
     lint_recipe_requirements,
+    rank_named_endpoints,
     recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
     render_app_from_recipe,
@@ -2356,6 +2359,67 @@ class GitHubInstallabilityTest(unittest.TestCase):
         }
         _strip_repo_pip(recipe, "git+https://github.com/AMAAI-Lab/SonicMaster.git@v1")
         self.assertEqual(recipe["framework"]["pip"], ["torch"])
+
+
+class EndpointSelectionTest(unittest.TestCase):
+    """Auto-picking the primary endpoint (MelodyFlow: /interrupt,/predict,/toggle_*)."""
+
+    API = {
+        "named_endpoints": {
+            "/interrupt": {"parameters": [], "returns": []},
+            "/predict": {
+                "parameters": [{"component": "Textbox"}, {"component": "Audio"}],
+                "returns": [{"component": "Audio"}],
+            },
+            "/toggle_melody": {"parameters": [{"component": "Checkbox"}], "returns": []},
+            "/toggle_solver": {"parameters": [{"component": "Dropdown"}], "returns": []},
+        }
+    }
+
+    class _FakeProvider:
+        def __init__(self, choice):
+            self._choice = choice
+
+        def complete_json(self, system, user, *, schema=None):
+            if isinstance(self._choice, Exception):
+                raise self._choice
+            return {"api_name": self._choice}
+
+    def test_heuristic_picks_predict_over_controls(self):
+        self.assertEqual(guess_primary_endpoint(self.API), "/predict")
+        ranked = rank_named_endpoints(self.API)
+        self.assertEqual(ranked[0][0], "/predict")
+        # control endpoints rank last
+        self.assertIn(ranked[-1][0], {"/interrupt", "/toggle_melody", "/toggle_solver"})
+
+    def test_single_endpoint_is_returned(self):
+        self.assertEqual(
+            guess_primary_endpoint({"named_endpoints": {"/run": {"parameters": [], "returns": []}}}),
+            "/run",
+        )
+
+    def test_no_endpoints_returns_none(self):
+        self.assertIsNone(guess_primary_endpoint({"named_endpoints": {}}))
+
+    def test_llm_valid_choice_is_used(self):
+        self.assertEqual(
+            pick_remote_endpoint(self.API, self._FakeProvider("/predict")), "/predict"
+        )
+
+    def test_llm_choice_without_slash_is_normalized(self):
+        self.assertEqual(
+            pick_remote_endpoint(self.API, self._FakeProvider("predict")), "/predict"
+        )
+
+    def test_llm_invalid_choice_falls_back_to_heuristic(self):
+        self.assertEqual(
+            pick_remote_endpoint(self.API, self._FakeProvider("/nonexistent")), "/predict"
+        )
+
+    def test_llm_failure_falls_back_to_heuristic(self):
+        self.assertEqual(
+            pick_remote_endpoint(self.API, self._FakeProvider(RuntimeError("boom"))), "/predict"
+        )
 
 
 class ResourceHeadsupTest(unittest.TestCase):

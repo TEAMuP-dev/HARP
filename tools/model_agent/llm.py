@@ -38,7 +38,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
-from .recipe import render_app_from_recipe, validate_recipe
+from .recipe import (
+    guess_primary_endpoint,
+    rank_named_endpoints,
+    render_app_from_recipe,
+    validate_recipe,
+)
 
 JSON = Dict[str, Any]
 
@@ -1062,6 +1067,89 @@ def _remote_invariant_error(refined: Mapping[str, Any], scaffold: Mapping[str, A
             "one per backend parameter, in the same order."
         )
     return None
+
+
+ENDPOINT_PICK_SYSTEM_PROMPT = (
+    "You choose which Gradio API endpoint of a Hugging Face Space runs the model's "
+    "MAIN inference (the one a HARP user would call to produce output from input). "
+    "Ignore UI-control/housekeeping endpoints (interrupt, toggle, cancel, reset, "
+    "login, load, change, select, lambda). Prefer an endpoint that takes real inputs "
+    "and returns media/text output. Reply with ONLY the chosen api_name."
+)
+
+ENDPOINT_PICK_SCHEMA: JSON = {
+    "type": "object",
+    "properties": {"api_name": {"type": "string"}},
+    "required": ["api_name"],
+}
+
+
+def build_endpoint_pick_prompt(
+    api_info: Mapping[str, Any], *, context: Optional[RecipeGenerationContext] = None
+) -> str:
+    """Describe each named endpoint (params/returns) for the endpoint-picker LLM."""
+
+    named = api_info.get("named_endpoints") if isinstance(api_info, Mapping) else None
+    named = named if isinstance(named, Mapping) else {}
+    lines: List[str] = []
+    if context is not None:
+        if context.model_id:
+            lines.append(f"# Model: {context.model_id}")
+        readme = (context.readme or "").strip()
+        if readme:
+            lines.append("# README (excerpt)\n" + readme[:1200])
+    lines.append("# Named endpoints (choose exactly one api_name):")
+    for name, ep in named.items():
+        ep = ep if isinstance(ep, Mapping) else {}
+        params = ep.get("parameters") or []
+        returns = ep.get("returns") or []
+        p_desc = ", ".join(str(p.get("component") or "?") for p in params if isinstance(p, Mapping)) or "none"
+        r_desc = ", ".join(str(r.get("component") or "?") for r in returns if isinstance(r, Mapping)) or "none"
+        lines.append(f"- {name}: inputs=[{p_desc}] outputs=[{r_desc}]")
+    lines.append(
+        "\nReturn JSON {\"api_name\": \"...\"} with one of the api_name values above."
+    )
+    return "\n".join(lines)
+
+
+def pick_remote_endpoint(
+    api_info: Mapping[str, Any],
+    provider: LLMProvider,
+    *,
+    context: Optional[RecipeGenerationContext] = None,
+) -> str:
+    """Let the LLM choose the primary inference endpoint from a Space's API schema.
+
+    Validates the LLM's answer against the real endpoint list and falls back to the
+    deterministic ``guess_primary_endpoint`` heuristic on any invalid/failed reply,
+    so this never returns an api_name the backend doesn't expose.
+    """
+
+    named = api_info.get("named_endpoints") if isinstance(api_info, Mapping) else None
+    named = named if isinstance(named, Mapping) else {}
+    if not named:
+        raise LLMError("the backend exposes no named endpoints to choose from")
+    if len(named) == 1:
+        return next(iter(named))
+
+    fallback = guess_primary_endpoint(api_info)
+    try:
+        data = provider.complete_json(
+            ENDPOINT_PICK_SYSTEM_PROMPT,
+            build_endpoint_pick_prompt(api_info, context=context),
+            schema=ENDPOINT_PICK_SCHEMA,
+        )
+        choice = str((data or {}).get("api_name") or "").strip()
+    except Exception:
+        choice = ""
+    if choice and not choice.startswith("/"):
+        choice = "/" + choice
+    if choice in named:
+        return choice
+    if fallback:
+        return fallback
+    # Last resort: the top-ranked endpoint (rank list is non-empty here).
+    return rank_named_endpoints(api_info)[0][0]
 
 
 def refine_remote_recipe(

@@ -36,6 +36,7 @@ from .llm import (
     complete_recipe,
     default_examples,
     generate_recipe,
+    pick_remote_endpoint,
     provider_from_env,
     refine_remote_recipe,
 )
@@ -45,6 +46,7 @@ from .recipe import (
     build_package_from_recipe,
     collect_pip_requirements,
     find_dependency_conflicts,
+    guess_primary_endpoint,
     lint_recipe_requirements,
     recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
@@ -153,6 +155,15 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="Backend named endpoint to call (e.g. /predict). Required only if the "
         "Space exposes more than one; otherwise the sole endpoint is used.",
+    )
+    scaffold_remote.add_argument(
+        "--auto-endpoint",
+        action="store_true",
+        help="When the Space exposes several endpoints and --api-name is omitted, "
+        "auto-pick the primary inference endpoint with a deterministic heuristic "
+        "(prefers /predict-like names that return media; ignores UI controls like "
+        "/interrupt, /toggle_*) instead of erroring. For a smarter choice on "
+        "ambiguous Spaces, use generate-recipe-from-llm --remote-space --remote-llm.",
     )
     scaffold_remote.add_argument(
         "--user-token",
@@ -704,6 +715,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 args.space,
                 api_name=args.api_name or None,
                 user_token=getattr(args, "user_token", False),
+                auto_endpoint=getattr(args, "auto_endpoint", False),
             )
             remote = recipe.get("framework", {}).get("remote", {})
             print(
@@ -786,10 +798,41 @@ def main(argv: Iterable[str] | None = None) -> int:
                     agent.endpoint_client.resolve_canonical_path(args.remote_space)
                     or args.remote_space
                 )
+                # If the user didn't pin --remote-api-name and the Space exposes
+                # several endpoints, choose one instead of erroring: the LLM picks
+                # (with --remote-llm), otherwise a deterministic heuristic does.
+                selected_api = args.remote_api_name or None
+                named = api_info.get("named_endpoints") or {}
+                provider = None
+                if args.remote_llm:
+                    provider = provider_from_env(
+                        args.provider,
+                        model=args.llm_model,
+                        timeout=args.llm_timeout,
+                        temperature=args.temperature,
+                    )
+                if not selected_api and isinstance(named, Mapping) and len(named) > 1:
+                    if provider is not None:
+                        selected_api = pick_remote_endpoint(
+                            api_info, provider, context=RecipeGenerationContext.from_card(card)
+                        )
+                        print(
+                            f"  LLM selected endpoint '{selected_api}' from "
+                            f"{sorted(named)}.",
+                            file=sys.stderr,
+                        )
+                    else:
+                        selected_api = guess_primary_endpoint(api_info)
+                        print(
+                            f"  Auto-selected endpoint '{selected_api}' (heuristic) from "
+                            f"{sorted(named)}; pass --remote-api-name to override, or "
+                            "--remote-llm to let the LLM choose.",
+                            file=sys.stderr,
+                        )
                 scaffold = remote_recipe_from_api_info(
                     canonical,
                     api_info,
-                    api_name=args.remote_api_name or None,
+                    api_name=selected_api,
                     user_token=getattr(args, "user_token", False),
                 )
                 if args.remote_llm:
@@ -799,12 +842,6 @@ def main(argv: Iterable[str] | None = None) -> int:
                         f"  Refining the scaffold with the LLM (grounded on '{chosen}'; "
                         "space/api_name and arg order stay pinned) ...",
                         file=sys.stderr,
-                    )
-                    provider = provider_from_env(
-                        args.provider,
-                        model=args.llm_model,
-                        timeout=args.llm_timeout,
-                        temperature=args.temperature,
                     )
                     llm_context = RecipeGenerationContext.from_card(card)
                     # Ground the refinement on the backend Space's own UI source so

@@ -1563,7 +1563,12 @@ class HarpModelAgent:
             return None
 
     def scaffold_remote_recipe(
-        self, space: str, *, api_name: Optional[str] = None, user_token: bool = False
+        self,
+        space: str,
+        *,
+        api_name: Optional[str] = None,
+        user_token: bool = False,
+        auto_endpoint: bool = False,
     ) -> JSON:
         """Probe a backend Space's Gradio API and scaffold a remote-backend recipe.
 
@@ -1571,14 +1576,20 @@ class HarpModelAgent:
         signature to a ``framework.remote`` proxy recipe (see
         ``recipe.remote_recipe_from_api_info``). Raises :class:`EndpointProbeError`
         if the Space exposes no callable API.
+
+        With ``auto_endpoint`` and no explicit ``api_name``, the primary inference
+        endpoint is chosen deterministically (``recipe.guess_primary_endpoint``)
+        instead of raising when the Space exposes several.
         """
 
         # Imported lazily: recipe.py imports from this module, so a top-level
         # import here would be circular.
-        from .recipe import remote_recipe_from_api_info
+        from .recipe import guess_primary_endpoint, remote_recipe_from_api_info
 
         api_info = self.fetch_api_info(space)
         canonical = self.endpoint_client.resolve_canonical_path(space) or space
+        if not api_name and auto_endpoint:
+            api_name = guess_primary_endpoint(api_info)
         return remote_recipe_from_api_info(
             canonical, api_info, api_name=api_name, user_token=user_token
         )

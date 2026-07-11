@@ -1687,6 +1687,63 @@ def _remote_param_name(param: Mapping[str, Any], index: int, used: set) -> str:
     return _identifier(param.get("label") or pname, f"arg_{index}", used)
 
 
+# Endpoint names that usually ARE the model's main inference call.
+_PRIMARY_ENDPOINT_NAMES = {
+    "predict", "run", "generate", "infer", "inference", "process", "synthesize",
+    "synthesis", "synthesis_function", "transcribe", "forward", "call", "api", "submit",
+}
+# Substrings that mark a UI control / housekeeping endpoint (never the inference).
+_CONTROL_ENDPOINT_HINTS = (
+    "interrupt", "toggle", "cancel", "stop", "reset", "clear", "login", "logout",
+    "load", "change", "update", "select", "lambda", "refresh", "preview", "_run_",
+)
+_MEDIA_RETURN_COMPONENTS = {"audio", "image", "video", "file", "gallery", "model3d"}
+
+
+def rank_named_endpoints(api_info: Mapping[str, Any]) -> List["tuple[str, int]"]:
+    """Rank a Space's named endpoints by how likely each is the inference call.
+
+    Deterministic heuristic (no network/LLM): reward canonical names
+    (``/predict`` etc.), returning media, and having parameters; penalize obvious
+    UI-control endpoints (``/interrupt``, ``/toggle_*``, ...). Returns
+    ``[(api_name, score), ...]`` sorted best-first, ties broken by name.
+    """
+
+    named = api_info.get("named_endpoints") if isinstance(api_info, Mapping) else None
+    if not isinstance(named, Mapping):
+        return []
+    scored: List["tuple[str, int]"] = []
+    for name, ep in named.items():
+        ep = ep if isinstance(ep, Mapping) else {}
+        short = str(name).lstrip("/").lower()
+        score = 0
+        if short in _PRIMARY_ENDPOINT_NAMES:
+            score += 100
+        if any(hint in short for hint in _CONTROL_ENDPOINT_HINTS):
+            score -= 100
+        returns = ep.get("returns") or []
+        params = ep.get("parameters") or []
+        if returns:
+            score += 10
+        if any(
+            str(r.get("component", "")).lower() in _MEDIA_RETURN_COMPONENTS
+            for r in returns
+            if isinstance(r, Mapping)
+        ):
+            score += 20
+        score += min(len(params), 10)
+        scored.append((str(name), score))
+    scored.sort(key=lambda item: (-item[1], item[0]))
+    return scored
+
+
+def guess_primary_endpoint(api_info: Mapping[str, Any]) -> Optional[str]:
+    """Best-guess the primary inference endpoint, or None if there are none."""
+
+    ranked = rank_named_endpoints(api_info)
+    return ranked[0][0] if ranked else None
+
+
 def remote_recipe_from_api_info(
     space: str,
     api_info: Mapping[str, Any],
@@ -1723,9 +1780,14 @@ def remote_recipe_from_api_info(
     elif len(named) == 1:
         chosen = next(iter(named))
     else:
+        best = guess_primary_endpoint(api_info)
+        hint = f" (best guess: {best})" if best else ""
         raise RecipeError(
             "The backend exposes multiple named endpoints; pass --api-name to pick "
-            "one. Available: " + ", ".join(sorted(named))
+            "one" + hint + ". Available: " + ", ".join(sorted(named))
+            + ". Or let the agent choose: scaffold-remote-recipe --auto-endpoint, or "
+            "generate-recipe-from-llm --remote-space <space> --remote-llm (no "
+            "--remote-api-name) to have the LLM pick."
         )
 
     endpoint = named[chosen] if isinstance(named[chosen], Mapping) else {}
