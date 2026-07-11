@@ -25,7 +25,7 @@ HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocess
     * **[Distribution](#distribution)**
 * **[Citations](#citations)**
 
-For more information on HARP, please see [our website](https://harp3.netlify.app) or our most recent [NeurIPS workshop paper](https://openreview.net/pdf?id=Ha2z921r51).
+For more information on HARP, please see [our website](https://harp3.netlify.app/) or our most recent [NeurIPS workshop paper](https://openreview.net/pdf?id=Ha2z921r51).
 
 
 <!-- website/content/supported_os.md -->
@@ -90,7 +90,7 @@ To get started:
 <!-- website/content/contributing/overview.md -->
 # Contributing
 
-To get started building and deploying models for others to use in HARP, see [Adding Models with pyharp](#adding-models-with-pyharp). To get started developing the HARP app itself, see [Building HARP](#building-harp). Please also see our [Developer Notes](https://github.com/TEAMuP-dev/HARP/blob/main/DevNotes.md) for various conventions and suggestions.
+To get started building and deploying models for others to use in HARP, see [Adding Models with pyharp](#adding-models-with-pyharp). To get started developing the HARP app itself, see [Building HARP](#building-harp). Please also see our [Developer Notes](https://github.com/TEAMuP-dev/HARP/blob/main/DEVNOTES.md) for various conventions and suggestions.
 
 <!-- website/content/contributing/version_compat.md -->
 ## Version Compatibility
