@@ -1372,6 +1372,9 @@ class RemoteRecipeRenderTest(unittest.TestCase):
         self.assertIn('api_name="/synthesis_function"', app)
         # Arg mapping: file wrapped, const emitted, cast applied.
         self.assertIn("handle_file(prompt_audio)", app)
+        # Optional file inputs arrive as None; handle_file(None) would raise, so
+        # the wrapped call must forward None instead of crashing.
+        self.assertIn("(handle_file(prompt_audio) if prompt_audio else None)", app)
         self.assertIn("        None,", app)
         self.assertIn("int(steps)", app)
         # Return mapping + guard for the media output.

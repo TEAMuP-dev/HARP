@@ -176,6 +176,15 @@
       "repo": "facebook/MelodyFlow",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/melodyflow"
+    },
+    {
+      "backend_space": "REPLACE_WITH_YOUR_BACKEND_SPACE",
+      "mode": "remote",
+      "model_id": "SonyResearch/Woosh",
+      "outcome": "success",
+      "repo": "SonyResearch/Woosh",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/woosh-dflow"
     }
   ],
   "version": 1

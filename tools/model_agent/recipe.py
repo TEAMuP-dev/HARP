@@ -583,8 +583,11 @@ def _remote_arg_expr(entry: Mapping[str, Any]) -> str:
     expr = f"{cast}({name})" if cast in _REMOTE_CASTS else name
     # Files/audio are local paths on the frontend; handle_file uploads them to
     # the backend. (File wrapping supersedes a cast, which wouldn't apply.)
+    # Guard None: optional file inputs (e.g. an unused melody prompt) arrive as
+    # None, and handle_file(None) raises "File None does not exist"; forward None
+    # so the backend applies its own default for the omitted argument.
     if entry.get("file"):
-        return f"handle_file({name})"
+        return f"(handle_file({name}) if {name} else None)"
     return expr
 
 
