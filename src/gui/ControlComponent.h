@@ -21,15 +21,15 @@ public:
     virtual ~ControlComponent() = default;
 
     /**
+     * Returns the preferred height for this control, or 0 to use the layout default.
+     */
+    virtual int getPreferredHeight() const { return 0; }
+
+    /**
      * Returns the minimum width required to display this control properly.
      * This includes the label width plus any necessary padding.
      */
     virtual int getMinimumRequiredWidth() const = 0;
-
-    /**
-     * Returns the preferred height for this control, or 0 to use the layout default.
-     */
-    virtual int getPreferredHeight() const { return 0; }
 
 protected:
     /** Default padding around the label */

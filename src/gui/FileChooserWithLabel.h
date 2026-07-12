@@ -16,9 +16,6 @@ using namespace juce;
 
 class FileChooserWithLabel : public ControlComponent, public FileDragAndDropTarget
 {
-    static constexpr int bannerHeight = 14;
-    bool required = true;
-
 public:
     ~FileChooserWithLabel() { actionButton.setLookAndFeel(nullptr); }
 
@@ -223,6 +220,7 @@ private:
     static constexpr int minFilePickerWidth = 260;
     static constexpr int minFilePickerHeight = 50;
     static constexpr int labelHeight = 20;
+    static constexpr int bannerHeight = 14;
 
     NoBorderLookAndFeel noBorderLAF;
     Label label;
@@ -231,6 +229,7 @@ private:
     MultiButton::Mode removeFileModeInfo;
 
     String currentPath;
+    bool required = true;
     std::vector<std::string> fileTypes;
     std::unique_ptr<FileChooser> fileChooser;
 };
