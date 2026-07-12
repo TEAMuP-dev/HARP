@@ -307,6 +307,7 @@ private:
         if (! info->path.empty())
             fileChooserComponent->setPath(info->path);
 
+        fileChooserComponent->setRequired(info->required);
         fileChooserComponent->setFileTypes(info->fileTypes);
 
         fileChooserComponent->onFileSelected = [info](const String& path)
@@ -421,7 +422,11 @@ private:
 
             auto& activeRow = rows.back();
 
-            activeRow.push_back({ c.get(), itemWidth, spec.minHeight });
+            int itemHeight = c->getPreferredHeight();
+            if (itemHeight == 0)
+                itemHeight = spec.minHeight;
+
+            activeRow.push_back({ c.get(), itemWidth, itemHeight });
         }
     }
 

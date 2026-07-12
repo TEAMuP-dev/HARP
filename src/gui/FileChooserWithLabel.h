@@ -16,6 +16,9 @@ using namespace juce;
 
 class FileChooserWithLabel : public ControlComponent, public FileDragAndDropTarget
 {
+    static constexpr int bannerHeight = 14;
+    bool required = true;
+
 public:
     ~FileChooserWithLabel() { actionButton.setLookAndFeel(nullptr); }
 
@@ -33,14 +36,31 @@ public:
     {
         auto area = getLocalBounds();
         label.setBounds(area.removeFromTop(labelHeight));
+
+        if (! required)
+            area.removeFromTop(bannerHeight);
+
         int buttonSize = area.getHeight();
         actionButton.setBounds(area.removeFromRight(buttonSize));
     }
 
     void paint(Graphics& g) override
     {
-        auto body = getLocalBounds().withTrimmedTop(labelHeight).toFloat();
-        auto bodyInt = body.toNearestInt();
+        auto area = getLocalBounds();
+        area.removeFromTop(labelHeight);
+
+        if (! required)
+        {
+            auto bannerRect = area.removeFromTop(bannerHeight).toFloat();
+            g.setColour(Colour::fromRGB(90, 105, 105));
+            g.fillRect(bannerRect);
+            g.setColour(Colours::white);
+            g.setFont(Font(12.0f));
+            g.drawText("OPTIONAL", bannerRect, Justification::centred, false);
+        }
+
+        auto body = area.toFloat();
+        auto bodyInt = area;
         float r = 3.0f;
 
         auto bg = findColour(ComboBox::backgroundColourId);
@@ -84,6 +104,17 @@ public:
     }
 
     void setFileTypes(const std::vector<std::string>& types) { fileTypes = types; }
+
+    void setRequired(bool req)
+    {
+        required = req;
+        repaint();
+    }
+
+    int getPreferredHeight() const override
+    {
+        return minFilePickerHeight + (required ? 0 : bannerHeight);
+    }
 
     int getMinimumRequiredWidth() const override
     {
@@ -190,6 +221,7 @@ private:
     };
 
     static constexpr int minFilePickerWidth = 260;
+    static constexpr int minFilePickerHeight = 50;
     static constexpr int labelHeight = 20;
 
     NoBorderLookAndFeel noBorderLAF;
