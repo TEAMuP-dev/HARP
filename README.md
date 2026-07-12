@@ -105,7 +105,7 @@ The currently available versions of HARP and pyharp are mutually compatible.
 <!-- website/content/contributing/add_model.md -->
 # Adding Models with pyharp
 
-[![ReadMe Card](https://github-readme-stats.vercel.app/api/pin/?username=TEAMuP-dev&repo=pyharp)](https://github.com/TEAMuP-dev/pyharp)
+[![PyHARP](https://gh-card.dev/repos/TEAMuP-dev/pyharp.svg)](https://github.com/TEAMuP-dev/pyharp)
 
 pyharp provides a lightweight API to build HARP-compatible [Gradio](https://www.gradio.app) apps. It allows researchers to easily create DAW-friendly interfaces for any audio processing code with minimal Python wrapping.
 

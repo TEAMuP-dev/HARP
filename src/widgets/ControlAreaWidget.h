@@ -12,6 +12,7 @@
 #include "../widgets/StatusAreaWidget.h"
 
 #include "../gui/ComboBoxWithLabel.h"
+#include "../gui/FileChooserWithLabel.h"
 #include "../gui/HoverHandler.h"
 #include "../gui/SliderWithLabel.h"
 #include "../gui/TextBoxWithLabel.h"
@@ -81,7 +82,7 @@ public:
     int getNumControls() const
     {
         return sliderComponents.size() + toggleComponents.size() + dropdownComponents.size()
-               + textComponents.size();
+               + textComponents.size() + fileChooserComponents.size();
     }
 
     int getMinimumRequiredWidth() const
@@ -100,6 +101,7 @@ public:
         checkGroup(toggleComponents);
         checkGroup(dropdownComponents);
         checkGroup(textComponents);
+        checkGroup(fileChooserComponents);
 
         return requiredWidth + 2 * (marginSize + minEdgeGap);
     }
@@ -156,6 +158,12 @@ public:
         }
         dropdownComponents.clear();
 
+        for (auto& c : fileChooserComponents)
+        {
+            removeChildComponent(c.get());
+        }
+        fileChooserComponents.clear();
+
         handlers.clear();
     }
 
@@ -181,6 +189,10 @@ public:
             else if (auto* dropdownInfo = dynamic_cast<ComboBoxComponentInfo*>(info.get()))
             {
                 addDropdown(dropdownInfo);
+            }
+            else if (auto* fileChooserInfo = dynamic_cast<FileComponentInfo*>(info.get()))
+            {
+                addFileChooser(fileChooserInfo);
             }
             else
             {
@@ -287,6 +299,27 @@ private:
         dropdownComponents.push_back(std::move(dropdownComponent));
     }
 
+    void addFileChooser(FileComponentInfo* info)
+    {
+        std::unique_ptr<FileChooserWithLabel> fileChooserComponent =
+            std::make_unique<FileChooserWithLabel>(info->label);
+
+        if (! info->path.empty())
+            fileChooserComponent->setPath(info->path);
+
+        fileChooserComponent->setRequired(info->required);
+        fileChooserComponent->setFileTypes(info->fileTypes);
+
+        fileChooserComponent->onFileSelected = [info](const String& path)
+        { info->path = path.toStdString(); };
+
+        addHandler(fileChooserComponent.get(), info);
+
+        addAndMakeVisible(*fileChooserComponent);
+
+        fileChooserComponents.push_back(std::move(fileChooserComponent));
+    }
+
     void addHandler(Component* comp, ModelComponentInfo* info)
     {
         std::unique_ptr<HoverHandler> handler = std::make_unique<HoverHandler>(*comp);
@@ -341,12 +374,14 @@ private:
         addGroupToRows(rows, toggleComponents, 1, width);
         addGroupToRows(rows, dropdownComponents, 2, width);
         addGroupToRows(rows, textComponents, 3, width);
+        addGroupToRows(rows, fileChooserComponents, 4, width);
 
         return rows;
     }
 
+    template <typename ComponentList>
     void addGroupToRows(std::vector<std::vector<RowEntry>>& rows,
-                        const auto& components,
+                        const ComponentList& components,
                         int type,
                         int availableWidth) const
     {
@@ -387,7 +422,11 @@ private:
 
             auto& activeRow = rows.back();
 
-            activeRow.push_back({ c.get(), itemWidth, spec.minHeight });
+            int itemHeight = c->getPreferredHeight();
+            if (itemHeight == 0)
+                itemHeight = spec.minHeight;
+
+            activeRow.push_back({ c.get(), itemWidth, itemHeight });
         }
     }
 
@@ -403,6 +442,8 @@ private:
                 return { preferredDropdownWidth, minDropdownHeight };
             case 3:
                 return { preferredTextBoxWidth, minTextBoxHeight };
+            case 4:
+                return { preferredFilePickerWidth, minFilePickerHeight };
         }
 
         return { preferredDropdownWidth, minDropdownHeight };
@@ -426,11 +467,13 @@ private:
     static constexpr int minToggleHeight = 34;
     static constexpr int minDropdownHeight = 44;
     static constexpr int minTextBoxHeight = 84;
+    static constexpr int minFilePickerHeight = 50;
 
     static constexpr int preferredSliderWidth = 108;
     static constexpr int preferredToggleWidth = 112;
     static constexpr int preferredDropdownWidth = 140;
     static constexpr int preferredTextBoxWidth = 200;
+    static constexpr int preferredFilePickerWidth = 260;
 
     static constexpr int minInterItemGap = 6;
     static constexpr int minEdgeGap = 4;
@@ -441,6 +484,7 @@ private:
     std::vector<std::unique_ptr<ToggleWithLabel>> toggleComponents;
     std::vector<std::unique_ptr<SliderWithLabel>> sliderComponents;
     std::vector<std::unique_ptr<ComboBoxWithLabel>> dropdownComponents;
+    std::vector<std::unique_ptr<FileChooserWithLabel>> fileChooserComponents;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
 

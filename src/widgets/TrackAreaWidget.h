@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../media/AudioDisplayComponent.h"
+#include "../media/FileDisplayComponent.h"
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
 
@@ -181,9 +182,15 @@ public:
 
                 FlexItem i = FlexItem(*m);
 
+                int fixedH = m->getFixedHeight();
+
                 if (fixedTrackHeight)
                 {
                     i = i.withHeight(fixedTrackHeight);
+                }
+                else if (fixedH > 0)
+                {
+                    i = i.withHeight(fixedH).withFlex(0);
                 }
                 else
                 {
@@ -398,6 +405,25 @@ public:
         }
     }
 
+    void addFileOutputFromComponentInfo(FileComponentInfo* fileInfo)
+    {
+        std::string label = fileInfo->label.empty() ? "File Output" : fileInfo->label;
+
+        auto m = std::make_unique<FileDisplayComponent>(String(label), false, false, displayMode);
+
+        m->setTrackID(fileInfo->id);
+        m->setInstanceFileTypes(fileInfo->fileTypes);
+
+        if (! fileInfo->info.empty())
+            m->setMediaInstructions(fileInfo->info);
+
+        m->addChangeListener(this);
+        addAndMakeVisible(m.get());
+        mediaDisplays.push_back(std::move(m));
+
+        resized();
+    }
+
     void updateTracks(const ModelComponentInfoList& trackComponents)
     {
         resetState();
@@ -408,9 +434,13 @@ public:
             {
                 addTrackFromComponentInfo(trackInfo);
             }
+            else if (auto* fileInfo = dynamic_cast<FileComponentInfo*>(info.get()))
+            {
+                addFileOutputFromComponentInfo(fileInfo);
+            }
             else
             {
-                // Invalid input track
+                // Invalid track component
                 jassertfalse;
             }
         }

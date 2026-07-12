@@ -259,6 +259,31 @@ public:
             }
         }
 
+        std::map<Uuid, std::string> fileControlRemotePaths;
+
+        for (const auto& controlComponent : controlComponents)
+        {
+            if (auto* fileComponentInfo = dynamic_cast<FileComponentInfo*>(controlComponent.get()))
+            {
+                if (fileComponentInfo->path.empty())
+                    continue;
+
+                String remoteFilePath;
+
+                result =
+                    client->uploadFile(loadedPath, File(fileComponentInfo->path), remoteFilePath);
+
+                if (result.failed())
+                {
+                    setStatus(ModelStatus::FAILURE);
+
+                    return result;
+                }
+
+                fileControlRemotePaths[fileComponentInfo->id] = remoteFilePath.toStdString();
+            }
+        }
+
         /* Extract control values for JSON payload in order */
 
         Array<var> controlValues;
@@ -313,6 +338,25 @@ public:
                          dynamic_cast<ComboBoxComponentInfo*>(componentInfo.get()))
             {
                 controlValue = var(comboBoxComponentInfo->value);
+            }
+            else if (auto fileComponentInfo = dynamic_cast<FileComponentInfo*>(componentInfo.get()))
+            {
+                auto it = fileControlRemotePaths.find(fileComponentInfo->id);
+
+                if (it == fileControlRemotePaths.end() || it->second.empty())
+                {
+                    controlValue = var();
+                }
+                else
+                {
+                    DynamicObject::Ptr fileObj = new DynamicObject();
+
+                    fileObj->setProperty("path", var(it->second));
+
+                    controlValue = var(fileObj);
+                }
+
+                wasFile = true;
             }
             else
             {
@@ -440,6 +484,17 @@ private:
                     DBG_AND_LOG("Model::extractInputs: MIDI track input \"" + midiTrack->label
                                 + "\" extracted.");
                 }
+                else if (type == "generic_file")
+                {
+                    std::shared_ptr<ModelComponentInfo> fileChooser =
+                        std::make_shared<FileComponentInfo>(controlsDict);
+
+                    newControls.push_back(fileChooser);
+                    tempComponentIDs.push_back(fileChooser->id);
+
+                    DBG_AND_LOG("Model::extractInputs: File chooser control \"" + fileChooser->label
+                                + "\" extracted.");
+                }
                 else if (type == "text_box")
                 {
                     std::shared_ptr<ModelComponentInfo> textControl =
@@ -561,6 +616,16 @@ private:
                     newOutputs.push_back(midiTrack);
 
                     DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
+                                + "\" extracted.");
+                }
+                else if (type == "generic_file")
+                {
+                    std::shared_ptr<ModelComponentInfo> fileOutput =
+                        std::make_shared<FileComponentInfo>(controlsDict);
+
+                    newOutputs.push_back(fileOutput);
+
+                    DBG_AND_LOG("Model::extractOutputs: File output \"" + fileOutput->label
                                 + "\" extracted.");
                 }
                 else if (type == "json")
