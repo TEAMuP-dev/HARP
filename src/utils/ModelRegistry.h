@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include <BinaryData.h>
@@ -16,61 +17,42 @@ using namespace juce;
 
 namespace ModelRegistry
 {
-inline std::vector<std::string> getFallbackFeaturedModelPaths()
-{
-    return {
-        "click here to enter a custom path...",
-        "stability/text-to-audio",
-        "stability/audio-to-audio",
-        "teamup-tech/text2midi-symbolic-music-generation",
-        "teamup-tech/demucs-source-separation",
-        "teamup-tech/solo-piano-audio-to-midi-transcription",
-        "teamup-tech/transkun", // TODO - more intuitive name
-        "teamup-tech/TRIA", // TODO - more intuitive name: (The Rhythm In Anything) conditional drum generation
-        "teamup-tech/anticipatory-music-transformer",
-        "teamup-tech/vampnet-conditional-music-generation",
-        "teamup-tech/harmonic-percussive-separation",
-        "teamup-tech/Kokoro-TTS",
-        "teamup-tech/MegaTTS3-Voice-Cloning",
-        "teamup-tech/midi-synthesizer",
-        "teamup-tech/audioseal", // TODO - more intuitive name
-        // "xribene/HARP-UI-TEST-v3"
-    };
-}
+// The model selection UI treats the first combo-box entry as the "enter a custom
+// path" affordance, so the placeholder is prepended here rather than stored in
+// the registry, keeping the registry models-only.
+inline constexpr const char* customPathPlaceholder = "click here to enter a custom path...";
 
 inline std::vector<std::string> getFeaturedModelPaths()
 {
+    std::vector<std::string> featuredPaths { customPathPlaceholder };
+
     const String registryJson =
         String::fromUTF8(BinaryData::model_registry_json, BinaryData::model_registry_jsonSize);
 
     var parsedRegistry;
     const Result parseResult = JSON::parse(registryJson, parsedRegistry);
 
+    // The bundled registry is validated at configure time (see CMakeLists.txt),
+    // so failures here indicate a corrupted build rather than a bad edit.
     if (parseResult.failed() || ! parsedRegistry.isObject())
     {
-        DBG_AND_LOG("ModelRegistry::getFeaturedModelPaths: Failed to parse bundled registry. "
-                    "Using fallback list.");
+        DBG_AND_LOG("ModelRegistry::getFeaturedModelPaths: Failed to parse bundled registry.");
 
-        return getFallbackFeaturedModelPaths();
+        return featuredPaths;
     }
 
     auto* root = parsedRegistry.getDynamicObject();
 
-    if (root == nullptr || ! root->hasProperty("models") || ! root->getProperty("models").isArray())
+    if (root == nullptr || ! root->getProperty("models").isArray())
     {
         DBG_AND_LOG("ModelRegistry::getFeaturedModelPaths: Registry is missing a valid models "
-                    "array. Using fallback list.");
+                    "array.");
 
-        return getFallbackFeaturedModelPaths();
+        return featuredPaths;
     }
-
-    std::vector<std::string> featuredPaths;
 
     for (const auto& modelVar : *root->getProperty("models").getArray())
     {
-        if (! modelVar.isObject())
-            continue;
-
         auto* model = modelVar.getDynamicObject();
 
         if (model == nullptr)
@@ -81,14 +63,6 @@ inline std::vector<std::string> getFeaturedModelPaths()
 
         if (isFeatured && path.isNotEmpty())
             featuredPaths.push_back(path.toStdString());
-    }
-
-    if (featuredPaths.empty())
-    {
-        DBG_AND_LOG("ModelRegistry::getFeaturedModelPaths: Registry did not yield any featured "
-                    "paths. Using fallback list.");
-
-        return getFallbackFeaturedModelPaths();
     }
 
     return featuredPaths;

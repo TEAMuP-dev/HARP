@@ -28,7 +28,8 @@ env:
 jobs:
   validate-remote-models:
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
+    # Worst case is ~14 models x (timeout + retry delay + retry) plus a cold build
+    timeout-minutes: 150
 
     steps:
       - name: Install JUCE Linux dependencies
@@ -52,8 +53,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: v1-model-validation
+
       - name: Configure
-        run: cmake -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" .
+        run: >
+          cmake -B "$BUILD_DIR" -G Ninja
+          -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+          -DHARP_BUILD_MODEL_VALIDATION=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          .
 
       - name: Build model validation runner
         run: cmake --build "$BUILD_DIR" --config "$BUILD_TYPE" --target HARPRemoteModelTests --parallel 4
@@ -68,4 +80,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: remote-model-validation-report
-          path: artifacts/model_validation/remote
+          path: ${{ env.HARP_MODEL_VALIDATION_REPORT_DIR }}

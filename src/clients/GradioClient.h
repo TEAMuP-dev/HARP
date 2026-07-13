@@ -692,7 +692,8 @@ private:
 
                 // TODO - could potentially identify other errors (e.g., too many requests)
 
-                return OpResult::fail(GradioError { GradioError::Type::RuntimeError, errorPath });
+                return OpResult::fail(
+                    GradioError { GradioError::Type::RuntimeError, errorPath, response });
             }
             else
             {

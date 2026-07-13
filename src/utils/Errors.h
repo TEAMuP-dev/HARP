@@ -227,6 +227,8 @@ struct GradioError
     Type type;
 
     String endpointPath;
+
+    String detail; // Raw error payload reported by the remote endpoint, if any
 };
 
 inline String toUserMessage(const GradioError& e)
@@ -246,6 +248,11 @@ inline String toUserMessage(const GradioError& e)
 
             userMessage += ". If this is a Hugging Face space running on ZeroGPU, this "
                            "can also indicate a user has exceeded their daily ZeroGPU quota.";
+
+            if (e.detail.isNotEmpty())
+            {
+                userMessage += " Remote error: \"" + e.detail + "\".";
+            }
 
             return userMessage;
     }

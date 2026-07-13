@@ -1,11 +1,15 @@
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
+#include <string>
+#include <thread>
 #include <unordered_set>
+#include <vector>
 
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
 
 #include "Model.h"
+#include "utils/Errors.h"
 #include "utils/Logging.h"
 
 JUCE_IMPLEMENT_SINGLETON(HARPLogger)
@@ -17,7 +21,10 @@ namespace
 constexpr auto registryRelativePath = "resources/models/model_registry.json";
 constexpr auto audioFixtureRelativePath = "resources/media/test.wav";
 constexpr auto midiFixtureRelativePath = "resources/media/test.mid";
+constexpr auto defaultTextControlValue = "Short validation prompt";
 constexpr int defaultPerModelTimeoutMs = 120000;
+constexpr int defaultMaxRetries = 0;
+constexpr int defaultRetryDelayMs = 15000;
 
 struct ValidationEntry
 {
@@ -26,6 +33,7 @@ struct ValidationEntry
     String path;
     String mode;
     String requiredEnv;
+    String prompt;
 };
 
 struct ValidationResultRow
@@ -33,9 +41,37 @@ struct ValidationResultRow
     String id;
     String name;
     String path;
-    String outcome;
+    String outcome; // "passed" | "failed" | "skipped" | "inconclusive"
     String reason;
+    bool retryable = false;
 };
+
+struct Summary
+{
+    int passed = 0;
+    int failed = 0;
+    int skipped = 0;
+    int inconclusive = 0;
+};
+
+Summary summarize(const std::vector<ValidationResultRow>& results)
+{
+    Summary summary;
+
+    for (const auto& result : results)
+    {
+        if (result.outcome == "passed")
+            summary.passed += 1;
+        else if (result.outcome == "skipped")
+            summary.skipped += 1;
+        else if (result.outcome == "inconclusive")
+            summary.inconclusive += 1;
+        else
+            summary.failed += 1;
+    }
+
+    return summary;
+}
 
 File repoRoot()
 {
@@ -72,11 +108,6 @@ String getSelectedModelId()
     return getEnvValue("HARP_MODEL_VALIDATION_ID");
 }
 
-bool isChildMode()
-{
-    return getEnvValue("HARP_MODEL_VALIDATION_CHILD") == "1";
-}
-
 int getPerModelTimeoutMs()
 {
     const auto value = getEnvValue("HARP_MODEL_VALIDATION_TIMEOUT_MS");
@@ -89,9 +120,6 @@ int getPerModelTimeoutMs()
     const auto parsed = value.getIntValue();
     return parsed > 0 ? parsed : defaultPerModelTimeoutMs;
 }
-
-constexpr int defaultMaxRetries = 0;
-constexpr int defaultRetryDelayMs = 15000;
 
 int getMaxRetries()
 {
@@ -131,17 +159,15 @@ File getReportDir()
     return repoRoot().getChildFile("artifacts/model_validation/remote");
 }
 
-void seedProviderTokens(const ValidationEntry& entry)
+void seedProviderTokens(const ValidationEntry& entry, SharedAPIKeys& sharedTokens)
 {
-    SharedResourcePointer<SharedAPIKeys> sharedTokens;
-
     if (entry.mode == "remote_api")
     {
         const auto token = firstNonEmptyEnv({ "HARP_STABILITY_API_KEY", "STABILITY_API_KEY" });
 
         if (token.isNotEmpty())
         {
-            sharedTokens->savedTokens[Provider::Stability] = token;
+            sharedTokens.savedTokens[Provider::Stability] = token;
         }
     }
     else
@@ -150,7 +176,7 @@ void seedProviderTokens(const ValidationEntry& entry)
 
         if (token.isNotEmpty())
         {
-            sharedTokens->savedTokens[Provider::HuggingFace] = token;
+            sharedTokens.savedTokens[Provider::HuggingFace] = token;
         }
     }
 }
@@ -167,7 +193,7 @@ var parseJsonFile(const File& file)
     return parsed;
 }
 
-std::vector<ValidationEntry> loadRemoteValidationEntries()
+std::vector<ValidationEntry> loadRemoteValidationEntries(const String& selectedModelId)
 {
     const auto parsedRegistry = parseJsonFile(repoRoot().getChildFile(registryRelativePath));
 
@@ -183,7 +209,6 @@ std::vector<ValidationEntry> loadRemoteValidationEntries()
         throw std::runtime_error("Model registry must contain a models array.");
     }
 
-    const auto selectedModelId = getSelectedModelId();
     std::vector<ValidationEntry> entries;
     std::unordered_set<String> seenIds;
 
@@ -228,13 +253,14 @@ std::vector<ValidationEntry> loadRemoteValidationEntries()
             model->getProperty("path").toString(),
             mode,
             validation->getProperty("requires_env").toString(),
+            validation->getProperty("prompt").toString(),
         });
     }
 
     return entries;
 }
 
-void seedModelInputs(Model& model)
+void seedModelInputs(Model& model, const ValidationEntry& entry)
 {
     const auto audioFixture = repoRoot().getChildFile(audioFixtureRelativePath);
     const auto midiFixture = repoRoot().getChildFile(midiFixtureRelativePath);
@@ -257,13 +283,17 @@ void seedModelInputs(Model& model)
         }
     }
 
+    const auto textControlValue =
+        entry.prompt.isNotEmpty() ? entry.prompt.toStdString()
+                                  : std::string(defaultTextControlValue);
+
     for (const auto& control : model.getControls())
     {
         if (auto* text = dynamic_cast<TextBoxComponentInfo*>(control.get()))
         {
             if (text->value.empty())
             {
-                text->value = "Short validation prompt";
+                text->value = textControlValue;
             }
         }
     }
@@ -271,29 +301,50 @@ void seedModelInputs(Model& model)
 
 String validateOutputFiles(const std::vector<File>& outputFiles, const LabelList& labels)
 {
+    AudioFormatManager formatManager;
+    formatManager.registerBasicFormats();
+
     for (const auto& outputFile : outputFiles)
     {
         if (! outputFile.existsAsFile())
         {
-            return "missing output file";
+            return "missing output file " + outputFile.getFileName();
         }
 
         const auto extension = outputFile.getFileExtension().toLowerCase();
 
         if (extension == ".mid" || extension == ".midi")
         {
-            std::ifstream midiStream(outputFile.getFullPathName().toStdString(), std::ios::binary);
-            char header[4] {};
-            midiStream.read(header, 4);
+            FileInputStream midiStream(outputFile);
+            MidiFile midiFile;
 
-            if (String::fromUTF8(header, 4) != "MThd")
+            if (! midiStream.openedOk() || ! midiFile.readFrom(midiStream))
             {
-                return "invalid MIDI output";
+                return "unreadable MIDI output " + outputFile.getFileName();
+            }
+
+            if (midiFile.getNumTracks() < 1)
+            {
+                return "MIDI output has no tracks: " + outputFile.getFileName();
+            }
+        }
+        else if (formatManager.findFormatForFileExtension(extension) != nullptr)
+        {
+            std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(outputFile));
+
+            if (reader == nullptr)
+            {
+                return "undecodable audio output " + outputFile.getFileName();
+            }
+
+            if (reader->lengthInSamples <= 0)
+            {
+                return "empty audio output " + outputFile.getFileName();
             }
         }
         else if (outputFile.getSize() <= 0)
         {
-            return "empty output file";
+            return "empty output file " + outputFile.getFileName();
         }
     }
 
@@ -308,18 +359,49 @@ String validateOutputFiles(const std::vector<File>& outputFiles, const LabelList
     return {};
 }
 
-String classifyFailureMessage(const String& message)
+struct FailureInfo
 {
-    if (message.containsIgnoreCase("status code 503"))
-        return "503 Service Unavailable";
-    if (message.containsIgnoreCase("timed out"))
-        return "remote Gradio timeout";
-    if (message.containsIgnoreCase("runtime error occurred at endpoint"))
-        return "remote Gradio runtime error";
-    if (message.containsIgnoreCase("valid API key"))
-        return "missing or invalid API key";
+    String reason;
+    bool retryable = false;
+    bool inconclusive = false;
+};
 
-    return message.isNotEmpty() ? message : "unknown failure";
+FailureInfo classifyFailure(const Error& error)
+{
+    FailureInfo info;
+    info.reason = toUserMessage(error);
+
+    if (const auto* http = std::get_if<HttpError>(&error))
+    {
+        // Sleeping/restarting spaces and server-side errors are transient
+        info.retryable = http->type == HttpError::Type::ConnectionFailed
+                         || (http->type == HttpError::Type::BadStatusCode
+                             && (http->statusCode == 429 || http->statusCode >= 500));
+    }
+    else if (const auto* gradio = std::get_if<GradioError>(&error))
+    {
+        // Quota exhaustion says nothing about the health of the model itself
+        info.inconclusive = gradio->detail.containsIgnoreCase("quota");
+    }
+    else if (const auto* file = std::get_if<FileError>(&error))
+    {
+        info.retryable = file->type == FileError::Type::UploadFailed
+                         || file->type == FileError::Type::DownloadFailed;
+    }
+
+    return info;
+}
+
+ValidationResultRow makeFailureRow(const ValidationEntry& entry, const Error& error)
+{
+    const auto failure = classifyFailure(error);
+
+    return { entry.id,
+             entry.name,
+             entry.path,
+             failure.inconclusive ? "inconclusive" : "failed",
+             failure.reason,
+             failure.retryable };
 }
 
 String summarizeReason(const String& reason)
@@ -339,28 +421,16 @@ String summarizeReason(const String& reason)
     return {};
 }
 
-String renderMarkdownReport(const std::vector<ValidationResultRow>& results)
+String renderMarkdownReport(const std::vector<ValidationResultRow>& results,
+                            const Summary& summary)
 {
-    int passed = 0;
-    int failed = 0;
-    int skipped = 0;
-
-    for (const auto& result : results)
-    {
-        if (result.outcome == "passed")
-            passed += 1;
-        else if (result.outcome == "failed")
-            failed += 1;
-        else if (result.outcome == "skipped")
-            skipped += 1;
-    }
-
     String markdown;
     markdown << "# HARP Remote Model Validation\n\n";
     markdown << "- Total: " << results.size() << "\n";
-    markdown << "- Passed: " << passed << "\n";
-    markdown << "- Failed: " << failed << "\n";
-    markdown << "- Skipped: " << skipped << "\n\n";
+    markdown << "- Passed: " << summary.passed << "\n";
+    markdown << "- Failed: " << summary.failed << "\n";
+    markdown << "- Skipped: " << summary.skipped << "\n";
+    markdown << "- Inconclusive: " << summary.inconclusive << "\n\n";
     markdown << "## Dashboard\n\n";
     markdown << "| Model Path | Outcome | Detail |\n";
     markdown << "| --- | --- | --- |\n";
@@ -378,20 +448,11 @@ void writeReport(const File& reportDir, const std::vector<ValidationResultRow>& 
 {
     reportDir.createDirectory();
 
-    int passed = 0;
-    int failed = 0;
-    int skipped = 0;
+    const auto summary = summarize(results);
     Array<var> rows;
 
     for (const auto& result : results)
     {
-        if (result.outcome == "passed")
-            passed += 1;
-        else if (result.outcome == "failed")
-            failed += 1;
-        else if (result.outcome == "skipped")
-            skipped += 1;
-
         auto* row = new DynamicObject();
         row->setProperty("id", result.id);
         row->setProperty("name", result.name);
@@ -401,25 +462,22 @@ void writeReport(const File& reportDir, const std::vector<ValidationResultRow>& 
         rows.add(var(row));
     }
 
-    auto* summary = new DynamicObject();
-    summary->setProperty("total", static_cast<int>(results.size()));
-    summary->setProperty("passed", passed);
-    summary->setProperty("failed", failed);
-    summary->setProperty("skipped", skipped);
+    auto* summaryObject = new DynamicObject();
+    summaryObject->setProperty("total", static_cast<int>(results.size()));
+    summaryObject->setProperty("passed", summary.passed);
+    summaryObject->setProperty("failed", summary.failed);
+    summaryObject->setProperty("skipped", summary.skipped);
+    summaryObject->setProperty("inconclusive", summary.inconclusive);
 
     auto* report = new DynamicObject();
     report->setProperty("generated_at", Time::getCurrentTime().toISO8601(true));
-    report->setProperty("registry_path", repoRoot().getChildFile(registryRelativePath).getFullPathName());
-    report->setProperty("summary", var(summary));
+    report->setProperty("registry_path",
+                        repoRoot().getChildFile(registryRelativePath).getFullPathName());
+    report->setProperty("summary", var(summaryObject));
     report->setProperty("results", rows);
 
-    const auto reportJson = JSON::toString(var(report), true);
-    const auto reportMd = renderMarkdownReport(results);
-
-    reportDir.getChildFile("latest.json").replaceWithText(reportJson);
-    reportDir.getChildFile("latest.md").replaceWithText(reportMd);
-    reportDir.getChildFile("status.json").replaceWithText(reportJson);
-    reportDir.getChildFile("dashboard.md").replaceWithText(reportMd);
+    reportDir.getChildFile("latest.json").replaceWithText(JSON::toString(var(report), true));
+    reportDir.getChildFile("latest.md").replaceWithText(renderMarkdownReport(results, summary));
 }
 
 ValidationResultRow validateEntry(const ValidationEntry& entry)
@@ -430,21 +488,21 @@ ValidationResultRow validateEntry(const ValidationEntry& entry)
                  "Required environment variable " + entry.requiredEnv + " is not set." };
     }
 
-    seedProviderTokens(entry);
+    // Must outlive the Model below — the shared object is destroyed with its
+    // last SharedResourcePointer, and the Client reading the tokens is only
+    // created inside Model::load
+    SharedResourcePointer<SharedAPIKeys> sharedTokens;
+    seedProviderTokens(entry, *sharedTokens);
 
     Model model;
     const auto loadResult = model.load(entry.path);
 
     if (loadResult.failed())
     {
-        return { entry.id,
-                 entry.name,
-                 entry.path,
-                 "failed",
-                 classifyFailureMessage(toUserMessage(loadResult.getError())) };
+        return makeFailureRow(entry, loadResult.getError());
     }
 
-    seedModelInputs(model);
+    seedModelInputs(model, entry);
 
     std::map<Uuid, File> inputFiles;
 
@@ -472,19 +530,21 @@ ValidationResultRow validateEntry(const ValidationEntry& entry)
 
     if (processResult.failed())
     {
-        return { entry.id,
-                 entry.name,
-                 entry.path,
-                 "failed",
-                 classifyFailureMessage(toUserMessage(processResult.getError())) };
+        return makeFailureRow(entry, processResult.getError());
     }
 
-    if (static_cast<int>(outputFiles.size()) != static_cast<int>(model.getOutputTracks().size()))
+    String outputError;
+
+    if (outputFiles.size() != model.getOutputTracks().size())
     {
-        return { entry.id, entry.name, entry.path, "failed", "unexpected number of output files" };
+        outputError = "unexpected number of output files (got "
+                      + String(outputFiles.size()) + ", expected "
+                      + String(model.getOutputTracks().size()) + ")";
     }
-
-    const auto outputError = validateOutputFiles(outputFiles, labels);
+    else
+    {
+        outputError = validateOutputFiles(outputFiles, labels);
+    }
 
     for (const auto& outputFile : outputFiles)
     {
@@ -507,6 +567,7 @@ String serializeResultRow(const ValidationResultRow& result)
     object->setProperty("path", result.path);
     object->setProperty("outcome", result.outcome);
     object->setProperty("reason", result.reason);
+    object->setProperty("retryable", result.retryable);
     return JSON::toString(var(object), false).replaceCharacters("\r\n", "  ");
 }
 
@@ -542,6 +603,7 @@ bool parseResultRowFromOutput(const String& output, ValidationResultRow& result)
         result.path = object->getProperty("path").toString();
         result.outcome = object->getProperty("outcome").toString();
         result.reason = object->getProperty("reason").toString();
+        result.retryable = static_cast<bool>(object->getProperty("retryable"));
         return true;
     }
 
@@ -550,42 +612,18 @@ bool parseResultRowFromOutput(const String& output, ValidationResultRow& result)
 
 bool isRetryableFailure(const ValidationResultRow& result)
 {
-    if (result.outcome != "failed")
-        return false;
-
-    const auto& reason = result.reason;
-    return reason.containsIgnoreCase("sleeping")
-        || reason.containsIgnoreCase("restarting")
-        || reason.containsIgnoreCase("try again")
-        || reason.containsIgnoreCase("timed out")
-        || reason.containsIgnoreCase("503")
-        || reason.containsIgnoreCase("Unable to make POST request");
+    return result.outcome == "failed" && result.retryable;
 }
 
 ValidationResultRow runEntryInChildProcessOnce(const ValidationEntry& entry)
 {
+    // The child inherits this process's environment (tokens, timeout, report
+    // dir); only the model id needs passing, and argv keeps secrets off the
+    // command line and works on Windows
     StringArray command;
-    command.add("env");
-    command.add("HARP_MODEL_VALIDATION_CHILD=1");
-    command.add("HARP_MODEL_VALIDATION_ID=" + entry.id);
-    command.add("HARP_MODEL_VALIDATION_TIMEOUT_MS=" + String(getPerModelTimeoutMs()));
-
-    const auto reportDir = getReportDir();
-    command.add("HARP_MODEL_VALIDATION_REPORT_DIR=" + reportDir.getFullPathName());
-
-    const auto hfToken = firstNonEmptyEnv({ "HARP_HUGGINGFACE_TOKEN", "HF_TOKEN" });
-    if (hfToken.isNotEmpty())
-    {
-        command.add("HARP_HUGGINGFACE_TOKEN=" + hfToken);
-    }
-
-    const auto stabilityKey = firstNonEmptyEnv({ "HARP_STABILITY_API_KEY", "STABILITY_API_KEY" });
-    if (stabilityKey.isNotEmpty())
-    {
-        command.add("HARP_STABILITY_API_KEY=" + stabilityKey);
-    }
-
     command.add(File::getSpecialLocation(File::currentExecutableFile).getFullPathName());
+    command.add("--child");
+    command.add(entry.id);
 
     ChildProcess child;
 
@@ -594,13 +632,25 @@ ValidationResultRow runEntryInChildProcessOnce(const ValidationEntry& entry)
         return { entry.id, entry.name, entry.path, "failed", "failed to launch child process" };
     }
 
-    if (! child.waitForProcessToFinish(getPerModelTimeoutMs()))
+    // Drain output while waiting — an undrained pipe blocks the child once the
+    // buffer fills, which would surface as a bogus timeout
+    String output;
+    std::thread outputReader([&child, &output] { output = child.readAllProcessOutput(); });
+
+    const bool finished = child.waitForProcessToFinish(getPerModelTimeoutMs());
+
+    if (! finished)
     {
         child.kill();
-        return { entry.id, entry.name, entry.path, "failed", "model validation timed out" };
     }
 
-    const auto output = child.readAllProcessOutput();
+    outputReader.join();
+
+    if (! finished)
+    {
+        return { entry.id, entry.name, entry.path, "failed", "model validation timed out", true };
+    }
+
     ValidationResultRow result;
 
     if (parseResultRowFromOutput(output, result))
@@ -635,30 +685,45 @@ ValidationResultRow runEntryInChildProcess(const ValidationEntry& entry)
 
     return result;
 }
+
+int runChildMode(const String& childModelId)
+{
+    const auto entries = loadRemoteValidationEntries(childModelId);
+
+    if (entries.size() != 1)
+    {
+        std::cerr << "Child mode: model id \"" << childModelId
+                  << "\" did not match exactly one enabled remote registry entry.\n";
+        return 1;
+    }
+
+    const auto result = validateEntry(entries.front());
+    std::cout << "RESULT_JSON: " << serializeResultRow(result) << '\n';
+    return result.outcome == "failed" ? 1 : 0;
+}
 } // namespace
 
 int main(int argc, char* argv[])
 {
-    ignoreUnused(argc, argv);
-
     ScopedJuceInitialiser_GUI scopedJuce;
 
     try
     {
-        const auto entries = loadRemoteValidationEntries();
+        for (int i = 1; i + 1 < argc; ++i)
+        {
+            if (String(argv[i]) == "--child")
+            {
+                return runChildMode(String::fromUTF8(argv[i + 1]));
+            }
+        }
+
+        const auto entries = loadRemoteValidationEntries(getSelectedModelId());
         const auto reportDir = getReportDir();
 
         if (entries.empty())
         {
             std::cerr << "No enabled remote validation entries found.\n";
             return 1;
-        }
-
-        if (isChildMode())
-        {
-            const auto result = validateEntry(entries.front());
-            std::cout << "RESULT_JSON: " << serializeResultRow(result) << '\n';
-            return result.outcome == "failed" ? 1 : 0;
         }
 
         const auto totalEntries = static_cast<int>(entries.size());
@@ -685,57 +750,49 @@ int main(int argc, char* argv[])
             const auto result = runEntryInChildProcess(entry);
             results.push_back(result);
 
+            // Write after every model so a killed run still leaves a report
+            writeReport(reportDir, results);
+
             if (result.outcome == "passed")
                 std::cout << "PASSED\n";
             else if (result.outcome == "skipped")
                 std::cout << "SKIPPED (" << result.reason << ")\n";
+            else if (result.outcome == "inconclusive")
+                std::cout << "INCONCLUSIVE (" << result.reason << ")\n";
             else
                 std::cout << "FAILED\n";
         }
 
-        int passed = 0;
-        int failed = 0;
-        int skipped = 0;
-        std::vector<const ValidationResultRow*> failedResults;
-
-        for (const auto& result : results)
-        {
-            if (result.outcome == "passed")
-                passed += 1;
-            else if (result.outcome == "skipped")
-                skipped += 1;
-            else
-            {
-                failed += 1;
-                failedResults.push_back(&result);
-            }
-        }
+        const auto summary = summarize(results);
 
         std::cout << "\n";
         std::cout << "========================================\n";
         std::cout << "  Summary\n";
         std::cout << "========================================\n";
-        std::cout << "  Passed:  " << passed << " / " << totalEntries << "\n";
-        std::cout << "  Failed:  " << failed << " / " << totalEntries << "\n";
-        std::cout << "  Skipped: " << skipped << " / " << totalEntries << "\n";
+        std::cout << "  Passed:       " << summary.passed << " / " << totalEntries << "\n";
+        std::cout << "  Failed:       " << summary.failed << " / " << totalEntries << "\n";
+        std::cout << "  Skipped:      " << summary.skipped << " / " << totalEntries << "\n";
+        std::cout << "  Inconclusive: " << summary.inconclusive << " / " << totalEntries << "\n";
         std::cout << "----------------------------------------\n";
 
-        if (! failedResults.empty())
+        if (summary.failed > 0)
         {
             std::cout << "\n  Failed models:\n\n";
 
-            for (const auto* result : failedResults)
+            for (const auto& result : results)
             {
-                std::cout << "    " << result->path << "\n";
-                std::cout << "      Reason: " << result->reason << "\n\n";
+                if (result.outcome == "passed" || result.outcome == "skipped"
+                    || result.outcome == "inconclusive")
+                    continue;
+
+                std::cout << "    " << result.path << "\n";
+                std::cout << "      Reason: " << result.reason << "\n\n";
             }
         }
 
         std::cout << "========================================\n\n";
 
-        writeReport(reportDir, results);
-
-        return failed > 0 ? 1 : 0;
+        return summary.failed > 0 ? 1 : 0;
     }
     catch (const std::exception& exception)
     {

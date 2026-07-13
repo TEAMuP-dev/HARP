@@ -2,29 +2,13 @@
   "version": 1,
   "models": [
     {
-      "id": "custom-path",
-      "name": "Custom Path",
-      "path": "click here to enter a custom path...",
-      "provider": "custom",
-      "source": "ui",
-      "featured": true,
-      "validation": {
-        "enabled": false,
-        "mode": "manual",
-        "reason": "UI placeholder entry used to add custom model paths."
-      }
-    },
-    {
       "id": "stability-text-to-audio",
       "name": "Stable Audio Text to Audio",
       "path": "stability/text-to-audio",
-      "provider": "stability",
-      "source": "stability_api",
       "featured": true,
       "validation": {
         "enabled": true,
         "mode": "remote_api",
-        "requires_network": true,
         "requires_env": "HARP_STABILITY_API_KEY"
       }
     },
@@ -32,13 +16,10 @@
       "id": "stability-audio-to-audio",
       "name": "Stable Audio Audio to Audio",
       "path": "stability/audio-to-audio",
-      "provider": "stability",
-      "source": "stability_api",
       "featured": true,
       "validation": {
         "enabled": true,
         "mode": "remote_api",
-        "requires_network": true,
         "requires_env": "HARP_STABILITY_API_KEY"
       }
     },
@@ -46,239 +27,120 @@
       "id": "text2midi-symbolic-music-generation",
       "name": "Text2MIDI Symbolic Music Generation",
       "path": "teamup-tech/text2midi-symbolic-music-generation",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "demucs-source-separation",
       "name": "Demucs Source Separation",
       "path": "teamup-tech/demucs-source-separation",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "solo-piano-audio-to-midi-transcription",
       "name": "Solo Piano Audio to MIDI Transcription",
       "path": "teamup-tech/solo-piano-audio-to-midi-transcription",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "transkun",
       "name": "Transkun",
       "path": "teamup-tech/transkun",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "tria",
-      "name": "TRIA",
+      "name": "TRIA (The Rhythm In Anything)",
       "path": "teamup-tech/TRIA",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "anticipatory-music-transformer",
       "name": "Anticipatory Music Transformer",
       "path": "teamup-tech/anticipatory-music-transformer",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "vampnet-conditional-music-generation",
       "name": "VampNet Conditional Music Generation",
       "path": "teamup-tech/vampnet-conditional-music-generation",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "harmonic-percussive-separation",
       "name": "Harmonic Percussive Separation",
       "path": "teamup-tech/harmonic-percussive-separation",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "kokoro-tts",
       "name": "Kokoro TTS",
       "path": "teamup-tech/Kokoro-TTS",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "megatts3-voice-cloning",
       "name": "MegaTTS3 Voice Cloning",
       "path": "teamup-tech/MegaTTS3-Voice-Cloning",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "midi-synthesizer",
       "name": "MIDI Synthesizer",
       "path": "teamup-tech/midi-synthesizer",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
+        "mode": "remote_gradio"
       }
     },
     {
       "id": "audioseal",
       "name": "AudioSeal",
       "path": "teamup-tech/audioseal",
-      "provider": "huggingface",
-      "source": "huggingface_space",
       "featured": true,
       "validation": {
         "enabled": true,
-        "mode": "remote_gradio",
-        "requires_network": true
-      }
-    },
-    {
-      "id": "pitch-shifter-example",
-      "name": "Pitch Shifter Example",
-      "path": null,
-      "provider": "pyharp",
-      "source": "local_example",
-      "featured": false,
-      "validation": {
-        "enabled": true,
-        "mode": "local_pyharp_example",
-        "app_path": "pyharp/examples/pitch_shifter/app.py",
-        "python_modules": [
-          "gradio",
-          "audiotools",
-          "torch",
-          "torchaudio"
-        ],
-        "inputs": [
-          {
-            "kind": "audio_fixture",
-            "path": "resources/media/test.wav"
-          },
-          {
-            "kind": "literal",
-            "value": 7
-          }
-        ],
-        "expected_outputs": [
-          {
-            "kind": "audio_file",
-            "extension": ".wav",
-            "min_size_bytes": 128
-          }
-        ]
-      }
-    },
-    {
-      "id": "midi-pitch-shifter-example",
-      "name": "MIDI Pitch Shifter Example",
-      "path": null,
-      "provider": "pyharp",
-      "source": "local_example",
-      "featured": false,
-      "validation": {
-        "enabled": true,
-        "mode": "local_pyharp_example",
-        "app_path": "pyharp/examples/midi_pitch_shifter/app.py",
-        "python_modules": [
-          "gradio",
-          "symusic"
-        ],
-        "inputs": [
-          {
-            "kind": "midi_fixture",
-            "path": "resources/media/test.mid"
-          },
-          {
-            "kind": "literal",
-            "value": 7
-          }
-        ],
-        "expected_outputs": [
-          {
-            "kind": "midi_file",
-            "extension": ".mid",
-            "min_size_bytes": 32
-          }
-        ]
-      }
-    },
-    {
-      "id": "ui-tester-example",
-      "name": "UI Tester Example",
-      "path": null,
-      "provider": "pyharp",
-      "source": "local_example",
-      "featured": false,
-      "validation": {
-        "enabled": false,
-        "mode": "local_pyharp_example",
-        "reason": "Downloads external fixture files and is better covered by a dedicated integration test."
+        "mode": "remote_gradio"
       }
     }
   ]

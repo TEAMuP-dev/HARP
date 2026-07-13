@@ -169,42 +169,68 @@ if(WIN32)
     )
 endif()
 
-include(CTest)
+# Validate the bundled model registry at configure time so a bad edit fails the
+# build instead of silently degrading the in-app model list.
+file(READ "${CMAKE_SOURCE_DIR}/resources/models/model_registry.json" HARP_MODEL_REGISTRY_CONTENTS)
+string(JSON HARP_MODEL_REGISTRY_MODEL_COUNT
+    ERROR_VARIABLE HARP_MODEL_REGISTRY_ERROR
+    LENGTH "${HARP_MODEL_REGISTRY_CONTENTS}" models)
 
-juce_add_console_app(HARPRemoteModelTests
-    PRODUCT_NAME "HARPRemoteModelTests"
-)
+if(HARP_MODEL_REGISTRY_ERROR)
+    message(FATAL_ERROR "resources/models/model_registry.json is invalid: ${HARP_MODEL_REGISTRY_ERROR}")
+elseif(HARP_MODEL_REGISTRY_MODEL_COUNT LESS 1)
+    message(FATAL_ERROR "resources/models/model_registry.json contains no models.")
+endif()
 
-juce_generate_juce_header(HARPRemoteModelTests)
+# The validation runner performs live network calls against deployed models, so
+# it is opt-in rather than part of the default build and test suite.
+option(HARP_BUILD_MODEL_VALIDATION "Build the remote model validation runner (live-network tests)" OFF)
 
-target_sources(HARPRemoteModelTests
-    PRIVATE
-        tests/ModelValidationMain.cpp
-        ${HARP_COMMON_SOURCES}
-)
+if(HARP_BUILD_MODEL_VALIDATION)
+    include(CTest)
 
-target_include_directories(HARPRemoteModelTests
-    PRIVATE
-        "${CMAKE_SOURCE_DIR}/src"
-)
+    juce_add_console_app(HARPRemoteModelTests
+        PRODUCT_NAME "HARPRemoteModelTests"
+    )
 
-target_compile_definitions(HARPRemoteModelTests
-    PRIVATE
-        JUCE_USE_CURL=1
-        JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
-        HARP_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-)
+    juce_generate_juce_header(HARPRemoteModelTests)
 
-target_link_libraries(HARPRemoteModelTests
-    PRIVATE
-        ${HARP_JUCE_MODULES}
-        stability_controls
-    PUBLIC
-        ${HARP_JUCE_FLAGS}
-)
+    target_sources(HARPRemoteModelTests
+        PRIVATE
+            tests/ModelValidationMain.cpp
+            ${HARP_COMMON_SOURCES}
+    )
 
-if(BUILD_TESTING)
-    add_test(NAME HARPRemoteModelTests COMMAND HARPRemoteModelTests)
+    target_include_directories(HARPRemoteModelTests
+        PRIVATE
+            "${CMAKE_SOURCE_DIR}/src"
+    )
+
+    target_compile_definitions(HARPRemoteModelTests
+        PRIVATE
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=1
+            JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
+            JUCE_USE_OGGVORBIS=1
+            JUCE_USE_MP3AUDIOFORMAT=1
+            HARP_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    )
+
+    target_link_libraries(HARPRemoteModelTests
+        PRIVATE
+            ${HARP_JUCE_MODULES}
+            stability_controls
+        PUBLIC
+            ${HARP_JUCE_FLAGS}
+    )
+
+    if(BUILD_TESTING)
+        add_test(NAME HARPRemoteModelTests COMMAND HARPRemoteModelTests)
+
+        # The serial sweep can legitimately run for over an hour; ctest's default
+        # 1500s timeout would kill it mid-run before any report is written.
+        set_tests_properties(HARPRemoteModelTests PROPERTIES TIMEOUT 7200)
+    endif()
 endif()
 
 if(APPLE)
