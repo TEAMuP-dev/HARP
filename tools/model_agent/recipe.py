@@ -412,6 +412,56 @@ def _indent(code: str, spaces: int = 4) -> str:
     return "\n".join((pad + line if line.strip() else line) for line in code.splitlines())
 
 
+# Restores torch.load's pre-2.6 default (weights_only=False) so legacy model
+# checkpoints -- which pickle non-tensor globals (e.g. numpy scalars) -- load
+# without the "Weights only load failed / WeightsUnpickler error" that PyTorch
+# >=2.6 raises. Guarded so it is a no-op when torch is not installed. This is the
+# single most common runtime failure for torch models packaged for a fresh Space.
+_TORCH_LOAD_COMPAT_PREAMBLE = """\
+try:  # torch>=2.6 flipped torch.load(weights_only) to True; legacy ckpts need False
+    import torch as _torch
+
+    if getattr(_torch.load, "__harp_compat__", False) is False:
+        _torch_load_orig = _torch.load
+
+        def _torch_load_compat(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _torch_load_orig(*args, **kwargs)
+
+        _torch_load_compat.__harp_compat__ = True
+        _torch.load = _torch_load_compat
+except Exception:  # torch not installed / unexpected API -- nothing to patch
+    pass"""
+
+# LLM code-generation slips that a deterministic pass can correct before deploy.
+# torch{audio,vision} have no `.cuda` submodule; device checks live on `torch`.
+_CODE_REPAIRS = (
+    (re.compile(r"\btorchaudio\.cuda\b"), "torch.cuda"),
+    (re.compile(r"\btorchvision\.cuda\b"), "torch.cuda"),
+)
+_TORCH_REF_RE = re.compile(r"\btorch\.")
+_TORCH_IMPORT_RE = re.compile(r"^\s*import\s+torch\b", re.MULTILINE)
+
+
+def _repair_inference_code(setup: str, body: str) -> "tuple[str, str, List[str]]":
+    """Deterministically fix common LLM/compat mistakes in generated glue.
+
+    Returns ``(setup, body, extra_imports)``. ``extra_imports`` adds ``import
+    torch`` when the (repaired) code references ``torch.`` but never imports it --
+    e.g. after rewriting a bogus ``torchaudio.cuda.is_available()`` call.
+    """
+
+    for pattern, replacement in _CODE_REPAIRS:
+        setup = pattern.sub(replacement, setup)
+        body = pattern.sub(replacement, body)
+
+    extra_imports: List[str] = []
+    combined = f"{setup}\n{body}"
+    if _TORCH_REF_RE.search(combined) and not _TORCH_IMPORT_RE.search(setup):
+        extra_imports.append("import torch")
+    return setup, body, extra_imports
+
+
 def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
     """Render a runnable pyharp ``app.py`` from a validated recipe."""
 
@@ -436,7 +486,13 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
 
     uses_gpu = bool(framework.get("gpu"))
 
+    setup = str(inference.get("setup") or "").strip()
+    raw_body = str(inference["body"]).strip() or "pass"
+    setup, raw_body, extra_imports = _repair_inference_code(setup, raw_body)
+
     import_lines = ["import gradio as gr"]
+    for extra in extra_imports:
+        import_lines.append(extra)
     if uses_gpu:
         import_lines.append(_SPACES_IMPORT_BLOCK)
     import_lines.append("")
@@ -445,9 +501,8 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
     # load_audio, save_audio, ...) that inference glue may reach for.
     import_lines.append("from pyharp import *")
 
-    setup = str(inference.get("setup") or "").strip()
     arg_names = ", ".join(str(spec["name"]) for spec in inputs)
-    body = _indent(str(inference["body"]).strip() or "pass")
+    body = _indent(raw_body)
     decorator = "@spaces.GPU\n" if uses_gpu else ""
 
     input_lines = ",\n".join(
@@ -461,6 +516,9 @@ def render_app_from_recipe(recipe: Mapping[str, Any]) -> str:
         "from __future__ import annotations",
         "",
         "\n".join(import_lines),
+        "",
+        "",
+        _TORCH_LOAD_COMPAT_PREAMBLE,
         "",
         "",
     ]
@@ -521,13 +579,18 @@ def _render_backend_app(recipe: Mapping[str, Any]) -> str:
     framework = recipe.get("framework") or {}
     uses_gpu = bool(framework.get("gpu"))
 
+    setup = str(inference.get("setup") or "").strip()
+    raw_body = str(inference["body"]).strip() or "pass"
+    setup, raw_body, extra_imports = _repair_inference_code(setup, raw_body)
+
     import_lines = ["import gradio as gr"]
+    for extra in extra_imports:
+        import_lines.append(extra)
     if uses_gpu:
         import_lines.append(_SPACES_IMPORT_BLOCK)
 
-    setup = str(inference.get("setup") or "").strip()
     arg_names = ", ".join(str(spec["name"]) for spec in inputs)
-    body = _indent(str(inference["body"]).strip() or "pass")
+    body = _indent(raw_body)
     decorator = "@spaces.GPU\n" if uses_gpu else ""
 
     input_lines = ",\n".join(
@@ -541,6 +604,9 @@ def _render_backend_app(recipe: Mapping[str, Any]) -> str:
         "from __future__ import annotations",
         "",
         "\n".join(import_lines),
+        "",
+        "",
+        _TORCH_LOAD_COMPAT_PREAMBLE,
         "",
         "",
     ]
@@ -1756,6 +1822,13 @@ _CONTROL_ENDPOINT_HINTS = (
     "interrupt", "toggle", "cancel", "stop", "reset", "clear", "login", "logout",
     "load", "change", "update", "select", "lambda", "refresh", "preview", "_run_",
 )
+# Substrings that mark an INTERNAL variant of the inference call (Gradio's batched
+# fn, streaming/background helpers). These share a verb with the real endpoint
+# (e.g. /predict_batched vs /predict_full) but take list-shaped args a single HARP
+# call can't satisfy -- calling one yields an opaque "Internal Gradio error".
+_INTERNAL_ENDPOINT_HINTS = (
+    "batch", "batched", "internal", "stream", "background", "_fn", "warmup",
+)
 _MEDIA_RETURN_COMPONENTS = {"audio", "image", "video", "file", "gallery", "model3d"}
 
 
@@ -1778,8 +1851,15 @@ def rank_named_endpoints(api_info: Mapping[str, Any]) -> List["tuple[str, int]"]
         score = 0
         if short in _PRIMARY_ENDPOINT_NAMES:
             score += 100
+        elif any(verb in short for verb in _PRIMARY_ENDPOINT_NAMES):
+            # Partial match rewards the user-facing variant, e.g. "predict_full"
+            # or "generate_music", without over-scoring an exact control name.
+            score += 40
         if any(hint in short for hint in _CONTROL_ENDPOINT_HINTS):
             score -= 100
+        if any(hint in short for hint in _INTERNAL_ENDPOINT_HINTS):
+            # e.g. /predict_batched, /predict_stream: internal siblings of the call.
+            score -= 60
         returns = ep.get("returns") or []
         params = ep.get("parameters") or []
         if returns:

@@ -185,6 +185,42 @@
       "repo": "SonyResearch/Woosh",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/woosh-dflow"
+    },
+    {
+      "backend_space": "facebook/MusicGen",
+      "mode": "remote",
+      "model_id": "facebook/MusicGen",
+      "outcome": "success",
+      "repo": "facebook/MusicGen",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/musicgen"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "suno-ai/bark",
+      "outcome": "success",
+      "repo": "suno-ai/bark",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/bark"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "speechbrain/tts-tacotron2-ljspeech",
+      "outcome": "success",
+      "repo": "speechbrain/tts-tacotron2-ljspeech",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/tacotron2-tts"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "haoheliu/voicefixer",
+      "outcome": "success",
+      "repo": "haoheliu/voicefixer",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/voicefixer"
     }
   ],
   "version": 1

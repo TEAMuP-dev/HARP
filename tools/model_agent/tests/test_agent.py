@@ -1962,6 +1962,47 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         self.assertEqual(lint_generated_app(app), [])
 
 
+class GeneratedCodeRepairTest(unittest.TestCase):
+    """Deterministic fixups applied to LLM-authored inference glue before deploy."""
+
+    def _recipe(self, setup, body):
+        return {
+            "model": {"id": "x/y", "name": "Y", "description": "d", "author": "x"},
+            "framework": {"gpu": False, "pip": ["torch", "torchaudio"]},
+            "inputs": [{"name": "text", "type": "textbox", "label": "Text", "required": True}],
+            "outputs": [{"name": "audio", "type": "audio", "label": "Audio"}],
+            "inference": {"setup": setup, "body": body},
+        }
+
+    def test_fixes_torchaudio_cuda_and_adds_torch_import(self):
+        # Tacotron2 regression: torchaudio has no .cuda; device checks live on torch.
+        recipe = self._recipe(
+            'import torchaudio\nDEVICE = "cuda" if torchaudio.cuda.is_available() else "cpu"',
+            "return save_audio(text)",
+        )
+        app = render_app_from_recipe(recipe)
+        compile(app, "<repair>", "exec")
+        self.assertNotIn("torchaudio.cuda", app)
+        self.assertIn("torch.cuda.is_available()", app)
+        # torch is referenced after the rewrite but not imported by setup -> injected.
+        self.assertIn("\nimport torch\n", app)
+
+    def test_injects_torch_load_weights_only_shim(self):
+        # Bark regression: torch>=2.6 defaults weights_only=True and breaks legacy
+        # checkpoints; the shim restores the old default for any torch model.
+        app = render_app_from_recipe(self._recipe("import bark", "return None"))
+        compile(app, "<shim>", "exec")
+        self.assertIn('kwargs.setdefault("weights_only", False)', app)
+        self.assertIn("_torch.load = _torch_load_compat", app)
+
+    def test_no_duplicate_torch_import_when_setup_imports_it(self):
+        recipe = self._recipe("import torch\nx = torch.zeros(1)", "return None")
+        app = render_app_from_recipe(recipe)
+        compile(app, "<dup>", "exec")
+        # setup already imports torch, so the renderer must not add a second one.
+        self.assertEqual(app.count("\nimport torch\n"), 1)
+
+
 class LintGeneratedAppTest(unittest.TestCase):
     """The generated-wrapper linter flags pipeline-reimplementation anti-patterns."""
 
@@ -2409,6 +2450,23 @@ class EndpointSelectionTest(unittest.TestCase):
         self.assertEqual(ranked[0][0], "/predict")
         # control endpoints rank last
         self.assertIn(ranked[-1][0], {"/interrupt", "/toggle_melody", "/toggle_solver"})
+
+    def test_prefers_user_endpoint_over_internal_batched(self):
+        # MusicGen regression: /predict_batched is Gradio's internal batched fn and
+        # errors on a single-call signature; the user-facing /predict_full must win.
+        api = {
+            "named_endpoints": {
+                "/predict_full": {
+                    "parameters": [{"component": "Textbox"}, {"component": "Audio"}],
+                    "returns": [{"component": "Audio"}],
+                },
+                "/predict_batched": {
+                    "parameters": [{"component": "Textbox"}, {"component": "Audio"}],
+                    "returns": [{"component": "Audio"}],
+                },
+            }
+        }
+        self.assertEqual(guess_primary_endpoint(api), "/predict_full")
 
     def test_single_endpoint_is_returned(self):
         self.assertEqual(
