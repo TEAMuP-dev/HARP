@@ -2855,6 +2855,38 @@ class ClassifierSignalTest(unittest.TestCase):
         signals = analyze_signals(manifests={"setup.py": "install_requires=['gradio>=4.0']"})
         self.assertFalse(signals.gradio_conflict)
 
+    def test_protobuf_conflict_detected(self):
+        # SoulX-Singer regression: NeMo wants protobuf~=5.29.5, but descript-audiotools
+        # (a pyharp dep) caps protobuf <3.20 -- they can't co-install.
+        signals = analyze_signals(
+            manifests={"setup.py": "x", "requirements.txt": "nemo_toolkit==2.6.2\nprotobuf~=5.29.5"}
+        )
+        packages = [c["package"] for c in signals.dependency_conflicts]
+        self.assertIn("protobuf", packages)
+
+    def test_huggingface_hub_1x_conflict_detected(self):
+        signals = analyze_signals(
+            manifests={"setup.py": "x", "requirements.txt": "huggingface_hub==1.20.1"}
+        )
+        packages = [c["package"] for c in signals.dependency_conflicts]
+        self.assertIn("huggingface_hub", packages)
+
+    def test_compatible_shared_pins_are_not_conflicts(self):
+        # A protobuf/hub the pyharp stack accepts, and a bare mention, don't trip.
+        signals = analyze_signals(
+            manifests={
+                "setup.py": "x",
+                "requirements.txt": "protobuf<3.20\nhuggingface_hub>=0.20\ntorch",
+            }
+        )
+        self.assertEqual(signals.dependency_conflicts, [])
+
+    def test_bare_shared_dep_mention_is_not_a_conflict(self):
+        signals = analyze_signals(
+            manifests={"setup.py": "x", "requirements.txt": "protobuf\nhuggingface_hub\n"}
+        )
+        self.assertEqual(signals.dependency_conflicts, [])
+
     def test_native_fragile_detected(self):
         signals = analyze_signals(
             manifests={"requirements.txt": "crepe<=0.0.12\nnumpy==1.23.5", "setup.py": "x"}
@@ -2890,6 +2922,20 @@ class ClassifierDecisionTest(unittest.TestCase):
     def test_gradio_conflict_with_existing_space_is_remote(self):
         decision = recommend_mode(
             manifests={"setup.py": "x", "requirements.txt": "gradio>=6.9.0"},
+            has_existing_space=True,
+        )
+        self.assertEqual(decision.mode, "remote")
+
+    def test_protobuf_conflict_without_space_is_dual(self):
+        decision = recommend_mode(
+            manifests={"setup.py": "x", "requirements.txt": "protobuf~=5.29.5\ntorch"}
+        )
+        self.assertEqual(decision.mode, "dual")
+        self.assertTrue(any("protobuf-conflict" in b for b in decision.blockers))
+
+    def test_protobuf_conflict_with_existing_space_is_remote(self):
+        decision = recommend_mode(
+            manifests={"setup.py": "x", "requirements.txt": "protobuf~=5.29.5"},
             has_existing_space=True,
         )
         self.assertEqual(decision.mode, "remote")

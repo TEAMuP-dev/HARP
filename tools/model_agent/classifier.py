@@ -29,6 +29,27 @@ from .recipe import _satisfies
 # 5.28.0 does NOT satisfy cannot share a process with pyharp.
 PYHARP_GRADIO_VERSION = "5.28.0"
 
+# Beyond gradio, pyharp's stack constrains other SHARED packages that models
+# frequently pin incompatibly -- the conflicts that repeatedly downgraded/broke
+# real deployments (SoulX-Singer: NeMo needs protobuf~=5.29 but descript-audiotools
+# -- a pyharp dep -- caps it <3.20; the gradio-5.28 era huggingface_hub is <1.0).
+# We can't run a resolver here, so each pin is approximated by representative
+# versions pyharp is known to accept: if a model's declared spec admits NONE of
+# them, the two graphs can't be co-installed -> a single Space is blocked. This
+# generalizes the gradio point-check without false-positiving on compatible ranges.
+PYHARP_SHARED_PINS: Dict[str, Dict[str, Any]] = {
+    "huggingface_hub": {
+        "aliases": ("huggingface_hub", "huggingface-hub"),
+        "pin": "<1.0 (gradio 5.28.0 era)",
+        "ok_versions": ("0.28.1", "0.30.2", "0.34.0"),
+    },
+    "protobuf": {
+        "aliases": ("protobuf",),
+        "pin": "<3.20 (via descript-audiotools, a pyharp dep)",
+        "ok_versions": ("3.19.6",),
+    },
+}
+
 # The dual-interpreter Dockerfile builds its backend interpreter from Debian
 # (python:3.10-slim-bullseye + apt pythonX.Y). Bullseye reliably provides only
 # up to ~3.10, so treat >3.11 as out of reach for dual (this is why Woosh, which
@@ -157,6 +178,37 @@ def _detect_cuda_hardcoded(sources: Mapping[str, str]) -> bool:
     return not _CUDA_FALLBACK_RE.search(blob)
 
 
+def _shared_dependency_conflicts(blob: str) -> List[Dict[str, str]]:
+    """Model requirements that conflict with a pyharp-shared pin (besides gradio).
+
+    For each shared package, take the model's declared specifier and check whether
+    ANY version pyharp is known to accept satisfies it. If none do, the model's
+    requirement and pyharp's constraint are disjoint -> they can't co-install.
+    A bare mention (no version bound) or an unparseable spec is treated as
+    compatible (no conflict).
+    """
+
+    conflicts: List[Dict[str, str]] = []
+    for pkg, info in PYHARP_SHARED_PINS.items():
+        spec: Optional[str] = None
+        for alias in info["aliases"]:
+            found = _spec_for(blob, alias)
+            if found:  # first alias with an actual version bound wins
+                spec = found
+                break
+        if not spec:
+            continue
+        try:
+            compatible = any(_satisfies(v, spec) for v in info["ok_versions"])
+        except Exception:
+            compatible = True  # can't parse -> don't block on it
+        if not compatible:
+            conflicts.append(
+                {"package": pkg, "requirement": spec, "pyharp_pin": str(info["pin"])}
+            )
+    return conflicts
+
+
 @dataclass
 class DeploymentSignals:
     """Machine-checkable facts that drive the mode decision."""
@@ -167,6 +219,7 @@ class DeploymentSignals:
     python_ok: bool = True
     gradio_requirement: Optional[str] = None
     gradio_conflict: bool = False
+    dependency_conflicts: List[Dict[str, str]] = field(default_factory=list)
     native_fragile: List[str] = field(default_factory=list)
     cuda_hardcoded: bool = False
     has_existing_space: bool = False
@@ -182,6 +235,7 @@ class DeploymentSignals:
             "python_ok": self.python_ok,
             "gradio_requirement": self.gradio_requirement,
             "gradio_conflict": self.gradio_conflict,
+            "dependency_conflicts": [dict(c) for c in self.dependency_conflicts],
             "native_fragile": list(self.native_fragile),
             "cuda_hardcoded": self.cuda_hardcoded,
             "has_existing_space": self.has_existing_space,
@@ -227,6 +281,8 @@ def analyze_signals(
         except Exception:
             gradio_conflict = False
 
+    dependency_conflicts = _shared_dependency_conflicts(blob)
+
     native = sorted(
         pkg for pkg in NATIVE_FRAGILE_PACKAGES if _spec_for(blob, pkg) is not None
     )
@@ -242,6 +298,7 @@ def analyze_signals(
         python_ok=python_ok,
         gradio_requirement=gradio_spec,
         gradio_conflict=gradio_conflict,
+        dependency_conflicts=dependency_conflicts,
         native_fragile=native,
         cuda_hardcoded=cuda_hardcoded,
         has_existing_space=has_existing_space,
@@ -407,6 +464,11 @@ def classify(signals: DeploymentSignals) -> ModeDecision:
         blockers.append(
             f"gradio-conflict (model needs gradio {signals.gradio_requirement}; "
             f"pyharp pins {PYHARP_GRADIO_VERSION})"
+        )
+    for conflict in signals.dependency_conflicts:
+        blockers.append(
+            f"{conflict['package']}-conflict (model needs {conflict['package']} "
+            f"{conflict['requirement']}; pyharp needs {conflict['pyharp_pin']})"
         )
     if signals.native_fragile:
         blockers.append("native-build-fragile: " + ", ".join(signals.native_fragile))
