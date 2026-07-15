@@ -1205,6 +1205,71 @@ def _recipe_gradio_pin(framework: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+# Some packages need an UNDECLARED companion at runtime: pip won't pull it, it
+# appears in no manifest, and it only surfaces as a ModuleNotFoundError on the
+# Space. torchaudio>=2.8 moved load/save/info to TorchCodec (and >=2.9 removed the
+# old FFmpeg backend), so any code calling torchaudio.load/save (e.g. speechbrain,
+# many TTS models) then needs `torchcodec` + system FFmpeg. Keyed by canonical
+# (hyphenated) trigger name.
+_COMPANION_REQUIREMENTS: Dict[str, Dict[str, Any]] = {
+    "torchaudio": {
+        "min_version": "2.8.0",
+        "pip": ["torchcodec"],
+        "apt": ["ffmpeg"],
+    },
+}
+
+
+def _spec_admits_at_least(spec: str, exact: Optional[str], min_version: str) -> bool:
+    """True if the requirement could resolve to a version >= ``min_version``.
+
+    Unpinned -> resolves to the latest (so yes). An exact pin is compared
+    directly. A range admits it if either the floor or an arbitrarily high
+    version satisfies it (catches both ``>=X`` and bounded ``>=2.7,<3`` ranges).
+    """
+
+    if exact is not None:
+        try:
+            return _cmp_release(_release_tuple(exact), _release_tuple(min_version)) >= 0
+        except Exception:
+            return True
+    if not spec:
+        return True
+    try:
+        return _satisfies(min_version, spec) or _satisfies("1000.0", spec)
+    except Exception:
+        return True
+
+
+def _companion_requirements(entries: List[str]) -> Tuple[List[str], List[str]]:
+    """(pip_companions, apt_companions) implied by trigger packages in ``entries``."""
+
+    present: Dict[str, Tuple[str, Optional[str]]] = {}
+    for entry in entries:
+        parsed = _parse_install_line(entry)
+        if parsed is None:
+            continue
+        name, spec, exact = parsed
+        present[name] = (spec, exact)
+
+    pip_add: List[str] = []
+    apt_add: List[str] = []
+    for trigger, info in _COMPANION_REQUIREMENTS.items():
+        canon = trigger.lower().replace("_", "-")
+        if canon not in present:
+            continue
+        spec, exact = present[canon]
+        if not _spec_admits_at_least(spec, exact, str(info["min_version"])):
+            continue
+        for pkg in info.get("pip", []):
+            if pkg.lower().replace("_", "-") not in present and pkg not in pip_add:
+                pip_add.append(pkg)
+        for pkg in info.get("apt", []):
+            if pkg not in apt_add:
+                apt_add.append(pkg)
+    return pip_add, apt_add
+
+
 def _backend_requirements_from_recipe(framework: Mapping[str, Any]) -> str:
     """Requirements for a plain-Gradio backend Space.
 
@@ -1219,6 +1284,9 @@ def _backend_requirements_from_recipe(framework: Mapping[str, Any]) -> str:
     for package in pip:
         if package not in requirements:
             requirements.append(package)
+    for pkg in _companion_requirements(requirements)[0]:
+        if pkg not in requirements:
+            requirements.append(pkg)
     return "\n".join(requirements + [""])
 
 
@@ -1232,6 +1300,9 @@ def _requirements_from_recipe(framework: Mapping[str, Any]) -> str:
     for package in framework.get("pip", []) or []:
         if package and package not in requirements:
             requirements.append(str(package))
+    for pkg in _companion_requirements(requirements)[0]:
+        if pkg not in requirements:
+            requirements.append(pkg)
     return "\n".join(requirements + [""])
 
 
@@ -1546,6 +1617,11 @@ def apply_dependency_fixes(recipe: MutableMapping[str, Any], fixes: Mapping[str,
 
 def _packages_from_recipe(framework: Mapping[str, Any]) -> str:
     apt = [str(package) for package in (framework.get("apt") or []) if package]
+    # Add system libs implied by a pip companion (e.g. torchcodec needs ffmpeg).
+    pip_entries = [str(p) for p in (framework.get("pip") or []) if str(p).strip()]
+    for pkg in _companion_requirements(pip_entries)[1]:
+        if pkg not in apt:
+            apt.append(pkg)
     return "\n".join(apt + [""]) if apt else ""
 
 

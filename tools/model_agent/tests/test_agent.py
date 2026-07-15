@@ -2003,6 +2003,66 @@ class GeneratedCodeRepairTest(unittest.TestCase):
         self.assertEqual(app.count("\nimport torch\n"), 1)
 
 
+class CompanionRequirementTest(unittest.TestCase):
+    """Undeclared runtime companions (torchaudio>=2.8 -> torchcodec + ffmpeg)."""
+
+    def _pkg(self, pip):
+        recipe = {
+            "model": {"id": "x/y", "name": "Y", "description": "d", "author": "x"},
+            "framework": {"gpu": False, "pip": pip},
+            "inputs": [{"name": "text", "type": "textbox", "label": "T", "required": True}],
+            "outputs": [{"name": "audio", "type": "audio", "label": "A"}],
+            "inference": {"setup": "", "body": "return None"},
+        }
+        return build_package_from_recipe(recipe)
+
+    def _has(self, requirements, name):
+        return any(r.strip().lower().startswith(name) for r in requirements.splitlines())
+
+    def test_unpinned_torchaudio_adds_torchcodec_and_ffmpeg(self):
+        # Tacotron2 regression: torchaudio.load now delegates to torchcodec.
+        pkg = self._pkg(["speechbrain", "torch", "torchaudio", "soundfile"])
+        self.assertTrue(self._has(pkg.requirements, "torchcodec"))
+        self.assertIn("ffmpeg", pkg.packages_txt)
+
+    def test_modern_pinned_torchaudio_adds_torchcodec(self):
+        pkg = self._pkg(["torch", "torchaudio==2.9.0"])
+        self.assertTrue(self._has(pkg.requirements, "torchcodec"))
+
+    def test_old_torchaudio_does_not_add_torchcodec(self):
+        # torchaudio<2.8 still ships the FFmpeg backend, so torchcodec isn't needed.
+        pkg = self._pkg(["torch", "torchaudio==2.4.0"])
+        self.assertFalse(self._has(pkg.requirements, "torchcodec"))
+        self.assertNotIn("ffmpeg", pkg.packages_txt)
+
+    def test_no_duplicate_when_torchcodec_already_present(self):
+        pkg = self._pkg(["torchaudio", "torchcodec"])
+        count = sum(
+            1 for r in pkg.requirements.splitlines() if r.strip().lower().startswith("torchcodec")
+        )
+        self.assertEqual(count, 1)
+
+    def test_no_torchaudio_no_companion(self):
+        pkg = self._pkg(["numpy", "librosa"])
+        self.assertFalse(self._has(pkg.requirements, "torchcodec"))
+
+    def test_remote_frontend_never_gets_model_companions(self):
+        # Remote frontends install none of the model's deps, so no companion either.
+        recipe = remote_recipe_from_api_info(
+            "owner/backend",
+            {
+                "named_endpoints": {
+                    "/predict": {
+                        "parameters": [{"component": "Textbox"}],
+                        "returns": [{"component": "Audio"}],
+                    }
+                }
+            },
+        )
+        pkg = build_package_from_recipe(recipe)
+        self.assertFalse(self._has(pkg.requirements, "torchcodec"))
+
+
 class LintGeneratedAppTest(unittest.TestCase):
     """The generated-wrapper linter flags pipeline-reimplementation anti-patterns."""
 
