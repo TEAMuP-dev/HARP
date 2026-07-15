@@ -66,6 +66,16 @@ dist
 
 testproj.RPP
 
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+venv/
+.venv/
+
+# model validation output
+reports/
+
 # Ignore all the *.md files in website/HARP
 website/content/HARP/*.md
 website/content/pyHARP/*.md

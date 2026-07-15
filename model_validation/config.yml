@@ -1,0 +1,85 @@
+# Configuration for model_validation/validate_models.py
+#
+# All keys are optional. Spaces not listed here are still discovered and
+# validated automatically with a single synthesized "default" test case.
+#
+# Schema:
+#
+#   exclude:        # models to exclude from validation: space ids, or
+#                   # "local/<example-dir>" for local pyharp examples
+#     - teamup-tech/some-non-harp-space
+#     - local/some_example
+#
+#   include_extra:  # spaces outside the org that should also be validated
+#     - some-user/some-harp-space
+#
+#   overrides:      # per-model settings; keys are space ids, or
+#                   # "local/<example-dir>" for local pyharp examples
+#     <model key>:
+#       connect_timeout: 600     # seconds to wait for build/wake (default 420)
+#       process_timeout: 900     # seconds to wait for /process (default 600)
+#       skip_process: true       # only check availability + /controls
+#       test_cases:              # named /process test cases; when omitted, a
+#                                # single synthesized "default" case runs
+#         - name: default        # empty case == synthesized defaults
+#         - name: my-case
+#           process_timeout: 300         # optional per-case override
+#           controls:                    # override control values by label
+#             "Some Slider Label": 12
+#             "Some Toggle Label": true
+#           files:                       # override track/file inputs by label;
+#                                        # paths are relative to this file
+#             "Input Audio": test_data/my_clip.wav
+
+exclude: []
+
+include_extra: []
+
+overrides:
+
+  # ---- Baseline: local pyharp examples -------------------------------------
+  # These run with `--local-examples` and exercise pyharp itself with no
+  # Hugging Face infrastructure involved. A failure here indicates a
+  # pyharp/gradio-level breakage rather than a deployment-specific one.
+
+  local/pitch_shifter:
+    test_cases:
+      - name: default
+      - name: shift-up-octave
+        controls:
+          "Pitch Shift (semitones)": 12
+      - name: shift-down-octave
+        controls:
+          "Pitch Shift (semitones)": -12
+      - name: no-shift
+        controls:
+          "Pitch Shift (semitones)": 0
+
+  local/midi_pitch_shifter:
+    test_cases:
+      - name: default
+      - name: shift-up-max
+        controls:
+          "Pitch Shift (semitones)": 24
+      - name: shift-down-max
+        controls:
+          "Pitch Shift (semitones)": -24
+
+  local/midi_synthesizer:
+    test_cases:
+      - name: default
+
+  local/ui_tester:
+    test_cases:
+      - name: default
+
+  # ---- Remote space overrides ---------------------------------------------
+  # Add per-space timeouts and extra test cases here as needed, e.g.:
+  #
+  # teamup-tech/pitch_shifter:
+  #   process_timeout: 900
+  #   test_cases:
+  #     - name: default
+  #     - name: extreme-shift
+  #       controls:
+  #         "Pitch Shift (semitones)": 24
