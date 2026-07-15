@@ -28,6 +28,14 @@ from .knowledge import (
     fingerprint_for_recipe,
     match_repair_rules,
 )
+from .orchestrator import (
+    DeployPlan,
+    RefTarget,
+    build_steps,
+    decide_plan,
+    detect_ref,
+    extract_space_links,
+)
 from .resolver import resolve_requirements
 from .llm import (
     LLMError,
@@ -42,6 +50,7 @@ from .llm import (
 )
 from .recipe import (
     RecipeError,
+    _slug,
     apply_dependency_fixes,
     build_package_from_recipe,
     collect_pip_requirements,
@@ -616,6 +625,77 @@ def build_parser() -> argparse.ArgumentParser:
     )
     knowledge.add_argument("--output", type=Path, help="Optional JSON output path.")
 
+    for _name, _alias in (("deploy", False), ("port", True)):
+        _dep = subparsers.add_parser(
+            _name,
+            help=(
+                "One command to deploy any model: detect the ref (GitHub repo / HF "
+                "model / HF Space), analyze it, pick the deployment mode, and run the "
+                "right steps. Prints the plan and asks before deploying (use --yes to "
+                "run unattended, --plan to only show the plan)."
+                + (" Alias of `deploy`." if _alias else "")
+            ),
+        )
+        _dep.add_argument(
+            "ref",
+            help="Model reference: a GitHub URL/owner-repo, an HF model id, or an HF "
+            "Space URL/id (e.g. https://github.com/haoheliu/voicefixer, "
+            "facebook/MusicGen, Soul-AILab/SoulX-Singer).",
+        )
+        _dep.add_argument(
+            "--repo",
+            default="",
+            help="Target HF Space id to deploy to (owner/name). Required unless --plan.",
+        )
+        _dep.add_argument(
+            "--source",
+            choices=["auto", "github", "hf-model", "hf-space"],
+            default="auto",
+            help="Force how to interpret a bare owner/name ref (default: auto -> HF model).",
+        )
+        _dep.add_argument(
+            "--space",
+            default="",
+            help="Proxy to THIS backend Space instead of auto-discovering one "
+            "(owner/space). Forces remote mode.",
+        )
+        _dep.add_argument("--ref-rev", default="", help="Git branch/tag/SHA for a GitHub ref.")
+        _dep.add_argument(
+            "--plan",
+            action="store_true",
+            help="Only analyze and print the plan + the exact commands; never deploy.",
+        )
+        _dep.add_argument(
+            "--yes",
+            "-y",
+            action="store_true",
+            help="Deploy without the interactive confirmation prompt (unattended).",
+        )
+        _dep.add_argument(
+            "--user-token",
+            action="store_true",
+            help="For a remote/proxy deploy, add the optional masked HF-token field "
+            "so ZeroGPU usage is charged to the calling user.",
+        )
+        _dep.add_argument(
+            "--no-discover-space",
+            action="store_true",
+            help="Don't auto-discover an existing backend Space; build from source instead.",
+        )
+        _dep.add_argument("--api-name", default="", help="Backend endpoint to call (remote mode).")
+        _dep.add_argument("--inputs", default="", help="Desired input types for single-Space mode.")
+        _dep.add_argument("--outputs", default="", help="Desired output types for single-Space mode.")
+        _dep.add_argument(
+            "--recipe-output", type=Path, default=None, help="Where to write the recipe JSON."
+        )
+        _dep.add_argument(
+            "--package-output",
+            type=Path,
+            default=Path("artifacts/model_agent/generated"),
+            help="Parent directory for the generated package.",
+        )
+        _dep.add_argument("--output", type=Path, help="Optional JSON output path for the plan.")
+
     return parser
 
 
@@ -1118,6 +1198,9 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(_knowledge_query(args), args.output)
             return 0
 
+        if args.command in ("deploy", "port"):
+            return _run_deploy(agent, args)
+
     except DeploySpaceError as exc:
         print(f"Space deploy failed: {exc}", file=sys.stderr)
         return 2
@@ -1274,6 +1357,224 @@ def _recommend_mode(agent: HarpModelAgent, args) -> dict:
             for rec in similar
         ]
     return payload
+
+
+def _discover_backend_space(
+    agent: HarpModelAgent, target, blob: str
+) -> Optional[str]:
+    """Best-effort: find a runnable Space linked from the model's README/source.
+
+    We only accept a candidate whose live Gradio API actually responds, so a
+    stale/dead link never routes us into remote mode.
+    """
+
+    for candidate in extract_space_links(blob):
+        if candidate.lower() == target.slug.lower() and target.kind != "hf_space":
+            continue
+        try:
+            agent.fetch_api_info(candidate)
+        except Exception:
+            continue
+        return candidate
+    return None
+
+
+def _print_plan(target, plan, steps) -> None:
+    """Human-readable plan preview (to stderr, so JSON stays clean on stdout)."""
+
+    print("\n=== Deployment plan ===", file=sys.stderr)
+    print(f"  model:   {target.slug}  ({target.kind})", file=sys.stderr)
+    print(f"  mode:    {plan.mode}", file=sys.stderr)
+    if plan.backend_space:
+        print(f"  backend: {plan.backend_space}", file=sys.stderr)
+    for reason in plan.rationale:
+        print(f"  why:     {reason}", file=sys.stderr)
+    for blocker in plan.blockers:
+        print(f"  blocker: {blocker}", file=sys.stderr)
+    for hint in plan.guidance:
+        print(f"  next:    {hint}", file=sys.stderr)
+    if steps:
+        print("\n  commands the agent will run:", file=sys.stderr)
+        for step in steps:
+            print(f"    python -m tools.model_agent {' '.join(step)}", file=sys.stderr)
+    print("", file=sys.stderr)
+
+
+def _run_deploy(agent: HarpModelAgent, args) -> int:
+    """One-command deploy: detect the ref, analyze it, pick a mode, and run it."""
+
+    try:
+        target = detect_ref(args.ref, args.source)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"Analyzing {target.slug} (detected: {target.kind}) ...", file=sys.stderr)
+
+    backend_space = args.space or ""
+    decision = None
+    card = None
+    manifests: dict = {}
+    sources: dict = {}
+
+    if target.kind == "github":
+        ref = args.ref_rev or None
+        try:
+            card = agent.get_github_card(target.slug, ref=ref)
+            manifests = agent.fetch_github_dependencies(target.slug, ref=ref)
+            sources = agent.fetch_github_sources(target.slug, ref=ref)
+        except (HTTPError, URLError, OSError) as exc:
+            print(f"  (could not fully read the GitHub repo: {exc})", file=sys.stderr)
+    elif target.kind == "hf_model":
+        if args.source == "auto":
+            # A bare owner/name might actually be a Space, not a model. Try the
+            # model card; if it's missing but the id serves a live Gradio API,
+            # treat it as a Space and proxy to it.
+            try:
+                card = agent.scraper.get_model_card(target.slug)
+            except (HTTPError, URLError, OSError):
+                card = None
+            if card is None:
+                try:
+                    agent.fetch_api_info(target.slug)
+                    print(
+                        f"  {target.slug} isn't a model card but serves a live API "
+                        "-> treating it as a Space.",
+                        file=sys.stderr,
+                    )
+                    target = RefTarget("hf_space", target.owner, target.name)
+                except Exception:
+                    card = _fetch_card_or_exit(agent, target.slug)  # helpful error/exit
+        else:
+            card = _fetch_card_or_exit(agent, target.slug)
+
+    if target.kind == "hf_space":
+        backend_space = backend_space or target.slug
+    else:
+        if not backend_space and not args.no_discover_space:
+            readme = str(card.get("readme") or "") if isinstance(card, dict) else ""
+            blob = "\n".join([readme] + list(sources.values()) + list(manifests.values()))
+            found = _discover_backend_space(agent, target, blob)
+            if found:
+                backend_space = found
+                print(f"  Discovered a runnable backend Space: {found}", file=sys.stderr)
+
+        decision = recommend_mode(
+            manifests=manifests,
+            sources=sources,
+            card=card if isinstance(card, dict) else None,
+            has_existing_space=bool(backend_space),
+        )
+
+    plan = decide_plan(
+        kind=target.kind,
+        slug=target.slug,
+        backend_space=backend_space or None,
+        decision_mode=decision.mode if decision else None,
+        decision_blockers=decision.blockers if decision else None,
+        prefer_existing_space=not args.no_discover_space,
+    )
+
+    recipe_path = args.recipe_output or (
+        Path("artifacts/model_agent/recipes") / f"{_slug(target.name)}.json"
+    )
+    package_parent = args.package_output
+    predicted_slug = (
+        _slug(plan.backend_space)
+        if plan.mode == "remote" and plan.backend_space
+        else _slug(target.slug)
+    )
+    predicted_pkg = package_parent / predicted_slug
+
+    steps = build_steps(
+        plan,
+        target=target,
+        target_repo=args.repo or "<owner/space>",
+        recipe_path=str(recipe_path),
+        package_parent=str(package_parent),
+        package_dir=str(predicted_pkg),
+        user_token=args.user_token,
+        remote_api_name=args.api_name,
+        ground_source=target.kind in ("github", "hf_model"),
+        inputs=args.inputs,
+        outputs=args.outputs,
+    )
+
+    _print_plan(target, plan, steps)
+
+    payload = {"ref": target.slug, "kind": target.kind, **plan.to_dict(), "steps": steps}
+
+    if args.plan:
+        _emit_json(payload, args.output)
+        return 0
+
+    if not plan.can_execute:
+        print(
+            f"\nThis model needs the '{plan.mode}' architecture, which isn't a single "
+            "automated command yet -- follow the guidance above.",
+            file=sys.stderr,
+        )
+        _emit_json(payload, args.output)
+        return 2
+
+    if not args.repo:
+        print(
+            "\nerror: --repo <owner/space> is required to deploy (or pass --plan to "
+            "only preview the plan).",
+            file=sys.stderr,
+        )
+        return 2
+
+    if not args.yes:
+        try:
+            reply = input(f"\nDeploy to {args.repo} using the plan above? [y/N] ").strip().lower()
+        except EOFError:
+            reply = ""
+        if reply not in ("y", "yes"):
+            print(
+                "Aborted (no changes made). Re-run with --yes to deploy unattended.",
+                file=sys.stderr,
+            )
+            return 0
+
+    recipe_path.parent.mkdir(parents=True, exist_ok=True)
+    package_parent.mkdir(parents=True, exist_ok=True)
+
+    # Step 1: generate the recipe (scaffold-remote or generate-recipe-from-llm).
+    recipe_step = steps[0]
+    print(f"\n$ model-agent {' '.join(recipe_step)}", file=sys.stderr)
+    rc = main(recipe_step)
+    if rc != 0:
+        print(f"  [deploy] recipe step failed (exit {rc}); stopping.", file=sys.stderr)
+        return rc
+
+    # The real package dir is <parent>/<slug(model.id)>; recompute it from the
+    # recipe we just wrote so the deploy step points at the right folder.
+    real_pkg = predicted_pkg
+    try:
+        recipe = _read_json(recipe_path)
+        model_id = str((recipe.get("model") or {}).get("id") or predicted_slug)
+        real_pkg = package_parent / _slug(model_id)
+    except Exception:
+        pass
+
+    gen_step = ["generate-recipe", str(recipe_path), "--output", str(package_parent)]
+    print(f"\n$ model-agent {' '.join(gen_step)}", file=sys.stderr)
+    rc = main(gen_step)
+    if rc != 0:
+        return rc
+
+    deploy_step = ["deploy-space", str(real_pkg), "--repo", args.repo]
+    print(f"\n$ model-agent {' '.join(deploy_step)}", file=sys.stderr)
+    rc = main(deploy_step)
+    if rc != 0:
+        return rc
+
+    print(
+        f"\n[deploy] Done -> https://huggingface.co/spaces/{args.repo}",
+        file=sys.stderr,
+    )
+    return 0
 
 
 def _resolve_check(agent: HarpModelAgent, args) -> dict:

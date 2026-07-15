@@ -87,6 +87,12 @@ from tools.model_agent.resolver import (
     parse_resolution_conflicts,
     resolve_requirements,
 )
+from tools.model_agent.orchestrator import (
+    build_steps,
+    decide_plan,
+    detect_ref,
+    extract_space_links,
+)
 
 
 class EndpointInferenceTest(unittest.TestCase):
@@ -1380,6 +1386,37 @@ class RemoteRecipeRenderTest(unittest.TestCase):
         # Return mapping + guard for the media output.
         self.assertIn("_out_generated = _values[0]", app)
         self.assertIn("return _out_generated", app)
+
+    def test_opaque_backend_error_gets_actionable_hint(self):
+        # MusicGen regression: the backend hides its exception behind a generic
+        # "Internal Gradio error"; the frontend must point at where the real cause
+        # lives instead of parroting the useless message.
+        api_info = {
+            "named_endpoints": {
+                "/predict_batched": {
+                    "parameters": [{"component": "Textbox"}, {"component": "Audio"}],
+                    "returns": [{"component": "Audio"}],
+                }
+            }
+        }
+        recipe = remote_recipe_from_api_info("facebook/MusicGen", api_info, user_token=True)
+        app = render_app_from_recipe(recipe)
+        compile(app, "<hint>", "exec")
+        ns = {"_ACCEPT_USER_TOKEN": True, "_BACKEND_SPACE": "facebook/MusicGen"}
+        start = app.index("def _quota_hint(")
+        end = app.index("\n\n\n", start)
+        exec(app[start:end], ns)
+        hint = ns["_quota_hint"]
+        opaque = hint("Internal Gradio error")
+        self.assertIn("Logs", opaque)
+        self.assertIn("facebook/MusicGen", opaque)
+        self.assertIn("token", opaque.lower())
+        # An empty backend message is treated the same (also opaque).
+        self.assertIn("Logs", hint(""))
+        # A real, descriptive error is passed through unchanged.
+        self.assertEqual(hint("File not found: foo.wav"), "File not found: foo.wav")
+        # Quota errors keep their dedicated message.
+        self.assertIn("quota", hint("You exceeded your ZeroGPU quota").lower())
 
     def test_wakes_and_retries_a_sleeping_backend(self):
         app = render_app_from_recipe(self.RECIPE)
@@ -3113,6 +3150,147 @@ class ResolverRunTest(unittest.TestCase):
         self.assertIn("git+https://github.com/o/r", result.unchecked)
         self.assertIn("numpy==1.23.5", captured["contents"])
         self.assertNotIn("git+", captured["contents"])
+
+
+class OrchestratorRefDetectionTest(unittest.TestCase):
+    def test_detects_github_url(self):
+        target = detect_ref("https://github.com/haoheliu/voicefixer")
+        self.assertEqual(target.kind, "github")
+        self.assertEqual(target.slug, "haoheliu/voicefixer")
+
+    def test_detects_github_url_with_git_suffix(self):
+        target = detect_ref("https://github.com/AMAAI-Lab/SonicMaster.git")
+        self.assertEqual(target.kind, "github")
+        self.assertEqual(target.name, "SonicMaster")
+
+    def test_detects_hf_space_url(self):
+        target = detect_ref("https://huggingface.co/spaces/facebook/MusicGen")
+        self.assertEqual(target.kind, "hf_space")
+        self.assertEqual(target.slug, "facebook/MusicGen")
+
+    def test_detects_hf_model_url(self):
+        target = detect_ref("https://huggingface.co/Soul-AILab/SoulX-Singer")
+        self.assertEqual(target.kind, "hf_model")
+        self.assertEqual(target.slug, "Soul-AILab/SoulX-Singer")
+
+    def test_bare_ref_defaults_to_hf_model(self):
+        self.assertEqual(detect_ref("facebook/MusicGen").kind, "hf_model")
+
+    def test_source_forces_github_for_bare_ref(self):
+        target = detect_ref("AMAAI-Lab/SonicMaster", source="github")
+        self.assertEqual(target.kind, "github")
+
+    def test_source_forces_space_for_bare_ref(self):
+        self.assertEqual(detect_ref("facebook/MusicGen", source="hf-space").kind, "hf_space")
+
+    def test_invalid_ref_raises(self):
+        with self.assertRaises(ValueError):
+            detect_ref("not a ref!!")
+
+    def test_extract_space_links_dedupes_in_order(self):
+        blob = (
+            "See https://huggingface.co/spaces/amaai-lab/SonicMaster and "
+            "https://huggingface.co/spaces/amaai-lab/SonicMaster again, plus "
+            "https://huggingface.co/spaces/other/Thing"
+        )
+        self.assertEqual(
+            extract_space_links(blob),
+            ["amaai-lab/SonicMaster", "other/Thing"],
+        )
+
+
+class OrchestratorPlanTest(unittest.TestCase):
+    def test_space_ref_proxies_to_itself(self):
+        plan = decide_plan(kind="hf_space", slug="facebook/MusicGen")
+        self.assertEqual(plan.mode, "remote")
+        self.assertEqual(plan.backend_space, "facebook/MusicGen")
+        self.assertTrue(plan.can_execute)
+
+    def test_discovered_space_is_preferred(self):
+        plan = decide_plan(
+            kind="github",
+            slug="AMAAI-Lab/SonicMaster",
+            backend_space="amaai-lab/SonicMaster",
+            decision_mode="single",
+        )
+        self.assertEqual(plan.mode, "remote")
+        self.assertEqual(plan.backend_space, "amaai-lab/SonicMaster")
+        self.assertTrue(plan.can_execute)
+
+    def test_clean_github_is_single_space(self):
+        plan = decide_plan(kind="github", slug="haoheliu/voicefixer", decision_mode="single")
+        self.assertEqual(plan.mode, "single")
+        self.assertIsNone(plan.backend_space)
+        self.assertTrue(plan.can_execute)
+
+    def test_remote_without_backend_is_not_executable(self):
+        plan = decide_plan(
+            kind="github",
+            slug="Soul-AILab/SoulX-Singer",
+            decision_mode="remote",
+            decision_blockers=["protobuf conflict"],
+        )
+        self.assertEqual(plan.mode, "remote-missing-backend")
+        self.assertFalse(plan.can_execute)
+        self.assertIn("protobuf conflict", plan.blockers)
+
+    def test_dual_and_two_space_are_guidance_only(self):
+        for mode in ("dual", "two-space"):
+            plan = decide_plan(kind="github", slug="x/y", decision_mode=mode)
+            self.assertEqual(plan.mode, mode)
+            self.assertFalse(plan.can_execute)
+            self.assertTrue(plan.guidance)
+
+
+class OrchestratorStepsTest(unittest.TestCase):
+    def _steps(self, plan, target, **kw):
+        return build_steps(
+            plan,
+            target=target,
+            target_repo="me/target",
+            recipe_path="r.json",
+            package_parent="gen",
+            package_dir="gen/pkg",
+            **kw,
+        )
+
+    def test_space_ref_uses_deterministic_scaffold(self):
+        target = detect_ref("facebook/MusicGen", source="hf-space")
+        plan = decide_plan(kind="hf_space", slug=target.slug)
+        steps = self._steps(plan, target, user_token=True)
+        self.assertEqual(steps[0][0], "scaffold-remote-recipe")
+        self.assertIn("--auto-endpoint", steps[0])
+        self.assertIn("--user-token", steps[0])
+        self.assertEqual(steps[-1][:1], ["deploy-space"])
+        self.assertIn("me/target", steps[-1])
+
+    def test_remote_from_github_grounds_on_source(self):
+        target = detect_ref("AMAAI-Lab/SonicMaster", source="github")
+        plan = decide_plan(
+            kind="github", slug=target.slug, backend_space="amaai-lab/SonicMaster"
+        )
+        steps = self._steps(plan, target, ground_source=True)
+        recipe_step = steps[0]
+        self.assertEqual(recipe_step[0], "generate-recipe-from-llm")
+        self.assertIn("--remote-space", recipe_step)
+        self.assertIn("amaai-lab/SonicMaster", recipe_step)
+        self.assertIn("--remote-llm", recipe_step)
+        self.assertIn("--github", recipe_step)
+
+    def test_single_space_passes_io_hints(self):
+        target = detect_ref("haoheliu/voicefixer", source="github")
+        plan = decide_plan(kind="github", slug=target.slug, decision_mode="single")
+        steps = self._steps(plan, target, inputs="audio", outputs="audio")
+        recipe_step = steps[0]
+        self.assertEqual(recipe_step[0], "generate-recipe-from-llm")
+        self.assertIn("--github", recipe_step)
+        self.assertIn("--inputs", recipe_step)
+        self.assertIn("audio", recipe_step)
+
+    def test_non_executable_plan_has_no_steps(self):
+        plan = decide_plan(kind="github", slug="x/y", decision_mode="dual")
+        target = detect_ref("x/y", source="github")
+        self.assertEqual(self._steps(plan, target), [])
 
 
 if __name__ == "__main__":
