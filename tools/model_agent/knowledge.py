@@ -117,10 +117,13 @@ REPAIR_RULES: List[RepairRule] = [
     RepairRule(
         name="missing-module",
         pattern=r"ModuleNotFoundError: No module named ['\"]([\w\.]+)['\"]",
-        action="add_missing_package",
-        hint="Add the missing module's distribution to the install set (map the "
-        "import name to its PyPI name, e.g. cv2->opencv-python, sklearn->"
-        "scikit-learn) and pin it alongside the sibling deps.",
+        action="remove_unused_import_or_add_package",
+        hint="First check whether the missing import came from copied source that "
+        "the wrapper never uses; remove unused imports/modules before expanding "
+        "the dependency graph. If the module is on the real inference path, add "
+        "its distribution to the install set (map import names to PyPI names, "
+        "e.g. cv2->opencv-python, sklearn->scikit-learn) and pin it alongside "
+        "the sibling deps.",
     ),
     RepairRule(
         name="dependency-conflict",
@@ -179,11 +182,116 @@ REPAIR_RULES: List[RepairRule] = [
         "dual-interpreter mode.",
     ),
     RepairRule(
+        name="gradio-pin-copied-into-pyharp-frontend",
+        pattern=r"(?:gradio(?:\[[^\]]+\])?\s*={1,2}\s*(?!5\.28\.0)|"
+        r"Cannot install .*gradio|ResolutionImpossible.*gradio)",
+        action="remove_model_gradio_pin_from_frontend",
+        hint="Do not copy a model Space's arbitrary gradio pin into a pyharp "
+        "frontend. pyharp owns the frontend Gradio version (currently 5.28.0); "
+        "keep model-specific Gradio requirements in a backend/remote Space, or "
+        "use deploy-space --into-space so reconciliation aligns sdk_version and "
+        "requirements safely.",
+    ),
+    RepairRule(
         name="not-pip-installable",
         pattern=r"does not appear to be a Python project",
         action="remote_or_backend",
         hint="The repo has no setup.py/pyproject.toml, so `pip install git+<repo>` "
         "fails. Deploy it as a plain-Gradio backend + remote frontend instead.",
+    ),
+    # -- ZeroGPU / `spaces` runtime pitfalls -------------------------------- #
+    RepairRule(
+        name="zerogpu-spaces-import-order",
+        pattern=r"CUDA has been initialized before importing the spaces package",
+        action="import_spaces_first",
+        hint="Import `spaces` (inside its try/except) as the VERY FIRST import, "
+        "before torch/gradio/diffusers or anything that touches CUDA.",
+    ),
+    RepairRule(
+        name="zerogpu-cuda-outside-gpu-scope",
+        pattern=r"(?:Low-level CUDA init|did not intercept a CUDA operation|"
+        r"CUDA emulation mode)",
+        action="keep_cuda_in_gpu_scope",
+        hint="Something touched CUDA outside an @spaces.GPU-decorated call (often a "
+        "background load thread). Keep loading CPU-only and move `.to(DEVICE)` "
+        "into the GPU-decorated process_fn.",
+    ),
+    RepairRule(
+        name="zerogpu-torch-version",
+        pattern=r"torch version .* is not compatible with ZeroGPU|"
+        r"CONFIG_ERROR:\s*torch",
+        action="pin_zerogpu_supported_torch",
+        hint="ZeroGPU supports only specific torch builds (e.g. 2.8.0/2.9.1/2.10.0/"
+        "2.11.0). Pin torch/torchaudio to a supported one and leave other "
+        "version-sensitive deps unpinned so pip resolves around it.",
+    ),
+    RepairRule(
+        name="space-app-starting-timeout",
+        pattern=r"APP_STARTING",
+        action="background_load_or_redeploy",
+        hint="For large models, synchronous download+init before launch() can exceed "
+        "HF's startup timeout -- load weights in a background thread and flip a "
+        "ready flag when done. For small models it's usually infra flakiness; "
+        "push a trivial change to trigger a fresh deploy.",
+    ),
+    # -- Hugging Face push / storage / Space-card errors -------------------- #
+    RepairRule(
+        name="hf-auth-failed",
+        pattern=r"[Aa]uthentication failed for .*huggingface\.co",
+        action="use_hf_write_token",
+        hint="Use a Hugging Face WRITE access token (not your account password) for "
+        "git push and for HF_TOKEN.",
+    ),
+    RepairRule(
+        name="hf-push-rejected",
+        pattern=r"\[rejected\].*(?:fetch first|non-fast-forward)|"
+        r"Updates were rejected because",
+        action="reconcile_or_force_push_once",
+        hint="The Space was created with an initial commit on the hub. Rebase "
+        "(git pull --rebase) or, for a freshly generated Space, `git push --force` "
+        "once.",
+    ),
+    RepairRule(
+        name="hf-storage-limit",
+        pattern=r"storage limit reached|Max:\s*1\s*GB|over the .*storage limit",
+        action="host_checkpoint_separately",
+        hint="The checkpoint exceeds the free-tier LFS quota. Host it in a separate "
+        "HF model repo and hf_hub_download it at startup; if it was already "
+        "committed, remove it from git history before re-pushing.",
+    ),
+    RepairRule(
+        name="invalid-space-card-color",
+        pattern=r'["\']?color(?:From|To)["\']?\s*must be one of',
+        action="fix_space_card_color",
+        hint="README.md colorFrom/colorTo must be one of: red, yellow, green, blue, "
+        "indigo, purple, pink, gray.",
+    ),
+    # -- Checkpoint / torch.load pitfalls ----------------------------------- #
+    RepairRule(
+        name="torch-weights-only",
+        pattern=r"(?:Weights only load failed|WeightsUnpickler|weights_only|"
+        r"Unsupported global)",
+        action="torch_load_weights_only_false",
+        hint="PyTorch>=2.6 defaults torch.load(weights_only=True), which rejects "
+        "non-tensor globals in older checkpoints. Pass weights_only=False for "
+        "trusted checkpoints (the agent injects this shim into generated apps).",
+    ),
+    RepairRule(
+        name="lightning-state-dict",
+        pattern=r"(?:Missing key\(s\)|Unexpected key\(s\))? ?in ?loading ?state_dict|"
+        r"Error\(s\) in loading state_dict|(?:Missing|Unexpected) key\(s\) in state_dict",
+        action="use_lightning_state_dict_key",
+        hint="PyTorch-Lightning checkpoints wrap weights under ['state_dict'] (often "
+        "with a 'model.' prefix). Load ckpt['state_dict'] and strip the prefix "
+        "rather than the raw checkpoint.",
+    ),
+    RepairRule(
+        name="torchcodec-required",
+        pattern=r"torchcodec",
+        action="install_torchcodec_or_soundfile",
+        hint="torchaudio>=2.8 offloads audio I/O to torchcodec. Install `torchcodec` "
+        "(+ system ffmpeg) -- the agent adds these as companions -- or switch to "
+        "soundfile (sf.read / sf.write).",
     ),
 ]
 

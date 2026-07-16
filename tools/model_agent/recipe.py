@@ -87,7 +87,7 @@ except ImportError:  # 'spaces' is only provided by Hugging Face Spaces
     spaces = _types.SimpleNamespace(GPU=_gpu)"""
 
 _BASE_REQUIREMENTS = [
-    "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
+    "git+https://github.com/TEAMuP-dev/pyharp.git@develop",
     "gradio>=4.0",
 ]
 
@@ -773,7 +773,7 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
 
     quota_hint_lines = [
         "def _quota_hint(message):",
-        "    # Turn a backend ZeroGPU quota error into an actionable message.",
+        "    # Turn a backend error into an actionable message.",
         "    # NOTE: 'message' is the backend's error text; it never contains our token.",
         "    _low = (message or \"\").lower()",
         "    if \"quota\" in _low or \"zerogpu\" in _low:",
@@ -788,6 +788,27 @@ def _render_remote_app(recipe: Mapping[str, Any]) -> str:
         "            \"anonymous unless an HF_TOKEN secret is set (Settings -> Variables \"",
         "            \"and secrets); use a token from a PRO account or a ZeroGPU-enabled org.\"",
         "        )",
+        "    # Opaque backend failure: the Space raised an exception it refuses to",
+        "    # expose (it runs with show_error=False), so all we get is a generic",
+        "    # 'Internal Gradio error'. The frontend can't fix a server-side crash --",
+        "    # point the user at where the real cause lives.",
+        "    if (",
+        "        \"internal gradio error\" in _low",
+        "        or \"internal server error\" in _low",
+        "        or \"apperror\" in _low",
+        "        or _low.strip() in (\"\", \"none\")",
+        "    ):",
+        "        _hint = (",
+        "            \"The backend Space raised an error it did not expose (it runs with \"",
+        "            \"show_error disabled), so the real cause is only in the backend \"",
+        f"            \"Space's Logs tab (\" + _BACKEND_SPACE + \").\"",
+        "        )",
+        "        if _ACCEPT_USER_TOKEN:",
+        "            _hint += (",
+        "                \" If it is a ZeroGPU Space, an anonymous call can fail this way -- \"",
+        "                \"paste a Hugging Face token in the token field and retry.\"",
+        "            )",
+        "        return _hint",
         "    return message or \"Backend call failed.\"",
     ]
 

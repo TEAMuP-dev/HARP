@@ -512,7 +512,7 @@ class FreezeMergeTest(unittest.TestCase):
         "huggingface-hub==0.26.0\n"
         "numpy==2.1.0\n"
         "torch==2.4.0\n"
-        "pyharp @ git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0\n"
+        "pyharp @ git+https://github.com/TEAMuP-dev/pyharp.git@develop\n"
         "-e git+https://example.com/x.git#egg=x\n"
     )
 
@@ -618,7 +618,7 @@ class DeployIntoSpaceTest(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 pkg = Path(tmp) / "pkg"
                 pkg.mkdir()
-                (pkg / "app.py").write_text("print('wrapper')\n", encoding="utf-8")
+                (pkg / "app.py").write_bytes(b"print('wrapper')\n")
                 result = HarpModelAgent().deploy_into_space(pkg, "me/dup", token="tok")
 
         self.assertEqual(result["mode"], "into-space")
@@ -2822,6 +2822,7 @@ class RepairRuleTest(unittest.TestCase):
     def test_missing_module_captures_name(self):
         hits = match_repair_rules("ModuleNotFoundError: No module named 'psutil'")
         self.assertTrue(any(h["rule"] == "missing-module" and h.get("match") == "psutil" for h in hits))
+        self.assertTrue(any("remove unused imports" in h["hint"] for h in hits))
 
     def test_imp_and_pkg_resources_rules(self):
         self.assertTrue(
@@ -2840,6 +2841,83 @@ class RepairRuleTest(unittest.TestCase):
 
     def test_no_match_returns_empty(self):
         self.assertEqual(match_repair_rules("everything is fine"), [])
+
+    def _assert_rule(self, error_text, rule_name):
+        hits = match_repair_rules(error_text)
+        self.assertTrue(
+            any(h["rule"] == rule_name for h in hits),
+            f"expected rule {rule_name!r} for {error_text!r}, got {[h['rule'] for h in hits]}",
+        )
+
+    def test_zerogpu_spaces_import_order(self):
+        self._assert_rule(
+            "RuntimeError: CUDA has been initialized before importing the spaces package",
+            "zerogpu-spaces-import-order",
+        )
+
+    def test_zerogpu_cuda_outside_gpu_scope(self):
+        self._assert_rule(
+            "RuntimeError: Low-level CUDA init ... did not intercept a CUDA operation",
+            "zerogpu-cuda-outside-gpu-scope",
+        )
+
+    def test_zerogpu_torch_version(self):
+        self._assert_rule(
+            "CONFIG_ERROR: torch version 2.4.0 is not compatible with ZeroGPU",
+            "zerogpu-torch-version",
+        )
+
+    def test_app_starting_timeout(self):
+        self._assert_rule("Space stuck on APP_STARTING", "space-app-starting-timeout")
+
+    def test_hf_auth_failed(self):
+        self._assert_rule(
+            "fatal: Authentication failed for 'https://huggingface.co/spaces/me/x/'",
+            "hf-auth-failed",
+        )
+
+    def test_hf_push_rejected(self):
+        self._assert_rule(
+            " ! [rejected] main -> main (fetch first)",
+            "hf-push-rejected",
+        )
+
+    def test_hf_storage_limit(self):
+        self._assert_rule(
+            "Repository storage limit reached (Max: 1 GB)",
+            "hf-storage-limit",
+        )
+
+    def test_invalid_space_color(self):
+        self._assert_rule(
+            '"colorFrom" must be one of [red, yellow, green, ...]',
+            "invalid-space-card-color",
+        )
+
+    def test_torch_weights_only(self):
+        self._assert_rule(
+            "_pickle.UnpicklingError: Weights only load failed ... Unsupported global",
+            "torch-weights-only",
+        )
+
+    def test_lightning_state_dict(self):
+        self._assert_rule(
+            'RuntimeError: Error(s) in loading state_dict for Model: Missing key(s) in state_dict',
+            "lightning-state-dict",
+        )
+
+    def test_torchcodec_required(self):
+        self._assert_rule(
+            "ModuleNotFoundError: No module named 'torchcodec'",
+            "torchcodec-required",
+        )
+
+    def test_gradio_pin_copied_into_pyharp_frontend(self):
+        self._assert_rule(
+            "ERROR: Cannot install -r requirements.txt and gradio==6.3.0 because "
+            "these package versions have conflicting dependencies.",
+            "gradio-pin-copied-into-pyharp-frontend",
+        )
 
 
 class KnowledgeBaseTest(unittest.TestCase):
