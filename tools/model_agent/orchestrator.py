@@ -28,10 +28,10 @@ _SPACE_LINK_RE = re.compile(
     r"huggingface\.co/spaces/([A-Za-z0-9_.\-]+)/([A-Za-z0-9_.\-]+)"
 )
 
-# What auto-execution the agent can perform end-to-end today. dual/two-space need
-# artifacts (a Docker recipe / a separately-hosted backend) that aren't yet
-# produced by a single command, so those plans are printed as guidance instead.
-EXECUTABLE_MODES = frozenset({"remote", "single"})
+# What auto-execution the agent can perform end-to-end today. two-space still
+# needs a separately hosted backend; remote/single/dual can be produced by the
+# command pipeline below.
+EXECUTABLE_MODES = frozenset({"remote", "single", "dual"})
 
 
 def _strip_git(name: str) -> str:
@@ -196,13 +196,12 @@ def decide_plan(
         return DeployPlan(
             mode="dual",
             backend_space=None,
-            can_execute=False,
+            can_execute=True,
             rationale=["dependency/version isolation needed (older Python / fragile native deps)."],
             blockers=blockers,
             guidance=[
-                "This needs a dual-interpreter Docker Space. See the DDSP/Omnizart "
-                "examples under examples/; automated dual generation isn't wired into "
-                "one command yet.",
+                "This will generate a dual-interpreter Docker Space: pyHARP frontend "
+                "+ isolated backend worker in one Space.",
             ],
         )
 
@@ -277,6 +276,18 @@ def build_steps(
         if user_token:
             recipe_step.append("--user-token")
         steps.append(recipe_step)
+    elif plan.mode == "dual":
+        recipe_step = [
+            "generate-recipe-from-llm",
+            source_flag, target.slug,
+            "--dual",
+            "--output", recipe_path,
+        ]
+        if inputs:
+            recipe_step += ["--inputs", inputs]
+        if outputs:
+            recipe_step += ["--outputs", outputs]
+        steps.append(recipe_step)
     else:  # single
         recipe_step = [
             "generate-recipe-from-llm",
@@ -290,5 +301,8 @@ def build_steps(
         steps.append(recipe_step)
 
     steps.append(["generate-recipe", recipe_path, "--output", package_parent])
-    steps.append(["deploy-space", package_dir, "--repo", target_repo])
+    deploy_step = ["deploy-space", package_dir, "--repo", target_repo]
+    if plan.mode == "dual":
+        deploy_step += ["--sdk", "docker"]
+    steps.append(deploy_step)
     return steps

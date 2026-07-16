@@ -25,8 +25,8 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from .recipe import _satisfies
 
-# pyharp v0.3.0 hard-pins gradio==5.28.0. A model that needs a gradio which
-# 5.28.0 does NOT satisfy cannot share a process with pyharp.
+# pyharp's HARP-compatible line hard-pins gradio==5.28.0. A model that needs a
+# gradio which 5.28.0 does NOT satisfy cannot share a process with pyharp.
 PYHARP_GRADIO_VERSION = "5.28.0"
 
 # Beyond gradio, pyharp's stack constrains other SHARED packages that models
@@ -47,6 +47,11 @@ PYHARP_SHARED_PINS: Dict[str, Dict[str, Any]] = {
         "aliases": ("protobuf",),
         "pin": "<3.20 (via descript-audiotools, a pyharp dep)",
         "ok_versions": ("3.19.6",),
+    },
+    "httpx": {
+        "aliases": ("httpx",),
+        "pin": ">=0.24.1 (via gradio 5.28.0)",
+        "ok_versions": ("0.24.1", "0.27.2", "0.28.1"),
     },
 }
 

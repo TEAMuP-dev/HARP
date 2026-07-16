@@ -26,12 +26,12 @@ GITHUB_API_BASE = "https://api.github.com"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 KNOWN_HYPHENATED_SPACE_ORGS = ("teamup-tech",)
 
-# pyharp v0.3.0 hard-pins gradio==5.28.0. HARP wrappers must therefore align the
-# Space on this exact gradio version (both the README sdk_version that Hugging
-# Face force-installs and any gradio pin in requirements.txt), or the build fails
-# with a ResolutionImpossible conflict.
+# pyharp's current HARP-compatible line hard-pins gradio==5.28.0. HARP wrappers
+# must therefore align the Space on this exact gradio version (both the README
+# sdk_version that Hugging Face force-installs and any gradio pin in
+# requirements.txt), or the build fails with a ResolutionImpossible conflict.
 HARP_GRADIO_VERSION = "5.28.0"
-PYHARP_REQUIREMENT = "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0"
+PYHARP_REQUIREMENT = "git+https://github.com/TEAMuP-dev/pyharp.git@develop"
 
 HARP_FRIENDLY_TASKS = {
     "audio-to-audio",
@@ -575,11 +575,11 @@ demo.queue().launch(share=True, show_error=False, pwa=True)
 
 def _requirements_for_framework(framework: str) -> str:
     base = [
-        "git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0",
+        PYHARP_REQUIREMENT,
         "gradio>=4.0",
     ]
     if framework == "speechbrain":
-        base += ["speechbrain>=1.0.0", "torch", "torchaudio", "soundfile"]
+        base += ["speechbrain>=1.0.0", "torch", "torchaudio", "torchcodec", "soundfile"]
     return "\n".join(base + [""])
 
 
@@ -1094,6 +1094,21 @@ class HarpModelAgent:
     ) -> Path:
         folder = output_dir / _slug(package.repo_id)
         folder.mkdir(parents=True, exist_ok=True)
+
+        for rel_path in (
+            "app.py",
+            "requirements.txt",
+            "packages.txt",
+            "Dockerfile",
+            "frontend_app.py",
+            "backend_worker.py",
+            "start.sh",
+            "requirements-frontend.txt",
+            "requirements-backend.txt",
+        ):
+            stale = folder / rel_path
+            if stale.exists():
+                stale.unlink()
 
         # Single-file layouts write app.py/requirements.txt/packages.txt; multi-file
         # layouts (dual-interpreter Docker Spaces) leave these empty and ship their

@@ -33,10 +33,12 @@ from tools.model_agent.analyze import analyze_app_source, analyze_path
 from tools.model_agent.cli import (
     attach_health,
     _apply_card_metadata,
+    _ensure_github_backend_pip,
     _ensure_github_pip,
     _pip_installable_from_signals,
     _predeploy_resolve_gate,
     _repo_is_pip_installable,
+    _strip_repo_backend_pip,
     _strip_repo_pip,
 )
 from tools.model_agent.llm import (
@@ -280,7 +282,9 @@ class TemplateGenerationTest(unittest.TestCase):
 
             self.assertTrue((folder / "app.py").exists())
             self.assertTrue((folder / "requirements.txt").exists())
-            self.assertIn("speechbrain", (folder / "requirements.txt").read_text(encoding="utf-8"))
+            requirements = (folder / "requirements.txt").read_text(encoding="utf-8")
+            self.assertIn("speechbrain", requirements)
+            self.assertIn("torchcodec", requirements)
             self.assertTrue((folder / "README.md").exists())
             self.assertTrue((folder / "packages.txt").exists())
             self.assertTrue((folder / ".harp" / "manifest.json").exists())
@@ -1148,6 +1152,22 @@ class LLMRecipeTest(unittest.TestCase):
         "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
         "inference": {"setup": "MODEL = None", "body": "return input_audio"},
     }
+    DUAL_RECIPE = {
+        # No "model" key on purpose: the agent must backfill it from the card.
+        "framework": {
+            "dual": {
+                "backend_python": "3.10",
+                "apt": ["ffmpeg"],
+                "backend_pip": ["soundfile"],
+                "worker": {
+                    "imports": "import os",
+                    "body": "outputs = {'out': inputs['input_audio']}",
+                },
+            }
+        },
+        "inputs": [{"name": "input_audio", "type": "audio", "label": "In", "required": True}],
+        "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+    }
 
     def _context(self):
         return RecipeGenerationContext.from_card(
@@ -1191,6 +1211,32 @@ class LLMRecipeTest(unittest.TestCase):
         self.assertNotIn("from pyharp import *", draft.app_py)
         self.assertIn("gr.Interface", draft.app_py)
         compile(draft.app_py, "<llm-backend>", "exec")
+
+    def test_dual_recipe_generates_docker_frontend_and_worker(self):
+        provider = _FakeProvider([self.DUAL_RECIPE])
+        draft = generate_recipe(self._context(), provider, max_repairs=2, dual=True)
+
+        self.assertEqual(draft.recipe["model"]["id"], "example/demucs")
+        self.assertIn("dual-interpreter", provider.calls[0]["system"])
+        self.assertIn("DUAL-INTERPRETER DOCKER", provider.calls[0]["user"])
+        self.assertIn("_call_backend", draft.app_py)
+        package = build_package_from_recipe(draft.recipe)
+        self.assertEqual(package.framework, "dual-interpreter")
+        self.assertIn("frontend_app.py", package.extra_files)
+        self.assertIn("backend_worker.py", package.extra_files)
+        self.assertNotIn("pyharp", "\n".join(draft.recipe["framework"]["dual"]["backend_pip"]))
+        compile(package.extra_files["frontend_app.py"], "<dual-frontend>", "exec")
+        compile(package.extra_files["backend_worker.py"], "<dual-worker>", "exec")
+
+    def test_dual_prompt_points_dependencies_at_backend_pip(self):
+        context = RecipeGenerationContext(
+            model_id="owner/repo",
+            readme="A model.",
+            dependency_manifests={"requirements.txt": "httpx<0.20\nsoundfile\n"},
+        )
+        prompt = build_recipe_user_prompt(context, dual=True)
+        self.assertIn("framework.dual.backend_pip", prompt)
+        self.assertIn("Do not include pyharp or gradio in backend_pip", prompt)
 
     def test_repairs_an_invalid_first_response(self):
         invalid = {"framework": {}, "inputs": [], "outputs": []}  # missing inference + components
@@ -2516,6 +2562,44 @@ class GitHubInstallabilityTest(unittest.TestCase):
         _strip_repo_pip(recipe, "git+https://github.com/AMAAI-Lab/SonicMaster.git@v1")
         self.assertEqual(recipe["framework"]["pip"], ["torch"])
 
+    def test_ensure_github_backend_pip_injects_dual_repo_requirement(self):
+        recipe = {
+            "framework": {
+                "dual": {
+                    "backend_pip": ["tensorflow==2.9.3"],
+                    "worker": {"body": "outputs = {}"},
+                }
+            }
+        }
+        _ensure_github_backend_pip(recipe, "git+https://github.com/deezer/spleeter.git@master")
+        self.assertEqual(
+            recipe["framework"]["dual"]["backend_pip"][0],
+            "git+https://github.com/deezer/spleeter.git@master",
+        )
+        _ensure_github_backend_pip(recipe, "git+https://github.com/deezer/spleeter.git@main")
+        self.assertEqual(
+            sum(
+                1
+                for entry in recipe["framework"]["dual"]["backend_pip"]
+                if "github.com/deezer/spleeter.git" in entry
+            ),
+            1,
+        )
+
+    def test_strip_repo_backend_pip_removes_matching_ref(self):
+        recipe = {
+            "framework": {
+                "dual": {
+                    "backend_pip": [
+                        "git+https://github.com/deezer/spleeter.git@master",
+                        "tensorflow==2.9.3",
+                    ]
+                }
+            }
+        }
+        _strip_repo_backend_pip(recipe, "git+https://github.com/deezer/spleeter.git@main")
+        self.assertEqual(recipe["framework"]["dual"]["backend_pip"], ["tensorflow==2.9.3"])
+
 
 class EndpointSelectionTest(unittest.TestCase):
     """Auto-picking the primary endpoint (MelodyFlow: /interrupt,/predict,/toggle_*)."""
@@ -2783,6 +2867,43 @@ class PackageWriterTest(unittest.TestCase):
                 (folder / "README.md").read_text(encoding="utf-8"),
             )
 
+    def test_generated_package_rewrite_removes_stale_layout_files(self):
+        base = {
+            "model": {"id": "example/layout-switch", "name": "Layout Switch"},
+            "inputs": [{"name": "audio", "type": "audio", "label": "Audio"}],
+            "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+        }
+        single_recipe = {
+            **base,
+            "framework": {"import": "custom", "pip": []},
+            "inference": {"body": "return audio"},
+        }
+        dual_recipe = {
+            **base,
+            "framework": {
+                "dual": {
+                    "backend_python": "3.10",
+                    "backend_pip": ["soundfile"],
+                    "worker": {"body": "outputs = {'out': inputs.get('audio')}"},
+                }
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            agent = HarpModelAgent()
+            folder = agent.write_generated_app_package(
+                build_package_from_recipe(single_recipe), Path(tmp)
+            )
+            self.assertTrue((folder / "app.py").exists())
+            self.assertTrue((folder / "requirements.txt").exists())
+
+            folder = agent.write_generated_app_package(
+                build_package_from_recipe(dual_recipe), Path(tmp)
+            )
+            self.assertFalse((folder / "app.py").exists())
+            self.assertFalse((folder / "requirements.txt").exists())
+            self.assertTrue((folder / "Dockerfile").exists())
+            self.assertTrue((folder / "requirements-backend.txt").exists())
+
 
 class DependencyFingerprintTest(unittest.TestCase):
     def test_is_order_independent_and_drops_comments_and_options(self):
@@ -3046,6 +3167,16 @@ class ClassifierSignalTest(unittest.TestCase):
         packages = [c["package"] for c in signals.dependency_conflicts]
         self.assertIn("huggingface_hub", packages)
 
+    def test_old_httpx_conflict_detected(self):
+        signals = analyze_signals(
+            manifests={
+                "setup.py": "x",
+                "requirements.txt": "httpx[http2]<0.20.0,>=0.19.0\nspleeter==2.4.0",
+            }
+        )
+        packages = [c["package"] for c in signals.dependency_conflicts]
+        self.assertIn("httpx", packages)
+
     def test_compatible_shared_pins_are_not_conflicts(self):
         # A protobuf/hub the pyharp stack accepts, and a bare mention, don't trip.
         signals = analyze_signals(
@@ -3114,6 +3245,16 @@ class ClassifierDecisionTest(unittest.TestCase):
             has_existing_space=True,
         )
         self.assertEqual(decision.mode, "remote")
+
+    def test_httpx_conflict_without_space_is_dual(self):
+        decision = recommend_mode(
+            manifests={
+                "setup.py": "x",
+                "requirements.txt": "httpx[http2]<0.20.0,>=0.19.0\nspleeter==2.4.0",
+            }
+        )
+        self.assertEqual(decision.mode, "dual")
+        self.assertTrue(any("httpx-conflict" in b for b in decision.blockers))
 
     def test_python_above_dual_ceiling_is_two_space(self):
         decision = recommend_mode(
@@ -3312,12 +3453,17 @@ class OrchestratorPlanTest(unittest.TestCase):
         self.assertFalse(plan.can_execute)
         self.assertIn("protobuf conflict", plan.blockers)
 
-    def test_dual_and_two_space_are_guidance_only(self):
-        for mode in ("dual", "two-space"):
-            plan = decide_plan(kind="github", slug="x/y", decision_mode=mode)
-            self.assertEqual(plan.mode, mode)
-            self.assertFalse(plan.can_execute)
-            self.assertTrue(plan.guidance)
+    def test_dual_is_executable(self):
+        plan = decide_plan(kind="github", slug="x/y", decision_mode="dual")
+        self.assertEqual(plan.mode, "dual")
+        self.assertTrue(plan.can_execute)
+        self.assertTrue(plan.guidance)
+
+    def test_two_space_is_guidance_only(self):
+        plan = decide_plan(kind="github", slug="x/y", decision_mode="two-space")
+        self.assertEqual(plan.mode, "two-space")
+        self.assertFalse(plan.can_execute)
+        self.assertTrue(plan.guidance)
 
 
 class OrchestratorStepsTest(unittest.TestCase):
@@ -3365,8 +3511,21 @@ class OrchestratorStepsTest(unittest.TestCase):
         self.assertIn("--inputs", recipe_step)
         self.assertIn("audio", recipe_step)
 
+    def test_dual_space_uses_llm_dual_and_docker_deploy(self):
+        target = detect_ref("deezer/spleeter", source="github")
+        plan = decide_plan(kind="github", slug=target.slug, decision_mode="dual")
+        steps = self._steps(plan, target, inputs="audio", outputs="audio")
+        recipe_step = steps[0]
+        self.assertEqual(recipe_step[0], "generate-recipe-from-llm")
+        self.assertIn("--github", recipe_step)
+        self.assertIn("--dual", recipe_step)
+        self.assertIn("--inputs", recipe_step)
+        self.assertEqual(steps[-1][:1], ["deploy-space"])
+        self.assertIn("--sdk", steps[-1])
+        self.assertIn("docker", steps[-1])
+
     def test_non_executable_plan_has_no_steps(self):
-        plan = decide_plan(kind="github", slug="x/y", decision_mode="dual")
+        plan = decide_plan(kind="github", slug="x/y", decision_mode="two-space")
         target = detect_ref("x/y", source="github")
         self.assertEqual(self._steps(plan, target), [])
 

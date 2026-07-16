@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
 
 from .recipe import (
+    build_package_from_recipe,
     guess_primary_endpoint,
     rank_named_endpoints,
     render_app_from_recipe,
@@ -62,7 +63,7 @@ class LLMError(Exception):
 # Model names move fast; these are sane defaults but a key/region may differ.
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
     "anthropic": "claude-sonnet-4-latest",
     "openai": "gpt-4o",
 }
@@ -415,6 +416,87 @@ Output ONLY the JSON object. No markdown, no commentary.
 """
 
 
+DUAL_SYSTEM_PROMPT = """\
+You generate HARP "dual-interpreter" Docker recipes as STRICT JSON. A
+deterministic renderer turns your recipe into ONE Hugging Face Docker Space with
+two isolated Python environments:
+  - a modern pyharp/Gradio frontend that HARP talks to;
+  - an isolated backend worker venv/interpreter that imports and runs the model.
+
+Return ONE JSON object with exactly these top-level keys:
+  - "model":     {"id", "name", "description", "author", "tags": [...]}
+  - "framework": {"dual": {...}}
+  - "inputs":    ordered list of input components
+  - "outputs":   ordered list of output components
+
+Do NOT return an "inference" block. Dual recipes use framework.dual.worker
+instead.
+
+framework.dual shape:
+  {
+    "backend_python": "3.10",
+    "apt": ["ffmpeg", "libsndfile1"],
+    "backend_pip": ["real backend dependency pins only"],
+    "backend_pip_no_deps": ["optional package installed --no-deps"],
+    "build_constraints": ["optional build-time pins such as Cython<3"],
+    "worker": {
+      "imports": "module-level backend python: imports, helpers, model loading",
+      "body": "BODY of _run(inputs): read inputs dict and set outputs dict"
+    }
+  }
+
+Input component types: audio, file, dropdown, slider, textbox, number, checkbox.
+Output component types: audio, file, labels.
+Every component needs "name" (a valid python identifier) and "type"; most need
+"label". Extra fields:
+  - dropdown: "choices": [...], optional "default"
+  - slider:   "min", "max", optional "step", "default"
+  - textbox/number/checkbox: optional "default"
+  - any component: optional "info" (tooltip string)
+  - file: optional "file_types": [".mid", ".midi"]
+  - input components: optional "required": true
+
+Dependency rules:
+  - Put ONLY model/backend dependencies in framework.dual.backend_pip. Do NOT put
+    pyharp, gradio, gradio_client, or spaces there; the renderer owns frontend
+    dependencies.
+  - When a "# Declared dependencies" section is provided, pin backend_pip to the
+    versions/bounds declared there (honor every upper bound); include only
+    packages needed for inference. Drop training/data/cloud/export extras.
+  - For GitHub grounding, include the repo itself as a git+ dependency in
+    backend_pip when it has a root setup.py/pyproject/setup.cfg.
+  - Use backend_python "3.10" unless the repo clearly needs an older version
+    ("3.9" or "3.8"). Do not choose Python above 3.11.
+  - Put OS packages in apt (common audio packages: ffmpeg, libsndfile1).
+
+worker.imports rules:
+  - This is module-level backend Python running inside the isolated backend venv.
+    Import the real framework, define helpers, and load the model once into a
+    module/global variable.
+  - Avoid CUDA-only assumptions. Prefer CPU-compatible loading unless the source
+    absolutely requires a GPU.
+  - Do NOT import pyharp, gradio, spaces, or use @spaces.GPU in the worker.
+
+worker.body rules:
+  - This is the BODY of _run(inputs) ONLY (no "def" line, no surrounding
+    indentation).
+  - Read inputs by name, e.g. `path = inputs["input_audio"]`. Audio/file inputs
+    arrive as local file path strings on the shared container filesystem. Scalar
+    inputs arrive as JSON values.
+  - It MUST set an `outputs` dict whose keys exactly match the output component
+    names. For audio/file outputs, write or point to a local file path string.
+    For labels outputs, return a JSON-serializable dict/list.
+  - Do not `return` directly; set `outputs = {...}`.
+
+When a "# Upstream GitHub source" section is provided it is the GROUND TRUTH for
+the real loading/inference API: import and call the repo's real functions rather
+than guessing from the README, and add the repo (plus its inference deps) to
+framework.dual.backend_pip.
+
+Output ONLY the JSON object. No markdown, no commentary.
+"""
+
+
 # A permissive structured-output schema (providers that ignore it still work).
 RECIPE_RESPONSE_SCHEMA: JSON = {
     "type": "object",
@@ -428,7 +510,7 @@ RECIPE_RESPONSE_SCHEMA: JSON = {
             "properties": {"setup": {"type": "string"}, "body": {"type": "string"}},
         },
     },
-    "required": ["inputs", "outputs", "inference"],
+    "required": ["inputs", "outputs"],
 }
 
 
@@ -494,12 +576,13 @@ class RecipeGenerationContext:
         )
 
 
-def default_examples(limit: int = 2) -> List[JSON]:
+def default_examples(limit: int = 2, *, dual: bool = False) -> List[JSON]:
     """Load committed example recipes for few-shot grounding."""
 
     examples_dir = Path(__file__).resolve().parent / "examples"
     examples: List[JSON] = []
-    for recipe_file in sorted(examples_dir.glob("recipe_*.json")):
+    pattern = "*_dual_recipe.json" if dual else "recipe_*.json"
+    for recipe_file in sorted(examples_dir.glob(pattern)):
         try:
             examples.append(json.loads(recipe_file.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError):
@@ -509,7 +592,9 @@ def default_examples(limit: int = 2) -> List[JSON]:
     return examples
 
 
-def build_recipe_user_prompt(context: RecipeGenerationContext, *, backend: bool = False) -> str:
+def build_recipe_user_prompt(
+    context: RecipeGenerationContext, *, backend: bool = False, dual: bool = False
+) -> str:
     lines: List[str] = ["# Target model", f"id: {context.model_id or '(unknown)'}"]
     if context.name:
         lines.append(f"name: {context.name}")
@@ -569,12 +654,13 @@ def build_recipe_user_prompt(context: RecipeGenerationContext, *, backend: bool 
             lines.append(f"## {filename}\n```python\n{snippet}\n```")
 
     if context.dependency_manifests:
+        dep_target = "framework.dual.backend_pip" if dual else "framework.pip"
         lines.append(
-            "# Declared dependencies (GROUND TRUTH for framework.pip versions)\n"
-            "These are the repo's own dependency manifests. Pin framework.pip to the "
+            f"# Declared dependencies (GROUND TRUTH for {dep_target} versions)\n"
+            f"These are the repo's own dependency manifests. Pin {dep_target} to the "
             "versions/bounds declared here rather than guessing (respect every upper "
             "bound, e.g. 'numpy<1.24', 'tensorflow<=2.11'). Include ONLY packages needed "
-            "for INFERENCE and the Gradio UI: drop training/data-pipeline/cloud/export "
+            "for INFERENCE and the generated UI/worker: drop training/data-pipeline/cloud/export "
             "extras (e.g. apache-beam, google-cloud-storage, tensorflow-datasets, "
             "tensorflowjs, tflite_support, hypertune) that a wrapper never calls."
         )
@@ -591,7 +677,16 @@ def build_recipe_user_prompt(context: RecipeGenerationContext, *, backend: bool 
         for example in context.examples:
             lines.append("```json\n" + json.dumps(example, indent=2) + "\n```")
 
-    if backend:
+    if dual:
+        lines.append(
+            "# Task\n"
+            "Return ONE JSON recipe for a DUAL-INTERPRETER DOCKER Space. The frontend "
+            "will be generated by the renderer; your job is to define HARP inputs/"
+            "outputs plus framework.dual.backend_pip and framework.dual.worker code "
+            "that runs THIS model in the isolated backend. Do not include pyharp or "
+            "gradio in backend_pip. Return only JSON."
+        )
+    elif backend:
         lines.append(
             "# Task\n"
             "Return ONE JSON recipe for a PLAIN-GRADIO BACKEND (no pyharp) that runs "
@@ -663,16 +758,22 @@ def generate_recipe(
     *,
     max_repairs: int = 2,
     backend: bool = False,
+    dual: bool = False,
 ) -> RecipeDraft:
     """Ask ``provider`` for a recipe and validate/render/repair until it is runnable.
 
     When ``backend`` is true, the LLM is prompted to author a plain-Gradio backend
     (no pyharp) and the resulting recipe is marked ``framework.backend = true`` so
     the renderer emits a standalone ``/predict`` Space for the two-Space workflow.
+    When ``dual`` is true, the LLM authors a ``framework.dual`` Docker recipe with
+    isolated backend dependencies and no in-process ``inference`` block.
     """
 
-    system_prompt = BACKEND_SYSTEM_PROMPT if backend else RECIPE_SYSTEM_PROMPT
-    base_user = build_recipe_user_prompt(context, backend=backend)
+    if backend and dual:
+        raise LLMError("backend and dual recipe generation are mutually exclusive")
+
+    system_prompt = DUAL_SYSTEM_PROMPT if dual else BACKEND_SYSTEM_PROMPT if backend else RECIPE_SYSTEM_PROMPT
+    base_user = build_recipe_user_prompt(context, backend=backend, dual=dual)
     raw_responses: List[Any] = []
     feedback: Optional[str] = None
     last_recipe: JSON = {}
@@ -694,8 +795,20 @@ def generate_recipe(
         last_recipe = recipe
         try:
             validate_recipe(recipe)
-            app_py = render_app_from_recipe(recipe)
-            compile(app_py, f"<llm:{context.model_id or 'recipe'}>", "exec")
+            if dual:
+                package = build_package_from_recipe(recipe)
+                frontend = package.extra_files.get("frontend_app.py", "")
+                backend_worker = package.extra_files.get("backend_worker.py", "")
+                compile(frontend, f"<llm-dual-frontend:{context.model_id or 'recipe'}>", "exec")
+                compile(
+                    backend_worker,
+                    f"<llm-dual-worker:{context.model_id or 'recipe'}>",
+                    "exec",
+                )
+                app_py = frontend
+            else:
+                app_py = render_app_from_recipe(recipe)
+                compile(app_py, f"<llm:{context.model_id or 'recipe'}>", "exec")
         except (ValueError, SyntaxError) as exc:
             feedback = f"{type(exc).__name__}: {exc}"
             continue

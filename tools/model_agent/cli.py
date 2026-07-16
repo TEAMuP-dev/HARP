@@ -289,6 +289,14 @@ def build_parser() -> argparse.ArgumentParser:
         "remote-backend frontend at it. Mutually exclusive with --remote-space.",
     )
     llm_recipe.add_argument(
+        "--dual",
+        action="store_true",
+        help="Generate a dual-interpreter Docker recipe: one pyHARP frontend plus an "
+        "isolated backend worker venv/interpreter. Best for models whose dependencies "
+        "conflict with pyHARP/Gradio but can still be installed in a separate backend "
+        "environment. Mutually exclusive with --backend and --remote-space.",
+    )
+    llm_recipe.add_argument(
         "--inputs", default="", help="Comma-separated desired input types (e.g. audio,slider)."
     )
     llm_recipe.add_argument(
@@ -848,6 +856,22 @@ def main(argv: Iterable[str] | None = None) -> int:
                     file=sys.stderr,
                 )
                 return 2
+            if getattr(args, "dual", False) and args.remote_space:
+                print(
+                    "error: --dual and --remote-space are mutually exclusive. Use "
+                    "--remote-space to PROXY an existing Space, or --dual to build one "
+                    "Docker Space with isolated frontend/backend interpreters.",
+                    file=sys.stderr,
+                )
+                return 2
+            if getattr(args, "dual", False) and getattr(args, "backend", False):
+                print(
+                    "error: --dual and --backend are mutually exclusive. Use --dual "
+                    "for one Docker Space, or --backend for the model-running half of "
+                    "a two-Space deployment.",
+                    file=sys.stderr,
+                )
+                return 2
             github_target = None
             if args.github:
                 github_target = agent.resolve_github_target(args.github, ref=args.ref or None)
@@ -969,7 +993,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 card,
                 target_inputs=_split_csv(args.inputs),
                 target_outputs=_split_csv(args.outputs),
-                examples=[] if args.no_examples else default_examples(),
+                examples=[] if args.no_examples else default_examples(dual=getattr(args, "dual", False)),
             )
             if github_target is not None:
                 owner, repo, ref = github_target
@@ -1021,6 +1045,7 @@ def main(argv: Iterable[str] | None = None) -> int:
                 provider,
                 max_repairs=args.max_repairs,
                 backend=getattr(args, "backend", False),
+                dual=getattr(args, "dual", False),
             )
             if github_target is not None:
                 owner, repo, _ref = github_target
@@ -1030,16 +1055,29 @@ def main(argv: Iterable[str] | None = None) -> int:
                 # (often partial) file listing misses it. Fall back to the card only
                 # when no packaging manifest was fetched.
                 if _pip_installable_from_signals(card, manifests):
-                    _ensure_github_pip(draft.recipe, context.source_repo_url)
+                    if getattr(args, "dual", False):
+                        _ensure_github_backend_pip(draft.recipe, context.source_repo_url)
+                    else:
+                        _ensure_github_pip(draft.recipe, context.source_repo_url)
                 else:
                     # No setup.py/pyproject.toml -> `pip install git+<repo>` fails with
                     # "does not appear to be a Python project". Strip that doomed line
                     # (the LLM often adds it) and steer to remote-backend mode instead.
                     _strip_repo_pip(draft.recipe, context.source_repo_url)
+                    _strip_repo_backend_pip(draft.recipe, context.source_repo_url)
+                    if getattr(args, "dual", False) and not getattr(args, "emit_anyway", False):
+                        print(
+                            "error: this GitHub repo has no root setup.py/pyproject.toml/"
+                            "setup.cfg, so the generated dual backend cannot install it "
+                            "with a git+ dependency. Use a remote/two-space backend or "
+                            "re-run with --emit-anyway to write the draft for manual repair.",
+                            file=sys.stderr,
+                        )
+                        return 2
                 # Single-Space feasibility gate: don't hand back a recipe that the
                 # deterministic classifier says can't deploy as one self-contained
                 # pyharp Space (unless the user asked for a backend or --emit-anyway).
-                if not getattr(args, "backend", False):
+                if not getattr(args, "backend", False) and not getattr(args, "dual", False):
                     decision = recommend_mode(
                         manifests=manifests,
                         sources=context.space_sources or {},
@@ -1565,6 +1603,8 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
         return rc
 
     deploy_step = ["deploy-space", str(real_pkg), "--repo", args.repo]
+    if plan.mode == "dual":
+        deploy_step += ["--sdk", "docker"]
     print(f"\n$ model-agent {' '.join(deploy_step)}", file=sys.stderr)
     rc = main(deploy_step)
     if rc != 0:
@@ -1796,6 +1836,49 @@ def _ensure_github_pip(recipe: dict, requirement: str) -> None:
     framework["pip"] = pip
 
 
+def _dual_backend_pip(recipe: dict, *, create: bool = False) -> Optional[list]:
+    """Return ``framework.dual.backend_pip`` when present, optionally creating it."""
+
+    if not isinstance(recipe, dict):
+        return None
+    framework = recipe.get("framework")
+    if not isinstance(framework, dict):
+        if not create:
+            return None
+        framework = {}
+        recipe["framework"] = framework
+    dual = framework.get("dual")
+    if not isinstance(dual, dict):
+        if not create:
+            return None
+        dual = {}
+        framework["dual"] = dual
+    backend_pip = dual.get("backend_pip")
+    if not isinstance(backend_pip, list):
+        if not create:
+            return None
+        backend_pip = []
+        dual["backend_pip"] = backend_pip
+    return backend_pip
+
+
+def _ensure_github_backend_pip(recipe: dict, requirement: str) -> None:
+    """Guarantee a GitHub-grounded dual recipe installs the repo in backend_pip."""
+
+    if not requirement:
+        return
+    backend_pip = _dual_backend_pip(recipe, create=True)
+    if backend_pip is None:
+        return
+    repo_prefix = requirement.rsplit("@", 1)[0]
+    already_listed = any(
+        isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix
+        for entry in backend_pip
+    )
+    if not already_listed:
+        backend_pip.insert(0, requirement)
+
+
 def _strip_repo_pip(recipe: dict, requirement: str) -> None:
     """Remove any ``git+...<repo>`` pip line pointing at the same repo (any @ref)."""
 
@@ -1811,6 +1894,22 @@ def _strip_repo_pip(recipe: dict, requirement: str) -> None:
     framework["pip"] = [
         entry
         for entry in pip
+        if not (isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix)
+    ]
+
+
+def _strip_repo_backend_pip(recipe: dict, requirement: str) -> None:
+    """Remove any matching GitHub repo line from ``framework.dual.backend_pip``."""
+
+    if not requirement:
+        return
+    backend_pip = _dual_backend_pip(recipe)
+    if backend_pip is None:
+        return
+    repo_prefix = requirement.rsplit("@", 1)[0]
+    backend_pip[:] = [
+        entry
+        for entry in backend_pip
         if not (isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix)
     ]
 
@@ -1878,8 +1977,9 @@ def _print_single_space_gate(owner: str, repo: str, decision) -> None:
     elif decision.mode == "dual":
         print(
             "  Use a dual-interpreter Docker recipe (one Space, isolated envs). The "
-            "LLM path can't author these; start from a hand-authored example such as "
-            "examples/ddsp_dual_recipe.json or examples/fxnorm_automix_dual_recipe.json.",
+            "LLM path can now author one with:\n"
+            "    python -m tools.model_agent generate-recipe-from-llm --github "
+            f"{owner}/{repo} --dual",
             file=sys.stderr,
         )
     else:  # two-space

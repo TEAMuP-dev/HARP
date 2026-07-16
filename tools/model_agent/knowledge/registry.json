@@ -128,14 +128,14 @@
     },
     {
       "backend": "examples/omnizart_pyharp",
-      "backend_space": null,
+      "backend_space": "",
       "deps_fingerprint": "111cb07feba3692a",
       "gpu": false,
       "lock": "knowledge/locks/music-and-culture-technology-lab-omnizart.txt",
       "mode": "dual",
       "model_id": "Music-and-Culture-Technology-Lab/omnizart",
       "notes": "PREFERRED single-Space path: one Docker Space FROM mctlab/omnizart:latest with a Python 3.10 pyharp frontend venv + Python 3.6 Omnizart backend over subprocess JSON IPC (hand-authored, not LLM-rendered). See examples/omnizart_pyharp.",
-      "outcome": "unverified",
+      "outcome": "success",
       "python": "3.6",
       "recipe": null,
       "repo": "Music-and-Culture-Technology-Lab/omnizart",
@@ -145,7 +145,8 @@
         "native_fragile": true,
         "notes": "base image mctlab/omnizart:latest is Python 3.6 (FROM tensorflow/tensorflow:2.5.0-gpu); modern Gradio/pyharp need Python >=3.10, so the frontend runs in a separate 3.10 venv and IPCs to the 3.6 model.",
         "pip_installable": true
-      }
+      },
+      "space_url": "https://huggingface.co/spaces/teamup-tech/Omnizart"
     },
     {
       "backend": "examples/omnizart_backend",
@@ -221,6 +222,33 @@
       "repo": "haoheliu/voicefixer",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/voicefixer"
+    },
+    {
+      "backend_space": "",
+      "mode": "dual",
+      "model_id": "deezer/spleeter",
+      "outcome": "success",
+      "repo": "deezer/spleeter",
+      "sdk": "docker",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/Spleeter"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "sigsep/open-unmix-pytorch",
+      "outcome": "success",
+      "repo": "sigsep/open-unmix-pytorch",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/Open-Unmix"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "lucidrains/BS-RoFormer",
+      "outcome": "success",
+      "repo": "lucidrains/BS-RoFormer",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/BS-RoFormer"
     }
   ],
   "version": 1
