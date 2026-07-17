@@ -1,24 +1,29 @@
 # Configuration for model_validation/validate_models.py
 #
-# All keys are optional. Spaces not listed here are still discovered and
-# validated automatically with a single synthesized "default" test case.
+# All keys are optional. Models not listed here are still discovered and
+# validated automatically with a single synthesized "default" test case, so
+# an entry is only needed to change a model's settings or add test cases.
 #
 # Schema:
 #
+#   zerogpu_budget_seconds: 1500   # optional ZeroGPU budget for quota
+#                                  # reporting (e.g. 1500 = PRO 25 min/day);
+#                                  # unset = report usage without a budget
+#
 #   exclude:        # models to exclude from validation: space ids, or
-#                   # "local/<example-dir>" for local pyharp examples
+#                   # "examples/<example-dir>" for local pyharp examples
 #     - teamup-tech/some-non-harp-space
-#     - local/some_example
+#     - examples/some_example
 #
 #   include_extra:  # spaces outside the org that should also be validated
 #     - some-user/some-harp-space
 #
 #   overrides:      # per-model settings; keys are space ids, or
-#                   # "local/<example-dir>" for local pyharp examples
+#                   # "examples/<example-dir>" for local pyharp examples
 #     <model key>:
 #       connect_timeout: 600     # seconds to wait for build/wake (default 420)
 #       process_timeout: 900     # seconds to wait for /process (default 600)
-#       skip_process: true       # only check availability + /controls
+#       load_only: true          # only check availability + /controls
 #       test_cases:              # named /process test cases; when omitted, a
 #                                # single synthesized "default" case runs
 #         - name: default        # empty case == synthesized defaults
@@ -30,6 +35,13 @@
 #           files:                       # override track/file inputs by label;
 #                                        # paths are relative to this file
 #             "Input Audio": test_data/my_clip.wav
+#           expect:                      # declarative output checks by label
+#             "Output Audio":
+#               ext: .wav                # downloaded file must have this ext
+#               min_bytes: 1000          # ... and be at least this many bytes
+#           validator: wav_not_silent    # custom check registered in
+#                                        # validators.py; extra case keys
+#                                        # (e.g. min_rms_db) parameterize it
 
 exclude: []
 
@@ -37,17 +49,20 @@ include_extra: []
 
 overrides:
 
-  # ---- Baseline: local pyharp examples -------------------------------------
+  # ---- Local pyharp examples ----------------------------------------------
   # These run with `--local-examples` and exercise pyharp itself with no
   # Hugging Face infrastructure involved. A failure here indicates a
   # pyharp/gradio-level breakage rather than a deployment-specific one.
+  # Examples are discovered automatically; entries are only needed to add
+  # test cases beyond the synthesized default.
 
-  local/pitch_shifter:
+  examples/pitch_shifter:
     test_cases:
       - name: default
       - name: shift-up-octave
         controls:
           "Pitch Shift (semitones)": 12
+        validator: wav_not_silent
       - name: shift-down-octave
         controls:
           "Pitch Shift (semitones)": -12
@@ -55,7 +70,7 @@ overrides:
         controls:
           "Pitch Shift (semitones)": 0
 
-  local/midi_pitch_shifter:
+  examples/midi_pitch_shifter:
     test_cases:
       - name: default
       - name: shift-up-max
@@ -64,14 +79,6 @@ overrides:
       - name: shift-down-max
         controls:
           "Pitch Shift (semitones)": -24
-
-  local/midi_synthesizer:
-    test_cases:
-      - name: default
-
-  local/ui_tester:
-    test_cases:
-      - name: default
 
   # ---- Remote space overrides ---------------------------------------------
   # Add per-space timeouts and extra test cases here as needed, e.g.:
@@ -83,3 +90,11 @@ overrides:
   #     - name: extreme-shift
   #       controls:
   #         "Pitch Shift (semitones)": 24
+  #       expect:
+  #         "Output Audio":
+  #           ext: .wav
+  #           min_bytes: 10000
+  #       validator: wav_format
+  #       channels: 1
+  #       sample_rate: 44100
+  #       min_duration: 1.5

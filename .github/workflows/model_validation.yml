@@ -1,7 +1,7 @@
 # Daily validation of HARP model deployments.
 #
 # Two tiers:
-#   1. baseline - local pyharp examples run inside the CI runner; no Hugging
+#   1. examples - local pyharp examples run inside the CI runner; no Hugging
 #                 Face infrastructure involved. A failure here means pyharp
 #                 or gradio itself is broken - fix that before debugging
 #                 individual spaces.
@@ -35,14 +35,14 @@ on:
         description: 'Space ids to validate (space-separated); empty = all'
         required: false
         default: ''
-      skip_process:
+      load_only:
         description: 'Skip /process inference tests (availability only)'
         type: boolean
         default: false
       restart_failed:
         description: 'Attempt to restart crashed/stopped spaces (needs write token)'
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -53,8 +53,8 @@ concurrency:
 
 jobs:
 
-  baseline:
-    name: Baseline (local pyharp examples)
+  examples:
+    name: Examples (local pyharp)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -80,24 +80,24 @@ jobs:
         run: |
           set +e
           python model_validation/validate_models.py --local-examples \
-            --output-dir reports/baseline
+            --output-dir reports/examples
           CODE=$?
           if [ "$CODE" -eq 1 ]; then
-            echo "::warning title=Baseline failures::Some local examples failed - see the run summary and report artifact."
+            echo "::warning title=Example failures::Some local examples failed - see the run summary and report artifact."
             exit 0
           fi
           exit "$CODE"
 
       - name: Publish summary
         if: always()
-        run: cat reports/baseline/report.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: cat reports/examples/report.md >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: report-baseline
-          path: reports/baseline/report.*
+          name: report-examples
+          path: reports/examples/report.*
           if-no-files-found: ignore
 
   spaces:
@@ -121,7 +121,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           INPUT_SPACES: ${{ inputs.spaces }}
-          INPUT_SKIP_PROCESS: ${{ inputs.skip_process }}
+          INPUT_LOAD_ONLY: ${{ inputs.load_only }}
           INPUT_RESTART_FAILED: ${{ inputs.restart_failed }}
         run: |
           ARGS=(--output-dir reports/spaces)
@@ -129,11 +129,12 @@ jobs:
             read -r -a SPACE_IDS <<< "$INPUT_SPACES"
             ARGS+=(--spaces "${SPACE_IDS[@]}")
           fi
-          if [ "$INPUT_SKIP_PROCESS" = "true" ]; then
-            ARGS+=(--skip-process)
+          if [ "$INPUT_LOAD_ONLY" = "true" ]; then
+            ARGS+=(--load-only)
           fi
-          if [ "$INPUT_RESTART_FAILED" = "true" ]; then
-            ARGS+=(--restart-failed)
+          # restart is the script default; scheduled runs leave INPUT empty
+          if [ "$INPUT_RESTART_FAILED" = "false" ]; then
+            ARGS+=(--no-restart-failed)
           fi
           set +e
           python model_validation/validate_models.py "${ARGS[@]}"

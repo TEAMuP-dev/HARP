@@ -31,7 +31,7 @@
 *.out
 *.app
 
-# build 
+# Build 
 build*/
 .vscode/
 libtorch/
@@ -53,12 +53,11 @@ py/client/dist/
 py/client/*.spec
 dist*/
 
-
 dist/
 Miniconda*/
 Miniconda*.sh
 
-# website
+# Website
 node_modules
 temp
 cache
@@ -73,9 +72,9 @@ __pycache__/
 venv/
 .venv/
 
-# model validation output
-reports/
-
 # Ignore all the *.md files in website/HARP
 website/content/HARP/*.md
 website/content/pyHARP/*.md
+
+# Model validation output
+reports/
