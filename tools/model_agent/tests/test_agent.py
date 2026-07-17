@@ -10,33 +10,21 @@ from tools.model_agent.agent import (
     PYHARP_REQUIREMENT,
     DeploySpaceError,
     EndpointProbeError,
-    HarpEndpointClient,
     HarpModelAgent,
-    ModelPackage,
     SpaceCandidate,
     VenvSetupError,
     _parse_github_url,
-    build_generated_app_package,
     lint_generated_app,
     merge_frozen_pins,
     parse_freeze,
     reconcile_readme,
     reconcile_requirements,
-    classify_task,
-    detect_inference_framework,
-    evaluate_license,
-    extract_io_signature,
-    render_pyharp_app,
-    score_compatibility,
 )
-from tools.model_agent.analyze import analyze_app_source, analyze_path
 from tools.model_agent.cli import (
-    attach_health,
     _apply_card_metadata,
     _ensure_github_backend_pip,
     _ensure_github_pip,
     _pip_installable_from_signals,
-    _predeploy_resolve_gate,
     _repo_is_pip_installable,
     _strip_repo_backend_pip,
     _strip_repo_pip,
@@ -56,15 +44,10 @@ from tools.model_agent.llm import (
 )
 from tools.model_agent.recipe import (
     RecipeError,
-    _satisfies,
-    apply_dependency_fixes,
     build_package_from_recipe,
-    collect_pip_requirements,
-    find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
     rank_named_endpoints,
-    recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
     render_app_from_recipe,
     validate_recipe,
@@ -82,86 +65,12 @@ from tools.model_agent.classifier import (
     recommend_mode,
     resource_headsup,
 )
-from tools.model_agent.resolver import (
-    ResolutionResult,
-    build_dry_run_command,
-    has_conflict_signal,
-    parse_resolution_conflicts,
-    resolve_requirements,
-)
 from tools.model_agent.orchestrator import (
     build_steps,
     decide_plan,
     detect_ref,
     extract_space_links,
 )
-
-
-class EndpointInferenceTest(unittest.TestCase):
-    def test_infers_hf_space_endpoint_from_abbrev_path(self):
-        self.assertEqual(
-            HarpEndpointClient.infer_endpoint_url("example/audio_model"),
-            "https://example-audio-model.hf.space/",
-        )
-
-    def test_infers_documentation_url_from_short_hf_url(self):
-        self.assertEqual(
-            HarpEndpointClient.infer_documentation_url(
-                "https://example-audio-model.hf.space/"
-            ),
-            "https://huggingface.co/spaces/example/audio-model",
-        )
-
-    def test_parses_plain_json_gradio_response(self):
-        payload = [{"card": {}, "inputs": [], "outputs": []}]
-        self.assertEqual(
-            HarpEndpointClient._parse_gradio_response(json.dumps(payload)),
-            payload,
-        )
-
-    def test_parses_sse_gradio_response(self):
-        payload = [{"card": {"name": "Demo"}, "inputs": [], "outputs": []}]
-        response = "event: complete\ndata: " + json.dumps(payload) + "\n\n"
-        self.assertEqual(HarpEndpointClient._parse_gradio_response(response), payload)
-
-
-class CanonicalPathResolutionTest(unittest.TestCase):
-    def test_recovers_underscores_from_gradio_config(self):
-        # A short *.hf.space URL flattens "example/audio_model" into
-        # "example-audio-model" and loses the underscore; the live config
-        # endpoint reports the authoritative id and lets us recover it.
-        class FakeConfigClient(HarpEndpointClient):
-            def _get_text(self, url):
-                if url.endswith("/gradio_api/config"):
-                    return json.dumps({"space_id": "example/audio_model"})
-                raise EndpointProbeError(f"unexpected GET {url}")
-
-        client = FakeConfigClient()
-        self.assertEqual(
-            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
-            "example/audio_model",
-        )
-
-    def test_falls_back_to_string_inference_without_config(self):
-        class FailingConfigClient(HarpEndpointClient):
-            def _get_text(self, url):
-                raise EndpointProbeError(f"no config at {url}")
-
-        client = FailingConfigClient()
-        self.assertEqual(
-            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
-            "example/audio-model",
-        )
-
-    def test_trusts_full_hf_spaces_url(self):
-        # Full HF Space URLs carry the exact id, so no network call is needed.
-        client = HarpEndpointClient()
-        self.assertEqual(
-            client.resolve_canonical_path(
-                "https://huggingface.co/spaces/example/audio_model"
-            ),
-            "example/audio_model",
-        )
 
 
 class SpaceCandidateTest(unittest.TestCase):
@@ -192,128 +101,6 @@ class DiscoveryTest(unittest.TestCase):
         candidates = HarpModelAgent(scraper=FakeScraper()).discover_open_gradio_spaces()
 
         self.assertEqual([candidate.id for candidate in candidates], ["example/open-gradio"])
-
-
-class CompatibilityScoringTest(unittest.TestCase):
-    def test_classifies_audio_task_from_pipeline_tag(self):
-        card = {"meta": {"pipeline_tag": "audio-to-audio", "tags": []}, "readme": ""}
-
-        self.assertEqual(classify_task(card), "audio-to-audio")
-
-    def test_classifies_midi_from_readme(self):
-        card = {"meta": {"pipeline_tag": "", "tags": []}, "readme": "This model generates MIDI notes."}
-
-        self.assertEqual(classify_task(card), "midi")
-
-    def test_evaluates_license_status(self):
-        self.assertFalse(evaluate_license("mit")["is_blocking"])
-        self.assertTrue(evaluate_license("cc-by-nc-4.0")["is_blocking"])
-
-    def test_scores_candidate_with_rationale(self):
-        card = {
-            "meta": {
-                "id": "example/audio-model",
-                "author": "example",
-                "pipeline_tag": "audio-to-audio",
-                "tags": ["audio-to-audio"],
-                "license": "mit",
-            },
-            "files": ["config.json", "model.safetensors"],
-            "readme": "This source separation model works at 48 kHz in stereo. " * 20,
-        }
-
-        result = score_compatibility(card)
-
-        self.assertEqual(result["task"], "audio-to-audio")
-        self.assertEqual(result["blockers"], [])
-        self.assertGreater(result["score"], 0.9)
-        self.assertEqual(extract_io_signature(card)["sample_rate_hz"], 48000)
-
-
-def _speechbrain_card():
-    return {
-        "meta": {
-            "id": "example/sepformer-model",
-            "author": "example",
-            "pipeline_tag": "audio-to-audio",
-            "library_name": "speechbrain",
-            "tags": ["audio-to-audio", "speechbrain", "Source Separation"],
-            "license": "apache-2.0",
-        },
-        "files": ["hyperparams.yaml", "model.ckpt"],
-        "readme": "A SpeechBrain source separation model trained at 8 kHz.",
-    }
-
-
-class TemplateGenerationTest(unittest.TestCase):
-    def test_detects_speechbrain_framework(self):
-        self.assertEqual(detect_inference_framework(_speechbrain_card()), "speechbrain")
-
-    def test_renders_speechbrain_pyharp_app(self):
-        app_py = render_pyharp_app(_speechbrain_card())
-
-        self.assertIn('REPO_ID = "example/sepformer-model"', app_py)
-        self.assertIn("build_endpoint", app_py)
-        self.assertIn("SepformerSeparation", app_py)
-        # The old, non-runnable transformers pipeline must not be emitted.
-        self.assertNotIn('pipeline("audio-to-audio"', app_py)
-
-    def test_refuses_unsupported_framework(self):
-        card = {
-            "meta": {
-                "id": "example/audio-model",
-                "author": "example",
-                "pipeline_tag": "audio-to-audio",
-                "tags": ["audio-to-audio"],
-                "license": "mit",
-            },
-            "files": ["config.json", "model.safetensors"],
-            "readme": "A test model with no recognized framework.",
-        }
-
-        with self.assertRaises(NotImplementedError):
-            render_pyharp_app(card)
-
-    def test_writes_generated_app_package(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            package = build_generated_app_package(_speechbrain_card())
-            self.assertEqual(package.framework, "speechbrain")
-            folder = HarpModelAgent().write_generated_app_package(package, Path(tmp))
-
-            self.assertTrue((folder / "app.py").exists())
-            self.assertTrue((folder / "requirements.txt").exists())
-            requirements = (folder / "requirements.txt").read_text(encoding="utf-8")
-            self.assertIn("speechbrain", requirements)
-            self.assertIn("torchcodec", requirements)
-            self.assertTrue((folder / "README.md").exists())
-            self.assertTrue((folder / "packages.txt").exists())
-            self.assertTrue((folder / ".harp" / "manifest.json").exists())
-
-
-class HarvestTest(unittest.TestCase):
-    def test_harvest_writes_app_files_and_index(self):
-        class FakeScraper:
-            def discover(self, **_kwargs):
-                return [
-                    SpaceCandidate(id="teamup-tech/alpha", sdk="gradio"),
-                    SpaceCandidate(id="teamup-tech/beta", sdk="gradio"),
-                ]
-
-            def get_space_file(self, space_id, filename="app.py"):
-                if space_id == "teamup-tech/alpha":
-                    return "print('alpha app')\n"
-                return None
-
-        with tempfile.TemporaryDirectory() as tmp:
-            results = HarpModelAgent(scraper=FakeScraper()).harvest_space_apps(
-                Path(tmp), author="teamup-tech"
-            )
-
-            statuses = {record["id"]: record["status"] for record in results}
-            self.assertEqual(statuses["teamup-tech/alpha"], "ok")
-            self.assertEqual(statuses["teamup-tech/beta"], "missing")
-            self.assertTrue((Path(tmp) / "teamup-tech-alpha" / "app.py").exists())
-            self.assertTrue((Path(tmp) / "index.json").exists())
 
 
 class VenvTest(unittest.TestCase):
@@ -699,232 +486,6 @@ class DeployIntoSpaceTest(unittest.TestCase):
                     )
 
 
-class AnalyzeTest(unittest.TestCase):
-    SAMPLE_APP = '''
-import spaces
-import gradio as gr
-from pyharp.core import ModelCard, build_endpoint
-from pyharp.labels import LabelList
-
-model_card = ModelCard(name="x", description="y", author="z", tags=[])
-
-
-@spaces.GPU
-def process_fn(audio_path, model_name):
-    return audio_path, audio_path, {"labels": []}
-
-
-with gr.Blocks() as demo:
-    input_audio = gr.Audio(type="filepath", label="Input Audio").harp_required(True)
-    model_dropdown = gr.Dropdown(choices=["a", "b"], label="Model", value="a")
-    out_drums = gr.Audio(type="filepath", label="Drums")
-    out_bass = gr.Audio(type="filepath", label="Bass")
-    out_labels = gr.JSON(label="Labels")
-    build_endpoint(
-        model_card=model_card,
-        input_components=[input_audio, model_dropdown],
-        output_components=[out_drums, out_bass, out_labels],
-        process_fn=process_fn,
-    )
-'''
-
-    DYNAMIC_APP = (
-        "import gradio as gr\n"
-        "from pyharp import build_endpoint\n"
-        "components = make_components()\n"
-        "build_endpoint(input_components=components, output_components=components)\n"
-    )
-
-    EMPTY_APP = (
-        "import gradio as gr\n"
-        "from pyharp import build_endpoint\n"
-        "build_endpoint(model_card, process_fn)\n"
-    )
-
-    def test_analyzes_input_output_shapes(self):
-        record = analyze_app_source(self.SAMPLE_APP)
-        self.assertTrue(record["build_endpoint_found"])
-        self.assertEqual(record["inputs"], ["Audio", "Dropdown"])
-        self.assertEqual(record["outputs"], ["Audio", "Audio", "JSON"])
-        self.assertTrue(record["uses_spaces_gpu"])
-        self.assertTrue(record["uses_labellist"])
-        self.assertIn("pyharp.core", record["pyharp_imports"])
-        self.assertIn("pyharp.labels", record["pyharp_imports"])
-
-    def test_clean_wrapper_is_recipe_eligible(self):
-        record = analyze_app_source(self.SAMPLE_APP)
-        self.assertTrue(record["recipe_eligible"])
-        self.assertEqual(record["unresolved_reason"], "")
-
-    def test_dynamic_components_not_recipe_eligible(self):
-        record = analyze_app_source(self.DYNAMIC_APP)
-        self.assertEqual(record["inputs"], ["dynamic"])
-        self.assertFalse(record["recipe_eligible"])
-        self.assertEqual(record["unresolved_reason"], "dynamic/unresolved component types")
-
-    def test_missing_components_not_recipe_eligible(self):
-        record = analyze_app_source(self.EMPTY_APP)
-        self.assertEqual(record["inputs"], [])
-        self.assertFalse(record["recipe_eligible"])
-        self.assertEqual(record["unresolved_reason"], "no resolvable components")
-
-    def test_resolves_inline_components(self):
-        source = (
-            "import gradio as gr\n"
-            "from pyharp.core import build_endpoint\n"
-            "build_endpoint(\n"
-            "    input_components=[gr.Audio(type='filepath').harp_required(True)],\n"
-            "    output_components=[gr.Audio()],\n"
-            ")\n"
-        )
-        record = analyze_app_source(source)
-        self.assertEqual(record["inputs"], ["Audio"])
-        self.assertEqual(record["outputs"], ["Audio"])
-        self.assertFalse(record["uses_spaces_gpu"])
-
-    def test_harp_required_reads_boolean_argument(self):
-        # ``.harp_required(False)`` must read as *not* required (the canonical
-        # HARP 3.0.0 template uses it on an optional audio input).
-        source = (
-            "import gradio as gr\n"
-            "from pyharp import *\n"
-            "build_endpoint(\n"
-            "    input_components=[\n"
-            "        gr.Audio(type='filepath', label='Optional')"
-            ".harp_required(False).set_info('not used'),\n"
-            "        gr.Textbox(label='Prompt').harp_required(True),\n"
-            "    ],\n"
-            "    output_components=[gr.Audio(label='Out')],\n"
-            ")\n"
-        )
-        record = analyze_app_source(source)
-        audio, textbox = record["input_details"]
-        self.assertFalse(audio["harp_required"])
-        self.assertEqual(audio["info"], "not used")
-        self.assertTrue(textbox["harp_required"])
-
-    def test_extracts_choices_info_and_file_types(self):
-        source = (
-            "import gradio as gr\n"
-            "from pyharp import *\n"
-            "build_endpoint(\n"
-            "    input_components=[\n"
-            "        gr.Dropdown(choices=['a', 'b'], value='b', label='Pick', info='hint'),\n"
-            "        gr.Slider(minimum=0, maximum=20, step=2, value=4, label='Amt'),\n"
-            "    ],\n"
-            "    output_components=[\n"
-            "        gr.File(type='filepath', label='MIDI', file_types=['.mid', '.midi']),\n"
-            "    ],\n"
-            ")\n"
-        )
-        record = analyze_app_source(source)
-        dropdown, slider = record["input_details"]
-        self.assertEqual(dropdown["choices"], ["a", "b"])
-        self.assertEqual(dropdown["default"], "b")
-        self.assertEqual(dropdown["info"], "hint")
-        self.assertEqual((slider["min"], slider["max"], slider["step"]), (0, 20, 2))
-        self.assertEqual(slider["default"], 4)
-        self.assertEqual(record["output_details"][0]["file_types"], [".mid", ".midi"])
-
-    def test_reports_syntax_errors(self):
-        record = analyze_app_source("def broken(:\n    pass\n")
-        self.assertIn("error", record)
-
-    def test_aggregates_directory(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "alpha").mkdir()
-            (root / "beta").mkdir()
-            (root / "alpha" / "app.py").write_text(self.SAMPLE_APP, encoding="utf-8")
-            (root / "beta" / "app.py").write_text(
-                "import gradio as gr\n"
-                "from pyharp.core import build_endpoint\n"
-                "a = gr.Audio()\n"
-                "build_endpoint(input_components=[a], output_components=[gr.Textbox()])\n",
-                encoding="utf-8",
-            )
-            report = analyze_path(root)
-            summary = report["summary"]
-            self.assertEqual(summary["apps_analyzed"], 2)
-            self.assertEqual(summary["apps_with_errors"], 0)
-            self.assertEqual(summary["uses_spaces_gpu"], 1)
-            self.assertEqual(summary["input_component_types"]["Audio"], 2)
-            self.assertEqual(summary["output_component_types"]["Textbox"], 1)
-            self.assertEqual(summary["recipe_eligible"], 2)
-            self.assertEqual(summary["unresolved"], 0)
-
-    def test_flags_unresolved_apps_in_summary(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "good").mkdir()
-            (root / "dyn").mkdir()
-            (root / "good" / "app.py").write_text(self.SAMPLE_APP, encoding="utf-8")
-            (root / "dyn" / "app.py").write_text(self.DYNAMIC_APP, encoding="utf-8")
-            report = analyze_path(root)
-            summary = report["summary"]
-            self.assertEqual(summary["recipe_eligible"], 1)
-            self.assertEqual(summary["unresolved"], 1)
-            self.assertEqual(len(summary["unresolved_apps"]), 1)
-
-
-class HealthCheckTest(unittest.TestCase):
-    class _FakeEndpointClient:
-        def __init__(self, alive_ids):
-            self.alive_ids = set(alive_ids)
-
-        def fetch_controls(self, model_path):
-            if model_path in self.alive_ids:
-                return {"card": {}, "inputs": [{}, {}], "outputs": [{}]}
-            raise EndpointProbeError(f"{model_path} is sleeping")
-
-    def test_agent_reports_alive_and_dead(self):
-        agent = HarpModelAgent(endpoint_client=self._FakeEndpointClient(["author/alive"]))
-        alive = agent.check_endpoint_health("author/alive")
-        dead = agent.check_endpoint_health("author/dead")
-        self.assertEqual(alive["status"], "alive")
-        self.assertEqual(alive["n_inputs"], 2)
-        self.assertEqual(alive["n_outputs"], 1)
-        self.assertEqual(dead["status"], "dead")
-        self.assertIn("sleeping", dead["reason"])
-
-    def test_attach_health_joins_index_json(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "teamup-tech-alive").mkdir()
-            (root / "teamup-tech-dead").mkdir()
-            (root / "teamup-tech-alive" / "app.py").write_text(
-                AnalyzeTest.SAMPLE_APP, encoding="utf-8"
-            )
-            (root / "teamup-tech-dead" / "app.py").write_text(
-                AnalyzeTest.SAMPLE_APP, encoding="utf-8"
-            )
-            index = [
-                {
-                    "id": "teamup-tech/alive",
-                    "path": str(root / "teamup-tech-alive" / "app.py"),
-                    "status": "ok",
-                },
-                {
-                    "id": "teamup-tech/dead",
-                    "path": str(root / "teamup-tech-dead" / "app.py"),
-                    "status": "ok",
-                },
-            ]
-            (root / "index.json").write_text(json.dumps(index), encoding="utf-8")
-
-            agent = HarpModelAgent(
-                endpoint_client=HealthCheckTest._FakeEndpointClient(["teamup-tech/alive"])
-            )
-            report = analyze_path(root)
-            attach_health(agent, root, report)
-
-            health_by_slug = {
-                Path(record["path"]).parent.name: record["health"] for record in report["apps"]
-            }
-            self.assertEqual(health_by_slug["teamup-tech-alive"]["status"], "alive")
-            self.assertEqual(health_by_slug["teamup-tech-dead"]["status"], "dead")
-            self.assertEqual(report["summary"]["health"], {"alive": 1, "dead": 1, "unknown": 0})
-
 
 class RecipeTest(unittest.TestCase):
     STEM_RECIPE = {
@@ -1069,49 +630,6 @@ class RecipeTest(unittest.TestCase):
         self.assertEqual(package.io["outputs"], ["audio", "labels"])
         self.assertIn("pyharp", package.requirements)
 
-
-class RecipeScaffoldTest(unittest.TestCase):
-    def test_scaffold_from_clean_wrapper(self):
-        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
-        recipe = recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
-
-        # The skeleton must itself be a valid recipe and render a stub wrapper.
-        validate_recipe(recipe)
-        app = render_app_from_recipe(recipe)
-        compile(app, "<scaffold>", "exec")
-        self.assertIn("raise NotImplementedError", app)
-
-        self.assertEqual([spec["type"] for spec in recipe["inputs"]], ["audio", "dropdown"])
-        self.assertEqual(
-            [spec["type"] for spec in recipe["outputs"]], ["audio", "audio", "labels"]
-        )
-        self.assertTrue(recipe["inputs"][0]["required"])
-        self.assertTrue(recipe["framework"]["gpu"])
-        self.assertEqual(recipe["model"]["id"], "teamup-tech/demucs")
-        self.assertTrue(recipe["_todo"])
-
-    def test_scaffold_fills_choices_from_analysis(self):
-        # The SAMPLE_APP dropdown has concrete choices/value; the scaffold must
-        # carry them through instead of emitting TODO placeholders.
-        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
-        recipe = recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
-        dropdown = recipe["inputs"][1]
-        self.assertEqual(dropdown["type"], "dropdown")
-        self.assertEqual(dropdown["choices"], ["a", "b"])
-        self.assertEqual(dropdown["default"], "a")
-        # No leftover TODO for choices we resolved.
-        self.assertFalse(any("choices" in todo for todo in recipe["_todo"]))
-
-    def test_scaffold_rejects_unmappable_component(self):
-        record = {
-            "build_endpoint_found": True,
-            "recipe_eligible": True,
-            "input_details": [{"type": "Image", "label": "Pic"}],
-            "output_details": [{"type": "Audio", "label": "Out"}],
-            "uses_spaces_gpu": False,
-        }
-        with self.assertRaises(RecipeError):
-            recipe_skeleton_from_analysis(record)
 
 
 class _FakeProvider:
@@ -1259,9 +777,9 @@ class LLMRecipeTest(unittest.TestCase):
                 provider_from_env()
 
     def test_provider_from_env_auto_detects_key(self):
-        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
+        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}, clear=True):
             provider = provider_from_env()
-            self.assertEqual(provider.name, "openai")
+            self.assertEqual(provider.name, "gemini")
 
     def test_provider_from_env_generic_key_defaults_provider(self):
         with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
@@ -1271,9 +789,8 @@ class LLMRecipeTest(unittest.TestCase):
 
     def test_provider_from_env_generic_key_honors_explicit_provider(self):
         with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
-            provider = provider_from_env("anthropic")
-            self.assertEqual(provider.name, "anthropic")
-            self.assertEqual(provider.api_key, "generic")
+            with self.assertRaises(LLMError):
+                provider_from_env("anthropic")
 
     def test_gemini_default_model_is_not_retired_1_5(self):
         with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "k"}, clear=True):
@@ -1318,9 +835,34 @@ class LLMRecipeTest(unittest.TestCase):
 
 class CompleteRecipeTest(unittest.TestCase):
     def _scaffold(self):
-        # Mimic scaffold-recipe output: resolved I/O + TODO stubs.
-        record = analyze_app_source(AnalyzeTest.SAMPLE_APP)
-        return recipe_skeleton_from_analysis(record, model_id="teamup-tech/demucs")
+        return {
+            "model": {
+                "id": "teamup-tech/demucs",
+                "name": "Demucs",
+                "description": "TODO: describe this model.",
+            },
+            "framework": {"import": "", "pip": [], "apt": [], "gpu": True},
+            "inputs": [
+                {"name": "audio", "type": "audio", "label": "Audio", "required": True},
+                {
+                    "name": "model_name",
+                    "type": "dropdown",
+                    "label": "Model",
+                    "choices": ["a", "b"],
+                    "default": "a",
+                },
+            ],
+            "outputs": [
+                {"name": "vocals", "type": "audio", "label": "Vocals"},
+                {"name": "drums", "type": "audio", "label": "Drums"},
+                {"name": "labels", "type": "labels", "label": "Labels"},
+            ],
+            "inference": {
+                "setup": "MODEL = None",
+                "body": "raise NotImplementedError('TODO')",
+            },
+            "_todo": ["Fill framework and inference."],
+        }
 
     def test_completion_fills_stubs_and_preserves_io(self):
         scaffold = self._scaffold()
@@ -1657,16 +1199,10 @@ class RemoteScaffoldTest(unittest.TestCase):
                 "owner/backend", {"named_endpoints": {}, "unnamed_endpoints": {}}
             )
 
-    def test_agent_scaffold_uses_endpoint_client(self):
-        class _FakeEndpoint:
-            def fetch_api_info(self, space):
-                return RemoteScaffoldTest.API_INFO
-
-            def resolve_canonical_path(self, space):
-                return "owner/backend"
-
-        agent = HarpModelAgent(endpoint_client=_FakeEndpoint())
-        recipe = agent.scaffold_remote_recipe("owner/backend")
+    def test_agent_scaffold_fetches_api_info(self):
+        agent = HarpModelAgent()
+        with mock.patch.object(agent, "fetch_api_info", return_value=RemoteScaffoldTest.API_INFO):
+            recipe = agent.scaffold_remote_recipe("owner/backend")
         validate_recipe(recipe)
 
 
@@ -2018,16 +1554,12 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         app = render_app_from_recipe(recipe)
         compile(app, "soulx_singer_recipe.json", "exec")
 
-        # Reuses the original Space's pipeline rather than reimplementing it.
-        self.assertIn("from webui import synthesis_function", app)
-        self.assertIn("synthesis_function(", app)
+        # Proxies to the original Space instead of installing/reimplementing it.
+        self.assertIn('Client(_BACKEND_SPACE', app)
+        self.assertIn('api_name="/synthesis_function"', app)
         # Correct two-audio interface (the whole point of the fix).
         self.assertEqual(app.count('gr.Audio(type="filepath"'), 3)  # 2 inputs + 1 output
-        self.assertIn(
-            "def process_fn(prompt_audio, target_audio, control, prompt_lyric_lang, "
-            "target_lyric_lang, prompt_vocal_sep, target_vocal_sep, auto_shift, pitch_shift):",
-            app,
-        )
+        self.assertIn("def process_fn(prompt_audio, target_audio, control", app)
         # gpu false -> must NOT add a second @spaces.GPU (synthesis_function has its own).
         self.assertNotIn("@spaces.GPU", app)
 
@@ -2037,10 +1569,10 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         # synthesis_function's own defaults), so the lyric/ASR path matches the
         # original UI: prompt_vocal_sep defaults False, target_vocal_sep True,
         # languages default English.
-        self.assertIn("prompt_lyric_lang=prompt_lyric_lang", app)
-        self.assertIn("target_lyric_lang=target_lyric_lang", app)
-        self.assertIn("prompt_vocal_sep=prompt_vocal_sep", app)
-        self.assertIn("target_vocal_sep=target_vocal_sep", app)
+        self.assertIn("prompt_lyric_lang,", app)
+        self.assertIn("target_lyric_lang,", app)
+        self.assertIn("prompt_vocal_sep,", app)
+        self.assertIn("target_vocal_sep,", app)
         # Wrapping the single entry point cleanly => no lint warnings.
         self.assertEqual(lint_generated_app(app), [])
 
@@ -2416,94 +1948,6 @@ class RecipeRequirementsLintTest(unittest.TestCase):
         self.assertEqual(lint_recipe_requirements({"model": {"id": "a/b"}}), [])
 
 
-class DependencyConflictTest(unittest.TestCase):
-    """The pre-deploy checker catches pins that violate a sibling's declared
-    constraints (the exact 'librosa==0.10.1 vs ddsp needs librosa<=0.10' bug)."""
-
-    # Fake package metadata so tests never touch the network.
-    _REQUIRES_DIST = {
-        ("ddsp", "3.7.0"): [
-            "librosa (<=0.10)",
-            "crepe (<=0.0.12)",
-            "numpy (<1.24)",
-            "pytest ; extra == 'test'",  # optional extra -> must be ignored
-        ],
-    }
-    _VERSIONS = {
-        "librosa": ["0.8.1", "0.9.2", "0.10.0", "0.10.1", "0.11.0"],
-        "numpy": ["1.23.5", "1.24.0", "2.0.0"],
-    }
-
-    def _requires_dist(self, name, version):
-        return self._REQUIRES_DIST.get((name, version))
-
-    def _versions(self, name):
-        return self._VERSIONS.get(name, [])
-
-    def _find(self, requirements):
-        return find_dependency_conflicts(
-            requirements, self._requires_dist, self._versions
-        )
-
-    def test_detects_violation_and_suggests_newest_compatible(self):
-        conflicts = self._find(["ddsp==3.7.0", "librosa==0.10.1", "numpy==1.23.5"])
-        self.assertEqual(len(conflicts), 1)
-        conflict = conflicts[0]
-        self.assertEqual(conflict["package"], "librosa")
-        self.assertEqual(conflict["pinned"], "0.10.1")
-        # 0.10.0 is the newest version that satisfies '<=0.10'.
-        self.assertEqual(conflict["suggestion"], "0.10.0")
-
-    def test_satisfying_pin_has_no_conflict(self):
-        # numpy 1.23.5 satisfies '<1.24'; librosa 0.9.2 satisfies '<=0.10'.
-        self.assertEqual(
-            self._find(["ddsp==3.7.0", "librosa==0.9.2", "numpy==1.23.5"]), []
-        )
-
-    def test_optional_extra_dependencies_are_ignored(self):
-        # pytest is only an [test] extra; pinning it must not trigger a conflict.
-        self.assertEqual(self._find(["ddsp==3.7.0", "pytest==999.0"]), [])
-
-    def test_version_specifier_semantics(self):
-        self.assertFalse(_satisfies("0.10.1", "<=0.10"))
-        self.assertTrue(_satisfies("0.10.0", "<=0.10"))
-        self.assertTrue(_satisfies("1.23.5", "<1.24"))
-        self.assertFalse(_satisfies("1.24.0", "<1.24"))
-        self.assertTrue(_satisfies("2.11.0", "<=2.11"))
-        self.assertTrue(_satisfies("0.4.2", ">=0.3.0,<=0.10"))
-
-    def test_collect_pip_requirements_by_mode(self):
-        dual = {"framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}}
-        self.assertEqual(
-            collect_pip_requirements(dual), ["ddsp==3.7.0", "librosa==0.10.1"]
-        )
-        remote = {"framework": {"remote": {"space": "a/b"}, "pip": ["x==1"]}}
-        self.assertEqual(collect_pip_requirements(remote), [])
-        plain = {"framework": {"pip": ["torch==2.0"]}}
-        self.assertEqual(collect_pip_requirements(plain), ["torch==2.0"])
-
-    def test_apply_dependency_fixes_rewrites_backend_pip(self):
-        recipe = {
-            "framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}
-        }
-        apply_dependency_fixes(recipe, {"librosa": "0.10.0"})
-        self.assertEqual(
-            recipe["framework"]["dual"]["backend_pip"],
-            ["ddsp==3.7.0", "librosa==0.10.0"],
-        )
-
-    def test_url_and_option_lines_are_skipped(self):
-        # git+/URL and pip option lines can't be checked and must not crash.
-        conflicts = self._find(
-            [
-                "--extra-index-url https://download.pytorch.org/whl/cpu",
-                "git+https://github.com/sony/FxNorm-automix",
-                "ddsp==3.7.0",
-                "librosa==0.10.1",
-            ]
-        )
-        self.assertEqual([c["package"] for c in conflicts], ["librosa"])
-
 
 class GitHubInstallabilityTest(unittest.TestCase):
     def test_root_pyproject_is_installable(self):
@@ -2714,84 +2158,6 @@ class ResourceHeadsupTest(unittest.TestCase):
         self.assertIsNotNone(resource_headsup(warnings))
 
 
-class PredeployResolveGateTest(unittest.TestCase):
-    """The deploy-space pre-flight dependency gate (Audio-Omni regression)."""
-
-    class _CleanAgent:
-        # No PyPI metadata conflicts (Layer 1 defers to Layer 2).
-        def pypi_requires_dist(self, name, version):
-            return None
-
-        def pypi_available_versions(self, name):
-            return []
-
-    def _package(self, tmp, requirements="torch\ngradio==5.28.0\n"):
-        pkg = Path(tmp) / "pkg"
-        pkg.mkdir()
-        (pkg / "requirements.txt").write_text(requirements, encoding="utf-8")
-        return pkg
-
-    def test_no_requirements_file_returns_none(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            empty = Path(tmp) / "empty"
-            empty.mkdir()
-            self.assertIsNone(_predeploy_resolve_gate(self._CleanAgent(), empty))
-
-    def test_blocks_on_resolution_conflict(self):
-        def fake_resolve(reqs, **kw):
-            return ResolutionResult(
-                ok=False,
-                return_code=1,
-                conflicts=[{"kind": "cannot-install", "summary": "a and b", "packages": ["a", "b"]}],
-            )
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pkg = self._package(tmp)
-            report = _predeploy_resolve_gate(
-                self._CleanAgent(), pkg, resolve_fn=fake_resolve
-            )
-        self.assertFalse(report["ok"])
-
-    def test_missing_wheel_is_a_warning_not_a_block(self):
-        # Wheels-only "no matching distribution" may still build from sdist on the
-        # Space, so it must NOT block the deploy.
-        def fake_resolve(reqs, **kw):
-            return ResolutionResult(
-                ok=False,
-                return_code=1,
-                conflicts=[{"kind": "no-distribution", "requirement": "somesdist"}],
-            )
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pkg = self._package(tmp)
-            report = _predeploy_resolve_gate(
-                self._CleanAgent(), pkg, resolve_fn=fake_resolve
-            )
-        self.assertTrue(report["ok"])
-        self.assertIn("somesdist", report["warnings"])
-
-    def test_clean_resolution_passes(self):
-        def fake_resolve(reqs, **kw):
-            return ResolutionResult(ok=True, return_code=0)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pkg = self._package(tmp)
-            report = _predeploy_resolve_gate(
-                self._CleanAgent(), pkg, resolve_fn=fake_resolve
-            )
-        self.assertTrue(report["ok"])
-
-    def test_inconclusive_run_does_not_block(self):
-        def fake_resolve(reqs, **kw):
-            return ResolutionResult(ok=True, skipped=True, return_code=1)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pkg = self._package(tmp)
-            report = _predeploy_resolve_gate(
-                self._CleanAgent(), pkg, resolve_fn=fake_resolve
-            )
-        self.assertTrue(report["ok"])
-
 
 class ApplyCardMetadataTest(unittest.TestCase):
     def test_fills_description_tags_license_from_card(self):
@@ -2841,32 +2207,6 @@ class EnsureGitHubPipTest(unittest.TestCase):
 
 
 class PackageWriterTest(unittest.TestCase):
-    def test_writes_package_artifacts(self):
-        package = ModelPackage(
-            model_path="example/audio-model",
-            source_url="https://huggingface.co/spaces/example/audio-model",
-            endpoint_url="https://example-audio-model.hf.space/",
-            documentation_url="https://huggingface.co/spaces/example/audio-model",
-            scraped_at="2026-05-26T00:00:00Z",
-            card={
-                "name": "Example Audio Model",
-                "description": "A fake model used only by tests.",
-                "author": "Example",
-                "tags": [],
-            },
-            inputs=[],
-            outputs=[],
-            raw_controls={"card": {}, "inputs": [], "outputs": []},
-        )
-        with tempfile.TemporaryDirectory() as tmp:
-            folder = HarpModelAgent().write_package(package, Path(tmp))
-            self.assertTrue((folder / "manifest.json").exists())
-            self.assertTrue((folder / "controls.json").exists())
-            self.assertIn(
-                "Example Audio Model",
-                (folder / "README.md").read_text(encoding="utf-8"),
-            )
-
     def test_generated_package_rewrite_removes_stale_layout_files(self):
         base = {
             "model": {"id": "example/layout-switch", "name": "Layout Switch"},
@@ -3276,99 +2616,6 @@ class ClassifierDecisionTest(unittest.TestCase):
         self.assertEqual(decision.mode, "single")
         self.assertTrue(any("CUDA" in r for r in decision.recommendations))
 
-
-class ResolverParseTest(unittest.TestCase):
-    LIBROSA_LOG = (
-        "ERROR: Cannot install -r /tmp/requirements-backend.txt (line 1) and "
-        "librosa==0.10.1 because these package versions have conflicting dependencies.\n"
-        "The conflict is caused by:\n"
-        "    The user requested librosa==0.10.1\n"
-        "    ddsp 3.7.0 depends on librosa<=0.10\n"
-        "\n"
-        "To fix this you could try to:\n"
-        "1. loosen the range\n"
-        "ERROR: ResolutionImpossible: for help visit https://pip.pypa.io\n"
-    )
-
-    def test_parses_cannot_install_and_causes(self):
-        conflicts = parse_resolution_conflicts(self.LIBROSA_LOG)
-        kinds = {c["kind"] for c in conflicts}
-        self.assertIn("cannot-install", kinds)
-        self.assertIn("resolution-impossible", kinds)
-        causes = next(c for c in conflicts if c["kind"] == "resolution-impossible")["causes"]
-        self.assertTrue(any("ddsp 3.7.0 depends on librosa<=0.10" in line for line in causes))
-        # The "To fix this" block must NOT be swallowed into the cause list.
-        self.assertFalse(any("loosen the range" in line for line in causes))
-
-    def test_parses_no_matching_distribution(self):
-        conflicts = parse_resolution_conflicts(
-            "ERROR: No matching distribution found for torch==2.4.0"
-        )
-        self.assertEqual(conflicts[0]["kind"], "no-distribution")
-        self.assertEqual(conflicts[0]["requirement"], "torch==2.4.0")
-
-    def test_has_conflict_signal(self):
-        self.assertTrue(has_conflict_signal(self.LIBROSA_LOG))
-        self.assertFalse(has_conflict_signal("Successfully installed everything"))
-
-
-class ResolverRunTest(unittest.TestCase):
-    def _proc(self, returncode, stdout="", stderr=""):
-        class _P:
-            pass
-
-        p = _P()
-        p.returncode = returncode
-        p.stdout = stdout
-        p.stderr = stderr
-        return p
-
-    def test_target_command_forces_only_binary(self):
-        cmd = build_dry_run_command(
-            "req.txt", target_python="3.10", target_platform="manylinux2014_x86_64"
-        )
-        self.assertIn("--only-binary=:all:", cmd)
-        self.assertIn("--python-version", cmd)
-
-    def test_empty_requirements_is_ok(self):
-        result = resolve_requirements([])
-        self.assertTrue(result.ok)
-
-    def test_conflict_run_reports_not_ok(self):
-        runner = lambda cmd: self._proc(1, stderr=ResolverParseTest.LIBROSA_LOG)
-        result = resolve_requirements(["librosa==0.10.1", "ddsp==3.7.0"], runner=runner)
-        self.assertFalse(result.ok)
-        self.assertTrue(result.conflicts)
-
-    def test_success_run_reports_ok(self):
-        runner = lambda cmd: self._proc(0, stdout="Would install numpy-1.23.5")
-        result = resolve_requirements(["numpy==1.23.5"], runner=runner)
-        self.assertTrue(result.ok)
-
-    def test_nonzero_without_conflict_signature_is_skipped(self):
-        runner = lambda cmd: self._proc(1, stderr="Could not fetch URL https://pypi.org: timed out")
-        result = resolve_requirements(["numpy"], runner=runner)
-        self.assertTrue(result.ok)
-        self.assertTrue(result.skipped)
-
-    def test_target_mode_marks_git_and_options_unchecked(self):
-        captured = {}
-
-        def runner(cmd):
-            # The temp requirements file is the last arg; read what pip would see.
-            req_path = cmd[cmd.index("-r") + 1]
-            captured["contents"] = Path(req_path).read_text(encoding="utf-8")
-            return self._proc(0)
-
-        result = resolve_requirements(
-            ["numpy==1.23.5", "git+https://github.com/o/r", "--extra-index-url https://x"],
-            target_python="3.10",
-            runner=runner,
-        )
-        self.assertTrue(result.ok)
-        self.assertIn("git+https://github.com/o/r", result.unchecked)
-        self.assertIn("numpy==1.23.5", captured["contents"])
-        self.assertNotIn("git+", captured["contents"])
 
 
 class OrchestratorRefDetectionTest(unittest.TestCase):

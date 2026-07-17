@@ -33,35 +33,6 @@ KNOWN_HYPHENATED_SPACE_ORGS = ("teamup-tech",)
 HARP_GRADIO_VERSION = "5.28.0"
 PYHARP_REQUIREMENT = "git+https://github.com/TEAMuP-dev/pyharp.git@develop"
 
-HARP_FRIENDLY_TASKS = {
-    "audio-to-audio",
-    "audio-classification",
-    "automatic-speech-recognition",
-    "text-to-audio",
-    "text-to-speech",
-}
-
-PERMISSIVE_LICENSES = {
-    "apache-2.0",
-    "mit",
-    "bsd",
-    "bsd-2-clause",
-    "bsd-3-clause",
-    "cc-by-4.0",
-    "cc-by-sa-4.0",
-    "openrail",
-    "openrail++",
-}
-
-NONCOMMERCIAL_LICENSES = {
-    "cc-by-nc-4.0",
-    "cc-by-nc-sa-4.0",
-    "cc-by-nc-nd-4.0",
-}
-
-WEIGHT_FILE_SUFFIXES = (".bin", ".safetensors", ".pt", ".ckpt", ".onnx")
-_SR_RE = re.compile(r"(\d{2,3})[ ._-]?k(?:hz| ?Hz)", re.IGNORECASE)
-_CHANNELS_RE = re.compile(r"\b(mono|stereo)\b", re.IGNORECASE)
 _LOCAL_URL_RE = re.compile(r"https?://(?:127\.0\.0\.1|0\.0\.0\.0|localhost):\d+")
 _PUBLIC_URL_RE = re.compile(r"https?://[\w.-]+\.gradio\.live")
 
@@ -114,7 +85,7 @@ class SpaceCandidate:
             gated=bool(payload.get("gated")),
             tags=tags,
             url=f"{HUGGING_FACE_BASE}/spaces/{space_id}" if space_id else "",
-            endpoint_url=HarpEndpointClient.infer_endpoint_url(space_id) if space_id else "",
+            endpoint_url=infer_endpoint_url(space_id) if space_id else "",
         )
 
     def looks_open_source(self) -> bool:
@@ -124,26 +95,6 @@ class SpaceCandidate:
         return self.sdk.lower() == "gradio" or "gradio" in {tag.lower() for tag in self.tags}
 
 
-@dataclass
-class ModelPackage:
-    """A normalized, reviewable package for one HARP-compatible model."""
-
-    model_path: str
-    source_url: str
-    endpoint_url: str
-    documentation_url: str
-    scraped_at: str
-    card: JSON
-    inputs: List[JSON]
-    outputs: List[JSON]
-    space: Optional[SpaceCandidate] = None
-    raw_controls: JSON = field(default_factory=dict)
-
-    def to_json(self) -> JSON:
-        data = asdict(self)
-        if self.space is None:
-            data["space"] = None
-        return data
 
 
 @dataclass
@@ -243,385 +194,6 @@ class SmokeTestResult:
         return asdict(self)
 
 
-def classify_task(card: Mapping[str, Any]) -> str:
-    """Classify a Hugging Face model card into a HARP-relevant task bucket."""
-
-    meta = _model_meta(card)
-    pipeline_tag = str(meta.get("pipeline_tag") or "")
-    if pipeline_tag in HARP_FRIENDLY_TASKS:
-        return pipeline_tag
-
-    tags = {str(tag).lower() for tag in meta.get("tags", []) if tag}
-    for candidate in HARP_FRIENDLY_TASKS:
-        if candidate in tags:
-            return candidate
-
-    blob = " ".join(sorted(tags)) + " " + str(card.get("readme") or "").lower()
-    if "source separation" in blob or "stem" in blob or "audio enhancement" in blob:
-        return "audio-to-audio"
-    if "speech recognition" in blob or "transcribe" in blob:
-        return "automatic-speech-recognition"
-    if "music generation" in blob or "text-to-music" in blob:
-        return "text-to-audio"
-    if "text to speech" in blob or "tts" in tags:
-        return "text-to-speech"
-    if "midi" in blob:
-        return "midi"
-    return "unknown"
-
-
-def evaluate_license(license_name: str) -> JSON:
-    """Classify a license string for automatic packaging decisions."""
-
-    normalized = license_name.strip().lower()
-    if not normalized:
-        return {
-            "status": "missing",
-            "license": "",
-            "is_blocking": False,
-            "reason": "license missing; manual review required",
-        }
-    if normalized in NONCOMMERCIAL_LICENSES:
-        return {
-            "status": "noncommercial",
-            "license": normalized,
-            "is_blocking": True,
-            "reason": "non-commercial license blocks automatic packaging",
-        }
-    if normalized in PERMISSIVE_LICENSES:
-        return {
-            "status": "permissive",
-            "license": normalized,
-            "is_blocking": False,
-            "reason": "permissive license",
-        }
-    return {
-        "status": "unknown",
-        "license": normalized,
-        "is_blocking": False,
-        "reason": "license is not recognized; manual review required",
-    }
-
-
-def extract_io_signature(card: Mapping[str, Any]) -> JSON:
-    """Infer simple audio I/O hints from model metadata and README text."""
-
-    meta = _model_meta(card)
-    text = str(card.get("readme") or "")
-    signature: JSON = {
-        "sample_rate_hz": None,
-        "channels": None,
-        "fixed_length_s": None,
-        "needs_text_input": "text-to" in str(meta.get("pipeline_tag") or ""),
-        "source": "regex",
-    }
-
-    sr_match = _SR_RE.search(text)
-    if sr_match:
-        signature["sample_rate_hz"] = int(sr_match.group(1)) * 1000
-
-    ch_match = _CHANNELS_RE.search(text)
-    if ch_match:
-        signature["channels"] = ch_match.group(1).lower()
-
-    return signature
-
-
-def score_compatibility(card: Mapping[str, Any]) -> JSON:
-    """Score whether a raw Hugging Face model is a good HARP wrapper candidate."""
-
-    meta = _model_meta(card)
-    files = [str(file_name) for file_name in card.get("files", [])]
-    readme = str(card.get("readme") or "")
-    task = classify_task(card)
-    license_result = evaluate_license(str(meta.get("license") or ""))
-
-    blockers: List[str] = []
-    notes: List[str] = []
-    score = 0.5
-
-    if task == "unknown":
-        blockers.append("task_not_audio")
-    elif task == "midi":
-        score += 0.05
-        notes.append("MIDI-related; useful for HARP but needs a MIDI template")
-    elif task == "audio-to-audio":
-        score += 0.25
-        notes.append("audio-to-audio is the cleanest pyharp template fit")
-    else:
-        score += 0.05
-        notes.append(f"{task} is relevant but needs a specialized template")
-
-    if license_result["is_blocking"]:
-        blockers.append(f"license_{license_result['status']}:{license_result['license']}")
-    elif license_result["status"] == "permissive":
-        score += 0.15
-        notes.append(f"permissive license: {license_result['license']}")
-    else:
-        notes.append(license_result["reason"])
-
-    has_config = any(file_name.endswith("config.json") for file_name in files)
-    has_weights = any(file_name.endswith(WEIGHT_FILE_SUFFIXES) for file_name in files)
-    if has_config and has_weights:
-        score += 0.05
-        notes.append("standard model layout with config and weights")
-    elif files and not has_weights:
-        blockers.append("no_weight_files")
-    elif not files:
-        notes.append("file list missing; cannot verify weights")
-
-    if len(readme) > 500:
-        score += 0.05
-        notes.append("substantial README/model card")
-    else:
-        notes.append("README/model card is sparse")
-
-    return {
-        "score": round(max(0.0, min(1.0, score)), 3),
-        "blockers": blockers,
-        "rationale": "; ".join(notes),
-        "task": task,
-        "license": license_result,
-    }
-
-
-SUPPORTED_GENERATION_FRAMEWORKS = ("speechbrain",)
-
-
-def detect_inference_framework(card: Mapping[str, Any]) -> str:
-    """Detect the Python framework needed to run a raw Hugging Face audio model.
-
-    Different ``audio-to-audio`` models load through completely different APIs,
-    so there is no single universal inference call. We only claim support for
-    frameworks that expose a clean, documented ``from_pretrained``/``from_hparams``
-    inference path; everything else is reported as ``unknown`` so the caller can
-    refuse to emit a wrapper it cannot actually run.
-    """
-
-    meta = _model_meta(card)
-    library = str(meta.get("library_name") or "").strip().lower()
-    tags = {str(tag).strip().lower() for tag in meta.get("tags", []) if tag}
-    blob = " ".join(sorted(tags)) + " " + str(card.get("readme") or "").lower()
-
-    if library == "speechbrain" or "speechbrain" in tags or "speechbrain" in blob:
-        return "speechbrain"
-    if library == "asteroid" or "asteroid" in tags:
-        return "asteroid"
-    if library == "transformers" or "transformers" in tags:
-        return "transformers"
-    return "unknown"
-
-
-def _speechbrain_kind(card: Mapping[str, Any]) -> str:
-    """Pick the SpeechBrain inference interface that matches the model."""
-
-    meta = _model_meta(card)
-    blob = " ".join(str(tag).lower() for tag in meta.get("tags", []) if tag)
-    blob += " " + str(meta.get("id") or "").lower()
-    blob += " " + str(card.get("readme") or "").lower()
-
-    enhancement_markers = ("enhance", "denois", "metricgan", "mtl-mimic", "dereverb")
-    if any(marker in blob for marker in enhancement_markers):
-        return "enhancement"
-    return "separation"
-
-
-def render_pyharp_app(card: Mapping[str, Any], signature: Optional[Mapping[str, Any]] = None) -> str:
-    """Render a starter pyharp ``app.py`` for supported raw Hugging Face models.
-
-    Only frameworks in :data:`SUPPORTED_GENERATION_FRAMEWORKS` produce a wrapper.
-    Emitting code we cannot run (the previous behavior, which called the
-    nonexistent ``pipeline("audio-to-audio")`` task) is worse than refusing, so
-    unsupported models raise :class:`NotImplementedError`.
-    """
-
-    task = classify_task(card)
-    if task != "audio-to-audio":
-        raise NotImplementedError(
-            f"No app.py template is available for task '{task}' yet."
-        )
-
-    framework = detect_inference_framework(card)
-    if framework == "speechbrain":
-        return _render_speechbrain_app(card, signature)
-
-    raise NotImplementedError(
-        f"No runnable app.py template for framework '{framework}'. "
-        f"Supported frameworks: {', '.join(SUPPORTED_GENERATION_FRAMEWORKS)}. "
-        "Wire up a model-specific template, or package the model's existing "
-        "Gradio Space with the `package` command instead."
-    )
-
-
-def _render_speechbrain_app(
-    card: Mapping[str, Any],
-    signature: Optional[Mapping[str, Any]] = None,
-) -> str:
-    """Render a SpeechBrain-based pyharp wrapper using real inference APIs."""
-
-    meta = _model_meta(card)
-    sig = dict(signature or extract_io_signature(card))
-    repo_id = str(meta.get("id") or "unknown/unknown")
-    model_name = repo_id.split("/")[-1].replace("_", " ").replace("-", " ").title()
-    author = str(meta.get("author") or repo_id.split("/", 1)[0] or "unknown")
-    description = _short_description(card)
-    tags = meta.get("tags") if isinstance(meta.get("tags"), list) else []
-    kind = _speechbrain_kind(card)
-    # SpeechBrain separation checkpoints (e.g. SepFormer/WSJ0-2mix) are usually
-    # 8 kHz; enhancement checkpoints are usually 16 kHz. The README sample rate,
-    # when present, wins over these defaults.
-    default_sr = 8000 if kind == "separation" else 16000
-    target_sr = sig.get("sample_rate_hz") or default_sr
-
-    header = f'''from __future__ import annotations
-
-import tempfile
-
-import gradio as gr
-import torch
-import torchaudio
-
-from pyharp import ModelCard, build_endpoint
-
-
-REPO_ID = {json.dumps(repo_id)}
-TARGET_SAMPLE_RATE = {json.dumps(target_sr)}
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-model_card = ModelCard(
-    name={json.dumps(model_name)},
-    description={json.dumps(description)},
-    author={json.dumps(author)},
-    tags={json.dumps(tags)},
-)
-'''
-
-    if kind == "enhancement":
-        body = '''
-
-from speechbrain.inference.enhancement import SpectralMaskEnhancement
-
-enhancer = SpectralMaskEnhancement.from_hparams(
-    source=REPO_ID,
-    savedir=tempfile.mkdtemp(prefix="harp_speechbrain_"),
-    run_opts={"device": DEVICE},
-)
-
-
-def process_fn(input_audio_path: str) -> str:
-    enhanced = enhancer.enhance_file(input_audio_path)
-    if enhanced.dim() == 1:
-        enhanced = enhanced.unsqueeze(0)
-    else:
-        enhanced = enhanced[:1]
-
-    output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    output.close()
-    torchaudio.save(output.name, enhanced.detach().cpu(), TARGET_SAMPLE_RATE)
-    return output.name
-
-
-OUTPUT_LABEL = "Enhanced Audio"
-OUTPUT_INFO = "Speech enhanced by " + REPO_ID
-'''
-    else:
-        body = '''
-
-from speechbrain.inference.separation import SepformerSeparation
-
-separator = SepformerSeparation.from_hparams(
-    source=REPO_ID,
-    savedir=tempfile.mkdtemp(prefix="harp_speechbrain_"),
-    run_opts={"device": DEVICE},
-)
-
-
-def process_fn(input_audio_path: str) -> str:
-    # est_sources has shape [batch, time, n_sources]; return the first source.
-    est_sources = separator.separate_file(path=input_audio_path)
-    first_source = est_sources[0, :, 0].detach().cpu().unsqueeze(0)
-
-    output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    output.close()
-    torchaudio.save(output.name, first_source, TARGET_SAMPLE_RATE)
-    return output.name
-
-
-OUTPUT_LABEL = "Separated Source"
-OUTPUT_INFO = "First separated source from " + REPO_ID
-'''
-
-    footer = '''
-
-with gr.Blocks() as demo:
-    input_components = [
-        gr.Audio(type="filepath", label="Input Audio").harp_required(True),
-    ]
-    output_components = [
-        gr.Audio(type="filepath", label=OUTPUT_LABEL).set_info(OUTPUT_INFO),
-    ]
-    build_endpoint(
-        model_card=model_card,
-        input_components=input_components,
-        output_components=output_components,
-        process_fn=process_fn,
-    )
-
-demo.queue().launch(share=True, show_error=False, pwa=True)
-'''
-
-    return header + body + footer
-
-
-def _requirements_for_framework(framework: str) -> str:
-    base = [
-        PYHARP_REQUIREMENT,
-        "gradio>=4.0",
-    ]
-    if framework == "speechbrain":
-        base += ["speechbrain>=1.0.0", "torch", "torchaudio", "torchcodec", "soundfile"]
-    return "\n".join(base + [""])
-
-
-def build_generated_app_package(card: Mapping[str, Any]) -> GeneratedAppPackage:
-    """Build in-memory files for a generated pyharp wrapper.
-
-    Raises :class:`NotImplementedError` (via :func:`render_pyharp_app`) when the
-    model's framework has no runnable template, so we never write a wrapper that
-    is known to fail at startup.
-    """
-
-    task = classify_task(card)
-    framework = detect_inference_framework(card)
-    score = score_compatibility(card)
-    signature = extract_io_signature(card)
-    app_py = render_pyharp_app(card, signature)
-    repo_id = str(_model_meta(card).get("id") or "unknown/unknown")
-    requirements = _requirements_for_framework(framework)
-    readme = _render_generated_space_readme(card, task)
-    packages_txt = "\n".join(["ffmpeg", "libsndfile1", ""]) if task == "audio-to-audio" else ""
-    manifest = {
-        "repo_id": repo_id,
-        "task": task,
-        "framework": framework,
-        "score": score,
-        "io": signature,
-        "entry": "app.py",
-        "space_layout": "huggingface-gradio",
-        "generated": True,
-    }
-    return GeneratedAppPackage(
-        repo_id=repo_id,
-        task=task,
-        framework=framework,
-        score=score,
-        io=signature,
-        app_py=app_py,
-        requirements=requirements,
-        readme=readme,
-        packages_txt=packages_txt,
-        manifest=manifest,
-    )
 
 
 class HuggingFaceSpaceScraper:
@@ -811,210 +383,121 @@ class GitHubRepoScraper:
             raise
 
 
-class HarpEndpointClient:
-    """Client for the HARP controls endpoint exposed by pyharp apps."""
+def infer_host_slash_model(model_path: str) -> str:
+    path = model_path.strip().rstrip("/")
+    if path.startswith("https://huggingface.co/spaces/"):
+        return path.removeprefix("https://huggingface.co/spaces/")
+    if path.startswith("https://") and path.endswith(".hf.space"):
+        host = path.removeprefix("https://").removesuffix(".hf.space")
+        for org in KNOWN_HYPHENATED_SPACE_ORGS:
+            prefix = f"{org}-"
+            if host.startswith(prefix):
+                return f"{org}/{host.removeprefix(prefix)}"
+        parts = host.split("-", 1)
+        if len(parts) == 2:
+            return f"{parts[0]}/{parts[1]}"
+    return path
 
-    def __init__(self, timeout: float = 120.0):
-        self.timeout = timeout
 
-    @staticmethod
-    def infer_host_slash_model(model_path: str) -> str:
-        path = model_path.strip().rstrip("/")
-        if path.startswith("https://huggingface.co/spaces/"):
-            return path.removeprefix("https://huggingface.co/spaces/")
-        if path.startswith("https://") and path.endswith(".hf.space"):
-            host = path.removeprefix("https://").removesuffix(".hf.space")
-            # Short Space URLs flatten "org/model" into "org-model". HARP has
-            # existing Spaces under a hyphenated org, so handle those before
-            # the generic split.
-            for org in KNOWN_HYPHENATED_SPACE_ORGS:
-                prefix = f"{org}-"
-                if host.startswith(prefix):
-                    return f"{org}/{host.removeprefix(prefix)}"
-            parts = host.split("-", 1)
-            if len(parts) == 2:
-                return f"{parts[0]}/{parts[1]}"
+def infer_endpoint_url(model_path: str) -> str:
+    path = model_path.strip().rstrip("/")
+    if path.startswith("http://localhost") or re.match(r"^http://\d+\.\d+\.\d+\.\d+:\d+", path):
         return path
-
-    @staticmethod
-    def infer_endpoint_url(model_path: str) -> str:
-        path = model_path.strip().rstrip("/")
-        if path.startswith("http://localhost") or re.match(r"^http://\d+\.\d+\.\d+\.\d+:\d+", path):
-            return path
-        if path.startswith("https://") and path.endswith(".gradio.live"):
-            return path
-        if path.startswith("https://") and path.endswith(".hf.space"):
-            return f"{path}/"
-        host_slash_model = HarpEndpointClient.infer_host_slash_model(path)
-        if "/" in host_slash_model:
-            host, model = host_slash_model.split("/", 1)
-            return f"https://{host}-{model.replace('_', '-')}.hf.space/"
+    if path.startswith("https://") and path.endswith(".gradio.live"):
         return path
+    if path.startswith("https://") and path.endswith(".hf.space"):
+        return f"{path}/"
+    host_slash_model = infer_host_slash_model(path)
+    if "/" in host_slash_model:
+        host, model = host_slash_model.split("/", 1)
+        return f"https://{host}-{model.replace('_', '-')}.hf.space/"
+    return path
 
-    @staticmethod
-    def infer_documentation_url(model_path: str) -> str:
-        path = model_path.strip().rstrip("/")
-        if path.startswith("https://huggingface.co/spaces/"):
-            return path
-        host_slash_model = HarpEndpointClient.infer_host_slash_model(path)
-        if "/" in host_slash_model:
-            return f"{HUGGING_FACE_BASE}/spaces/{host_slash_model}"
-        return HarpEndpointClient.infer_endpoint_url(model_path)
 
-    def fetch_space_id(self, model_path: str) -> str:
-        """Query the live Gradio config for the authoritative ``author/name``.
+def _get_endpoint_text(url: str, *, timeout: float) -> str:
+    request = Request(url, headers={"Accept": "*/*", "User-Agent": "model-agent/0.1"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.read().decode("utf-8")
+    except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
+        raise EndpointProbeError(f"GET {url} failed: {exc}") from exc
 
-        Short ``*.hf.space`` URLs flatten ``author/model`` to ``author-model`` and
-        turn ``_`` into ``-``, so the canonical id cannot be recovered by string
-        manipulation alone (the same ambiguity HARP's C++ client resolves). The
-        Gradio config endpoint reports the real ``space_id``; we try both the
-        modern and legacy config paths.
-        """
 
-        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
-        last_error: Optional[EndpointProbeError] = None
-        for config_path in ("gradio_api/config", "config"):
-            try:
-                text = self._get_text(f"{endpoint}/{config_path}")
-            except EndpointProbeError as exc:
-                last_error = exc
-                continue
-
-            try:
-                config = json.loads(text)
-            except json.JSONDecodeError:
-                continue
-
-            if isinstance(config, dict):
-                space_id = config.get("space_id")
-                if isinstance(space_id, str) and "/" in space_id:
-                    return space_id
-
-        if last_error is not None:
-            raise last_error
-        return ""
-
-    def resolve_canonical_path(self, model_path: str) -> str:
-        """Return the canonical ``author/name`` for a model path.
-
-        Full ``huggingface.co/spaces/...`` URLs already carry the exact id and are
-        trusted as-is. For abbreviated paths and short ``*.hf.space`` URLs we ask
-        the endpoint for its real ``space_id`` so documentation/source links keep
-        the correct ``_`` vs ``-`` spelling, falling back to the best-effort
-        string inference when the config is unavailable.
-        """
-
-        guess = self.infer_host_slash_model(model_path)
-        if model_path.strip().rstrip("/").startswith("https://huggingface.co/spaces/"):
-            return guess
-
+def fetch_space_id(model_path: str, *, timeout: float = 120.0) -> str:
+    endpoint = infer_endpoint_url(model_path).rstrip("/")
+    last_error: Optional[EndpointProbeError] = None
+    for config_path in ("gradio_api/config", "config"):
         try:
-            space_id = self.fetch_space_id(model_path)
-        except EndpointProbeError:
-            space_id = ""
-        return space_id or guess
-
-    def fetch_controls(self, model_path: str) -> JSON:
-        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
-        call_url = f"{endpoint}/gradio_api/call/controls"
-        event = self._post_json(call_url, {"data": []})
-        event_id = event.get("event_id") if isinstance(event, dict) else None
-        if not event_id:
-            raise EndpointProbeError(f"{model_path} did not return a Gradio event_id")
-
-        response_text = self._get_text(f"{call_url}/{quote(str(event_id))}")
-        data = self._parse_gradio_response(response_text)
-        if not data or not isinstance(data[0], dict):
-            raise EndpointProbeError(f"{model_path} did not return a HARP controls object")
-
-        controls = data[0]
-        for key in ("card", "inputs", "outputs"):
-            if key not in controls:
-                raise EndpointProbeError(f"{model_path} controls are missing '{key}'")
-        return controls
-
-    def fetch_api_info(self, model_path: str) -> JSON:
-        """Fetch a Space's Gradio API schema (its named/unnamed endpoints).
-
-        Reads ``/gradio_api/info`` (modern) or ``/info`` (legacy), which describes
-        every callable endpoint's positional parameters and returns. Used to
-        scaffold a remote-backend (proxy) recipe. Raises :class:`EndpointProbeError`
-        if the Space does not expose an API schema (e.g. ``show_api=False``).
-        """
-
-        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
-        last_error: Optional[EndpointProbeError] = None
-        for info_path in ("gradio_api/info", "info"):
-            try:
-                text = self._get_text(f"{endpoint}/{info_path}")
-            except EndpointProbeError as exc:
-                last_error = exc
-                continue
-            try:
-                info = json.loads(text)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(info, dict) and isinstance(info.get("named_endpoints"), dict):
-                return info
-
-        if last_error is not None:
-            raise last_error
-        raise EndpointProbeError(f"{model_path} did not expose a Gradio API schema")
-
-    def _post_json(self, url: str, payload: JSON) -> Any:
-        body = json.dumps(payload).encode("utf-8")
-        request = Request(
-            url,
-            data=body,
-            headers={
-                "Accept": "*/*",
-                "Content-Type": "application/json",
-                "User-Agent": "model-agent/0.1",
-            },
-            method="POST",
-        )
+            text = _get_endpoint_text(f"{endpoint}/{config_path}", timeout=timeout)
+        except EndpointProbeError as exc:
+            last_error = exc
+            continue
         try:
-            with urlopen(request, timeout=self.timeout) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
-            raise EndpointProbeError(f"POST {url} failed: {exc}") from exc
-
-    def _get_text(self, url: str) -> str:
-        request = Request(url, headers={"Accept": "*/*", "User-Agent": "model-agent/0.1"})
-        try:
-            with urlopen(request, timeout=self.timeout) as response:
-                return response.read().decode("utf-8")
-        except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
-            raise EndpointProbeError(f"GET {url} failed: {exc}") from exc
-
-    @staticmethod
-    def _parse_gradio_response(response_text: str) -> List[Any]:
-        response_text = response_text.strip()
-        if not response_text:
-            return []
-
-        try:
-            parsed = json.loads(response_text)
-            return parsed if isinstance(parsed, list) else [parsed]
+            config = json.loads(text)
         except json.JSONDecodeError:
-            pass
+            continue
+        if isinstance(config, dict):
+            space_id = config.get("space_id")
+            if isinstance(space_id, str) and "/" in space_id:
+                return space_id
+    if last_error is not None:
+        raise last_error
+    return ""
 
-        data_lines = []
-        for line in response_text.splitlines():
-            line = line.strip()
-            if line.startswith("data:"):
-                value = line.removeprefix("data:").strip()
-                if value and value != "[DONE]":
-                    data_lines.append(value)
 
-        for line in reversed(data_lines):
-            try:
-                parsed = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            return parsed if isinstance(parsed, list) else [parsed]
+def resolve_canonical_path(model_path: str, *, timeout: float = 120.0) -> str:
+    guess = infer_host_slash_model(model_path)
+    if model_path.strip().rstrip("/").startswith("https://huggingface.co/spaces/"):
+        return guess
+    try:
+        space_id = fetch_space_id(model_path, timeout=timeout)
+    except EndpointProbeError:
+        space_id = ""
+    return space_id or guess
 
-        raise EndpointProbeError("Could not parse Gradio response payload")
+
+def fetch_api_info(model_path: str, *, timeout: float = 120.0) -> JSON:
+    endpoint = infer_endpoint_url(model_path).rstrip("/")
+    last_error: Optional[EndpointProbeError] = None
+    for info_path in ("gradio_api/info", "info"):
+        try:
+            text = _get_endpoint_text(f"{endpoint}/{info_path}", timeout=timeout)
+        except EndpointProbeError as exc:
+            last_error = exc
+            continue
+        try:
+            info = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(info, dict) and isinstance(info.get("named_endpoints"), dict):
+            return info
+    if last_error is not None:
+        raise last_error
+    raise EndpointProbeError(f"{model_path} did not expose a Gradio API schema")
+
+
+def _download_hf_space_file_text(
+    downloader: Callable[..., str],
+    repo_id: str,
+    filename: str,
+    token: Optional[str],
+) -> Optional[str]:
+    """Download one text file from a Space via huggingface_hub, or None."""
+
+    try:
+        local = downloader(
+            repo_id=repo_id,
+            filename=filename,
+            repo_type="space",
+            token=token,
+        )
+    except Exception:
+        return None
+    try:
+        return Path(local).read_text(encoding="utf-8")
+    except OSError:
+        return None
+
 
 
 class HarpModelAgent:
@@ -1023,12 +506,12 @@ class HarpModelAgent:
     def __init__(
         self,
         scraper: Optional[HuggingFaceSpaceScraper] = None,
-        endpoint_client: Optional[HarpEndpointClient] = None,
         github_scraper: Optional[GitHubRepoScraper] = None,
+        endpoint_timeout: float = 120.0,
     ):
         self.scraper = scraper or HuggingFaceSpaceScraper()
-        self.endpoint_client = endpoint_client or HarpEndpointClient()
         self.github_scraper = github_scraper or GitHubRepoScraper()
+        self.endpoint_timeout = endpoint_timeout
 
     def discover_open_gradio_spaces(self, **kwargs: Any) -> List[SpaceCandidate]:
         return [
@@ -1037,55 +520,6 @@ class HarpModelAgent:
             if candidate.looks_open_source() and candidate.looks_gradio()
         ]
 
-    def build_generated_app_package_for_repo(self, repo_id: str) -> GeneratedAppPackage:
-        normalized_repo_id = _normalize_hf_model_repo_id(repo_id)
-        card = self.scraper.get_model_card(normalized_repo_id)
-        if card is None:
-            raise ValueError(f"Hugging Face model repo not found: {normalized_repo_id}")
-
-        score = score_compatibility(card)
-        if score["blockers"]:
-            raise ValueError(f"Model cannot be packaged automatically: {', '.join(score['blockers'])}")
-
-        return build_generated_app_package(card)
-
-    def package_model(self, model_path: str, *, include_space_metadata: bool = True) -> ModelPackage:
-        controls = self.endpoint_client.fetch_controls(model_path)
-        # Resolve the canonical author/name so documentation and source links use
-        # the real "_" vs "-" spelling rather than a lossy string guess.
-        canonical_path = self.endpoint_client.resolve_canonical_path(model_path)
-        has_canonical = "/" in canonical_path
-        space = self.scraper.get_space(canonical_path) if include_space_metadata and has_canonical else None
-        card = controls.get("card") if isinstance(controls.get("card"), dict) else {}
-        inputs = controls.get("inputs") if isinstance(controls.get("inputs"), list) else []
-        outputs = controls.get("outputs") if isinstance(controls.get("outputs"), list) else []
-        documentation_url = (
-            f"{HUGGING_FACE_BASE}/spaces/{canonical_path}"
-            if has_canonical
-            else self.endpoint_client.infer_documentation_url(model_path)
-        )
-
-        return ModelPackage(
-            model_path=canonical_path,
-            source_url=f"{HUGGING_FACE_BASE}/spaces/{canonical_path}" if has_canonical else "",
-            endpoint_url=self.endpoint_client.infer_endpoint_url(model_path),
-            documentation_url=documentation_url,
-            scraped_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            card=card,
-            inputs=inputs,
-            outputs=outputs,
-            space=space,
-            raw_controls=controls,
-        )
-
-    def write_package(self, package: ModelPackage, output_dir: Path) -> Path:
-        folder = output_dir / _slug(package.model_path)
-        folder.mkdir(parents=True, exist_ok=True)
-
-        _write_json(folder / "manifest.json", package.to_json())
-        _write_json(folder / "controls.json", package.raw_controls)
-        (folder / "README.md").write_text(_render_readme(package), encoding="utf-8")
-        return folder
 
     def write_generated_app_package(
         self,
@@ -1201,7 +635,7 @@ class HarpModelAgent:
 
             startup_seconds = round(time.monotonic() - start, 2)
             try:
-                self.endpoint_client.fetch_controls(endpoint_url)
+                fetch_api_info(endpoint_url, timeout=self.endpoint_timeout)
             except EndpointProbeError as exc:
                 return SmokeTestResult(
                     ok=False,
@@ -1486,7 +920,7 @@ class HarpModelAgent:
             if log is not None:
                 log(message)
 
-        existing_req = self._download_space_text(
+        existing_req = _download_hf_space_file_text(
             hf_hub_download, repo_id, "requirements.txt", resolved_token
         )
         if existing_req is None:
@@ -1513,7 +947,7 @@ class HarpModelAgent:
             ("requirements.txt", new_req.encode("utf-8")),
         ]
 
-        existing_readme = self._download_space_text(
+        existing_readme = _download_hf_space_file_text(
             hf_hub_download, repo_id, "README.md", resolved_token
         )
         if existing_readme is not None:
@@ -1554,29 +988,6 @@ class HarpModelAgent:
             "authenticated": bool(resolved_token),
         }
 
-    @staticmethod
-    def _download_space_text(
-        downloader: Callable[..., str],
-        repo_id: str,
-        filename: str,
-        token: Optional[str],
-    ) -> Optional[str]:
-        """Download one text file from a Space via huggingface_hub, or None."""
-
-        try:
-            local = downloader(
-                repo_id=repo_id,
-                filename=filename,
-                repo_type="space",
-                token=token,
-            )
-        except Exception:  # missing file / auth / network -> treat as absent
-            return None
-        try:
-            return Path(local).read_text(encoding="utf-8")
-        except OSError:
-            return None
-
     def scaffold_remote_recipe(
         self,
         space: str,
@@ -1602,7 +1013,7 @@ class HarpModelAgent:
         from .recipe import guess_primary_endpoint, remote_recipe_from_api_info
 
         api_info = self.fetch_api_info(space)
-        canonical = self.endpoint_client.resolve_canonical_path(space) or space
+        canonical = resolve_canonical_path(space, timeout=self.endpoint_timeout) or space
         if not api_name and auto_endpoint:
             api_name = guess_primary_endpoint(api_info)
         return remote_recipe_from_api_info(
@@ -1612,7 +1023,7 @@ class HarpModelAgent:
     def fetch_api_info(self, space: str) -> JSON:
         """Convenience passthrough to the endpoint client's API-schema fetch."""
 
-        return self.endpoint_client.fetch_api_info(space)
+        return fetch_api_info(space, timeout=self.endpoint_timeout)
 
     def fetch_space_sources(
         self,
@@ -1818,127 +1229,6 @@ class HarpModelAgent:
                 manifests[name] = text[:max_chars]
         return manifests
 
-    def pypi_requires_dist(self, name: str, version: str) -> Optional[List[str]]:
-        """Best-effort declared dependencies of ``name==version`` from PyPI.
-
-        Returns the ``requires_dist`` list (e.g. ``['librosa (<=0.10)', ...]``)
-        or None when the metadata can't be fetched. Used to detect recipe pins
-        that violate a sibling package's declared constraints before deploy.
-        """
-
-        info = self._pypi_json(f"{quote(name)}/{quote(version)}")
-        if info is None:
-            return None
-        return list((info.get("info") or {}).get("requires_dist") or [])
-
-    def pypi_available_versions(self, name: str) -> List[str]:
-        """Best-effort list of all released versions of ``name`` on PyPI."""
-
-        info = self._pypi_json(quote(name))
-        if info is None:
-            return []
-        return list((info.get("releases") or {}).keys())
-
-    def _pypi_json(self, path: str) -> Optional[JSON]:
-        if path in _PYPI_CACHE:
-            return _PYPI_CACHE[path]
-        # Once the network is clearly unreachable, stop retrying (each miss would
-        # otherwise cost a full timeout) -- the dep check is best-effort anyway.
-        if _PYPI_STATE.get("unreachable"):
-            return None
-        result: Optional[JSON] = None
-        try:
-            req = Request(
-                f"https://pypi.org/pypi/{path}/json",
-                headers={"User-Agent": "harp-model-agent"},
-            )
-            with urlopen(req, timeout=10) as response:
-                result = json.loads(response.read().decode("utf-8"))
-        except HTTPError:
-            result = None  # a real 404 (no such package/version) -- cache the miss
-        except (URLError, TimeoutError, socket.timeout, OSError, ValueError):
-            _PYPI_STATE["unreachable"] = True
-            return None
-        _PYPI_CACHE[path] = result
-        return result
-
-    def harvest_space_apps(
-        self,
-        output_dir: Path,
-        *,
-        author: str = "",
-        query: str = "",
-        limit: int = 100,
-        filename: str = "app.py",
-    ) -> List[JSON]:
-        """Download `app.py` (or another file) from an author's HF Spaces.
-
-        Read-only review helper: it discovers Spaces and saves each Space's
-        wrapper file under ``output_dir/<slug>/<filename>`` so a corpus of real
-        HARP wrappers can be studied offline. A per-Space ``index.json`` summary
-        is written alongside. One unreachable Space never aborts the batch.
-        """
-
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        candidates = self.scraper.discover(query=query, author=author, limit=limit)
-        results: List[JSON] = []
-
-        for candidate in candidates:
-            record: JSON = {
-                "id": candidate.id,
-                "url": candidate.url,
-                "status": "",
-                "path": "",
-                "error": "",
-            }
-            try:
-                text = self.scraper.get_space_file(candidate.id, filename=filename)
-            except (HTTPError, URLError, TimeoutError, socket.timeout, OSError) as exc:
-                record["status"] = "error"
-                record["error"] = str(exc)
-                results.append(record)
-                continue
-
-            if text is None:
-                record["status"] = "missing"
-                results.append(record)
-                continue
-
-            folder = output_dir / _slug(candidate.id)
-            folder.mkdir(parents=True, exist_ok=True)
-            destination = folder / filename
-            destination.write_text(text, encoding="utf-8")
-            record["status"] = "ok"
-            record["path"] = str(destination)
-            results.append(record)
-
-        write_json(output_dir / "index.json", results)
-        return results
-
-    def check_endpoint_health(self, model_path: str) -> JSON:
-        """Liveness probe: does the Space's HARP controls endpoint respond now?
-
-        This is orthogonal to static analysis: a wrapper can be well-formed yet
-        its Space may be down (e.g. after a Hugging Face/runtime update). Returns
-        ``alive`` with control counts, or ``dead`` with the failure reason.
-        """
-
-        try:
-            controls = self.endpoint_client.fetch_controls(model_path)
-        except (EndpointProbeError, ValueError, HTTPError, URLError, OSError) as exc:
-            return {"status": "dead", "reason": str(exc)}
-
-        inputs = controls.get("inputs") if isinstance(controls.get("inputs"), list) else []
-        outputs = controls.get("outputs") if isinstance(controls.get("outputs"), list) else []
-        return {
-            "status": "alive",
-            "reason": "",
-            "n_inputs": len(inputs),
-            "n_outputs": len(outputs),
-        }
-
 
 def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -2039,11 +1329,6 @@ def _local_import_modules(source: str) -> List[str]:
 # Root dependency manifests fetched to ground recipe generation on the repo's
 # REAL declared dependency versions/bounds instead of the LLM's guesses.
 _DEP_MANIFEST_FILES = ("requirements.txt", "setup.py", "pyproject.toml", "setup.cfg")
-
-# Best-effort PyPI metadata cache for the pre-deploy dependency conflict check.
-# ``_PYPI_STATE['unreachable']`` short-circuits repeated lookups when offline.
-_PYPI_CACHE: Dict[str, Any] = {}
-_PYPI_STATE: Dict[str, Any] = {}
 
 _GITHUB_ENTRY_BASENAMES = (
     "app.py",
@@ -2590,84 +1875,3 @@ def _normalize_space_repo_id(value: str) -> str:
     if repo_id.startswith("spaces/"):
         repo_id = repo_id.removeprefix("spaces/")
     return repo_id
-
-
-def _short_description(card: Mapping[str, Any]) -> str:
-    readme = str(card.get("readme") or "")
-    for line in readme.splitlines():
-        line = line.strip()
-        if line and not line.startswith(("#", "<!--", "---", "license", "tags:")):
-            return line[:200]
-    return "Auto-generated HARP wrapper."
-
-
-def _render_generated_space_readme(card: Mapping[str, Any], task: str) -> str:
-    meta = _model_meta(card)
-    repo_id = str(meta.get("id") or "unknown/unknown")
-    model_name = repo_id.split("/")[-1].replace("_", " ").replace("-", " ").title()
-    license_name = str(meta.get("license") or "").strip().lower() or "other"
-    description = _short_description(card)
-
-    return "\n".join(
-        [
-            "---",
-            # Quote free-text values so a colon in the title/license does not
-            # break the YAML front matter.
-            f"title: {json.dumps(model_name)}",
-            "colorFrom: indigo",
-            "colorTo: gray",
-            "sdk: gradio",
-            "sdk_version: 5.28.0",
-            "app_file: app.py",
-            "pinned: false",
-            f"license: {json.dumps(license_name)}",
-            "---",
-            "",
-            f"# {model_name}",
-            "",
-            f"Generated HARP wrapper for `{repo_id}`.",
-            "",
-            f"- Source model: {HUGGING_FACE_BASE}/{repo_id}",
-            f"- Task: `{task}`",
-            "",
-            description,
-            "",
-        ]
-    )
-
-
-def _render_readme(package: ModelPackage) -> str:
-    card = package.card
-    tags = ", ".join(str(tag) for tag in card.get("tags", []))
-    title = card.get("name") or package.model_path
-    author = card.get("author") or (package.space.author if package.space else "")
-    license_name = package.space.license if package.space else ""
-
-    lines = [
-        f"# {title}",
-        "",
-        f"- HARP path: `{package.model_path}`",
-        f"- Documentation: {package.documentation_url}",
-        f"- Endpoint: {package.endpoint_url}",
-    ]
-    if author:
-        lines.append(f"- Author: {author}")
-    if license_name:
-        lines.append(f"- License: {license_name}")
-    if tags:
-        lines.append(f"- Tags: {tags}")
-    lines.extend(
-        [
-            "",
-            "## Description",
-            "",
-            str(card.get("description") or "No description returned by the endpoint."),
-            "",
-            "## HARP Contract",
-            "",
-            f"- Inputs: {len(package.inputs)}",
-            f"- Outputs: {len(package.outputs)}",
-            "",
-        ]
-    )
-    return "\n".join(lines)

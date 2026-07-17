@@ -42,7 +42,7 @@
     },
     {
       "backend_space": null,
-      "deps_fingerprint": "adaf8c3b9c0a71ba",
+      "deps_fingerprint": "c9400d6fd3bf0476",
       "gpu": false,
       "lock": "knowledge/locks/magenta-ddsp.txt",
       "mode": "dual",
@@ -128,14 +128,14 @@
     },
     {
       "backend": "examples/omnizart_pyharp",
-      "backend_space": "",
+      "backend_space": null,
       "deps_fingerprint": "111cb07feba3692a",
       "gpu": false,
       "lock": "knowledge/locks/music-and-culture-technology-lab-omnizart.txt",
       "mode": "dual",
       "model_id": "Music-and-Culture-Technology-Lab/omnizart",
       "notes": "PREFERRED single-Space path: one Docker Space FROM mctlab/omnizart:latest with a Python 3.10 pyharp frontend venv + Python 3.6 Omnizart backend over subprocess JSON IPC (hand-authored, not LLM-rendered). See examples/omnizart_pyharp.",
-      "outcome": "success",
+      "outcome": "unverified",
       "python": "3.6",
       "recipe": null,
       "repo": "Music-and-Culture-Technology-Lab/omnizart",
@@ -145,8 +145,7 @@
         "native_fragile": true,
         "notes": "base image mctlab/omnizart:latest is Python 3.6 (FROM tensorflow/tensorflow:2.5.0-gpu); modern Gradio/pyharp need Python >=3.10, so the frontend runs in a separate 3.10 venv and IPCs to the 3.6 model.",
         "pip_installable": true
-      },
-      "space_url": "https://huggingface.co/spaces/teamup-tech/Omnizart"
+      }
     },
     {
       "backend": "examples/omnizart_backend",
@@ -170,85 +169,63 @@
       }
     },
     {
-      "backend_space": "facebook/MelodyFlow",
-      "mode": "remote",
-      "model_id": "facebook/MelodyFlow",
-      "outcome": "success",
-      "repo": "facebook/MelodyFlow",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/melodyflow"
-    },
-    {
-      "backend_space": "REPLACE_WITH_YOUR_BACKEND_SPACE",
-      "mode": "remote",
-      "model_id": "SonyResearch/Woosh",
-      "outcome": "success",
-      "repo": "SonyResearch/Woosh",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/woosh-dflow"
-    },
-    {
-      "backend_space": "facebook/MusicGen",
-      "mode": "remote",
-      "model_id": "facebook/MusicGen",
-      "outcome": "success",
-      "repo": "facebook/MusicGen",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/musicgen"
-    },
-    {
-      "backend_space": "",
-      "mode": "pip",
-      "model_id": "suno-ai/bark",
-      "outcome": "success",
-      "repo": "suno-ai/bark",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/bark"
-    },
-    {
-      "backend_space": "",
-      "mode": "pip",
-      "model_id": "speechbrain/tts-tacotron2-ljspeech",
-      "outcome": "success",
-      "repo": "speechbrain/tts-tacotron2-ljspeech",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/tacotron2-tts"
-    },
-    {
-      "backend_space": "",
-      "mode": "pip",
-      "model_id": "haoheliu/voicefixer",
-      "outcome": "success",
-      "repo": "haoheliu/voicefixer",
-      "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/voicefixer"
-    },
-    {
-      "backend_space": "",
-      "mode": "dual",
-      "model_id": "deezer/spleeter",
-      "outcome": "success",
-      "repo": "deezer/spleeter",
-      "sdk": "docker",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/Spleeter"
-    },
-    {
-      "backend_space": "",
-      "mode": "pip",
+      "backend_space": null,
+      "command": "python -m tools.model_agent deploy https://github.com/sigsep/open-unmix-pytorch --repo teamup-tech/Open-Unmix",
+      "deps_fingerprint": null,
+      "gpu": false,
+      "lock": null,
+      "mode": "single",
       "model_id": "sigsep/open-unmix-pytorch",
+      "notes": "Known-good direct deploy path for Open-Unmix PyTorch.",
       "outcome": "success",
+      "python": "3.10",
+      "recipe": null,
       "repo": "sigsep/open-unmix-pytorch",
       "sdk": "gradio",
+      "signals": {
+        "has_existing_space": false,
+        "notes": "User-reported successful one-command deployment.",
+        "pip_installable": true
+      },
       "space_url": "https://huggingface.co/spaces/teamup-tech/Open-Unmix"
     },
     {
-      "backend_space": "",
-      "mode": "pip",
+      "backend_space": null,
+      "command": "python -m tools.model_agent deploy https://github.com/lucidrains/BS-RoFormer --repo teamup-tech/BS-RoFormer",
+      "deps_fingerprint": null,
+      "gpu": false,
+      "lock": null,
+      "mode": "single",
       "model_id": "lucidrains/BS-RoFormer",
-      "outcome": "success",
+      "notes": "Do not retry unchanged. First verify the checkpoint source, revision, file name, repo_type, and HF_TOKEN read access; if unavailable, mirror the checkpoint to an accessible HF model repo and update the wrapper download source.",
+      "outcome": "failed",
+      "python": "3.10",
+      "recipe": null,
       "repo": "lucidrains/BS-RoFormer",
       "sdk": "gradio",
-      "space_url": "https://huggingface.co/spaces/teamup-tech/BS-RoFormer"
+      "signals": {
+        "has_existing_space": false,
+        "notes": "User-reported failed one-command deployment: generated/runtime path tried to download ZFTurbo/Music-Source-Separation-Training vocal_mel_band_roformer_je_1017.ckpt, but the checkpoint repo/file was unavailable or required authentication.",
+        "pip_installable": true
+      }
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "speechbrain/sepformer-wsj02mix",
+      "outcome": "success",
+      "repo": "speechbrain/sepformer-wsj02mix",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/SepFormer"
+    },
+    {
+      "backend_space": "haoheliu/DiffRhythm2",
+      "mode": "remote",
+      "model_id": "haoheliu/DiffRhythm2",
+      "outcome": "success",
+      "repo": "haoheliu/DiffRhythm2",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/DiffRhythm2"
     }
   ],
   "version": 1

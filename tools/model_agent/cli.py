@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
+
 import json
 import sys
 from pathlib import Path
@@ -12,16 +12,13 @@ from .agent import (
     HARP_GRADIO_VERSION,
     DeploySpaceError,
     EndpointProbeError,
+    resolve_canonical_path,
     lint_generated_app,
     HarpModelAgent,
     SmokeTestResult,
     VenvSetupError,
-    build_generated_app_package,
-    render_pyharp_app,
-    score_compatibility,
     write_json,
 )
-from .analyze import analyze_app_file, analyze_path
 from .classifier import detect_resource_warnings, recommend_mode, resource_headsup
 from .knowledge import (
     KnowledgeBase,
@@ -36,7 +33,6 @@ from .orchestrator import (
     detect_ref,
     extract_space_links,
 )
-from .resolver import resolve_requirements
 from .llm import (
     LLMError,
     RecipeDraft,
@@ -51,20 +47,15 @@ from .llm import (
 from .recipe import (
     RecipeError,
     _slug,
-    apply_dependency_fixes,
     build_package_from_recipe,
-    collect_pip_requirements,
-    find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
-    recipe_skeleton_from_analysis,
     remote_recipe_from_api_info,
     render_app_from_recipe,
 )
 
 
-_DEFAULT_TARGET_PY = "3.10"
-_DEFAULT_TARGET_PLATFORM = "manylinux2014_x86_64"
+
 
 
 def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
@@ -79,7 +70,7 @@ def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="model-agent",
-        description="Discover, probe, and package HARP-compatible open-source models.",
+        description="Discover, generate, test, and deploy HARP-compatible model recipes.",
     )
     parser.add_argument("--timeout", type=float, default=120.0, help="Network timeout in seconds.")
 
@@ -97,57 +88,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep candidates that are not obviously open-source Gradio Spaces.",
     )
 
-    probe = subparsers.add_parser("probe", help="Fetch HARP controls from model endpoints.")
-    probe.add_argument("models", nargs="+", help="HARP model paths, HF Space paths, or endpoint URLs.")
-    probe.add_argument("--output", type=Path, help="Optional JSON output path.")
-
-    package = subparsers.add_parser("package", help="Package HARP controls into review folders.")
-    package.add_argument("models", nargs="*", help="Model paths to package.")
-    package.add_argument("--from-file", type=Path, help="Read model ids from a discovery/probe JSON file.")
-    package.add_argument(
-        "--output",
-        type=Path,
-        default=Path("artifacts/model_agent/packages"),
-        help="Package output directory.",
-    )
-    package.add_argument(
-        "--no-space-metadata",
-        action="store_true",
-        help="Skip Hugging Face Space metadata lookup while packaging.",
-    )
-
-    score = subparsers.add_parser("score-card", help="Score a raw Hugging Face model card JSON file.")
-    score.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
-    score.add_argument("--output", type=Path, help="Optional JSON output path.")
-
-    render = subparsers.add_parser("render-app", help="Render a starter pyharp app.py from a model card.")
-    render.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
-    render.add_argument("--output", type=Path, help="Optional app.py output path.")
-
-    generate = subparsers.add_parser(
-        "generate-package",
-        help="Write app.py, requirements.txt, and manifest.json for a raw model card.",
-    )
-    generate.add_argument("card", type=Path, help="JSON file with meta/readme/files fields.")
-    generate.add_argument(
-        "--output",
-        type=Path,
-        default=Path("artifacts/model_agent/generated"),
-        help="Generated package output directory.",
-    )
-    generate.add_argument(
-        "--smoke-test",
-        action="store_true",
-        help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
-    )
-    _add_venv_flag(generate)
-
-    scaffold_recipe = subparsers.add_parser(
-        "scaffold-recipe",
-        help="Generate a recipe skeleton from a harvested app.py (fills I/O; stubs inference).",
-    )
-    scaffold_recipe.add_argument("path", type=Path, help="Path to a harvested app.py file.")
-    scaffold_recipe.add_argument("--output", type=Path, help="Optional recipe JSON output path.")
 
     scaffold_remote = subparsers.add_parser(
         "scaffold-remote-recipe",
@@ -212,13 +152,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Render a plain-Gradio BACKEND Space (no pyharp) exposing /predict, for the "
         "two-Space workflow. Forces framework.backend on the recipe before rendering.",
-    )
-    generate_recipe.add_argument(
-        "--no-fix-deps",
-        action="store_true",
-        help="Do NOT auto-repair pins that violate a sibling package's declared "
-        "constraints (checked against PyPI metadata before build). Conflicts are "
-        "still reported.",
     )
     _add_venv_flag(generate_recipe)
 
@@ -304,7 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     llm_recipe.add_argument(
         "--provider",
-        choices=["gemini", "anthropic", "openai"],
+        choices=["gemini"],
         help="LLM provider (default: auto-detect from API key env vars).",
     )
     llm_recipe.add_argument(
@@ -350,12 +283,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
-    llm_recipe.add_argument(
-        "--no-fix-deps",
-        action="store_true",
-        help="Do NOT auto-repair pins that violate a sibling package's declared "
-        "constraints (checked against PyPI metadata). Conflicts are still reported.",
-    )
     _add_venv_flag(llm_recipe)
 
     list_models = subparsers.add_parser(
@@ -364,7 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     list_models.add_argument(
         "--provider",
-        choices=["gemini", "anthropic", "openai"],
+        choices=["gemini"],
         help="LLM provider (default: auto-detect from API key env vars).",
     )
     list_models.add_argument("--llm-timeout", type=float, default=60.0, help="API timeout (s).")
@@ -373,7 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
         "complete-recipe",
         help="Use an LLM to fill the _todo stubs of a scaffolded recipe (preserves I/O).",
     )
-    complete.add_argument("recipe", type=Path, help="Scaffolded recipe JSON (from scaffold-recipe).")
+    complete.add_argument("recipe", type=Path, help="Recipe JSON with LLM-fillable _todo stubs.")
     complete.add_argument(
         "--card", type=Path, help="Optional model-card JSON to enrich the prompt with the README."
     )
@@ -382,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     complete.add_argument(
         "--provider",
-        choices=["gemini", "anthropic", "openai"],
+        choices=["gemini"],
         help="LLM provider (default: auto-detect from API key env vars).",
     )
     complete.add_argument("--llm-model", default=None, help="Provider model name.")
@@ -407,85 +334,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
     _add_venv_flag(complete)
-
-    package_repo = subparsers.add_parser(
-        "package-repo",
-        help="Fetch a Hugging Face model repo and write a HARP Space package.",
-    )
-    package_repo.add_argument("repo", help="Hugging Face model repo id or URL.")
-    package_repo.add_argument(
-        "--output",
-        type=Path,
-        default=Path("artifacts/model_agent/hf_spaces"),
-        help="Generated Hugging Face Space repo output directory.",
-    )
-    package_repo.add_argument(
-        "--smoke-test",
-        action="store_true",
-        help="After writing, launch app.py and verify HARP controls (runs downloaded code).",
-    )
-    _add_venv_flag(package_repo)
-
-    harvest = subparsers.add_parser(
-        "harvest",
-        help="Download app.py from an author's HF Spaces for offline review.",
-    )
-    harvest.add_argument(
-        "--author",
-        default="teamup-tech",
-        help="Hugging Face author/org whose Spaces to harvest.",
-    )
-    harvest.add_argument("--query", default="", help="Optional search query.")
-    harvest.add_argument("--limit", type=int, default=100, help="Maximum Spaces to fetch.")
-    harvest.add_argument(
-        "--filename",
-        default="app.py",
-        help="File to download from each Space.",
-    )
-    harvest.add_argument(
-        "--output",
-        type=Path,
-        default=Path("artifacts/model_agent/harvest"),
-        help="Directory to write harvested files into.",
-    )
-
-    analyze = subparsers.add_parser(
-        "analyze",
-        help="Statically analyze harvested app.py files and report I/O shapes.",
-    )
-    analyze.add_argument(
-        "path",
-        type=Path,
-        help="A harvested directory (searched recursively) or a single app.py file.",
-    )
-    analyze.add_argument(
-        "--filename",
-        default="app.py",
-        help="File name to look for when PATH is a directory.",
-    )
-    analyze.add_argument("--output", type=Path, help="Optional JSON output path.")
-    analyze.add_argument(
-        "--summary-only",
-        action="store_true",
-        help="Emit only the aggregate summary, not the per-app records.",
-    )
-    analyze.add_argument(
-        "--check-health",
-        action="store_true",
-        help="Also probe each harvested Space's endpoint (uses index.json; network).",
-    )
-    analyze.add_argument(
-        "--health-timeout",
-        type=float,
-        default=20.0,
-        help="Per-Space timeout in seconds for --check-health probes.",
-    )
-    analyze.add_argument(
-        "--health-workers",
-        type=int,
-        default=8,
-        help="Number of concurrent --check-health probes.",
-    )
 
     smoke = subparsers.add_parser(
         "smoke-test",
@@ -562,15 +410,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not record this deployment in the knowledge base on success.",
     )
-    deploy.add_argument(
-        "--skip-resolve-check",
-        action="store_true",
-        help="Skip the pre-deploy dependency-resolution gate. By default a Gradio "
-        "Space's requirements.txt is checked (PyPI metadata conflicts + a pip "
-        f"--dry-run for Python {_DEFAULT_TARGET_PY}/{_DEFAULT_TARGET_PLATFORM}) and "
-        "deployment is refused on a genuine conflict, so you don't push a Space that "
-        "can't build. Docker/dual bundles are skipped automatically.",
-    )
+
 
     recommend = subparsers.add_parser(
         "recommend-mode",
@@ -590,30 +430,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     recommend.add_argument("--output", type=Path, help="Optional JSON output path.")
 
-    resolve = subparsers.add_parser(
-        "resolve-check",
-        help="Pre-check dependency resolution: the deterministic PyPI conflict check "
-        "plus an optional `pip install --dry-run` (target the deploy env with --target).",
-    )
-    resolve_source = resolve.add_mutually_exclusive_group(required=True)
-    resolve_source.add_argument("recipe", nargs="?", type=Path, help="Recipe JSON file.")
-    resolve_source.add_argument(
-        "--requirements", type=Path, help="A requirements.txt-style file to resolve instead."
-    )
-    resolve.add_argument(
-        "--dry-run-pip",
-        action="store_true",
-        help="Also run `pip install --dry-run` (needs pip + network). Off by default.",
-    )
-    resolve.add_argument(
-        "--target",
-        action="store_true",
-        help="With --dry-run-pip: resolve wheels-only for the deploy environment "
-        f"(Python {_DEFAULT_TARGET_PY}, {_DEFAULT_TARGET_PLATFORM}) instead of the host.",
-    )
-    resolve.add_argument("--python-version", default=_DEFAULT_TARGET_PY, help="Target Python for --target.")
-    resolve.add_argument("--platform", default=_DEFAULT_TARGET_PLATFORM, help="Target platform for --target.")
-    resolve.add_argument("--output", type=Path, help="Optional JSON output path.")
+
 
     knowledge = subparsers.add_parser(
         "knowledge",
@@ -711,7 +528,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = build_parser().parse_args(list(argv) if argv is not None else None)
     agent = HarpModelAgent()
     agent.scraper.timeout = args.timeout
-    agent.endpoint_client.timeout = args.timeout
+    agent.endpoint_timeout = args.timeout
 
     try:
         if args.command == "discover":
@@ -729,69 +546,6 @@ def main(argv: Iterable[str] | None = None) -> int:
                 ]
             payload = [candidate.__dict__ for candidate in candidates]
             _emit_json(payload, args.output)
-            return 0
-
-        if args.command == "probe":
-            payload = []
-            for model in args.models:
-                controls = agent.endpoint_client.fetch_controls(model)
-                payload.append({"model_path": model, "controls": controls})
-            _emit_json(payload, args.output)
-            return 0
-
-        if args.command == "package":
-            models = list(args.models)
-            if args.from_file:
-                models.extend(_models_from_file(args.from_file))
-            if not models:
-                raise SystemExit("package requires at least one model or --from-file")
-
-            written = []
-            for model in models:
-                package = agent.package_model(
-                    model,
-                    include_space_metadata=not args.no_space_metadata,
-                )
-                written.append(str(agent.write_package(package, args.output)))
-            _emit_json({"packages": written}, None)
-            return 0
-
-        if args.command == "score-card":
-            result = score_compatibility(_read_json(args.card))
-            _emit_json(result, args.output)
-            return 0
-
-        if args.command == "render-app":
-            app_py = render_pyharp_app(_read_json(args.card))
-            if args.output:
-                args.output.parent.mkdir(parents=True, exist_ok=True)
-                args.output.write_text(app_py, encoding="utf-8")
-            print(app_py)
-            return 0
-
-        if args.command == "generate-package":
-            package = build_generated_app_package(_read_json(args.card))
-            folder = agent.write_generated_app_package(package, args.output)
-            result = {"package": str(folder), "framework": package.framework}
-            if args.smoke_test:
-                result["smoke_test"] = _run_smoke_test(
-                    agent, folder, use_venv=getattr(args, "venv", False)
-                ).to_json()
-            _emit_json(result, None)
-            return 0 if result.get("smoke_test", {}).get("ok", True) else 4
-
-        if args.command == "scaffold-recipe":
-            record = analyze_app_file(args.path)
-            if not record.get("recipe_eligible"):
-                reason = record.get("unresolved_reason", "components could not be resolved")
-                print(
-                    f"Cannot scaffold a recipe from {args.path}: {reason}.",
-                    file=sys.stderr,
-                )
-                return 2
-            model_id = _harvest_ids_by_slug(args.path).get(Path(args.path).parent.name, "")
-            recipe = recipe_skeleton_from_analysis(record, model_id=model_id)
-            _emit_json(recipe, args.output)
             return 0
 
         if args.command == "scaffold-remote-recipe":
@@ -834,8 +588,6 @@ def main(argv: Iterable[str] | None = None) -> int:
                     recipe["framework"] = framework
                 framework["backend"] = True
             _warn_recipe_requirements(recipe)
-            if not getattr(args, "no_fix_deps", False):
-                _resolve_dependency_conflicts(recipe, agent, fix=True)
             package = build_package_from_recipe(recipe)
             _warn_app_lint(package.app_py)
             folder = agent.write_generated_app_package(package, args.output)
@@ -898,10 +650,9 @@ def main(argv: Iterable[str] | None = None) -> int:
                     file=sys.stderr,
                 )
                 api_info = agent.fetch_api_info(args.remote_space)
-                canonical = (
-                    agent.endpoint_client.resolve_canonical_path(args.remote_space)
-                    or args.remote_space
-                )
+                canonical = resolve_canonical_path(
+                    args.remote_space, timeout=agent.endpoint_timeout
+                ) or args.remote_space
                 # If the user didn't pin --remote-api-name and the Space exposes
                 # several endpoints, choose one instead of erroring: the LLM picks
                 # (with --remote-llm), otherwise a deterministic heuristic does.
@@ -1112,52 +863,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             )
             return _emit_recipe_draft(agent, draft, args)
 
-        if args.command == "package-repo":
-            package = agent.build_generated_app_package_for_repo(args.repo)
-            folder = agent.write_generated_app_package(package, args.output)
-            result = {
-                "package": str(folder),
-                "repo_id": package.repo_id,
-                "framework": package.framework,
-            }
-            if args.smoke_test:
-                result["smoke_test"] = _run_smoke_test(
-                    agent, folder, use_venv=getattr(args, "venv", False)
-                ).to_json()
-            _emit_json(result, None)
-            return 0 if result.get("smoke_test", {}).get("ok", True) else 4
 
-        if args.command == "harvest":
-            results = agent.harvest_space_apps(
-                args.output,
-                author=args.author,
-                query=args.query,
-                limit=args.limit,
-                filename=args.filename,
-            )
-            summary = {"ok": 0, "missing": 0, "error": 0}
-            for record in results:
-                summary[record["status"]] = summary.get(record["status"], 0) + 1
-            _emit_json(
-                {"output": str(args.output), "summary": summary, "results": results},
-                None,
-            )
-            return 0
-
-        if args.command == "analyze":
-            report = analyze_path(args.path, filename=args.filename)
-            if args.check_health:
-                attach_health(
-                    agent,
-                    args.path,
-                    report,
-                    timeout=args.health_timeout,
-                    max_workers=args.health_workers,
-                )
-            if args.summary_only:
-                report = report["summary"]
-            _emit_json(report, args.output)
-            return 0
 
         if args.command == "smoke-test":
             result = _run_smoke_test(
@@ -1172,16 +878,6 @@ def main(argv: Iterable[str] | None = None) -> int:
 
         if args.command == "deploy-space":
             log = lambda message: print(f"  [deploy] {message}", file=sys.stderr)
-            if not getattr(args, "skip_resolve_check", False) and args.sdk != "docker":
-                gate = _predeploy_resolve_gate(agent, args.package, log=log)
-                if gate is not None and not gate["ok"]:
-                    print(
-                        "  [deploy] ABORTED: the wrapper's dependencies do not resolve; "
-                        "deploying would produce a Space that fails to build.",
-                        file=sys.stderr,
-                    )
-                    _emit_json(gate, None)
-                    return 4
             if args.into_space:
                 print(
                     f"Overlaying HARP wrapper onto existing Space {args.repo} "
@@ -1227,10 +923,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(decision, args.output)
             return 0
 
-        if args.command == "resolve-check":
-            report = _resolve_check(agent, args)
-            _emit_json(report, args.output)
-            return 0 if report.get("ok", True) else 4
+
 
         if args.command == "knowledge":
             _emit_json(_knowledge_query(args), args.output)
@@ -1295,53 +988,6 @@ def _warn_recipe_requirements(recipe: dict) -> None:
 
     for warning in lint_recipe_requirements(recipe):
         print(f"  [deps] WARNING: {warning}", file=sys.stderr)
-
-
-def _resolve_dependency_conflicts(recipe: dict, agent: HarpModelAgent, *, fix: bool = True) -> None:
-    """Detect (and by default auto-repair) pins that violate a sibling package's
-    declared constraints, using PyPI metadata. Best-effort: silently no-ops when
-    offline. This is what turns 'librosa==0.10.1 vs ddsp needs librosa<=0.10'
-    into an up-front, auto-fixed problem instead of a failed 10-minute build.
-    """
-
-    requirements = collect_pip_requirements(recipe)
-    if not requirements:
-        return
-    try:
-        conflicts = find_dependency_conflicts(
-            requirements,
-            requires_dist_of=agent.pypi_requires_dist,
-            available_versions=agent.pypi_available_versions,
-        )
-    except Exception:
-        return
-
-    fixes: dict = {}
-    for conflict in conflicts:
-        sources = "; ".join(
-            f"{src} requires {conflict['package']}{spec}"
-            for src, spec in conflict["violations"]
-        )
-        message = (
-            f"{conflict['package']}=={conflict['pinned']} conflicts with declared "
-            f"constraints ({sources})."
-        )
-        if conflict["suggestion"]:
-            message += f" Newest compatible version: {conflict['package']}=={conflict['suggestion']}."
-            if fix:
-                fixes[conflict["package"]] = conflict["suggestion"]
-        else:
-            message += f" Pin a version satisfying: {conflict['combined']}."
-        print(f"  [deps] CONFLICT: {message}", file=sys.stderr)
-
-    if fix and fixes:
-        apply_dependency_fixes(recipe, fixes)
-        applied = ", ".join(f"{name}=={version}" for name, version in fixes.items())
-        print(
-            f"  [deps] auto-repaired conflicting pins: {applied} "
-            "(the package built here is fixed; the source recipe file is unchanged)",
-            file=sys.stderr,
-        )
 
 
 def _recommend_mode(agent: HarpModelAgent, args) -> dict:
@@ -1617,143 +1263,7 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
     return 0
 
 
-def _resolve_check(agent: HarpModelAgent, args) -> dict:
-    """Run the deterministic PyPI conflict check, then optionally pip --dry-run."""
 
-    if args.requirements:
-        requirements = [
-            line for line in args.requirements.read_text(encoding="utf-8").splitlines()
-        ]
-        recipe = None
-    else:
-        recipe = _read_json(args.recipe)
-        requirements = collect_pip_requirements(recipe)
-
-    report: dict = {"ok": True, "requirements_checked": len(requirements)}
-
-    # Layer 1: deterministic PyPI metadata check (no install).
-    conflicts = []
-    try:
-        conflicts = find_dependency_conflicts(
-            requirements,
-            requires_dist_of=agent.pypi_requires_dist,
-            available_versions=agent.pypi_available_versions,
-        )
-    except Exception:
-        conflicts = []
-    if conflicts:
-        report["ok"] = False
-        report["metadata_conflicts"] = [
-            {
-                "package": c["package"],
-                "pinned": c["pinned"],
-                "violations": [f"{src} requires {c['package']}{spec}" for src, spec in c["violations"]],
-                "suggestion": c.get("suggestion"),
-            }
-            for c in conflicts
-        ]
-
-    # Layer 2: pip --dry-run (opt-in).
-    if args.dry_run_pip:
-        result = resolve_requirements(
-            requirements,
-            target_python=args.python_version if args.target else None,
-            target_platform=args.platform if args.target else None,
-        )
-        report["pip_dry_run"] = result.to_dict()
-        if not result.ok:
-            report["ok"] = False
-    return report
-
-
-def _predeploy_resolve_gate(
-    agent: HarpModelAgent, package_dir: Path, *, log=None, resolve_fn=resolve_requirements
-) -> Optional[dict]:
-    """Pre-deploy dependency-resolution gate for a Gradio Space package.
-
-    Reads the package's ``requirements.txt`` and runs two cheap-first checks:
-      1. deterministic PyPI metadata conflicts (``find_dependency_conflicts``);
-      2. ``pip install --dry-run`` for the deploy target (Linux / Python 3.10,
-         wheels-only).
-
-    Returns a report dict (``ok`` False => a *genuine* conflict was found and the
-    deploy should be refused), or ``None`` when there's nothing to check (no
-    requirements.txt). We only fail the deploy on real conflicts
-    (resolution-impossible / cannot-install / a pinned-vs-declared metadata
-    clash); a wheels-only "no matching distribution" is reported as a non-blocking
-    warning (the package may still build from sdist on the Space), and an
-    inconclusive/offline run never blocks.
-    """
-
-    req_path = Path(package_dir) / "requirements.txt"
-    if not req_path.exists():
-        return None  # docker/dual bundles or nothing to check
-
-    def _emit(message: str) -> None:
-        if log:
-            log(message)
-
-    _emit("checking that the wrapper's dependencies resolve before deploying ...")
-    requirements = [
-        line for line in req_path.read_text(encoding="utf-8").splitlines() if line.strip()
-    ]
-    report: dict = {"ok": True, "requirements_checked": len(requirements)}
-
-    # Layer 1: deterministic PyPI metadata check (a pin vs a sibling's bound).
-    try:
-        conflicts = find_dependency_conflicts(
-            requirements,
-            requires_dist_of=agent.pypi_requires_dist,
-            available_versions=agent.pypi_available_versions,
-        )
-    except Exception:
-        conflicts = []
-    if conflicts:
-        report["ok"] = False
-        report["metadata_conflicts"] = [
-            {
-                "package": c["package"],
-                "pinned": c["pinned"],
-                "violations": [f"{src} requires {c['package']}{spec}" for src, spec in c["violations"]],
-                "suggestion": c.get("suggestion"),
-            }
-            for c in conflicts
-        ]
-
-    # Layer 2: pip --dry-run for the deploy target (wheels-only).
-    result = resolve_fn(
-        requirements,
-        target_python=_DEFAULT_TARGET_PY,
-        target_platform=_DEFAULT_TARGET_PLATFORM,
-    )
-    report["pip_dry_run"] = result.to_dict()
-    blocking_kinds = {"resolution-impossible", "cannot-install"}
-    hard = [c for c in result.conflicts if c.get("kind") in blocking_kinds]
-    soft = [c for c in result.conflicts if c.get("kind") not in blocking_kinds]
-    if hard:
-        report["ok"] = False
-    if soft:
-        report["warnings"] = (
-            "wheels-only 'no matching distribution' for: "
-            + ", ".join(c.get("requirement", "?") for c in soft)
-            + " (may still build from sdist on the Space; not blocking)"
-        )
-
-    if report["ok"]:
-        note = "dependencies resolve"
-        if result.skipped:
-            note = "dependency check inconclusive (offline/unbuildable dry-run) -- proceeding"
-        elif result.unchecked:
-            note = (
-                "dependencies resolve (git/URL lines "
-                + f"[{len(result.unchecked)}] can't be pre-checked wheels-only)"
-            )
-        _emit(note + ".")
-    else:
-        _emit("dependency conflict detected -- see the report below.")
-        _emit("re-run with --skip-resolve-check to deploy anyway, or diagnose with:")
-        _emit("  python -m tools.model_agent knowledge --diagnose \"<paste the conflict>\"")
-    return report
 
 
 def _knowledge_query(args) -> dict:
@@ -2072,8 +1582,6 @@ def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
     """Shared output for the LLM recipe commands: write/print + optional package."""
 
     _warn_recipe_requirements(draft.recipe)
-    if not getattr(args, "no_fix_deps", False):
-        _resolve_dependency_conflicts(draft.recipe, agent, fix=True)
     _warn_app_lint(draft.app_py)
 
 
@@ -2133,111 +1641,6 @@ def _run_smoke_test(
     )
 
 
-def _harvest_ids_by_slug(path: Path) -> dict:
-    """Map a harvest folder slug -> canonical Space id, using index.json.
-
-    Locates ``index.json`` at ``path`` (when it is the harvest dir) or among its
-    ancestors (when ``path`` points at a single harvested ``app.py``).
-    """
-
-    path = Path(path)
-    candidates = []
-    if path.is_dir():
-        candidates.append(path / "index.json")
-    candidates.extend(parent / "index.json" for parent in path.parents)
-
-    index_file = next((candidate for candidate in candidates if candidate.exists()), None)
-    if index_file is None:
-        return {}
-
-    data = json.loads(index_file.read_text(encoding="utf-8"))
-    entries = data.get("results", data) if isinstance(data, dict) else data
-
-    mapping: dict = {}
-    if isinstance(entries, list):
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            entry_path = entry.get("path") or ""
-            model_id = entry.get("id")
-            if entry_path and model_id:
-                mapping[Path(entry_path).parent.name] = model_id
-    return mapping
-
-
-def attach_health(
-    agent: HarpModelAgent,
-    path: Path,
-    report: dict,
-    *,
-    timeout: float = 20.0,
-    max_workers: int = 8,
-) -> None:
-    """Add a liveness probe to each analyzed app, joined via harvest index.json.
-
-    Probes run concurrently with a short per-Space timeout so a handful of
-    sleeping/dead Spaces don't serialize into a multi-minute wait.
-    """
-
-    ids_by_slug = _harvest_ids_by_slug(path)
-
-    # Use a short timeout for liveness so dead Spaces fail fast rather than
-    # blocking for the full discovery/probe timeout.
-    agent.endpoint_client.timeout = timeout
-
-    jobs = []
-    for record in report.get("apps", []):
-        record_path = record.get("path") or ""
-        slug = Path(record_path).parent.name if record_path else ""
-        model_id = ids_by_slug.get(slug)
-        if model_id:
-            jobs.append((record, model_id))
-        else:
-            record["health"] = {"status": "unknown", "reason": "no Space id in index.json"}
-
-    total = len(jobs)
-    print(
-        f"Probing {total} Space endpoint(s) with timeout {timeout:.0f}s "
-        f"across {max_workers} worker(s)...",
-        file=sys.stderr,
-    )
-
-    def probe(job):
-        record, model_id = job
-        health = agent.check_endpoint_health(model_id)
-        health["model_id"] = model_id
-        return record, health
-
-    done = 0
-    if jobs:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
-            futures = [executor.submit(probe, job) for job in jobs]
-            for future in concurrent.futures.as_completed(futures):
-                record, health = future.result()
-                record["health"] = health
-                done += 1
-                print(
-                    f"  [{done}/{total}] {health['model_id']}: {health['status']}",
-                    file=sys.stderr,
-                )
-
-    alive = dead = unknown = 0
-    for record in report.get("apps", []):
-        status = record.get("health", {}).get("status")
-        if status == "alive":
-            alive += 1
-        elif status == "dead":
-            dead += 1
-        else:
-            unknown += 1
-
-    report.setdefault("summary", {})["health"] = {
-        "alive": alive,
-        "dead": dead,
-        "unknown": unknown,
-    }
-
-
 def _emit_json(payload: object, output: Path | None) -> None:
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -2251,17 +1654,3 @@ def _read_json(path: Path) -> object:
 
 def _split_csv(value: str) -> List[str]:
     return [item.strip() for item in str(value or "").split(",") if item.strip()]
-
-
-def _models_from_file(path: Path) -> List[str]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    models: List[str] = []
-    records = payload if isinstance(payload, list) else payload.get("packages", [])
-    for item in records:
-        if isinstance(item, str):
-            models.append(item)
-        elif isinstance(item, dict):
-            model = item.get("model_path") or item.get("id")
-            if model:
-                models.append(str(model))
-    return models

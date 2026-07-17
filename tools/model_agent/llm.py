@@ -1,9 +1,6 @@
 """Optional LLM-backed recipe generation for arbitrary models.
 
-Hardcoded per-framework templates (see ``agent.render_pyharp_app``) only cover a
-handful of frameworks and raise ``NotImplementedError`` for the long tail
-(PyTorch Hub, Transformers, Diffusers, custom GitHub repos, ...). This module
-lets an LLM write the two genuinely model-specific parts of a wrapper -- the
+This module lets an LLM write the two genuinely model-specific parts of a wrapper -- the
 ``inference.setup`` (imports + model loading) and ``inference.body`` (the
 ``process_fn`` body) -- while everything else stays deterministic.
 
@@ -21,10 +18,8 @@ This keeps the agent's core offline and stdlib-only: providers use
 :mod:`urllib` (no SDKs), network calls happen only inside provider methods, and
 the whole module is optional -- nothing else imports it at module load time.
 
-Set an API key and pick a provider via env vars:
-``GEMINI_API_KEY`` / ``GOOGLE_API_KEY`` (gemini), ``ANTHROPIC_API_KEY``
-(anthropic), or ``OPENAI_API_KEY`` (openai); override the default with
-``HARP_LLM_PROVIDER``.
+Set a Gemini API key via ``GEMINI_API_KEY`` / ``GOOGLE_API_KEY`` (or the generic
+``HARP_LLM_API_KEY``); override the default provider with ``HARP_LLM_PROVIDER``.
 """
 
 from __future__ import annotations
@@ -64,8 +59,6 @@ class LLMError(Exception):
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
     "gemini": "gemini-3.5-flash",
-    "anthropic": "claude-sonnet-4-latest",
-    "openai": "gpt-4o",
 }
 
 
@@ -176,65 +169,8 @@ class GeminiProvider(LLMProvider):
             raise LLMError(f"unexpected Gemini response: {json.dumps(data)[:500]}") from exc
         return _loads_lenient(text)
 
-
-class AnthropicProvider(LLMProvider):
-    name = "anthropic"
-
-    def list_models(self) -> List[str]:
-        headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
-        data = _http_get_json("https://api.anthropic.com/v1/models", headers, self.timeout)
-        return [str(item.get("id")) for item in (data.get("data") or []) if item.get("id")]
-
-    def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
-        url = "https://api.anthropic.com/v1/messages"
-        headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01"}
-        payload = {
-            "model": self.model,
-            "max_tokens": 4096,
-            "temperature": self.temperature,
-            "system": system,
-            "messages": [{"role": "user", "content": user}],
-        }
-        data = _http_post_json(url, payload, headers, self.timeout)
-        try:
-            text = data["content"][0]["text"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise LLMError(f"unexpected Anthropic response: {json.dumps(data)[:500]}") from exc
-        return _loads_lenient(text)
-
-
-class OpenAIProvider(LLMProvider):
-    name = "openai"
-
-    def list_models(self) -> List[str]:
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        data = _http_get_json("https://api.openai.com/v1/models", headers, self.timeout)
-        return [str(item.get("id")) for item in (data.get("data") or []) if item.get("id")]
-
-    def complete_json(self, system: str, user: str, *, schema: Optional[JSON] = None) -> JSON:
-        url = "https://api.openai.com/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        payload = {
-            "model": self.model,
-            "temperature": self.temperature,
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        }
-        data = _http_post_json(url, payload, headers, self.timeout)
-        try:
-            text = data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise LLMError(f"unexpected OpenAI response: {json.dumps(data)[:500]}") from exc
-        return _loads_lenient(text)
-
-
 _PROVIDERS = {
     "gemini": (GeminiProvider, ("GEMINI_API_KEY", "GOOGLE_API_KEY")),
-    "anthropic": (AnthropicProvider, ("ANTHROPIC_API_KEY",)),
-    "openai": (OpenAIProvider, ("OPENAI_API_KEY",)),
 }
 
 
@@ -247,38 +183,22 @@ def provider_from_env(
 ) -> LLMProvider:
     """Construct a provider from CLI args + environment, auto-detecting if needed."""
 
-    name = (name or os.environ.get("HARP_LLM_PROVIDER") or "").strip().lower()
-    if not name:
-        for candidate, (_cls, keys) in _PROVIDERS.items():
-            if any(os.environ.get(key) for key in keys):
-                name = candidate
-                break
-    # A generic key with no provider specified defaults to the first provider.
-    if not name and os.environ.get("HARP_LLM_API_KEY"):
-        name = next(iter(_PROVIDERS))
-    if not name:
-        raise LLMError(
-            "No LLM provider configured. Set --provider and the matching API key "
-            "env var (GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY), or set "
-            "the generic HARP_LLM_API_KEY."
-        )
-    if name not in _PROVIDERS:
-        raise LLMError(f"Unknown LLM provider '{name}' (expected one of {sorted(_PROVIDERS)}).")
+    name = (name or os.environ.get("HARP_LLM_PROVIDER") or "gemini").strip().lower()
+    if name != "gemini":
+        raise LLMError(f"Unknown LLM provider '{name}' (only 'gemini' is supported).")
 
-    provider_cls, keys = _PROVIDERS[name]
+    provider_cls, keys = _PROVIDERS["gemini"]
     api_key = next((os.environ[key] for key in keys if os.environ.get(key)), "")
     if not api_key:
-        # Generic fallback so a single env var works for any provider (used by the
-        # GUI widget's "LLM API key" field).
         api_key = (os.environ.get("HARP_LLM_API_KEY") or "").strip()
     if not api_key:
         raise LLMError(
-            f"{name} selected but no API key found. Set one of {keys} (or the generic "
+            f"gemini selected but no API key found. Set one of {keys} (or the generic "
             "HARP_LLM_API_KEY) in the environment."
         )
     return provider_cls(
         api_key=api_key,
-        model=model or _DEFAULT_MODELS[name],
+        model=model or _DEFAULT_MODELS["gemini"],
         timeout=timeout,
         temperature=temperature,
     )
