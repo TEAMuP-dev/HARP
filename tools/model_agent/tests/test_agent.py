@@ -1,7 +1,11 @@
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
+import io
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -10,6 +14,7 @@ from tools.model_agent.agent import (
     PYHARP_REQUIREMENT,
     DeploySpaceError,
     EndpointProbeError,
+    HarpEndpointClient,
     HarpModelAgent,
     SpaceCandidate,
     VenvSetupError,
@@ -26,8 +31,10 @@ from tools.model_agent.cli import (
     _ensure_github_pip,
     _pip_installable_from_signals,
     _repo_is_pip_installable,
+    _run_deploy,
     _strip_repo_backend_pip,
     _strip_repo_pip,
+    build_parser,
 )
 from tools.model_agent.llm import (
     GeminiProvider,
@@ -44,7 +51,11 @@ from tools.model_agent.llm import (
 )
 from tools.model_agent.recipe import (
     RecipeError,
+    _satisfies,
+    apply_dependency_fixes,
     build_package_from_recipe,
+    collect_pip_requirements,
+    find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
     rank_named_endpoints,
@@ -71,6 +82,73 @@ from tools.model_agent.orchestrator import (
     detect_ref,
     extract_space_links,
 )
+
+
+class EndpointInferenceTest(unittest.TestCase):
+    def test_infers_hf_space_endpoint_from_abbrev_path(self):
+        self.assertEqual(
+            HarpEndpointClient.infer_endpoint_url("example/audio_model"),
+            "https://example-audio-model.hf.space/",
+        )
+
+    def test_infers_documentation_url_from_short_hf_url(self):
+        self.assertEqual(
+            HarpEndpointClient.infer_documentation_url(
+                "https://example-audio-model.hf.space/"
+            ),
+            "https://huggingface.co/spaces/example/audio-model",
+        )
+
+    def test_parses_plain_json_gradio_response(self):
+        payload = [{"card": {}, "inputs": [], "outputs": []}]
+        self.assertEqual(
+            HarpEndpointClient._parse_gradio_response(json.dumps(payload)),
+            payload,
+        )
+
+    def test_parses_sse_gradio_response(self):
+        payload = [{"card": {"name": "Demo"}, "inputs": [], "outputs": []}]
+        response = "event: complete\ndata: " + json.dumps(payload) + "\n\n"
+        self.assertEqual(HarpEndpointClient._parse_gradio_response(response), payload)
+
+
+class CanonicalPathResolutionTest(unittest.TestCase):
+    def test_recovers_underscores_from_gradio_config(self):
+        # A short *.hf.space URL flattens "example/audio_model" into
+        # "example-audio-model" and loses the underscore; the live config
+        # endpoint reports the authoritative id and lets us recover it.
+        class FakeConfigClient(HarpEndpointClient):
+            def _get_text(self, url):
+                if url.endswith("/gradio_api/config"):
+                    return json.dumps({"space_id": "example/audio_model"})
+                raise EndpointProbeError(f"unexpected GET {url}")
+
+        client = FakeConfigClient()
+        self.assertEqual(
+            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
+            "example/audio_model",
+        )
+
+    def test_falls_back_to_string_inference_without_config(self):
+        class FailingConfigClient(HarpEndpointClient):
+            def _get_text(self, url):
+                raise EndpointProbeError(f"no config at {url}")
+
+        client = FailingConfigClient()
+        self.assertEqual(
+            client.resolve_canonical_path("https://example-audio-model.hf.space/"),
+            "example/audio-model",
+        )
+
+    def test_trusts_full_hf_spaces_url(self):
+        # Full HF Space URLs carry the exact id, so no network call is needed.
+        client = HarpEndpointClient()
+        self.assertEqual(
+            client.resolve_canonical_path(
+                "https://huggingface.co/spaces/example/audio_model"
+            ),
+            "example/audio_model",
+        )
 
 
 class SpaceCandidateTest(unittest.TestCase):
@@ -486,7 +564,6 @@ class DeployIntoSpaceTest(unittest.TestCase):
                     )
 
 
-
 class RecipeTest(unittest.TestCase):
     STEM_RECIPE = {
         "model": {
@@ -629,7 +706,6 @@ class RecipeTest(unittest.TestCase):
         self.assertIn("ffmpeg", package.packages_txt)
         self.assertEqual(package.io["outputs"], ["audio", "labels"])
         self.assertIn("pyharp", package.requirements)
-
 
 
 class _FakeProvider:
@@ -777,7 +853,7 @@ class LLMRecipeTest(unittest.TestCase):
                 provider_from_env()
 
     def test_provider_from_env_auto_detects_key(self):
-        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "gemini-test"}, clear=True):
+        with mock.patch.dict(os.environ, {"GOOGLE_API_KEY": "sk-test"}, clear=True):
             provider = provider_from_env()
             self.assertEqual(provider.name, "gemini")
 
@@ -788,6 +864,12 @@ class LLMRecipeTest(unittest.TestCase):
             self.assertEqual(provider.api_key, "generic")
 
     def test_provider_from_env_generic_key_honors_explicit_provider(self):
+        with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
+            provider = provider_from_env("gemini")
+            self.assertEqual(provider.name, "gemini")
+            self.assertEqual(provider.api_key, "generic")
+
+    def test_provider_from_env_rejects_unknown_provider(self):
         with mock.patch.dict(os.environ, {"HARP_LLM_API_KEY": "generic"}, clear=True):
             with self.assertRaises(LLMError):
                 provider_from_env("anthropic")
@@ -835,17 +917,29 @@ class LLMRecipeTest(unittest.TestCase):
 
 class CompleteRecipeTest(unittest.TestCase):
     def _scaffold(self):
+        # A scaffolded recipe: resolved I/O + TODO stubs for framework/inference.
         return {
+            "_todo": [
+                "framework.import / framework.pip: set the real package(s)",
+                "inference.setup / inference.body: fill in model loading and inference",
+            ],
             "model": {
                 "id": "teamup-tech/demucs",
                 "name": "Demucs",
                 "description": "TODO: describe this model.",
+                "author": "teamup-tech",
+                "tags": [],
             },
-            "framework": {"import": "", "pip": [], "apt": [], "gpu": True},
+            "framework": {
+                "import": "TODO_package",
+                "pip": ["TODO-package"],
+                "apt": [],
+                "gpu": True,
+            },
             "inputs": [
-                {"name": "audio", "type": "audio", "label": "Audio", "required": True},
+                {"name": "input_audio", "type": "audio", "label": "Input Audio", "required": True},
                 {
-                    "name": "model_name",
+                    "name": "model",
                     "type": "dropdown",
                     "label": "Model",
                     "choices": ["a", "b"],
@@ -853,15 +947,14 @@ class CompleteRecipeTest(unittest.TestCase):
                 },
             ],
             "outputs": [
-                {"name": "vocals", "type": "audio", "label": "Vocals"},
                 {"name": "drums", "type": "audio", "label": "Drums"},
+                {"name": "bass", "type": "audio", "label": "Bass"},
                 {"name": "labels", "type": "labels", "label": "Labels"},
             ],
             "inference": {
-                "setup": "MODEL = None",
-                "body": "raise NotImplementedError('TODO')",
+                "setup": "# TODO: import the model package and load the model here.",
+                "body": 'raise NotImplementedError("Fill in the inference body.")',
             },
-            "_todo": ["Fill framework and inference."],
         }
 
     def test_completion_fills_stubs_and_preserves_io(self):
@@ -1199,10 +1292,16 @@ class RemoteScaffoldTest(unittest.TestCase):
                 "owner/backend", {"named_endpoints": {}, "unnamed_endpoints": {}}
             )
 
-    def test_agent_scaffold_fetches_api_info(self):
-        agent = HarpModelAgent()
-        with mock.patch.object(agent, "fetch_api_info", return_value=RemoteScaffoldTest.API_INFO):
-            recipe = agent.scaffold_remote_recipe("owner/backend")
+    def test_agent_scaffold_uses_endpoint_client(self):
+        class _FakeEndpoint:
+            def fetch_api_info(self, space):
+                return RemoteScaffoldTest.API_INFO
+
+            def resolve_canonical_path(self, space):
+                return "owner/backend"
+
+        agent = HarpModelAgent(endpoint_client=_FakeEndpoint())
+        recipe = agent.scaffold_remote_recipe("owner/backend")
         validate_recipe(recipe)
 
 
@@ -1482,6 +1581,33 @@ class DualRecipeTest(unittest.TestCase):
         self.assertIn("subprocess.run", package.extra_files["frontend_app.py"])
         self.assertIn("build_endpoint", package.extra_files["frontend_app.py"])
 
+    def test_backend_worker_rejects_missing_output_keys(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["dual"]["worker"]["body"] = (
+            'outputs = {"vocals": inputs["audio"]}'
+        )
+        recipe["outputs"] = [
+            {"name": "vocals", "type": "audio", "label": "Vocals"},
+            {"name": "drums", "type": "audio", "label": "Drums"},
+        ]
+        worker = build_package_from_recipe(recipe).extra_files["backend_worker.py"]
+        with tempfile.TemporaryDirectory() as tmp:
+            worker_path = Path(tmp) / "backend_worker.py"
+            worker_path.write_text(worker, encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(worker_path)],
+                input=json.dumps({"inputs": {"audio": "input.wav"}}),
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+        self.assertNotEqual(proc.returncode, 0)
+        payload = json.loads(proc.stdout)
+        self.assertFalse(payload["ok"])
+        self.assertIn("missing output key(s): drums", payload["error"])
+        self.assertIn("returned keys: ['vocals']", payload["error"])
+
     def test_dockerfile_pins_backend_python_and_no_deps_installs(self):
         package = build_package_from_recipe(self.RECIPE)
         dockerfile = package.extra_files["Dockerfile"]
@@ -1554,12 +1680,16 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         app = render_app_from_recipe(recipe)
         compile(app, "soulx_singer_recipe.json", "exec")
 
-        # Proxies to the original Space instead of installing/reimplementing it.
-        self.assertIn('Client(_BACKEND_SPACE', app)
-        self.assertIn('api_name="/synthesis_function"', app)
+        # Reuses the original Space's pipeline rather than reimplementing it.
+        self.assertIn("from webui import synthesis_function", app)
+        self.assertIn("synthesis_function(", app)
         # Correct two-audio interface (the whole point of the fix).
         self.assertEqual(app.count('gr.Audio(type="filepath"'), 3)  # 2 inputs + 1 output
-        self.assertIn("def process_fn(prompt_audio, target_audio, control", app)
+        self.assertIn(
+            "def process_fn(prompt_audio, target_audio, control, prompt_lyric_lang, "
+            "target_lyric_lang, prompt_vocal_sep, target_vocal_sep, auto_shift, pitch_shift):",
+            app,
+        )
         # gpu false -> must NOT add a second @spaces.GPU (synthesis_function has its own).
         self.assertNotIn("@spaces.GPU", app)
 
@@ -1569,10 +1699,10 @@ class SoulXSingerRecipeTest(unittest.TestCase):
         # synthesis_function's own defaults), so the lyric/ASR path matches the
         # original UI: prompt_vocal_sep defaults False, target_vocal_sep True,
         # languages default English.
-        self.assertIn("prompt_lyric_lang,", app)
-        self.assertIn("target_lyric_lang,", app)
-        self.assertIn("prompt_vocal_sep,", app)
-        self.assertIn("target_vocal_sep,", app)
+        self.assertIn("prompt_lyric_lang=prompt_lyric_lang", app)
+        self.assertIn("target_lyric_lang=target_lyric_lang", app)
+        self.assertIn("prompt_vocal_sep=prompt_vocal_sep", app)
+        self.assertIn("target_vocal_sep=target_vocal_sep", app)
         # Wrapping the single entry point cleanly => no lint warnings.
         self.assertEqual(lint_generated_app(app), [])
 
@@ -1948,6 +2078,94 @@ class RecipeRequirementsLintTest(unittest.TestCase):
         self.assertEqual(lint_recipe_requirements({"model": {"id": "a/b"}}), [])
 
 
+class DependencyConflictTest(unittest.TestCase):
+    """The pre-deploy checker catches pins that violate a sibling's declared
+    constraints (the exact 'librosa==0.10.1 vs ddsp needs librosa<=0.10' bug)."""
+
+    # Fake package metadata so tests never touch the network.
+    _REQUIRES_DIST = {
+        ("ddsp", "3.7.0"): [
+            "librosa (<=0.10)",
+            "crepe (<=0.0.12)",
+            "numpy (<1.24)",
+            "pytest ; extra == 'test'",  # optional extra -> must be ignored
+        ],
+    }
+    _VERSIONS = {
+        "librosa": ["0.8.1", "0.9.2", "0.10.0", "0.10.1", "0.11.0"],
+        "numpy": ["1.23.5", "1.24.0", "2.0.0"],
+    }
+
+    def _requires_dist(self, name, version):
+        return self._REQUIRES_DIST.get((name, version))
+
+    def _versions(self, name):
+        return self._VERSIONS.get(name, [])
+
+    def _find(self, requirements):
+        return find_dependency_conflicts(
+            requirements, self._requires_dist, self._versions
+        )
+
+    def test_detects_violation_and_suggests_newest_compatible(self):
+        conflicts = self._find(["ddsp==3.7.0", "librosa==0.10.1", "numpy==1.23.5"])
+        self.assertEqual(len(conflicts), 1)
+        conflict = conflicts[0]
+        self.assertEqual(conflict["package"], "librosa")
+        self.assertEqual(conflict["pinned"], "0.10.1")
+        # 0.10.0 is the newest version that satisfies '<=0.10'.
+        self.assertEqual(conflict["suggestion"], "0.10.0")
+
+    def test_satisfying_pin_has_no_conflict(self):
+        # numpy 1.23.5 satisfies '<1.24'; librosa 0.9.2 satisfies '<=0.10'.
+        self.assertEqual(
+            self._find(["ddsp==3.7.0", "librosa==0.9.2", "numpy==1.23.5"]), []
+        )
+
+    def test_optional_extra_dependencies_are_ignored(self):
+        # pytest is only an [test] extra; pinning it must not trigger a conflict.
+        self.assertEqual(self._find(["ddsp==3.7.0", "pytest==999.0"]), [])
+
+    def test_version_specifier_semantics(self):
+        self.assertFalse(_satisfies("0.10.1", "<=0.10"))
+        self.assertTrue(_satisfies("0.10.0", "<=0.10"))
+        self.assertTrue(_satisfies("1.23.5", "<1.24"))
+        self.assertFalse(_satisfies("1.24.0", "<1.24"))
+        self.assertTrue(_satisfies("2.11.0", "<=2.11"))
+        self.assertTrue(_satisfies("0.4.2", ">=0.3.0,<=0.10"))
+
+    def test_collect_pip_requirements_by_mode(self):
+        dual = {"framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}}
+        self.assertEqual(
+            collect_pip_requirements(dual), ["ddsp==3.7.0", "librosa==0.10.1"]
+        )
+        remote = {"framework": {"remote": {"space": "a/b"}, "pip": ["x==1"]}}
+        self.assertEqual(collect_pip_requirements(remote), [])
+        plain = {"framework": {"pip": ["torch==2.0"]}}
+        self.assertEqual(collect_pip_requirements(plain), ["torch==2.0"])
+
+    def test_apply_dependency_fixes_rewrites_backend_pip(self):
+        recipe = {
+            "framework": {"dual": {"backend_pip": ["ddsp==3.7.0", "librosa==0.10.1"]}}
+        }
+        apply_dependency_fixes(recipe, {"librosa": "0.10.0"})
+        self.assertEqual(
+            recipe["framework"]["dual"]["backend_pip"],
+            ["ddsp==3.7.0", "librosa==0.10.0"],
+        )
+
+    def test_url_and_option_lines_are_skipped(self):
+        # git+/URL and pip option lines can't be checked and must not crash.
+        conflicts = self._find(
+            [
+                "--extra-index-url https://download.pytorch.org/whl/cpu",
+                "git+https://github.com/sony/FxNorm-automix",
+                "ddsp==3.7.0",
+                "librosa==0.10.1",
+            ]
+        )
+        self.assertEqual([c["package"] for c in conflicts], ["librosa"])
+
 
 class GitHubInstallabilityTest(unittest.TestCase):
     def test_root_pyproject_is_installable(self):
@@ -2158,7 +2376,6 @@ class ResourceHeadsupTest(unittest.TestCase):
         self.assertIsNotNone(resource_headsup(warnings))
 
 
-
 class ApplyCardMetadataTest(unittest.TestCase):
     def test_fills_description_tags_license_from_card(self):
         recipe = {"model": {"name": "X", "description": "TODO: describe this model.", "tags": []}}
@@ -2300,6 +2517,16 @@ class RepairRuleTest(unittest.TestCase):
         hits = match_repair_rules("... does not appear to be a Python project ...")
         self.assertTrue(any(h["rule"] == "not-pip-installable" for h in hits))
 
+    def test_dual_backend_missing_output_rule(self):
+        self._assert_rule(
+            "The backend produced no 'drums' output. Check the Space logs.",
+            "dual-backend-missing-output",
+        )
+        self._assert_rule(
+            "RuntimeError: Invalid backend outputs: missing output key(s): drums",
+            "dual-backend-missing-output",
+        )
+
     def test_no_match_returns_empty(self):
         self.assertEqual(match_repair_rules("everything is fine"), [])
 
@@ -2347,6 +2574,15 @@ class RepairRuleTest(unittest.TestCase):
         self._assert_rule(
             "Repository storage limit reached (Max: 1 GB)",
             "hf-storage-limit",
+        )
+
+    def test_hf_hub_artifact_not_found_or_private(self):
+        self._assert_rule(
+            "Repository Not Found for url: "
+            "https://huggingface.co/ZFTurbo/Music-Source-Separation-Training/"
+            "resolve/main/vocal_mel_band_roformer_je_1017.ckpt. "
+            "Invalid username or password.",
+            "hf-hub-artifact-not-found-or-private",
         )
 
     def test_invalid_space_color(self):
@@ -2615,7 +2851,6 @@ class ClassifierDecisionTest(unittest.TestCase):
         )
         self.assertEqual(decision.mode, "single")
         self.assertTrue(any("CUDA" in r for r in decision.recommendations))
-
 
 
 class OrchestratorRefDetectionTest(unittest.TestCase):

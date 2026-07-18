@@ -1,8 +1,9 @@
-"""Optional LLM-backed recipe generation for arbitrary models.
+"""LLM-backed recipe generation for arbitrary models.
 
-This module lets an LLM write the two genuinely model-specific parts of a wrapper -- the
-``inference.setup`` (imports + model loading) and ``inference.body`` (the
-``process_fn`` body) -- while everything else stays deterministic.
+This module lets an LLM write the two genuinely model-specific parts of a
+wrapper -- the ``inference.setup`` (imports + model loading) and
+``inference.body`` (the ``process_fn`` body) -- while everything else stays
+deterministic. It is the primary path for porting a model into HARP.
 
 The design is "LLM proposes, the deterministic pipeline disposes":
 
@@ -14,12 +15,12 @@ The design is "LLM proposes, the deterministic pipeline disposes":
 3. On failure the validation/syntax error is fed back for a bounded number of
    repair attempts.
 
-This keeps the agent's core offline and stdlib-only: providers use
+This keeps the agent's core offline and stdlib-only: the provider uses
 :mod:`urllib` (no SDKs), network calls happen only inside provider methods, and
 the whole module is optional -- nothing else imports it at module load time.
 
-Set a Gemini API key via ``GEMINI_API_KEY`` / ``GOOGLE_API_KEY`` (or the generic
-``HARP_LLM_API_KEY``); override the default provider with ``HARP_LLM_PROVIDER``.
+Set an API key via ``GEMINI_API_KEY`` / ``GOOGLE_API_KEY`` (or the generic
+``HARP_LLM_API_KEY``); Gemini is the only supported provider.
 """
 
 from __future__ import annotations
@@ -55,10 +56,10 @@ class LLMError(Exception):
 # Providers (urllib only; no third-party SDKs)
 # --------------------------------------------------------------------------- #
 
-# Model names move fast; these are sane defaults but a key/region may differ.
+# Model names move fast; this is a sane default but a key/region may differ.
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
-    "gemini": "gemini-3.5-flash",
+    "gemini": "gemini-2.5-flash",
 }
 
 
@@ -169,6 +170,7 @@ class GeminiProvider(LLMProvider):
             raise LLMError(f"unexpected Gemini response: {json.dumps(data)[:500]}") from exc
         return _loads_lenient(text)
 
+
 _PROVIDERS = {
     "gemini": (GeminiProvider, ("GEMINI_API_KEY", "GOOGLE_API_KEY")),
 }
@@ -183,22 +185,37 @@ def provider_from_env(
 ) -> LLMProvider:
     """Construct a provider from CLI args + environment, auto-detecting if needed."""
 
-    name = (name or os.environ.get("HARP_LLM_PROVIDER") or "gemini").strip().lower()
-    if name != "gemini":
-        raise LLMError(f"Unknown LLM provider '{name}' (only 'gemini' is supported).")
+    name = (name or os.environ.get("HARP_LLM_PROVIDER") or "").strip().lower()
+    if not name:
+        for candidate, (_cls, keys) in _PROVIDERS.items():
+            if any(os.environ.get(key) for key in keys):
+                name = candidate
+                break
+    # A generic key with no provider specified defaults to the first provider.
+    if not name and os.environ.get("HARP_LLM_API_KEY"):
+        name = next(iter(_PROVIDERS))
+    if not name:
+        raise LLMError(
+            "No LLM provider configured. Set the API key env var "
+            "(GEMINI_API_KEY / GOOGLE_API_KEY), or set the generic HARP_LLM_API_KEY."
+        )
+    if name not in _PROVIDERS:
+        raise LLMError(f"Unknown LLM provider '{name}' (expected one of {sorted(_PROVIDERS)}).")
 
-    provider_cls, keys = _PROVIDERS["gemini"]
+    provider_cls, keys = _PROVIDERS[name]
     api_key = next((os.environ[key] for key in keys if os.environ.get(key)), "")
     if not api_key:
+        # Generic fallback so a single env var works for any provider (used by the
+        # GUI widget's "LLM API key" field).
         api_key = (os.environ.get("HARP_LLM_API_KEY") or "").strip()
     if not api_key:
         raise LLMError(
-            f"gemini selected but no API key found. Set one of {keys} (or the generic "
+            f"{name} selected but no API key found. Set one of {keys} (or the generic "
             "HARP_LLM_API_KEY) in the environment."
         )
     return provider_cls(
         api_key=api_key,
-        model=model or _DEFAULT_MODELS["gemini"],
+        model=model or _DEFAULT_MODELS[name],
         timeout=timeout,
         temperature=temperature,
     )

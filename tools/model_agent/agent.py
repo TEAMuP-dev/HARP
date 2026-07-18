@@ -85,7 +85,7 @@ class SpaceCandidate:
             gated=bool(payload.get("gated")),
             tags=tags,
             url=f"{HUGGING_FACE_BASE}/spaces/{space_id}" if space_id else "",
-            endpoint_url=infer_endpoint_url(space_id) if space_id else "",
+            endpoint_url=HarpEndpointClient.infer_endpoint_url(space_id) if space_id else "",
         )
 
     def looks_open_source(self) -> bool:
@@ -93,8 +93,6 @@ class SpaceCandidate:
 
     def looks_gradio(self) -> bool:
         return self.sdk.lower() == "gradio" or "gradio" in {tag.lower() for tag in self.tags}
-
-
 
 
 @dataclass
@@ -192,8 +190,6 @@ class SmokeTestResult:
 
     def to_json(self) -> JSON:
         return asdict(self)
-
-
 
 
 class HuggingFaceSpaceScraper:
@@ -383,121 +379,210 @@ class GitHubRepoScraper:
             raise
 
 
-def infer_host_slash_model(model_path: str) -> str:
-    path = model_path.strip().rstrip("/")
-    if path.startswith("https://huggingface.co/spaces/"):
-        return path.removeprefix("https://huggingface.co/spaces/")
-    if path.startswith("https://") and path.endswith(".hf.space"):
-        host = path.removeprefix("https://").removesuffix(".hf.space")
-        for org in KNOWN_HYPHENATED_SPACE_ORGS:
-            prefix = f"{org}-"
-            if host.startswith(prefix):
-                return f"{org}/{host.removeprefix(prefix)}"
-        parts = host.split("-", 1)
-        if len(parts) == 2:
-            return f"{parts[0]}/{parts[1]}"
-    return path
+class HarpEndpointClient:
+    """Client for the HARP controls endpoint exposed by pyharp apps."""
 
+    def __init__(self, timeout: float = 120.0):
+        self.timeout = timeout
 
-def infer_endpoint_url(model_path: str) -> str:
-    path = model_path.strip().rstrip("/")
-    if path.startswith("http://localhost") or re.match(r"^http://\d+\.\d+\.\d+\.\d+:\d+", path):
+    @staticmethod
+    def infer_host_slash_model(model_path: str) -> str:
+        path = model_path.strip().rstrip("/")
+        if path.startswith("https://huggingface.co/spaces/"):
+            return path.removeprefix("https://huggingface.co/spaces/")
+        if path.startswith("https://") and path.endswith(".hf.space"):
+            host = path.removeprefix("https://").removesuffix(".hf.space")
+            # Short Space URLs flatten "org/model" into "org-model". HARP has
+            # existing Spaces under a hyphenated org, so handle those before
+            # the generic split.
+            for org in KNOWN_HYPHENATED_SPACE_ORGS:
+                prefix = f"{org}-"
+                if host.startswith(prefix):
+                    return f"{org}/{host.removeprefix(prefix)}"
+            parts = host.split("-", 1)
+            if len(parts) == 2:
+                return f"{parts[0]}/{parts[1]}"
         return path
-    if path.startswith("https://") and path.endswith(".gradio.live"):
+
+    @staticmethod
+    def infer_endpoint_url(model_path: str) -> str:
+        path = model_path.strip().rstrip("/")
+        if path.startswith("http://localhost") or re.match(r"^http://\d+\.\d+\.\d+\.\d+:\d+", path):
+            return path
+        if path.startswith("https://") and path.endswith(".gradio.live"):
+            return path
+        if path.startswith("https://") and path.endswith(".hf.space"):
+            return f"{path}/"
+        host_slash_model = HarpEndpointClient.infer_host_slash_model(path)
+        if "/" in host_slash_model:
+            host, model = host_slash_model.split("/", 1)
+            return f"https://{host}-{model.replace('_', '-')}.hf.space/"
         return path
-    if path.startswith("https://") and path.endswith(".hf.space"):
-        return f"{path}/"
-    host_slash_model = infer_host_slash_model(path)
-    if "/" in host_slash_model:
-        host, model = host_slash_model.split("/", 1)
-        return f"https://{host}-{model.replace('_', '-')}.hf.space/"
-    return path
 
+    @staticmethod
+    def infer_documentation_url(model_path: str) -> str:
+        path = model_path.strip().rstrip("/")
+        if path.startswith("https://huggingface.co/spaces/"):
+            return path
+        host_slash_model = HarpEndpointClient.infer_host_slash_model(path)
+        if "/" in host_slash_model:
+            return f"{HUGGING_FACE_BASE}/spaces/{host_slash_model}"
+        return HarpEndpointClient.infer_endpoint_url(model_path)
 
-def _get_endpoint_text(url: str, *, timeout: float) -> str:
-    request = Request(url, headers={"Accept": "*/*", "User-Agent": "model-agent/0.1"})
-    try:
-        with urlopen(request, timeout=timeout) as response:
-            return response.read().decode("utf-8")
-    except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
-        raise EndpointProbeError(f"GET {url} failed: {exc}") from exc
+    def fetch_space_id(self, model_path: str) -> str:
+        """Query the live Gradio config for the authoritative ``author/name``.
 
+        Short ``*.hf.space`` URLs flatten ``author/model`` to ``author-model`` and
+        turn ``_`` into ``-``, so the canonical id cannot be recovered by string
+        manipulation alone (the same ambiguity HARP's C++ client resolves). The
+        Gradio config endpoint reports the real ``space_id``; we try both the
+        modern and legacy config paths.
+        """
 
-def fetch_space_id(model_path: str, *, timeout: float = 120.0) -> str:
-    endpoint = infer_endpoint_url(model_path).rstrip("/")
-    last_error: Optional[EndpointProbeError] = None
-    for config_path in ("gradio_api/config", "config"):
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        last_error: Optional[EndpointProbeError] = None
+        for config_path in ("gradio_api/config", "config"):
+            try:
+                text = self._get_text(f"{endpoint}/{config_path}")
+            except EndpointProbeError as exc:
+                last_error = exc
+                continue
+
+            try:
+                config = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+
+            if isinstance(config, dict):
+                space_id = config.get("space_id")
+                if isinstance(space_id, str) and "/" in space_id:
+                    return space_id
+
+        if last_error is not None:
+            raise last_error
+        return ""
+
+    def resolve_canonical_path(self, model_path: str) -> str:
+        """Return the canonical ``author/name`` for a model path.
+
+        Full ``huggingface.co/spaces/...`` URLs already carry the exact id and are
+        trusted as-is. For abbreviated paths and short ``*.hf.space`` URLs we ask
+        the endpoint for its real ``space_id`` so documentation/source links keep
+        the correct ``_`` vs ``-`` spelling, falling back to the best-effort
+        string inference when the config is unavailable.
+        """
+
+        guess = self.infer_host_slash_model(model_path)
+        if model_path.strip().rstrip("/").startswith("https://huggingface.co/spaces/"):
+            return guess
+
         try:
-            text = _get_endpoint_text(f"{endpoint}/{config_path}", timeout=timeout)
-        except EndpointProbeError as exc:
-            last_error = exc
-            continue
-        try:
-            config = json.loads(text)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(config, dict):
-            space_id = config.get("space_id")
-            if isinstance(space_id, str) and "/" in space_id:
-                return space_id
-    if last_error is not None:
-        raise last_error
-    return ""
+            space_id = self.fetch_space_id(model_path)
+        except EndpointProbeError:
+            space_id = ""
+        return space_id or guess
 
+    def fetch_controls(self, model_path: str) -> JSON:
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        call_url = f"{endpoint}/gradio_api/call/controls"
+        event = self._post_json(call_url, {"data": []})
+        event_id = event.get("event_id") if isinstance(event, dict) else None
+        if not event_id:
+            raise EndpointProbeError(f"{model_path} did not return a Gradio event_id")
 
-def resolve_canonical_path(model_path: str, *, timeout: float = 120.0) -> str:
-    guess = infer_host_slash_model(model_path)
-    if model_path.strip().rstrip("/").startswith("https://huggingface.co/spaces/"):
-        return guess
-    try:
-        space_id = fetch_space_id(model_path, timeout=timeout)
-    except EndpointProbeError:
-        space_id = ""
-    return space_id or guess
+        response_text = self._get_text(f"{call_url}/{quote(str(event_id))}")
+        data = self._parse_gradio_response(response_text)
+        if not data or not isinstance(data[0], dict):
+            raise EndpointProbeError(f"{model_path} did not return a HARP controls object")
 
+        controls = data[0]
+        for key in ("card", "inputs", "outputs"):
+            if key not in controls:
+                raise EndpointProbeError(f"{model_path} controls are missing '{key}'")
+        return controls
 
-def fetch_api_info(model_path: str, *, timeout: float = 120.0) -> JSON:
-    endpoint = infer_endpoint_url(model_path).rstrip("/")
-    last_error: Optional[EndpointProbeError] = None
-    for info_path in ("gradio_api/info", "info"):
-        try:
-            text = _get_endpoint_text(f"{endpoint}/{info_path}", timeout=timeout)
-        except EndpointProbeError as exc:
-            last_error = exc
-            continue
-        try:
-            info = json.loads(text)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(info, dict) and isinstance(info.get("named_endpoints"), dict):
-            return info
-    if last_error is not None:
-        raise last_error
-    raise EndpointProbeError(f"{model_path} did not expose a Gradio API schema")
+    def fetch_api_info(self, model_path: str) -> JSON:
+        """Fetch a Space's Gradio API schema (its named/unnamed endpoints).
 
+        Reads ``/gradio_api/info`` (modern) or ``/info`` (legacy), which describes
+        every callable endpoint's positional parameters and returns. Used to
+        scaffold a remote-backend (proxy) recipe. Raises :class:`EndpointProbeError`
+        if the Space does not expose an API schema (e.g. ``show_api=False``).
+        """
 
-def _download_hf_space_file_text(
-    downloader: Callable[..., str],
-    repo_id: str,
-    filename: str,
-    token: Optional[str],
-) -> Optional[str]:
-    """Download one text file from a Space via huggingface_hub, or None."""
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        last_error: Optional[EndpointProbeError] = None
+        for info_path in ("gradio_api/info", "info"):
+            try:
+                text = self._get_text(f"{endpoint}/{info_path}")
+            except EndpointProbeError as exc:
+                last_error = exc
+                continue
+            try:
+                info = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(info, dict) and isinstance(info.get("named_endpoints"), dict):
+                return info
 
-    try:
-        local = downloader(
-            repo_id=repo_id,
-            filename=filename,
-            repo_type="space",
-            token=token,
+        if last_error is not None:
+            raise last_error
+        raise EndpointProbeError(f"{model_path} did not expose a Gradio API schema")
+
+    def _post_json(self, url: str, payload: JSON) -> Any:
+        body = json.dumps(payload).encode("utf-8")
+        request = Request(
+            url,
+            data=body,
+            headers={
+                "Accept": "*/*",
+                "Content-Type": "application/json",
+                "User-Agent": "model-agent/0.1",
+            },
+            method="POST",
         )
-    except Exception:
-        return None
-    try:
-        return Path(local).read_text(encoding="utf-8")
-    except OSError:
-        return None
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
+            raise EndpointProbeError(f"POST {url} failed: {exc}") from exc
 
+    def _get_text(self, url: str) -> str:
+        request = Request(url, headers={"Accept": "*/*", "User-Agent": "model-agent/0.1"})
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return response.read().decode("utf-8")
+        except (HTTPError, URLError, TimeoutError, socket.timeout) as exc:
+            raise EndpointProbeError(f"GET {url} failed: {exc}") from exc
+
+    @staticmethod
+    def _parse_gradio_response(response_text: str) -> List[Any]:
+        response_text = response_text.strip()
+        if not response_text:
+            return []
+
+        try:
+            parsed = json.loads(response_text)
+            return parsed if isinstance(parsed, list) else [parsed]
+        except json.JSONDecodeError:
+            pass
+
+        data_lines = []
+        for line in response_text.splitlines():
+            line = line.strip()
+            if line.startswith("data:"):
+                value = line.removeprefix("data:").strip()
+                if value and value != "[DONE]":
+                    data_lines.append(value)
+
+        for line in reversed(data_lines):
+            try:
+                parsed = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            return parsed if isinstance(parsed, list) else [parsed]
+
+        raise EndpointProbeError("Could not parse Gradio response payload")
 
 
 class HarpModelAgent:
@@ -506,12 +591,12 @@ class HarpModelAgent:
     def __init__(
         self,
         scraper: Optional[HuggingFaceSpaceScraper] = None,
+        endpoint_client: Optional[HarpEndpointClient] = None,
         github_scraper: Optional[GitHubRepoScraper] = None,
-        endpoint_timeout: float = 120.0,
     ):
         self.scraper = scraper or HuggingFaceSpaceScraper()
+        self.endpoint_client = endpoint_client or HarpEndpointClient()
         self.github_scraper = github_scraper or GitHubRepoScraper()
-        self.endpoint_timeout = endpoint_timeout
 
     def discover_open_gradio_spaces(self, **kwargs: Any) -> List[SpaceCandidate]:
         return [
@@ -519,7 +604,6 @@ class HarpModelAgent:
             for candidate in self.scraper.discover(**kwargs)
             if candidate.looks_open_source() and candidate.looks_gradio()
         ]
-
 
     def write_generated_app_package(
         self,
@@ -635,7 +719,7 @@ class HarpModelAgent:
 
             startup_seconds = round(time.monotonic() - start, 2)
             try:
-                fetch_api_info(endpoint_url, timeout=self.endpoint_timeout)
+                self.endpoint_client.fetch_controls(endpoint_url)
             except EndpointProbeError as exc:
                 return SmokeTestResult(
                     ok=False,
@@ -920,7 +1004,7 @@ class HarpModelAgent:
             if log is not None:
                 log(message)
 
-        existing_req = _download_hf_space_file_text(
+        existing_req = self._download_space_text(
             hf_hub_download, repo_id, "requirements.txt", resolved_token
         )
         if existing_req is None:
@@ -947,7 +1031,7 @@ class HarpModelAgent:
             ("requirements.txt", new_req.encode("utf-8")),
         ]
 
-        existing_readme = _download_hf_space_file_text(
+        existing_readme = self._download_space_text(
             hf_hub_download, repo_id, "README.md", resolved_token
         )
         if existing_readme is not None:
@@ -988,6 +1072,29 @@ class HarpModelAgent:
             "authenticated": bool(resolved_token),
         }
 
+    @staticmethod
+    def _download_space_text(
+        downloader: Callable[..., str],
+        repo_id: str,
+        filename: str,
+        token: Optional[str],
+    ) -> Optional[str]:
+        """Download one text file from a Space via huggingface_hub, or None."""
+
+        try:
+            local = downloader(
+                repo_id=repo_id,
+                filename=filename,
+                repo_type="space",
+                token=token,
+            )
+        except Exception:  # missing file / auth / network -> treat as absent
+            return None
+        try:
+            return Path(local).read_text(encoding="utf-8")
+        except OSError:
+            return None
+
     def scaffold_remote_recipe(
         self,
         space: str,
@@ -1013,7 +1120,7 @@ class HarpModelAgent:
         from .recipe import guess_primary_endpoint, remote_recipe_from_api_info
 
         api_info = self.fetch_api_info(space)
-        canonical = resolve_canonical_path(space, timeout=self.endpoint_timeout) or space
+        canonical = self.endpoint_client.resolve_canonical_path(space) or space
         if not api_name and auto_endpoint:
             api_name = guess_primary_endpoint(api_info)
         return remote_recipe_from_api_info(
@@ -1023,7 +1130,7 @@ class HarpModelAgent:
     def fetch_api_info(self, space: str) -> JSON:
         """Convenience passthrough to the endpoint client's API-schema fetch."""
 
-        return fetch_api_info(space, timeout=self.endpoint_timeout)
+        return self.endpoint_client.fetch_api_info(space)
 
     def fetch_space_sources(
         self,
@@ -1229,6 +1336,50 @@ class HarpModelAgent:
                 manifests[name] = text[:max_chars]
         return manifests
 
+    def pypi_requires_dist(self, name: str, version: str) -> Optional[List[str]]:
+        """Best-effort declared dependencies of ``name==version`` from PyPI.
+
+        Returns the ``requires_dist`` list (e.g. ``['librosa (<=0.10)', ...]``)
+        or None when the metadata can't be fetched. Used to detect recipe pins
+        that violate a sibling package's declared constraints before deploy.
+        """
+
+        info = self._pypi_json(f"{quote(name)}/{quote(version)}")
+        if info is None:
+            return None
+        return list((info.get("info") or {}).get("requires_dist") or [])
+
+    def pypi_available_versions(self, name: str) -> List[str]:
+        """Best-effort list of all released versions of ``name`` on PyPI."""
+
+        info = self._pypi_json(quote(name))
+        if info is None:
+            return []
+        return list((info.get("releases") or {}).keys())
+
+    def _pypi_json(self, path: str) -> Optional[JSON]:
+        if path in _PYPI_CACHE:
+            return _PYPI_CACHE[path]
+        # Once the network is clearly unreachable, stop retrying (each miss would
+        # otherwise cost a full timeout) -- the dep check is best-effort anyway.
+        if _PYPI_STATE.get("unreachable"):
+            return None
+        result: Optional[JSON] = None
+        try:
+            req = Request(
+                f"https://pypi.org/pypi/{path}/json",
+                headers={"User-Agent": "harp-model-agent"},
+            )
+            with urlopen(req, timeout=10) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except HTTPError:
+            result = None  # a real 404 (no such package/version) -- cache the miss
+        except (URLError, TimeoutError, socket.timeout, OSError, ValueError):
+            _PYPI_STATE["unreachable"] = True
+            return None
+        _PYPI_CACHE[path] = result
+        return result
+
 
 def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -1241,11 +1392,6 @@ _write_json = write_json
 def _tail(text: str, limit: int = 500) -> str:
     text = text.strip()
     return text if len(text) <= limit else "..." + text[-limit:]
-
-
-def _model_meta(card: Mapping[str, Any]) -> Mapping[str, Any]:
-    meta = card.get("meta")
-    return meta if isinstance(meta, Mapping) else card
 
 
 def _slug(value: str) -> str:
@@ -1329,6 +1475,11 @@ def _local_import_modules(source: str) -> List[str]:
 # Root dependency manifests fetched to ground recipe generation on the repo's
 # REAL declared dependency versions/bounds instead of the LLM's guesses.
 _DEP_MANIFEST_FILES = ("requirements.txt", "setup.py", "pyproject.toml", "setup.cfg")
+
+# Best-effort PyPI metadata cache for the pre-deploy dependency conflict check.
+# ``_PYPI_STATE['unreachable']`` short-circuits repeated lookups when offline.
+_PYPI_CACHE: Dict[str, Any] = {}
+_PYPI_STATE: Dict[str, Any] = {}
 
 _GITHUB_ENTRY_BASENAMES = (
     "app.py",
@@ -1875,3 +2026,5 @@ def _normalize_space_repo_id(value: str) -> str:
     if repo_id.startswith("spaces/"):
         repo_id = repo_id.removeprefix("spaces/")
     return repo_id
+
+

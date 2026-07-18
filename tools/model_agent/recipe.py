@@ -1056,6 +1056,12 @@ def _render_dual_backend_worker(recipe: Mapping[str, Any]) -> str:
     worker = dual.get("worker") or {}
     imports = str(worker.get("imports") or "").strip()
     body = _indent(str(worker.get("body")).strip() or "outputs = {}")
+    expected_outputs = [str(spec["name"]) for spec in recipe["outputs"]]
+    required_media_outputs = [
+        str(spec["name"])
+        for spec in recipe["outputs"]
+        if str(spec.get("type")) in _MEDIA_TYPES
+    ]
 
     parts = [
         "#!/usr/bin/env python3",
@@ -1072,6 +1078,9 @@ def _render_dual_backend_worker(recipe: Mapping[str, Any]) -> str:
         "import json",
         "import sys",
         "import traceback",
+        "",
+        f"_EXPECTED_OUTPUTS = {json.dumps(expected_outputs)}",
+        f"_REQUIRED_MEDIA_OUTPUTS = {json.dumps(required_media_outputs)}",
     ]
     if imports:
         parts += ["", imports]
@@ -1080,6 +1089,30 @@ def _render_dual_backend_worker(recipe: Mapping[str, Any]) -> str:
         "",
         "def _run(inputs):",
         body,
+        "    return outputs",
+        "",
+        "",
+        "def _validate_outputs(outputs):",
+        "    if not isinstance(outputs, dict):",
+        "        raise RuntimeError(",
+        '            "framework.dual.worker.body must set outputs to a dict; "',
+        '            f"got {type(outputs).__name__}"',
+        "        )",
+        "    missing = [name for name in _EXPECTED_OUTPUTS if name not in outputs]",
+        "    empty_media = [name for name in _REQUIRED_MEDIA_OUTPUTS if not outputs.get(name)]",
+        "    if missing or empty_media:",
+        "        details = []",
+        "        if missing:",
+        '            details.append("missing output key(s): " + ", ".join(missing))',
+        "        if empty_media:",
+        '            details.append("empty media output(s): " + ", ".join(empty_media))',
+        "        returned = sorted(str(key) for key in outputs.keys())",
+        "        raise RuntimeError(",
+        '            "Invalid backend outputs: "',
+        '            + "; ".join(details)',
+        '            + f". Expected keys: {_EXPECTED_OUTPUTS}; returned keys: {returned}. "',
+        '            + "Ensure framework.dual.worker.body sets outputs with every recipe output name."',
+        "        )",
         "    return outputs",
         "",
         "",
@@ -1093,6 +1126,7 @@ def _render_dual_backend_worker(recipe: Mapping[str, Any]) -> str:
         "    try:",
         "        with contextlib.redirect_stdout(sys.stderr):",
         "            outputs = _run(inputs)",
+        "            outputs = _validate_outputs(outputs)",
         '        payload = {"ok": True, "outputs": outputs}',
         "    except Exception:",
         '        payload = {"ok": False, "error": traceback.format_exc()[-3000:]}',
@@ -1765,13 +1799,6 @@ _GRADIO_TO_RECIPE_OUTPUT = {
     "JSON": "labels",
 }
 
-_STUB_SETUP = "# TODO: import the model package and load the model here."
-_STUB_BODY = (
-    "# TODO: run inference on the inputs above and return the outputs in order.\n"
-    'raise NotImplementedError("Fill in the inference body for this recipe.")'
-)
-
-
 def _identifier(label: Any, fallback: str, used: set) -> str:
     base = re.sub(r"[^0-9A-Za-z]+", "_", str(label or "")).strip("_").lower()
     if not _IDENTIFIER_RE.match(base):
@@ -1783,120 +1810,6 @@ def _identifier(label: Any, fallback: str, used: set) -> str:
         counter += 1
     used.add(name)
     return name
-
-
-def recipe_skeleton_from_analysis(record: Mapping[str, Any], *, model_id: str = "") -> JSON:
-    """Build a recipe *skeleton* from a (recipe-eligible) ``analyze`` record.
-
-    Input/output components are filled in from the statically-resolved shapes;
-    the parts that cannot be derived from a wrapper's surface (the model's
-    dependencies and the inference glue, plus dropdown choices and slider
-    ranges) are left as clearly-marked TODO placeholders. The result is itself a
-    valid recipe that renders to a stub wrapper which raises ``NotImplementedError``.
-    """
-
-    used_names: set = set()
-    todos: List[str] = []
-
-    inputs: List[JSON] = []
-    for index, detail in enumerate(record.get("input_details", [])):
-        gradio_type = str(detail.get("type"))
-        recipe_type = _GRADIO_TO_RECIPE_INPUT.get(gradio_type)
-        if recipe_type is None:
-            raise RecipeError(
-                f"input component type '{gradio_type}' has no recipe mapping"
-            )
-        label = detail.get("label")
-        spec: JSON = {
-            "name": _identifier(label, f"input_{index}", used_names),
-            "type": recipe_type,
-            "label": str(label) if label else recipe_type.title(),
-        }
-        if detail.get("harp_required"):
-            spec["required"] = True
-        if detail.get("info"):
-            spec["info"] = str(detail["info"])
-        if recipe_type == "dropdown":
-            choices = detail.get("choices")
-            if isinstance(choices, list) and choices:
-                spec["choices"] = list(choices)
-                if detail.get("default") is not None:
-                    spec["default"] = detail["default"]
-            else:
-                spec["choices"] = ["TODO_option_1", "TODO_option_2"]
-                todos.append(f"inputs.{spec['name']}.choices: set the real dropdown options")
-        if recipe_type == "slider":
-            has_range = detail.get("min") is not None and detail.get("max") is not None
-            spec["min"] = detail["min"] if detail.get("min") is not None else 0.0
-            spec["max"] = detail["max"] if detail.get("max") is not None else 1.0
-            if detail.get("step") is not None:
-                spec["step"] = detail["step"]
-            elif not has_range:
-                spec["step"] = 0.1
-            if detail.get("default") is not None:
-                spec["default"] = detail["default"]
-            if not has_range:
-                todos.append(f"inputs.{spec['name']}: set the real slider min/max/step/default")
-        if recipe_type in {"textbox", "number", "checkbox"} and detail.get("default") is not None:
-            spec["default"] = detail["default"]
-        if recipe_type == "file" and isinstance(detail.get("file_types"), list):
-            spec["file_types"] = list(detail["file_types"])
-        inputs.append(spec)
-
-    outputs: List[JSON] = []
-    for index, detail in enumerate(record.get("output_details", [])):
-        gradio_type = str(detail.get("type"))
-        recipe_type = _GRADIO_TO_RECIPE_OUTPUT.get(gradio_type)
-        if recipe_type is None:
-            raise RecipeError(
-                f"output component type '{gradio_type}' has no recipe mapping"
-            )
-        label = detail.get("label")
-        out_spec: JSON = {
-            "name": _identifier(label, f"output_{index}", used_names),
-            "type": recipe_type,
-            "label": str(label) if label else recipe_type.title(),
-        }
-        if detail.get("info"):
-            out_spec["info"] = str(detail["info"])
-        if recipe_type == "file" and isinstance(detail.get("file_types"), list):
-            out_spec["file_types"] = list(detail["file_types"])
-        outputs.append(out_spec)
-
-    identifier = model_id or "TODO-author/TODO-model"
-    parts = identifier.split("/")
-    author = parts[0] if len(parts) == 2 else "TODO-author"
-    display_name = parts[-1].replace("-", " ").replace("_", " ").title()
-
-    todos.extend(
-        [
-            "model.description: describe what the model does",
-            "model.tags: add Hugging Face/HARP tags",
-            "framework.import / framework.pip: set the real package(s)",
-            "inference.setup / inference.body: fill in model loading and inference",
-        ]
-    )
-
-    return {
-        "_source": str(record.get("path") or ""),
-        "_todo": todos,
-        "model": {
-            "id": identifier,
-            "name": display_name,
-            "description": "TODO: describe this model.",
-            "author": author,
-            "tags": [],
-        },
-        "framework": {
-            "import": "TODO_package",
-            "pip": ["TODO-package"],
-            "apt": [],
-            "gpu": bool(record.get("uses_spaces_gpu")),
-        },
-        "inputs": inputs,
-        "outputs": outputs,
-        "inference": {"setup": _STUB_SETUP, "body": _STUB_BODY},
-    }
 
 
 def _remote_param_name(param: Mapping[str, Any], index: int, used: set) -> str:

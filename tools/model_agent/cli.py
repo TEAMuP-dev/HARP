@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-
 import json
 import sys
 from pathlib import Path
@@ -12,7 +11,6 @@ from .agent import (
     HARP_GRADIO_VERSION,
     DeploySpaceError,
     EndpointProbeError,
-    resolve_canonical_path,
     lint_generated_app,
     HarpModelAgent,
     SmokeTestResult,
@@ -26,7 +24,6 @@ from .knowledge import (
     match_repair_rules,
 )
 from .orchestrator import (
-    DeployPlan,
     RefTarget,
     build_steps,
     decide_plan,
@@ -47,15 +44,15 @@ from .llm import (
 from .recipe import (
     RecipeError,
     _slug,
+    apply_dependency_fixes,
     build_package_from_recipe,
+    collect_pip_requirements,
+    find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
     remote_recipe_from_api_info,
     render_app_from_recipe,
 )
-
-
-
 
 
 def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
@@ -70,7 +67,7 @@ def _add_venv_flag(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="model-agent",
-        description="Discover, generate, test, and deploy HARP-compatible model recipes.",
+        description="Discover, probe, and package HARP-compatible open-source models.",
     )
     parser.add_argument("--timeout", type=float, default=120.0, help="Network timeout in seconds.")
 
@@ -87,7 +84,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Keep candidates that are not obviously open-source Gradio Spaces.",
     )
-
 
     scaffold_remote = subparsers.add_parser(
         "scaffold-remote-recipe",
@@ -152,6 +148,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Render a plain-Gradio BACKEND Space (no pyharp) exposing /predict, for the "
         "two-Space workflow. Forces framework.backend on the recipe before rendering.",
+    )
+    generate_recipe.add_argument(
+        "--no-fix-deps",
+        action="store_true",
+        help="Do NOT auto-repair pins that violate a sibling package's declared "
+        "constraints (checked against PyPI metadata before build). Conflicts are "
+        "still reported.",
     )
     _add_venv_flag(generate_recipe)
 
@@ -283,6 +286,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Build the package and smoke-test it (implies --generate-package; runs downloaded code).",
     )
+    llm_recipe.add_argument(
+        "--no-fix-deps",
+        action="store_true",
+        help="Do NOT auto-repair pins that violate a sibling package's declared "
+        "constraints (checked against PyPI metadata). Conflicts are still reported.",
+    )
     _add_venv_flag(llm_recipe)
 
     list_models = subparsers.add_parser(
@@ -300,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
         "complete-recipe",
         help="Use an LLM to fill the _todo stubs of a scaffolded recipe (preserves I/O).",
     )
-    complete.add_argument("recipe", type=Path, help="Recipe JSON with LLM-fillable _todo stubs.")
+    complete.add_argument("recipe", type=Path, help="Scaffolded recipe JSON (from scaffold-recipe).")
     complete.add_argument(
         "--card", type=Path, help="Optional model-card JSON to enrich the prompt with the README."
     )
@@ -411,7 +420,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not record this deployment in the knowledge base on success.",
     )
 
-
     recommend = subparsers.add_parser(
         "recommend-mode",
         help="Analyze a repo and recommend a deployment mode (single / remote / "
@@ -429,8 +437,6 @@ def build_parser() -> argparse.ArgumentParser:
         "remote fallback). Pass the Space you'd proxy to.",
     )
     recommend.add_argument("--output", type=Path, help="Optional JSON output path.")
-
-
 
     knowledge = subparsers.add_parser(
         "knowledge",
@@ -528,7 +534,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = build_parser().parse_args(list(argv) if argv is not None else None)
     agent = HarpModelAgent()
     agent.scraper.timeout = args.timeout
-    agent.endpoint_timeout = args.timeout
+    agent.endpoint_client.timeout = args.timeout
 
     try:
         if args.command == "discover":
@@ -588,6 +594,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                     recipe["framework"] = framework
                 framework["backend"] = True
             _warn_recipe_requirements(recipe)
+            if not getattr(args, "no_fix_deps", False):
+                _resolve_dependency_conflicts(recipe, agent, fix=True)
             package = build_package_from_recipe(recipe)
             _warn_app_lint(package.app_py)
             folder = agent.write_generated_app_package(package, args.output)
@@ -650,9 +658,10 @@ def main(argv: Iterable[str] | None = None) -> int:
                     file=sys.stderr,
                 )
                 api_info = agent.fetch_api_info(args.remote_space)
-                canonical = resolve_canonical_path(
-                    args.remote_space, timeout=agent.endpoint_timeout
-                ) or args.remote_space
+                canonical = (
+                    agent.endpoint_client.resolve_canonical_path(args.remote_space)
+                    or args.remote_space
+                )
                 # If the user didn't pin --remote-api-name and the Space exposes
                 # several endpoints, choose one instead of erroring: the LLM picks
                 # (with --remote-llm), otherwise a deterministic heuristic does.
@@ -863,8 +872,6 @@ def main(argv: Iterable[str] | None = None) -> int:
             )
             return _emit_recipe_draft(agent, draft, args)
 
-
-
         if args.command == "smoke-test":
             result = _run_smoke_test(
                 agent,
@@ -923,8 +930,6 @@ def main(argv: Iterable[str] | None = None) -> int:
             _emit_json(decision, args.output)
             return 0
 
-
-
         if args.command == "knowledge":
             _emit_json(_knowledge_query(args), args.output)
             return 0
@@ -947,9 +952,6 @@ def main(argv: Iterable[str] | None = None) -> int:
     except ValueError as exc:
         print(f"Packaging failed: {exc}", file=sys.stderr)
         return 2
-    except NotImplementedError as exc:
-        print(f"Template generation failed: {exc}", file=sys.stderr)
-        return 3
     except (HTTPError, URLError, OSError) as exc:
         print(f"Network request failed: {exc}", file=sys.stderr)
         return 2
@@ -988,6 +990,53 @@ def _warn_recipe_requirements(recipe: dict) -> None:
 
     for warning in lint_recipe_requirements(recipe):
         print(f"  [deps] WARNING: {warning}", file=sys.stderr)
+
+
+def _resolve_dependency_conflicts(recipe: dict, agent: HarpModelAgent, *, fix: bool = True) -> None:
+    """Detect (and by default auto-repair) pins that violate a sibling package's
+    declared constraints, using PyPI metadata. Best-effort: silently no-ops when
+    offline. This is what turns 'librosa==0.10.1 vs ddsp needs librosa<=0.10'
+    into an up-front, auto-fixed problem instead of a failed 10-minute build.
+    """
+
+    requirements = collect_pip_requirements(recipe)
+    if not requirements:
+        return
+    try:
+        conflicts = find_dependency_conflicts(
+            requirements,
+            requires_dist_of=agent.pypi_requires_dist,
+            available_versions=agent.pypi_available_versions,
+        )
+    except Exception:
+        return
+
+    fixes: dict = {}
+    for conflict in conflicts:
+        sources = "; ".join(
+            f"{src} requires {conflict['package']}{spec}"
+            for src, spec in conflict["violations"]
+        )
+        message = (
+            f"{conflict['package']}=={conflict['pinned']} conflicts with declared "
+            f"constraints ({sources})."
+        )
+        if conflict["suggestion"]:
+            message += f" Newest compatible version: {conflict['package']}=={conflict['suggestion']}."
+            if fix:
+                fixes[conflict["package"]] = conflict["suggestion"]
+        else:
+            message += f" Pin a version satisfying: {conflict['combined']}."
+        print(f"  [deps] CONFLICT: {message}", file=sys.stderr)
+
+    if fix and fixes:
+        apply_dependency_fixes(recipe, fixes)
+        applied = ", ".join(f"{name}=={version}" for name, version in fixes.items())
+        print(
+            f"  [deps] auto-repaired conflicting pins: {applied} "
+            "(the package built here is fixed; the source recipe file is unchanged)",
+            file=sys.stderr,
+        )
 
 
 def _recommend_mode(agent: HarpModelAgent, args) -> dict:
@@ -1143,6 +1192,12 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
                 backend_space = found
                 print(f"  Discovered a runnable backend Space: {found}", file=sys.stderr)
 
+    recipe_path = args.recipe_output or (
+        Path("artifacts/model_agent/recipes") / f"{_slug(target.name)}.json"
+    )
+    package_parent = args.package_output
+
+    if target.kind != "hf_space":
         decision = recommend_mode(
             manifests=manifests,
             sources=sources,
@@ -1159,10 +1214,6 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
         prefer_existing_space=not args.no_discover_space,
     )
 
-    recipe_path = args.recipe_output or (
-        Path("artifacts/model_agent/recipes") / f"{_slug(target.name)}.json"
-    )
-    package_parent = args.package_output
     predicted_slug = (
         _slug(plan.backend_space)
         if plan.mode == "remote" and plan.backend_space
@@ -1261,9 +1312,6 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
         file=sys.stderr,
     )
     return 0
-
-
-
 
 
 def _knowledge_query(args) -> dict:
@@ -1582,6 +1630,8 @@ def _emit_recipe_draft(agent: HarpModelAgent, draft, args) -> int:
     """Shared output for the LLM recipe commands: write/print + optional package."""
 
     _warn_recipe_requirements(draft.recipe)
+    if not getattr(args, "no_fix_deps", False):
+        _resolve_dependency_conflicts(draft.recipe, agent, fix=True)
     _warn_app_lint(draft.app_py)
 
 
