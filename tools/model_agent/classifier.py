@@ -57,9 +57,11 @@ PYHARP_SHARED_PINS: Dict[str, Dict[str, Any]] = {
 
 # The dual-interpreter Dockerfile builds its backend interpreter from Debian
 # (python:3.10-slim-bullseye + apt pythonX.Y). Bullseye reliably provides only
-# up to ~3.10, so treat >3.11 as out of reach for dual (this is why Woosh, which
-# needs 3.12, becomes a two-space deploy).
-DUAL_PYTHON_CEILING: Tuple[int, int] = (3, 11)
+# up to 3.10 (3.10 comes from the base image, 3.9 from apt; python3.11+ is not
+# packaged), so treat >3.10 as out of reach for dual -- otherwise the build dies
+# with "Unable to locate package python3.11". Models needing >=3.11 (Woosh,
+# ACE-Step) become a two-space deploy instead.
+DUAL_PYTHON_CEILING: Tuple[int, int] = (3, 10)
 DUAL_PYTHON_FLOOR: Tuple[int, int] = (3, 7)
 TARGET_PYTHON: Tuple[int, int] = (3, 10)
 
@@ -273,6 +275,13 @@ def analyze_signals(
             # Only a requirements.txt was found (no setup.py/pyproject): fall back
             # to the file-list heuristic rather than declaring it uninstallable.
             pip_installable = _card_is_pip_installable(card)
+    elif not pip_installable:
+        # A bare HF *model* ref (no GitHub manifests) with no root packaging file
+        # is still single-Space deployable when its card declares a PyPI framework
+        # that loads models by hub id: the wrapper `pip install`s the framework and
+        # loads the weights by id, so `git+<repo>` (which needs a setup.py) is
+        # never used. This is the SpeechBrain / transformers / diffusers path.
+        pip_installable = _card_framework_installable(card)
 
     requires_python = _parse_requires_python(manifests)
     floor = _python_floor(requires_python, manifests)
@@ -325,6 +334,50 @@ def _card_is_pip_installable(card: Optional[Mapping[str, Any]]) -> bool:
             continue
         if path.lower() in _PACKAGING_MARKERS:
             return True
+    return False
+
+
+# Frameworks published on PyPI that load their weights directly by Hugging Face
+# hub id, so a *model* repo needs no root packaging file to be single-Space
+# deployable: the wrapper `pip install`s the framework and loads the model by id
+# (e.g. `speechbrain.inference.*.from_hparams("owner/name")`,
+# `transformers.pipeline(model="owner/name")`). Matched against the card's
+# declared `library_name` or its tags.
+_HUB_LOADABLE_FRAMEWORKS = frozenset(
+    {
+        "speechbrain",
+        "transformers",
+        "diffusers",
+        "sentence-transformers",
+        "sentence_transformers",
+        "timm",
+        "asteroid",
+        "open_clip",
+        "open-clip",
+        "open_clip_torch",
+        "setfit",
+    }
+)
+
+
+def _card_framework_installable(card: Optional[Mapping[str, Any]]) -> bool:
+    """True when the card declares a PyPI framework that loads models by hub id.
+
+    Such models are single-Space deployable even without a root packaging file:
+    the wrapper installs the framework from PyPI and loads the weights by their
+    Hugging Face id, so ``git+<repo>`` (which needs a setup.py) is never used.
+    """
+
+    if not isinstance(card, Mapping):
+        return False
+    meta = card.get("meta") if isinstance(card.get("meta"), Mapping) else card
+    if not isinstance(meta, Mapping):
+        return False
+    if str(meta.get("library_name") or "").strip().lower() in _HUB_LOADABLE_FRAMEWORKS:
+        return True
+    tags = meta.get("tags")
+    if isinstance(tags, (list, tuple)):
+        return any(str(tag).strip().lower() in _HUB_LOADABLE_FRAMEWORKS for tag in tags)
     return False
 
 

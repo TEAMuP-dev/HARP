@@ -501,6 +501,35 @@ class HarpEndpointClient:
                 raise EndpointProbeError(f"{model_path} controls are missing '{key}'")
         return controls
 
+    def fetch_config(self, model_path: str) -> JSON:
+        """Fetch a Space's live Gradio config (its component tree + dependencies).
+
+        Reads ``/gradio_api/config`` (modern) or ``/config`` (legacy). Unlike
+        ``/info``, the config carries each component's real props -- dropdown
+        ``choices`` and slider ``minimum/maximum/step`` -- which the remote
+        scaffold uses to build a faithful proxy UI. Returns ``{}`` when the config
+        can't be parsed; raises :class:`EndpointProbeError` when it can't be
+        reached at all.
+        """
+
+        endpoint = self.infer_endpoint_url(model_path).rstrip("/")
+        last_error: Optional[EndpointProbeError] = None
+        for config_path in ("gradio_api/config", "config"):
+            try:
+                text = self._get_text(f"{endpoint}/{config_path}")
+            except EndpointProbeError as exc:
+                last_error = exc
+                continue
+            try:
+                config = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(config, dict):
+                return config
+        if last_error is not None:
+            raise last_error
+        return {}
+
     def fetch_api_info(self, model_path: str) -> JSON:
         """Fetch a Space's Gradio API schema (its named/unnamed endpoints).
 
@@ -1117,14 +1146,36 @@ class HarpModelAgent:
 
         # Imported lazily: recipe.py imports from this module, so a top-level
         # import here would be circular.
-        from .recipe import guess_primary_endpoint, remote_recipe_from_api_info
+        from .recipe import (
+            component_props_for_endpoint,
+            guess_primary_endpoint,
+            remote_recipe_from_api_info,
+        )
 
         api_info = self.fetch_api_info(space)
         canonical = self.endpoint_client.resolve_canonical_path(space) or space
         if not api_name and auto_endpoint:
             api_name = guess_primary_endpoint(api_info)
+
+        # Best-effort: the live config exposes real dropdown choices / slider
+        # bounds that /info omits, so the proxy mirrors the backend UI faithfully.
+        # A missing/unparseable config just falls back to placeholder inputs.
+        component_props = None
+        fetch_config = getattr(self.endpoint_client, "fetch_config", None)
+        if callable(fetch_config):
+            try:
+                config = fetch_config(space)
+                resolved = api_name or guess_primary_endpoint(api_info)
+                component_props = component_props_for_endpoint(config, resolved)
+            except Exception:  # noqa: BLE001 - config enrichment is best-effort
+                component_props = None
+
         return remote_recipe_from_api_info(
-            canonical, api_info, api_name=api_name, user_token=user_token
+            canonical,
+            api_info,
+            api_name=api_name,
+            user_token=user_token,
+            component_props=component_props,
         )
 
     def fetch_api_info(self, space: str) -> JSON:

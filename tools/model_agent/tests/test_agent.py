@@ -55,6 +55,7 @@ from tools.model_agent.recipe import (
     apply_dependency_fixes,
     build_package_from_recipe,
     collect_pip_requirements,
+    component_props_for_endpoint,
     find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
@@ -1237,6 +1238,69 @@ class RemoteScaffoldTest(unittest.TestCase):
         self.assertEqual(recipe["outputs"][0]["type"], "audio")
         self.assertEqual(remote["returns"], [{"index": 0, "to": "output"}])
 
+    def test_scaffolded_dropdown_and_slider_defaults_stay_in_range(self):
+        # DiffRhythm2 regression: /info gives a dropdown's default ("mp3") but not
+        # its choices, and sliders' defaults (16, 1.3) but not their ranges. The
+        # scaffold must still render a valid app -- a default outside choices /
+        # slider range makes Gradio raise at launch.
+        info = {
+            "named_endpoints": {
+                "/infer": {
+                    "parameters": [
+                        {
+                            "label": "Output Format",
+                            "parameter_name": "file_type",
+                            "component": "Dropdown",
+                            "parameter_default": "mp3",
+                        },
+                        {
+                            "label": "Diffusion Steps",
+                            "parameter_name": "steps",
+                            "component": "Slider",
+                            "parameter_default": 16,
+                        },
+                        {
+                            "label": "CFG Strength",
+                            "parameter_name": "cfg_strength",
+                            "component": "Slider",
+                            "parameter_default": 1.3,
+                        },
+                    ],
+                    "returns": [{"label": "Audio", "component": "Audio"}],
+                }
+            },
+            "unnamed_endpoints": {},
+        }
+        recipe = remote_recipe_from_api_info("owner/backend", info)
+        validate_recipe(recipe)
+        compile(render_app_from_recipe(recipe), "<scaffold>", "exec")
+
+        by_name = {spec["name"]: spec for spec in recipe["inputs"]}
+        dropdown = by_name["file_type"]
+        self.assertIn(dropdown["default"], dropdown["choices"])
+        for slider_name in ("steps", "cfg_strength"):
+            slider = by_name[slider_name]
+            self.assertLessEqual(slider["min"], slider["default"])
+            self.assertLessEqual(slider["default"], slider["max"])
+
+    def test_renderer_recovers_dropdown_default_missing_from_choices(self):
+        # Even a hand-written / LLM recipe whose dropdown default isn't among the
+        # choices must render (the default is surfaced as a selectable choice).
+        recipe = remote_recipe_from_api_info("owner/backend", self.API_INFO)
+        recipe["inputs"].append(
+            {
+                "name": "fmt",
+                "type": "dropdown",
+                "label": "Format",
+                "choices": ["a", "b"],
+                "default": "mp3",
+            }
+        )
+        recipe["framework"]["remote"]["args"].append({"const": "mp3"})
+        app = render_app_from_recipe(recipe)
+        compile(app, "<recover>", "exec")
+        self.assertIn('gr.Dropdown(choices=["mp3", "a", "b"], value="mp3"', app)
+
     def test_default_scaffold_has_no_user_token_field(self):
         app = render_app_from_recipe(remote_recipe_from_api_info("owner/backend", self.API_INFO))
         self.assertNotIn('type="password"', app)
@@ -1303,6 +1367,90 @@ class RemoteScaffoldTest(unittest.TestCase):
         agent = HarpModelAgent(endpoint_client=_FakeEndpoint())
         recipe = agent.scaffold_remote_recipe("owner/backend")
         validate_recipe(recipe)
+
+    # --- live-config enrichment (DiffRhythm2: real choices + slider bounds) ---
+
+    CONFIG_INFO = {
+        "named_endpoints": {
+            "/infer": {
+                "parameters": [
+                    {
+                        "label": "Output Format",
+                        "parameter_name": "file_type",
+                        "component": "Dropdown",
+                        "parameter_default": "mp3",
+                    },
+                    {
+                        "label": "Diffusion Steps",
+                        "parameter_name": "steps",
+                        "component": "Slider",
+                        "parameter_default": 16,
+                    },
+                ],
+                "returns": [{"label": "Audio", "component": "Audio"}],
+            }
+        },
+        "unnamed_endpoints": {},
+    }
+
+    CONFIG = {
+        "components": [
+            {"id": 7, "type": "dropdown", "props": {"choices": [["MP3", "mp3"], ["WAV", "wav"]], "value": "mp3"}},
+            {"id": 8, "type": "slider", "props": {"minimum": 1, "maximum": 100, "step": 1, "value": 16}},
+        ],
+        "dependencies": [
+            {"api_name": "infer", "inputs": [7, 8], "outputs": [9]},
+        ],
+    }
+
+    def test_component_props_for_endpoint_maps_inputs_in_order(self):
+        props = component_props_for_endpoint(self.CONFIG, "/infer")
+        self.assertEqual(len(props), 2)
+        self.assertEqual(props[0]["choices"], [["MP3", "mp3"], ["WAV", "wav"]])
+        self.assertEqual(props[1]["maximum"], 100)
+
+    def test_component_props_for_endpoint_returns_none_when_unmatched(self):
+        self.assertIsNone(component_props_for_endpoint(self.CONFIG, "/nope"))
+        self.assertIsNone(component_props_for_endpoint({}, "/infer"))
+
+    def test_scaffold_uses_real_choices_and_slider_bounds_from_config(self):
+        props = component_props_for_endpoint(self.CONFIG, "/infer")
+        recipe = remote_recipe_from_api_info(
+            "owner/backend", self.CONFIG_INFO, component_props=props
+        )
+        validate_recipe(recipe)
+        compile(render_app_from_recipe(recipe), "<config>", "exec")
+
+        by_name = {spec["name"]: spec for spec in recipe["inputs"]}
+        # Real option values (unwrapped from [label, value] pairs), default kept.
+        self.assertEqual(by_name["file_type"]["choices"], ["mp3", "wav"])
+        self.assertEqual(by_name["file_type"]["default"], "mp3")
+        # Real slider bounds, not the guessed placeholder range.
+        self.assertEqual(by_name["steps"]["min"], 1)
+        self.assertEqual(by_name["steps"]["max"], 100)
+        self.assertEqual(by_name["steps"]["default"], 16)
+        # A resolved control no longer needs a _todo.
+        todo = " ".join(recipe.get("_todo", []))
+        self.assertNotIn("file_type", todo)
+        self.assertNotIn("steps:", todo)
+
+    def test_agent_scaffold_enriches_from_config(self):
+        class _FakeEndpoint:
+            def fetch_api_info(self, space):
+                return RemoteScaffoldTest.CONFIG_INFO
+
+            def fetch_config(self, space):
+                return RemoteScaffoldTest.CONFIG
+
+            def resolve_canonical_path(self, space):
+                return "owner/backend"
+
+        agent = HarpModelAgent(endpoint_client=_FakeEndpoint())
+        recipe = agent.scaffold_remote_recipe("owner/backend", auto_endpoint=True)
+        validate_recipe(recipe)
+        by_name = {spec["name"]: spec for spec in recipe["inputs"]}
+        self.assertEqual(by_name["file_type"]["choices"], ["mp3", "wav"])
+        self.assertEqual(by_name["steps"]["max"], 100)
 
 
 class RefineRemoteRecipeTest(unittest.TestCase):
@@ -2789,8 +2937,48 @@ class ClassifierSignalTest(unittest.TestCase):
         )
         self.assertFalse(signals.cuda_hardcoded)
 
+    def test_framework_hub_loadable_card_is_pip_installable(self):
+        # A bare HF *model* ref (no github manifests) whose card declares a PyPI
+        # framework that loads by hub id is single-Space deployable even without a
+        # root setup.py (Tacotron2 / SpeechBrain regression).
+        card = {
+            "meta": {"library_name": "speechbrain", "tags": ["text-to-speech", "speechbrain"]},
+            "files": ["hyperparams.yaml", "model.ckpt"],
+        }
+        signals = analyze_signals(card=card)
+        self.assertTrue(signals.pip_installable)
+
+    def test_framework_detected_from_tags_when_library_name_absent(self):
+        card = {"meta": {"tags": ["automatic-speech-recognition", "transformers"]}, "files": ["config.json"]}
+        signals = analyze_signals(card=card)
+        self.assertTrue(signals.pip_installable)
+
+    def test_weights_only_card_without_framework_is_not_pip_installable(self):
+        # No packaging file and no recognized framework -> still not installable.
+        card = {"meta": {"tags": ["audio"]}, "files": ["model.ckpt", "config.yaml"]}
+        signals = analyze_signals(card=card)
+        self.assertFalse(signals.pip_installable)
+
 
 class ClassifierDecisionTest(unittest.TestCase):
+    def test_framework_hub_loadable_hf_model_is_single(self):
+        # `deploy speechbrain/tts-tacotron2-ljspeech` must route to a one-command
+        # single Space, not two-space (post-refactor SpeechBrain path).
+        decision = recommend_mode(
+            card={
+                "meta": {"library_name": "speechbrain", "tags": ["text-to-speech"]},
+                "files": ["hyperparams.yaml", "model.ckpt"],
+            }
+        )
+        self.assertEqual(decision.mode, "single")
+
+    def test_weights_only_hf_model_without_framework_is_two_space(self):
+        decision = recommend_mode(
+            card={"meta": {"tags": ["audio"]}, "files": ["model.ckpt"]}
+        )
+        self.assertEqual(decision.mode, "two-space")
+
+
     def test_no_blockers_is_single(self):
         decision = recommend_mode(manifests={"setup.py": "install_requires=['numpy']"})
         self.assertEqual(decision.mode, "single")
@@ -2837,6 +3025,26 @@ class ClassifierDecisionTest(unittest.TestCase):
             manifests={"pyproject.toml": "requires-python = '>=3.12'\ndependencies=['gradio>=6.9.0']"}
         )
         self.assertEqual(decision.mode, "two-space")
+
+    def test_python_311_is_two_space_not_dual(self):
+        # ACE-Step github regression: the dual base image (bullseye) can't apt-get
+        # python3.11, so >=3.11 must route to two-space rather than a dual build
+        # that dies with "Unable to locate package python3.11".
+        decision = recommend_mode(
+            manifests={
+                "pyproject.toml": "requires-python = '>=3.11,<3.13'\ndependencies=['gradio==6.2.0']"
+            }
+        )
+        self.assertEqual(decision.mode, "two-space")
+
+    def test_python_310_can_still_be_dual(self):
+        # 3.10 is the base image's own interpreter, so it stays dual-buildable.
+        decision = recommend_mode(
+            manifests={
+                "pyproject.toml": "requires-python = '>=3.10'\ndependencies=['gradio>=6.9.0']"
+            }
+        )
+        self.assertEqual(decision.mode, "dual")
 
     def test_native_fragile_without_space_is_dual(self):
         decision = recommend_mode(

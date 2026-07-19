@@ -57,7 +57,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from .agent import GeneratedAppPackage
 
@@ -368,18 +368,31 @@ def _component_code(spec: Mapping[str, Any], *, is_input: bool, pyharp: bool = T
         types = f", file_types={json.dumps([str(item) for item in file_types])}"
         code = f'gr.File(type="filepath", label={label}{types})'
     elif comp_type == "dropdown":
-        choices = json.dumps(list(spec.get("choices", [])))
+        choice_list = list(spec.get("choices", []))
         default = spec.get("default")
+        # A default that isn't among the choices makes Gradio raise at launch;
+        # keep the app renderable by surfacing it as a selectable choice.
+        if default is not None and default not in choice_list:
+            choice_list = [default, *choice_list]
+        choices = json.dumps(choice_list)
         value = f", value={json.dumps(default)}" if default is not None else ""
         code = f"gr.Dropdown(choices={choices}{value}, label={label}{info_kwarg})"
     elif comp_type == "slider":
-        minimum = json.dumps(spec.get("min"))
-        maximum = json.dumps(spec.get("max"))
+        lo = spec.get("min")
+        hi = spec.get("max")
+        default = spec.get("default")
+        # Widen the range to include an out-of-range default (older Gradio raises
+        # instead of clamping) so the control always renders.
+        if isinstance(default, (int, float)) and not isinstance(default, bool):
+            if isinstance(lo, (int, float)) and default < lo:
+                lo = default
+            if isinstance(hi, (int, float)) and default > hi:
+                hi = default
+        minimum = json.dumps(lo)
+        maximum = json.dumps(hi)
         step = f", step={json.dumps(spec.get('step'))}" if spec.get("step") is not None else ""
-        default = (
-            f", value={json.dumps(spec.get('default'))}" if spec.get("default") is not None else ""
-        )
-        code = f"gr.Slider(minimum={minimum}, maximum={maximum}{step}{default}, label={label}{info_kwarg})"
+        default_kwarg = f", value={json.dumps(default)}" if default is not None else ""
+        code = f"gr.Slider(minimum={minimum}, maximum={maximum}{step}{default_kwarg}, label={label}{info_kwarg})"
     elif comp_type == "textbox":
         default = (
             f", value={json.dumps(spec.get('default'))}" if spec.get("default") is not None else ""
@@ -1893,6 +1906,104 @@ def guess_primary_endpoint(api_info: Mapping[str, Any]) -> Optional[str]:
     return ranked[0][0] if ranked else None
 
 
+def _placeholder_slider_range(default: float) -> JSON:
+    """Guess slider min/max/step that safely bracket a known default.
+
+    Gradio's ``/info`` schema exposes a parameter's default but not its slider
+    bounds. A default that falls outside ``[min, max]`` is a launch-time error in
+    older Gradio, so we derive a range that always contains it (with head-room)
+    and let the user tighten it via the recipe's ``_todo`` note. Integer-valued
+    defaults get an integer step.
+    """
+
+    value = float(default)
+    low = min(0.0, value)
+    if value.is_integer():
+        high = max(value * 2, value + 10)
+        return {"min": low, "max": float(int(high)), "step": 1.0}
+    high = max(value * 2, value + 1.0)
+    return {"min": low, "max": high, "step": 0.1}
+
+
+def _config_choice_values(props: Any) -> List[Any]:
+    """Real dropdown/radio choice *values* from a Gradio config component.
+
+    Gradio stores choices as ``[[label, value], ...]`` (older builds use a flat
+    list); we return the callable values the backend expects.
+    """
+
+    if not isinstance(props, Mapping):
+        return []
+    choices = props.get("choices")
+    if not isinstance(choices, (list, tuple)):
+        return []
+    values: List[Any] = []
+    for choice in choices:
+        if isinstance(choice, (list, tuple)) and len(choice) == 2:
+            values.append(choice[1])
+        else:
+            values.append(choice)
+    return [value for value in values if value is not None]
+
+
+def _config_slider_range(props: Any) -> Optional[JSON]:
+    """Real slider min/max/step from a Gradio config component, if present."""
+
+    if not isinstance(props, Mapping):
+        return None
+    low = props.get("minimum")
+    high = props.get("maximum")
+    if not isinstance(low, (int, float)) or isinstance(low, bool):
+        return None
+    if not isinstance(high, (int, float)) or isinstance(high, bool):
+        return None
+    step = props.get("step")
+    if not isinstance(step, (int, float)) or isinstance(step, bool) or not step:
+        step = 1.0 if float(low).is_integer() and float(high).is_integer() else 0.1
+    return {"min": low, "max": high, "step": step}
+
+
+def component_props_for_endpoint(
+    config: Any, api_name: Optional[str]
+) -> Optional[List[Optional[JSON]]]:
+    """Map a Gradio config's components onto a named endpoint's input parameters.
+
+    Returns a list of ``props`` dicts aligned (by position) with the endpoint's
+    ``/info`` parameters, so the scaffold can read each input's *real* dropdown
+    choices / slider bounds (which ``/info`` omits). ``None`` when the config is
+    unusable or the endpoint can't be matched -- the caller then falls back to the
+    placeholder behavior.
+    """
+
+    if not isinstance(config, Mapping):
+        return None
+    components = config.get("components")
+    dependencies = config.get("dependencies")
+    if not isinstance(components, list) or not isinstance(dependencies, list):
+        return None
+    by_id = {
+        comp.get("id"): comp
+        for comp in components
+        if isinstance(comp, Mapping) and comp.get("id") is not None
+    }
+    want = (api_name or "").lstrip("/")
+    for dep in dependencies:
+        if not isinstance(dep, Mapping):
+            continue
+        if str(dep.get("api_name") or "").lstrip("/") != want:
+            continue
+        inputs = dep.get("inputs")
+        if not isinstance(inputs, list):
+            return None
+        props: List[Optional[JSON]] = []
+        for cid in inputs:
+            comp = by_id.get(cid)
+            comp_props = comp.get("props") if isinstance(comp, Mapping) else None
+            props.append(comp_props if isinstance(comp_props, Mapping) else None)
+        return props
+    return None
+
+
 def remote_recipe_from_api_info(
     space: str,
     api_info: Mapping[str, Any],
@@ -1900,6 +2011,7 @@ def remote_recipe_from_api_info(
     api_name: Optional[str] = None,
     model_name: str = "",
     user_token: bool = False,
+    component_props: Optional[Sequence[Optional[Mapping[str, Any]]]] = None,
 ) -> JSON:
     """Scaffold a remote-backend recipe from a Gradio ``/info`` API schema.
 
@@ -1907,8 +2019,13 @@ def remote_recipe_from_api_info(
     returns to HARP outputs, producing a ``framework.remote`` block whose ``args``
     line up with the backend's call signature. Parameters whose component type has
     no HARP equivalent are emitted as ``{"const": <default>}`` so the positional
-    signature stays aligned; the user reviews/trims these (and any slider ranges /
-    dropdown choices, which ``/info`` does not expose) before deploying.
+    signature stays aligned.
+
+    ``component_props`` (from the Space's live Gradio config, aligned by position
+    with the endpoint's parameters) supplies the real dropdown choices and slider
+    bounds that ``/info`` omits. When it isn't available the scaffold falls back to
+    safe placeholders (choices seeded with the known default, slider range guessed
+    to bracket the default) that the user tightens via the ``_todo`` notes.
     """
 
     named = api_info.get("named_endpoints") if isinstance(api_info, Mapping) else None
@@ -1968,18 +2085,54 @@ def remote_recipe_from_api_info(
         label = str(param.get("label") or name)
         spec: JSON = {"name": name, "type": recipe_type, "label": label}
 
+        props = (
+            component_props[index]
+            if component_props is not None and index < len(component_props)
+            else None
+        )
+
         if recipe_type == "dropdown":
-            spec["choices"] = ["TODO_option_1", "TODO_option_2"]
-            if default is not None:
+            real_choices = _config_choice_values(props)
+            if real_choices:
+                # The live config exposes the true option list.
+                spec["choices"] = real_choices
+                spec["default"] = default if default in real_choices else real_choices[0]
+            elif default is not None:
+                # /info gives only the default; seed choices with it so the app is
+                # valid (a default outside the choice list makes Gradio raise at
+                # launch). The user adds the rest via the _todo note.
+                spec["choices"] = [default]
                 spec["default"] = default
-            todos.append(f"inputs.{name}.choices: set the real dropdown options")
+                todos.append(
+                    f"inputs.{name}.choices: only the default is known; "
+                    "add the other real dropdown options"
+                )
+            else:
+                spec["choices"] = ["TODO_option_1"]
+                spec["default"] = "TODO_option_1"
+                todos.append(f"inputs.{name}.choices: set the real dropdown options")
         elif recipe_type == "slider":
-            spec["min"] = 0.0
-            spec["max"] = 1.0
-            spec["step"] = 0.1
-            if isinstance(default, (int, float)) and not isinstance(default, bool):
+            real_range = _config_slider_range(props)
+            if real_range:
+                # The live config exposes the true min/max/step.
+                spec.update(real_range)
+                if isinstance(default, (int, float)) and not isinstance(default, bool):
+                    spec["default"] = default
+            elif isinstance(default, (int, float)) and not isinstance(default, bool):
+                # /info gives only the default; guess a range that brackets it so
+                # the control renders (out-of-range is a launch-time error in
+                # older Gradio). User fixes it via the _todo.
+                spec.update(_placeholder_slider_range(default))
                 spec["default"] = default
-            todos.append(f"inputs.{name}: set the real slider min/max/step")
+                todos.append(
+                    f"inputs.{name}: set the real slider min/max/step "
+                    "(guessed to bracket the default)"
+                )
+            else:
+                spec["min"] = 0.0
+                spec["max"] = 1.0
+                spec["step"] = 0.1
+                todos.append(f"inputs.{name}: set the real slider min/max/step")
         elif recipe_type == "checkbox":
             spec["default"] = bool(default)
         elif recipe_type in {"textbox", "number"} and default is not None:

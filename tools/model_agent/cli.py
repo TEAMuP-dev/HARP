@@ -309,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
         "complete-recipe",
         help="Use an LLM to fill the _todo stubs of a scaffolded recipe (preserves I/O).",
     )
-    complete.add_argument("recipe", type=Path, help="Scaffolded recipe JSON (from scaffold-recipe).")
+    complete.add_argument("recipe", type=Path, help="Partial recipe JSON with _todo stubs to fill.")
     complete.add_argument(
         "--card", type=Path, help="Optional model-card JSON to enrich the prompt with the README."
     )

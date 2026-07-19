@@ -226,6 +226,33 @@
       "repo": "haoheliu/DiffRhythm2",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/DiffRhythm2"
+    },
+    {
+      "backend_space": "ASLP-lab/DiffRhythm2",
+      "mode": "remote",
+      "model_id": "ASLP-lab/DiffRhythm2",
+      "outcome": "success",
+      "repo": "ASLP-lab/DiffRhythm2",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/DiffRhythm2"
+    },
+    {
+      "backend_space": "",
+      "mode": "dual",
+      "model_id": "ace-step/ACE-Step-1.5",
+      "outcome": "success",
+      "repo": "ace-step/ACE-Step-1.5",
+      "sdk": "docker",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/ACE-Step"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "ACE-Step/Ace-Step1.5",
+      "outcome": "success",
+      "repo": "ACE-Step/Ace-Step1.5",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/ACE-Step"
     }
   ],
   "version": 1
