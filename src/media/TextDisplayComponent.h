@@ -9,26 +9,29 @@ public:
     TextDisplayComponent(String name,
                          bool req = true,
                          bool fromDAW = false,
-                         DisplayMode mode = DisplayMode::Input);
+                         DisplayMode mode = DisplayMode::Hybrid);
     ~TextDisplayComponent() override = default;
 
     static StringArray getSupportedExtensions();
 
-    StringArray getInstanceExtensions() override;
+    StringArray getInstanceExtensions() override
+    {
+        return TextDisplayComponent::getSupportedExtensions();
+    }
 
     int getFixedHeight() const override { return fixedHeight; }
 
-    double getTotalLengthInSecs() override;
+    double getTotalLengthInSecs() override { return 0.0; }
 
-    void paint(Graphics& g) override;
     void resized() override;
 
     void loadMediaFile(const URL& filePath) override;
+
+private:
     void resetMedia() override;
 
     void postLoadActions(const URL& filePath) override;
 
-private:
     TextEditor textEditor;
 
     static constexpr int fixedHeight = 150;

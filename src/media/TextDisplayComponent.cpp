@@ -16,19 +16,11 @@ TextDisplayComponent::TextDisplayComponent(String name, bool req, bool fromDAW, 
 
 StringArray TextDisplayComponent::getSupportedExtensions()
 {
-    return { ".txt" };
-}
+    StringArray extensions;
 
-StringArray TextDisplayComponent::getInstanceExtensions()
-{
-    return getSupportedExtensions();
-}
+    extensions.add(".txt");
 
-double TextDisplayComponent::getTotalLengthInSecs() { return 0.0; }
-
-void TextDisplayComponent::paint(Graphics& g)
-{
-    MediaDisplayComponent::paint(g);
+    return extensions;
 }
 
 void TextDisplayComponent::resized()
@@ -41,16 +33,11 @@ void TextDisplayComponent::loadMediaFile(const URL& filePath)
 {
     File file = filePath.getLocalFile();
     textEditor.setText(file.loadFileAsString());
-    repaint();
 }
 
 void TextDisplayComponent::resetMedia()
 {
     textEditor.setText("No text file loaded.");
-    repaint();
 }
 
-void TextDisplayComponent::postLoadActions(const URL& /*filePath*/)
-{
-    repaint();
-}
+void TextDisplayComponent::postLoadActions(const URL& /*filePath*/) {}
