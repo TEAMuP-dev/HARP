@@ -99,6 +99,7 @@ target_sources(${PROJECT_NAME}
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
         src/media/FileDisplayComponent.cpp
+        src/media/TextDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
         src/media/pianoroll/KeyboardComponent.cpp

@@ -1,6 +1,7 @@
 #include "MediaDisplayComponent.h"
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
+#include "TextDisplayComponent.h"
 
 #include "../utils/Interface.h"
 
@@ -295,9 +296,11 @@ StringArray MediaDisplayComponent::getSupportedExtensions()
 {
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
+    StringArray textExtensions = TextDisplayComponent::getSupportedExtensions();
 
     StringArray allExtensions = StringArray(audioExtensions);
     allExtensions.mergeArray(midiExtensions);
+    allExtensions.mergeArray(textExtensions);
 
     return allExtensions;
 }

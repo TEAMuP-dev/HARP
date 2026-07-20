@@ -83,6 +83,11 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
+struct TextTrackComponentInfo : public TrackComponentInfo
+{
+    using TrackComponentInfo::TrackComponentInfo;
+};
+
 struct FileComponentInfo : public ModelComponentInfo // TODO - Listener?
 {
     bool required = true;
