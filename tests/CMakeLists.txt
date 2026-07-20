@@ -17,7 +17,7 @@ add_executable(harp_tests
 )
 
 target_link_libraries(harp_tests PRIVATE
-    gtest_main
+    gtest
     juce::juce_core
     juce::juce_data_structures
     juce::juce_events
