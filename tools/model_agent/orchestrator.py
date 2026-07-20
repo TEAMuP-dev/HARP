@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Mapping, Optional, Sequence, Tuple
+
+from .classifier import DUAL_PYTHON_CEILING
 
 # ref detection ---------------------------------------------------------------
 
@@ -28,10 +30,13 @@ _SPACE_LINK_RE = re.compile(
     r"huggingface\.co/spaces/([A-Za-z0-9_.\-]+)/([A-Za-z0-9_.\-]+)"
 )
 
-# What auto-execution the agent can perform end-to-end today. two-space still
-# needs a separately hosted backend; remote/single/dual can be produced by the
-# command pipeline below.
-EXECUTABLE_MODES = frozenset({"remote", "single", "dual"})
+# Modes the agent can execute end-to-end today. ``backend`` is Phase 1 of the
+# two-Space workflow (plain Gradio Space that runs the model); the HARP frontend
+# is a follow-up once that Space is Running (``deploy ... --space <backend>``).
+EXECUTABLE_MODES = frozenset({"remote", "single", "dual", "backend"})
+
+# Isolation approaches the user may choose when single/remote aren't viable.
+ISOLATION_MODES = frozenset({"dual", "backend"})
 
 
 def _strip_git(name: str) -> str:
@@ -110,12 +115,13 @@ def extract_space_links(text: str) -> List[str]:
 class DeployPlan:
     """The chosen deployment strategy for a model reference."""
 
-    mode: str  # remote | single | dual | two-space | remote-missing-backend
+    mode: str  # remote | single | dual | backend | two-space | remote-missing-backend
     backend_space: Optional[str]
     can_execute: bool
     rationale: List[str] = field(default_factory=list)
     blockers: List[str] = field(default_factory=list)
     guidance: List[str] = field(default_factory=list)
+    choices: List[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -125,7 +131,44 @@ class DeployPlan:
             "rationale": self.rationale,
             "blockers": self.blockers,
             "guidance": self.guidance,
+            "choices": self.choices,
         }
+
+
+def _python_floor_from_signals(signals: Optional[Mapping]) -> Optional[Tuple[int, int]]:
+    if not isinstance(signals, Mapping):
+        return None
+    floor = signals.get("python_floor")
+    if isinstance(floor, (list, tuple)) and len(floor) == 2:
+        try:
+            return (int(floor[0]), int(floor[1]))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def isolation_options(
+    *,
+    pip_installable: bool,
+    python_floor: Optional[Tuple[int, int]] = None,
+) -> List[str]:
+    """Approaches available when single/remote aren't viable.
+
+    * ``dual`` -- one Docker Space (pyharp frontend + isolated backend). Needs a
+      pip-installable repo and Python <= the dual base image ceiling.
+    * ``backend`` -- Phase 1 of two-Space: plain Gradio Space that runs the model
+      (HARP frontend later via ``--space``). Needs a pip-installable repo.
+    """
+
+    options: List[str] = []
+    dual_ok = bool(pip_installable) and (
+        python_floor is None or python_floor <= DUAL_PYTHON_CEILING
+    )
+    if dual_ok:
+        options.append("dual")
+    if pip_installable:
+        options.append("backend")
+    return options
 
 
 def decide_plan(
@@ -136,6 +179,9 @@ def decide_plan(
     decision_mode: Optional[str] = None,
     decision_blockers: Optional[List[str]] = None,
     prefer_existing_space: bool = True,
+    forced_mode: Optional[str] = None,
+    pip_installable: bool = True,
+    python_floor: Optional[Tuple[int, int]] = None,
 ) -> DeployPlan:
     """Pick a deployment mode from the ref kind + (optional) classifier result.
 
@@ -144,9 +190,14 @@ def decide_plan(
       prefer reuse, proxy to it -- the least-risk path (reuses tested code, and
       the frontend installs no conflicting deps).
     * Otherwise fall back to the deterministic classifier's mode.
+    * For isolation cases (``dual`` / former ``two-space``), ``forced_mode`` may
+      select ``dual`` or ``backend`` when both are available.
     """
 
     blockers = list(decision_blockers or [])
+    choices = isolation_options(
+        pip_installable=pip_installable, python_floor=python_floor
+    )
 
     if kind == "hf_space":
         return DeployPlan(
@@ -179,7 +230,15 @@ def decide_plan(
 
     if mode == "remote":
         # The classifier wants a proxy (deps conflict with pyharp) but no backend
-        # Space was found -- we can't proxy to nothing.
+        # Space was found -- we can't proxy to nothing. Offer isolation choices
+        # when the repo can still be built as dual/backend.
+        if choices:
+            selected = _select_isolation_mode(
+                forced_mode=forced_mode,
+                default="dual" if "dual" in choices else "backend",
+                choices=choices,
+            )
+            return _isolation_plan(selected, blockers=blockers, choices=choices)
         return DeployPlan(
             mode="remote-missing-backend",
             backend_space=None,
@@ -192,20 +251,36 @@ def decide_plan(
             ],
         )
 
-    if mode == "dual":
-        return DeployPlan(
-            mode="dual",
-            backend_space=None,
-            can_execute=True,
-            rationale=["dependency/version isolation needed (older Python / fragile native deps)."],
-            blockers=blockers,
-            guidance=[
-                "This will generate a dual-interpreter Docker Space: pyHARP frontend "
-                "+ isolated backend worker in one Space.",
-            ],
+    if mode in ("dual", "two-space") or forced_mode in ISOLATION_MODES:
+        # Classifier recommended isolation (or the user forced dual/backend).
+        if not choices:
+            return DeployPlan(
+                mode="two-space",
+                backend_space=None,
+                can_execute=False,
+                rationale=[
+                    "no single-Space path and the dual/backend paths can't build it "
+                    "(not pip-installable and no existing Space)."
+                ],
+                blockers=blockers,
+                guidance=[
+                    "This needs a separately-hosted backend Space (the Woosh/Omnizart "
+                    "pattern) plus a proxy frontend. Deploy the backend first, then "
+                    "re-run with --space <owner/space> to build the frontend.",
+                ],
+            )
+        default = "dual" if mode == "dual" and "dual" in choices else (
+            "dual" if "dual" in choices else "backend"
         )
+        # Prefer backend when the classifier said two-space (dual can't build).
+        if mode == "two-space" and "backend" in choices:
+            default = "backend"
+        selected = _select_isolation_mode(
+            forced_mode=forced_mode, default=default, choices=choices
+        )
+        return _isolation_plan(selected, blockers=blockers, choices=choices)
 
-    # two-space
+    # Unknown classifier mode -- treat as two-space guidance.
     return DeployPlan(
         mode="two-space",
         backend_space=None,
@@ -217,6 +292,64 @@ def decide_plan(
             "plus a proxy frontend. Deploy the backend first, then re-run with "
             "--space <owner/space> to build the frontend.",
         ],
+        choices=choices,
+    )
+
+
+def _select_isolation_mode(
+    *,
+    forced_mode: Optional[str],
+    default: str,
+    choices: Sequence[str],
+) -> str:
+    if forced_mode:
+        if forced_mode not in ISOLATION_MODES:
+            raise ValueError(
+                f"forced_mode must be one of {sorted(ISOLATION_MODES)}, got {forced_mode!r}"
+            )
+        if forced_mode not in choices:
+            raise ValueError(
+                f"mode {forced_mode!r} is not available for this model "
+                f"(available: {', '.join(choices) or 'none'})"
+            )
+        return forced_mode
+    return default if default in choices else choices[0]
+
+
+def _isolation_plan(
+    mode: str, *, blockers: List[str], choices: List[str]
+) -> DeployPlan:
+    if mode == "dual":
+        return DeployPlan(
+            mode="dual",
+            backend_space=None,
+            can_execute=True,
+            rationale=[
+                "dependency/version isolation needed (older Python / fragile native deps)."
+            ],
+            blockers=blockers,
+            guidance=[
+                "This will generate a dual-interpreter Docker Space: pyHARP frontend "
+                "+ isolated backend worker in one Space.",
+            ],
+            choices=list(choices),
+        )
+    # backend (Phase 1 of two-space)
+    return DeployPlan(
+        mode="backend",
+        backend_space=None,
+        can_execute=True,
+        rationale=[
+            "no single-Space path that coexists with pyharp -> deploy a plain Gradio "
+            "backend Space that runs the model (Phase 1 of two-space)."
+        ],
+        blockers=blockers,
+        guidance=[
+            "This deploys the model-running backend only. When it shows Running, "
+            "re-run deploy with --space <owner/backend-space> to build the pyharp "
+            "frontend that proxies to it.",
+        ],
+        choices=list(choices),
     )
 
 
@@ -288,6 +421,18 @@ def build_steps(
         if outputs:
             recipe_step += ["--outputs", outputs]
         steps.append(recipe_step)
+    elif plan.mode == "backend":
+        recipe_step = [
+            "generate-recipe-from-llm",
+            source_flag, target.slug,
+            "--backend",
+            "--output", recipe_path,
+        ]
+        if inputs:
+            recipe_step += ["--inputs", inputs]
+        if outputs:
+            recipe_step += ["--outputs", outputs]
+        steps.append(recipe_step)
     else:  # single
         recipe_step = [
             "generate-recipe-from-llm",
@@ -300,7 +445,10 @@ def build_steps(
             recipe_step += ["--outputs", outputs]
         steps.append(recipe_step)
 
-    steps.append(["generate-recipe", recipe_path, "--output", package_parent])
+    gen_step = ["generate-recipe", recipe_path, "--output", package_parent]
+    if plan.mode == "backend":
+        gen_step.append("--backend")
+    steps.append(gen_step)
     deploy_step = ["deploy-space", package_dir, "--repo", target_repo]
     if plan.mode == "dual":
         deploy_step += ["--sdk", "docker"]

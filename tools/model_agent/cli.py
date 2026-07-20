@@ -24,11 +24,13 @@ from .knowledge import (
     match_repair_rules,
 )
 from .orchestrator import (
+    ISOLATION_MODES,
     RefTarget,
     build_steps,
     decide_plan,
     detect_ref,
     extract_space_links,
+    isolation_options,
 )
 from .llm import (
     LLMError,
@@ -512,6 +514,16 @@ def build_parser() -> argparse.ArgumentParser:
             "--no-discover-space",
             action="store_true",
             help="Don't auto-discover an existing backend Space; build from source instead.",
+        )
+        _dep.add_argument(
+            "--mode",
+            choices=["auto", "dual", "backend"],
+            default="auto",
+            help="When the model needs isolation (can't share a process with pyharp), "
+            "choose 'dual' (one Docker Space: pyharp + isolated backend) or 'backend' "
+            "(plain Gradio backend only; later re-run with --space for the HARP "
+            "frontend). Default 'auto' asks interactively when both are available, "
+            "or picks the classifier default under --yes/--plan.",
         )
         _dep.add_argument("--api-name", default="", help="Backend endpoint to call (remote mode).")
         _dep.add_argument("--inputs", default="", help="Desired input types for single-Space mode.")
@@ -1120,6 +1132,8 @@ def _print_plan(target, plan, steps) -> None:
     print(f"  mode:    {plan.mode}", file=sys.stderr)
     if plan.backend_space:
         print(f"  backend: {plan.backend_space}", file=sys.stderr)
+    if plan.choices:
+        print(f"  choices: {', '.join(plan.choices)}", file=sys.stderr)
     for reason in plan.rationale:
         print(f"  why:     {reason}", file=sys.stderr)
     for blocker in plan.blockers:
@@ -1131,6 +1145,38 @@ def _print_plan(target, plan, steps) -> None:
         for step in steps:
             print(f"    python -m tools.model_agent {' '.join(step)}", file=sys.stderr)
     print("", file=sys.stderr)
+
+
+def _prompt_isolation_mode(choices: List[str], *, default: str) -> str:
+    """Ask the user to pick dual vs backend when both isolation paths are open."""
+
+    labels = {
+        "dual": "dual     — one Docker Space (pyharp frontend + isolated model backend)",
+        "backend": "backend  — plain Gradio backend only (Phase 1); HARP frontend later via --space",
+    }
+    print("\nThis model needs isolation from pyharp. Choose an approach:", file=sys.stderr)
+    for choice in choices:
+        marker = " (default)" if choice == default else ""
+        print(f"  [{choice[0]}] {labels.get(choice, choice)}{marker}", file=sys.stderr)
+    prompt = f"Approach [{'/'.join(c[0] for c in choices)}]"
+    if default:
+        prompt += f" (Enter={default[0]})"
+    prompt += ": "
+    try:
+        reply = input(prompt).strip().lower()
+    except EOFError:
+        reply = ""
+    if not reply:
+        return default
+    for choice in choices:
+        if reply in (choice, choice[0]):
+            return choice
+    print(
+        f"  Unrecognized choice {reply!r}; using {default!r}. "
+        "Pass --mode dual|backend to skip this prompt.",
+        file=sys.stderr,
+    )
+    return default
 
 
 def _run_deploy(agent: HarpModelAgent, args) -> int:
@@ -1205,14 +1251,62 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
             has_existing_space=bool(backend_space),
         )
 
-    plan = decide_plan(
-        kind=target.kind,
-        slug=target.slug,
-        backend_space=backend_space or None,
-        decision_mode=decision.mode if decision else None,
-        decision_blockers=decision.blockers if decision else None,
-        prefer_existing_space=not args.no_discover_space,
+    signals = (decision.signals if decision else {}) or {}
+    pip_installable = bool(signals.get("pip_installable", True)) if decision else True
+    python_floor = None
+    floor_raw = signals.get("python_floor") if decision else None
+    if isinstance(floor_raw, (list, tuple)) and len(floor_raw) == 2:
+        try:
+            python_floor = (int(floor_raw[0]), int(floor_raw[1]))
+        except (TypeError, ValueError):
+            python_floor = None
+
+    available = isolation_options(
+        pip_installable=pip_installable, python_floor=python_floor
     )
+    # Ask (or honor --mode) before building the plan whenever isolation is in play.
+    needs_isolation = bool(decision) and decision.mode in (
+        "dual",
+        "two-space",
+        "remote",
+    ) and not backend_space
+    forced_mode = None
+    mode_arg = getattr(args, "mode", "auto") or "auto"
+    if needs_isolation and available:
+        if mode_arg in ISOLATION_MODES:
+            if mode_arg not in available:
+                print(
+                    f"error: --mode {mode_arg} is not available for this model "
+                    f"(available: {', '.join(available)}).",
+                    file=sys.stderr,
+                )
+                return 2
+            forced_mode = mode_arg
+        elif mode_arg == "auto" and not args.plan and not args.yes and len(available) > 1:
+            default = "dual" if "dual" in available else available[0]
+            if decision and decision.mode == "two-space" and "backend" in available:
+                default = "backend"
+            forced_mode = _prompt_isolation_mode(available, default=default)
+        elif mode_arg == "auto" and decision and decision.mode == "two-space":
+            # Unattended / --plan: prefer the executable backend Phase 1 over a
+            # dead-end two-space message when the repo is pip-installable.
+            forced_mode = "backend" if "backend" in available else None
+
+    try:
+        plan = decide_plan(
+            kind=target.kind,
+            slug=target.slug,
+            backend_space=backend_space or None,
+            decision_mode=decision.mode if decision else None,
+            decision_blockers=decision.blockers if decision else None,
+            prefer_existing_space=not args.no_discover_space,
+            forced_mode=forced_mode,
+            pip_installable=pip_installable,
+            python_floor=python_floor,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     predicted_slug = (
         _slug(plan.backend_space)
@@ -1294,6 +1388,8 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
         pass
 
     gen_step = ["generate-recipe", str(recipe_path), "--output", str(package_parent)]
+    if plan.mode == "backend":
+        gen_step.append("--backend")
     print(f"\n$ model-agent {' '.join(gen_step)}", file=sys.stderr)
     rc = main(gen_step)
     if rc != 0:
@@ -1311,6 +1407,13 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
         f"\n[deploy] Done -> https://huggingface.co/spaces/{args.repo}",
         file=sys.stderr,
     )
+    if plan.mode == "backend":
+        print(
+            f"  Backend only. When it shows Running, build the HARP frontend with:\n"
+            f"    python -m tools.model_agent deploy {target.slug} "
+            f"--repo <owner/frontend> --space {args.repo}",
+            file=sys.stderr,
+        )
     return 0
 
 

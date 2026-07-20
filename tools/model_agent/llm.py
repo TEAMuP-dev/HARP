@@ -59,7 +59,7 @@ class LLMError(Exception):
 # Model names move fast; this is a sane default but a key/region may differ.
 # Use the `list-models` command (or --llm-model) to pick a valid one.
 _DEFAULT_MODELS = {
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
 }
 
 

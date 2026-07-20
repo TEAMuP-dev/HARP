@@ -81,6 +81,7 @@ from tools.model_agent.orchestrator import (
     build_steps,
     decide_plan,
     detect_ref,
+    isolation_options,
     extract_space_links,
 )
 
@@ -3132,12 +3133,28 @@ class OrchestratorPlanTest(unittest.TestCase):
         self.assertIsNone(plan.backend_space)
         self.assertTrue(plan.can_execute)
 
-    def test_remote_without_backend_is_not_executable(self):
+    def test_remote_without_backend_offers_isolation_when_pip_installable(self):
+        # Classifier said "remote" but no Space was found; a pip-installable repo
+        # can still be built as dual/backend instead of a dead end.
         plan = decide_plan(
             kind="github",
             slug="Soul-AILab/SoulX-Singer",
             decision_mode="remote",
             decision_blockers=["protobuf conflict"],
+            pip_installable=True,
+        )
+        self.assertEqual(plan.mode, "dual")
+        self.assertTrue(plan.can_execute)
+        self.assertIn("dual", plan.choices)
+        self.assertIn("backend", plan.choices)
+
+    def test_remote_without_backend_is_not_executable_when_not_installable(self):
+        plan = decide_plan(
+            kind="github",
+            slug="Soul-AILab/SoulX-Singer",
+            decision_mode="remote",
+            decision_blockers=["protobuf conflict"],
+            pip_installable=False,
         )
         self.assertEqual(plan.mode, "remote-missing-backend")
         self.assertFalse(plan.can_execute)
@@ -3148,12 +3165,64 @@ class OrchestratorPlanTest(unittest.TestCase):
         self.assertEqual(plan.mode, "dual")
         self.assertTrue(plan.can_execute)
         self.assertTrue(plan.guidance)
+        self.assertEqual(plan.choices, ["dual", "backend"])
 
-    def test_two_space_is_guidance_only(self):
-        plan = decide_plan(kind="github", slug="x/y", decision_mode="two-space")
+    def test_two_space_defaults_to_executable_backend(self):
+        # Pip-installable but above the dual Python ceiling -> backend Phase 1.
+        plan = decide_plan(
+            kind="github",
+            slug="x/y",
+            decision_mode="two-space",
+            pip_installable=True,
+            python_floor=(3, 11),
+        )
+        self.assertEqual(plan.mode, "backend")
+        self.assertTrue(plan.can_execute)
+        self.assertEqual(plan.choices, ["backend"])
+
+    def test_two_space_not_installable_is_guidance_only(self):
+        plan = decide_plan(
+            kind="github",
+            slug="x/y",
+            decision_mode="two-space",
+            pip_installable=False,
+        )
         self.assertEqual(plan.mode, "two-space")
         self.assertFalse(plan.can_execute)
         self.assertTrue(plan.guidance)
+
+    def test_forced_mode_backend_when_dual_also_available(self):
+        plan = decide_plan(
+            kind="github",
+            slug="x/y",
+            decision_mode="dual",
+            forced_mode="backend",
+            pip_installable=True,
+        )
+        self.assertEqual(plan.mode, "backend")
+        self.assertTrue(plan.can_execute)
+
+    def test_forced_mode_dual_rejected_when_python_too_new(self):
+        with self.assertRaises(ValueError):
+            decide_plan(
+                kind="github",
+                slug="x/y",
+                decision_mode="two-space",
+                forced_mode="dual",
+                pip_installable=True,
+                python_floor=(3, 11),
+            )
+
+    def test_isolation_options_dual_and_backend(self):
+        self.assertEqual(
+            isolation_options(pip_installable=True, python_floor=(3, 10)),
+            ["dual", "backend"],
+        )
+        self.assertEqual(
+            isolation_options(pip_installable=True, python_floor=(3, 11)),
+            ["backend"],
+        )
+        self.assertEqual(isolation_options(pip_installable=False), [])
 
 
 class OrchestratorStepsTest(unittest.TestCase):
@@ -3214,8 +3283,29 @@ class OrchestratorStepsTest(unittest.TestCase):
         self.assertIn("--sdk", steps[-1])
         self.assertIn("docker", steps[-1])
 
+    def test_backend_mode_uses_llm_backend_and_gradio_deploy(self):
+        target = detect_ref("ace-step/ACE-Step-1.5", source="github")
+        plan = decide_plan(
+            kind="github",
+            slug=target.slug,
+            decision_mode="two-space",
+            forced_mode="backend",
+            pip_installable=True,
+            python_floor=(3, 11),
+        )
+        steps = self._steps(plan, target, inputs="audio", outputs="audio")
+        recipe_step = steps[0]
+        self.assertEqual(recipe_step[0], "generate-recipe-from-llm")
+        self.assertIn("--backend", recipe_step)
+        self.assertNotIn("--dual", recipe_step)
+        self.assertIn("--backend", steps[1])  # generate-recipe --backend
+        self.assertEqual(steps[-1][:1], ["deploy-space"])
+        self.assertNotIn("docker", steps[-1])
+
     def test_non_executable_plan_has_no_steps(self):
-        plan = decide_plan(kind="github", slug="x/y", decision_mode="two-space")
+        plan = decide_plan(
+            kind="github", slug="x/y", decision_mode="two-space", pip_installable=False
+        )
         target = detect_ref("x/y", source="github")
         self.assertEqual(self._steps(plan, target), [])
 
