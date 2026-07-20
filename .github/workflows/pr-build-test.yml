@@ -52,21 +52,42 @@ jobs:
         run: cmake -S . -B build -G Ninja -DHARP_BUILD_TESTS=ON -DHARP_ENABLE_COVERAGE=ON  -DCMAKE_BUILD_TYPE=Debug
 
       # compile library and tests
-      - name: Build
-        run: cmake --build build --config Debug
+      - name: Build HARP application
+        run: cmake --build build --target HARP --parallel 2
+
+      - name: Build unit tests
+        run: cmake --build build --target harp_tests --parallel 2
+
+      - name: Capture coverage baseline
+        shell: bash
+        run: |
+          lcov \
+            --capture \
+            --initial \
+            --directory build \
+            --output-file coverage-base.info \
+            --rc geninfo_unexecuted_blocks=1
 
       # runs all tests registered by add_test()
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+        id: tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ctest --test-dir build --output-on-failure 2>&1 | tee test-results.txt
 
       # report which tests failed and what lines 
-      - name: Extract failing tests
-        if: failure()   # only run if tests failed
+      - name: Add test failure details
+        if: failure() && steps.tests.outcome == 'failure'
+        shell: bash
         run: |
-          echo "## ❌ Failed Tests" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          ctest --test-dir build --output-on-failure | grep -E "FAILED|Failure|error:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## ❌ Failed Tests"
+            echo
+            echo '```text'
+            grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # uploads ctest result as an artifact to be downloaded.
       # runs even on test failure.
@@ -75,37 +96,74 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results
-          path: build/Testing
+          path: |
+            build/Testing
+            test-results.txt
+          if-no-files-found: warn
 
       # write test results into summary UI
-      - name: Show test summary
+      - name: Add test results to summary
         if: always()
+        shell: bash
         run: |
-          echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
-          ctest --test-dir build --output-on-failure >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🧪 Test Results"
+            echo
+            echo '```text'
+            cat test-results.txt 2>/dev/null || echo "Tests did not run."
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # capture coverage, filter noise, generate html report
       - name: Generate coverage report
         if: always()
+        shell: bash
         run: |
-          lcov --rc geninfo_unexecuted_blocks=1 --capture --directory build --output-file coverage.info
+          mkdir -p coverage
       
-          lcov --rc geninfo_unexecuted_blocks=1 \
-            --remove coverage.info \
-            '/usr/*' \
-            '*/tests/*' \
-            '*/_deps/*' \
+          lcov \
+            --capture \
+            --directory build \
+            --output-file coverage-tests.info \
+            --rc geninfo_unexecuted_blocks=1
+      
+          lcov \
+            --add-tracefile coverage-base.info \
+            --add-tracefile coverage-tests.info \
+            --output-file coverage-all.info
+      
+          lcov \
+            --extract coverage-all.info \
+            "$GITHUB_WORKSPACE/src/*" \
             --output-file coverage.info
       
-          if grep -q "^SF:" coverage.info; then
-            echo "HARP source files found in coverage data."
-            genhtml coverage.info --output-directory coverage
+          lcov \
+            --remove coverage.info \
+            "$GITHUB_WORKSPACE/tests/*" \
+            "$GITHUB_WORKSPACE/JUCE/*" \
+            "*/_deps/*" \
+            "/usr/*" \
+            --output-file coverage.info
+      
+          if grep -q '^SF:' coverage.info; then
+            lcov --list coverage.info
+      
+            genhtml coverage.info \
+              --output-directory coverage \
+              --title "HARP Unit Test Coverage" \
+              --legend
           else
-            echo "No HARP source files were exercised."
+            echo "No HARP source files were found in the coverage data."
       
-            mkdir -p coverage
-      
-            echo "<html><body><h1>Coverage: 0%</h1><p>No HARP source files were exercised by the tests.</p></body></html>" > coverage/index.html
+            cat > coverage/index.html <<'EOF'
+          <!doctype html>
+          <html>
+            <body>
+              <h1>HARP coverage unavailable</h1>
+              <p>No instrumented HARP source files appeared in the coverage data.</p>
+            </body>
+          </html>
+          EOF
           fi
 
       # update html coverage dashboard
@@ -114,41 +172,70 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage
+          path: |
+            coverage
+            coverage.info
+          if-no-files-found: warn
 
       # AI-generated markdown test summary
 
       # parse coverage.info to compute coverage %. 
       # writes .md file containing percentage & progress bars
       - name: Generate Markdown Coverage Dashboard
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
         run: |
-          python3 << 'EOF'
-          import re
-
+          python3 <<'EOF'
+          import os
+      
           covered = 0
           total = 0
-          with open("coverage.info") as f:
-              for line in f:
-                  if line.startswith("LF:"):
-                      total += int(line.split(":")[1])
-                  if line.startswith("LH:"):
-                      covered += int(line.split(":")[1])
-
-          pct = int(covered / total * 100) if total > 0 else 0
-          bar_len = 40
-          filled = int(bar_len * pct / 100)
-          bar = "█" * filled + "░" * (bar_len - filled)
-
-          with open("coverage-dashboard.md", "w") as out:
-              out.write("# 📈 Build Quality Dashboard\n\n")
-              out.write("## 🧪 Tests\n")
-              out.write("- Status: 🟢 All tests passed\n\n")
-              out.write("## 📊 Coverage\n")
-              out.write(f"**Lines:** {pct}%\n")
-              out.write(bar + "\n\n")
-              out.write("_Dashboard generated automatically._\n")
+      
+          if os.path.exists("coverage.info"):
+              with open("coverage.info", encoding="utf-8") as report:
+                  for raw_line in report:
+                      line = raw_line.strip()
+      
+                      if line.startswith("LF:"):
+                          total += int(line.split(":", 1)[1])
+                      elif line.startswith("LH:"):
+                          covered += int(line.split(":", 1)[1])
+      
+          percentage = round((covered / total) * 100, 1) if total else 0.0
+          bar_length = 40
+          filled = round(bar_length * percentage / 100)
+          bar = "█" * filled + "░" * (bar_length - filled)
+      
+          test_outcome = os.environ.get("TEST_OUTCOME", "unknown")
+      
+          status = {
+              "success": "🟢 Passed",
+              "failure": "🔴 Failed",
+              "cancelled": "⚪ Cancelled",
+              "skipped": "⚪ Skipped",
+          }.get(test_outcome, "⚪ Not available")
+      
+          with open("coverage-dashboard.md", "w", encoding="utf-8") as output:
+              output.write("# 📈 Build Quality Dashboard\n\n")
+              output.write("## 🧪 Tests\n\n")
+              output.write(f"- Status: {status}\n\n")
+              output.write("## 📊 HARP Source Coverage\n\n")
+              output.write(f"- Covered lines: **{covered} / {total}**\n")
+              output.write(f"- Line coverage: **{percentage:.1f}%**\n\n")
+              output.write(f"`{bar}`\n\n")
+      
+              if total == 0:
+                  output.write(
+                      "> No HARP source coverage data was generated. "
+                      "Check whether the tests exercised instrumented code.\n\n"
+                  )
+      
+              output.write("_Dashboard generated automatically._\n")
           EOF
 
       # put .md dashboard into actions summary
       - name: Add Dashboard to Summary
+        if: always()
         run: cat coverage-dashboard.md >> $GITHUB_STEP_SUMMARY
