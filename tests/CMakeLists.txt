@@ -24,6 +24,12 @@ target_link_libraries(harp_tests PRIVATE
     juce::juce_gui_basics
 )
 
+target_compile_definitions(harp_tests PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=1
+    JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
+)
+
 if(HARP_ENABLE_COVERAGE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(harp_tests PRIVATE
