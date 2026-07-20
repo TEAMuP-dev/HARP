@@ -49,7 +49,7 @@ jobs:
       # configure project into a build directory, 
       # set to debug mode, and set coverage flags
       - name: Configure CMake (with coverage)
-        run: cmake -S . -B build -DHARP_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage" -DCMAKE_C_FLAGS="--coverage"
+        run: cmake -S . -B build -G Ninja -DHARP_BUILD_TESTS=ON -DHARP_ENABLE_COVERAGE=ON  -DCMAKE_BUILD_TYPE=Debug
 
       # compile library and tests
       - name: Build
