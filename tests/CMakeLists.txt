@@ -24,4 +24,22 @@ target_link_libraries(harp_tests PRIVATE
     juce::juce_gui_basics
 )
 
+if(HARP_ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(harp_tests PRIVATE
+            -O0
+            -g
+            --coverage
+        )
+
+        target_link_options(harp_tests PRIVATE
+            --coverage
+        )
+    else()
+        message(WARNING
+            "HARP_ENABLE_COVERAGE is enabled, but coverage is only configured for GCC and Clang."
+        )
+    endif()
+endif()
+
 add_test(NAME harp_tests COMMAND harp_tests)
