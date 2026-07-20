@@ -278,6 +278,7 @@ endif(APPLE)
 # --------------------------------------------------
 
 option(HARP_BUILD_TESTS "Build HARP unit tests" OFF)
+option(HARP_ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
 
 if(HARP_BUILD_TESTS)
     enable_testing()
