@@ -332,7 +332,10 @@ inference.setup rules:
   - When a "# Declared dependencies" section is provided, pin framework.pip to the
     versions/bounds declared there (honor every upper bound); include only the
     packages inference + the Gradio UI actually need (drop training/data/cloud/export
-    extras). Also add the repo itself if a git+ dependency is required.
+    extras). Add the repo itself as a git+ dependency ONLY when the prompt says
+    the repo is pip-installable. If the prompt says it is NOT pip-installable,
+    INLINE the needed loading/inference code from the provided sources into
+    inference.setup / inference.body (do NOT add a git+ line).
 
 inference.body rules:
   - this is the BODY of predict() ONLY (no "def" line, no surrounding
@@ -403,7 +406,8 @@ Dependency rules:
   - For GitHub grounding, include the repo itself as a git+ dependency in
     backend_pip when it has a root setup.py/pyproject/setup.cfg.
   - Use backend_python "3.10" unless the repo clearly needs an older version
-    ("3.9" or "3.8"). Do not choose Python above 3.11.
+    ("3.9" or "3.8"). Do not choose Python above 3.10 (the dual base image is
+    Debian bullseye and cannot provision python3.11+).
   - Put OS packages in apt (common audio packages: ffmpeg, libsndfile1).
 
 worker.imports rules:
@@ -483,6 +487,10 @@ class RecipeGenerationContext:
     # For GitHub grounding: the pip requirement the wrapper must declare so the
     # repo's modules are importable (e.g. "git+https://github.com/o/r.git@main").
     source_repo_url: str = ""
+    # Whether the GitHub repo has a root setup.py/pyproject.toml/setup.cfg.
+    # When False, backend recipes must INLINE inference from the provided sources
+    # instead of ``pip install git+...`` (which fails for script-style repos).
+    repo_pip_installable: Optional[bool] = None
 
     @classmethod
     def from_card(
@@ -562,20 +570,38 @@ def build_recipe_user_prompt(
     if context.space_sources:
         if context.grounding_origin == "github":
             pip_hint = context.source_repo_url or "git+https://github.com/<owner>/<repo>.git"
-            lines.append(
-                "# Upstream GitHub source (GROUND TRUTH for the real inference API)\n"
-                "These files come from the model's GitHub repository. Reuse this code: "
-                "import and call the repo's REAL functions/classes for model loading and "
-                "inference instead of guessing from the README. This repo is NOT a Gradio "
-                "app you deploy into -- you are writing a NEW HARP/Gradio wrapper around its "
-                "Python API. Therefore you MUST:\n"
-                f"  - add the repo as a pip dependency in framework.pip: \"{pip_hint}\" "
-                "(plus its other pip/apt deps), so its modules are importable;\n"
-                "  - import the repo's modules in inference.setup and load the model once "
-                "there;\n"
-                "  - design HARP input/output components for the desired I/O types (the repo "
-                "has no UI to mirror)."
-            )
+            # None means "unknown / assume installable" (legacy callers).
+            installable = context.repo_pip_installable is not False
+            if installable:
+                lines.append(
+                    "# Upstream GitHub source (GROUND TRUTH for the real inference API)\n"
+                    "These files come from the model's GitHub repository. Reuse this code: "
+                    "import and call the repo's REAL functions/classes for model loading and "
+                    "inference instead of guessing from the README. This repo is NOT a Gradio "
+                    "app you deploy into -- you are writing a NEW HARP/Gradio wrapper around its "
+                    "Python API. Therefore you MUST:\n"
+                    f"  - add the repo as a pip dependency in framework.pip: \"{pip_hint}\" "
+                    "(plus its other pip/apt deps), so its modules are importable;\n"
+                    "  - import the repo's modules in inference.setup and load the model once "
+                    "there;\n"
+                    "  - design HARP input/output components for the desired I/O types (the repo "
+                    "has no UI to mirror)."
+                )
+            else:
+                lines.append(
+                    "# Upstream GitHub source (GROUND TRUTH -- NOT pip-installable)\n"
+                    "These files come from the model's GitHub repository. The repo has NO "
+                    "root setup.py/pyproject.toml/setup.cfg, so `pip install git+...` WILL "
+                    "FAIL. You are writing a standalone Gradio backend that must be "
+                    "self-contained. Therefore you MUST:\n"
+                    "  - INLINE the needed loading/inference logic from the sources below "
+                    "into inference.setup and inference.body (copy essential functions/"
+                    "classes into the generated module; do NOT `import` repo-local modules "
+                    "that won't exist on the Space);\n"
+                    "  - put only third-party packages (torch, miditoolkit, etc.) in "
+                    "framework.pip -- NEVER a git+ line for this repo;\n"
+                    "  - design Gradio input/output components for the desired I/O types."
+                )
         else:
             lines.append(
                 "# Original Space source (GROUND TRUTH for the real API and UI)\n"

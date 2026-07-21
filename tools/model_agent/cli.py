@@ -794,6 +794,15 @@ def main(argv: Iterable[str] | None = None) -> int:
                         + ", ".join(sorted(context.dependency_manifests)),
                         file=sys.stderr,
                     )
+                context.repo_pip_installable = _pip_installable_from_signals(
+                    card, context.dependency_manifests or {}
+                )
+                if not context.repo_pip_installable:
+                    print(
+                        "  Repo is not pip-installable (no root packaging file); "
+                        "backend recipes will inline inference from the sources.",
+                        file=sys.stderr,
+                    )
             elif args.space:
                 print(
                     f"Grounding on the original Space source: {args.space} ...",
@@ -1260,9 +1269,20 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
             python_floor = (int(floor_raw[0]), int(floor_raw[1]))
         except (TypeError, ValueError):
             python_floor = None
+    # Script-style GitHub repos (REMI, etc.) have no setup.py but do have .py
+    # sources we can ground a plain-Gradio backend on (LLM inlines inference).
+    allow_source_backend = target.kind == "github" and (
+        bool(sources)
+        or any(
+            str(name).endswith(".py")
+            for name in ((card or {}).get("files") if isinstance(card, dict) else []) or []
+        )
+    )
 
     available = isolation_options(
-        pip_installable=pip_installable, python_floor=python_floor
+        pip_installable=pip_installable,
+        python_floor=python_floor,
+        allow_source_backend=allow_source_backend,
     )
     # Ask (or honor --mode) before building the plan whenever isolation is in play.
     needs_isolation = bool(decision) and decision.mode in (
@@ -1303,6 +1323,7 @@ def _run_deploy(agent: HarpModelAgent, args) -> int:
             forced_mode=forced_mode,
             pip_installable=pip_installable,
             python_floor=python_floor,
+            allow_source_backend=allow_source_backend,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)

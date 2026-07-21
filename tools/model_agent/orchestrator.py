@@ -151,13 +151,16 @@ def isolation_options(
     *,
     pip_installable: bool,
     python_floor: Optional[Tuple[int, int]] = None,
+    allow_source_backend: bool = False,
 ) -> List[str]:
     """Approaches available when single/remote aren't viable.
 
     * ``dual`` -- one Docker Space (pyharp frontend + isolated backend). Needs a
       pip-installable repo and Python <= the dual base image ceiling.
     * ``backend`` -- Phase 1 of two-Space: plain Gradio Space that runs the model
-      (HARP frontend later via ``--space``). Needs a pip-installable repo.
+      (HARP frontend later via ``--space``). Available when the repo is
+      pip-installable **or** when ``allow_source_backend`` is set (GitHub script
+      repos with no setup.py: the LLM inlines inference from fetched sources).
     """
 
     options: List[str] = []
@@ -166,7 +169,7 @@ def isolation_options(
     )
     if dual_ok:
         options.append("dual")
-    if pip_installable:
+    if pip_installable or allow_source_backend:
         options.append("backend")
     return options
 
@@ -182,6 +185,7 @@ def decide_plan(
     forced_mode: Optional[str] = None,
     pip_installable: bool = True,
     python_floor: Optional[Tuple[int, int]] = None,
+    allow_source_backend: bool = False,
 ) -> DeployPlan:
     """Pick a deployment mode from the ref kind + (optional) classifier result.
 
@@ -196,7 +200,9 @@ def decide_plan(
 
     blockers = list(decision_blockers or [])
     choices = isolation_options(
-        pip_installable=pip_installable, python_floor=python_floor
+        pip_installable=pip_installable,
+        python_floor=python_floor,
+        allow_source_backend=allow_source_backend,
     )
 
     if kind == "hf_space":
@@ -335,14 +341,21 @@ def _isolation_plan(
             choices=list(choices),
         )
     # backend (Phase 1 of two-space)
+    not_installable = any("not-pip-installable" in b for b in blockers)
+    rationale = [
+        "no single-Space path that coexists with pyharp -> deploy a plain Gradio "
+        "backend Space that runs the model (Phase 1 of two-space)."
+    ]
+    if not_installable:
+        rationale.append(
+            "repo has no root packaging file: the backend will inline inference "
+            "from the GitHub sources (no git+ install)."
+        )
     return DeployPlan(
         mode="backend",
         backend_space=None,
         can_execute=True,
-        rationale=[
-            "no single-Space path that coexists with pyharp -> deploy a plain Gradio "
-            "backend Space that runs the model (Phase 1 of two-space)."
-        ],
+        rationale=rationale,
         blockers=blockers,
         guidance=[
             "This deploys the model-running backend only. When it shows Running, "

@@ -2170,6 +2170,21 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
 
+    def test_non_pip_installable_github_prompts_inline_not_git_plus(self):
+        # REMI-style script repos: no setup.py -> never recommend git+.
+        context = RecipeGenerationContext(
+            model_id="YatingMusic/remi",
+            readme="REMI.",
+            space_sources={"main.py": "def generate():\n    pass\n"},
+            grounding_origin="github",
+            source_repo_url="git+https://github.com/YatingMusic/remi.git@master",
+            repo_pip_installable=False,
+        )
+        prompt = build_recipe_user_prompt(context, backend=True)
+        self.assertIn("NOT pip-installable", prompt)
+        self.assertIn("INLINE", prompt)
+        self.assertNotIn("add the repo as a pip dependency", prompt)
+
     def test_declared_dependencies_are_grounded_in_prompt(self):
         context = RecipeGenerationContext(
             model_id="owner/repo",
@@ -3191,6 +3206,21 @@ class OrchestratorPlanTest(unittest.TestCase):
         self.assertFalse(plan.can_execute)
         self.assertTrue(plan.guidance)
 
+    def test_script_repo_without_packaging_offers_source_backend(self):
+        # REMI-style: no setup.py, but GitHub sources can ground an inlined backend.
+        plan = decide_plan(
+            kind="github",
+            slug="YatingMusic/remi",
+            decision_mode="two-space",
+            decision_blockers=["not-pip-installable (no root setup.py/pyproject.toml)"],
+            pip_installable=False,
+            allow_source_backend=True,
+        )
+        self.assertEqual(plan.mode, "backend")
+        self.assertTrue(plan.can_execute)
+        self.assertEqual(plan.choices, ["backend"])
+        self.assertTrue(any("inline" in r.lower() for r in plan.rationale))
+
     def test_forced_mode_backend_when_dual_also_available(self):
         plan = decide_plan(
             kind="github",
@@ -3223,6 +3253,10 @@ class OrchestratorPlanTest(unittest.TestCase):
             ["backend"],
         )
         self.assertEqual(isolation_options(pip_installable=False), [])
+        self.assertEqual(
+            isolation_options(pip_installable=False, allow_source_backend=True),
+            ["backend"],
+        )
 
 
 class OrchestratorStepsTest(unittest.TestCase):

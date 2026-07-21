@@ -262,6 +262,15 @@
       "repo": "deezer/spleeter",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/spleeter"
+    },
+    {
+      "backend_space": "",
+      "mode": "backend",
+      "model_id": "YatingMusic/remi",
+      "outcome": "success",
+      "repo": "YatingMusic/remi",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/REMI"
     }
   ],
   "version": 1
