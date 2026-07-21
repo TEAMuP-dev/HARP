@@ -1,13 +1,13 @@
 # HARP Model Validation
 
 Automated validation of HARP model deployments. Verifies that each deployment
-is reachable, exposes the HARP gradio endpoints (`/controls`, `/process`),
+is reachable, exposes the HARP gradio endpoints (_i.e._, `/controls`, `/process`),
 and can actually process test inputs end-to-end — the same interactions the
 HARP client performs, driven headlessly.
 
 ## Overview
 
-Two tiers share the same harness:
+Two tiers share the same test harness:
 
 | Tier | Command | What it validates | What a failure means |
 |---|---|---|---|
@@ -34,23 +34,20 @@ Key behaviors:
 
 ## Code layout
 
-Implementation lives under `src/`, separate from configuration, real test
-inputs, and generated output — mirroring how pyharp itself keeps its source
-(`pyharp/pyharp/`) apart from its top-level docs, examples, and packaging.
-
-| File | Purpose |
+ File | Purpose |
 |---|---|
 | [src/validate_models.py](src/validate_models.py) | Command-line entry point and per-tier orchestration |
 | [src/harness.py](src/harness.py) | The test harness: drives /controls + /process against a live model |
 | [src/cases.py](src/cases.py) | Synthesis of inputs, test-case overlay, output validation/inspection |
 | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
+| [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
 | [src/assets.py](src/assets.py) | Synthesized WAV/MIDI/text/JSON test inputs |
 | [src/quota.py](src/quota.py) | ZeroGPU usage tracking and account quota lookup |
 | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
 | [src/utils.py](src/utils.py) | Token handling, config loading, discovery, timeouts |
-| [config.yml](config.yml) | Validation configuration (excludes, per-model test cases, etc.) |
+| [config.yml](config.yml) | Validation configuration (_e.g._, excludes, per-model test cases) |
 | [test_data/](test_data/) | Real input files referenced by test cases |
-| `reports/` | Generated report output (gitignored) |
+| `reports/` | Generated report output |
 
 ## Token setup (IMPORTANT — read this)
 
@@ -117,7 +114,7 @@ Two signals are combined:
   spaces only (models on CPU or dedicated hardware do not draw on the
   allowance and are never counted). It is an upper bound on GPU seconds
   consumed, since it includes queue time. Set `zerogpu_budget_seconds` in
-  [config.yml](config.yml) (e.g. `1500` for the PRO 25 min/day allowance)
+  [config.yml](config.yml) (_e.g._, `1500` for the PRO 25 min/day allowance)
   to show usage against a budget.
 - **Account quota** — fetched from `huggingface.co/api/quota` when available.
   Hugging Face has no documented public ZeroGPU quota API, so this part is
@@ -173,7 +170,7 @@ Note: once `test_cases` is present, **only** the listed cases run — include
 ### Step 3: check the outputs (optional)
 
 Every case already gets structural checks for free: `/process` must not
-error, file outputs must exist and be non-empty, and JSON outputs (e.g. an
+error, file outputs must exist and be non-empty, and JSON outputs (_i.e._, an
 optional pyharp `LabelList`) must be well-formed when present (absent/None
 is valid, since labels are optional).
 
@@ -217,7 +214,7 @@ The full vocabulary, and which output types each rule covers:
 | `channels` | audio output | Exact channel count |
 | `sample_rate` | audio output | Exact sample rate in Hz |
 | `min_duration` / `max_duration` | audio output | Length in seconds is within bounds |
-| `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...); errors on compressed formats |
+| `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...); errors on compressed formats (_e.g._, MP3 or OGG) |
 | `min_rms_db` | audio output | RMS level is at least this many dBFS |
 | `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
 
@@ -232,13 +229,9 @@ apply rules to every output a rule covers — with mixed outputs, `"*"` sends
             min_bytes: 1000      # every file output must be non-trivial
 ```
 
-Labels are preferred over positional indices: they survive a model reordering
-its outputs, and they make the config readable without cross-referencing the
-model's `app.py`.
-
 **Mistakes are reported as configuration errors, not model failures.** An
 unrecognized rule name, an unknown output label, or a rule aimed at an output
-type it does not cover (`min_labels` on an audio output, say) raises an error
+type it does not cover (_e.g._, `min_labels` on an audio output) raises an error
 naming the problem and listing what is valid. A `"*"` rule matching no output
 at all is also an error, since it would otherwise silently check nothing.
 
@@ -261,8 +254,8 @@ so audio rules work on any libsndfile format — WAV, FLAC, OGG, MP3, AIFF, and
 more — not just pyharp's `save_audio()` WAV default. Decoding to float also
 makes every audio rule bit-depth-independent, so a level threshold means the
 same thing whether the source is 16-bit, 24-bit, or float. `bit_depth` is the
-exception, by definition: it reads the file's PCM encoding and errors on a
-compressed format, which has no fixed bit depth.
+exception, by definition: it reads the file's PCM encoding and errors on any
+compressed formats, which have no fixed bit depth.
 
 #### `validators` — custom Python
 
@@ -280,12 +273,11 @@ test case's own fields. A case may run several:
 A validator receives `(outputs, controls, params)` — `outputs` maps output
 labels to local file paths (file outputs) or decoded objects (JSON outputs) —
 and raises `AssertionError` with a message naming the output and what went
-wrong. One ships as an example: `labels_within_audio`, which asserts every
-returned label falls inside the audio output's timespan. It belongs here
-because it relates two different outputs to each other; had it concerned only
-one output, it would belong in `expect` instead.
+wrong. As an example: `labels_within_audio` asserts every
+returned label falls inside the audio output's timespan,
+relating two different outputs to each other.
 
-To add one:
+To add a validator:
 
 ```python
 @validator("midi_note_count")
@@ -328,8 +320,8 @@ Two equivalent ways, merged together:
   (non-HARP spaces, archived deployments, known-broken examples).
 - `--exclude <model> ...` on the command line — for ad-hoc runs.
 
-Use the space id (`teamup-tech/some-space`) for remote models and
-`examples/<example-dir>` (e.g. `examples/midi_synthesizer`) for local examples.
+Use the space id (`teamup-tech/<some-space>`) for remote models and
+`examples/<some-example>` for local examples.
 
 ## CI behavior
 
@@ -346,5 +338,5 @@ Use the space id (`teamup-tech/some-space`) for remote models and
 - **Opting back into notifications later:** remove the exit-code handling in
   the two `Validate` steps of the workflow so the script's exit code 1
   propagates; failed runs then turn red and GitHub emails maintainers.
-- Example failures indicate a pyharp/gradio-level breakage that likely
-  affects every deployment — fix those before debugging individual spaces.
+- Failures with example models likely indicate a pyharp/gradio-level breakage that may
+  affect every deployment — fix those before debugging individual spaces.

@@ -1,4 +1,4 @@
 gradio_client>=1.0
 huggingface_hub>=0.23
 PyYAML>=6.0
-soundfile>=0.12   # decode audio outputs (any libsndfile format) for expect rules
+soundfile>=0.12 # decode audio outputs (any libsndfile format) for expect rules
