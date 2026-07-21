@@ -47,7 +47,7 @@ Key behaviors:
 | [src/utils.py](src/utils.py) | Token handling, config loading, discovery, timeouts |
 | [config.yml](config.yml) | Validation configuration (_e.g._, excludes, per-model test cases) |
 | [test_data/](test_data/) | Real input files referenced by test cases |
-| `reports/` | Generated report output |
+| `reports/` | Generated reports, synthesized assets, and example logs |
 
 ## Token setup (IMPORTANT — read this)
 
@@ -94,10 +94,11 @@ pip install -e ./pyharp
 python model_validation/src/validate_models.py --local-examples
 ```
 
-Reports land in `reports/` as `report.json` (machine-readable) and
-`report.md` (human-readable table); local example logs are saved alongside
-them. Exit code is `0` when everything passes, `1` on any model failure,
-`2` on configuration/infrastructure errors.
+Reports land in `model_validation/reports/` (override with `--output-dir`) as
+`report.json` (machine-readable) and `report.md` (human-readable table);
+synthesized test inputs and local example logs are saved alongside them. Exit
+code is `0` when everything passes, `1` on any model failure, `2` on
+configuration/infrastructure errors.
 
 ## ZeroGPU quota reporting
 
@@ -301,9 +302,9 @@ instead of putting it in a one-off validator.
 python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
 ```
 
-The console shows each case's pass/fail; `reports/report.json` has per-case
-timings and error details. Once green, the daily CI run picks the case up
-automatically — no workflow changes needed.
+The console shows each case's pass/fail; `report.json` has per-case timings
+and error details. Once the case passes reliably, the daily CI run picks it
+up automatically — no workflow changes needed.
 
 ### Reference: full config.yml schema
 

@@ -95,7 +95,9 @@ def synthesize_default_args(controls: dict, assets: Assets) -> tuple:
         elif ctype == "generic_file":
             path = assets.for_file_types(spec.get("file_types"))
             if path is None and spec.get("required", True):
-                missing[label] = f"cannot synthesize input for file_types={spec.get('file_types')}"
+                missing[label] = (f"cannot synthesize input for "
+                                  f"file_types={spec.get('file_types')}; supply "
+                                  f"one via a test case's `files` entry")
             args.append(handle_file(str(path)) if path is not None else None)
         elif ctype in ("slider", "number_box"):
             value = spec.get("value")

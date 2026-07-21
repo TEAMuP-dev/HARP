@@ -43,6 +43,15 @@ DEAD_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR", "DELETING"}
 # Stages that resolve on their own if we wait (or wake on first request)
 TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING", "SLEEPING"}
 
+# Fixed sub-timeouts, in seconds. Unlike connect_timeout / process_timeout,
+# these bound quick metadata calls whose duration does not vary by model, so
+# they are module constants rather than per-model config.
+CONTROLS_TIMEOUT = 120       # fetch the /controls spec (model already loaded)
+CLIENT_CLOSE_TIMEOUT = 10    # best-effort gradio_client shutdown
+SERVER_PROBE_INTERVAL = 2    # poll cadence while a local example boots
+SERVER_PROBE_TIMEOUT = 5     # per-probe HTTP timeout against a local example
+PROCESS_TERMINATE_TIMEOUT = 15  # grace period before killing a local example
+
 
 def close_client(client) -> None:
     """
@@ -57,7 +66,7 @@ def close_client(client) -> None:
         return
 
     try:
-        run_with_timeout(client.close, 10, "client close")
+        run_with_timeout(client.close, CLIENT_CLOSE_TIMEOUT, "client close")
     except Exception:  # noqa: BLE001 - cleanup is best-effort
         pass
 
@@ -95,7 +104,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
     # --- /controls -----------------------------------------------------------
     controls = run_with_timeout(
-        lambda: client.predict(api_name="/controls"), 120, "/controls")
+        lambda: client.predict(api_name="/controls"), CONTROLS_TIMEOUT, "/controls")
     if not isinstance(controls, dict) or "card" not in controls or "inputs" not in controls:
         result.error = f"/controls returned malformed data: {str(controls)[:200]}"
         return result
@@ -281,10 +290,10 @@ def wait_for_local_server(port: int, proc: subprocess.Popen, timeout: float) -> 
         if proc.poll() is not None:
             raise RuntimeError(f"app exited early with code {proc.returncode}")
         try:
-            with urllib.request.urlopen(url, timeout=5):
+            with urllib.request.urlopen(url, timeout=SERVER_PROBE_TIMEOUT):
                 return
         except Exception:  # noqa: BLE001 - server not up yet
-            time.sleep(2)
+            time.sleep(SERVER_PROBE_INTERVAL)
 
     raise TimeoutError(f"local app did not become ready within {int(timeout)}s")
 
@@ -343,6 +352,6 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
         if proc is not None and proc.poll() is None:
             proc.terminate()
             try:
-                proc.wait(timeout=15)
+                proc.wait(timeout=PROCESS_TERMINATE_TIMEOUT)
             except subprocess.TimeoutExpired:
                 proc.kill()

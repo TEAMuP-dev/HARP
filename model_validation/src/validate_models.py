@@ -58,6 +58,7 @@ MODEL_VALIDATION_DIR = SCRIPT_DIR.parent      # model_validation
 REPO_ROOT = MODEL_VALIDATION_DIR.parent
 DEFAULT_CONFIG = MODEL_VALIDATION_DIR / "config.yml"
 DEFAULT_EXAMPLES_DIR = REPO_ROOT / "pyharp" / "examples"
+DEFAULT_OUTPUT_DIR = MODEL_VALIDATION_DIR / "reports"
 
 LOCAL_PORT_BASE = 7861
 
@@ -97,7 +98,9 @@ def parse_args() -> argparse.Namespace:
                         help="Seconds to wait for a deployment to build/wake/start")
     parser.add_argument("--process-timeout", type=float, default=600,
                         help="Seconds to wait for /process (includes ZeroGPU queue time)")
-    parser.add_argument("--output-dir", type=Path, default=Path("reports"))
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
+                        help=f"Directory for reports, synthesized assets, and "
+                             f"example logs (default: {DEFAULT_OUTPUT_DIR})")
     parser.add_argument("--verbose", action="store_true")
 
     return parser.parse_args()
