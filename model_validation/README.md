@@ -34,18 +34,23 @@ Key behaviors:
 
 ## Code layout
 
+Implementation lives under `src/`, separate from configuration, real test
+inputs, and generated output — mirroring how pyharp itself keeps its source
+(`pyharp/pyharp/`) apart from its top-level docs, examples, and packaging.
+
 | File | Purpose |
 |---|---|
-| [validate_models.py](validate_models.py) | Command-line entry point and per-tier orchestration |
-| [harness.py](harness.py) | Core endpoint tests; space and local-example drivers |
-| [cases.py](cases.py) | Input synthesis, test-case overlay, output validation/inspection |
-| [validators.py](validators.py) | Registry of custom output validators (extend this) |
-| [assets.py](assets.py) | Synthesized WAV/MIDI/text/JSON test inputs |
-| [quota.py](quota.py) | ZeroGPU usage tracking and account quota lookup |
-| [results.py](results.py) | Result records and JSON/markdown report generation |
-| [utils.py](utils.py) | Token handling, config loading, discovery, timeouts |
-| [config.yml](config.yml) | Validation configuration (excludes, per-model test cases) |
+| [src/validate_models.py](src/validate_models.py) | Command-line entry point and per-tier orchestration |
+| [src/harness.py](src/harness.py) | The test harness: drives /controls + /process against a live model |
+| [src/cases.py](src/cases.py) | Synthesis of inputs, test-case overlay, output validation/inspection |
+| [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
+| [src/assets.py](src/assets.py) | Synthesized WAV/MIDI/text/JSON test inputs |
+| [src/quota.py](src/quota.py) | ZeroGPU usage tracking and account quota lookup |
+| [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
+| [src/utils.py](src/utils.py) | Token handling, config loading, discovery, timeouts |
+| [config.yml](config.yml) | Validation configuration (excludes, per-model test cases, etc.) |
 | [test_data/](test_data/) | Real input files referenced by test cases |
+| `reports/` | Generated report output (gitignored) |
 
 ## Token setup (IMPORTANT — read this)
 
@@ -72,24 +77,24 @@ pip install -r model_validation/requirements.txt
 
 # All spaces in the org (crashed/stopped spaces are restarted by default)
 export HF_TOKEN=hf_...   # see token setup above
-python model_validation/validate_models.py
+python model_validation/src/validate_models.py
 
-# A single space, with verbose errors — the go-to while developing a test case
-python model_validation/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
+# A single space, with verbose errors (useful while developing a test case)
+python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
 
 # Exclude specific models (also configurable via `exclude` in config.yml)
-python model_validation/validate_models.py --exclude teamup-tech/broken-space
+python model_validation/src/validate_models.py --exclude teamup-tech/broken-space
 
 # Availability + /controls only (fast; no inference, no GPU quota used)
-python model_validation/validate_models.py --load-only
+python model_validation/src/validate_models.py --load-only
 
 # Never restart spaces (works with a read-only token)
-python model_validation/validate_models.py --no-restart-failed
+python model_validation/src/validate_models.py --no-restart-failed
 
 # Examples tier (needs pyharp + example deps; no token required)
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 pip install -e ./pyharp
-python model_validation/validate_models.py --local-examples
+python model_validation/src/validate_models.py --local-examples
 ```
 
 Reports land in `reports/` as `report.json` (machine-readable) and
@@ -165,14 +170,25 @@ overrides:
 Note: once `test_cases` is present, **only** the listed cases run — include
 `- name: default` to keep the synthesized one.
 
-### Step 3: check the outputs (optional, two levels)
+### Step 3: check the outputs (optional)
 
 Every case already gets structural checks for free: `/process` must not
 error, file outputs must exist and be non-empty, and JSON outputs (e.g. an
 optional pyharp `LabelList`) must be well-formed when present (absent/None
 is valid, since labels are optional).
 
-**Level 1 — declarative `expect` rules**, simple per-output assertions:
+Beyond that, there are two mechanisms, divided by what they can express:
+
+- **`expect`** asserts properties of a *single* output, and covers almost
+  every check worth writing.
+- **`validators`** run custom Python for checks that cannot be expressed as
+  a property of one output — typically relationships spanning several
+  outputs.
+
+#### `expect` — declarative per-output rules
+
+Keyed by output label, then by rule. Every rule is optional, and an output
+with no rules is still subject to the structural checks above:
 
 ```yaml
       - name: extreme-shift
@@ -180,47 +196,117 @@ is valid, since labels are optional).
           "Pitch Shift (semitones)": 24
         expect:
           "Output Audio":
-            ext: .wav         # downloaded file must have this extension
-            min_bytes: 10000  # ... and be at least this many bytes
+            ext: .wav            # extension: a string, or a list of accepted ones
+            min_bytes: 10000     # minimum file size
+            channels: 1          # exact channel count (1 = mono, 2 = stereo)
+            sample_rate: 44100   # exact sample rate, in Hz
+            min_duration: 1.5    # minimum length, in seconds
+            max_duration: 10.0   # maximum length, in seconds
+            bit_depth: 16        # exact PCM bit depth
+            min_rms_db: -60      # minimum RMS level, in dBFS
+          "Output Labels":
+            min_labels: 1        # minimum labels in a pyharp LabelList
 ```
 
-**Level 2 — custom validators**, arbitrary Python registered in
-[validators.py](validators.py) and referenced by name:
+The full vocabulary, and which output types each rule covers:
+
+| Rule | Applies to | Asserts |
+|---|---|---|
+| `ext` | any file output | Extension matches (string, or list of accepted extensions) |
+| `min_bytes` | any file output | File is at least this many bytes |
+| `channels` | audio output | Exact channel count |
+| `sample_rate` | audio output | Exact sample rate in Hz |
+| `min_duration` / `max_duration` | audio output | Length in seconds is within bounds |
+| `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...); errors on compressed formats |
+| `min_rms_db` | audio output | RMS level is at least this many dBFS |
+| `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
+
+**Targeting outputs.** A model with several outputs gets one block per
+output label, each checked independently. Use `"*"` instead of a label to
+apply rules to every output a rule covers — with mixed outputs, `"*"` sends
+`min_bytes` to all file outputs and `min_rms_db` only to the audio ones:
 
 ```yaml
-      - name: extreme-shift
-        validator: wav_not_silent
-        min_rms_db: -40      # extra case keys parameterize the validator
+        expect:
+          "*":
+            min_bytes: 1000      # every file output must be non-trivial
 ```
 
-A validator receives `(outputs, controls, case)` — `outputs` maps output
-labels to local file paths (file outputs) or decoded objects (JSON
-outputs) — and raises `AssertionError` with a helpful message on failure.
-Three ship out of the box:
+Labels are preferred over positional indices: they survive a model reordering
+its outputs, and they make the config readable without cross-referencing the
+model's `app.py`.
 
-- `wav_not_silent` — asserts WAV outputs carry signal, measured as RMS in
-  dBFS (0 dBFS = full scale). The default threshold of `-60` dBFS rejects
-  digital silence and near-silence; raise it (e.g. `min_rms_db: -40`) to
-  demand typical program levels.
-- `wav_format` — checks `channels`, `sample_rate`, and/or `min_duration` on
-  WAV outputs — e.g. assert mono output at 44100 Hz and at least 1.5s long.
-- `has_labels` — asserts a non-empty pyharp `LabelList` was returned
-  (optionally `min_labels`).
+**Mistakes are reported as configuration errors, not model failures.** An
+unrecognized rule name, an unknown output label, or a rule aimed at an output
+type it does not cover (`min_labels` on an audio output, say) raises an error
+naming the problem and listing what is valid. A `"*"` rule matching no output
+at all is also an error, since it would otherwise silently check nothing.
+
+**On `min_rms_db`:** level is measured as RMS in dBFS (0 dBFS = full scale),
+a bit-depth-independent unit that is easy to set thresholds in. Digital
+silence is `-inf`, quiet noise floors sit near `-60`, and typical program
+material is above `-40`. RMS is also more robust than a peak measurement — a
+single stray click cannot make an otherwise-silent file pass. `min_rms_db:
+-60` is the usual "this output is not silent" check.
+
+**On `min_labels`:** `min_labels: 0` is meaningful and is the right rule when
+a model may legitimately return no labels — it asserts a well-formed
+`LabelList` came back while permitting it to be empty. Omitting the rule
+entirely is weaker: a missing or `None` label output also passes, because
+labels are optional in pyharp.
+
+**On audio formats:** audio outputs are decoded with
+[soundfile](https://python-soundfile.readthedocs.io/) (a listed dependency),
+so audio rules work on any libsndfile format — WAV, FLAC, OGG, MP3, AIFF, and
+more — not just pyharp's `save_audio()` WAV default. Decoding to float also
+makes every audio rule bit-depth-independent, so a level threshold means the
+same thing whether the source is 16-bit, 24-bit, or float. `bit_depth` is the
+exception, by definition: it reads the file's PCM encoding and errors on a
+compressed format, which has no fixed bit depth.
+
+#### `validators` — custom Python
+
+Registered in [validators.py](src/validators.py) and referenced by name, with
+each validator's parameters nested beneath it, so they stay separate from the
+test case's own fields. A case may run several:
+
+```yaml
+      - name: labels-line-up
+        validators:
+          labels_within_audio:
+            tolerance: 0.1
+```
+
+A validator receives `(outputs, controls, params)` — `outputs` maps output
+labels to local file paths (file outputs) or decoded objects (JSON outputs) —
+and raises `AssertionError` with a message naming the output and what went
+wrong. One ships as an example: `labels_within_audio`, which asserts every
+returned label falls inside the audio output's timespan. It belongs here
+because it relates two different outputs to each other; had it concerned only
+one output, it would belong in `expect` instead.
 
 To add one:
 
 ```python
-@validator("midi_not_empty")
-def midi_not_empty(outputs, controls, case):
+@validator("midi_note_count")
+def midi_note_count(outputs, controls, params):
+    """Assert the MIDI output has at least params['min_notes'] note-ons."""
     for label, value in outputs.items():
         if isinstance(value, str) and value.lower().endswith((".mid", ".midi")):
-            assert os.path.getsize(value) > 50, f"'{label}' looks empty"
+            notes = count_note_ons(value)
+            assert notes >= params.get("min_notes", 1), \
+                f"'{label}' has {notes} notes, expected at least {params['min_notes']}"
 ```
+
+Before writing one, check whether an `expect` rule would do — and if the
+check is a generally useful property of a single output, consider adding it
+to the `expect` vocabulary (`EXPECT_RULES` in [cases.py](src/cases.py))
+instead of putting it in a one-off validator.
 
 ### Step 4: run just that model to iterate
 
 ```bash
-python model_validation/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
+python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
 ```
 
 The console shows each case's pass/fail; `reports/report.json` has per-case

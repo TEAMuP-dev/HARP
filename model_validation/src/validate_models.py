@@ -27,11 +27,11 @@ are validated independently: a failure (or timeout) in one model never stops
 validation of the others.
 
 Usage:
-    HF_TOKEN=... python model_validation/validate_models.py
-    HF_TOKEN=... python model_validation/validate_models.py --spaces teamup-tech/pitch_shifter
-    HF_TOKEN=... python model_validation/validate_models.py --load-only --workers 8
-    HF_TOKEN=... python model_validation/validate_models.py --no-restart-failed
-    python model_validation/validate_models.py --local-examples
+    HF_TOKEN=... python model_validation/src/validate_models.py
+    HF_TOKEN=... python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter
+    HF_TOKEN=... python model_validation/src/validate_models.py --load-only --workers 8
+    HF_TOKEN=... python model_validation/src/validate_models.py --no-restart-failed
+    python model_validation/src/validate_models.py --local-examples
 
 Exit codes:
     0 - all validated models passed (or were explicitly skipped)
@@ -53,9 +53,11 @@ from utils import get_token, scrub, load_config, get_excluded, discover_spaces
 
 
 DEFAULT_ORG = "teamup-tech"
-SCRIPT_DIR = Path(__file__).parent
-DEFAULT_CONFIG = SCRIPT_DIR / "config.yml"
-DEFAULT_EXAMPLES_DIR = SCRIPT_DIR.parent / "pyharp" / "examples"
+SCRIPT_DIR = Path(__file__).parent            # model_validation/src
+MODEL_VALIDATION_DIR = SCRIPT_DIR.parent      # model_validation
+REPO_ROOT = MODEL_VALIDATION_DIR.parent
+DEFAULT_CONFIG = MODEL_VALIDATION_DIR / "config.yml"
+DEFAULT_EXAMPLES_DIR = REPO_ROOT / "pyharp" / "examples"
 
 LOCAL_PORT_BASE = 7861
 

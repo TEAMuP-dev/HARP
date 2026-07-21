@@ -79,7 +79,7 @@ jobs:
       - name: Validate local examples
         run: |
           set +e
-          python model_validation/validate_models.py --local-examples \
+          python model_validation/src/validate_models.py --local-examples \
             --output-dir reports/examples
           CODE=$?
           if [ "$CODE" -eq 1 ]; then
@@ -137,7 +137,7 @@ jobs:
             ARGS+=(--no-restart-failed)
           fi
           set +e
-          python model_validation/validate_models.py "${ARGS[@]}"
+          python model_validation/src/validate_models.py "${ARGS[@]}"
           CODE=$?
           if [ "$CODE" -eq 1 ]; then
             echo "::warning title=Space failures::Some spaces failed validation - see the run summary and report artifact."

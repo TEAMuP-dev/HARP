@@ -1,4 +1,4 @@
-# Configuration for model_validation/validate_models.py
+# Configuration for model_validation/src/validate_models.py
 #
 # All keys are optional. Models not listed here are still discovered and
 # validated automatically with a single synthesized "default" test case, so
@@ -21,27 +21,57 @@
 #   overrides:      # per-model settings; keys are space ids, or
 #                   # "examples/<example-dir>" for local pyharp examples
 #     <model key>:
-#       connect_timeout: 600     # seconds to wait for build/wake (default 420)
-#       process_timeout: 900     # seconds to wait for /process (default 600)
-#       load_only: true          # only check availability + /controls
-#       test_cases:              # named /process test cases; when omitted, a
-#                                # single synthesized "default" case runs
-#         - name: default        # empty case == synthesized defaults
+#       connect_timeout: 600   # seconds to wait for build/wake (default 420)
+#       process_timeout: 900   # seconds to wait for /process (default 600)
+#       load_only: true        # only check availability + /controls
+#
+#       test_cases:            # named /process test cases; when omitted, a
+#                              # single synthesized "default" case runs
+#         - name: default      # empty case == synthesized defaults
+#
 #         - name: my-case
-#           process_timeout: 300         # optional per-case override
-#           controls:                    # override control values by label
+#           process_timeout: 300   # optional per-case override
+#
+#           controls:              # override control values by label
 #             "Some Slider Label": 12
 #             "Some Toggle Label": true
-#           files:                       # override track/file inputs by label;
-#                                        # paths are relative to this file
+#
+#           files:                 # override track/file inputs by label;
+#                                  # paths are relative to this file
 #             "Input Audio": test_data/my_clip.wav
-#           expect:                      # declarative output checks by label
-#             "Output Audio":
-#               ext: .wav                # downloaded file must have this ext
-#               min_bytes: 1000          # ... and be at least this many bytes
-#           validator: wav_not_silent    # custom check registered in
-#                                        # validators.py; extra case keys
-#                                        # (e.g. min_rms_db) parameterize it
+#
+#           expect:                # per-output checks, keyed by output label
+#             "Output Audio":      # ("*" applies rules to every compatible
+#                                  #  output; see the rule table below)
+#               ext: .wav          # extension: string or list of accepted
+#               min_bytes: 1000    # minimum file size, in bytes
+#               channels: 1        # audio: exact channel count
+#               sample_rate: 44100 # audio: exact sample rate, in Hz
+#               min_duration: 1.5  # audio: minimum length, in seconds
+#               max_duration: 10.0 # audio: maximum length, in seconds
+#               bit_depth: 16      # audio: exact PCM bit depth (PCM formats)
+#               min_rms_db: -60    # audio: minimum RMS level, in dBFS
+#             "Output Labels":
+#               min_labels: 1      # LabelList: minimum count (0 permits an
+#                                  # empty list, but requires a valid one)
+#
+#           validators:            # only for checks `expect` cannot express,
+#                                  # e.g. spanning several outputs; each
+#                                  # validator's parameters nest beneath it
+#             labels_within_audio:
+#               tolerance: 0.1
+#
+# Which expect rules apply to which output types:
+#
+#   ext, min_bytes                                  any file output
+#   channels, sample_rate, min_duration,            audio outputs
+#     max_duration, bit_depth, min_rms_db
+#   min_labels                                      JSON (LabelList) outputs
+#
+# Applying a rule to an output type it does not cover is reported as a
+# configuration error, not a model failure. Audio outputs are decoded with
+# soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3, AIFF, ...);
+# bit_depth applies only to PCM formats, not compressed ones.
 
 exclude: []
 
@@ -62,7 +92,10 @@ overrides:
       - name: shift-up-octave
         controls:
           "Pitch Shift (semitones)": 12
-        validator: wav_not_silent
+        expect:
+          "Output Audio":
+            ext: .wav
+            min_rms_db: -60      # shifted audio must still carry signal
       - name: shift-down-octave
         controls:
           "Pitch Shift (semitones)": -12
@@ -94,7 +127,6 @@ overrides:
   #         "Output Audio":
   #           ext: .wav
   #           min_bytes: 10000
-  #       validator: wav_format
-  #       channels: 1
-  #       sample_rate: 44100
-  #       min_duration: 1.5
+  #           channels: 1
+  #           sample_rate: 44100
+  #           min_duration: 1.5

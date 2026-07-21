@@ -77,4 +77,4 @@ website/content/HARP/*.md
 website/content/pyHARP/*.md
 
 # Model validation output
-reports/
+model_validation/reports/

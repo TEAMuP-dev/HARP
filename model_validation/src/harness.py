@@ -1,5 +1,7 @@
 """
-The core validation harness for HARP model deployments.
+The core validation harness for HARP model deployments: the code that sets
+up a connection to a live model, drives it through /controls and /process,
+and reports what happened, independent of where the model is running.
 
 Both validation tiers funnel into run_endpoint_tests(), which performs the
 identical black-box checks against any live HARP gradio app:
