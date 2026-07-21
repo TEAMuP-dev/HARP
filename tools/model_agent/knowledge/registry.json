@@ -128,14 +128,14 @@
     },
     {
       "backend": "examples/omnizart_pyharp",
-      "backend_space": null,
+      "backend_space": "",
       "deps_fingerprint": "111cb07feba3692a",
       "gpu": false,
       "lock": "knowledge/locks/music-and-culture-technology-lab-omnizart.txt",
       "mode": "dual",
       "model_id": "Music-and-Culture-Technology-Lab/omnizart",
       "notes": "PREFERRED single-Space path: one Docker Space FROM mctlab/omnizart:latest with a Python 3.10 pyharp frontend venv + Python 3.6 Omnizart backend over subprocess JSON IPC (hand-authored, not LLM-rendered). See examples/omnizart_pyharp.",
-      "outcome": "unverified",
+      "outcome": "success",
       "python": "3.6",
       "recipe": null,
       "repo": "Music-and-Culture-Technology-Lab/omnizart",
@@ -145,7 +145,8 @@
         "native_fragile": true,
         "notes": "base image mctlab/omnizart:latest is Python 3.6 (FROM tensorflow/tensorflow:2.5.0-gpu); modern Gradio/pyharp need Python >=3.10, so the frontend runs in a separate 3.10 venv and IPCs to the 3.6 model.",
         "pip_installable": true
-      }
+      },
+      "space_url": "https://huggingface.co/spaces/teamup-tech/Omnizart"
     },
     {
       "backend": "examples/omnizart_backend",
@@ -271,6 +272,87 @@
       "repo": "YatingMusic/remi",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/REMI"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "sergree/matchering",
+      "outcome": "success",
+      "repo": "sergree/matchering",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/Matchering"
+    },
+    {
+      "backend_space": "Zeyue7/AudioX",
+      "mode": "remote",
+      "model_id": "Zeyue7/AudioX",
+      "outcome": "success",
+      "repo": "Zeyue7/AudioX",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/AudioX"
+    },
+    {
+      "backend_space": "ACE-Step/ACE-Step",
+      "mode": "remote",
+      "model_id": "ACE-Step/ACE-Step",
+      "outcome": "success",
+      "repo": "ACE-Step/ACE-Step",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/ACE-Step"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "spotify/pedalboard",
+      "outcome": "success",
+      "repo": "spotify/pedalboard",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/pedalboard"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "timsainb/noisereduce",
+      "outcome": "success",
+      "repo": "timsainb/noisereduce",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/noisereduce"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "csteinmetz1/pyloudnorm",
+      "outcome": "success",
+      "repo": "csteinmetz1/pyloudnorm",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/pyloudnorm"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "rikorose/deepfilternet",
+      "outcome": "success",
+      "repo": "rikorose/deepfilternet",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/DeepFilterNet"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "acids-ircam/rave",
+      "outcome": "success",
+      "repo": "acids-ircam/rave",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/RAVE"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "csteinmetz1/automix-toolkit",
+      "outcome": "success",
+      "repo": "csteinmetz1/automix-toolkit",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/automix-toolkit"
     }
   ],
   "version": 1

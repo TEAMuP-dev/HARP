@@ -302,7 +302,8 @@ frontend will later proxy to it over the network. THIS APP DOES NOT USE PYHARP.
 
 Return ONE JSON object with exactly these top-level keys:
   - "model":     {"id", "name", "description", "author", "tags": [...]}
-  - "framework": {"import": "<top pip import name>", "pip": [...], "apt": [...], "gpu": bool}
+  - "framework": {"import": "<top pip import name>", "pip": [...], "apt": [...], "gpu": bool,
+                  "python_version": "3.10"}
   - "inputs":    ordered list of input components
   - "outputs":   ordered list of output components
   - "inference": {"setup": "<module-level python>", "body": "<predict() body>"}
@@ -324,6 +325,16 @@ CRITICAL -- no pyharp:
     other pyharp helper. Use plain libraries instead (soundfile / librosa /
     numpy for audio I/O), and declare them in framework.pip.
 
+CRITICAL -- Python / TensorFlow pins:
+  - Set framework.python_version to "3.10" whenever you pin tensorflow /
+    tensorflow-cpu / ddsp / crepe, or any stack that uses TF 1.x compat APIs
+    (tf.compat.v1, disable_v2_behavior). Current Hugging Face Gradio Spaces
+    may otherwise pick Python 3.12+, where tensorflow==2.15 has NO wheels and
+    the build dies with "No matching distribution found".
+  - Prefer tensorflow==2.15.0 (or tensorflow-cpu==2.15.0) on python_version
+    3.10 for TF1-compat research code. Do NOT pin tensorflow==2.15 on an
+    unset/newer python_version.
+
 inference.setup rules:
   - module-level python that runs once at import: imports for your framework and
     one-time model loading (assign the loaded model to a module-level variable).
@@ -335,7 +346,10 @@ inference.setup rules:
     extras). Add the repo itself as a git+ dependency ONLY when the prompt says
     the repo is pip-installable. If the prompt says it is NOT pip-installable,
     INLINE the needed loading/inference code from the provided sources into
-    inference.setup / inference.body (do NOT add a git+ line).
+    inference.setup / inference.body (do NOT add a git+ line). Prefer
+    `from model import ...` style imports when the prompt says those .py modules
+    will be vendored next to app.py -- do NOT urllib-download source .py files
+    at runtime. Checkpoint / weight downloads (gdown, huggingface_hub) are OK.
 
 inference.body rules:
   - this is the BODY of predict() ONLY (no "def" line, no surrounding
@@ -592,15 +606,16 @@ def build_recipe_user_prompt(
                     "# Upstream GitHub source (GROUND TRUTH -- NOT pip-installable)\n"
                     "These files come from the model's GitHub repository. The repo has NO "
                     "root setup.py/pyproject.toml/setup.cfg, so `pip install git+...` WILL "
-                    "FAIL. You are writing a standalone Gradio backend that must be "
-                    "self-contained. Therefore you MUST:\n"
-                    "  - INLINE the needed loading/inference logic from the sources below "
-                    "into inference.setup and inference.body (copy essential functions/"
-                    "classes into the generated module; do NOT `import` repo-local modules "
-                    "that won't exist on the Space);\n"
-                    "  - put only third-party packages (torch, miditoolkit, etc.) in "
-                    "framework.pip -- NEVER a git+ line for this repo;\n"
-                    "  - design Gradio input/output components for the desired I/O types."
+                    "FAIL. The agent will VENDOR these .py files next to app.py on the "
+                    "Space. Therefore you MUST:\n"
+                    "  - import local modules directly (e.g. `from model import ...`) -- "
+                    "do NOT urllib/requests-download .py sources at runtime;\n"
+                    "  - put only third-party packages (tensorflow, miditoolkit, gdown, "
+                    "…) in framework.pip -- NEVER a git+ line for this repo;\n"
+                    "  - set framework.python_version to \"3.10\" when using tensorflow "
+                    "(or any TF1-compat API);\n"
+                    "  - design Gradio input/output components for the desired I/O types.\n"
+                    "Checkpoint / weight downloads (gdown, zip extract) are fine."
                 )
         else:
             lines.append(

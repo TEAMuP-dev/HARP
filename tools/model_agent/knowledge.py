@@ -147,7 +147,8 @@ REPAIR_RULES: List[RepairRule] = [
         pattern=r"No module named ['\"]imp['\"]",
         action="use_older_python_or_dual",
         hint="The 'imp' module was removed in Python 3.12. Build this package "
-        "under Python <=3.11 (dual-interpreter mode with an older backend_python).",
+        "under Python <=3.10 (dual-interpreter mode with an older backend_python; "
+        "the dual base image cannot provision 3.11+).",
     ),
     RepairRule(
         name="setuptools-build-meta",
@@ -164,6 +165,16 @@ REPAIR_RULES: List[RepairRule] = [
         hint="The pinned torch build isn't on the default index. Use the CPU/CUDA "
         "wheel index (--extra-index-url https://download.pytorch.org/whl/cpu) or "
         "proxy to an existing backend Space (remote mode).",
+    ),
+    RepairRule(
+        name="tensorflow-no-distribution",
+        pattern=r"No matching distribution found for tensorflow(?:-cpu|-gpu)?==([\w\.\+]+)",
+        action="pin_python_310_or_newer_tf",
+        hint="That TensorFlow pin has no wheel for the Space's Python. For TF 1.x "
+        "compat / tensorflow==2.15 research stacks, set framework.python_version "
+        "to '3.10' (the agent writes python_version into the Space README). On "
+        "Python 3.12+ only tensorflow>=2.16 (often 2.20+) is published -- bumping "
+        "TF may break tf.compat.v1 code, so prefer pinning Python 3.10.",
     ),
     RepairRule(
         name="cuda-unavailable",
@@ -198,6 +209,17 @@ REPAIR_RULES: List[RepairRule] = [
         action="remote_or_backend",
         hint="The repo has no setup.py/pyproject.toml, so `pip install git+<repo>` "
         "fails. Deploy it as a plain-Gradio backend + remote frontend instead.",
+    ),
+    RepairRule(
+        name="dual-backend-missing-output",
+        pattern=r"(?:backend produced no ['\"]([^'\"]+)['\"] output|"
+        r"missing output key\(s\):\s*([A-Za-z0-9_, \-]+))",
+        action="fix_dual_worker_output_mapping",
+        hint="The dual backend worker returned an outputs dict that does not match "
+        "the recipe outputs. Ensure framework.dual.worker.body sets `outputs` with "
+        "every recipe output name exactly, e.g. drums/bass/other/vocals for a "
+        "4-stem wrapper. If the model only produces fewer stems, change the recipe "
+        "outputs to match the model or explicitly derive/map the missing stems.",
     ),
     # -- ZeroGPU / `spaces` runtime pitfalls -------------------------------- #
     RepairRule(
@@ -258,6 +280,18 @@ REPAIR_RULES: List[RepairRule] = [
         hint="The checkpoint exceeds the free-tier LFS quota. Host it in a separate "
         "HF model repo and hf_hub_download it at startup; if it was already "
         "committed, remove it from git history before re-pushing.",
+    ),
+    RepairRule(
+        name="hf-hub-artifact-not-found-or-private",
+        pattern=r"Repository Not Found for url: .*huggingface\.co/.*/resolve/.*|"
+        r"Invalid username or password|private or gated repo",
+        action="fix_checkpoint_source_or_token",
+        hint="A runtime hf_hub_download checkpoint URL is missing, private, gated, "
+        "or fetched with no readable token. Verify the repo id, filename, revision, "
+        "and repo_type; if the artifact is private/gated, accept its terms and set "
+        "HF_TOKEN with read access. If the upstream file moved or is unavailable, "
+        "mirror the checkpoint into an accessible HF model repo and update the "
+        "wrapper to download from that repo.",
     ),
     RepairRule(
         name="invalid-space-card-color",

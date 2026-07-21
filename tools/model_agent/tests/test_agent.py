@@ -1662,6 +1662,26 @@ class BackendRecipeTest(unittest.TestCase):
         self.assertIn("sdk_version: 3.50.2", package.readme)
         self.assertIn("/predict", package.readme)
 
+    def test_backend_readme_pins_python_310_when_tensorflow_present(self):
+        # REMI regression: tensorflow==2.15 has no wheel on HF's newer default
+        # Python; the Space README must pin python_version 3.10.
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"].pop("python_version", None)
+        package = build_package_from_recipe(recipe)
+        self.assertIn('python_version: "3.10"', package.readme)
+        self.assertEqual(recipe["framework"].get("python_version"), "3.10")
+
+    def test_backend_vendors_source_files_into_package(self):
+        recipe = json.loads(json.dumps(self.RECIPE))
+        recipe["framework"]["vendor_files"] = {
+            "model.py": "class PopMusicTransformer:\n    pass\n",
+            "utils.py": "def helper():\n    return 1\n",
+        }
+        package = build_package_from_recipe(recipe)
+        self.assertIn("model.py", package.extra_files)
+        self.assertIn("PopMusicTransformer", package.extra_files["model.py"])
+        self.assertIn("utils.py", package.extra_files)
+
     def test_backend_readme_defaults_sdk_version_when_unpinned(self):
         recipe = json.loads(json.dumps(self.RECIPE))
         recipe["framework"]["pip"] = ["ddsp", "soundfile"]  # no gradio pin
@@ -2170,8 +2190,9 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         # GitHub grounding must NOT claim the wrapper is deployed into a Space.
         self.assertNotIn("Original Space source", prompt)
 
-    def test_non_pip_installable_github_prompts_inline_not_git_plus(self):
-        # REMI-style script repos: no setup.py -> never recommend git+.
+    def test_non_pip_installable_github_prompts_vendor_not_git_plus(self):
+        # REMI-style script repos: no setup.py -> never recommend git+; sources
+        # will be vendored next to app.py.
         context = RecipeGenerationContext(
             model_id="YatingMusic/remi",
             readme="REMI.",
@@ -2182,7 +2203,8 @@ class GitHubGroundingPromptTest(unittest.TestCase):
         )
         prompt = build_recipe_user_prompt(context, backend=True)
         self.assertIn("NOT pip-installable", prompt)
-        self.assertIn("INLINE", prompt)
+        self.assertIn("VENDOR", prompt)
+        self.assertIn("python_version", prompt)
         self.assertNotIn("add the repo as a pip dependency", prompt)
 
     def test_declared_dependencies_are_grounded_in_prompt(self):
@@ -2680,6 +2702,13 @@ class RepairRuleTest(unittest.TestCase):
     def test_not_pip_installable_rule(self):
         hits = match_repair_rules("... does not appear to be a Python project ...")
         self.assertTrue(any(h["rule"] == "not-pip-installable" for h in hits))
+
+    def test_tensorflow_no_distribution_rule(self):
+        hits = match_repair_rules(
+            "ERROR: No matching distribution found for tensorflow==2.15.0"
+        )
+        self.assertTrue(any(h["rule"] == "tensorflow-no-distribution" for h in hits))
+        self.assertTrue(any("3.10" in h["hint"] for h in hits))
 
     def test_dual_backend_missing_output_rule(self):
         self._assert_rule(
@@ -3219,7 +3248,7 @@ class OrchestratorPlanTest(unittest.TestCase):
         self.assertEqual(plan.mode, "backend")
         self.assertTrue(plan.can_execute)
         self.assertEqual(plan.choices, ["backend"])
-        self.assertTrue(any("inline" in r.lower() for r in plan.rationale))
+        self.assertTrue(any("inline" in r.lower() or "packaging" in r.lower() for r in plan.rationale))
 
     def test_forced_mode_backend_when_dual_also_available(self):
         plan = decide_plan(

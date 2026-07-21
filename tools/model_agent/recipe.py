@@ -57,6 +57,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Sequence, Tuple
 
 from .agent import GeneratedAppPackage
@@ -155,6 +156,24 @@ def validate_recipe(recipe: Mapping[str, Any]) -> None:
             "framework.backend (a plain-Gradio backend Space) cannot be combined "
             "with 'remote' or 'dual'"
         )
+    if is_backend:
+        py_ver = framework.get("python_version")
+        if py_ver is not None and not _PY_VERSION_RE.match(str(py_ver).strip()):
+            errors.append(
+                "framework.python_version must be a Python 3.x like '3.10' "
+                f"(got {py_ver!r})"
+            )
+        vendor = framework.get("vendor_files")
+        if vendor is not None:
+            if not isinstance(vendor, Mapping):
+                errors.append("framework.vendor_files must be an object of {filename: source}")
+            else:
+                for name, text in vendor.items():
+                    if not str(name).strip() or not isinstance(text, str):
+                        errors.append(
+                            "framework.vendor_files entries must be filename -> source string"
+                        )
+                        break
 
     if is_remote:
         # Remote-backend recipes proxy to a Space, so the inference glue is not
@@ -1273,6 +1292,71 @@ def _recipe_gradio_pin(framework: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+def _backend_needs_legacy_python(framework: Mapping[str, Any]) -> bool:
+    """True when the backend's pip pins are unlikely to resolve on bleeding-edge Python.
+
+    Hugging Face Gradio Spaces have been drifting toward newer CPythons on which
+    older TensorFlow / TF1-compat research stacks (REMI, DDSP, …) have no wheels.
+    Pinning ``python_version: 3.10`` in the Space README keeps those pins installable.
+    """
+
+    for entry in framework.get("pip") or []:
+        name = str(entry).strip().split("==")[0].split(">=")[0].split("<")[0].split("[")[0]
+        name = name.strip().lower().replace("_", "-")
+        if name in {"tensorflow", "tensorflow-cpu", "tensorflow-gpu", "tf-nightly"}:
+            return True
+        if name in {"ddsp", "crepe", "magenta"}:
+            return True
+    return False
+
+
+def ensure_backend_runtime_defaults(recipe: MutableMapping[str, Any]) -> None:
+    """Fill backend-only runtime defaults (python_version) when missing.
+
+    Mutates ``recipe`` in place. Safe to call repeatedly.
+    """
+
+    framework = recipe.get("framework")
+    if not isinstance(framework, MutableMapping) or not framework.get("backend"):
+        return
+    if str(framework.get("python_version") or "").strip():
+        return
+    if _backend_needs_legacy_python(framework):
+        framework["python_version"] = "3.10"
+
+
+def attach_vendor_files(
+    recipe: MutableMapping[str, Any], sources: Mapping[str, str]
+) -> int:
+    """Copy top-level ``.py`` sources into ``framework.vendor_files`` for the Space.
+
+    Used for script-style GitHub repos (no setup.py): the LLM may still emit
+    runtime ``urllib`` downloads, but vendored files make ``os.path.exists`` skip
+    those downloads and keep imports working offline. Returns the number of files
+    attached.
+    """
+
+    framework = recipe.get("framework")
+    if not isinstance(framework, MutableMapping) or not framework.get("backend"):
+        return 0
+    vendor: Dict[str, str] = {}
+    existing = framework.get("vendor_files")
+    if isinstance(existing, Mapping):
+        vendor.update({str(k): str(v) for k, v in existing.items() if isinstance(v, str)})
+    for path, text in (sources or {}).items():
+        if not isinstance(text, str) or not text.strip():
+            continue
+        name = Path(str(path).replace("\\", "/")).name
+        if not name.endswith(".py"):
+            continue
+        # Don't overwrite an explicit vendor entry the LLM/recipe already set.
+        vendor.setdefault(name, text)
+    if not vendor:
+        return 0
+    framework["vendor_files"] = vendor
+    return len(vendor)
+
+
 # Some packages need an UNDECLARED companion at runtime: pip won't pull it, it
 # appears in no manifest, and it only surfaces as a ModuleNotFoundError on the
 # Space. torchaudio>=2.8 moved load/save/info to TorchCodec (and >=2.9 removed the
@@ -1707,18 +1791,29 @@ def _readme_from_recipe(recipe: Mapping[str, Any]) -> str:
         # the recipe pins (so HF doesn't force a version that fights the model's
         # deps); fall back to the standard version when the recipe leaves it open.
         sdk_version = _recipe_gradio_pin(framework) or "5.28.0"
+        # Legacy TF / research stacks need an older CPython: without an explicit
+        # python_version, current Gradio Spaces may pick 3.12+ where tensorflow
+        # 2.15 (and similar) have no wheels ("No matching distribution found").
+        python_version = str(framework.get("python_version") or "").strip()
+        if not python_version and _backend_needs_legacy_python(framework):
+            python_version = "3.10"
+        front_matter = [
+            "---",
+            f"title: {json.dumps(name)}",
+            "colorFrom: indigo",
+            "colorTo: gray",
+            "sdk: gradio",
+            f"sdk_version: {sdk_version}",
+            "app_file: app.py",
+            "pinned: false",
+            f"license: {json.dumps(license_name)}",
+        ]
+        if python_version:
+            front_matter.append(f'python_version: "{python_version}"')
+        front_matter.append("---")
         return "\n".join(
-            [
-                "---",
-                f"title: {json.dumps(name)}",
-                "colorFrom: indigo",
-                "colorTo: gray",
-                "sdk: gradio",
-                f"sdk_version: {sdk_version}",
-                "app_file: app.py",
-                "pinned: false",
-                f"license: {json.dumps(license_name)}",
-                "---",
+            front_matter
+            + [
                 "",
                 f"# {name} (backend)",
                 "",
@@ -2222,6 +2317,11 @@ def remote_recipe_from_api_info(
 def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
     """Build the in-memory files for a pyharp wrapper from a recipe."""
 
+    # Backend recipes may omit python_version; fill it before validate/render so
+    # the README front matter always carries a pin when legacy TF deps need it.
+    if isinstance(recipe, MutableMapping):
+        ensure_backend_runtime_defaults(recipe)
+
     validate_recipe(recipe)
 
     model = recipe["model"]
@@ -2299,6 +2399,16 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
         if is_backend
         else _requirements_from_recipe(framework)
     )
+    extra_files: JSON = {}
+    if is_backend and isinstance(framework, Mapping):
+        vendor = framework.get("vendor_files")
+        if isinstance(vendor, Mapping):
+            for name, text in vendor.items():
+                if isinstance(text, str) and str(name).strip():
+                    # Only allow simple relative filenames (no path traversal).
+                    safe = Path(str(name).replace("\\", "/")).name
+                    if safe.endswith(".py"):
+                        extra_files[safe] = text
     return GeneratedAppPackage(
         repo_id=repo_id,
         task=task,
@@ -2310,4 +2420,5 @@ def build_package_from_recipe(recipe: Mapping[str, Any]) -> GeneratedAppPackage:
         readme=_readme_from_recipe(recipe),
         packages_txt=_packages_from_recipe(framework),
         manifest=manifest,
+        extra_files=extra_files,
     )

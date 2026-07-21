@@ -47,8 +47,10 @@ from .recipe import (
     RecipeError,
     _slug,
     apply_dependency_fixes,
+    attach_vendor_files,
     build_package_from_recipe,
     collect_pip_requirements,
+    ensure_backend_runtime_defaults,
     find_dependency_conflicts,
     guess_primary_endpoint,
     lint_recipe_requirements,
@@ -855,6 +857,18 @@ def main(argv: Iterable[str] | None = None) -> int:
                             file=sys.stderr,
                         )
                         return 2
+                    # Script-style backend: ship the repo's .py modules next to app.py
+                    # so imports work without git+ (and without runtime urllib downloads).
+                    if getattr(args, "backend", False) and context.space_sources:
+                        n_vendor = attach_vendor_files(
+                            draft.recipe, context.space_sources
+                        )
+                        if n_vendor:
+                            print(
+                                f"  Vendored {n_vendor} source file(s) into the backend "
+                                "package (framework.vendor_files).",
+                                file=sys.stderr,
+                            )
                 # Single-Space feasibility gate: don't hand back a recipe that the
                 # deterministic classifier says can't deploy as one self-contained
                 # pyharp Space (unless the user asked for a backend or --emit-anyway).
@@ -867,6 +881,15 @@ def main(argv: Iterable[str] | None = None) -> int:
                     if decision.mode != "single" and not getattr(args, "emit_anyway", False):
                         _print_single_space_gate(owner, repo, decision)
                         return 2
+            if getattr(args, "backend", False) and isinstance(draft.recipe, dict):
+                ensure_backend_runtime_defaults(draft.recipe)
+                py_ver = (draft.recipe.get("framework") or {}).get("python_version")
+                if py_ver:
+                    print(
+                        f"  Backend Space python_version={py_ver} "
+                        "(needed for legacy TensorFlow / research pins).",
+                        file=sys.stderr,
+                    )
             _print_resource_headsup(card, context)
             return _emit_recipe_draft(agent, draft, args)
 
