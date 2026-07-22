@@ -31,6 +31,7 @@ from .orchestrator import (
     detect_ref,
     extract_space_links,
     isolation_options,
+    resolve_target_repo,
 )
 from .llm import (
     LLMError,
@@ -473,14 +474,20 @@ def build_parser() -> argparse.ArgumentParser:
         )
         _dep.add_argument(
             "ref",
+            nargs="?",
+            default="",
             help="Model reference: a GitHub URL/owner-repo, an HF model id, or an HF "
             "Space URL/id (e.g. https://github.com/haoheliu/voicefixer, "
-            "facebook/MusicGen, Soul-AILab/SoulX-Singer).",
+            "facebook/MusicGen, Soul-AILab/SoulX-Singer). If omitted, you'll be "
+            "prompted for it.",
         )
         _dep.add_argument(
             "--repo",
             default="",
-            help="Target HF Space id to deploy to (owner/name). Required unless --plan.",
+            help="Target HF Space to deploy to. Either the full 'owner/name', or just "
+            "your org/owner (e.g. 'teamup-tech'), in which case the Space name is taken "
+            "from the model reference (so '.../pedalboard --repo teamup-tech' targets "
+            "'teamup-tech/pedalboard'). Prompted for when omitted; required unless --plan.",
         )
         _dep.add_argument(
             "--source",
@@ -1216,13 +1223,45 @@ def _prompt_isolation_mode(choices: List[str], *, default: str) -> str:
 def _run_deploy(agent: HarpModelAgent, args) -> int:
     """One-command deploy: detect the ref, analyze it, pick a mode, and run it."""
 
+    ref = (args.ref or "").strip()
+    if not ref:
+        # Widget-style: prompt for just the link when it wasn't passed.
+        try:
+            ref = input(
+                "Model link (GitHub / HF model / HF Space URL or owner/name): "
+            ).strip()
+        except EOFError:
+            ref = ""
+        if not ref:
+            print(
+                "error: a model reference is required (a GitHub/HF URL or owner/name).",
+                file=sys.stderr,
+            )
+            return 2
+    args.ref = ref
+
     try:
         target = detect_ref(args.ref, args.source)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
+    # Allow an org-only --repo (e.g. "teamup-tech"): derive the Space name from
+    # the reference so the user doesn't have to retype it. Prompt when missing
+    # (unless we're only previewing the plan).
+    if not args.repo and not args.plan:
+        try:
+            entered = input(
+                f"Target Space [owner/name, or just an org -> owner/{target.name}]: "
+            ).strip()
+        except EOFError:
+            entered = ""
+        args.repo = entered
+    args.repo = resolve_target_repo(args.repo, target)
+
     print(f"Analyzing {target.slug} (detected: {target.kind}) ...", file=sys.stderr)
+    if args.repo:
+        print(f"  Target Space: {args.repo}", file=sys.stderr)
 
     backend_space = args.space or ""
     decision = None

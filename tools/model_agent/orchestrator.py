@@ -108,6 +108,33 @@ def extract_space_links(text: str) -> List[str]:
     return seen
 
 
+def resolve_target_repo(repo: str, target: RefTarget) -> str:
+    """Expand a target Space id, allowing an org-only shorthand.
+
+    Lets a user pass just their org (e.g. ``teamup-tech``) and have the Space
+    name derived from the model reference, so ``deploy .../pedalboard
+    --repo teamup-tech`` targets ``teamup-tech/pedalboard``.
+
+    * ``owner/name`` -> used verbatim.
+    * ``owner`` (no slash) -> ``owner/<name-from-ref>``.
+    * empty -> empty (the caller decides whether to prompt or error).
+
+    A full ``https://huggingface.co/spaces/<owner>/<name>`` URL is also accepted
+    and reduced to ``owner/name``.
+    """
+
+    repo = (repo or "").strip()
+    if not repo:
+        return ""
+    match = _HF_SPACE_RE.search(repo)
+    if match:
+        return f"{match.group(1)}/{match.group(2)}"
+    repo = repo.strip("/")
+    if "/" in repo:
+        return repo
+    return f"{repo}/{target.name}"
+
+
 # planning --------------------------------------------------------------------
 
 

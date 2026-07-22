@@ -83,6 +83,7 @@ from tools.model_agent.orchestrator import (
     detect_ref,
     isolation_options,
     extract_space_links,
+    resolve_target_repo,
 )
 
 
@@ -3379,7 +3380,43 @@ class OrchestratorStepsTest(unittest.TestCase):
         self.assertEqual(self._steps(plan, target), [])
 
 
+class ResolveTargetRepoTest(unittest.TestCase):
+    def test_org_only_repo_derives_name_from_ref(self):
+        target = detect_ref("https://github.com/spotify/pedalboard")
+        self.assertEqual(
+            resolve_target_repo("teamup-tech", target), "teamup-tech/pedalboard"
+        )
+
+    def test_full_owner_name_is_used_verbatim(self):
+        target = detect_ref("https://github.com/spotify/pedalboard")
+        self.assertEqual(
+            resolve_target_repo("teamup-tech/custom", target), "teamup-tech/custom"
+        )
+
+    def test_derives_name_for_hf_model_ref(self):
+        target = detect_ref("facebook/MusicGen", source="hf-model")
+        self.assertEqual(resolve_target_repo("myorg", target), "myorg/MusicGen")
+
+    def test_full_space_url_is_reduced(self):
+        target = detect_ref("https://github.com/spotify/pedalboard")
+        self.assertEqual(
+            resolve_target_repo(
+                "https://huggingface.co/spaces/teamup-tech/pedalboard", target
+            ),
+            "teamup-tech/pedalboard",
+        )
+
+    def test_empty_stays_empty(self):
+        target = detect_ref("https://github.com/spotify/pedalboard")
+        self.assertEqual(resolve_target_repo("", target), "")
+        self.assertEqual(resolve_target_repo("  ", target), "")
+
+
 class DeployCliFlagsTest(unittest.TestCase):
+    def test_deploy_ref_is_optional_for_prompting(self):
+        args = build_parser().parse_args(["deploy", "--repo", "me/x", "--plan"])
+        self.assertEqual(args.ref, "")
+
     def test_deploy_defaults_user_token_on(self):
         args = build_parser().parse_args(
             ["deploy", "facebook/MusicGen", "--source", "hf-space", "--repo", "me/x", "--plan"]
