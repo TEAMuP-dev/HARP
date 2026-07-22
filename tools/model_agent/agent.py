@@ -1408,6 +1408,33 @@ class HarpModelAgent:
             return []
         return list((info.get("releases") or {}).keys())
 
+    def pypi_distribution_exists(self, name: str) -> bool:
+        """True when ``name`` is a real published PyPI project (best-effort).
+
+        Returns False on a 404 and also when PyPI can't be reached (so callers
+        fall back to their non-PyPI path rather than assuming a wheel exists).
+        """
+
+        return self._pypi_json(quote(str(name).strip())) is not None
+
+    def resolve_pypi_distribution(
+        self, manifests: Optional[Mapping[str, str]], repo_name: str = ""
+    ) -> Optional[str]:
+        """The PyPI project name this repo publishes, if any.
+
+        Prefers the distribution name declared in the repo's own packaging files
+        (pyproject/setup.cfg/setup.py) and falls back to the repo name, returning
+        the first candidate that actually exists on PyPI. Used to install a normal
+        wheel (e.g. ``pedalboard``) instead of ``git+<repo>`` -- which triggers a
+        source build (native compiles, SSH submodules) that routinely fails on a
+        Space builder.
+        """
+
+        for candidate in distribution_names_from_manifests(manifests or {}, repo_name):
+            if self.pypi_distribution_exists(candidate):
+                return candidate
+        return None
+
     def _pypi_json(self, path: str) -> Optional[JSON]:
         if path in _PYPI_CACHE:
             return _PYPI_CACHE[path]
@@ -1430,6 +1457,61 @@ class HarpModelAgent:
             return None
         _PYPI_CACHE[path] = result
         return result
+
+
+# Distribution-name extraction from a repo's packaging manifests. Used to decide
+# whether a GitHub repo can be pip-installed from PyPI (a wheel) instead of via
+# git+ (a source build that often fails on native/submodule repos like pedalboard).
+_PYPROJECT_TABLE_RE = re.compile(
+    r"(?ms)^\s*\[(project|tool\.poetry)\]\s*$(.*?)(?=^\s*\[|\Z)"
+)
+_QUOTED_NAME_RE = re.compile(
+    r"""(?m)^\s*name\s*=\s*["']([A-Za-z0-9][A-Za-z0-9._-]*)["']"""
+)
+_SETUPCFG_METADATA_RE = re.compile(r"(?ms)^\s*\[metadata\]\s*$(.*?)(?=^\s*\[|\Z)")
+_SETUPCFG_NAME_RE = re.compile(r"(?m)^\s*name\s*=\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*$")
+_SETUP_PY_NAME_RE = re.compile(
+    r"""name\s*=\s*["']([A-Za-z0-9][A-Za-z0-9._-]*)["']"""
+)
+
+
+def distribution_names_from_manifests(
+    manifests: Mapping[str, str], repo_name: str = ""
+) -> List[str]:
+    """Ordered candidate PyPI project names declared by a repo's manifests.
+
+    Looks at ``pyproject.toml`` (``[project]`` / ``[tool.poetry]`` ``name``),
+    ``setup.cfg`` (``[metadata] name``), and ``setup.py`` (``name=``), then the
+    repo name as a last resort. De-duplicated, in priority order.
+    """
+
+    names: List[str] = []
+
+    def add(value: Optional[str]) -> None:
+        text = (value or "").strip()
+        if text and text not in names:
+            names.append(text)
+
+    pyproject = str((manifests or {}).get("pyproject.toml") or "")
+    for _header, body in _PYPROJECT_TABLE_RE.findall(pyproject):
+        match = _QUOTED_NAME_RE.search(body)
+        if match:
+            add(match.group(1))
+
+    setup_cfg = str((manifests or {}).get("setup.cfg") or "")
+    meta = _SETUPCFG_METADATA_RE.search(setup_cfg)
+    if meta:
+        match = _SETUPCFG_NAME_RE.search(meta.group(1))
+        if match:
+            add(match.group(1))
+
+    setup_py = str((manifests or {}).get("setup.py") or "")
+    match = _SETUP_PY_NAME_RE.search(setup_py)
+    if match:
+        add(match.group(1))
+
+    add(repo_name)
+    return names
 
 
 def write_json(path: Path, payload: Any) -> None:

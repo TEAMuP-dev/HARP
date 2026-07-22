@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Iterable, List, Mapping, Optional
@@ -847,7 +848,26 @@ def main(argv: Iterable[str] | None = None) -> int:
                 # (often partial) file listing misses it. Fall back to the card only
                 # when no packaging manifest was fetched.
                 if _pip_installable_from_signals(card, manifests):
-                    if getattr(args, "dual", False):
+                    is_dual = getattr(args, "dual", False)
+                    # Prefer the repo's published PyPI wheel over `git+<repo>`:
+                    # a git+ install rebuilds from source, which fails for native
+                    # / submodule repos (e.g. pedalboard pulls pybind11 over SSH).
+                    pypi_name = None
+                    try:
+                        pypi_name = agent.resolve_pypi_distribution(manifests, repo)
+                    except Exception:  # noqa: BLE001 - PyPI lookup is best-effort
+                        pypi_name = None
+                    if pypi_name:
+                        print(
+                            f"  {owner}/{repo} publishes '{pypi_name}' on PyPI -> "
+                            "installing the wheel instead of git+ (avoids source/"
+                            "submodule builds).",
+                            file=sys.stderr,
+                        )
+                        _strip_repo_pip(draft.recipe, context.source_repo_url)
+                        _strip_repo_backend_pip(draft.recipe, context.source_repo_url)
+                        _ensure_pip_distribution(draft.recipe, pypi_name, dual=is_dual)
+                    elif is_dual:
                         _ensure_github_backend_pip(draft.recipe, context.source_repo_url)
                     else:
                         _ensure_github_pip(draft.recipe, context.source_repo_url)
@@ -1580,6 +1600,55 @@ def _ensure_github_pip(recipe: dict, requirement: str) -> None:
         pip.insert(0, requirement)
 
     framework["pip"] = pip
+
+
+def _canon_dist(name: str) -> str:
+    """Canonical PyPI project name for comparison (PEP 503-ish)."""
+
+    return re.sub(r"[-_.]+", "-", str(name).strip().split("[")[0]).lower()
+
+
+def _pip_lists_distribution(pip: list, name: str) -> bool:
+    """True when ``pip`` already contains a bare requirement for ``name``."""
+
+    canon = _canon_dist(name)
+    for entry in pip:
+        if not isinstance(entry, str):
+            continue
+        text = entry.strip()
+        if text.startswith(("git+", "http://", "https://")) or "://" in text:
+            continue
+        head = re.split(r"[\s<>=!~;@\[]", text, 1)[0]
+        if _canon_dist(head) == canon:
+            return True
+    return False
+
+
+def _ensure_pip_distribution(recipe: dict, name: str, *, dual: bool) -> None:
+    """Ensure ``name`` (a plain PyPI project) is installed, for single or dual.
+
+    Preserves an existing bare requirement for the same project (keeps any LLM
+    pin) and never duplicates it. Used to install the repo's published wheel
+    instead of a ``git+`` source build.
+    """
+
+    if not name or not isinstance(recipe, dict):
+        return
+    if dual:
+        target = _dual_backend_pip(recipe, create=True)
+        if target is None:
+            return
+    else:
+        framework = recipe.get("framework")
+        if not isinstance(framework, dict):
+            framework = {}
+            recipe["framework"] = framework
+        target = framework.get("pip")
+        if not isinstance(target, list):
+            target = []
+            framework["pip"] = target
+    if not _pip_lists_distribution(target, name):
+        target.insert(0, name)
 
 
 def _dual_backend_pip(recipe: dict, *, create: bool = False) -> Optional[list]:

@@ -19,6 +19,7 @@ from tools.model_agent.agent import (
     SpaceCandidate,
     VenvSetupError,
     _parse_github_url,
+    distribution_names_from_manifests,
     lint_generated_app,
     merge_frozen_pins,
     parse_freeze,
@@ -29,6 +30,7 @@ from tools.model_agent.cli import (
     _apply_card_metadata,
     _ensure_github_backend_pip,
     _ensure_github_pip,
+    _ensure_pip_distribution,
     _pip_installable_from_signals,
     _repo_is_pip_installable,
     _run_deploy,
@@ -2608,6 +2610,110 @@ class EnsureGitHubPipTest(unittest.TestCase):
         recipe = {"framework": {"pip": ["numpy"]}}
         _ensure_github_pip(recipe, "")
         self.assertEqual(recipe["framework"]["pip"], ["numpy"])
+
+
+class DistributionNamesTest(unittest.TestCase):
+    def test_prefers_pyproject_project_name(self):
+        manifests = {
+            "pyproject.toml": (
+                "[build-system]\nrequires = ['setuptools']\n\n"
+                "[project]\nname = 'my-dist'\nversion = '1.0'\n"
+            ),
+        }
+        self.assertEqual(
+            distribution_names_from_manifests(manifests, "repo-fallback"),
+            ["my-dist", "repo-fallback"],
+        )
+
+    def test_reads_poetry_and_setup_cfg_and_setup_py(self):
+        manifests = {
+            "pyproject.toml": "[tool.poetry]\nname = \"poetry-name\"\n",
+            "setup.cfg": "[metadata]\nname = cfg_name\nversion = 1\n",
+            "setup.py": "setup(\n    name='py_name',\n    version='1',\n)",
+        }
+        names = distribution_names_from_manifests(manifests, "repo")
+        # Priority: pyproject, then setup.cfg, then setup.py, then repo.
+        self.assertEqual(names, ["poetry-name", "cfg_name", "py_name", "repo"])
+
+    def test_falls_back_to_repo_name_only(self):
+        self.assertEqual(
+            distribution_names_from_manifests({}, "pedalboard"), ["pedalboard"]
+        )
+
+    def test_ignores_name_inside_dependencies_table(self):
+        # A `name=` under [tool.other] must not be picked up as the project name.
+        manifests = {
+            "pyproject.toml": (
+                "[project]\nname = 'real'\n\n"
+                "[tool.other]\nname = 'not-the-project'\n"
+            ),
+        }
+        self.assertEqual(
+            distribution_names_from_manifests(manifests, "repo")[0], "real"
+        )
+
+
+class ResolvePypiDistributionTest(unittest.TestCase):
+    def _agent(self, existing):
+        agent = HarpModelAgent.__new__(HarpModelAgent)
+
+        def fake_exists(name):
+            return name in existing
+
+        agent.pypi_distribution_exists = fake_exists  # type: ignore[assignment]
+        return agent
+
+    def test_returns_declared_name_when_on_pypi(self):
+        agent = self._agent({"pedalboard"})
+        manifests = {"setup.py": "setup(name='pedalboard')"}
+        self.assertEqual(
+            agent.resolve_pypi_distribution(manifests, "pedalboard"), "pedalboard"
+        )
+
+    def test_returns_none_when_not_published(self):
+        agent = self._agent(set())
+        manifests = {"setup.py": "setup(name='sonicmaster')"}
+        self.assertIsNone(agent.resolve_pypi_distribution(manifests, "SonicMaster"))
+
+    def test_falls_back_to_repo_name(self):
+        agent = self._agent({"repo-dist"})
+        self.assertEqual(
+            agent.resolve_pypi_distribution({}, "repo-dist"), "repo-dist"
+        )
+
+
+class EnsurePipDistributionTest(unittest.TestCase):
+    def test_inserts_plain_name_first_for_single(self):
+        recipe = {"framework": {"pip": ["numpy"]}}
+        _ensure_pip_distribution(recipe, "pedalboard", dual=False)
+        self.assertEqual(recipe["framework"]["pip"], ["pedalboard", "numpy"])
+
+    def test_does_not_duplicate_existing_pin(self):
+        recipe = {"framework": {"pip": ["pedalboard==0.9.16", "numpy"]}}
+        _ensure_pip_distribution(recipe, "pedalboard", dual=False)
+        self.assertEqual(
+            recipe["framework"]["pip"], ["pedalboard==0.9.16", "numpy"]
+        )
+
+    def test_matches_canonical_name_across_dash_underscore(self):
+        recipe = {"framework": {"pip": ["My_Dist"]}}
+        _ensure_pip_distribution(recipe, "my-dist", dual=False)
+        self.assertEqual(recipe["framework"]["pip"], ["My_Dist"])
+
+    def test_ignores_git_line_and_still_adds_wheel(self):
+        recipe = {"framework": {"pip": ["git+https://github.com/o/pedalboard.git"]}}
+        _ensure_pip_distribution(recipe, "pedalboard", dual=False)
+        self.assertEqual(
+            recipe["framework"]["pip"],
+            ["pedalboard", "git+https://github.com/o/pedalboard.git"],
+        )
+
+    def test_writes_backend_pip_for_dual(self):
+        recipe = {}
+        _ensure_pip_distribution(recipe, "pedalboard", dual=True)
+        self.assertEqual(
+            recipe["framework"]["dual"]["backend_pip"], ["pedalboard"]
+        )
 
 
 class PackageWriterTest(unittest.TestCase):
