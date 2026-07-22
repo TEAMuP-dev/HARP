@@ -508,9 +508,11 @@ def build_parser() -> argparse.ArgumentParser:
         )
         _dep.add_argument(
             "--user-token",
-            action="store_true",
-            help="For a remote/proxy deploy, add the optional masked HF-token field "
-            "so ZeroGPU usage is charged to the calling user.",
+            action=argparse.BooleanOptionalAction,
+            default=True,
+            help="For remote/proxy deploys, include the optional masked HF-token field "
+            "so callers can paste their own token (ZeroGPU billed to them; default: on). "
+            "Use --no-user-token to omit it and rely only on a Space HF_TOKEN secret.",
         )
         _dep.add_argument(
             "--no-discover-space",

@@ -3310,6 +3310,12 @@ class OrchestratorStepsTest(unittest.TestCase):
         self.assertEqual(steps[-1][:1], ["deploy-space"])
         self.assertIn("me/target", steps[-1])
 
+    def test_remote_steps_omit_user_token_when_disabled(self):
+        target = detect_ref("facebook/MusicGen", source="hf-space")
+        plan = decide_plan(kind="hf_space", slug=target.slug)
+        steps = self._steps(plan, target, user_token=False)
+        self.assertNotIn("--user-token", steps[0])
+
     def test_remote_from_github_grounds_on_source(self):
         target = detect_ref("AMAAI-Lab/SonicMaster", source="github")
         plan = decide_plan(
@@ -3371,6 +3377,29 @@ class OrchestratorStepsTest(unittest.TestCase):
         )
         target = detect_ref("x/y", source="github")
         self.assertEqual(self._steps(plan, target), [])
+
+
+class DeployCliFlagsTest(unittest.TestCase):
+    def test_deploy_defaults_user_token_on(self):
+        args = build_parser().parse_args(
+            ["deploy", "facebook/MusicGen", "--source", "hf-space", "--repo", "me/x", "--plan"]
+        )
+        self.assertTrue(args.user_token)
+
+    def test_deploy_no_user_token_opt_out(self):
+        args = build_parser().parse_args(
+            [
+                "deploy",
+                "facebook/MusicGen",
+                "--source",
+                "hf-space",
+                "--repo",
+                "me/x",
+                "--no-user-token",
+                "--plan",
+            ]
+        )
+        self.assertFalse(args.user_token)
 
 
 if __name__ == "__main__":
