@@ -1919,6 +1919,40 @@ class GeneratedCodeRepairTest(unittest.TestCase):
         # setup already imports torch, so the renderer must not add a second one.
         self.assertEqual(app.count("\nimport torch\n"), 1)
 
+    def test_strips_bogus_labellist_to_json_call(self):
+        # pyloudnorm regression: LabelList has no .to_json() -> AttributeError.
+        # The gr.JSON output accepts the LabelList object directly.
+        recipe = {
+            "model": {"id": "x/y", "name": "Y", "description": "d", "author": "x"},
+            "framework": {"gpu": False, "pip": ["numpy"]},
+            "inputs": [{"name": "audio", "type": "audio", "label": "A", "required": True}],
+            "outputs": [
+                {"name": "out", "type": "audio", "label": "Out"},
+                {"name": "labels", "type": "labels", "label": "Labels"},
+            ],
+            "inference": {
+                "setup": "",
+                "body": (
+                    "labels = LabelList()\n"
+                    "labels.append({'t': 0.0, 'label': 'x'})\n"
+                    "return audio, labels.to_json()"
+                ),
+            },
+        }
+        app = render_app_from_recipe(recipe)
+        compile(app, "<labels>", "exec")
+        self.assertNotIn(".to_json()", app)
+        self.assertIn("return audio, labels", app)
+
+    def test_keeps_to_json_on_non_labellist_objects(self):
+        # A real .to_json() (e.g. pandas) must be preserved -- only LabelList's is bogus.
+        recipe = self._recipe(
+            "import pandas as pd\ndf = pd.DataFrame()", "return df.to_json()"
+        )
+        recipe["outputs"] = [{"name": "labels", "type": "labels", "label": "L"}]
+        app = render_app_from_recipe(recipe)
+        self.assertIn("df.to_json()", app)
+
 
 class CompanionRequirementTest(unittest.TestCase):
     """Undeclared runtime companions (torchaudio>=2.8 -> torchcodec + ffmpeg)."""

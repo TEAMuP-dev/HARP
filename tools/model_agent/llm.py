@@ -264,8 +264,22 @@ inference.body rules:
     indentation). The function parameters are exactly the input components'
     "name" values, in order, and each audio/file input arrives as a string path.
   - it MUST end with a `return` of the outputs in the SAME ORDER as "outputs".
-    Return a filepath string for audio/file outputs; return a LabelList (or its
-    .to_json()) for a labels output.
+    Return a filepath string for audio/file outputs.
+  - Choose the SIMPLEST output type that faithfully represents the model output;
+    do NOT wrap data in pyharp classes unless HARP actually needs them. A "labels"
+    output renders as a gr.JSON component, so for ordinary results (metrics,
+    analysis, metadata, scores, key/value info like loudness/LUFS, tempo, etc.)
+    just return an ORDINARY Python dict or list, e.g.
+    `return out_path, {"loudness_lufs": loudness, "lra": lra}`. NEVER call
+    `.to_json()` on anything -- pyharp's LabelList has no such method and it
+    raises AttributeError at runtime.
+  - Build a pyharp LabelList ONLY for genuine timeline/annotation output tied to
+    the audio/MIDI (segments, events, timestamps, intervals, beats, chords,
+    notes) -- NOT for arbitrary scalar metadata. When you do need it, populate it
+    as `labels = LabelList(); labels.labels.extend([AudioLabel(t=0.0,
+    label="...", duration=1.0), MidiLabel(t=0.0, label="...", pitch=60)])` and
+    return the LabelList OBJECT directly (never a bare dict via `.append(...)`,
+    never `.to_json()`).
   - set framework.gpu true only if the model needs a GPU; if true the renderer
     adds `import spaces` and an `@spaces.GPU` decorator. Do NOT set gpu true if
     you are reusing a Space function that already has its own @spaces.GPU

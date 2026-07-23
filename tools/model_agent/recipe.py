@@ -473,6 +473,20 @@ _CODE_REPAIRS = (
 )
 _TORCH_REF_RE = re.compile(r"\btorch\.")
 _TORCH_IMPORT_RE = re.compile(r"^\s*import\s+torch\b", re.MULTILINE)
+# pyharp's LabelList has no `.to_json()` method -- calling it raises
+# AttributeError at request time. The output component is a gr.JSON, which
+# accepts the LabelList object directly, so drop the bogus call on any variable
+# that was assigned from `LabelList(...)`. Scoped to that variable so we never
+# touch a legitimate `.to_json()` on e.g. a pandas object.
+_LABELLIST_ASSIGN_RE = re.compile(r"\b(\w+)\s*=\s*LabelList\s*\(")
+
+
+def _strip_labellist_to_json(code: str) -> str:
+    for name in set(_LABELLIST_ASSIGN_RE.findall(code)):
+        code = re.sub(
+            rf"\b{re.escape(name)}\.to_json\s*\(\s*\)", name, code
+        )
+    return code
 
 
 def _repair_inference_code(setup: str, body: str) -> "tuple[str, str, List[str]]":
@@ -486,6 +500,9 @@ def _repair_inference_code(setup: str, body: str) -> "tuple[str, str, List[str]]
     for pattern, replacement in _CODE_REPAIRS:
         setup = pattern.sub(replacement, setup)
         body = pattern.sub(replacement, body)
+
+    setup = _strip_labellist_to_json(setup)
+    body = _strip_labellist_to_json(body)
 
     extra_imports: List[str] = []
     combined = f"{setup}\n{body}"
