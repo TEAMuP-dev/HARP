@@ -16,16 +16,14 @@ Two tiers share the same test harness:
 
 Key behaviors:
 
-- **Models are validated independently.** Each model (and each test case
-  within it) runs inside its own error boundary, so a crash, hang, or
-  timeout in one model never stops validation of the others. All results are
-  collected into a single report and the process exits non-zero only after
-  everything has run.
+- **Models are validated independently** — a crash, hang, or timeout in one
+  never stops the rest; all results are collected into a single report and
+  the process exits non-zero only after everything has run.
 - **Crashed/stopped spaces are restarted automatically** (sleeping spaces
   are woken simply by connecting). Pass `--no-restart-failed` to disable;
   restarting requires a token with write access.
-- **ZeroGPU quota is reported** at the start of a spaces run and after every
-  model, so it is easy to tell if and when quota will be exceeded mid-run.
+- **ZeroGPU time is tracked** across the run and reported after each ZeroGPU
+  model; `--skip-zerogpu` skips those models to spend no allowance at all.
 - A daily GitHub Action
   ([model_validation.yml](../.github/workflows/model_validation.yml)) runs
   both tiers at 06:30 UTC. Model failures do **not** turn the run red (no
@@ -85,6 +83,9 @@ python model_validation/src/validate_models.py --exclude teamup-tech/broken-spac
 # Availability + /controls only (fast; no inference, no GPU quota used)
 python model_validation/src/validate_models.py --load-only
 
+# Skip ZeroGPU models, to spend none of the shared ZeroGPU allowance
+python model_validation/src/validate_models.py --skip-zerogpu
+
 # Never restart spaces (works with a read-only token)
 python model_validation/src/validate_models.py --no-restart-failed
 
@@ -100,26 +101,30 @@ synthesized test inputs and local example logs are saved alongside them. Exit
 code is `0` when everything passes, `1` on any model failure, `2` on
 configuration/infrastructure errors.
 
-## ZeroGPU quota reporting
+## ZeroGPU time tracking
 
-Space validation prints the quota state at the start of the run and after
-every model, on the same line as its pass/fail status:
+Each model's line shows its hardware, and ZeroGPU models additionally show
+the running ZeroGPU time consumed so far this run:
 
 ```
-✅ PASS teamup-tech/pitch_shifter (42.1s) [GPU time ~38s/1500s budget | ...]
+✅ PASS teamup-tech/pitch_shifter (42.1s) [zero-a10g | ZeroGPU time ~38s this run]
+✅ PASS teamup-tech/cpu_model     (18.3s) [cpu-basic]
 ```
 
-Two signals are combined:
+The tracked total is cumulative `/process` wall time across ZeroGPU models
+only — CPU and dedicated-hardware models never contribute. It is an upper
+bound on the GPU seconds charged, since wall time includes queue time. Set
+`zerogpu_budget_seconds` in [config.yml](config.yml) (_e.g._, `1500` for the
+PRO 25 min/day allowance) to show it against a budget.
 
-- **GPU time this run** — cumulative `/process` wall time on ZeroGPU-hardware
-  spaces only (models on CPU or dedicated hardware do not draw on the
-  allowance and are never counted). It is an upper bound on GPU seconds
-  consumed, since it includes queue time. Set `zerogpu_budget_seconds` in
-  [config.yml](config.yml) (_e.g._, `1500` for the PRO 25 min/day allowance)
-  to show usage against a budget.
-- **Account quota** — fetched from `huggingface.co/api/quota` when available.
-  Hugging Face has no documented public ZeroGPU quota API, so this part is
-  best-effort and silently omitted if the endpoint yields nothing usable.
+This is the ZeroGPU time *this run* spends, not your account's remaining
+quota — Hugging Face exposes no reliable public API for the latter, so it is
+not reported. To avoid spending any allowance, pass `--skip-zerogpu`, which
+skips ZeroGPU models entirely (they appear as `SKIP` in the report).
+
+Transient "model is still loading" responses from a ZeroGPU space waking its
+GPU worker are retried automatically (up to `connect_timeout`), rather than
+counted as failures.
 
 ## Configuring test cases — a walkthrough
 

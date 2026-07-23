@@ -80,14 +80,18 @@ def write_reports(results: list, out_dir: Path, label: str) -> None:
         "total": len(results),
         "passed": sum(r.status == PASS for r in results),
         "failed": sum(r.status == FAIL for r in results),
+        "skipped": sum(r.status == SKIP for r in results),
         "results": [dataclasses.asdict(r) for r in results],
     }
     (out_dir / "report.json").write_text(json.dumps(payload, indent=2))
 
+    headline = f"**{payload['passed']}/{payload['total']} models passed**"
+    if payload["skipped"]:
+        headline += f", {payload['skipped']} skipped"
     lines = [
         f"# HARP Model Validation Report - {label}",
         "",
-        f"**{payload['passed']}/{payload['total']} models passed** ({payload['timestamp']})",
+        f"{headline} ({payload['timestamp']})",
         "",
         "| Model | Status | Stage | Hardware | Controls | Cases | Time (s) | Detail |",
         "|---|---|---|---|---|---|---|---|",

@@ -22,9 +22,7 @@ Validates HARP deployments in two tiers, using the same black-box harness
 
 Per-model test cases are declared in config.yml (see README.md for a full
 walkthrough). When a model has no configured cases, a single "default" case
-runs with inputs synthesized automatically from the /controls spec. Models
-are validated independently: a failure (or timeout) in one model never stops
-validation of the others.
+runs with inputs synthesized automatically from the /controls spec.
 
 Usage:
     HF_TOKEN=... python model_validation/src/validate_models.py
@@ -47,8 +45,8 @@ from pathlib import Path
 
 from assets import Assets
 from harness import test_space, test_local_example
-from quota import QuotaTracker, is_zerogpu
-from results import FAIL, status_emoji, write_reports
+from quota import ZeroGPUTracker, is_zerogpu
+from results import PASS, FAIL, SKIP, status_emoji, write_reports
 from utils import get_token, scrub, load_config, get_excluded, discover_spaces
 
 
@@ -87,6 +85,9 @@ def parse_args() -> argparse.Namespace:
                         help="Optional YAML config (excludes, per-model overrides/cases)")
     parser.add_argument("--load-only", action="store_true",
                         help="Only verify availability and /controls, do not run inference")
+    parser.add_argument("--skip-zerogpu", action="store_true",
+                        help="Skip models on ZeroGPU hardware, to avoid spending "
+                             "the shared ZeroGPU allowance")
     parser.add_argument("--restart-failed", action=argparse.BooleanOptionalAction,
                         default=True,
                         help="Attempt to restart spaces found in an error/stopped state; "
@@ -180,10 +181,9 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         print(f"ERROR: no spaces found for org '{opts.org}'", file=sys.stderr)
         return None
 
-    tracker = QuotaTracker(token, config.get("zerogpu_budget_seconds"))
+    tracker = ZeroGPUTracker(config.get("zerogpu_budget_seconds"))
     print(f"Validating {len(space_ids)} spaces with {opts.workers} workers "
-          f"(process test: {'OFF' if opts.load_only else 'ON'})")
-    print(f"ZeroGPU quota at start: {tracker.status()}\n")
+          f"(process test: {'OFF' if opts.load_only else 'ON'})\n")
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
@@ -195,12 +195,15 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
-            # CPU-hardware models do not draw on the ZeroGPU allowance
+            # Show the hardware for every model; the running ZeroGPU total is
+            # only meaningful (and only accrues) for ZeroGPU models
+            info = r.hardware or "?"
             if is_zerogpu(r.hardware):
                 tracker.add(sum(c.duration for c in r.cases))
+                info = f"{info} | {tracker.summary()}"
             note = f" - {r.error}" if r.error else ""
             print(f"{status_emoji(r)} {r.status:4s} {r.target} "
-                  f"({r.duration}s) {tracker.status()}{scrub(note, token)}")
+                  f"({r.duration}s) [{info}]{scrub(note, token)}")
 
     return results
 
@@ -232,9 +235,13 @@ def main() -> int:
 
     write_reports(results, opts.output_dir, label)
 
+    passed = [r for r in results if r.status == PASS]
     failed = [r for r in results if r.status == FAIL]
-    print(f"\n{len(results) - len(failed)}/{len(results)} models passed. "
-          f"Reports written to {opts.output_dir}/")
+    skipped = [r for r in results if r.status == SKIP]
+    summary = f"\n{len(passed)}/{len(results)} models passed"
+    if skipped:
+        summary += f", {len(skipped)} skipped"
+    print(f"{summary}. Reports written to {opts.output_dir}/")
     if failed:
         print("\nFailed models:")
         for r in sorted(failed, key=lambda r: r.target):

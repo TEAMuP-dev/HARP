@@ -28,7 +28,8 @@ from gradio_client import Client
 
 from assets import Assets
 from cases import synthesize_default_args, apply_case, validate_outputs, inspect_outputs
-from results import ModelResult, CaseResult, PASS, FAIL
+from quota import is_zerogpu
+from results import ModelResult, CaseResult, PASS, FAIL, SKIP
 from utils import run_with_timeout, scrub
 
 
@@ -51,6 +52,59 @@ CLIENT_CLOSE_TIMEOUT = 10    # best-effort gradio_client shutdown
 SERVER_PROBE_INTERVAL = 2    # poll cadence while a local example boots
 SERVER_PROBE_TIMEOUT = 5     # per-probe HTTP timeout against a local example
 PROCESS_TERMINATE_TIMEOUT = 15  # grace period before killing a local example
+LOADING_RETRY_INTERVAL = 15  # wait between retries while a model warms up
+
+# Substrings marking a "model is still loading" response - a ZeroGPU space
+# waking its GPU worker returns this immediately rather than blocking, so it
+# is retried (within connect_timeout) instead of treated as a failure.
+LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
+                   "currently loading", "warming up")
+
+
+def is_loading_error(exc: Exception) -> bool:
+    """
+    Whether an exception is a transient "model still loading" response.
+
+    Args:
+        exc (Exception): The exception raised by a gradio call.
+
+    Returns:
+        loading (bool): True if the model reported it was still loading.
+    """
+
+    message = str(exc).lower()
+    return any(marker in message for marker in LOADING_MARKERS)
+
+
+def call_through_loading(fn, deadline: float, what: str):
+    """
+    Call fn(), retrying while the model reports it is still loading.
+
+    A ZeroGPU space that has to spin up its GPU worker answers the first
+    request with a "still loading" error immediately; retrying until the
+    deadline lets validation ride through the warm-up instead of failing.
+
+    Args:
+        fn (callable): Zero-argument call to make.
+        deadline (float): time.time() value to stop retrying at.
+        what (str): Short description for the timeout message.
+
+    Returns:
+        result: Whatever fn() returns once the model is ready.
+
+    Raises:
+        Exception: fn()'s error, once it is not a loading error or the
+            deadline has passed.
+    """
+
+    while True:
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001 - inspected below, else re-raised
+            if is_loading_error(exc) and time.time() + LOADING_RETRY_INTERVAL < deadline:
+                time.sleep(LOADING_RETRY_INTERVAL)
+                continue
+            raise
 
 
 def close_client(client) -> None:
@@ -76,8 +130,8 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     """
     Verify /controls and run every configured /process test case.
 
-    Each case runs inside its own error boundary, so a failing case never
-    stops the remaining cases (or models) from running.
+    Each case runs inside its own error boundary, so a failing case does not
+    stop the remaining cases.
 
     Args:
         client (Client): Connected gradio client for the deployment.
@@ -91,6 +145,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     """
 
     process_timeout = overrides.get("process_timeout", opts.process_timeout)
+    connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)
     load_only = opts.load_only or overrides.get("load_only", False)
     config_dir = opts.config.parent.resolve()
 
@@ -102,9 +157,11 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
                         f"deployment may use an outdated pyharp")
         return result
 
-    # --- /controls -----------------------------------------------------------
-    controls = run_with_timeout(
-        lambda: client.predict(api_name="/controls"), CONTROLS_TIMEOUT, "/controls")
+    # --- /controls (retry through a warming-up model) ------------------------
+    controls = call_through_loading(
+        lambda: run_with_timeout(
+            lambda: client.predict(api_name="/controls"), CONTROLS_TIMEOUT, "/controls"),
+        time.time() + connect_timeout, "/controls")
     if not isinstance(controls, dict) or "card" not in controls or "inputs" not in controls:
         result.error = f"/controls returned malformed data: {str(controls)[:200]}"
         return result
@@ -133,8 +190,14 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
                 continue
 
             args = apply_case(default_args, controls, case, config_dir)
-            job = client.submit(*args, api_name="/process")
-            output = job.result(timeout=case.get("process_timeout", process_timeout))
+            case_timeout = case.get("process_timeout", process_timeout)
+
+            def run_process():
+                job = client.submit(*args, api_name="/process")
+                return job.result(timeout=case_timeout)
+
+            output = call_through_loading(
+                run_process, time.time() + connect_timeout, "/process")
 
             error = validate_outputs(output, controls)
             if error:
@@ -220,6 +283,12 @@ def test_space(space_id: str, token: str, assets: Assets,
         # requested_hardware reflects the space's configuration even while
         # it is sleeping or stopped (hardware itself is only set when live)
         result.hardware = runtime.requested_hardware or runtime.hardware or ""
+
+        # Skip ZeroGPU models before doing any work that would spend quota
+        if opts.skip_zerogpu and is_zerogpu(result.hardware):
+            result.status = SKIP
+            result.error = "skipped: ZeroGPU hardware (--skip-zerogpu)"
+            return result
 
         if stage in DEAD_STAGES or stage in ("STOPPED", "PAUSED"):
             if opts.restart_failed and stage != "DELETING":
