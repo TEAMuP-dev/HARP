@@ -1880,20 +1880,32 @@ def _readme_from_recipe(recipe: Mapping[str, Any]) -> str:
             ]
         )
 
+    # A single pyharp Space is a gradio-SDK Space; HF honours an explicit
+    # python_version there too. Pin it when the recipe carries one so old research
+    # pins (e.g. scipy==1.10.0, needing Python <3.12) resolve instead of the Space
+    # defaulting to a bleeding-edge CPython with no matching wheels.
+    python_version = str(framework.get("python_version") or "").strip()
+    if not python_version and _backend_needs_legacy_python(framework):
+        python_version = "3.10"
+    front_matter = [
+        "---",
+        # Quote free-text values: a title/license containing a colon (e.g.
+        # "SoulX-Singer: SVS") would otherwise break the YAML front matter.
+        f"title: {json.dumps(name)}",
+        "colorFrom: indigo",
+        "colorTo: gray",
+        "sdk: gradio",
+        "sdk_version: 5.28.0",
+        "app_file: app.py",
+        "pinned: false",
+        f"license: {json.dumps(license_name)}",
+    ]
+    if python_version:
+        front_matter.append(f'python_version: "{python_version}"')
+    front_matter.append("---")
     return "\n".join(
-        [
-            "---",
-            # Quote free-text values: a title/license containing a colon (e.g.
-            # "SoulX-Singer: SVS") would otherwise break the YAML front matter.
-            f"title: {json.dumps(name)}",
-            "colorFrom: indigo",
-            "colorTo: gray",
-            "sdk: gradio",
-            "sdk_version: 5.28.0",
-            "app_file: app.py",
-            "pinned: false",
-            f"license: {json.dumps(license_name)}",
-            "---",
+        front_matter
+        + [
             "",
             f"# {name}",
             "",

@@ -1408,6 +1408,40 @@ class HarpModelAgent:
             return []
         return list((info.get("releases") or {}).keys())
 
+    def compatible_python_ceiling_for_pins(
+        self, pip_entries: Optional[Iterable[str]]
+    ) -> Optional[Tuple[int, int]]:
+        """Highest ``(major, minor)`` Python allowed by all exact pins, or None.
+
+        For each ``name==version`` requirement, reads that release's
+        ``requires_python`` from PyPI and takes the strictest upper bound. This
+        catches research pins whose wheels don't exist on the Space's
+        bleeding-edge CPython -- e.g. ``scipy==1.10.0`` (``>=3.8,<3.12``) has no
+        wheel on Python 3.13, so the returned ceiling ``(3, 11)`` tells the caller
+        to pin ``python_version`` accordingly. Best-effort: pins we can't resolve
+        (or with no upper bound) are skipped.
+        """
+
+        ceiling: Optional[Tuple[int, int]] = None
+        for entry in pip_entries or []:
+            text = str(entry).strip()
+            if not text or text.startswith("#"):
+                continue
+            if text.startswith(("git+", "http://", "https://")) or "://" in text:
+                continue
+            match = _EXACT_PIN_RE.match(text)
+            if not match:
+                continue
+            name, version = match.group(1), match.group(2)
+            info = self._pypi_json(f"{quote(name)}/{quote(version)}")
+            if not info:
+                continue
+            requires_python = (info.get("info") or {}).get("requires_python")
+            cap = _upper_python_bound(requires_python)
+            if cap and (ceiling is None or cap < ceiling):
+                ceiling = cap
+        return ceiling
+
     def pypi_distribution_exists(self, name: str) -> bool:
         """True when ``name`` is a real published PyPI project (best-effort).
 
@@ -1473,6 +1507,34 @@ _SETUPCFG_NAME_RE = re.compile(r"(?m)^\s*name\s*=\s*([A-Za-z0-9][A-Za-z0-9._-]*)
 _SETUP_PY_NAME_RE = re.compile(
     r"""name\s*=\s*["']([A-Za-z0-9][A-Za-z0-9._-]*)["']"""
 )
+
+
+# An exact pin `name==version` (extras/markers after the version are ignored).
+_EXACT_PIN_RE = re.compile(
+    r"^([A-Za-z0-9][A-Za-z0-9._-]*)\s*==\s*([A-Za-z0-9][A-Za-z0-9.\-+!]*)"
+)
+# Upper Python bound clauses in a PEP 440 requires-python string ("<3.12", "<=3.11").
+_PY_UPPER_RE = re.compile(r"(<=?)\s*3\.(\d+)")
+
+
+def _upper_python_bound(requires_python: Optional[str]) -> Optional[Tuple[int, int]]:
+    """Strictest ``(3, minor)`` Python allowed by a ``requires_python`` spec.
+
+    ``"<3.12"`` -> ``(3, 11)`` (must be strictly below 3.12); ``"<=3.11"`` ->
+    ``(3, 11)``. Returns None when there is no ``3.x`` upper bound.
+    """
+
+    if not requires_python:
+        return None
+    best: Optional[Tuple[int, int]] = None
+    for op, minor_s in _PY_UPPER_RE.findall(requires_python):
+        minor = int(minor_s)
+        cap = (3, minor) if op == "<=" else (3, minor - 1)
+        if cap[1] < 0:
+            continue
+        if best is None or cap < best:
+            best = cap
+    return best
 
 
 def distribution_names_from_manifests(

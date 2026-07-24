@@ -19,6 +19,7 @@ from tools.model_agent.agent import (
     SpaceCandidate,
     VenvSetupError,
     _parse_github_url,
+    _upper_python_bound,
     distribution_names_from_manifests,
     lint_generated_app,
     merge_frozen_pins,
@@ -31,6 +32,7 @@ from tools.model_agent.cli import (
     _ensure_github_backend_pip,
     _ensure_github_pip,
     _ensure_pip_distribution,
+    _pin_python_for_legacy_pins,
     _pip_installable_from_signals,
     _repo_is_pip_installable,
     _run_deploy,
@@ -1685,6 +1687,7 @@ class BackendRecipeTest(unittest.TestCase):
         self.assertIn("PopMusicTransformer", package.extra_files["model.py"])
         self.assertIn("utils.py", package.extra_files)
 
+
     def test_backend_readme_defaults_sdk_version_when_unpinned(self):
         recipe = json.loads(json.dumps(self.RECIPE))
         recipe["framework"]["pip"] = ["ddsp", "soundfile"]  # no gradio pin
@@ -1698,6 +1701,31 @@ class BackendRecipeTest(unittest.TestCase):
         recipe["framework"]["remote"] = {"space": "x/y", "api_name": "/predict"}
         with self.assertRaises(RecipeError):
             validate_recipe(recipe)
+
+
+class SingleSpacePythonVersionTest(unittest.TestCase):
+    """A single pyharp Space (gradio SDK) honours an explicit python_version."""
+
+    def _recipe(self, python_version=None):
+        recipe = {
+            "model": {"id": "acids-ircam/rave", "name": "RAVE", "description": "d"},
+            "framework": {"gpu": False, "pip": ["scipy==1.10.0", "librosa"]},
+            "inputs": [{"name": "audio", "type": "audio", "label": "In", "required": True}],
+            "outputs": [{"name": "out", "type": "audio", "label": "Out"}],
+            "inference": {"setup": "", "body": "return audio"},
+        }
+        if python_version:
+            recipe["framework"]["python_version"] = python_version
+        return recipe
+
+    def test_single_readme_emits_python_version_when_set(self):
+        package = build_package_from_recipe(self._recipe(python_version="3.11"))
+        self.assertIn("sdk: gradio", package.readme)
+        self.assertIn('python_version: "3.11"', package.readme)
+
+    def test_single_readme_has_no_python_version_by_default(self):
+        package = build_package_from_recipe(self._recipe())
+        self.assertNotIn("python_version", package.readme)
 
 
 class DualRecipeTest(unittest.TestCase):
@@ -2645,6 +2673,29 @@ class EnsureGitHubPipTest(unittest.TestCase):
         _ensure_github_pip(recipe, "")
         self.assertEqual(recipe["framework"]["pip"], ["numpy"])
 
+    def test_keeps_existing_pin_case_insensitively(self):
+        # GitHub repos are case-insensitive: the LLM's canonical-cased git+ line
+        # for the same repo must not be duplicated with a lowercase one.
+        recipe = {
+            "framework": {
+                "pip": ["git+https://github.com/Rikorose/DeepFilterNet.git@v0.5", "numpy"]
+            }
+        }
+        _ensure_github_pip(recipe, "git+https://github.com/rikorose/deepfilternet.git@main")
+        self.assertEqual(
+            recipe["framework"]["pip"],
+            ["git+https://github.com/Rikorose/DeepFilterNet.git@v0.5", "numpy"],
+        )
+
+    def test_strip_matches_repo_case_insensitively(self):
+        recipe = {
+            "framework": {
+                "pip": ["git+https://github.com/Rikorose/DeepFilterNet.git@main", "numpy"]
+            }
+        }
+        _strip_repo_pip(recipe, "git+https://github.com/rikorose/deepfilternet.git@main")
+        self.assertEqual(recipe["framework"]["pip"], ["numpy"])
+
 
 class DistributionNamesTest(unittest.TestCase):
     def test_prefers_pyproject_project_name(self):
@@ -2714,6 +2765,105 @@ class ResolvePypiDistributionTest(unittest.TestCase):
         self.assertEqual(
             agent.resolve_pypi_distribution({}, "repo-dist"), "repo-dist"
         )
+
+
+class UpperPythonBoundTest(unittest.TestCase):
+    def test_strict_upper_bound(self):
+        self.assertEqual(_upper_python_bound(">=3.8,<3.12"), (3, 11))
+
+    def test_inclusive_upper_bound(self):
+        self.assertEqual(_upper_python_bound(">=3.9,<=3.11"), (3, 11))
+
+    def test_no_upper_bound_returns_none(self):
+        self.assertIsNone(_upper_python_bound(">=3.9"))
+        self.assertIsNone(_upper_python_bound(None))
+        self.assertIsNone(_upper_python_bound(""))
+
+    def test_picks_strictest_of_multiple(self):
+        self.assertEqual(_upper_python_bound("<3.13, <3.11"), (3, 10))
+
+
+class CompatiblePythonCeilingTest(unittest.TestCase):
+    def _agent(self, requires_by_pin):
+        agent = HarpModelAgent.__new__(HarpModelAgent)
+
+        def fake_pypi_json(path):
+            rp = requires_by_pin.get(path)
+            return {"info": {"requires_python": rp}} if path in requires_by_pin else None
+
+        agent._pypi_json = fake_pypi_json  # type: ignore[assignment]
+        return agent
+
+    def test_takes_strictest_ceiling_across_pins(self):
+        agent = self._agent(
+            {"scipy/1.10.0": ">=3.8,<3.12", "numba/0.56.4": ">=3.7,<3.11"}
+        )
+        ceiling = agent.compatible_python_ceiling_for_pins(
+            ["scipy==1.10.0", "numba==0.56.4", "numpy>=1.23", "torch"]
+        )
+        self.assertEqual(ceiling, (3, 10))
+
+    def test_skips_git_and_unpinned_and_unresolvable(self):
+        agent = self._agent({"scipy/1.10.0": ">=3.8,<3.12"})
+        ceiling = agent.compatible_python_ceiling_for_pins(
+            [
+                "scipy==1.10.0",
+                "git+https://github.com/o/r.git@main",
+                "numpy>=1.23",
+                "unknownpkg==9.9.9",
+            ]
+        )
+        self.assertEqual(ceiling, (3, 11))
+
+    def test_returns_none_when_no_upper_bounds(self):
+        agent = self._agent({"torch/2.2.2": ">=3.8"})
+        self.assertIsNone(
+            agent.compatible_python_ceiling_for_pins(["torch==2.2.2"])
+        )
+
+
+class PinPythonForLegacyPinsTest(unittest.TestCase):
+    def _agent(self, ceiling):
+        agent = HarpModelAgent.__new__(HarpModelAgent)
+        agent.compatible_python_ceiling_for_pins = lambda pins: ceiling  # type: ignore[assignment]
+        return agent
+
+    def test_pins_single_space_to_ceiling(self):
+        recipe = {"framework": {"pip": ["scipy==1.10.0"]}}
+        with redirect_stderr(io.StringIO()):
+            _pin_python_for_legacy_pins(self._agent((3, 11)), recipe)
+        self.assertEqual(recipe["framework"]["python_version"], "3.11")
+
+    def test_floors_at_310(self):
+        recipe = {"framework": {"pip": ["oldpkg==1.0"]}}
+        with redirect_stderr(io.StringIO()):
+            _pin_python_for_legacy_pins(self._agent((3, 8)), recipe)
+        self.assertEqual(recipe["framework"]["python_version"], "3.10")
+
+    def test_no_pin_when_ceiling_is_modern(self):
+        recipe = {"framework": {"pip": ["x==1"]}}
+        _pin_python_for_legacy_pins(self._agent((3, 13)), recipe)
+        self.assertNotIn("python_version", recipe["framework"])
+
+    def test_no_pin_when_unconstrained(self):
+        recipe = {"framework": {"pip": ["x==1"]}}
+        _pin_python_for_legacy_pins(self._agent(None), recipe)
+        self.assertNotIn("python_version", recipe["framework"])
+
+    def test_respects_existing_python_version(self):
+        recipe = {"framework": {"pip": ["scipy==1.10.0"], "python_version": "3.9"}}
+        _pin_python_for_legacy_pins(self._agent((3, 11)), recipe)
+        self.assertEqual(recipe["framework"]["python_version"], "3.9")
+
+    def test_skips_remote_recipes(self):
+        recipe = {"framework": {"remote": {"space": "o/s"}, "pip": ["scipy==1.10.0"]}}
+        _pin_python_for_legacy_pins(self._agent((3, 11)), recipe)
+        self.assertNotIn("python_version", recipe["framework"])
+
+    def test_skips_dual_recipes(self):
+        recipe = {"framework": {"dual": {"backend_python": "3.9"}, "pip": ["scipy==1.10.0"]}}
+        _pin_python_for_legacy_pins(self._agent((3, 11)), recipe)
+        self.assertNotIn("python_version", recipe["framework"])
 
 
 class EnsurePipDistributionTest(unittest.TestCase):

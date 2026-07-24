@@ -12,6 +12,7 @@ from .agent import (
     HARP_GRADIO_VERSION,
     DeploySpaceError,
     EndpointProbeError,
+    distribution_names_from_manifests,
     lint_generated_app,
     HarpModelAgent,
     SmokeTestResult,
@@ -864,6 +865,26 @@ def main(argv: Iterable[str] | None = None) -> int:
                             "submodule builds).",
                             file=sys.stderr,
                         )
+                    else:
+                        # A root pyproject/Cargo *workspace* (no [project] table, no
+                        # setup.py) can't build a wheel from git+<repo>: setuptools
+                        # aborts with "Multiple top-level packages in a flat-layout"
+                        # (DeepFilterNet's layout). The real package is on PyPI under
+                        # the repo name, so prefer that wheel even if we couldn't
+                        # verify it live -- git+ is guaranteed to fail here either way.
+                        declares_wheel_target = bool(
+                            distribution_names_from_manifests(manifests, "")
+                        ) or ("setup.py" in (manifests or {}))
+                        if not declares_wheel_target:
+                            pypi_name = repo
+                            print(
+                                f"  {owner}/{repo} root is a workspace/flat layout with "
+                                f"no buildable wheel target -> installing '{repo}' from "
+                                "PyPI instead of git+ (git+ would fail on flat-layout "
+                                "package discovery).",
+                                file=sys.stderr,
+                            )
+                    if pypi_name:
                         _strip_repo_pip(draft.recipe, context.source_repo_url)
                         _strip_repo_backend_pip(draft.recipe, context.source_repo_url)
                         _ensure_pip_distribution(draft.recipe, pypi_name, dual=is_dual)
@@ -919,6 +940,11 @@ def main(argv: Iterable[str] | None = None) -> int:
                         "(needed for legacy TensorFlow / research pins).",
                         file=sys.stderr,
                     )
+            # Pin python_version for single/backend Spaces whose exact pins have no
+            # wheels on the Space's default (bleeding-edge) CPython -- e.g. RAVE's
+            # scipy==1.10.0 needs Python <3.12. No-op for remote/dual recipes.
+            if isinstance(draft.recipe, dict):
+                _pin_python_for_legacy_pins(agent, draft.recipe)
             _print_resource_headsup(card, context)
             return _emit_recipe_draft(agent, draft, args)
 
@@ -1590,10 +1616,10 @@ def _ensure_github_pip(recipe: dict, requirement: str) -> None:
     if not isinstance(pip, list):
         pip = []
 
-    # "git+https://github.com/owner/repo.git" without any trailing "@ref".
-    repo_prefix = requirement.rsplit("@", 1)[0]
+    # "git+https://github.com/owner/repo" (case-insensitive, no ref/.git).
+    repo_key = _canon_repo_key(requirement)
     already_listed = any(
-        isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix
+        isinstance(entry, str) and _canon_repo_key(entry) == repo_key
         for entry in pip
     )
     if not already_listed:
@@ -1606,6 +1632,21 @@ def _canon_dist(name: str) -> str:
     """Canonical PyPI project name for comparison (PEP 503-ish)."""
 
     return re.sub(r"[-_.]+", "-", str(name).strip().split("[")[0]).lower()
+
+
+def _canon_repo_key(requirement: str) -> str:
+    """Case-insensitive ``git+<host>/<owner>/<repo>`` key (ref and ``.git`` dropped).
+
+    GitHub owner/repo names are case-insensitive, so ``Rikorose/DeepFilterNet``
+    and ``rikorose/deepfilternet`` are the same repo. Without normalizing, a
+    stray git+ line the LLM authored with the canonical casing survives our strip
+    and breaks the build alongside the wheel we injected.
+    """
+
+    base = str(requirement).rsplit("@", 1)[0].strip().lower()
+    if base.endswith(".git"):
+        base = base[:-4]
+    return base
 
 
 def _pip_lists_distribution(pip: list, name: str) -> bool:
@@ -1651,6 +1692,49 @@ def _ensure_pip_distribution(recipe: dict, name: str, *, dual: bool) -> None:
         target.insert(0, name)
 
 
+def _pin_python_for_legacy_pins(agent: HarpModelAgent, recipe: dict) -> None:
+    """Pin the Space ``python_version`` when a pinned dep caps the Python it needs.
+
+    Research repos pin exact old versions (``scipy==1.10.0``, ``tensorflow==2.15``)
+    whose wheels don't exist on Hugging Face's now-bleeding-edge default CPython,
+    so the build dies with "No matching distribution found". We read each pin's
+    ``requires_python`` from PyPI and pin the Space to the strictest allowed
+    Python (floored at 3.10, pyharp/gradio's minimum). Remote proxies install
+    nothing and dual/backend manage their own interpreter, so they're skipped.
+    """
+
+    if not isinstance(recipe, dict):
+        return
+    framework = recipe.get("framework")
+    if not isinstance(framework, dict):
+        return
+    if framework.get("remote") or framework.get("dual"):
+        return
+    if str(framework.get("python_version") or "").strip():
+        return
+    pins = list(framework.get("pip") or [])
+    ceiling = None
+    try:
+        ceiling = agent.compatible_python_ceiling_for_pins(pins)
+    except Exception:  # noqa: BLE001 - PyPI lookup is best-effort
+        ceiling = None
+    if ceiling is None:
+        return
+    floor = (3, 10)
+    # Only pin when a dep actually excludes a current CPython (<3.13); a ceiling of
+    # 3.13+ means everything already resolves on the Space's default.
+    if ceiling >= (3, 13):
+        return
+    target = ceiling if ceiling >= floor else floor
+    framework["python_version"] = f"{target[0]}.{target[1]}"
+    print(
+        f"  Pinning Space python_version={framework['python_version']} "
+        f"(a pinned dependency requires Python <= {ceiling[0]}.{ceiling[1]}; "
+        "older wheels don't exist on newer CPython).",
+        file=sys.stderr,
+    )
+
+
 def _dual_backend_pip(recipe: dict, *, create: bool = False) -> Optional[list]:
     """Return ``framework.dual.backend_pip`` when present, optionally creating it."""
 
@@ -1685,9 +1769,9 @@ def _ensure_github_backend_pip(recipe: dict, requirement: str) -> None:
     backend_pip = _dual_backend_pip(recipe, create=True)
     if backend_pip is None:
         return
-    repo_prefix = requirement.rsplit("@", 1)[0]
+    repo_key = _canon_repo_key(requirement)
     already_listed = any(
-        isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix
+        isinstance(entry, str) and _canon_repo_key(entry) == repo_key
         for entry in backend_pip
     )
     if not already_listed:
@@ -1705,11 +1789,11 @@ def _strip_repo_pip(recipe: dict, requirement: str) -> None:
     pip = framework.get("pip")
     if not isinstance(pip, list):
         return
-    repo_prefix = requirement.rsplit("@", 1)[0]
+    repo_key = _canon_repo_key(requirement)
     framework["pip"] = [
         entry
         for entry in pip
-        if not (isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix)
+        if not (isinstance(entry, str) and _canon_repo_key(entry) == repo_key)
     ]
 
 
@@ -1721,11 +1805,11 @@ def _strip_repo_backend_pip(recipe: dict, requirement: str) -> None:
     backend_pip = _dual_backend_pip(recipe)
     if backend_pip is None:
         return
-    repo_prefix = requirement.rsplit("@", 1)[0]
+    repo_key = _canon_repo_key(requirement)
     backend_pip[:] = [
         entry
         for entry in backend_pip
-        if not (isinstance(entry, str) and entry.rsplit("@", 1)[0].strip() == repo_prefix)
+        if not (isinstance(entry, str) and _canon_repo_key(entry) == repo_key)
     ]
 
 

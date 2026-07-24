@@ -353,6 +353,24 @@
       "repo": "csteinmetz1/automix-toolkit",
       "sdk": "gradio",
       "space_url": "https://huggingface.co/spaces/teamup-tech/automix-toolkit"
+    },
+    {
+      "backend_space": "k2-fsa/OmniVoice",
+      "mode": "remote",
+      "model_id": "k2-fsa/OmniVoice",
+      "outcome": "success",
+      "repo": "k2-fsa/OmniVoice",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/OmniVoice"
+    },
+    {
+      "backend_space": "",
+      "mode": "pip",
+      "model_id": "kuielab/mdx-net",
+      "outcome": "success",
+      "repo": "kuielab/mdx-net",
+      "sdk": "gradio",
+      "space_url": "https://huggingface.co/spaces/teamup-tech/MDX-Net"
     }
   ],
   "version": 1
