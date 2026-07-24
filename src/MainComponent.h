@@ -14,6 +14,7 @@
 
 #include "widgets/MediaClipboardWidget.h"
 #include "widgets/ModelAgentWidget.h"
+#include "widgets/QuickDeployWidget.h"
 #include "widgets/StatusAreaWidget.h"
 
 #include "windows/AboutWindow.h"

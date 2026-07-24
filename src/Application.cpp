@@ -213,7 +213,8 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
             break;
 
         case CommandIDs::modelDeployment:
-            result.setInfo("Model Agent", "Open the model agent panel (discover, probe, package)",
+            result.setInfo("Deploy a Model",
+                           "Deploy a model to a HARP Space from a link (GitHub / HF model / Space)",
                            "View", 0);
 
             break;
