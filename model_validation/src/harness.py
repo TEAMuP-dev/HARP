@@ -53,12 +53,23 @@ SERVER_PROBE_INTERVAL = 2    # poll cadence while a local example boots
 SERVER_PROBE_TIMEOUT = 5     # per-probe HTTP timeout against a local example
 PROCESS_TERMINATE_TIMEOUT = 15  # grace period before killing a local example
 LOADING_RETRY_INTERVAL = 15  # wait between retries while a model warms up
+JOB_POLL_INTERVAL = 1        # cadence for polling a /process job's status
+
+# gradio job status codes that mean the job is still waiting in the ZeroGPU
+# queue (not yet executing on the GPU)
+QUEUE_STATUS_CODES = {"IN_QUEUE", "JOINING_QUEUE", "QUEUE_FULL"}
 
 # Substrings marking a "model is still loading" response - a ZeroGPU space
 # waking its GPU worker returns this immediately rather than blocking, so it
 # is retried (within connect_timeout) instead of treated as a failure.
 LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
                    "currently loading", "warming up")
+
+# Substrings marking a ZeroGPU quota-exhausted response. Hitting this on one
+# model means every other ZeroGPU model would hit it too, so the rest are
+# skipped rather than retried.
+QUOTA_EXHAUSTED_MARKERS = ("exceeded your gpu quota", "gpu quota exceeded",
+                           "zerogpu quota", "quota exceeded", "gpu quota")
 
 
 def is_loading_error(exc: Exception) -> bool:
@@ -76,13 +87,28 @@ def is_loading_error(exc: Exception) -> bool:
     return any(marker in message for marker in LOADING_MARKERS)
 
 
+def is_quota_exhausted(text: str) -> bool:
+    """
+    Whether an error message indicates the ZeroGPU allowance is exhausted.
+
+    Args:
+        text (str): An error message to inspect.
+
+    Returns:
+        exhausted (bool): True if it looks like a ZeroGPU quota error.
+    """
+
+    lowered = text.lower()
+    return any(marker in lowered for marker in QUOTA_EXHAUSTED_MARKERS)
+
+
 def call_through_loading(fn, deadline: float, what: str):
     """
     Call fn(), retrying while the model reports it is still loading.
 
-    A ZeroGPU space that has to spin up its GPU worker answers the first
-    request with a "still loading" error immediately; retrying until the
-    deadline lets validation ride through the warm-up instead of failing.
+    A ZeroGPU space that must start its GPU worker answers the first request
+    with a "still loading" error immediately; retrying until the deadline
+    tolerates that start-up interval instead of failing on it.
 
     Args:
         fn (callable): Zero-argument call to make.
@@ -105,6 +131,52 @@ def call_through_loading(fn, deadline: float, what: str):
                 time.sleep(LOADING_RETRY_INTERVAL)
                 continue
             raise
+
+
+def job_status_code(job) -> str | None:
+    """
+    Best-effort read of a gradio job's current status code name.
+
+    Args:
+        job: A gradio_client Job handle.
+
+    Returns:
+        code (str | None): The status code name (e.g. "IN_QUEUE",
+            "PROCESSING"), or None if the status cannot be read.
+    """
+
+    try:
+        status = job.status()
+        return getattr(getattr(status, "code", None), "name", None)
+    except Exception:  # noqa: BLE001 - status polling is best-effort
+        return None
+
+
+def wait_out_queue(job, queue_deadline: float, api_name: str) -> None:
+    """
+    Block until a /process job leaves the ZeroGPU queue and begins executing.
+
+    A ZeroGPU job waits in a shared queue before running; that wait is not
+    part of the model's execution and is not charged against quota, so it is
+    bounded by queue_deadline (the connect timeout) rather than by the shorter
+    execution timeout the caller applies afterwards.
+
+    Args:
+        job: A gradio_client Job handle.
+        queue_deadline (float): time.time() by which the job must leave the
+            queue, or it is cancelled.
+        api_name (str): Endpoint name, for the timeout message.
+
+    Raises:
+        TimeoutError: If the job never leaves the queue by queue_deadline.
+    """
+
+    while not job.done() and job_status_code(job) in QUEUE_STATUS_CODES:
+        if time.time() >= queue_deadline:
+            job.cancel()
+            raise TimeoutError(f"{api_name} still queued after waiting for the "
+                               f"connect timeout")
+        time.sleep(JOB_POLL_INTERVAL)
 
 
 def close_client(client) -> None:
@@ -144,7 +216,12 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
         result (ModelResult): The same record, completed.
     """
 
-    process_timeout = overrides.get("process_timeout", opts.process_timeout)
+    # ZeroGPU models default to a lower process timeout (their jobs are short
+    # once running); a per-model process_timeout override still wins
+    default_process_timeout = (opts.zerogpu_process_timeout
+                               if is_zerogpu(result.hardware)
+                               else opts.process_timeout)
+    process_timeout = overrides.get("process_timeout", default_process_timeout)
     connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)
     load_only = opts.load_only or overrides.get("load_only", False)
     config_dir = opts.config.parent.resolve()
@@ -174,12 +251,24 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
     # --- /process test cases -------------------------------------------------
     default_args, missing = synthesize_default_args(controls, assets)
-    cases = overrides.get("test_cases") or [{"name": "default"}]
+    # Common cases (generic, applied to every model) run alongside this
+    # model's own cases; their names are namespaced so both are legible in
+    # the report. A model can opt out with `skip_common_cases`.
+    own_cases = overrides.get("test_cases") or [{"name": "default"}]
+    if overrides.get("skip_common_cases"):
+        common_cases = []
+    else:
+        common_cases = [dict(c, name=f"common:{c.get('name', 'unnamed')}")
+                        for c in (opts.common_test_cases or [])]
+    cases = common_cases + own_cases
 
     for case in cases:
         case_result = CaseResult(name=case.get("name", "unnamed"))
         result.cases.append(case_result)
         case_start = time.time()
+        # Shared with run_process so `executed` is recorded even when the job
+        # leaves the queue (and thus reserves GPU) but then fails or times out
+        run_state = {"executed": False}
         try:
             # Inputs we couldn't synthesize are fine if this case supplies them
             supplied = set(case.get("controls") or {}) | set(case.get("files") or {})
@@ -194,6 +283,11 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
             def run_process():
                 job = client.submit(*args, api_name="/process")
+                # The queue wait is bounded by connect_timeout; only once the
+                # job is dequeued does the (shorter) execution timeout apply
+                wait_out_queue(job, time.time() + connect_timeout, "/process")
+                # Left the queue: GPU is now reserved, so this call is billed
+                run_state["executed"] = True
                 return job.result(timeout=case_timeout)
 
             output = call_through_loading(
@@ -211,6 +305,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
             case_result.error = f"{type(exc).__name__}: {exc}"
         finally:
             case_result.duration = round(time.time() - case_start, 1)
+            case_result.executed = run_state["executed"]
 
     if any(c.ok is False for c in result.cases):
         result.error = "; ".join(
@@ -250,7 +345,8 @@ def wait_for_runtime(api, space_id: str, deadline: float):
 
 
 def test_space(space_id: str, token: str, assets: Assets,
-               opts: argparse.Namespace, overrides: dict) -> ModelResult:
+               opts: argparse.Namespace, overrides: dict,
+               quota_guard=None) -> ModelResult:
     """
     Validate one remote Hugging Face Space end-to-end.
 
@@ -260,6 +356,9 @@ def test_space(space_id: str, token: str, assets: Assets,
         assets (Assets): Synthesized input files.
         opts (argparse.Namespace): Parsed command-line options.
         overrides (dict): This space's entry from config.yml `overrides`.
+        quota_guard (ZeroGPUQuotaGuard | None): Shared flag; when tripped,
+            ZeroGPU models are skipped, and this model trips it if its own
+            run reveals the allowance is exhausted.
 
     Returns:
         result (ModelResult): The completed validation record.
@@ -283,11 +382,16 @@ def test_space(space_id: str, token: str, assets: Assets,
         # requested_hardware reflects the space's configuration even while
         # it is sleeping or stopped (hardware itself is only set when live)
         result.hardware = runtime.requested_hardware or runtime.hardware or ""
+        zerogpu = is_zerogpu(result.hardware)
 
         # Skip ZeroGPU models before doing any work that would spend quota
-        if opts.skip_zerogpu and is_zerogpu(result.hardware):
+        if zerogpu and opts.skip_zerogpu:
             result.status = SKIP
             result.error = "skipped: ZeroGPU hardware (--skip-zerogpu)"
+            return result
+        if zerogpu and quota_guard is not None and quota_guard.exhausted:
+            result.status = SKIP
+            result.error = "skipped: ZeroGPU allowance already exhausted this run"
             return result
 
         if stage in DEAD_STAGES or stage in ("STOPPED", "PAUSED"):
@@ -321,8 +425,20 @@ def test_space(space_id: str, token: str, assets: Assets,
                 time.sleep(15)
         if client is None:
             raise RuntimeError(f"could not connect: {last_exc}")
+        # Connecting has woken the space; reflect that rather than the stale
+        # SLEEPING/STARTING stage seen before the wake-up
+        if result.stage != "RUNNING":
+            result.stage = "RUNNING"
 
-        return run_endpoint_tests(client, result, assets, overrides, opts)
+        run_endpoint_tests(client, result, assets, overrides, opts)
+
+        # If a ZeroGPU model failed because the allowance is gone, trip the
+        # guard so the remaining ZeroGPU models are skipped
+        if zerogpu and quota_guard is not None and result.status == FAIL \
+                and is_quota_exhausted(result.error):
+            quota_guard.mark_exhausted()
+
+        return result
 
     except Exception as exc:  # noqa: BLE001 - any failure means invalid
         result.error = scrub(f"{type(exc).__name__}: {exc}", token)

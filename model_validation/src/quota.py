@@ -13,6 +13,7 @@ import threading
 
 __all__ = [
     'ZeroGPUTracker',
+    'ZeroGPUQuotaGuard',
     'is_zerogpu'
 ]
 
@@ -36,42 +37,86 @@ def is_zerogpu(hardware: str) -> bool:
 
 class ZeroGPUTracker:
     """
-    Accumulates the ZeroGPU processing time consumed during a run.
+    Tracks ZeroGPU work done during a run.
 
-    The total is the cumulative /process wall time across ZeroGPU models
-    (CPU and dedicated-hardware models never contribute). It is an upper
-    bound on the GPU seconds charged, since wall time includes queue time,
-    and is shown against an optional budget (`zerogpu_budget_seconds` in
-    config.yml).
+    ZeroGPU bills dynamically: each call reserves its declared
+    `@spaces.GPU(duration=...)` time up front, then refunds the unused portion
+    once the function returns - so the account's usage rises during a run and
+    settles lower afterwards, and the exact billed amount is not readable from
+    the gradio client. Two figures are tracked instead:
+
+      - the number of /process calls that reached the GPU - exact, and the
+        most reliable signal of how much of the allowance a run will use;
+      - the total /process wall time of those calls (queue plus execution) -
+        an over-estimate of the settled bill, in the range of the mid-run
+        reservation peak, not the amount that remains after refunds.
+
+    Only calls that reached the GPU count; queued or input-skipped cases do
+    not. CPU and dedicated-hardware models never contribute.
     """
 
     def __init__(self, budget: float | None):
         self.budget = budget
-        self.used = 0.0
+        self.calls = 0
+        self.wall_seconds = 0.0
         self._lock = threading.Lock()
 
-    def add(self, seconds: float) -> None:
+    def add(self, calls: int, wall_seconds: float) -> None:
         """
-        Record ZeroGPU processing time from a completed model validation.
+        Record ZeroGPU work from a completed model validation.
 
         Args:
-            seconds (float): Wall time spent in this model's /process calls.
+            calls (int): Number of /process calls that ran on the GPU.
+            wall_seconds (float): Total /process wall time of those calls.
         """
 
         with self._lock:
-            self.used += seconds
+            self.calls += calls
+            self.wall_seconds += wall_seconds
 
     def summary(self) -> str:
         """
-        Format the ZeroGPU time consumed so far for a console line.
+        Format the ZeroGPU work done so far for a console line.
 
         Returns:
-            summary (str): e.g. "ZeroGPU time ~38s/1500s budget this run".
+            summary (str): e.g.
+                "ZeroGPU: 25 calls, ~340s wall (approx)".
         """
 
         with self._lock:
-            used = int(self.used)
+            calls, wall = self.calls, int(self.wall_seconds)
 
+        plural = "s" if calls != 1 else ""
         if self.budget:
-            return f"ZeroGPU time ~{used}s/{int(self.budget)}s budget this run"
-        return f"ZeroGPU time ~{used}s this run"
+            detail = f"{calls} call{plural}, ~{wall}s/{int(self.budget)}s wall"
+        else:
+            detail = f"{calls} call{plural}, ~{wall}s wall"
+
+        return f"ZeroGPU: {detail} (approx)"
+
+
+class ZeroGPUQuotaGuard:
+    """
+    A shared, thread-safe flag tripped when the ZeroGPU allowance runs out.
+
+    Spaces are validated concurrently. Once any ZeroGPU model reports its
+    quota is exhausted, this guard causes the remaining ZeroGPU models to be
+    skipped rather than run against an exhausted allowance.
+    """
+
+    def __init__(self):
+        self._exhausted = False
+        self._lock = threading.Lock()
+
+    def mark_exhausted(self) -> None:
+        """Record that the ZeroGPU allowance has been exhausted."""
+
+        with self._lock:
+            self._exhausted = True
+
+    @property
+    def exhausted(self) -> bool:
+        """Whether the ZeroGPU allowance has been reported exhausted."""
+
+        with self._lock:
+            return self._exhausted

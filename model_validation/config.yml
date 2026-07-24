@@ -6,9 +6,11 @@
 #
 # Schema:
 #
-#   zerogpu_budget_seconds: 1500   # optional ZeroGPU budget for quota
-#                                  # reporting (e.g. 1500 = PRO 25 min/day);
-#                                  # unset = report usage without a budget
+#   zerogpu_budget_seconds: 1500   # optional budget (seconds) the measured
+#                                  # ZeroGPU execution time is shown against
+#                                  # (e.g. 1500 = PRO 25 min/day). Note the
+#                                  # measured time is approximate, not the
+#                                  # amount Hugging Face bills (see README)
 #
 #   exclude:        # models to exclude from validation: space ids, or
 #                   # "examples/<example-dir>" for local pyharp examples
@@ -47,10 +49,12 @@
 #               min_bytes: 1000    # minimum file size, in bytes
 #               channels: 1        # audio: exact channel count
 #               sample_rate: 44100 # audio: exact sample rate, in Hz
-#               min_duration: 1.5  # audio: minimum length, in seconds
-#               max_duration: 10.0 # audio: maximum length, in seconds
+#               min_duration: 1.5  # audio/MIDI: minimum length, in seconds
+#               max_duration: 10.0 # audio/MIDI: maximum length, in seconds
 #               bit_depth: 16      # audio: exact PCM bit depth (PCM formats)
 #               min_rms_db: -60    # audio: minimum RMS level, in dBFS
+#             "Output MIDI":
+#               min_notes: 1       # MIDI: minimum note-on count
 #             "Output Labels":
 #               min_labels: 1      # LabelList: minimum count (0 permits an
 #                                  # empty list, but requires a valid one)
@@ -61,17 +65,29 @@
 #             labels_within_audio:
 #               tolerance: 0.1
 #
+#       skip_common_cases: true    # opt this model out of common_test_cases
+#
+#   common_test_cases:   # generic cases run on EVERY model, on top of its
+#                        # own; keep them model-agnostic - target outputs with
+#                        # "*" (rules that match nothing are simply skipped)
+#     - name: outputs-nontrivial
+#       expect:
+#         "*":
+#           min_bytes: 100   # every file output is at least minimally sized
+#
 # Which expect rules apply to which output types:
 #
 #   ext, min_bytes                                  any file output
-#   channels, sample_rate, min_duration,            audio outputs
-#     max_duration, bit_depth, min_rms_db
+#   channels, sample_rate, bit_depth, min_rms_db    audio outputs
+#   min_duration, max_duration                      audio and MIDI outputs
+#   min_notes                                       MIDI outputs
 #   min_labels                                      JSON (LabelList) outputs
 #
-# Applying a rule to an output type it does not cover is reported as a
-# configuration error, not a model failure. Audio outputs are decoded with
-# soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3, AIFF, ...);
-# bit_depth applies only to PCM formats, not compressed ones.
+# Applying a rule to a NAMED output whose type it does not cover is reported
+# as a configuration error, not a model failure; under "*" such a rule is
+# simply skipped. Audio outputs are decoded with soundfile, so any libsndfile
+# format works (WAV, FLAC, OGG, MP3, AIFF, ...); bit_depth applies only to
+# PCM formats, not compressed ones. MIDI outputs are parsed with mido.
 
 exclude: []
 
@@ -109,6 +125,9 @@ overrides:
       - name: shift-up-max
         controls:
           "Pitch Shift (semitones)": 24
+        expect:
+          "Output Midi":
+            min_notes: 1         # shifted MIDI must still contain notes
       - name: shift-down-max
         controls:
           "Pitch Shift (semitones)": -24

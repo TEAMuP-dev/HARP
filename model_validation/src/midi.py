@@ -1,0 +1,53 @@
+"""
+MIDI decoding for HARP model validation.
+
+Parallels audio.py: reads a MIDI output and measures the handful of
+properties `expect` rules check. Uses mido, a small pure-Python parser, so
+it handles running status and tempo maps correctly without a native
+dependency.
+"""
+
+import mido
+
+
+__all__ = [
+    'read_midi_props'
+]
+
+
+def read_midi_props(label: str, path: str) -> dict:
+    """
+    Parse a MIDI file and measure the properties `expect` rules check.
+
+    Args:
+        label (str): Output label, for error messages.
+        path (str): Path to the MIDI file.
+
+    Returns:
+        props (dict): num_tracks, num_notes (note-on events with non-zero
+            velocity), and duration (seconds, or None when it cannot be
+            determined, e.g. an asynchronous format-2 file).
+
+    Raises:
+        AssertionError: If the file cannot be parsed as MIDI.
+    """
+
+    try:
+        midi = mido.MidiFile(path)
+    except Exception as exc:  # noqa: BLE001 - any parse failure
+        raise AssertionError(f"output '{label}' could not be parsed as MIDI: {exc}")
+
+    num_notes = sum(1 for track in midi.tracks for msg in track
+                    if msg.type == "note_on" and msg.velocity > 0)
+
+    try:
+        duration = midi.length
+    except (ValueError, KeyError):
+        # length is undefined for asynchronous (format 2) files
+        duration = None
+
+    return {
+        "num_tracks": len(midi.tracks),
+        "num_notes": num_notes,
+        "duration": duration,
+    }

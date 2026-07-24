@@ -15,7 +15,8 @@ from gradio_client import handle_file
 
 from assets import Assets
 from audio import read_audio_props
-from validators import VALIDATORS
+from midi import read_midi_props
+from validators import VALIDATORS, ValidatorNotApplicable
 
 
 __all__ = [
@@ -40,28 +41,32 @@ EXPECT_RULES = {
             "file extension, as a string or list of accepted extensions"),
     "min_bytes": (FILE_TYPES,
                   "minimum file size in bytes"),
+    "min_duration": ({"audio_track", "midi_track"},
+                     "minimum length, in seconds"),
+    "max_duration": ({"audio_track", "midi_track"},
+                     "maximum length, in seconds"),
     "channels": ({"audio_track"},
                  "exact channel count (1 = mono, 2 = stereo)"),
     "sample_rate": ({"audio_track"},
                     "exact sample rate, in Hz"),
-    "min_duration": ({"audio_track"},
-                     "minimum length, in seconds"),
-    "max_duration": ({"audio_track"},
-                     "maximum length, in seconds"),
     "bit_depth": ({"audio_track"},
                   "exact PCM bit depth, e.g. 16 or 24 (not valid for "
                   "compressed formats such as MP3 or OGG)"),
     "min_rms_db": ({"audio_track"},
                    "minimum RMS level, in dBFS (0 = full scale); -60 is the "
                    "usual threshold for 'this output is not silent'"),
+    "min_notes": ({"midi_track"},
+                  "minimum number of note-on events"),
     "min_labels": ({"json"},
                    "minimum number of labels in a pyharp LabelList; 0 asserts "
                    "a well-formed LabelList that may legitimately be empty"),
 }
 
-# Rules requiring the audio properties of the output to be decoded
-AUDIO_RULES = {rule for rule, (types, _) in EXPECT_RULES.items()
-               if types == {"audio_track"}}
+# Rule groups, by what they need decoded. Duration rules are shared: they read
+# from whichever of audio/MIDI props matches the output's type.
+DURATION_RULES = {"min_duration", "max_duration"}
+AUDIO_PROP_RULES = {"channels", "sample_rate", "bit_depth", "min_rms_db"}
+MIDI_PROP_RULES = {"min_notes"}
 
 # Key selecting every compatible output rather than one named output
 ALL_OUTPUTS = "*"
@@ -287,9 +292,10 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
 
     Keys are output labels, or "*" to apply rules to every output the rule
     is compatible with (e.g. `min_rms_db` under "*" reaches only the audio
-    outputs). Rules are checked against the output's type here, so a rule
-    aimed at the wrong kind of output is reported as a configuration error
-    rather than a model failure.
+    outputs). A "*" rule that matches no output is simply dropped, so a
+    generic case can safely target output types a given model lacks. An
+    explicit label, by contrast, must exist and must accept the rule -
+    otherwise it is a configuration error, not a model failure.
 
     Args:
         expect (dict): The case's `expect` block.
@@ -313,19 +319,14 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
                              f"'{key}'; supported rules: {sorted(EXPECT_RULES)}")
 
         if key == ALL_OUTPUTS:
-            # Fan each rule out to the outputs whose type it covers
+            # Fan each rule out to the outputs whose type it covers; a rule
+            # matching nothing is dropped (lenient, so generic cases apply)
             per_label = {}
             for rule, value in rules.items():
                 applicable, _ = EXPECT_RULES[rule]
-                matched = [label for label, otype in out_types.items()
-                           if otype in applicable]
-                if not matched:
-                    raise ValueError(
-                        f"expect rule '{rule}' under '{ALL_OUTPUTS}' matches no "
-                        f"output; it applies to {sorted(applicable)} outputs, "
-                        f"but this model has {sorted(set(out_types.values()))}")
-                for label in matched:
-                    per_label.setdefault(label, {})[rule] = value
+                for label, otype in out_types.items():
+                    if otype in applicable:
+                        per_label.setdefault(label, {})[rule] = value
             targets.extend(per_label.items())
             continue
 
@@ -346,16 +347,48 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
     return targets
 
 
-def check_expectations(label: str, value, rules: dict) -> None:
+def check_duration(label: str, duration, rules: dict) -> None:
+    """
+    Apply the shared min_duration / max_duration rules to a decoded length.
+
+    Args:
+        label (str): Output label, for error messages.
+        duration (float | None): Length in seconds, or None if undetermined.
+        rules (dict): The output's rules (only duration keys are read).
+
+    Raises:
+        AssertionError: If a duration bound is not met, or duration is
+            required but could not be determined.
+    """
+
+    if not (set(rules) & DURATION_RULES):
+        return
+
+    assert duration is not None, \
+        f"output '{label}': could not determine its duration"
+
+    if "min_duration" in rules:
+        assert duration >= rules["min_duration"], \
+            (f"output '{label}' is {duration:.2f}s, expected at least "
+             f"{rules['min_duration']}s")
+
+    if "max_duration" in rules:
+        assert duration <= rules["max_duration"], \
+            (f"output '{label}' is {duration:.2f}s, expected at most "
+             f"{rules['max_duration']}s")
+
+
+def check_expectations(label: str, otype: str, value, rules: dict) -> None:
     """
     Apply one output's declarative `expect` rules.
 
     Rule names and their applicability to this output are validated upstream
-    by resolve_expect_targets(). Audio properties are decoded in a single
-    pass, and only when an audio rule is actually requested.
+    by resolve_expect_targets(). Audio/MIDI files are decoded in a single
+    pass, and only when a rule that needs the decoded properties is present.
 
     Args:
         label (str): Output label the rules apply to.
+        otype (str): The output's component type from /controls.
         value: The mapped output value (file path or decoded JSON).
         rules (dict): Rule name -> expected value.
 
@@ -377,7 +410,7 @@ def check_expectations(label: str, value, rules: dict) -> None:
             f"output file '{label}' is {size} bytes, expected at least {rules['min_bytes']}"
 
     # --- Audio outputs -------------------------------------------------------
-    if set(rules) & AUDIO_RULES:
+    if otype == "audio_track" and set(rules) & (AUDIO_PROP_RULES | DURATION_RULES):
         props = read_audio_props(label, require_file(label, value))
 
         if "channels" in rules:
@@ -389,16 +422,6 @@ def check_expectations(label: str, value, rules: dict) -> None:
             assert props["sample_rate"] == rules["sample_rate"], \
                 (f"output '{label}': expected {rules['sample_rate']} Hz, "
                  f"got {props['sample_rate']} Hz")
-
-        if "min_duration" in rules:
-            assert props["duration"] >= rules["min_duration"], \
-                (f"output '{label}' is {props['duration']:.2f}s, expected at "
-                 f"least {rules['min_duration']}s")
-
-        if "max_duration" in rules:
-            assert props["duration"] <= rules["max_duration"], \
-                (f"output '{label}' is {props['duration']:.2f}s, expected at "
-                 f"most {rules['max_duration']}s")
 
         if "bit_depth" in rules:
             assert props["bit_depth"] is not None, \
@@ -412,6 +435,19 @@ def check_expectations(label: str, value, rules: dict) -> None:
             assert props["rms_db"] >= rules["min_rms_db"], \
                 (f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
                  f"< {rules['min_rms_db']} dBFS)")
+
+        check_duration(label, props["duration"], rules)
+
+    # --- MIDI outputs --------------------------------------------------------
+    if otype == "midi_track" and set(rules) & (MIDI_PROP_RULES | DURATION_RULES):
+        props = read_midi_props(label, require_file(label, value))
+
+        if "min_notes" in rules:
+            assert props["num_notes"] >= rules["min_notes"], \
+                (f"output '{label}' has {props['num_notes']} note(s), expected "
+                 f"at least {rules['min_notes']}")
+
+        check_duration(label, props["duration"], rules)
 
     # --- JSON / LabelList outputs --------------------------------------------
     if "min_labels" in rules:
@@ -452,11 +488,16 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
     out_types = {spec.get("label"): spec.get("type") for spec in specs}
 
     for label, rules in resolve_expect_targets(case.get("expect"), out_types):
-        check_expectations(label, out_map[label], rules)
+        check_expectations(label, out_types[label], out_map[label], rules)
 
     for name, params in (case.get("validators") or {}).items():
         if name not in VALIDATORS:
             raise ValueError(f"unknown validator '{name}' (available: "
                              f"{sorted(VALIDATORS)}); register it in "
                              f"validators.py")
-        VALIDATORS[name](out_map, controls, params or {})
+        try:
+            VALIDATORS[name](out_map, controls, params or {})
+        except ValidatorNotApplicable:
+            # The model lacks the outputs this validator needs; skip it so a
+            # common case's validator does not fail on models it does not fit
+            continue

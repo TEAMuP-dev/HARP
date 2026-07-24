@@ -39,6 +39,7 @@ Key behaviors:
 | [src/cases.py](src/cases.py) | Synthesis of inputs, test-case overlay, output validation/inspection |
 | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
 | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
+| [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
 | [src/assets.py](src/assets.py) | Synthesized WAV/MIDI/text/JSON test inputs |
 | [src/quota.py](src/quota.py) | ZeroGPU usage tracking and account quota lookup |
 | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
@@ -95,32 +96,58 @@ pip install -e ./pyharp
 python model_validation/src/validate_models.py --local-examples
 ```
 
-Reports land in `model_validation/reports/` (override with `--output-dir`) as
-`report.json` (machine-readable) and `report.md` (human-readable table);
-synthesized test inputs and local example logs are saved alongside them. Exit
-code is `0` when everything passes, `1` on any model failure, `2` on
+Each run writes to its own timestamped directory under
+`model_validation/reports/` (override the base with `--output-dir`), so runs
+never overwrite each other — e.g. `model_validation/reports/2026-07-18T14-30-00Z/`.
+It contains `report.json` (machine-readable) and `report.md` (human-readable
+table), with synthesized test inputs and local example logs alongside. Both
+reports record the command line the run was invoked with. Exit code is `0`
+when everything passes, `1` on any model failure, `2` on
 configuration/infrastructure errors.
 
-## ZeroGPU time tracking
+## ZeroGPU usage tracking
 
 Each model's line shows its hardware, and ZeroGPU models additionally show
-the running ZeroGPU time consumed so far this run:
+the ZeroGPU work done so far this run:
 
 ```
-✅ PASS teamup-tech/pitch_shifter (42.1s) [zero-a10g | ZeroGPU time ~38s this run]
+✅ PASS teamup-tech/pitch_shifter (42.1s) [zero-a10g | ZeroGPU: 2 calls, ~84s wall (approx)]
 ✅ PASS teamup-tech/cpu_model     (18.3s) [cpu-basic]
 ```
 
-The tracked total is cumulative `/process` wall time across ZeroGPU models
-only — CPU and dedicated-hardware models never contribute. It is an upper
-bound on the GPU seconds charged, since wall time includes queue time. Set
-`zerogpu_budget_seconds` in [config.yml](config.yml) (_e.g._, `1500` for the
-PRO 25 min/day allowance) to show it against a budget.
+Two figures are tracked, because the exact billed amount is not observable
+from the client:
 
-This is the ZeroGPU time *this run* spends, not your account's remaining
-quota — Hugging Face exposes no reliable public API for the latter, so it is
-not reported. To avoid spending any allowance, pass `--skip-zerogpu`, which
-skips ZeroGPU models entirely (they appear as `SKIP` in the report).
+- **Call count** — the number of `/process` calls that reached the GPU. This
+  is exact and is the most reliable signal of how much of the allowance a run
+  will use. Only calls that ran count; a queued or input-skipped case does
+  not. CPU and dedicated-hardware models never contribute.
+- **Wall time** — the total `/process` wall time (queue plus execution) of
+  those calls, marked `(approx)`. Hugging Face bills ZeroGPU **dynamically**:
+  each call reserves its declared `@spaces.GPU(duration=)` time up front and
+  refunds the unused part when the function returns, so an account's usage
+  rises during a run and settles lower afterwards. This wall figure is an
+  over-estimate of the settled bill — closer to that mid-run reservation peak
+  — and is not returned to the client, so treat it as indicative. Set
+  `zerogpu_budget_seconds` in [config.yml](config.yml) (_e.g._, `1500` for the
+  PRO 25 min/day allowance) to show it against a budget.
+
+Each case's wall time is also recorded in `report.json` (`duration`). These
+figures reflect the work *this run* does, not your account's remaining quota —
+Hugging Face exposes no reliable public API for the latter. To spend none of
+the allowance, pass `--skip-zerogpu`, which skips ZeroGPU models entirely
+(they appear as `SKIP` in the report).
+
+Two mechanisms limit the ZeroGPU allowance a run can consume:
+
+- **Quota exhaustion stops the remaining ZeroGPU models.** If a ZeroGPU model
+  fails with a "quota exceeded" error, every remaining ZeroGPU model is
+  skipped (as `SKIP`) rather than run against an exhausted allowance.
+- **ZeroGPU models use a lower execution timeout** — `--zerogpu-process-timeout`
+  (default 120s) instead of `--process-timeout` (default 600s). This bounds
+  execution only; the queue wait before a job runs is bounded separately by
+  `--connect-timeout`, so a long queue does not trip the execution timeout. A
+  per-model `process_timeout` override takes precedence.
 
 Transient "model is still loading" responses from a ZeroGPU space waking its
 GPU worker are retried automatically (up to `connect_timeout`), rather than
@@ -182,8 +209,8 @@ is valid, since labels are optional).
 
 Beyond that, there are two mechanisms, divided by what they can express:
 
-- **`expect`** asserts properties of a *single* output, and covers almost
-  every check worth writing.
+- **`expect`** asserts properties of a *single* output, and covers most
+  checks.
 - **`validators`** run custom Python for checks that cannot be expressed as
   a property of one output — typically relationships spanning several
   outputs.
@@ -219,15 +246,17 @@ The full vocabulary, and which output types each rule covers:
 | `min_bytes` | any file output | File is at least this many bytes |
 | `channels` | audio output | Exact channel count |
 | `sample_rate` | audio output | Exact sample rate in Hz |
-| `min_duration` / `max_duration` | audio output | Length in seconds is within bounds |
 | `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...); errors on compressed formats (_e.g._, MP3 or OGG) |
 | `min_rms_db` | audio output | RMS level is at least this many dBFS |
+| `min_duration` / `max_duration` | audio or MIDI output | Length in seconds is within bounds |
+| `min_notes` | MIDI output | At least this many note-on events |
 | `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
 
 **Targeting outputs.** A model with several outputs gets one block per
 output label, each checked independently. Use `"*"` instead of a label to
 apply rules to every output a rule covers — with mixed outputs, `"*"` sends
-`min_bytes` to all file outputs and `min_rms_db` only to the audio ones:
+`min_bytes` to all file outputs, `min_rms_db` only to the audio ones, and
+`min_notes` only to the MIDI ones:
 
 ```yaml
         expect:
@@ -235,11 +264,14 @@ apply rules to every output a rule covers — with mixed outputs, `"*"` sends
             min_bytes: 1000      # every file output must be non-trivial
 ```
 
-**Mistakes are reported as configuration errors, not model failures.** An
-unrecognized rule name, an unknown output label, or a rule aimed at an output
-type it does not cover (_e.g._, `min_labels` on an audio output) raises an error
-naming the problem and listing what is valid. A `"*"` rule matching no output
-at all is also an error, since it would otherwise silently check nothing.
+**Mistakes on a named output are configuration errors, not model failures.**
+An unrecognized rule name, an unknown output label, or a rule aimed at a named
+output whose type it does not cover (_e.g._, `min_labels` on an audio output)
+raises an error naming the problem and listing what is valid. A rule under
+`"*"` is more forgiving: when it matches no compatible output, it is skipped
+instead of raising an error. This lets a generic case (see
+[common test cases](#step-4-reuse-a-case-across-models)) target output types
+that a given model does not have.
 
 **On `min_rms_db`:** level is measured as RMS in dBFS (0 dBFS = full scale),
 a bit-depth-independent unit that is easy to set thresholds in. Digital
@@ -260,8 +292,13 @@ so audio rules work on any libsndfile format — WAV, FLAC, OGG, MP3, AIFF, and
 more — not just pyharp's `save_audio()` WAV default. Decoding to float also
 makes every audio rule bit-depth-independent, so a level threshold means the
 same thing whether the source is 16-bit, 24-bit, or float. `bit_depth` is the
-exception, by definition: it reads the file's PCM encoding and errors on any
-compressed formats, which have no fixed bit depth.
+exception: it reads the file's PCM encoding and errors on compressed formats,
+which have no fixed bit depth.
+
+**On MIDI:** MIDI outputs are parsed with
+[mido](https://mido.readthedocs.io/) (a listed dependency). `min_duration` /
+`max_duration` are shared with audio and read the MIDI's own length in
+seconds; `min_notes` counts note-on events.
 
 #### `validators` — custom Python
 
@@ -279,21 +316,24 @@ test case's own fields. A case may run several:
 A validator receives `(outputs, controls, params)` — `outputs` maps output
 labels to local file paths (file outputs) or decoded objects (JSON outputs) —
 and raises `AssertionError` with a message naming the output and what went
-wrong. As an example: `labels_within_audio` asserts every
-returned label falls inside the audio output's timespan,
-relating two different outputs to each other.
+wrong. It may raise `ValidatorNotApplicable` to opt out on a model that lacks
+the outputs it needs; that is treated as a skip, not a failure, so a validator
+can be used in a common test case. As an example, `labels_within_audio`
+asserts every returned label falls inside the audio output's timespan (a
+relationship between two outputs), and raises `ValidatorNotApplicable` when
+the model has no audio or no label output.
 
 To add a validator:
 
 ```python
-@validator("midi_note_count")
-def midi_note_count(outputs, controls, params):
-    """Assert the MIDI output has at least params['min_notes'] note-ons."""
+@validator("labels_sorted")
+def labels_sorted(outputs, controls, params):
+    """Assert every LabelList output is in chronological order - an ordering
+    property no single-value `expect` rule can express."""
     for label, value in outputs.items():
-        if isinstance(value, str) and value.lower().endswith((".mid", ".midi")):
-            notes = count_note_ons(value)
-            assert notes >= params.get("min_notes", 1), \
-                f"'{label}' has {notes} notes, expected at least {params['min_notes']}"
+        if isinstance(value, dict) and isinstance(value.get("labels"), list):
+            times = [entry.get("t", 0.0) for entry in value["labels"]]
+            assert times == sorted(times), f"'{label}' labels are out of order"
 ```
 
 Before writing one, check whether an `expect` rule would do — and if the
@@ -301,7 +341,35 @@ check is a generally useful property of a single output, consider adding it
 to the `expect` vocabulary (`EXPECT_RULES` in [cases.py](src/cases.py))
 instead of putting it in a one-off validator.
 
-### Step 4: run just that model to iterate
+### Step 4: reuse a case across models
+
+A case under a model's `test_cases` only applies to that model. For a check
+that should hold for *every* model — "no file output is empty", "audio is
+never silent" — add a `common_test_cases` entry at the top level of
+config.yml instead. Common cases run on every model in addition to its own,
+and their names are shown in the report prefixed with `common:`.
+
+```yaml
+common_test_cases:
+  - name: outputs-nontrivial
+    expect:
+      "*":
+        min_bytes: 100      # every file output, on every model
+  - name: audio-not-silent
+    expect:
+      "*":
+        min_rms_db: -60     # applies only to models that have audio outputs
+```
+
+Keep common cases model-agnostic: target outputs with `"*"` (never a specific
+label, which will not exist on most models). Because a `"*"` rule is skipped
+when it matches no compatible output, `audio-not-silent` above checks audio
+models and is skipped on MIDI-only ones. A validator can do the same by
+raising `ValidatorNotApplicable` when the model lacks the outputs it needs
+(the shipped `labels_within_audio` does this). A model can opt out of common
+cases entirely with `skip_common_cases: true` in its `overrides` entry.
+
+### Step 5: run just that model to iterate
 
 ```bash
 python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
@@ -315,8 +383,9 @@ up automatically — no workflow changes needed.
 
 See the comment block at the top of [config.yml](config.yml) for the
 complete schema in one place: `zerogpu_budget_seconds`, `exclude`,
-`include_extra`, and per-model `overrides` (`connect_timeout`,
-`process_timeout`, `load_only`, `test_cases`).
+`include_extra`, top-level `common_test_cases`, and per-model `overrides`
+(`connect_timeout`, `process_timeout`, `load_only`, `test_cases`,
+`skip_common_cases`).
 
 ## Excluding models
 

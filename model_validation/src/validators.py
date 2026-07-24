@@ -36,8 +36,20 @@ from audio import read_audio_props
 
 __all__ = [
     'VALIDATORS',
-    'validator'
+    'validator',
+    'ValidatorNotApplicable'
 ]
+
+
+class ValidatorNotApplicable(Exception):
+    """
+    Raised by a validator when the current model lacks the outputs it needs.
+
+    Treated as a skip, not a failure. Raising this (rather than asserting)
+    for absent outputs lets a validator run in a common test case: it applies
+    to models that have the relevant outputs and is skipped on those that do
+    not, mirroring the leniency of a "*" expect rule.
+    """
 
 
 VALIDATORS = {}
@@ -74,8 +86,9 @@ def labels_within_audio(outputs, controls, params):
             before it is treated as out of bounds (default 0.05).
 
     Raises:
-        AssertionError: If a label lies outside the audio, or the outputs
-            needed for the comparison are missing.
+        AssertionError: If a label lies outside the audio output.
+        ValidatorNotApplicable: If the model has no audio output or no
+            LabelList output for the comparison.
     """
 
     tolerance = params.get("tolerance", 0.05)
@@ -91,7 +104,8 @@ def labels_within_audio(outputs, controls, params):
         if isinstance(value, str):
             duration = read_audio_props(label, value)["duration"]
             break
-    assert duration is not None, "no audio output found to compare labels against"
+    if duration is None:
+        raise ValidatorNotApplicable("no audio output to compare labels against")
 
     for label, value in outputs.items():
         if not (isinstance(value, dict) and isinstance(value.get("labels"), list)):
@@ -107,4 +121,4 @@ def labels_within_audio(outputs, controls, params):
                  f"past the {duration:.2f}s audio output")
         return
 
-    raise AssertionError("no pyharp LabelList output found to check")
+    raise ValidatorNotApplicable("no pyharp LabelList output to check")

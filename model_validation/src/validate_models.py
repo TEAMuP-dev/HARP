@@ -41,11 +41,12 @@ import argparse
 import concurrent.futures
 import os
 import sys
+import time
 from pathlib import Path
 
 from assets import Assets
 from harness import test_space, test_local_example
-from quota import ZeroGPUTracker, is_zerogpu
+from quota import ZeroGPUTracker, ZeroGPUQuotaGuard, is_zerogpu
 from results import PASS, FAIL, SKIP, status_emoji, write_reports
 from utils import get_token, scrub, load_config, get_excluded, discover_spaces
 
@@ -98,7 +99,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--connect-timeout", type=float, default=420,
                         help="Seconds to wait for a deployment to build/wake/start")
     parser.add_argument("--process-timeout", type=float, default=600,
-                        help="Seconds to wait for /process (includes ZeroGPU queue time)")
+                        help="Seconds to wait for /process on non-ZeroGPU models")
+    parser.add_argument("--zerogpu-process-timeout", type=float, default=120,
+                        help="Seconds allowed for /process EXECUTION on ZeroGPU "
+                             "models once they leave the queue (queue wait is "
+                             "bounded separately by --connect-timeout; default 120)")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
                         help=f"Directory for reports, synthesized assets, and "
                              f"example logs (default: {DEFAULT_OUTPUT_DIR})")
@@ -182,6 +187,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         return None
 
     tracker = ZeroGPUTracker(config.get("zerogpu_budget_seconds"))
+    guard = ZeroGPUQuotaGuard()
     print(f"Validating {len(space_ids)} spaces with {opts.workers} workers "
           f"(process test: {'OFF' if opts.load_only else 'ON'})\n")
 
@@ -189,17 +195,20 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
     with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
         futures = {
             pool.submit(test_space, sid, token, assets, opts,
-                        overrides.get(sid, {})): sid
+                        overrides.get(sid, {}), guard): sid
             for sid in space_ids
         }
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
-            # Show the hardware for every model; the running ZeroGPU total is
-            # only meaningful (and only accrues) for ZeroGPU models
+            # Show the hardware for every model; ZeroGPU work only accrues for
+            # ZeroGPU models. Count each /process call that reached the GPU and
+            # its total wall time - a queued or input-skipped case never ran
+            # and is excluded
             info = r.hardware or "?"
             if is_zerogpu(r.hardware):
-                tracker.add(sum(c.duration for c in r.cases))
+                ran = [c for c in r.cases if c.executed]
+                tracker.add(len(ran), sum(c.duration for c in ran))
                 info = f"{info} | {tracker.summary()}"
             note = f" - {r.error}" if r.error else ""
             print(f"{status_emoji(r)} {r.status:4s} {r.target} "
@@ -219,6 +228,14 @@ def main() -> int:
     opts = parse_args()
     config = load_config(opts.config)
     excluded = get_excluded(config, opts.exclude)
+    # Generic cases applied to every model, on top of its own (see config.yml)
+    opts.common_test_cases = config.get("common_test_cases", [])
+
+    # Each run writes to its own timestamped directory so runs never overwrite
+    # each other; assets, logs, and reports all live under it. Local time is
+    # used for the directory name (on a UTC CI runner this is naturally UTC).
+    run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
+    opts.output_dir = opts.output_dir / run_stamp
     assets = Assets(opts.output_dir / "assets")
 
     if opts.local_examples is not None:
@@ -233,12 +250,18 @@ def main() -> int:
     if results is None:
         return 2
 
-    write_reports(results, opts.output_dir, label)
+    # Record how the run was invoked (argv holds no secrets - the token comes
+    # from HF_TOKEN) plus the resolved options, so the report is reproducible
+    command = " ".join(sys.argv)
+    options = {k: str(v) if isinstance(v, Path) else v
+               for k, v in vars(opts).items()}
+    write_reports(results, opts.output_dir, label, command, options)
 
     passed = [r for r in results if r.status == PASS]
     failed = [r for r in results if r.status == FAIL]
     skipped = [r for r in results if r.status == SKIP]
-    summary = f"\n{len(passed)}/{len(results)} models passed"
+    validated = len(results) - len(skipped)   # exclude skipped from the total
+    summary = f"\n{len(passed)}/{validated} models passed"
     if skipped:
         summary += f", {len(skipped)} skipped"
     print(f"{summary}. Reports written to {opts.output_dir}/")
