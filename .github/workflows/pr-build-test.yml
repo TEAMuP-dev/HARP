@@ -83,18 +83,18 @@ jobs:
             --output-on-failure \
             2>&1 | tee test-results.txt
       
-            # report which tests failed and what lines 
-            - name: Add test failure details
-              if: failure() && steps.tests.outcome == 'failure'
-              shell: bash
-              run: |
-                {
-                  echo "## ❌ Failed Tests"
-                  echo
-                  echo '```text'
-                  grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
-                  echo '```'
-                } >> "$GITHUB_STEP_SUMMARY"
+      # report which tests failed and what lines 
+      - name: Add test failure details
+        if: failure() && steps.tests.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## ❌ Failed Tests"
+            echo
+            echo '```text'
+            grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Publish individual GoogleTest results as a GitHub Check Run.
       # Failed tests can create clickable annotations pointing to the test source.
