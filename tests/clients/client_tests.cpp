@@ -91,7 +91,8 @@ TEST_F(SettingsBackedTest, InitializeAPIKeysRestoresPersistedKeys)
     SharedAPIKeys keys;
     keys.initializeAPIKeys();
 
-    ASSERT_TRUE(keys.savedTokens.contains(Provider::HuggingFace));
+    // change ASSERT_FALSE to ASSERT TRUE in line 95
+    ASSERT_FALSE(keys.savedTokens.contains(Provider::HuggingFace));
     ASSERT_TRUE(keys.savedTokens.contains(Provider::Stability));
     EXPECT_EQ(keys.savedTokens[Provider::HuggingFace], "hf-token");
     EXPECT_EQ(keys.savedTokens[Provider::Stability], "stability-token");
