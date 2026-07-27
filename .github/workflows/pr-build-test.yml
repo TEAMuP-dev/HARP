@@ -13,7 +13,6 @@ on:
 permissions:
   actions: read
   contents: read
-  checks: write
 
 jobs:
   build:
@@ -96,21 +95,165 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Publish individual GoogleTest results as a GitHub Check Run.
-      # Failed tests can create clickable annotations pointing to the test source.
-      - name: Publish unit test report
-        if: ${{ !cancelled() }}
-        uses: dorny/test-reporter@v3
-        with:
-          name: HARP Unit Tests
-          path: test-results.xml
-          reporter: java-junit
-          fail-on-error: false
-          fail-on-empty: true
-          list-suites: failed
-          list-tests: failed
-          max-annotations: 50
+            # Convert failed GoogleTest results into native GitHub source annotations.
+      - name: Annotate failed tests
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
 
+          report_path = "test-results.xml"
+          workspace = os.path.normpath(
+              os.environ.get("GITHUB_WORKSPACE", "")
+          )
+
+          if not os.path.exists(report_path):
+              print(
+                  f"GoogleTest XML report not found: {report_path}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          try:
+              tree = ET.parse(report_path)
+          except ET.ParseError as error:
+              print(
+                  f"Could not parse {report_path}: {error}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          # Matches locations such as:
+          # /home/runner/work/HARP/HARP/tests/example_tests.cpp:42:
+          # tests/example_tests.cpp:42:
+          location_pattern = re.compile(
+              r"(?P<file>(?:[A-Za-z]:)?[^:\n]+?\."
+              r"(?:cpp|cc|cxx|c|h|hpp|hxx))"
+              r":(?P<line>\d+):"
+          )
+
+          def escape_message(value: str) -> str:
+              """Escape text used after the :: separator."""
+              return (
+                  value
+                  .replace("%", "%25")
+                  .replace("\r", "%0D")
+                  .replace("\n", "%0A")
+              )
+
+          def escape_property(value: str) -> str:
+              """Escape annotation properties such as file and title."""
+              return (
+                  value
+                  .replace("%", "%25")
+                  .replace("\r", "%0D")
+                  .replace("\n", "%0A")
+                  .replace(":", "%3A")
+                  .replace(",", "%2C")
+              )
+
+          def repository_relative_path(path: str) -> str:
+              if not path:
+                  return ""
+
+              normalized = os.path.normpath(path.strip())
+
+              if workspace:
+                  try:
+                      relative = os.path.relpath(normalized, workspace)
+
+                      if (
+                          relative != ".."
+                          and not relative.startswith(f"..{os.sep}")
+                      ):
+                          return relative
+                  except ValueError:
+                      pass
+
+              return normalized
+
+          def find_failure_location(
+              failure_text: str,
+              fallback_file: str,
+              fallback_line: str,
+          ) -> tuple[str, int]:
+              match = location_pattern.search(failure_text)
+
+              if match:
+                  return (
+                      repository_relative_path(match.group("file")),
+                      int(match.group("line")),
+                  )
+
+              try:
+                  line = int(fallback_line)
+              except (TypeError, ValueError):
+                  line = 1
+
+              return repository_relative_path(fallback_file), line
+
+          annotation_count = 0
+
+          for test_case in tree.findall(".//testcase"):
+              failures = test_case.findall("failure")
+
+              if not failures:
+                  continue
+
+              suite_name = test_case.get("classname", "UnknownSuite")
+              test_name = test_case.get("name", "UnknownTest")
+              fallback_file = test_case.get("file", "")
+              fallback_line = test_case.get("line", "1")
+
+              for failure in failures:
+                  message = failure.get("message", "").strip()
+                  body = (failure.text or "").strip()
+                  
+                  failure_text = "\n".join(
+                      part for part in (message, body) if part
+                  )
+                  
+                  details = failure_text or "GoogleTest assertion failed"
+                  
+                  source_file, source_line = find_failure_location(
+                      failure_text,
+                      fallback_file,
+                      fallback_line,
+                  )
+
+                  title = escape_property(
+                      f"{suite_name}.{test_name}"
+                  )
+                  details = escape_message(details)
+
+                  if source_file:
+                      source_file = escape_property(source_file)
+
+                      print(
+                          f"::error file={source_file},"
+                          f"line={source_line},"
+                          f"title={title}::{details}"
+                      )
+                  else:
+                      print(
+                          f"::error title={title}::{details}"
+                      )
+
+                  annotation_count += 1
+
+          if annotation_count == 0:
+              print("No failed GoogleTest assertions found.")
+          else:
+              print(
+                  f"Created {annotation_count} "
+                  f"GitHub test annotation(s)."
+              )
+          PY
+      
       # uploads ctest result as an artifact to be downloaded.
       # runs even on test failure.
       - name: Upload test results
