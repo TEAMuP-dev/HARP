@@ -9,10 +9,11 @@ on:
       - main
   workflow_dispatch:
 
-# do not give actions write permissions
+# assign actions permissions
 permissions:
   actions: read
   contents: read
+  checks: write
 
 jobs:
   build:
@@ -69,25 +70,46 @@ jobs:
             --rc geninfo_unexecuted_blocks=1
 
       # runs all tests registered by add_test()
+      # GTEST_OUTPUT creates a structured XML report containing each GoogleTest case.
       - name: Run tests
         id: tests
         shell: bash
+        env:
+          GTEST_OUTPUT: xml:${{ github.workspace }}/test-results.xml
         run: |
           set -o pipefail
-          ctest --test-dir build --output-on-failure 2>&1 | tee test-results.txt
+          ctest \
+            --test-dir build \
+            --output-on-failure \
+            2>&1 | tee test-results.txt
+      
+            # report which tests failed and what lines 
+            - name: Add test failure details
+              if: failure() && steps.tests.outcome == 'failure'
+              shell: bash
+              run: |
+                {
+                  echo "## ❌ Failed Tests"
+                  echo
+                  echo '```text'
+                  grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
+                  echo '```'
+                } >> "$GITHUB_STEP_SUMMARY"
 
-      # report which tests failed and what lines 
-      - name: Add test failure details
-        if: failure() && steps.tests.outcome == 'failure'
-        shell: bash
-        run: |
-          {
-            echo "## ❌ Failed Tests"
-            echo
-            echo '```text'
-            grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+      # Publish individual GoogleTest results as a GitHub Check Run.
+      # Failed tests can create clickable annotations pointing to the test source.
+      - name: Publish unit test report
+        if: ${{ !cancelled() }}
+        uses: dorny/test-reporter@v3
+        with:
+          name: HARP Unit Tests
+          path: test-results.xml
+          reporter: java-junit
+          fail-on-error: false
+          fail-on-empty: true
+          list-suites: failed
+          list-tests: failed
+          max-annotations: 50
 
       # uploads ctest result as an artifact to be downloaded.
       # runs even on test failure.
@@ -99,6 +121,7 @@ jobs:
           path: |
             build/Testing
             test-results.txt
+            test-results.xml
           if-no-files-found: warn
 
       # write test results into summary UI
