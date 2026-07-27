@@ -3,17 +3,19 @@ include(FetchContent)
 FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 FetchContent_MakeAvailable(googletest)
 
+file(GLOB_RECURSE HARP_TEST_SOURCES
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*_tests.cpp"
+
 add_executable(harp_tests
     test_main.cpp
     test_harp_logger.cpp
-    utils/controls_tests.cpp
-    utils/settings_tests.cpp
-    clients/client_tests.cpp
-    clients/gradio_client_tests.cpp
+    ${HARP_TEST_SOURCES}
 )
 
 target_link_libraries(harp_tests PRIVATE
