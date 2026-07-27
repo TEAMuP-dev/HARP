@@ -274,13 +274,50 @@ if (APPLE)
 endif(APPLE)
 
 # --------------------------------------------------
-# Unit Testing
+# Unit Testing and Coverage
 # --------------------------------------------------
 
 option(HARP_BUILD_TESTS "Build HARP unit tests" OFF)
 option(HARP_ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
 
+function(enable_harp_coverage target_name)
+    if(NOT TARGET ${target_name})
+        message(FATAL_ERROR
+            "Cannot enable coverage because target '${target_name}' does not exist."
+        )
+    endif()
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target_name} PRIVATE
+            -O0
+            -g
+            --coverage
+        )
+
+        target_link_options(${target_name} PRIVATE
+            --coverage
+        )
+    else()
+        message(WARNING
+            "HARP_ENABLE_COVERAGE is enabled, but coverage is only configured for GCC and Clang."
+        )
+    endif()
+endfunction()
+
+# Instrument the complete HARP application target so the coverage baseline
+# includes production files that have not yet been exercised by unit tests.
+if(HARP_ENABLE_COVERAGE)
+    enable_harp_coverage(${PROJECT_NAME})
+endif()
+
 if(HARP_BUILD_TESTS)
     enable_testing()
+    add_subdirectory(tests)
+
+    # harp_tests does not exist until tests/CMakeLists.txt has been processed.
+    if(HARP_ENABLE_COVERAGE)
+        enable_harp_coverage(harp_tests)
+    endif()
+endif()
     add_subdirectory(tests)
 endif()
