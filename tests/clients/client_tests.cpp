@@ -105,8 +105,7 @@ TEST_F(SettingsBackedTest, InitializeAPIKeysIgnoresMissingAndEmptyKeys)
     SharedAPIKeys keys;
     keys.initializeAPIKeys();
 
-    // change EXPECT TRUE -> EXPECT_FALSE
-    EXPECT_TRUE(keys.savedTokens.contains(Provider::HuggingFace));
+    EXPECT_FALSE(keys.savedTokens.contains(Provider::HuggingFace));
     EXPECT_FALSE(keys.savedTokens.contains(Provider::Stability));
 }
 
