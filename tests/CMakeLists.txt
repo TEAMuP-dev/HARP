@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(googletest)
 file(GLOB_RECURSE HARP_TEST_SOURCES
     CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*_tests.cpp"
+)
 
 add_executable(harp_tests
     test_main.cpp
