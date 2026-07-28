@@ -888,7 +888,12 @@ private:
         auto scriptFile = File::getSpecialLocation(File::tempDirectory)
                               .getChildFile("harp_model_agent_"
                                             + String(Time::getMillisecondCounter()) + extension);
-        scriptFile.replaceWithText(script);
+        // Write verbatim: buildScript() already emits per-platform line endings
+        // (\n for the .sh, \r\n for the .bat). The default lineFeed ("\r\n")
+        // would rewrite the .sh to CRLF, leaving a trailing \r on the last
+        // token (harmless for a value, but breaks a trailing bare flag). Pass
+        // nullptr to disable line-ending translation.
+        scriptFile.replaceWithText(script, false, false, nullptr);
 
         logEditor.clear();
         logEditor.setText("$ " + tokens.joinIntoString(" ") + "\n\n", dontSendNotification);

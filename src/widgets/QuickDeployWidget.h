@@ -513,7 +513,12 @@ private:
         auto scriptFile = File::getSpecialLocation(File::tempDirectory)
                               .getChildFile("harp_quick_deploy_"
                                             + String(Time::getMillisecondCounter()) + extension);
-        scriptFile.replaceWithText(script);
+        // Write the script verbatim. buildScript() already emits the correct
+        // line endings per platform (\n for the bash .sh, \r\n for the .bat);
+        // the default lineFeed ("\r\n") would rewrite the .sh to CRLF and bash
+        // would then choke on the trailing \r (e.g. a final "--plan\r" flag
+        // becomes an unrecognized argument), so pass nullptr to disable it.
+        scriptFile.replaceWithText(script, false, false, nullptr);
 
         logEditor.clear();
         logEditor.setText("$ " + tokens.joinIntoString(" ") + "\n\n", dontSendNotification);
