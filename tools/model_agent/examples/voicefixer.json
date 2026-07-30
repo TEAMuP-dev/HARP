@@ -1,0 +1,69 @@
+{
+  "framework": {
+    "apt": [
+      "ffmpeg"
+    ],
+    "gpu": true,
+    "import": "voicefixer",
+    "pip": [
+      "git+https://github.com/haoheliu/voicefixer.git@main",
+      "torch>=1.7.0",
+      "librosa",
+      "torchlibrosa"
+    ]
+  },
+  "inference": {
+    "body": "output_file = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False).name\nvoicefixer_model.restore(input_audio, output_file, mode=int(mode))\nreturn output_file",
+    "setup": "import tempfile\nfrom voicefixer import VoiceFixer\n\n# Initialize VoiceFixer. It handles downloading checkpoints and setting device.\n# The VoiceFixer class automatically detects and uses CUDA if available.\nvoicefixer_model = VoiceFixer()"
+  },
+  "inputs": [
+    {
+      "info": "Upload an audio file to be processed by VoiceFixer.",
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "0",
+        "1",
+        "2"
+      ],
+      "default": "0",
+      "info": "Select the VoiceFixer processing mode:\n0: Original Model (suggested by default)\n1: Add preprocessing module (remove higher frequency)\n2: Train mode (might work sometimes on seriously degraded real speech)",
+      "label": "Processing Mode",
+      "name": "mode",
+      "type": "dropdown"
+    }
+  ],
+  "model": {
+    "author": "haoheliu",
+    "description": "VoiceFixer aims to restore human speech regardless how serious its degraded. It can handle noise, reverberation, low resolution (2kHz~44.1kHz) and clipping (0.1-1.0 threshold) effect within one model.",
+    "id": "haoheliu/voicefixer",
+    "license": "MIT",
+    "name": "VoiceFixer",
+    "tags": [
+      "declipping",
+      "denoise",
+      "dereverberation",
+      "mel",
+      "speech",
+      "speech-analysis",
+      "speech-enhancement",
+      "speech-processing",
+      "speech-synthesis",
+      "super-resolution",
+      "tts",
+      "vocoder"
+    ]
+  },
+  "outputs": [
+    {
+      "info": "The enhanced audio output from VoiceFixer.",
+      "label": "Fixed Audio",
+      "name": "output_audio",
+      "type": "audio"
+    }
+  ]
+}

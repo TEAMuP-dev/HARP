@@ -1,0 +1,73 @@
+{
+  "framework": {
+    "apt": [
+      "ffmpeg"
+    ],
+    "gpu": false,
+    "import": "noisereduce",
+    "pip": [
+      "git+https://github.com/timsainb/noisereduce.git@master",
+      "scipy",
+      "numpy",
+      "tqdm",
+      "joblib",
+      "torch",
+      "soundfile"
+    ]
+  },
+  "inference": {
+    "body": "data, rate = sf.read(input_audio)\nis_stereo = len(data.shape) > 1 and data.shape[1] > 1\nif is_stereo:\n    data = data.T\n\nreduced = nr.reduce_noise(\n    y=data,\n    sr=rate,\n    stationary=stationary,\n    use_torch=use_torch,\n    prop_decrease=prop_decrease\n)\n\nif is_stereo:\n    reduced = reduced.T\n\nout_file = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False)\nout_file.close()\nsf.write(out_file.name, reduced, rate)\nreturn out_file.name",
+    "setup": "import tempfile\nimport soundfile as sf\nimport noisereduce as nr"
+  },
+  "inputs": [
+    {
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "default": true,
+      "info": "If checked, keeps the estimated noise threshold at the same level across the whole signal. If unchecked, continuously updates the threshold over time (non-stationary).",
+      "label": "Stationary Noise Reduction",
+      "name": "stationary",
+      "type": "checkbox"
+    },
+    {
+      "default": false,
+      "info": "Use PyTorch-based implementation for faster execution.",
+      "label": "Use PyTorch",
+      "name": "use_torch",
+      "type": "checkbox"
+    },
+    {
+      "default": 1.0,
+      "info": "The proportion of noise to reduce (1.0 = 100% reduction).",
+      "label": "Noise Reduction Proportion",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "prop_decrease",
+      "step": 0.05,
+      "type": "slider"
+    }
+  ],
+  "model": {
+    "author": "timsainb",
+    "description": "Noise reduction in python using spectral gating. Supports stationary and non-stationary noise reduction.",
+    "id": "timsainb/noisereduce",
+    "license": "MIT",
+    "name": "noisereduce",
+    "tags": [
+      "audio-to-audio",
+      "noise-reduction",
+      "denoising"
+    ]
+  },
+  "outputs": [
+    {
+      "label": "Denoised Audio",
+      "name": "output_audio",
+      "type": "audio"
+    }
+  ]
+}

@@ -1,8 +1,0 @@
-# Known-good backend "lock" for Music-and-Culture-Technology-Lab/omnizart.
-# The heavy native stack (tensorflow, madmom/Cython, vamp, pyfluidsynth +
-# system libs fluidsynth/libsndfile/ffmpeg) is NOT pip-resolved here: the
-# backend Docker image is built FROM the maintainers' own published image, which
-# already has it all working. We only add a Gradio server on top. Two-Space
-# deploy: this Docker backend + a pyharp remote frontend.
-# base-image: mctlab/omnizart:latest
-gradio==5.28.0

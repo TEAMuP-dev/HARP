@@ -1,0 +1,118 @@
+{
+  "framework": {
+    "apt": [
+      "libsndfile1"
+    ],
+    "gpu": false,
+    "import": "pedalboard",
+    "pip": [
+      "pedalboard",
+      "numpy"
+    ]
+  },
+  "inference": {
+    "body": "with AudioFile(input_audio) as f:\n    sr = f.samplerate\n    audio = f.read(f.frames)\n\nplugins = []\nif pitch_shift != 0:\n    plugins.append(PitchShift(semitones=pitch_shift))\nif chorus_mix > 0:\n    plugins.append(Chorus(mix=chorus_mix))\nif distortion_drive > 0:\n    plugins.append(Distortion(drive_db=distortion_drive))\nif delay_seconds > 0 and delay_mix > 0:\n    plugins.append(Delay(delay_seconds=delay_seconds, mix=delay_mix))\nif reverb_wet > 0:\n    plugins.append(Reverb(room_size=0.5, wet_level=reverb_wet, dry_level=1.0 - reverb_wet))\nif lowpass_cutoff < 20000.0:\n    plugins.append(LowpassFilter(cutoff_frequency_hz=lowpass_cutoff))\nif highpass_cutoff > 20.0:\n    plugins.append(HighpassFilter(cutoff_frequency_hz=highpass_cutoff))\n\nboard = Pedalboard(plugins)\neffected = board(audio, sr)\n\nout_file = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False)\nout_file.close()\nwith AudioFile(out_file.name, 'w', sr, effected.shape[0]) as f:\n    f.write(effected)\n\nreturn out_file.name",
+    "setup": "import tempfile\nfrom pedalboard import Pedalboard, PitchShift, Chorus, Distortion, Delay, Reverb, LowpassFilter, HighpassFilter\nfrom pedalboard.io import AudioFile"
+  },
+  "inputs": [
+    {
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "default": 0,
+      "label": "Pitch Shift (semitones)",
+      "max": 12,
+      "min": -12,
+      "name": "pitch_shift",
+      "step": 1,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Chorus Mix",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "chorus_mix",
+      "step": 0.05,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Distortion Drive (dB)",
+      "max": 30.0,
+      "min": 0.0,
+      "name": "distortion_drive",
+      "step": 0.5,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Delay Time (seconds)",
+      "max": 2.0,
+      "min": 0.0,
+      "name": "delay_seconds",
+      "step": 0.05,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Delay Mix",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "delay_mix",
+      "step": 0.05,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Reverb Wet Level",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "reverb_wet",
+      "step": 0.05,
+      "type": "slider"
+    },
+    {
+      "default": 20000.0,
+      "label": "Lowpass Cutoff (Hz)",
+      "max": 20000.0,
+      "min": 20.0,
+      "name": "lowpass_cutoff",
+      "step": 100.0,
+      "type": "slider"
+    },
+    {
+      "default": 20.0,
+      "label": "Highpass Cutoff (Hz)",
+      "max": 20000.0,
+      "min": 20.0,
+      "name": "highpass_cutoff",
+      "step": 100.0,
+      "type": "slider"
+    }
+  ],
+  "model": {
+    "author": "Spotify",
+    "description": "Apply studio-quality audio effects like Pitch Shift, Chorus, Distortion, Delay, Reverb, and Filters using Spotify's Pedalboard library.",
+    "id": "spotify/pedalboard",
+    "license": "GPL-3.0",
+    "name": "Pedalboard Effects",
+    "tags": [
+      "audio-processing",
+      "effects",
+      "reverb",
+      "delay",
+      "pitch-shift"
+    ]
+  },
+  "outputs": [
+    {
+      "label": "Processed Audio",
+      "name": "output_audio",
+      "type": "audio"
+    }
+  ]
+}

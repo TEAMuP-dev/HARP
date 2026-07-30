@@ -1,0 +1,262 @@
+{
+  "_source": "ACE-Step/ACE-Step :: /__call__",
+  "_todo": [
+    "framework.remote.args[5]: backend arg (component 'Radio') is sent as a constant 'euler'; adjust if it should be user-controlled",
+    "framework.remote.args[6]: backend arg (component 'Radio') is sent as a constant 'apg'; adjust if it should be user-controlled",
+    "model.description: describe what the model does",
+    "model.tags: add Hugging Face/HARP tags",
+    "framework.remote.args: mark any fixed args as {\"const\": ...} and drop ones the UI should not expose (e.g. hidden metadata)",
+    "Reliability: pointing at someone else's live Space is an unpinned runtime dependency -- duplicate it under your org for anything you depend on."
+  ],
+  "framework": {
+    "gpu": false,
+    "pip": [],
+    "remote": {
+      "api_name": "/__call__",
+      "args": [
+        {
+          "from": "audio_duration"
+        },
+        {
+          "from": "prompt"
+        },
+        {
+          "from": "lyrics"
+        },
+        {
+          "from": "infer_step"
+        },
+        {
+          "from": "guidance_scale"
+        },
+        {
+          "const": "euler"
+        },
+        {
+          "const": "apg"
+        },
+        {
+          "from": "omega_scale"
+        },
+        {
+          "from": "manual_seeds"
+        },
+        {
+          "from": "guidance_interval"
+        },
+        {
+          "from": "guidance_interval_decay"
+        },
+        {
+          "from": "min_guidance_scale"
+        },
+        {
+          "from": "use_erg_tag"
+        },
+        {
+          "from": "use_erg_lyric"
+        },
+        {
+          "from": "use_erg_diffusion"
+        },
+        {
+          "from": "oss_steps"
+        },
+        {
+          "from": "guidance_scale_text"
+        },
+        {
+          "from": "guidance_scale_lyric"
+        },
+        {
+          "from": "audio2audio_enable"
+        },
+        {
+          "from": "ref_audio_strength"
+        },
+        {
+          "file": true,
+          "from": "ref_audio_input"
+        },
+        {
+          "from": "lora_name_or_path"
+        }
+      ],
+      "returns": [
+        {
+          "index": 0,
+          "to": "text2music_generated_audio_1"
+        }
+      ],
+      "space": "ACE-Step/ACE-Step",
+      "token_env": "HF_TOKEN"
+    }
+  },
+  "inputs": [
+    {
+      "default": -1,
+      "label": "Audio Duration",
+      "max": 240.0,
+      "min": -1,
+      "name": "audio_duration",
+      "step": 1e-05,
+      "type": "slider"
+    },
+    {
+      "default": "funk, pop, soul, rock, melodic, guitar, drums, bass, keyboard, percussion, 105 BPM, energetic, upbeat, groovy, vibrant, dynamic",
+      "label": "Tags",
+      "name": "prompt",
+      "type": "textbox"
+    },
+    {
+      "default": "[verse]\nNeon lights they flicker bright\nCity hums in dead of night\nRhythms pulse through concrete veins\nLost in echoes of refrains\n\n[verse]\nBassline groovin' in my chest\nHeartbeats match the city's zest\nElectric whispers fill the air\nSynthesized dreams everywhere\n\n[chorus]\nTurn it up and let it flow\nFeel the fire let it grow\nIn this rhythm we belong\nHear the night sing out our song\n\n[verse]\nGuitar strings they start to weep\nWake the soul from silent sleep\nEvery note a story told\nIn this night we\u2019re bold and gold\n\n[bridge]\nVoices blend in harmony\nLost in pure cacophony\nTimeless echoes timeless cries\nSoulful shouts beneath the skies\n\n[verse]\nKeyboard dances on the keys\nMelodies on evening breeze\nCatch the tune and hold it tight\nIn this moment we take flight\n",
+      "label": "Lyrics",
+      "name": "lyrics",
+      "type": "textbox"
+    },
+    {
+      "default": 60,
+      "label": "Infer Steps",
+      "max": 200,
+      "min": 1,
+      "name": "infer_step",
+      "step": 1,
+      "type": "slider"
+    },
+    {
+      "default": 15.0,
+      "label": "Guidance Scale",
+      "max": 30.0,
+      "min": 0.0,
+      "name": "guidance_scale",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": 10.0,
+      "label": "Granularity Scale",
+      "max": 100.0,
+      "min": -100.0,
+      "name": "omega_scale",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "label": "manual seeds (default None)",
+      "name": "manual_seeds",
+      "type": "textbox"
+    },
+    {
+      "default": 0.5,
+      "label": "Guidance Interval",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "guidance_interval",
+      "step": 0.01,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Guidance Interval Decay",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "guidance_interval_decay",
+      "step": 0.01,
+      "type": "slider"
+    },
+    {
+      "default": 3.0,
+      "label": "Min Guidance Scale",
+      "max": 200.0,
+      "min": 0.0,
+      "name": "min_guidance_scale",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": true,
+      "label": "use ERG for tag",
+      "name": "use_erg_tag",
+      "type": "checkbox"
+    },
+    {
+      "default": false,
+      "label": "use ERG for lyric",
+      "name": "use_erg_lyric",
+      "type": "checkbox"
+    },
+    {
+      "default": true,
+      "label": "use ERG for diffusion",
+      "name": "use_erg_diffusion",
+      "type": "checkbox"
+    },
+    {
+      "label": "OSS Steps",
+      "name": "oss_steps",
+      "type": "textbox"
+    },
+    {
+      "default": 0.0,
+      "label": "Guidance Scale Text",
+      "max": 10.0,
+      "min": 0.0,
+      "name": "guidance_scale_text",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Guidance Scale Lyric",
+      "max": 10.0,
+      "min": 0.0,
+      "name": "guidance_scale_lyric",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": false,
+      "label": "Enable Audio2Audio",
+      "name": "audio2audio_enable",
+      "type": "checkbox"
+    },
+    {
+      "default": 0.5,
+      "label": "Refer audio strength",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "ref_audio_strength",
+      "step": 0.01,
+      "type": "slider"
+    },
+    {
+      "label": "Reference Audio (for Audio2Audio)",
+      "name": "ref_audio_input",
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "ACE-Step/ACE-Step-v1-chinese-rap-LoRA",
+        "none"
+      ],
+      "default": "none",
+      "label": "Lora Name or Path",
+      "name": "lora_name_or_path",
+      "type": "dropdown"
+    }
+  ],
+  "model": {
+    "author": "ACE-Step",
+    "description": "TODO: describe this model.",
+    "id": "ACE-Step/ACE-Step",
+    "name": "Ace Step",
+    "tags": []
+  },
+  "outputs": [
+    {
+      "label": "Text2Music Generated Audio 1",
+      "name": "text2music_generated_audio_1",
+      "type": "audio"
+    }
+  ]
+}

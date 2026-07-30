@@ -1,0 +1,81 @@
+{
+  "framework": {
+    "apt": [],
+    "gpu": false,
+    "import": "pyloudnorm",
+    "pip": [
+      "pyloudnorm",
+      "scipy>=1.0.1",
+      "numpy>=1.14.2",
+      "soundfile>=0.12.1"
+    ]
+  },
+  "inference": {
+    "body": "data, rate = sf.read(input_audio)\n\nmeter = pyln.Meter(rate, filter_class=filter_class, block_size=block_size)\n\nresults = {}\nif analysis_type == \"Integrated Loudness (LUFS)\":\n    loudness = meter.integrated_loudness(data)\n    results[\"integrated_loudness_lufs\"] = float(loudness)\nelif analysis_type == \"Loudness Range (LU)\":\n    lra = meter.loudness_range(data)\n    results[\"loudness_range_lu\"] = float(lra)\n\nreturn results",
+    "setup": "import soundfile as sf\nimport pyloudnorm as pyln\nimport numpy as np"
+  },
+  "inputs": [
+    {
+      "info": "Upload an audio file to analyze.",
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "Integrated Loudness (LUFS)",
+        "Loudness Range (LU)"
+      ],
+      "default": "Integrated Loudness (LUFS)",
+      "info": "Choose between measuring integrated loudness (ITU-R BS.1770-4) or loudness range (EBU Tech 3342).",
+      "label": "Analysis Type",
+      "name": "analysis_type",
+      "type": "dropdown"
+    },
+    {
+      "choices": [
+        "K-weighting",
+        "Fenton/Lee 1",
+        "Fenton/Lee 2",
+        "Dash et al.",
+        "DeMan"
+      ],
+      "default": "K-weighting",
+      "info": "Class of weighting filter used for loudness measurement. 'K-weighting' is the default for ITU-R BS.1770-4.",
+      "label": "Weighting Filter Class",
+      "name": "filter_class",
+      "type": "dropdown"
+    },
+    {
+      "default": 0.4,
+      "info": "The duration of the gating block in seconds. Standard is 0.400s (400ms). The input audio length must be greater than this value.",
+      "label": "Gating Block Size (seconds)",
+      "max": 1.0,
+      "min": 0.1,
+      "name": "block_size",
+      "step": 0.05,
+      "type": "slider"
+    }
+  ],
+  "model": {
+    "author": "csteinmetz1",
+    "description": "Flexible audio loudness meter in Python. Implementation of ITU-R BS.1770-4 for integrated loudness and EBU Tech 3342 for loudness range.",
+    "id": "csteinmetz1/pyloudnorm",
+    "license": "MIT",
+    "name": "pyloudnorm",
+    "tags": [
+      "audio-analysis",
+      "loudness",
+      "metering"
+    ],
+    "task": "audio-analysis"
+  },
+  "outputs": [
+    {
+      "label": "Analysis Results",
+      "name": "results",
+      "type": "labels"
+    }
+  ]
+}

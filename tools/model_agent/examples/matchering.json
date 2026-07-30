@@ -1,0 +1,69 @@
+{
+  "framework": {
+    "apt": [
+      "libsndfile1",
+      "ffmpeg"
+    ],
+    "gpu": false,
+    "import": "matchering",
+    "pip": [
+      "git+https://github.com/sergree/matchering.git@master",
+      "numpy>=1.23.4",
+      "scipy>=1.9.2",
+      "soundfile>=0.11.0",
+      "resampy>=0.4.2",
+      "statsmodels>=0.13.2"
+    ]
+  },
+  "inference": {
+    "body": "out_file = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False)\nout_file.close()\nout_path = out_file.name\n\nif bit_depth == \"pcm24\":\n    result_config = mg.pcm24(out_path)\nelse:\n    result_config = mg.pcm16(out_path)\n\nmg.process(\n    target=target_audio,\n    reference=ref_audio,\n    results=[result_config]\n)\n\nreturn out_path",
+    "setup": "import tempfile\nimport matchering as mg"
+  },
+  "inputs": [
+    {
+      "info": "The track you want to master (your mix).",
+      "label": "Target Audio",
+      "name": "target_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "info": "The reference track you want your target to sound like.",
+      "label": "Reference Audio",
+      "name": "ref_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "pcm16",
+        "pcm24"
+      ],
+      "default": "pcm16",
+      "info": "Choose 16-bit PCM (CD quality) or 24-bit PCM (Studio quality) for the output file.",
+      "label": "Output Bit Depth",
+      "name": "bit_depth",
+      "type": "dropdown"
+    }
+  ],
+  "model": {
+    "author": "sergree",
+    "description": "Match the RMS, Frequency Response, Peak Amplitude, and Stereo Width of a target track to a reference track for instant mastering.",
+    "id": "sergree/matchering",
+    "license": "GPL-3.0",
+    "name": "Matchering",
+    "tags": [
+      "audio",
+      "mastering",
+      "dsp",
+      "matching"
+    ]
+  },
+  "outputs": [
+    {
+      "label": "Mastered Audio",
+      "name": "mastered_audio",
+      "type": "audio"
+    }
+  ]
+}

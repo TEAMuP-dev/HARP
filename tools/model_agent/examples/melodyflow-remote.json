@@ -1,0 +1,148 @@
+{
+  "_source": "facebook/MelodyFlow :: /predict",
+  "_todo": [
+    "framework.remote.args[0]: backend arg (component 'Radio') is sent as a constant 'facebook/melodyflow-t24-30secs'; adjust if it should be user-controlled",
+    "framework.remote.args[2]: backend arg (component 'Radio') is sent as a constant 'midpoint'; adjust if it should be user-controlled",
+    "inputs.steps: set the real slider min/max/step",
+    "inputs.target_flowstep: set the real slider min/max/step",
+    "inputs.regularization_strength: set the real slider min/max/step",
+    "inputs.duration: set the real slider min/max/step",
+    "model.description: describe what the model does",
+    "model.tags: add Hugging Face/HARP tags",
+    "framework.remote.args: mark any fixed args as {\"const\": ...} and drop ones the UI should not expose (e.g. hidden metadata)",
+    "Reliability: pointing at someone else's live Space is an unpinned runtime dependency -- duplicate it under your org for anything you depend on.",
+    "framework.remote.user_token is on: the UI shows an optional HF token field; usage is attributed to the user's account when they provide one."
+  ],
+  "framework": {
+    "gpu": false,
+    "pip": [],
+    "remote": {
+      "api_name": "/predict",
+      "args": [
+        {
+          "const": "facebook/melodyflow-t24-30secs"
+        },
+        {
+          "from": "text"
+        },
+        {
+          "const": "midpoint"
+        },
+        {
+          "from": "steps"
+        },
+        {
+          "from": "target_flowstep"
+        },
+        {
+          "from": "regularize"
+        },
+        {
+          "from": "regularization_strength"
+        },
+        {
+          "from": "duration"
+        },
+        {
+          "file": true,
+          "from": "melody"
+        }
+      ],
+      "returns": [
+        {
+          "index": 0,
+          "to": "generated_audio_variation_1"
+        },
+        {
+          "index": 1,
+          "to": "generated_audio_variation_2"
+        },
+        {
+          "index": 2,
+          "to": "generated_audio_variation_3"
+        }
+      ],
+      "space": "facebook/MelodyFlow",
+      "token_env": "HF_TOKEN",
+      "user_token": true
+    }
+  },
+  "inputs": [
+    {
+      "label": "Input Text",
+      "name": "text",
+      "type": "textbox"
+    },
+    {
+      "default": 128.0,
+      "label": "Inference steps",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "steps",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": 0.0,
+      "label": "Target Flow step",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "target_flowstep",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": false,
+      "label": "Regularize",
+      "name": "regularize",
+      "type": "checkbox"
+    },
+    {
+      "default": 0.2,
+      "label": "Regularization Strength",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "regularization_strength",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "default": 30.0,
+      "label": "Duration",
+      "max": 1.0,
+      "min": 0.0,
+      "name": "duration",
+      "step": 0.1,
+      "type": "slider"
+    },
+    {
+      "label": "File or Microphone",
+      "name": "melody",
+      "type": "audio"
+    }
+  ],
+  "model": {
+    "author": "facebook",
+    "description": "TODO: describe this model.",
+    "id": "facebook/MelodyFlow",
+    "name": "Melodyflow",
+    "tags": []
+  },
+  "outputs": [
+    {
+      "label": "Generated Audio - variation 1",
+      "name": "generated_audio_variation_1",
+      "type": "audio"
+    },
+    {
+      "label": "Generated Audio - variation 2",
+      "name": "generated_audio_variation_2",
+      "type": "audio"
+    },
+    {
+      "label": "Generated Audio - variation 3",
+      "name": "generated_audio_variation_3",
+      "type": "audio"
+    }
+  ]
+}

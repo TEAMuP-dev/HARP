@@ -1,0 +1,95 @@
+{
+  "framework": {
+    "apt": [
+      "ffmpeg",
+      "libsndfile1"
+    ],
+    "gpu": true,
+    "import": "openunmix",
+    "pip": [
+      "git+https://github.com/sigsep/open-unmix-pytorch.git@master",
+      "torch",
+      "torchaudio",
+      "numpy",
+      "soundfile"
+    ]
+  },
+  "inference": {
+    "body": "audio, rate = torchaudio.load(input_audio)\nif audio.shape[0] == 1:\n    audio = audio.repeat(2, 1)\n\nseparator = get_separator(model_name, int(niter), int(wiener_win_len))\n\nestimates = predict.separate(\n    audio=audio,\n    rate=rate,\n    model_str_or_path=model_name,\n    separator=separator,\n    device=DEVICE\n)\n\noutput_files = {}\nfor target in [\"vocals\", \"drums\", \"bass\", \"other\"]:\n    target_tensor = estimates[target][0].cpu()\n    out_file = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False)\n    out_file.close()\n    torchaudio.save(out_file.name, target_tensor, int(separator.sample_rate))\n    output_files[target] = out_file.name\n\nreturn (\n    output_files[\"vocals\"],\n    output_files[\"drums\"],\n    output_files[\"bass\"],\n    output_files[\"other\"]\n)",
+    "setup": "import tempfile\nimport torch\nimport torchaudio\nfrom openunmix import utils, predict\n\nDEVICE = \"cuda\" if torch.cuda.is_available() else \"cpu\"\n_separators = {}\n\ndef get_separator(model_name, niter, wiener_win_len):\n    key = (model_name, niter, wiener_win_len)\n    if key not in _separators:\n        sep = utils.load_separator(\n            model_str_or_path=model_name,\n            niter=niter,\n            wiener_win_len=wiener_win_len,\n            device=DEVICE,\n            pretrained=True,\n        )\n        sep.freeze()\n        sep.to(DEVICE)\n        _separators[key] = sep\n    return _separators[key]"
+  },
+  "inputs": [
+    {
+      "label": "Input Audio",
+      "name": "input_audio",
+      "required": true,
+      "type": "audio"
+    },
+    {
+      "choices": [
+        "umxl",
+        "umxhq",
+        "umx"
+      ],
+      "default": "umxl",
+      "info": "umxl is the largest and best performing model, trained on extra data.",
+      "label": "Model",
+      "name": "model_name",
+      "type": "dropdown"
+    },
+    {
+      "default": 1,
+      "info": "Number of iterations for Wiener filtering. 0 means softmask.",
+      "label": "Wiener Filter Iterations",
+      "max": 5,
+      "min": 0,
+      "name": "niter",
+      "step": 1,
+      "type": "slider"
+    },
+    {
+      "default": 300,
+      "info": "Number of frames on which to apply filtering independently.",
+      "label": "Wiener Window Length",
+      "max": 500,
+      "min": 100,
+      "name": "wiener_win_len",
+      "step": 50,
+      "type": "slider"
+    }
+  ],
+  "model": {
+    "author": "sigsep",
+    "description": "Music source separation into vocals, drums, bass, and other instruments using deep neural networks.",
+    "id": "sigsep/open-unmix-pytorch",
+    "license": "MIT",
+    "name": "Open-Unmix",
+    "tags": [
+      "audio-to-audio",
+      "source-separation",
+      "stems"
+    ]
+  },
+  "outputs": [
+    {
+      "label": "Vocals",
+      "name": "vocals",
+      "type": "audio"
+    },
+    {
+      "label": "Drums",
+      "name": "drums",
+      "type": "audio"
+    },
+    {
+      "label": "Bass",
+      "name": "bass",
+      "type": "audio"
+    },
+    {
+      "label": "Other",
+      "name": "other",
+      "type": "audio"
+    }
+  ]
+}

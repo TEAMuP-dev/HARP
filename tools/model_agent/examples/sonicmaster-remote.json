@@ -1,0 +1,59 @@
+{
+  "_source": "amaai-lab/SonicMaster :: /enhance_audio_ui",
+  "_todo": [
+    "model.description: describe what the model does",
+    "model.tags: add Hugging Face/HARP tags",
+    "framework.remote.args: mark any fixed args as {\"const\": ...} and drop ones the UI should not expose (e.g. hidden metadata)",
+    "Reliability: pointing at someone else's live Space is an unpinned runtime dependency -- duplicate it under your org for anything you depend on."
+  ],
+  "framework": {
+    "gpu": false,
+    "pip": [],
+    "remote": {
+      "api_name": "/enhance_audio_ui",
+      "args": [
+        {
+          "file": true,
+          "from": "audio_path"
+        },
+        {
+          "from": "prompt"
+        }
+      ],
+      "returns": [
+        {
+          "index": 0,
+          "to": "enhanced_audio_output"
+        }
+      ],
+      "space": "amaai-lab/SonicMaster",
+      "token_env": "HF_TOKEN"
+    }
+  },
+  "inputs": [
+    {
+      "label": "Input Audio",
+      "name": "audio_path",
+      "type": "audio"
+    },
+    {
+      "label": "Text Prompt",
+      "name": "prompt",
+      "type": "textbox"
+    }
+  ],
+  "model": {
+    "author": "amaai-lab",
+    "description": "TODO: describe this model.",
+    "id": "amaai-lab/SonicMaster",
+    "name": "Sonicmaster",
+    "tags": []
+  },
+  "outputs": [
+    {
+      "label": "Enhanced Audio (output)",
+      "name": "enhanced_audio_output",
+      "type": "audio"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "framework": {
+    "apt": [],
+    "gpu": true,
+    "import": "speechbrain",
+    "pip": [
+      "speechbrain",
+      "torch",
+      "torchaudio"
+    ]
+  },
+  "inference": {
+    "body": "mel_output, mel_length, alignment = tacotron2.encode_text(text_input)\nwaveforms = hifi_gan.decode_batch(mel_output)\n\noutput_path = tempfile.NamedTemporaryFile(suffix=\".wav\", delete=False).name\ntorchaudio.save(output_path, waveforms.squeeze(1).cpu(), 22050)\n\nreturn output_path",
+    "setup": "import torchaudio\nimport tempfile\nimport os\nfrom speechbrain.inference.TTS import Tacotron2\nfrom speechbrain.inference.vocoders import HIFIGAN\n\nDEVICE = \"cuda\" if torchaudio.cuda.is_available() else \"cpu\"\n\ntacotron2 = Tacotron2.from_hparams(\n    source=\"speechbrain/tts-tacotron2-ljspeech\",\n    savedir=os.path.join(tempfile.gettempdir(), \"tmpdir_tts\"),\n    run_opts={\"device\": DEVICE}\n)\nhifi_gan = HIFIGAN.from_hparams(\n    source=\"speechbrain/tts-hifigan-ljspeech\",\n    savedir=os.path.join(tempfile.gettempdir(), \"tmpdir_vocoder\"),\n    run_opts={\"device\": DEVICE}\n)"
+  },
+  "inputs": [
+    {
+      "default": "Mary had a little lamb",
+      "label": "Text to synthesize",
+      "name": "text_input",
+      "required": true,
+      "type": "textbox"
+    }
+  ],
+  "model": {
+    "author": "speechbrain",
+    "description": "Text-to-Speech (TTS) with SpeechBrain using a Tacotron2 pretrained on LJSpeech.",
+    "id": "speechbrain/tts-tacotron2-ljspeech",
+    "license": "apache-2.0",
+    "name": "TTS Tacotron2 LJSpeech",
+    "tags": [
+      "text-to-speech",
+      "TTS",
+      "speech-synthesis",
+      "Tacotron2",
+      "speechbrain",
+      "en",
+      "LJSpeech"
+    ]
+  },
+  "outputs": [
+    {
+      "label": "Synthesized Audio",
+      "name": "synthesized_audio",
+      "type": "audio"
+    }
+  ]
+}
