@@ -15,6 +15,7 @@ __all__ = [
     'CaseResult',
     'ModelResult',
     'status_emoji',
+    'case_emoji',
     'write_reports'
 ]
 
@@ -63,6 +64,20 @@ def status_emoji(result: ModelResult) -> str:
     return {PASS: "✅", FAIL: "❌", SKIP: "⏭️"}[result.status]
 
 
+def case_emoji(ok: bool | None) -> str:
+    """
+    Symbol for one test case's outcome.
+
+    Args:
+        ok (bool | None): True passed, False failed, None skipped.
+
+    Returns:
+        emoji (str): The corresponding symbol.
+    """
+
+    return {True: "✅", False: "❌", None: "⏭️"}[ok]
+
+
 def write_reports(results: list, out_dir: Path, label: str,
                   command: str = "", options: dict | None = None) -> None:
     """
@@ -98,33 +113,60 @@ def write_reports(results: list, out_dir: Path, label: str,
     }
     (out_dir / "report.json").write_text(json.dumps(payload, indent=2))
 
-    headline = f"**{passed}/{validated} models passed**"
-    if skipped:
-        headline += f", {skipped} skipped"
-    lines = [
-        f"# HARP Model Validation Report - {label}",
-        "",
-        f"{headline} ({payload['timestamp']})",
-        "",
-        f"Command: `{command}`" if command else "",
-        "",
-        "| Model | Status | Stage | Hardware | Controls | Cases | Time (s) | Detail |",
-        "|---|---|---|---|---|---|---|---|",
-    ]
+    (out_dir / "report.md").write_text(render_markdown(results, payload))
+
+
+def render_markdown(results: list, payload: dict) -> str:
+    """
+    Render the human-readable report: a summary table plus full error text.
+
+    Args:
+        results (list): ModelResult objects for every validated model.
+        payload (dict): The report.json payload (headline counts, command).
+
+    Returns:
+        markdown (str): The rendered report.
+    """
 
     # Failures first, then alphabetical, so problems are visible at a glance
-    for r in sorted(results, key=lambda r: (r.status != FAIL, r.target)):
-        if r.cases:
-            cases = ", ".join(
-                f"{c.name} {'✅' if c.ok else '⏭️' if c.ok is None else '❌'}"
-                for c in r.cases)
-        else:
-            cases = "—"
+    ranked = sorted(results, key=lambda r: (r.status != FAIL, r.target))
+
+    headline = f"**{payload['passed']}/{payload['validated']} models passed**"
+    if payload["skipped"]:
+        headline += f", {payload['skipped']} skipped"
+
+    lines = [f"# HARP Model Validation Report - {payload['label']}", ""]
+    lines += [f"{headline} ({payload['timestamp']})", ""]
+    if payload["command"]:
+        lines += [f"Command: `{payload['command']}`", ""]
+    lines += ["| Model | Status | Stage | Hardware | Controls | Cases | Time (s) | Detail |",
+              "|---|---|---|---|---|---|---|---|"]
+
+    for r in ranked:
+        cases = ", ".join(f"{c.name} {case_emoji(c.ok)}" for c in r.cases) or "—"
         link = (f"[{r.target}](https://huggingface.co/spaces/{r.target})"
                 if r.kind == "space" else f"`{r.target}`")
-        detail = r.error.replace("|", "\\|")[:300] if r.error else ""
+        # Keep the table scannable; the untruncated text follows below
+        detail = r.error.replace("|", "\\|") if r.error else ""
+        if len(detail) > 200:
+            detail = detail[:200] + " […]"
         lines.append(f"| {link} | {status_emoji(r)} {r.status} | {r.stage} "
                      f"| {r.hardware or '—'} | {'✅' if r.controls_ok else '❌'} "
                      f"| {cases} | {r.duration} | {detail} |")
 
-    (out_dir / "report.md").write_text("\n".join(lines) + "\n")
+    # Full, untruncated text wherever something was reported - including a
+    # skipped case on an otherwise passing model
+    problems = [r for r in ranked
+                if r.error or r.status == FAIL or any(c.error for c in r.cases)]
+    if problems:
+        lines += ["", "## Details", ""]
+        for r in problems:
+            lines += [f"### {r.target} — {r.status}", ""]
+            if r.error and not r.cases:
+                lines += ["```", r.error, "```", ""]
+            for c in r.cases:
+                if c.error:
+                    lines += [f"- **{c.name}** {case_emoji(c.ok)}", "",
+                              "```", c.error, "```", ""]
+
+    return "\n".join(lines) + "\n"

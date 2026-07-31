@@ -30,55 +30,48 @@ __all__ = [
 
 # Output component types that produce a file on disk
 FILE_TYPES = {"audio_track", "midi_track", "generic_file"}
+AUDIO, MIDI, JSON = {"audio_track"}, {"midi_track"}, {"json"}
 
-# The declarative `expect` vocabulary: rule name -> (applicable output types,
-# what it asserts). Anything expressible as "read a property of one output and
-# compare it" belongs here rather than in a custom validator (validators.py).
-# Applying a rule to an output type it does not cover is a configuration
-# error, not a model failure.
+# The declarative `expect` vocabulary: rule name -> output types it applies to.
+# Anything expressible as "read a property of one output and compare it"
+# belongs here rather than in a custom validator (validators.py). Applying a
+# rule to an output type it does not cover is a configuration error, not a
+# model failure. config.yml documents what each rule asserts.
 EXPECT_RULES = {
-    "ext": (FILE_TYPES,
-            "file extension, as a string or list of accepted extensions"),
-    "min_bytes": (FILE_TYPES,
-                  "minimum file size in bytes"),
-    "min_duration": ({"audio_track", "midi_track"},
-                     "minimum length, in seconds"),
-    "max_duration": ({"audio_track", "midi_track"},
-                     "maximum length, in seconds"),
-    "channels": ({"audio_track"},
-                 "exact channel count (1 = mono, 2 = stereo)"),
-    "sample_rate": ({"audio_track"},
-                    "exact sample rate, in Hz"),
-    "bit_depth": ({"audio_track"},
-                  "exact PCM bit depth, e.g. 16 or 24 (not valid for "
-                  "compressed formats such as MP3 or OGG)"),
-    "min_rms_db": ({"audio_track"},
-                   "minimum RMS level, in dBFS (0 = full scale); -60 is the "
-                   "usual threshold for 'this output is not silent'"),
-    "min_notes": ({"midi_track"},
-                  "minimum number of note-on events"),
-    "min_labels": ({"json"},
-                   "minimum number of labels in a pyharp LabelList; 0 asserts "
-                   "a well-formed LabelList that may legitimately be empty"),
+    "ext": FILE_TYPES,
+    "min_bytes": FILE_TYPES,
+    "min_duration": AUDIO | MIDI,
+    "max_duration": AUDIO | MIDI,
+    "channels": AUDIO,
+    "sample_rate": AUDIO,
+    "bit_depth": AUDIO,
+    "min_rms_db": AUDIO,
+    "min_notes": MIDI,
+    "min_labels": JSON,
 }
 
 # Rule groups, by what they need decoded. Duration rules are shared: they read
 # from whichever of audio/MIDI props matches the output's type.
 DURATION_RULES = {"min_duration", "max_duration"}
-AUDIO_PROP_RULES = {"channels", "sample_rate", "bit_depth", "min_rms_db"}
-MIDI_PROP_RULES = {"min_notes"}
+DECODED_RULES = {
+    "audio_track": {"channels", "sample_rate", "bit_depth", "min_rms_db"} | DURATION_RULES,
+    "midi_track": {"min_notes"} | DURATION_RULES,
+}
 
 # Key selecting every compatible output rather than one named output
 ALL_OUTPUTS = "*"
 
 
-def synthesize_default_args(controls: dict, assets: Assets) -> tuple:
+def synthesize_default_args(controls: dict, assets: Assets,
+                            synth: dict | None = None) -> tuple:
     """
     Build the positional argument list for /process from the /controls spec.
 
     Args:
         controls (dict): The /controls payload (card, inputs, outputs).
         assets (Assets): Synthesized input files to draw from.
+        synth (dict | None): Merged `synthesized_inputs` block controlling the
+            properties of the generated inputs (see config.yml).
 
     Returns:
         args (list): One argument per input component, in declaration order.
@@ -92,15 +85,22 @@ def synthesize_default_args(controls: dict, assets: Assets) -> tuple:
     for spec in controls.get("inputs", []):
         ctype = spec.get("type")
         label = spec.get("label")
+        required = spec.get("required", True)
 
-        if ctype == "audio_track":
-            args.append(handle_file(str(assets.wav)) if spec.get("required", True) else None)
-        elif ctype == "midi_track":
-            args.append(handle_file(str(assets.midi)) if spec.get("required", True) else None)
-        elif ctype == "generic_file":
-            path = assets.for_file_types(spec.get("file_types"))
-            if path is None and spec.get("required", True):
-                missing[label] = (f"cannot synthesize input for "
+        if ctype in FILE_TYPES:
+            # Optional file inputs are left unsupplied, exercising the model's
+            # own handling of their absence
+            if not required:
+                args.append(None)
+                continue
+            if ctype == "audio_track":
+                path = assets.audio(synth)
+            elif ctype == "midi_track":
+                path = assets.midi(synth)
+            else:
+                path = assets.for_file_types(spec.get("file_types"), synth)
+            if path is None:
+                missing[label] = (f"cannot synthesize a {ctype} input for "
                                   f"file_types={spec.get('file_types')}; supply "
                                   f"one via a test case's `files` entry")
             args.append(handle_file(str(path)) if path is not None else None)
@@ -110,7 +110,10 @@ def synthesize_default_args(controls: dict, assets: Assets) -> tuple:
                 value = spec.get("minimum", 0)
             args.append(value)
         elif ctype == "text_box":
-            args.append(spec.get("value") or "test")
+            # An empty string is a legitimate declared default, so only fall
+            # back when no default was declared at all
+            value = spec.get("value")
+            args.append(value if value is not None else "test")
         elif ctype == "toggle":
             args.append(bool(spec.get("value", False)))
         elif ctype == "dropdown":
@@ -235,9 +238,8 @@ def validate_outputs(result, controls: dict) -> str | None:
 
         # gradio_client downloads file outputs and returns local paths
         path = out.get("path") if isinstance(out, dict) and "path" in out else out
-        if isinstance(path, str) and os.path.sep in path and os.path.exists(path):
-            if os.path.getsize(path) == 0:
-                return f"output file for '{spec.get('label')}' is empty"
+        if isinstance(path, str) and os.path.isfile(path) and os.path.getsize(path) == 0:
+            return f"output file for '{spec.get('label')}' is empty"
 
     return None
 
@@ -323,7 +325,7 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
             # matching nothing is dropped (lenient, so generic cases apply)
             per_label = {}
             for rule, value in rules.items():
-                applicable, _ = EXPECT_RULES[rule]
+                applicable = EXPECT_RULES[rule]
                 for label, otype in out_types.items():
                     if otype in applicable:
                         per_label.setdefault(label, {})[rule] = value
@@ -335,7 +337,7 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
                              f"(available: {list(out_types)})")
 
         for rule in rules:
-            applicable, _ = EXPECT_RULES[rule]
+            applicable = EXPECT_RULES[rule]
             if out_types[key] not in applicable:
                 raise ValueError(
                     f"expect rule '{rule}' does not apply to output '{key}' "
@@ -409,10 +411,14 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
         assert size >= rules["min_bytes"], \
             f"output file '{label}' is {size} bytes, expected at least {rules['min_bytes']}"
 
-    # --- Audio outputs -------------------------------------------------------
-    if otype == "audio_track" and set(rules) & (AUDIO_PROP_RULES | DURATION_RULES):
-        props = read_audio_props(label, require_file(label, value))
+    # --- Decoded audio/MIDI properties ---------------------------------------
+    # Decode once, and only when a rule actually needs the decoded properties
+    props = None
+    if set(rules) & DECODED_RULES.get(otype, set()):
+        reader = read_audio_props if otype == "audio_track" else read_midi_props
+        props = reader(label, require_file(label, value))
 
+    if props is not None and otype == "audio_track":
         if "channels" in rules:
             assert props["channels"] == rules["channels"], \
                 (f"output '{label}': expected {rules['channels']} channel(s), "
@@ -436,17 +442,13 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
                 (f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
                  f"< {rules['min_rms_db']} dBFS)")
 
-        check_duration(label, props["duration"], rules)
-
-    # --- MIDI outputs --------------------------------------------------------
-    if otype == "midi_track" and set(rules) & (MIDI_PROP_RULES | DURATION_RULES):
-        props = read_midi_props(label, require_file(label, value))
-
+    if props is not None and otype == "midi_track":
         if "min_notes" in rules:
             assert props["num_notes"] >= rules["min_notes"], \
                 (f"output '{label}' has {props['num_notes']} note(s), expected "
                  f"at least {rules['min_notes']}")
 
+    if props is not None:
         check_duration(label, props["duration"], rules)
 
     # --- JSON / LabelList outputs --------------------------------------------
@@ -461,16 +463,10 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
 def inspect_outputs(result, controls: dict, case: dict) -> None:
     """
-    Apply a test case's deeper output checks (see README.md).
-
-    Both mechanisms are optional per case; without either, an output is still
-    subject to the structural checks in validate_outputs().
-
-        expect: declarative per-output rules, the common path - see
-            EXPECT_RULES for the vocabulary.
-        validators: mapping of validator name -> parameters, for checks that
-            cannot be expressed declaratively (e.g. spanning several
-            outputs); registered in validators.py.
+    Apply a test case's deeper output checks: its `expect` rules (declarative,
+    per output - see EXPECT_RULES) and its `validators` (custom Python for
+    checks spanning several outputs - see validators.py). Both are optional;
+    without either, outputs are still subject to validate_outputs().
 
     Args:
         result: The raw value returned by gradio_client for /process.

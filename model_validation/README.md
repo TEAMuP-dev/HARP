@@ -148,6 +148,11 @@ Two mechanisms limit the ZeroGPU allowance a run can consume:
   execution only; the queue wait before a job runs is bounded separately by
   `--connect-timeout`, so a long queue does not trip the execution timeout. A
   per-model `process_timeout` override takes precedence.
+- **ZeroGPU models run one at a time** — `--zerogpu-workers` (default 1). Each
+  concurrent GPU call reserves its declared duration, so overlapping them ties
+  up allowance that is not being used. Non-ZeroGPU models still run at full
+  `--workers` concurrency alongside, and the limit is held only around the
+  endpoint tests, so slow restarts and connections still overlap.
 
 Transient "model is still loading" responses from a ZeroGPU space waking its
 GPU worker are retried automatically (up to `connect_timeout`), rather than
@@ -157,11 +162,35 @@ counted as failures.
 
 Every model automatically gets one **`default`** test case, even with no
 configuration at all: inputs are synthesized from the model's `/controls`
-spec — a sine-sweep WAV for audio tracks, a two-note MIDI file for MIDI
-tracks, and each control's declared default value for sliders, toggles,
-dropdowns, number boxes, and text boxes. So configuration is only needed to
-go beyond that: pinning specific control values, feeding real audio, or
-inspecting outputs more deeply.
+spec — a sine-sweep clip for audio tracks, a short MIDI file for MIDI tracks,
+and each control's declared default value for sliders, toggles, dropdowns,
+number boxes, and text boxes. So configuration is only needed to go beyond
+that: pinning specific control values, feeding real audio, adjusting the
+properties of the synthesized inputs, or inspecting outputs more deeply.
+
+### Synthesized input properties
+
+The generated inputs default to a 2-second mono 44.1 kHz WAV and a two-note
+MIDI file. Override any of those properties with a `synthesized_inputs` block
+— globally in [config.yml](config.yml), per model under its `overrides` entry,
+or per test case; each level overrides the last:
+
+```yaml
+synthesized_inputs:      # global default for every model
+  audio:
+    sample_rate: 48000
+    channels: 2
+    duration: 5.0
+    ext: .flac
+  midi:
+    num_notes: 8
+    note_duration: 0.25
+```
+
+Audio is written with soundfile, so `ext` accepts any libsndfile format. It is
+a preference rather than a guarantee: a component that only accepts other
+extensions still gets one it accepts. Each distinct set of properties is
+generated once and reused for the rest of the run.
 
 ### Step 1: find the model's control labels
 

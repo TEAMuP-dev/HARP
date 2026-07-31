@@ -12,6 +12,21 @@
 #                                  # measured time is approximate, not the
 #                                  # amount Hugging Face bills (see README)
 #
+#   synthesized_inputs:   # properties of the generated test inputs. Set here
+#                         # as the global default, per model under `overrides`,
+#                         # or per test case; each level overrides the last.
+#     audio:
+#       sample_rate: 44100  # Hz
+#       channels: 1         # 1 = mono, 2 = stereo
+#       duration: 2.0       # seconds
+#       ext: .wav           # format to write (any libsndfile format); a
+#                           # component that accepts only other extensions
+#                           # still gets one it accepts
+#     midi:
+#       num_notes: 2        # ascending notes from middle C
+#       note_duration: 0.5  # seconds per note
+#       ext: .mid
+#
 #   exclude:        # models to exclude from validation: space ids, or
 #                   # "examples/<example-dir>" for local pyharp examples
 #     - teamup-tech/some-non-harp-space
@@ -27,6 +42,11 @@
 #       process_timeout: 900   # seconds to wait for /process (default 600)
 #       load_only: true        # only check availability + /controls
 #
+#       synthesized_inputs:    # input properties for this model's cases
+#         audio:
+#           sample_rate: 48000
+#           channels: 2
+#
 #       test_cases:            # named /process test cases; when omitted, a
 #                              # single synthesized "default" case runs
 #         - name: default      # empty case == synthesized defaults
@@ -41,6 +61,10 @@
 #           files:                 # override track/file inputs by label;
 #                                  # paths are relative to this file
 #             "Input Audio": test_data/my_clip.wav
+#
+#           synthesized_inputs:    # input properties for this case only
+#             audio:
+#               duration: 10.0
 #
 #           expect:                # per-output checks, keyed by output label
 #             "Output Audio":      # ("*" applies rules to every compatible

@@ -1,11 +1,9 @@
 """
 ZeroGPU usage tracking for HARP model validation.
 
-ZeroGPU allowances are consumed per account, so a long validation run can eat
-into the day's quota. There is no documented public API for the remaining
-account quota, so rather than guess at it this module tracks the ZeroGPU time
-*this run* consumes - the part attributable to validation - and reports it
-after every ZeroGPU model.
+ZeroGPU allowances are consumed per account, so a long validation run draws on
+the day's quota. Hugging Face publishes no reliable API for the remaining
+allowance, so this module reports the work attributable to the run itself.
 """
 
 import threading
@@ -13,7 +11,6 @@ import threading
 
 __all__ = [
     'ZeroGPUTracker',
-    'ZeroGPUQuotaGuard',
     'is_zerogpu'
 ]
 
@@ -86,37 +83,7 @@ class ZeroGPUTracker:
         with self._lock:
             calls, wall = self.calls, int(self.wall_seconds)
 
-        plural = "s" if calls != 1 else ""
-        if self.budget:
-            detail = f"{calls} call{plural}, ~{wall}s/{int(self.budget)}s wall"
-        else:
-            detail = f"{calls} call{plural}, ~{wall}s wall"
+        budget = f"/{int(self.budget)}s" if self.budget else ""
 
-        return f"ZeroGPU: {detail} (approx)"
-
-
-class ZeroGPUQuotaGuard:
-    """
-    A shared, thread-safe flag tripped when the ZeroGPU allowance runs out.
-
-    Spaces are validated concurrently. Once any ZeroGPU model reports its
-    quota is exhausted, this guard causes the remaining ZeroGPU models to be
-    skipped rather than run against an exhausted allowance.
-    """
-
-    def __init__(self):
-        self._exhausted = False
-        self._lock = threading.Lock()
-
-    def mark_exhausted(self) -> None:
-        """Record that the ZeroGPU allowance has been exhausted."""
-
-        with self._lock:
-            self._exhausted = True
-
-    @property
-    def exhausted(self) -> bool:
-        """Whether the ZeroGPU allowance has been reported exhausted."""
-
-        with self._lock:
-            return self._exhausted
+        return (f"ZeroGPU: {calls} call{'s' if calls != 1 else ''}, "
+                f"~{wall}s{budget} wall (approx)")

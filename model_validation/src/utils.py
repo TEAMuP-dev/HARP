@@ -1,6 +1,6 @@
 """
-Shared utilities for HARP model validation: credentials, configuration,
-model discovery, and timeout handling.
+Shared utilities for HARP model validation: credentials, error rendering,
+configuration, model discovery, and timeout handling.
 """
 
 import os
@@ -8,20 +8,52 @@ import sys
 import threading
 from pathlib import Path
 
-try:
-    import yaml
-except ImportError:
-    yaml = None
+import yaml
 
 
 __all__ = [
     'get_token',
     'scrub',
+    'describe_exception',
     'run_with_timeout',
     'load_config',
     'get_excluded',
     'discover_spaces'
 ]
+
+
+def describe_exception(exc: BaseException) -> str:
+    """
+    Render an exception with as much detail as it carries.
+
+    Beyond the usual "Type: message", this surfaces a gradio AppError's
+    `title` when the upstream app set an informative one, and follows the
+    exception chain so the underlying cause is not lost. Note that a Space
+    launched with `show_error=False` deliberately returns only the exception
+    class name, so for those there is genuinely nothing further to report.
+
+    Args:
+        exc (BaseException): The exception to describe.
+
+    Returns:
+        description (str): A single-line description of the exception.
+    """
+
+    parts = [f"{type(exc).__name__}: {exc}".strip()]
+
+    # gradio's AppError carries a title alongside the message
+    title = getattr(exc, "title", None)
+    if title and title not in ("Error", str(exc)):
+        parts.append(f"[{title}]")
+
+    # Follow the chain so the root cause survives (bounded to stay one line)
+    seen, cause = {id(exc)}, exc.__cause__ or exc.__context__
+    while cause is not None and id(cause) not in seen and len(parts) < 4:
+        seen.add(id(cause))
+        parts.append(f"caused by {type(cause).__name__}: {cause}".strip())
+        cause = cause.__cause__ or cause.__context__
+
+    return " | ".join(parts)
 
 
 def get_token(required: bool) -> str:
@@ -118,10 +150,6 @@ def load_config(path: Path) -> dict:
     """
 
     if not path.exists():
-        return {}
-
-    if yaml is None:
-        print(f"WARNING: PyYAML not installed; ignoring {path}", file=sys.stderr)
         return {}
 
     return yaml.safe_load(path.read_text()) or {}

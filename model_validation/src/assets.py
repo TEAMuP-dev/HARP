@@ -1,145 +1,190 @@
 """
 Synthesized test inputs for HARP model validation.
 
-Every input file is generated from scratch - the base WAV and MIDI with the
-standard library, other audio formats transcoded from the WAV with soundfile
-- so validation needs no binary fixtures checked into the repository.
-Real-world inputs for specific models belong in test_data/ and are referenced
-from a test case's `files` entry in config.yml.
+Every input file is generated from scratch - audio with soundfile, MIDI with
+the standard library - so validation needs no binary fixtures checked into the
+repository. Real-world inputs for specific models belong in test_data/ and are
+referenced from a test case's `files` entry in config.yml.
+
+Input properties (sample rate, channels, length, format, ...) are configurable
+via `synthesized_inputs` - see config.yml for the schema. Each distinct set of
+properties is generated once and cached for the run.
 """
 
-import math
 import struct
-import wave
 from pathlib import Path
 
+import numpy
 import soundfile
 
 
 __all__ = [
     'Assets',
-    'make_test_wav',
-    'make_test_midi'
+    'AUDIO_DEFAULTS',
+    'MIDI_DEFAULTS',
+    'merge_specs'
 ]
 
 
+# Configurable properties of synthesized inputs, with their default values
+AUDIO_DEFAULTS = {
+    "sample_rate": 44100,   # Hz
+    "channels": 1,          # 1 = mono, 2 = stereo, ...
+    "duration": 2.0,        # seconds
+    "ext": ".wav",          # container/format to write
+}
+MIDI_DEFAULTS = {
+    "num_notes": 2,         # ascending notes from middle C
+    "note_duration": 0.5,   # seconds per note (at the default 120 BPM)
+    "ext": ".mid",
+}
+
 # Extensions understood as audio; a component accepting one of these gets a
-# synthesized clip in that format (transcoded from the base WAV via soundfile,
-# so only formats this libsndfile build can write actually succeed).
+# synthesized clip in that format (written via soundfile, so only formats this
+# libsndfile build supports actually succeed).
 AUDIO_EXTS = {".wav", ".flac", ".ogg", ".oga", ".opus", ".aiff", ".aif",
               ".aifc", ".au", ".snd", ".w64", ".caf", ".mp3"}
 
+MIDI_EXTS = {".mid", ".midi"}
 
-def make_test_wav(path: Path, duration: float = 2.0, sr: int = 44100) -> Path:
+# MIDI ticks per quarter note, and the default tempo those ticks imply
+MIDI_TICKS_PER_BEAT = 480
+MIDI_SECONDS_PER_BEAT = 0.5
+
+
+def merge_specs(*specs) -> dict:
     """
-    Write a short mono 16-bit sine sweep - a valid input for any audio model.
+    Merge `synthesized_inputs` blocks, later entries winning per property.
 
     Args:
-        path (Path): Destination .wav path.
-        duration (float): Length of the sweep in seconds.
-        sr (int): Sample rate in Hz.
+        *specs (dict | None): Blocks keyed by media kind ("audio", "midi"),
+            in increasing order of precedence.
 
     Returns:
-        path (Path): The written file, for chaining.
+        merged (dict): One block with per-kind properties merged.
     """
 
-    n = int(duration * sr)
+    merged = {}
 
-    with wave.open(str(path), "wb") as f:
-        f.setnchannels(1)
-        f.setsampwidth(2)
-        f.setframerate(sr)
-        frames = bytearray()
-        for i in range(n):
-            t = i / sr
-            # Sweep from 220 Hz up one octave over the clip
-            freq = 220.0 + 440.0 * t / duration
-            sample = int(0.5 * 32767 * math.sin(2 * math.pi * freq * t))
-            frames += struct.pack("<h", sample)
-        f.writeframes(bytes(frames))
+    for spec in specs:
+        for kind, props in (spec or {}).items():
+            merged.setdefault(kind, {}).update(props or {})
 
-    return path
-
-
-def make_test_midi(path: Path) -> Path:
-    """
-    Write a minimal standard MIDI file (format 0, two quarter notes).
-
-    Args:
-        path (Path): Destination .mid path.
-
-    Returns:
-        path (Path): The written file, for chaining.
-    """
-
-    track_events = bytes([
-        0x00, 0xC0, 0x00,               # program change: acoustic grand
-        0x00, 0x90, 0x3C, 0x64,         # note on  C4
-        0x83, 0x60, 0x80, 0x3C, 0x40,   # note off C4 after 480 ticks
-        0x00, 0x90, 0x40, 0x64,         # note on  E4
-        0x83, 0x60, 0x80, 0x40, 0x40,   # note off E4 after 480 ticks
-        0x00, 0xFF, 0x2F, 0x00,         # end of track
-    ])
-    header = b"MThd" + struct.pack(">IHHH", 6, 0, 1, 480)
-    track = b"MTrk" + struct.pack(">I", len(track_events)) + track_events
-    path.write_bytes(header + track)
-
-    return path
+    return merged
 
 
 class Assets:
     """
-    Synthesized test input files, generated once and shared across all
-    model validations in a run.
+    Synthesized test input files, generated on demand and cached for the run.
+
+    Args:
+        workdir (Path): Directory the generated files are written to.
+        defaults (dict | None): Global `synthesized_inputs` block from
+            config.yml, overriding the built-in property defaults.
     """
 
-    def __init__(self, workdir: Path):
+    def __init__(self, workdir: Path, defaults: dict | None = None):
         workdir.mkdir(parents=True, exist_ok=True)
         self.workdir = workdir
-        self.wav = make_test_wav(workdir / "test_input.wav")
-        self.midi = make_test_midi(workdir / "test_input.mid")
+        self.defaults = defaults or {}
+        self._cache = {}
+
         self.text = workdir / "test_input.txt"
         self.text.write_text("HARP model validation\n")
         self.json = workdir / "test_input.json"
         self.json.write_text("{}\n")
-        self._audio_cache = {".wav": self.wav}
 
-    def audio_in(self, ext: str) -> Path | None:
+    def resolve(self, kind: str, overrides: dict | None = None) -> dict:
         """
-        Get the synthesized test clip in a given audio format, transcoding
-        it from the base WAV on first request and caching the result.
+        Resolve the properties for one media kind.
+
+        Precedence is built-in defaults, then the global `synthesized_inputs`
+        block, then the per-model/per-case overrides.
 
         Args:
-            ext (str): Target extension, e.g. ".flac" or ".ogg".
+            kind (str): "audio" or "midi".
+            overrides (dict | None): A merged `synthesized_inputs` block.
 
         Returns:
-            path (Path | None): The clip in that format, or None when this
-                libsndfile build cannot write it.
+            props (dict): The resolved properties for that kind.
         """
 
-        if ext not in self._audio_cache:
-            path = self.workdir / f"test_input{ext}"
-            try:
-                data, sr = soundfile.read(str(self.wav))
-                soundfile.write(str(path), data, sr)
-                self._audio_cache[ext] = path
-            except Exception:  # noqa: BLE001 - format not writable here
-                self._audio_cache[ext] = None
-        return self._audio_cache[ext]
+        props = dict(AUDIO_DEFAULTS if kind == "audio" else MIDI_DEFAULTS)
+        props.update(self.defaults.get(kind) or {})
+        props.update((overrides or {}).get(kind) or {})
 
-    def for_file_types(self, file_types: list) -> Path | None:
+        return props
+
+    def audio(self, overrides: dict | None = None, ext: str | None = None) -> Path | None:
+        """
+        Get a synthesized audio clip with the resolved properties.
+
+        Args:
+            overrides (dict | None): A merged `synthesized_inputs` block.
+            ext (str | None): Format to write, overriding the resolved `ext`
+                (used when a component only accepts certain extensions).
+
+        Returns:
+            path (Path | None): The clip, or None when this libsndfile build
+                cannot write the requested format.
+        """
+
+        props = self.resolve("audio", overrides)
+        sample_rate = int(props["sample_rate"])
+        channels = int(props["channels"])
+        duration = float(props["duration"])
+        ext = (ext or props["ext"]).lower()
+
+        key = ("audio", sample_rate, channels, duration, ext)
+        if key not in self._cache:
+            path = (self.workdir /
+                    f"test_input_{sample_rate}hz_{channels}ch_{duration:g}s{ext}")
+            try:
+                self._cache[key] = write_audio(path, duration, sample_rate, channels)
+            except Exception:  # noqa: BLE001 - format not writable here
+                self._cache[key] = None
+
+        return self._cache[key]
+
+    def midi(self, overrides: dict | None = None, ext: str | None = None) -> Path:
+        """
+        Get a synthesized MIDI file with the resolved properties.
+
+        Args:
+            overrides (dict | None): A merged `synthesized_inputs` block.
+            ext (str | None): Extension to write, overriding the resolved one.
+
+        Returns:
+            path (Path): The MIDI file.
+        """
+
+        props = self.resolve("midi", overrides)
+        num_notes = int(props["num_notes"])
+        note_duration = float(props["note_duration"])
+        ext = (ext or props["ext"]).lower()
+
+        key = ("midi", num_notes, note_duration, ext)
+        if key not in self._cache:
+            path = self.workdir / f"test_input_{num_notes}n_{note_duration:g}s{ext}"
+            self._cache[key] = write_midi(path, num_notes, note_duration)
+
+        return self._cache[key]
+
+    def for_file_types(self, file_types: list,
+                       overrides: dict | None = None) -> Path | None:
         """
         Pick a synthesized file whose format matches the accepted types.
 
-        Audio components get a real clip in an accepted format (WAV, FLAC,
-        OGG, AIFF, ...), transcoded on demand; MIDI, JSON, and text inputs
-        are served from their fixed synthesized files. A component whose
-        accepted types are all unsupported (e.g. a bespoke binary format)
-        gets None - supply a real file via a test case's `files` entry.
+        Audio components get a clip in an accepted format, preferring the
+        configured `ext` when the component allows it; MIDI, JSON, and text
+        inputs are served from their synthesized files. A component whose
+        accepted types are all unsupported (e.g. a bespoke binary format) gets
+        None - supply a real file via a test case's `files` entry.
 
         Args:
             file_types (list): Accepted extensions from the /controls spec;
                 empty or None means any file is accepted.
+            overrides (dict | None): A merged `synthesized_inputs` block.
 
         Returns:
             path (Path | None): A matching synthesized file, or None when no
@@ -149,20 +194,92 @@ class Assets:
         types = {str(t).lower() for t in (file_types or [])}
 
         if not types or "audio" in types:
-            return self.wav
+            return self.audio(overrides)
 
-        # Prefer WAV, then any other accepted audio format we can write
-        for ext in [".wav"] + sorted(types & AUDIO_EXTS - {".wav"}):
-            if ext in types:
-                clip = self.audio_in(ext)
+        # Try the configured format first, then any other accepted audio format
+        accepted_audio = types & AUDIO_EXTS
+        if accepted_audio:
+            preferred = self.resolve("audio", overrides)["ext"].lower()
+            order = ([preferred] if preferred in accepted_audio else []) + \
+                sorted(accepted_audio - {preferred})
+            for candidate in order:
+                clip = self.audio(overrides, ext=candidate)
                 if clip is not None:
                     return clip
 
-        if types & {".mid", ".midi"}:
-            return self.midi
+        accepted_midi = types & MIDI_EXTS
+        if accepted_midi:
+            preferred = self.resolve("midi", overrides)["ext"].lower()
+            return self.midi(overrides,
+                             ext=preferred if preferred in accepted_midi
+                             else sorted(accepted_midi)[0])
+
         if ".json" in types:
             return self.json
         if types & {".txt", ".text", "text"}:
             return self.text
 
         return None
+
+
+def write_audio(path: Path, duration: float, sample_rate: int,
+                channels: int) -> Path:
+    """
+    Write a sine sweep - a valid input for any audio model.
+
+    Args:
+        path (Path): Destination path; its extension selects the format.
+        duration (float): Length of the sweep in seconds.
+        sample_rate (int): Sample rate in Hz.
+        channels (int): Number of (identical) channels to write.
+
+    Returns:
+        path (Path): The written file, for chaining.
+    """
+
+    n = max(1, int(duration * sample_rate))
+    t = numpy.arange(n) / sample_rate
+    # Sweep from 220 Hz up one octave over the clip
+    freq = 220.0 + 220.0 * numpy.arange(n) / n
+    mono = 0.5 * numpy.sin(2 * numpy.pi * freq * t)
+    soundfile.write(str(path), numpy.tile(mono[:, None], (1, channels)), sample_rate)
+
+    return path
+
+
+def write_midi(path: Path, num_notes: int, note_duration: float) -> Path:
+    """
+    Write a standard MIDI file (format 0) of ascending notes from middle C.
+
+    Args:
+        path (Path): Destination .mid path.
+        num_notes (int): Number of notes to write.
+        note_duration (float): Seconds each note sounds, at 120 BPM.
+
+    Returns:
+        path (Path): The written file, for chaining.
+    """
+
+    ticks = max(1, int(round(note_duration / MIDI_SECONDS_PER_BEAT * MIDI_TICKS_PER_BEAT)))
+
+    def delta(value):
+        """Encode a delta time as a MIDI variable-length quantity."""
+        out = [value & 0x7F]
+        value >>= 7
+        while value:
+            out.insert(0, (value & 0x7F) | 0x80)
+            value >>= 7
+        return bytes(out)
+
+    events = bytearray([0x00, 0xC0, 0x00])          # program change: grand piano
+    for i in range(max(0, num_notes)):
+        pitch = 60 + (i * 2) % 24                   # ascending from middle C
+        events += bytes([0x00, 0x90, pitch, 0x64])  # note on
+        events += delta(ticks) + bytes([0x80, pitch, 0x40])
+    events += bytes([0x00, 0xFF, 0x2F, 0x00])       # end of track
+
+    header = b"MThd" + struct.pack(">IHHH", 6, 0, 1, MIDI_TICKS_PER_BEAT)
+    track = b"MTrk" + struct.pack(">I", len(events)) + bytes(events)
+    path.write_bytes(header + track)
+
+    return path

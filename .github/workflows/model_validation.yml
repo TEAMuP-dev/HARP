@@ -8,16 +8,14 @@
 #   2. spaces   - every Hugging Face Space under teamup-tech, validated
 #                 end-to-end (/controls + /process) via gradio_client.
 #
-# Models are validated independently; one failure never stops the rest.
 # Results are published to the run summary and uploaded as artifacts.
 #
-# Model failures do NOT fail the workflow (deployments are not yet stable
-# enough - a red run every day would just spam maintainers with emails).
-# They appear as warning annotations and in the run summary instead. Only
-# infrastructure errors (bad token, discovery failure, ...) turn the run
-# red, since those mean validation itself has stopped working. To start
-# getting notified on model failures later, remove the exit-code handling
-# in the two Validate steps so exit code 1 propagates.
+# Model failures do NOT fail the workflow, since deployments are not yet
+# stable enough for a daily red run to be actionable; they appear as warning
+# annotations instead. Only infrastructure errors (bad token, discovery
+# failure, ...) turn the run red, since those mean validation itself has
+# stopped working. To get notified on model failures later, remove the
+# exit-code handling in the two Validate steps so exit code 1 propagates.
 #
 # Requires the repository secret HF_TOKEN: a Hugging Face token with read
 # access to the teamup-tech spaces (write access if you want the workflow to

@@ -11,8 +11,7 @@ Validates HARP deployments in two tiers, using the same black-box harness
    and processes test inputs end-to-end. ZeroGPU spaces require an
    authenticated request for GPU quota, so a token must be provided via the
    HF_TOKEN environment variable - never on the command line or in the
-   repository. ZeroGPU quota usage is reported at the start of the run and
-   after every model.
+   repository.
 
 2. Examples (--local-examples): launches each app under pyharp/examples/ on
    a local port and runs the identical endpoint tests. The examples tier
@@ -41,12 +40,13 @@ import argparse
 import concurrent.futures
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 
 from assets import Assets
 from harness import test_space, test_local_example
-from quota import ZeroGPUTracker, ZeroGPUQuotaGuard, is_zerogpu
+from quota import ZeroGPUTracker, is_zerogpu
 from results import PASS, FAIL, SKIP, status_emoji, write_reports
 from utils import get_token, scrub, load_config, get_excluded, discover_spaces
 
@@ -96,6 +96,11 @@ def parse_args() -> argparse.Namespace:
                              "disable with --no-restart-failed")
     parser.add_argument("--workers", type=int, default=4,
                         help="Number of spaces to validate concurrently (spaces tier only)")
+    parser.add_argument("--zerogpu-workers", type=int, default=1,
+                        help="How many ZeroGPU models may make GPU calls at once. "
+                             "Each concurrent call reserves its declared duration, "
+                             "so 1 (the default) keeps overlapping reservations "
+                             "from tying up the allowance")
     parser.add_argument("--connect-timeout", type=float, default=420,
                         help="Seconds to wait for a deployment to build/wake/start")
     parser.add_argument("--process-timeout", type=float, default=600,
@@ -110,6 +115,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--verbose", action="store_true")
 
     return parser.parse_args()
+
+
+def result_line(result, extra: str = "", token: str = "") -> str:
+    """
+    Format one model's console line.
+
+    Args:
+        result (ModelResult): The completed validation record.
+        extra (str): Text inserted before the error note (e.g. hardware).
+        token (str): Token to scrub from the error text.
+
+    Returns:
+        line (str): The formatted line.
+    """
+
+    note = f" - {result.error}" if result.error else ""
+
+    return (f"{status_emoji(result)} {result.status:4s} {result.target} "
+            f"({result.duration}s){extra}{scrub(note, token)}")
 
 
 def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
@@ -150,8 +174,7 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
         r = test_local_example(app_dir, LOCAL_PORT_BASE + i, assets, opts,
                                overrides.get(f"examples/{app_dir.name}", {}))
         results.append(r)
-        note = f" - {r.error}" if r.error else ""
-        print(f"{status_emoji(r)} {r.status:4s} {r.target} ({r.duration}s){note}")
+        print(result_line(r))
 
     return results
 
@@ -187,17 +210,17 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         return None
 
     tracker = ZeroGPUTracker(config.get("zerogpu_budget_seconds"))
-    guard = ZeroGPUQuotaGuard()
+    quota_exhausted = threading.Event()
+    zerogpu_limiter = threading.Semaphore(max(1, opts.zerogpu_workers))
     print(f"Validating {len(space_ids)} spaces with {opts.workers} workers "
-          f"(process test: {'OFF' if opts.load_only else 'ON'})\n")
+          f"({opts.zerogpu_workers} concurrent on ZeroGPU; "
+          f"process test: {'OFF' if opts.load_only else 'ON'})\n")
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
-        futures = {
-            pool.submit(test_space, sid, token, assets, opts,
-                        overrides.get(sid, {}), guard): sid
-            for sid in space_ids
-        }
+        futures = [pool.submit(test_space, sid, token, assets, opts,
+                               overrides.get(sid, {}), quota_exhausted, zerogpu_limiter)
+                   for sid in space_ids]
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
@@ -210,9 +233,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
                 ran = [c for c in r.cases if c.executed]
                 tracker.add(len(ran), sum(c.duration for c in ran))
                 info = f"{info} | {tracker.summary()}"
-            note = f" - {r.error}" if r.error else ""
-            print(f"{status_emoji(r)} {r.status:4s} {r.target} "
-                  f"({r.duration}s) [{info}]{scrub(note, token)}")
+            print(result_line(r, f" [{info}]", token))
 
     return results
 
@@ -236,7 +257,8 @@ def main() -> int:
     # used for the directory name (on a UTC CI runner this is naturally UTC).
     run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
     opts.output_dir = opts.output_dir / run_stamp
-    assets = Assets(opts.output_dir / "assets")
+    assets = Assets(opts.output_dir / "assets",
+                    config.get("synthesized_inputs"))
 
     if opts.local_examples is not None:
         token = ""
