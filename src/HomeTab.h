@@ -22,18 +22,21 @@ class TagLabel : public Component
 public:
     TagLabel(const String& text) : tagText(text)
     {
-        setSize(font.getStringWidth(tagText) + 12, 18);
+        setSize(getPreferredWidth(), getPreferredHeight());
     }
+
+    int getPreferredWidth() const { return font.getStringWidth(tagText) + horizontalPadding * 2; }
+    int getPreferredHeight() const { return roundToInt(font.getHeight()) + verticalPadding * 2; }
 
     void paint(Graphics& g) override
     {
         auto bounds = getLocalBounds().toFloat().reduced(0.5f);
-        g.setColour(Colour(0xff2d2d35));
+        g.setColour(Colour(0xff183238));
         g.fillRoundedRectangle(bounds, 4.0f);
-        g.setColour(Colour(0xff4f46e5).withAlpha(0.4f));
+        g.setColour(Colour(0xff2dd4bf).withAlpha(0.42f));
         g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
-        g.setColour(Colour(0xffa5b4fc));
+        g.setColour(Colour(0xff9eeadf));
         g.setFont(font);
         g.drawText(tagText, getLocalBounds(), Justification::centred, true);
     }
@@ -41,6 +44,8 @@ public:
 private:
     String tagText;
     Font font { 10.0f, Font::bold };
+    static constexpr int horizontalPadding = 7;
+    static constexpr int verticalPadding = 4;
 };
 
 class CategoryChip : public Button
@@ -62,6 +67,9 @@ public:
 
     bool getSelected() const { return isSelected; }
 
+    int getPreferredWidth() const { return font.getStringWidth(getName()) + horizontalPadding * 2; }
+    int getPreferredHeight() const { return roundToInt(font.getHeight()) + verticalPadding * 2; }
+
     void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
     {
         auto bounds = getLocalBounds().toFloat().reduced(1.0f);
@@ -71,12 +79,12 @@ public:
         
         if (isSelected)
         {
-            bg = Colour(0xff4f46e5);
+            bg = Colour(0xff0f766e);
             textColour = Colours::white;
         }
         else if (shouldDrawButtonAsHighlighted || shouldDrawButtonAsDown)
         {
-            bg = Colour(0xff2d2d30);
+            bg = Colour(0xff263a3d);
             textColour = Colours::white;
         }
         else
@@ -86,18 +94,21 @@ public:
         }
 
         g.setColour(bg);
-        g.fillRoundedRectangle(bounds, bounds.getHeight() * 0.5f);
+        g.fillRoundedRectangle(bounds, 5.0f);
 
-        g.setColour(isSelected ? Colour(0xff818cf8) : Colours::white.withAlpha(0.1f));
-        g.drawRoundedRectangle(bounds, bounds.getHeight() * 0.5f, 1.0f);
+        g.setColour(isSelected ? Colour(0xff5eead4) : Colours::white.withAlpha(0.1f));
+        g.drawRoundedRectangle(bounds, 5.0f, 1.0f);
 
         g.setColour(textColour);
-        g.setFont(Font(13.0f, Font::bold));
-        g.drawText(getName(), getLocalBounds(), Justification::centred, true);
+        g.setFont(font);
+        g.drawText(getName(), getLocalBounds().reduced(horizontalPadding, 0), Justification::centred, true);
     }
 
 private:
     bool isSelected = false;
+    Font font { 13.0f, Font::bold };
+    static constexpr int horizontalPadding = 12;
+    static constexpr int verticalPadding = 7;
 };
 
 class CategoryFilterBar : public Component
@@ -146,25 +157,28 @@ public:
         auto area = getLocalBounds();
         int x = 0;
         int y = 0;
-        int rowHeight = 28;
         int spacingX = 6;
         int spacingY = 6;
+        int rowHeight = 0;
 
         for (auto& chip : chips)
         {
-            int chipWidth = Font(13.0f, Font::bold).getStringWidth(chip->getName()) + 24;
+            int chipWidth = chip->getPreferredWidth();
+            int chipHeight = chip->getPreferredHeight();
             
             if (x + chipWidth > area.getWidth() && x > 0)
             {
                 x = 0;
                 y += rowHeight + spacingY;
+                rowHeight = 0;
             }
 
-            chip->setBounds(x, y, chipWidth, rowHeight);
+            chip->setBounds(x, y, chipWidth, chipHeight);
             x += chipWidth + spacingX;
+            rowHeight = jmax(rowHeight, chipHeight);
         }
         
-        int newHeight = y + rowHeight;
+        int newHeight = y + jmax(rowHeight, 1);
         if (newHeight != preferredHeight)
         {
             preferredHeight = newHeight;
@@ -199,7 +213,7 @@ public:
         g.drawText(categoryName, getLocalBounds().reduced(4, 0), Justification::centredLeft, true);
         
         auto textWidth = Font(16.0f, Font::bold).getStringWidth(categoryName);
-        g.setColour(Colour(0xff4f46e5).withAlpha(0.6f));
+        g.setColour(Colour(0xff2dd4bf).withAlpha(0.6f));
         g.fillRect(textWidth + 12.0f, bounds.getCentreY() - 1.0f, bounds.getWidth() - textWidth - 16.0f, 2.0f);
     }
 
@@ -274,7 +288,9 @@ public:
         
         for (auto& tagLabel : tagLabels)
         {
-            tagLabel->setBounds(topRow.removeFromRight(tagLabel->getWidth() + 4).reduced(0, 1));
+            tagLabel->setBounds(topRow.removeFromRight(tagLabel->getPreferredWidth() + 4)
+                                      .withSizeKeepingCentre(tagLabel->getPreferredWidth(),
+                                                             tagLabel->getPreferredHeight()));
         }
 
         nameLabel.setBounds(area.removeFromTop(24));

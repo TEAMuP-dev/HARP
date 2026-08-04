@@ -27,9 +27,19 @@ struct Entry
     {}
 };
 
+inline String getCleanModelPath(const String& modelPath)
+{
+    auto cleaned = modelPath.trim();
+
+    for (const auto& tag : { String(" [ERROR]"), String(" [DOWN]"), String(" [TRY AGAIN]"), String(" [SLEEPING]") })
+        cleaned = cleaned.replace(tag, "");
+
+    return cleaned.trim();
+}
+
 inline String getFallbackModelDisplayName(const String& modelPath)
 {
-    auto cleaned = modelPath.upToFirstOccurrenceOf(" [", false, false).trim();
+    auto cleaned = getCleanModelPath(modelPath).upToFirstOccurrenceOf(" [", false, false).trim();
     auto tokens = StringArray::fromTokens(cleaned, "/", "");
 
     if (tokens.size() > 0)
@@ -126,19 +136,19 @@ inline std::vector<std::string> getFeaturedModelPaths()
 
 inline Entry getEntryForPath(const String& modelPath)
 {
-    const auto cleanedPath = modelPath.upToFirstOccurrenceOf(" [", false, false).trim();
+    const auto cleanedPath = getCleanModelPath(modelPath).upToFirstOccurrenceOf(" [", false, false).trim();
 
     for (const auto& entry : getFeaturedModels())
     {
         if (entry.path == cleanedPath)
         {
             auto result = entry;
-            result.path = modelPath;
+            result.path = cleanedPath;
             return result;
         }
     }
 
-    return { modelPath,
+    return { cleanedPath,
              getFallbackModelDisplayName(modelPath),
              "Custom or recently used HARP-compatible model endpoint.",
              cleanedPath.startsWith("stability/") ? "Stability AI" : "Custom" };

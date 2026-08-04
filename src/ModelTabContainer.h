@@ -126,7 +126,6 @@ public:
         int index = getNumTabs();
 
         auto* tab = new ModelTab();
-        tab->addChangeListener(this);
 
         auto tabName = modelName;
 
@@ -136,14 +135,7 @@ public:
         if (tabName.isEmpty())
             tabName = "Model " + String(index);
 
-        addTab(tabName,
-               tabBackgroundColour,
-               tab,
-               true);
-
-        addCloseButtonToModelTab(tab);
-
-        setCurrentTabIndex(getNumTabs() - 1);
+        addLoadedModelTab(tab, tabName);
 
         if (modelPath.isNotEmpty())
             tab->loadModelPath(modelPath);
@@ -168,6 +160,20 @@ public:
     }
 
 private:
+    void addLoadedModelTab(ModelTab* tab, const String& tabName)
+    {
+        tab->addChangeListener(this);
+
+        addTab(tabName,
+               tabBackgroundColour,
+               tab,
+               true);
+
+        addCloseButtonToModelTab(tab);
+
+        setCurrentTabIndex(getNumTabs() - 1);
+    }
+
     void addCloseButtonToModelTab(ModelTab* tab)
     {
         auto* closeButton = new TextButton("x");
@@ -210,8 +216,24 @@ private:
         auto* homeTab = new HomeTab();
         homeTab->onModelLoadRequested = [this, homeTab](String modelPath, String modelName)
         {
-            createNewTab(modelPath, modelName);
-            homeTab->resetSelection();
+            auto* pendingTab = new ModelTab();
+            pendingTab->onNextModelLoadComplete(
+                [this, homeTab, modelName](ModelTab* tab, bool wasSuccessful)
+                {
+                    if (wasSuccessful)
+                    {
+                        addLoadedModelTab(tab, modelName);
+                        sendChangeMessage();
+                    }
+                    else
+                    {
+                        MessageManager::callAsync([tab] { delete tab; });
+                    }
+
+                    homeTab->resetSelection();
+                });
+
+            pendingTab->loadModelPath(modelPath);
         };
 
         addTab("Home",

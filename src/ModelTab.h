@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "Model.h"
@@ -60,6 +62,11 @@ public:
     void loadModelPath(const String& modelPath)
     {
         modelSelectionWidget.loadModelBypass(modelPath);
+    }
+
+    void onNextModelLoadComplete(std::function<void(ModelTab*, bool)> callback)
+    {
+        initialLoadCallback = std::move(callback);
     }
 
     // Bounds accessors for tutorial steps
@@ -437,6 +444,8 @@ private:
 
                             // Re-enable processing immediately
                             processCancelButton.setEnabled(true);
+
+                            notifyInitialLoadComplete(true);
                         }
                         else
                         {
@@ -448,12 +457,23 @@ private:
 
                                 // Re-enable processing after closing error window
                                 processCancelButton.setEnabled(true);
+
+                                notifyInitialLoadComplete(false);
                             };
 
                             openErrorPopup(error, onExit);
                         }
                     });
             });
+    }
+
+    void notifyInitialLoadComplete(bool wasSuccessful)
+    {
+        auto callback = std::move(initialLoadCallback);
+        initialLoadCallback = nullptr;
+
+        if (callback)
+            callback(this, wasSuccessful);
     }
 
     void processCallback()
@@ -607,4 +627,5 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    std::function<void(ModelTab*, bool)> initialLoadCallback;
 };
