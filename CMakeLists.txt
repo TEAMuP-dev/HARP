@@ -93,8 +93,10 @@ target_sources(${PROJECT_NAME}
         src/gui/HoverHandler.h
         src/gui/ControlComponent.h
         src/gui/ToggleWithLabel.h
+        src/gui/FileChooserWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
+        src/media/FileDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
@@ -129,6 +131,15 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioData.cpp
         src/external/fontaudio/data/FontAudioIcons.h
 )
+
+# Include the platform-specific clipboard implementation.
+if(APPLE)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
+elseif(WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
+elseif(LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
+endif()
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
