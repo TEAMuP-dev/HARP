@@ -27,6 +27,20 @@ Each validator receives:
     params (dict): the parameters nested under this validator's name, keeping
         its settings separate from the test case's own fields.
 
+A validator may additionally declare an `inputs` parameter to receive input
+label -> value for the arguments actually sent to /process, shaped exactly
+like `outputs` (file inputs as local paths, everything else as its scalar).
+This is what makes *relative* checks possible - "the output has more notes
+than the input" holds regardless of what the input was, so it works on
+synthesized inputs where an absolute threshold would be arbitrary. Prefer
+these: a relative check that fits many models beats an absolute one tuned to
+a single model. Declaring the parameter is how a validator opts in, so
+output-only validators keep the three-argument form:
+
+    @validator("more_notes_than_input")
+    def more_notes_than_input(outputs, controls, params, inputs):
+        ...
+
 Validators signal failure by raising AssertionError with a message naming the
 output and what was wrong.
 """

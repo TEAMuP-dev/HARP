@@ -16,6 +16,7 @@ test_local_example() for a pyharp example app launched locally.
 """
 
 import argparse
+import inspect
 import os
 import subprocess
 import sys
@@ -70,6 +71,33 @@ LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
 # skipped rather than retried.
 QUOTA_EXHAUSTED_MARKERS = ("exceeded your gpu quota", "gpu quota exceeded",
                            "zerogpu quota", "quota exceeded", "gpu quota")
+
+# gradio_client renamed the token argument from `hf_token` to `token` in 2.0.
+# requirements.txt allows >=1.0, so pick whichever this install accepts rather
+# than hard-coding one and failing every space with a TypeError.
+TOKEN_KWARG = ("hf_token"
+               if "hf_token" in inspect.signature(Client.__init__).parameters
+               else "token")
+
+
+def make_client(src: str, token: str = "") -> Client:
+    """
+    Construct a gradio_client, passing the token under the name this version
+    of gradio_client expects.
+
+    Args:
+        src (str): Space id or URL to connect to.
+        token (str): Hugging Face token; omitted when empty (anonymous).
+
+    Returns:
+        client (Client): The connected client.
+    """
+
+    kwargs = {"verbose": False}
+    if token:
+        kwargs[TOKEN_KWARG] = token
+
+    return Client(src, **kwargs)
 
 
 def is_loading_error(exc: Exception) -> bool:
@@ -298,7 +326,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
                 case_result.ok = False
                 case_result.error = f"/process output invalid: {error}"
             else:
-                inspect_outputs(output, controls, case)
+                inspect_outputs(output, controls, case, args)
                 case_result.ok = True
         except Exception as exc:  # noqa: BLE001 - any exception fails the case
             case_result.ok = False
@@ -417,7 +445,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         while time.time() < deadline:
             try:
                 client = run_with_timeout(
-                    lambda: Client(space_id, hf_token=token, verbose=False),
+                    lambda: make_client(space_id, token),
                     max(10.0, deadline - time.time()), "connect")
                 break
             except Exception as exc:  # noqa: BLE001 - space may still be waking
@@ -524,7 +552,7 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
                 stdout=log, stderr=subprocess.STDOUT)
         wait_for_local_server(port, proc, overrides.get(
             "connect_timeout", opts.connect_timeout))
-        client = Client(f"http://127.0.0.1:{port}", verbose=False)
+        client = make_client(f"http://127.0.0.1:{port}")
         return run_endpoint_tests(client, result, assets, overrides, opts)
     except Exception as exc:  # noqa: BLE001 - any failure means invalid
         result.error = f"{type(exc).__name__}: {exc} (see {log_path.name})"

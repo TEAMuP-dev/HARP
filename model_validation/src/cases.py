@@ -8,6 +8,7 @@ configured case's control values and input files, and checking the outputs
 validators).
 """
 
+import inspect
 import os
 from pathlib import Path
 
@@ -24,6 +25,7 @@ __all__ = [
     'apply_case',
     'validate_outputs',
     'inspect_outputs',
+    'inputs_by_label',
     'EXPECT_RULES'
 ]
 
@@ -41,35 +43,73 @@ EXPECT_RULES = {
             "file extension, as a string or list of accepted extensions"),
     "min_bytes": (FILE_TYPES,
                   "minimum file size in bytes"),
+    "max_bytes": (FILE_TYPES,
+                  "maximum file size in bytes, for catching runaway output"),
     "min_duration": ({"audio_track", "midi_track"},
                      "minimum length, in seconds"),
     "max_duration": ({"audio_track", "midi_track"},
                      "maximum length, in seconds"),
     "channels": ({"audio_track"},
-                 "exact channel count (1 = mono, 2 = stereo)"),
+                 "channel count (1 = mono, 2 = stereo); a list accepts any "
+                 "of several counts"),
     "sample_rate": ({"audio_track"},
-                    "exact sample rate, in Hz"),
+                    "sample rate in Hz; a list accepts any of several rates"),
+    "min_sample_rate": ({"audio_track"},
+                        "minimum sample rate in Hz, for asserting a model "
+                        "does not silently downsample"),
     "bit_depth": ({"audio_track"},
                   "exact PCM bit depth, e.g. 16 or 24 (not valid for "
                   "compressed formats such as MP3 or OGG)"),
     "min_rms_db": ({"audio_track"},
                    "minimum RMS level, in dBFS (0 = full scale); -60 is the "
                    "usual threshold for 'this output is not silent'"),
+    "max_rms_db": ({"audio_track"},
+                   "maximum RMS level, in dBFS; catches output driven to "
+                   "noise or full scale"),
+    "max_peak_db": ({"audio_track"},
+                    "maximum peak sample level, in dBFS; -0.1 is the usual "
+                    "threshold for 'this output is not clipped'"),
     "min_notes": ({"midi_track"},
                   "minimum number of note-on events"),
+    "max_notes": ({"midi_track"},
+                  "maximum number of note-on events"),
     "min_labels": ({"json"},
                    "minimum number of labels in a pyharp LabelList; 0 asserts "
                    "a well-formed LabelList that may legitimately be empty"),
+    "max_labels": ({"json"},
+                   "maximum number of labels in a pyharp LabelList"),
+    "min_length": ({"text_box"},
+                   "minimum number of characters in a text output; 1 asserts "
+                   "'this model returned something'"),
+    "contains": ({"text_box"},
+                 "substring, or list of substrings, that must all appear in "
+                 "a text output (compared case-insensitively)"),
 }
 
 # Rule groups, by what they need decoded. Duration rules are shared: they read
 # from whichever of audio/MIDI props matches the output's type.
 DURATION_RULES = {"min_duration", "max_duration"}
-AUDIO_PROP_RULES = {"channels", "sample_rate", "bit_depth", "min_rms_db"}
-MIDI_PROP_RULES = {"min_notes"}
+AUDIO_PROP_RULES = {"channels", "sample_rate", "min_sample_rate", "bit_depth",
+                    "min_rms_db", "max_rms_db", "max_peak_db"}
+MIDI_PROP_RULES = {"min_notes", "max_notes"}
+TEXT_RULES = {"min_length", "contains"}
 
 # Key selecting every compatible output rather than one named output
 ALL_OUTPUTS = "*"
+
+
+def as_list(value) -> list:
+    """
+    Normalize a rule value that may be a single item or a list of them.
+
+    Args:
+        value: A scalar (str, int, float) or an iterable of them.
+
+    Returns:
+        values (list): The value(s) as a list.
+    """
+
+    return [value] if isinstance(value, (str, int, float)) else list(value)
 
 
 def synthesize_default_args(controls: dict, assets: Assets) -> tuple:
@@ -265,6 +305,34 @@ def outputs_by_label(result, specs: list) -> dict:
     return mapped
 
 
+def inputs_by_label(args: list, specs: list) -> dict:
+    """
+    Map input labels to the values actually sent to /process.
+
+    The mirror of outputs_by_label(), letting a validator compare what came
+    back against what went in - e.g. "the returned MIDI has more notes than
+    the MIDI I supplied". File inputs are unwrapped from the dict handle_file
+    produces, so they read as plain local paths just like file outputs do.
+
+    Args:
+        args (list): Positional arguments passed to /process, in the order of
+            the input specs.
+        specs (list): Input component specs from /controls.
+
+    Returns:
+        inputs (dict): Label -> local file path (file inputs) or scalar value
+            (sliders, dropdowns, text boxes, toggles).
+    """
+
+    mapped = {}
+
+    for spec, arg in zip(specs, args):
+        value = arg.get("path") if isinstance(arg, dict) and "path" in arg else arg
+        mapped[spec.get("label")] = value
+
+    return mapped
+
+
 def require_file(label: str, value) -> str:
     """
     Assert an output is a file on disk and return its path.
@@ -398,30 +466,46 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
     # --- Any file output -----------------------------------------------------
     if "ext" in rules:
-        allowed = rules["ext"]
-        allowed = [allowed] if isinstance(allowed, str) else list(allowed)
+        allowed = as_list(rules["ext"])
         assert isinstance(value, str) and \
-            any(value.lower().endswith(e.lower()) for e in allowed), \
-            f"output '{label}' is not a {' or '.join(allowed)} file: {value}"
+            any(value.lower().endswith(str(e).lower()) for e in allowed), \
+            f"output '{label}' is not a {' or '.join(map(str, allowed))} file: {value}"
 
-    if "min_bytes" in rules:
+    if set(rules) & {"min_bytes", "max_bytes"}:
         size = os.path.getsize(require_file(label, value))
-        assert size >= rules["min_bytes"], \
-            f"output file '{label}' is {size} bytes, expected at least {rules['min_bytes']}"
+
+        if "min_bytes" in rules:
+            assert size >= rules["min_bytes"], \
+                (f"output file '{label}' is {size} bytes, expected at least "
+                 f"{rules['min_bytes']}")
+
+        if "max_bytes" in rules:
+            assert size <= rules["max_bytes"], \
+                (f"output file '{label}' is {size} bytes, expected at most "
+                 f"{rules['max_bytes']}")
 
     # --- Audio outputs -------------------------------------------------------
     if otype == "audio_track" and set(rules) & (AUDIO_PROP_RULES | DURATION_RULES):
         props = read_audio_props(label, require_file(label, value))
 
         if "channels" in rules:
-            assert props["channels"] == rules["channels"], \
-                (f"output '{label}': expected {rules['channels']} channel(s), "
+            allowed = as_list(rules["channels"])
+            assert props["channels"] in allowed, \
+                (f"output '{label}': expected "
+                 f"{' or '.join(map(str, allowed))} channel(s), "
                  f"got {props['channels']}")
 
         if "sample_rate" in rules:
-            assert props["sample_rate"] == rules["sample_rate"], \
-                (f"output '{label}': expected {rules['sample_rate']} Hz, "
+            allowed = as_list(rules["sample_rate"])
+            assert props["sample_rate"] in allowed, \
+                (f"output '{label}': expected "
+                 f"{' or '.join(map(str, allowed))} Hz, "
                  f"got {props['sample_rate']} Hz")
+
+        if "min_sample_rate" in rules:
+            assert props["sample_rate"] >= rules["min_sample_rate"], \
+                (f"output '{label}' is {props['sample_rate']} Hz, expected at "
+                 f"least {rules['min_sample_rate']} Hz")
 
         if "bit_depth" in rules:
             assert props["bit_depth"] is not None, \
@@ -436,6 +520,16 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
                 (f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
                  f"< {rules['min_rms_db']} dBFS)")
 
+        if "max_rms_db" in rules:
+            assert props["rms_db"] <= rules["max_rms_db"], \
+                (f"output '{label}' is too hot (RMS {props['rms_db']:.1f} dBFS "
+                 f"> {rules['max_rms_db']} dBFS)")
+
+        if "max_peak_db" in rules:
+            assert props["peak_db"] <= rules["max_peak_db"], \
+                (f"output '{label}' appears clipped (peak "
+                 f"{props['peak_db']:.2f} dBFS > {rules['max_peak_db']} dBFS)")
+
         check_duration(label, props["duration"], rules)
 
     # --- MIDI outputs --------------------------------------------------------
@@ -447,19 +541,48 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
                 (f"output '{label}' has {props['num_notes']} note(s), expected "
                  f"at least {rules['min_notes']}")
 
+        if "max_notes" in rules:
+            assert props["num_notes"] <= rules["max_notes"], \
+                (f"output '{label}' has {props['num_notes']} note(s), expected "
+                 f"at most {rules['max_notes']}")
+
         check_duration(label, props["duration"], rules)
 
     # --- JSON / LabelList outputs --------------------------------------------
-    if "min_labels" in rules:
+    if set(rules) & {"min_labels", "max_labels"}:
         labels = value.get("labels") if isinstance(value, dict) else None
         assert isinstance(labels, list), \
             f"output '{label}' does not contain a pyharp LabelList: {value}"
-        assert len(labels) >= rules["min_labels"], \
-            (f"output '{label}' has {len(labels)} label(s), expected at least "
-             f"{rules['min_labels']}")
+
+        if "min_labels" in rules:
+            assert len(labels) >= rules["min_labels"], \
+                (f"output '{label}' has {len(labels)} label(s), expected at "
+                 f"least {rules['min_labels']}")
+
+        if "max_labels" in rules:
+            assert len(labels) <= rules["max_labels"], \
+                (f"output '{label}' has {len(labels)} label(s), expected at "
+                 f"most {rules['max_labels']}")
+
+    # --- Text outputs --------------------------------------------------------
+    if otype == "text_box" and set(rules) & TEXT_RULES:
+        assert isinstance(value, str), \
+            f"output '{label}' is not text: {type(value).__name__}"
+
+        if "min_length" in rules:
+            assert len(value.strip()) >= rules["min_length"], \
+                (f"output '{label}' is {len(value.strip())} character(s), "
+                 f"expected at least {rules['min_length']}")
+
+        if "contains" in rules:
+            haystack = value.lower()
+            for needle in as_list(rules["contains"]):
+                assert str(needle).lower() in haystack, \
+                    (f"output '{label}' does not contain {str(needle)!r}: "
+                     f"{value[:120]!r}")
 
 
-def inspect_outputs(result, controls: dict, case: dict) -> None:
+def inspect_outputs(result, controls: dict, case: dict, args: list = None) -> None:
     """
     Apply a test case's deeper output checks (see README.md).
 
@@ -476,6 +599,9 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
         result: The raw value returned by gradio_client for /process.
         controls (dict): The /controls payload.
         case (dict): Test case entry from config.yml.
+        args (list): The positional arguments sent to /process. Supplying
+            them lets validators compare output against input; without them,
+            a validator that asks for `inputs` receives an empty mapping.
 
     Raises:
         AssertionError: If an expectation or validator check fails.
@@ -486,6 +612,7 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
     specs = controls.get("outputs", [])
     out_map = outputs_by_label(result, specs)
     out_types = {spec.get("label"): spec.get("type") for spec in specs}
+    in_map = inputs_by_label(args or [], controls.get("inputs", []))
 
     for label, rules in resolve_expect_targets(case.get("expect"), out_types):
         check_expectations(label, out_types[label], out_map[label], rules)
@@ -495,8 +622,14 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
             raise ValueError(f"unknown validator '{name}' (available: "
                              f"{sorted(VALIDATORS)}); register it in "
                              f"validators.py")
+        fn = VALIDATORS[name]
+        # A validator opts into seeing the inputs by declaring an `inputs`
+        # parameter, so validators that only inspect outputs keep the shorter
+        # three-argument signature.
+        extra = ({"inputs": in_map}
+                 if "inputs" in inspect.signature(fn).parameters else {})
         try:
-            VALIDATORS[name](out_map, controls, params or {})
+            fn(out_map, controls, params or {}, **extra)
         except ValidatorNotApplicable:
             # The model lacks the outputs this validator needs; skip it so a
             # common case's validator does not fail on models it does not fit

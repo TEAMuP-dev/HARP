@@ -66,7 +66,8 @@ def read_audio_props(label: str, path: str) -> dict:
 
     Returns:
         props (dict): channels, sample_rate, duration (seconds), rms_db (RMS
-            level in dBFS; -inf for digital silence), subtype (libsndfile
+            level in dBFS; -inf for digital silence), peak_db (highest sample
+            magnitude in dBFS, for spotting clipping), subtype (libsndfile
             encoding name), and bit_depth (int, or None for compressed
             encodings).
 
@@ -93,12 +94,17 @@ def read_audio_props(label: str, path: str) -> dict:
     assert frames, f"output '{label}' contains no audio frames"
 
     rms = math.sqrt(float((data * data).sum()) / data.size)
+    # Peak is measured on the decoded floats, so it is comparable across bit
+    # depths. Values at or above 0 dBFS indicate clipping (or, for float
+    # encodings that allow it, outright overshoot).
+    peak = float(abs(data).max())
 
     return {
         "channels": channels,
         "sample_rate": sample_rate,
         "duration": frames / sample_rate,
         "rms_db": 20 * math.log10(rms) if rms > 0 else float("-inf"),
+        "peak_db": 20 * math.log10(peak) if peak > 0 else float("-inf"),
         "subtype": subtype,
         "bit_depth": bit_depth_from_subtype(subtype),
     }
