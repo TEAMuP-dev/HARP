@@ -1351,10 +1351,30 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 
         if (! getLocalBounds().contains(getMouseXYRelative()))
         {
-            //performExternalDragDropOfFiles(
-            //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
-            performExternalDragDropOfFiles(
-                StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
+            Component* topLevel = getTopLevelComponent();
+            Rectangle<int> appBounds =
+                topLevel != nullptr ? topLevel->getScreenBounds() : Rectangle<int>();
+            Point<int> screenPos = localPointToGlobal(getMouseXYRelative());
+
+            // if the cursor goes outside the HARP window
+            if (auto* container = DragAndDropContainer::findParentDragContainerFor(this))
+            {
+                if (appBounds.contains(screenPos)) // use internal JUCE drag inside window
+                {
+                    if (!container->isDragAndDropActive())
+                    {
+                        container->startDragging(
+                            getOriginalFilePath().getLocalFile().getFullPathName(), this, ScaledImage{}, false);
+                    }
+                }
+                else // use OS file drag outside window
+                {
+                    container->performExternalDragDropOfFiles(
+                        StringArray(getOriginalFilePath().getLocalFile().getFullPathName()),
+                        false,
+                        this);
+                }
+            }
         }
 
         updateCursorPosition();
