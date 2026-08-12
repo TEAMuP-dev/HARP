@@ -4,6 +4,12 @@
 # validated automatically with a single synthesized "default" test case, so
 # an entry is only needed to change a model's settings or add test cases.
 #
+# Model names here can refer to either tier. A bare "pitch_shifter" means the
+# model in whichever tier is being run - the space on a spaces run, the local
+# example on an examples run - since only one tier runs at a time. Qualify a
+# name to pin it to one tier: "teamup-tech/pitch_shifter" (or "other-org/name")
+# is only ever a space, "examples/pitch_shifter" only ever a local example.
+#
 # Schema:
 #
 #   zerogpu_budget_seconds: 1500   # optional budget (seconds) the measured
@@ -27,16 +33,16 @@
 #       note_duration: 0.5  # seconds per note
 #       ext: .mid
 #
-#   exclude:        # models to exclude from validation: space ids, or
-#                   # "examples/<example-dir>" for local pyharp examples
-#     - teamup-tech/some-non-harp-space
+#   exclude:        # models to exclude from validation
+#     - some-non-harp-space
+#     - other-org/some-space
 #     - examples/some_example
 #
 #   include_extra:  # spaces outside the org that should also be validated
 #     - some-user/some-harp-space
 #
-#   overrides:      # per-model settings; keys are space ids, or
-#                   # "examples/<example-dir>" for local pyharp examples
+#   overrides:      # per-model settings; keys are model names (bare or
+#                   # owner-qualified), or "examples/<example-dir>"
 #     <model key>:
 #       connect_timeout: 600   # seconds to wait for build/wake (default 420)
 #       process_timeout: 900   # seconds to wait for /process (default 600)
@@ -93,7 +99,7 @@
 #
 #   common_test_cases:   # generic cases run on EVERY model, on top of its
 #                        # own; keep them model-agnostic - target outputs with
-#                        # "*" (rules that match nothing are simply skipped)
+#                        # "*" rather than a label
 #     - name: outputs-nontrivial
 #       expect:
 #         "*":
@@ -109,7 +115,8 @@
 #
 # Applying a rule to a NAMED output whose type it does not cover is reported
 # as a configuration error, not a model failure; under "*" such a rule is
-# simply skipped. Audio outputs are decoded with soundfile, so any libsndfile
+# skipped instead, which is what lets a common case target types a model
+# may not have. Audio outputs are decoded with soundfile, so any libsndfile
 # format works (WAV, FLAC, OGG, MP3, AIFF, ...); bit_depth applies only to
 # PCM formats, not compressed ones. MIDI outputs are parsed with mido.
 

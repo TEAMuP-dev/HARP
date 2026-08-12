@@ -158,20 +158,25 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
     labels = [spec.get("label") for spec in controls.get("inputs", [])]
     args = list(args)
 
-    for label, value in (case.get("controls") or {}).items():
-        if label not in labels:
-            raise ValueError(f"test case '{case.get('name')}' references unknown "
-                             f"control '{label}' (available: {labels})")
-        args[labels.index(label)] = value
-
-    for label, rel_path in (case.get("files") or {}).items():
+    def index_of(label: str) -> int:
+        """Locate an input by label, rejecting unknown or ambiguous names."""
         if label not in labels:
             raise ValueError(f"test case '{case.get('name')}' references unknown "
                              f"input '{label}' (available: {labels})")
+        if labels.count(label) > 1:
+            raise ValueError(f"test case '{case.get('name')}' references '{label}', "
+                             f"but the model has {labels.count(label)} inputs with "
+                             f"that label; overriding it is ambiguous")
+        return labels.index(label)
+
+    for label, value in (case.get("controls") or {}).items():
+        args[index_of(label)] = value
+
+    for label, rel_path in (case.get("files") or {}).items():
         path = (config_dir / rel_path).resolve()
         if not path.exists():
             raise ValueError(f"test case '{case.get('name')}': file not found: {path}")
-        args[labels.index(label)] = handle_file(str(path))
+        args[index_of(label)] = handle_file(str(path))
 
     return args
 
@@ -238,7 +243,10 @@ def validate_outputs(result, controls: dict) -> str | None:
 
         # gradio_client downloads file outputs and returns local paths
         path = out.get("path") if isinstance(out, dict) and "path" in out else out
-        if isinstance(path, str) and os.path.isfile(path) and os.path.getsize(path) == 0:
+        if not isinstance(path, (str, os.PathLike)):
+            return (f"output '{spec.get('label')}' is not a file path: "
+                    f"{str(out)[:100]}")
+        if os.path.isfile(path) and os.path.getsize(path) == 0:
             return f"output file for '{spec.get('label')}' is empty"
 
     return None
@@ -294,7 +302,7 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
 
     Keys are output labels, or "*" to apply rules to every output the rule
     is compatible with (e.g. `min_rms_db` under "*" reaches only the audio
-    outputs). A "*" rule that matches no output is simply dropped, so a
+    outputs). A "*" rule that matches no output is dropped, so a
     generic case can safely target output types a given model lacks. An
     explicit label, by contrast, must exist and must accept the rule -
     otherwise it is a configuration error, not a model failure.
@@ -412,7 +420,7 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
             f"output file '{label}' is {size} bytes, expected at least {rules['min_bytes']}"
 
     # --- Decoded audio/MIDI properties ---------------------------------------
-    # Decode once, and only when a rule actually needs the decoded properties
+    # Decode once, and only when a rule needs the decoded properties
     props = None
     if set(rules) & DECODED_RULES.get(otype, set()):
         reader = read_audio_props if otype == "audio_track" else read_midi_props

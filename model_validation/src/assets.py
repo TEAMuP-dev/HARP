@@ -12,6 +12,7 @@ properties is generated once and cached for the run.
 """
 
 import struct
+import threading
 from pathlib import Path
 
 import numpy
@@ -41,7 +42,7 @@ MIDI_DEFAULTS = {
 
 # Extensions understood as audio; a component accepting one of these gets a
 # synthesized clip in that format (written via soundfile, so only formats this
-# libsndfile build supports actually succeed).
+# libsndfile build supports can be produced).
 AUDIO_EXTS = {".wav", ".flac", ".ogg", ".oga", ".opus", ".aiff", ".aif",
               ".aifc", ".au", ".snd", ".w64", ".caf", ".mp3"}
 
@@ -77,6 +78,10 @@ class Assets:
     """
     Synthesized test input files, generated on demand and cached for the run.
 
+    One instance is shared by every worker thread, so generation is guarded:
+    without the lock, two models requesting the same input would write the
+    same file concurrently and a model could be handed a truncated one.
+
     Args:
         workdir (Path): Directory the generated files are written to.
         defaults (dict | None): Global `synthesized_inputs` block from
@@ -84,15 +89,59 @@ class Assets:
     """
 
     def __init__(self, workdir: Path, defaults: dict | None = None):
-        workdir.mkdir(parents=True, exist_ok=True)
         self.workdir = workdir
         self.defaults = defaults or {}
         self._cache = {}
+        self._lock = threading.Lock()
 
-        self.text = workdir / "test_input.txt"
-        self.text.write_text("HARP model validation\n")
-        self.json = workdir / "test_input.json"
-        self.json.write_text("{}\n")
+    @property
+    def text(self) -> Path:
+        """A plain-text input file."""
+
+        return self.cached(("text",), lambda: write_bytes(
+            self.workdir / "test_input.txt", b"HARP model validation\n"))
+
+    @property
+    def json(self) -> Path:
+        """A minimal JSON input file."""
+
+        return self.cached(("json",), lambda: write_bytes(
+            self.workdir / "test_input.json", b"{}\n"))
+
+    def cached(self, key: tuple, generate) -> Path | None:
+        """
+        Return the file for a cache key, generating it if it is not on disk.
+
+        A cached path is re-checked rather than trusted: these files live
+        under the run's report directory, so a cleanup elsewhere can remove
+        them mid-run. Regenerating is cheap, and handing back a path to a
+        deleted file would fail every remaining model with an error that
+        looks like the model's fault.
+
+        Args:
+            key (tuple): Identity of the file (media kind plus properties).
+            generate (callable): Zero-argument builder returning the path.
+
+        Returns:
+            path (Path | None): The generated file, or None if it could not
+                be written in the requested format.
+        """
+
+        with self._lock:
+            if key in self._cache:
+                path = self._cache[key]
+                # None records a format this build cannot write, so it is
+                # not retried; an existing file is reused as-is
+                if path is None or path.exists():
+                    return path
+
+            self.workdir.mkdir(parents=True, exist_ok=True)
+            try:
+                self._cache[key] = generate()
+            except Exception:  # noqa: BLE001 - format not writable here
+                self._cache[key] = None
+
+            return self._cache[key]
 
     def resolve(self, kind: str, overrides: dict | None = None) -> dict:
         """
@@ -135,16 +184,11 @@ class Assets:
         duration = float(props["duration"])
         ext = (ext or props["ext"]).lower()
 
-        key = ("audio", sample_rate, channels, duration, ext)
-        if key not in self._cache:
-            path = (self.workdir /
-                    f"test_input_{sample_rate}hz_{channels}ch_{duration:g}s{ext}")
-            try:
-                self._cache[key] = write_audio(path, duration, sample_rate, channels)
-            except Exception:  # noqa: BLE001 - format not writable here
-                self._cache[key] = None
+        path = (self.workdir /
+                f"test_input_{sample_rate}hz_{channels}ch_{duration:g}s{ext}")
 
-        return self._cache[key]
+        return self.cached(("audio", sample_rate, channels, duration, ext),
+                           lambda: write_audio(path, duration, sample_rate, channels))
 
     def midi(self, overrides: dict | None = None, ext: str | None = None) -> Path:
         """
@@ -163,12 +207,10 @@ class Assets:
         note_duration = float(props["note_duration"])
         ext = (ext or props["ext"]).lower()
 
-        key = ("midi", num_notes, note_duration, ext)
-        if key not in self._cache:
-            path = self.workdir / f"test_input_{num_notes}n_{note_duration:g}s{ext}"
-            self._cache[key] = write_midi(path, num_notes, note_duration)
+        path = self.workdir / f"test_input_{num_notes}n_{note_duration:g}s{ext}"
 
-        return self._cache[key]
+        return self.cached(("midi", num_notes, note_duration, ext),
+                           lambda: write_midi(path, num_notes, note_duration))
 
     def for_file_types(self, file_types: list,
                        overrides: dict | None = None) -> Path | None:
@@ -220,6 +262,23 @@ class Assets:
             return self.text
 
         return None
+
+
+def write_bytes(path: Path, data: bytes) -> Path:
+    """
+    Write fixed bytes to a path.
+
+    Args:
+        path (Path): Destination path.
+        data (bytes): Contents to write.
+
+    Returns:
+        path (Path): The written file, for chaining.
+    """
+
+    path.write_bytes(data)
+
+    return path
 
 
 def write_audio(path: Path, duration: float, sample_rate: int,

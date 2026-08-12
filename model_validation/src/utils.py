@@ -17,9 +17,35 @@ __all__ = [
     'describe_exception',
     'run_with_timeout',
     'load_config',
+    'qualify',
+    'qualify_keys',
     'get_excluded',
     'discover_spaces'
 ]
+
+
+def qualify(model: str, owner: str) -> str:
+    """
+    Expand a bare model name using the owner of the tier being validated.
+
+    Used for the names that can refer to either tier - `--exclude` and the
+    config's `exclude`, `include_extra`, and `overrides` keys. Only one tier
+    runs per invocation, so a bare name is unambiguous there: it means the
+    organization's space on a spaces run and the like-named example on an
+    examples run. A name that already carries an owner is returned unchanged,
+    pinning it to one tier. (`--spaces` names only spaces and
+    `--local-examples` only examples, so neither takes the other's form.)
+
+    Args:
+        model (str): A space id, bare model name, or example key.
+        owner (str): Owner to assume for bare names - the organization on a
+            spaces run, "examples" on an examples run.
+
+    Returns:
+        model (str): The qualified name.
+    """
+
+    return model if "/" in model else f"{owner}/{model}"
 
 
 def describe_exception(exc: BaseException) -> str:
@@ -28,9 +54,9 @@ def describe_exception(exc: BaseException) -> str:
 
     Beyond the usual "Type: message", this surfaces a gradio AppError's
     `title` when the upstream app set an informative one, and follows the
-    exception chain so the underlying cause is not lost. Note that a Space
-    launched with `show_error=False` deliberately returns only the exception
-    class name, so for those there is genuinely nothing further to report.
+    exception chain so the underlying cause is not lost. A Space launched
+    with `show_error=False` deliberately returns only the exception class
+    name, so for those there is nothing further to report.
 
     Args:
         exc (BaseException): The exception to describe.
@@ -155,19 +181,50 @@ def load_config(path: Path) -> dict:
     return yaml.safe_load(path.read_text()) or {}
 
 
-def get_excluded(config: dict, cli_exclude: list | None) -> set:
+def qualify_keys(overrides: dict, owner: str) -> dict:
+    """
+    Re-key the config's `overrides` block by qualified model name.
+
+    Args:
+        overrides (dict): The config's `overrides` block.
+        owner (str): Owner to assume for bare names (see qualify).
+
+    Returns:
+        overrides (dict): The block, re-keyed by qualified name.
+
+    Raises:
+        ValueError: If two keys resolve to the same model, which would
+            otherwise silently discard one model's settings.
+    """
+
+    qualified = {}
+
+    for model, entry in (overrides or {}).items():
+        key = qualify(model, owner)
+        if key in qualified:
+            raise ValueError(f"config `overrides` names '{key}' twice (via "
+                             f"'{model}'); remove one of the entries")
+        qualified[key] = entry
+
+    return qualified
+
+
+def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> set:
     """
     Combine the models excluded from validation.
 
     Args:
         config (dict): Parsed configuration (its `exclude` list is used).
         cli_exclude (list | None): Models passed via --exclude, if any.
+        owner (str): Owner to assume for bare names (see qualify).
 
     Returns:
-        excluded (set): Model keys (space ids or "examples/<example-dir>").
+        excluded (set): Qualified model names to leave out.
     """
 
-    return set(config.get("exclude", [])) | set(cli_exclude or [])
+    named = set(config.get("exclude", [])) | set(cli_exclude or [])
+
+    return {qualify(model, owner) for model in named}
 
 
 def discover_spaces(api, org: str, config: dict, excluded: set) -> list:
@@ -186,6 +243,7 @@ def discover_spaces(api, org: str, config: dict, excluded: set) -> list:
     """
 
     spaces = [s.id for s in api.list_spaces(author=org)]
-    spaces += [s for s in config.get("include_extra", []) if s not in spaces]
+    spaces += [qualify(s, org) for s in config.get("include_extra", [])
+               if qualify(s, org) not in spaces]
 
     return sorted(s for s in spaces if s not in excluded)

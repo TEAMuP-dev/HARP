@@ -2,38 +2,30 @@
 """
 HARP model validation - command-line entry point.
 
-Validates HARP deployments in two tiers, using the same black-box harness
-(see harness.py):
+Parses the options, runs one of the two tiers, and writes the reports:
 
-1. Spaces (default): discovers all Spaces under an organization (default:
-   teamup-tech), verifies each is running (restarting crashed/stopped spaces
-   by default), exposes the HARP gradio endpoints (/controls and /process),
-   and processes test inputs end-to-end. ZeroGPU spaces require an
-   authenticated request for GPU quota, so a token must be provided via the
-   HF_TOKEN environment variable - never on the command line or in the
-   repository.
+1. Spaces (default): every Space under an organization, validated concurrently
+   by spaces.py. Requires a Hugging Face token, read only from the HF_TOKEN
+   environment variable so it never appears in argv or in the repository.
 
-2. Examples (--local-examples): launches each app under pyharp/examples/ on
-   a local port and runs the identical endpoint tests. The examples tier
-   exercises pyharp itself with no Hugging Face infrastructure in the loop,
-   so a failure indicates a pyharp/gradio-level breakage rather than a
-   deployment-specific one.
+2. Examples (--local-examples): the pyharp example apps, launched locally and
+   validated one at a time by examples.py. Needs no token, and exercises
+   pyharp itself with no Hugging Face infrastructure in the loop.
 
-Per-model test cases are declared in config.yml (see README.md for a full
-walkthrough). When a model has no configured cases, a single "default" case
-runs with inputs synthesized automatically from the /controls spec.
+Either way the checks are the same, and come from harness.py. Which models to
+validate and what to assert about their outputs is configured in config.yml;
+README.md is the guide to writing that.
 
 Usage:
     HF_TOKEN=... python model_validation/src/validate_models.py
-    HF_TOKEN=... python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter
-    HF_TOKEN=... python model_validation/src/validate_models.py --load-only --workers 8
-    HF_TOKEN=... python model_validation/src/validate_models.py --no-restart-failed
-    python model_validation/src/validate_models.py --local-examples
+    HF_TOKEN=... python model_validation/src/validate_models.py --spaces pitch_shifter
+    HF_TOKEN=... python model_validation/src/validate_models.py --skip-zerogpu
+    python model_validation/src/validate_models.py --local-examples pitch_shifter
 
 Exit codes:
-    0 - all validated models passed (or were explicitly skipped)
+    0 - every validated model passed (skipped models do not count against it)
     1 - at least one model failed
-    2 - infrastructure/configuration error (bad token, no spaces found, ...)
+    2 - the run could not proceed (missing token, no models found, bad config)
 """
 
 import argparse
@@ -45,10 +37,12 @@ import time
 from pathlib import Path
 
 from assets import Assets
-from harness import test_space, test_local_example
+from examples import test_local_example
+from spaces import test_space
 from quota import ZeroGPUTracker, is_zerogpu
-from results import PASS, FAIL, SKIP, status_emoji, write_reports
-from utils import get_token, scrub, load_config, get_excluded, discover_spaces
+from results import FAIL, status_emoji, write_reports
+from utils import (get_token, scrub, load_config, qualify, qualify_keys,
+                   get_excluded, discover_spaces)
 
 
 DEFAULT_ORG = "teamup-tech"
@@ -73,15 +67,20 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate HARP model deployments.")
     parser.add_argument("--org", default=DEFAULT_ORG, help="HF organization to scan")
     parser.add_argument("--spaces", nargs="*", default=None,
-                        help="Explicit space ids to validate (skips discovery)")
+                        help="Explicit spaces to validate, skipping discovery. A "
+                             "bare name is taken to be in --org; give 'owner/name' "
+                             "to reach another organization")
     parser.add_argument("--exclude", nargs="*", default=None, metavar="MODEL",
-                        help="Models to exclude from validation (space ids, or "
-                             "examples/<example-dir>); merged with the config "
-                             "`exclude` list")
+                        help="Models to exclude, in either tier. A bare name means "
+                             "the model in the tier being run; qualify it "
+                             "('owner/name' or 'examples/<dir>') to pin it to one. "
+                             "Merged with the config `exclude` list")
     parser.add_argument("--local-examples", nargs="*", default=None, metavar="DIR",
                         help="Validate local pyharp example apps instead of remote "
-                             "spaces (the examples tier). With no DIRs given, tests "
-                             "every app under pyharp/examples/.")
+                             "spaces. Name them by directory ('pitch_shifter' or "
+                             "'examples/pitch_shifter'), or give a path to an example "
+                             "kept elsewhere; with none given, every app under "
+                             "pyharp/examples/ is validated")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG,
                         help="Optional YAML config (excludes, per-model overrides/cases)")
     parser.add_argument("--load-only", action="store_true",
@@ -136,6 +135,27 @@ def result_line(result, extra: str = "", token: str = "") -> str:
             f"({result.duration}s){extra}{scrub(note, token)}")
 
 
+def resolve_example_dir(name: str) -> Path:
+    """
+    Resolve one --local-examples argument to an example directory.
+
+    An existing path is used as given, so an example outside the pyharp tree
+    can still be validated. Otherwise the name is read the way model names are
+    read elsewhere: "pitch_shifter" and "examples/pitch_shifter" both mean that
+    example under pyharp/examples/.
+
+    Args:
+        name (str): A directory path, bare example name, or "examples/<name>".
+
+    Returns:
+        app_dir (Path): The directory expected to contain app.py.
+    """
+
+    path = Path(name)
+
+    return path if path.exists() else DEFAULT_EXAMPLES_DIR / path.name
+
+
 def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
                       assets: Assets) -> list:
     """
@@ -157,7 +177,7 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
     overrides = config.get("overrides", {})
 
     if opts.local_examples:
-        app_dirs = [Path(d) for d in opts.local_examples]
+        app_dirs = [resolve_example_dir(name) for name in opts.local_examples]
     else:
         app_dirs = sorted(d for d in DEFAULT_EXAMPLES_DIR.iterdir()
                           if (d / "app.py").exists())
@@ -201,7 +221,8 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
     api = HfApi(token=token)
 
     if opts.spaces:
-        space_ids = [s for s in opts.spaces if s not in excluded]
+        space_ids = [s for s in (qualify(s, opts.org) for s in opts.spaces)
+                     if s not in excluded]
     else:
         space_ids = discover_spaces(api, opts.org, config, excluded)
 
@@ -225,13 +246,14 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
             r = future.result()
             results.append(r)
             # Show the hardware for every model; ZeroGPU work only accrues for
-            # ZeroGPU models. Count each /process call that reached the GPU and
-            # its total wall time - a queued or input-skipped case never ran
-            # and is excluded
+            # ZeroGPU models. Count every /process call that reached the GPU
+            # (including retries, which reserve again) and the wall time of the
+            # cases that made them - a queued or input-skipped case never ran
             info = r.hardware or "?"
             if is_zerogpu(r.hardware):
-                ran = [c for c in r.cases if c.executed]
-                tracker.add(len(ran), sum(c.duration for c in ran))
+                ran = [c for c in r.cases if c.gpu_calls]
+                tracker.add(sum(c.gpu_calls for c in ran),
+                            sum(c.duration for c in ran))
                 info = f"{info} | {tracker.summary()}"
             print(result_line(r, f" [{info}]", token))
 
@@ -247,8 +269,20 @@ def main() -> int:
     """
 
     opts = parse_args()
+    # Resolved so a case's `files:` paths stay relative to the config file
+    # itself, whatever directory the run was launched from
+    opts.config = opts.config.resolve()
     config = load_config(opts.config)
-    excluded = get_excluded(config, opts.exclude)
+
+    # Only one tier runs, so a bare model name resolves against that tier
+    examples_tier = opts.local_examples is not None
+    owner = "examples" if examples_tier else opts.org
+    try:
+        config["overrides"] = qualify_keys(config.get("overrides"), owner)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    excluded = get_excluded(config, opts.exclude, owner)
     # Generic cases applied to every model, on top of its own (see config.yml)
     opts.common_test_cases = config.get("common_test_cases", [])
 
@@ -260,7 +294,7 @@ def main() -> int:
     assets = Assets(opts.output_dir / "assets",
                     config.get("synthesized_inputs"))
 
-    if opts.local_examples is not None:
+    if examples_tier:
         token = ""
         label = "pyharp examples"
         results = validate_examples(opts, config, excluded, assets)
@@ -277,16 +311,14 @@ def main() -> int:
     command = " ".join(sys.argv)
     options = {k: str(v) if isinstance(v, Path) else v
                for k, v in vars(opts).items()}
-    write_reports(results, opts.output_dir, label, command, options)
+    report = write_reports(results, opts.output_dir, label, command, options)
 
-    passed = [r for r in results if r.status == PASS]
-    failed = [r for r in results if r.status == FAIL]
-    skipped = [r for r in results if r.status == SKIP]
-    validated = len(results) - len(skipped)   # exclude skipped from the total
-    summary = f"\n{len(passed)}/{validated} models passed"
-    if skipped:
-        summary += f", {len(skipped)} skipped"
+    summary = f"\n{report['passed']}/{report['validated']} models passed"
+    if report["skipped"]:
+        summary += f", {report['skipped']} skipped"
     print(f"{summary}. Reports written to {opts.output_dir}/")
+
+    failed = [r for r in results if r.status == FAIL]
     if failed:
         print("\nFailed models:")
         for r in sorted(failed, key=lambda r: r.target):

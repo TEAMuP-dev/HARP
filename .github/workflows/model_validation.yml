@@ -30,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       spaces:
-        description: 'Space ids to validate (space-separated); empty = all'
+        description: 'Spaces to validate, space-separated (bare names allowed); empty = all'
         required: false
         default: ''
       load_only:

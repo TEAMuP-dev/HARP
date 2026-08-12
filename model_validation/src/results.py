@@ -30,7 +30,8 @@ class CaseResult:
     name: str
     ok: bool | None = None    # None => skipped
     duration: float = 0.0     # total /process wall time (queue + execution)
-    executed: bool = False    # the /process job left the queue and ran on GPU
+    gpu_calls: int = 0        # /process jobs that left the queue, so reserved GPU
+                              # (a retried call reserves again, and counts again)
     error: str = ""
 
 
@@ -79,7 +80,7 @@ def case_emoji(ok: bool | None) -> str:
 
 
 def write_reports(results: list, out_dir: Path, label: str,
-                  command: str = "", options: dict | None = None) -> None:
+                  command: str = "", options: dict | None = None) -> dict:
     """
     Write the machine-readable and human-readable reports.
 
@@ -90,6 +91,10 @@ def write_reports(results: list, out_dir: Path, label: str,
         command (str): The command line the run was invoked with.
         options (dict | None): The resolved run options, recorded in the
             report so a run's parameters are reproducible from it.
+
+    Returns:
+        payload (dict): The report.json contents, whose counts the caller
+            reuses so the console summary cannot disagree with the report.
     """
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -114,6 +119,8 @@ def write_reports(results: list, out_dir: Path, label: str,
     (out_dir / "report.json").write_text(json.dumps(payload, indent=2))
 
     (out_dir / "report.md").write_text(render_markdown(results, payload))
+
+    return payload
 
 
 def render_markdown(results: list, payload: dict) -> str:
@@ -146,10 +153,14 @@ def render_markdown(results: list, payload: dict) -> str:
         cases = ", ".join(f"{c.name} {case_emoji(c.ok)}" for c in r.cases) or "—"
         link = (f"[{r.target}](https://huggingface.co/spaces/{r.target})"
                 if r.kind == "space" else f"`{r.target}`")
-        # Keep the table scannable; the untruncated text follows below
-        detail = r.error.replace("|", "\\|") if r.error else ""
+        # Keep the table scannable and on one row; a newline or an unescaped
+        # pipe in an error would otherwise break the table. Truncate before
+        # escaping so a cut never lands inside an escape sequence. The
+        # untruncated text follows below.
+        detail = " ".join(r.error.split())
         if len(detail) > 200:
             detail = detail[:200] + " […]"
+        detail = detail.replace("|", "\\|")
         lines.append(f"| {link} | {status_emoji(r)} {r.status} | {r.stage} "
                      f"| {r.hardware or '—'} | {'✅' if r.controls_ok else '❌'} "
                      f"| {cases} | {r.duration} | {detail} |")

@@ -32,21 +32,27 @@ Key behaviors:
 
 ## Code layout
 
- File | Purpose |
-|---|---|
-| [src/validate_models.py](src/validate_models.py) | Command-line entry point and per-tier orchestration |
-| [src/harness.py](src/harness.py) | The test harness: drives /controls + /process against a live model |
-| [src/cases.py](src/cases.py) | Synthesis of inputs, test-case overlay, output validation/inspection |
-| [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
-| [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
-| [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
-| [src/assets.py](src/assets.py) | Synthesized WAV/MIDI/text/JSON test inputs |
-| [src/quota.py](src/quota.py) | ZeroGPU usage tracking and account quota lookup |
-| [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
-| [src/utils.py](src/utils.py) | Token handling, config loading, discovery, timeouts |
-| [config.yml](config.yml) | Validation configuration (_e.g._, excludes, per-model test cases) |
-| [test_data/](test_data/) | Real input files referenced by test cases |
-| `reports/` | Generated reports, synthesized assets, and example logs |
+The modules under `src/` fall into five groups. Dependencies only ever run
+downward, so a module can be read knowing nothing about the groups above it:
+
+| Group | File | Purpose |
+|---|---|---|
+| **Entry point** | [src/validate_models.py](src/validate_models.py) | Command line, per-tier orchestration, console output |
+| **Tier drivers** | [src/spaces.py](src/spaces.py) | Gets a Space ready: runtime stage, restart, wake, ZeroGPU safeguards |
+| | [src/examples.py](src/examples.py) | Launches a local pyharp app and captures its log |
+| **Harness** | [src/harness.py](src/harness.py) | Drives /controls + /process against whatever the drivers hand it |
+| **Checking** | [src/cases.py](src/cases.py) | Input synthesis, test-case overlay, output validation and inspection |
+| | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
+| **Support** | [src/assets.py](src/assets.py) | Synthesizes the WAV/MIDI/text/JSON test inputs |
+| | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
+| | [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
+| | [src/quota.py](src/quota.py) | ZeroGPU hardware detection and usage tracking |
+| | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
+| | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
+
+Alongside the code: [config.yml](config.yml) holds the validation
+configuration, [test_data/](test_data/) the real input files test cases refer
+to, and `reports/` the generated reports, synthesized assets, and example logs.
 
 ## Token setup (IMPORTANT — read this)
 
@@ -75,11 +81,12 @@ pip install -r model_validation/requirements.txt
 export HF_TOKEN=hf_...   # see token setup above
 python model_validation/src/validate_models.py
 
-# A single space, with verbose errors (useful while developing a test case)
-python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
+# Specific spaces, with verbose errors (useful while developing a test case)
+python model_validation/src/validate_models.py --spaces pitch_shifter --verbose
+python model_validation/src/validate_models.py --spaces pitch_shifter harp-vampnet other-org/model
 
 # Exclude specific models (also configurable via `exclude` in config.yml)
-python model_validation/src/validate_models.py --exclude teamup-tech/broken-space
+python model_validation/src/validate_models.py --exclude broken-space
 
 # Availability + /controls only (fast; no inference, no GPU quota used)
 python model_validation/src/validate_models.py --load-only
@@ -94,7 +101,21 @@ python model_validation/src/validate_models.py --no-restart-failed
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 pip install -e ./pyharp
 python model_validation/src/validate_models.py --local-examples
+python model_validation/src/validate_models.py --local-examples pitch_shifter
 ```
+
+**Naming models.** `--spaces` names Hugging Face Spaces and `--local-examples`
+names local examples; neither accepts the other's models. Both expand a bare
+name for you — `pitch_shifter` means `teamup-tech/pitch_shifter` for `--spaces`
+and the `pyharp/examples/pitch_shifter` directory for `--local-examples`. Write
+`<owner>/<name>` on `--spaces` to reach another organization, or give
+`--local-examples` a path to an example kept outside `pyharp/examples/`.
+
+`--exclude` and the config's `exclude` and `overrides` keys can refer to either
+tier, so a bare name there means the model in whichever tier is being run —
+one entry covers a model in both. Qualify it to pin it to one:
+`teamup-tech/<name>` is only ever a space, `examples/<name>` only ever a local
+example.
 
 Each run writes to its own timestamped directory under
 `model_validation/reports/` (override the base with `--output-dir`), so runs
@@ -118,10 +139,11 @@ the ZeroGPU work done so far this run:
 Two figures are tracked, because the exact billed amount is not observable
 from the client:
 
-- **Call count** — the number of `/process` calls that reached the GPU. This
-  is exact and is the most reliable signal of how much of the allowance a run
-  will use. Only calls that ran count; a queued or input-skipped case does
-  not. CPU and dedicated-hardware models never contribute.
+- **Call count** — the number of `/process` calls that reached the GPU, each
+  of which reserves allowance. This is exact and is the most reliable signal
+  of how much a run will use. A call retried after an infrastructure fault
+  reserves again and counts again; a queued or input-skipped case never ran
+  and does not count. CPU and dedicated-hardware models never contribute.
 - **Wall time** — the total `/process` wall time (queue plus execution) of
   those calls, marked `(approx)`. Hugging Face bills ZeroGPU **dynamically**:
   each call reserves its declared `@spaces.GPU(duration=)` time up front and
@@ -148,15 +170,28 @@ Two mechanisms limit the ZeroGPU allowance a run can consume:
   execution only; the queue wait before a job runs is bounded separately by
   `--connect-timeout`, so a long queue does not trip the execution timeout. A
   per-model `process_timeout` override takes precedence.
-- **ZeroGPU models run one at a time** — `--zerogpu-workers` (default 1). Each
-  concurrent GPU call reserves its declared duration, so overlapping them ties
-  up allowance that is not being used. Non-ZeroGPU models still run at full
+- **ZeroGPU models run one at a time** — `--zerogpu-workers` (default 1),
+  since overlapping reservations tie up allowance none of them is using.
+  Non-ZeroGPU models still run at full
   `--workers` concurrency alongside, and the limit is held only around the
   endpoint tests, so slow restarts and connections still overlap.
 
-Transient "model is still loading" responses from a ZeroGPU space waking its
-GPU worker are retried automatically (up to `connect_timeout`), rather than
-counted as failures.
+Failures that are not the model's fault are retried rather than reported. A
+"model is still loading" response from a space starting its GPU worker is
+retried up to `--connect-timeout`, the time budgeted for the model to come up.
+A short list of infrastructure faults — a read timeout, a GPU host ECC error,
+a server disconnect — is retried a few times at a short interval, since these
+have no expected duration to wait out and the retry usually surfaces the
+model's real behaviour.
+
+That list (`TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), retried
+`TRANSIENT_RETRY_LIMIT` times) is deliberately narrow, holding only faults
+observed to clear on a retry. A retried `/process` call re-reserves ZeroGPU
+allowance, so a marker that also fires on a genuine failure multiplies the
+quota that failure costs and delays the real error. That rules out matching a
+dropped connection broadly, since a model that crashes its own Space drops the
+connection identically. Add an entry only once a fault is confirmed to succeed
+on a retry.
 
 ## Configuring test cases — a walkthrough
 
@@ -424,8 +459,9 @@ Two equivalent ways, merged together:
   (non-HARP spaces, archived deployments, known-broken examples).
 - `--exclude <model> ...` on the command line — for ad-hoc runs.
 
-Use the space id (`teamup-tech/<some-space>`) for remote models and
-`examples/<some-example>` for local examples.
+Models are named as described above, so `midi_synthesizer` excludes the space
+on a spaces run and the example on an examples run; `examples/midi_synthesizer`
+excludes only the example.
 
 ## CI behavior
 
