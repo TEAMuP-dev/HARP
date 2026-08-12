@@ -13,6 +13,7 @@ remote Hugging Face Space, examples.py for a local pyharp example.
 """
 
 import argparse
+import concurrent.futures
 import time
 from pathlib import Path
 
@@ -268,7 +269,17 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
             # is dequeued does the (shorter) execution timeout apply
             wait_out_queue(job, time.time() + connect_timeout, "/process")
             state["gpu_calls"] += 1
-            return job.result(timeout=process_timeout)
+            try:
+                return job.result(timeout=process_timeout)
+            except concurrent.futures.TimeoutError:
+                # Cancelling ends the client's event stream for a job we have
+                # stopped waiting on, so its worker thread does not linger for
+                # the rest of the run. The upstream function itself keeps
+                # running - gradio can only call off a job still in the queue.
+                job.cancel()
+                # Future.result() raises with no message; say what timed out
+                raise TimeoutError(f"/process did not return within "
+                                   f"{int(process_timeout)}s") from None
 
         output = call_with_retries(run_process, time.time() + connect_timeout)
 

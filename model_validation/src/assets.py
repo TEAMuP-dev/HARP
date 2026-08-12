@@ -48,7 +48,9 @@ AUDIO_EXTS = {".wav", ".flac", ".ogg", ".oga", ".opus", ".aiff", ".aif",
 
 MIDI_EXTS = {".mid", ".midi"}
 
-# MIDI ticks per quarter note, and the default tempo those ticks imply
+# MIDI time base: ticks per quarter note written into the file header, and the
+# seconds per quarter note they represent. No tempo event is written, so the
+# MIDI default of 120 BPM (0.5s per beat) applies when the file is read.
 MIDI_TICKS_PER_BEAT = 480
 MIDI_SECONDS_PER_BEAT = 0.5
 

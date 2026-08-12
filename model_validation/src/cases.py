@@ -35,8 +35,9 @@ AUDIO, MIDI, JSON = {"audio_track"}, {"midi_track"}, {"json"}
 # The declarative `expect` vocabulary: rule name -> output types it applies to.
 # Anything expressible as "read a property of one output and compare it"
 # belongs here rather than in a custom validator (validators.py). Applying a
-# rule to an output type it does not cover is a configuration error, not a
-# model failure. config.yml documents what each rule asserts.
+# rule to an output type it does not cover fails the case with a message
+# naming the configuration mistake, rather than reading as a fault in the
+# model. config.yml documents what each rule asserts.
 EXPECT_RULES = {
     "ext": FILE_TYPES,
     "min_bytes": FILE_TYPES,
@@ -105,10 +106,13 @@ def synthesize_default_args(controls: dict, assets: Assets,
                                   f"one via a test case's `files` entry")
             args.append(handle_file(str(path)) if path is not None else None)
         elif ctype in ("slider", "number_box"):
+            # A number box can declare neither a default nor a minimum (both
+            # arrive as None), so fall back to 0 rather than sending None and
+            # failing inside the model with what looks like a model fault
             value = spec.get("value")
             if value is None:
-                value = spec.get("minimum", 0)
-            args.append(value)
+                value = spec.get("minimum")
+            args.append(value if value is not None else 0)
         elif ctype == "text_box":
             # An empty string is a legitimate declared default, so only fall
             # back when no default was declared at all
@@ -241,12 +245,15 @@ def validate_outputs(result, controls: dict) -> str | None:
         if out is None:
             return f"output '{spec.get('label')}' is None"
 
-        # gradio_client downloads file outputs and returns local paths
+        # gradio_client downloads file outputs and returns local paths, so a
+        # path that is not a file on disk means the output never arrived
         path = out.get("path") if isinstance(out, dict) and "path" in out else out
         if not isinstance(path, (str, os.PathLike)):
             return (f"output '{spec.get('label')}' is not a file path: "
                     f"{str(out)[:100]}")
-        if os.path.isfile(path) and os.path.getsize(path) == 0:
+        if not os.path.isfile(path):
+            return f"output file for '{spec.get('label')}' does not exist: {path}"
+        if os.path.getsize(path) == 0:
             return f"output file for '{spec.get('label')}' is empty"
 
     return None

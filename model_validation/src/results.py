@@ -41,7 +41,8 @@ class ModelResult:
 
     target: str                       # space id or "examples/<example>"
     kind: str = "space"               # "space" | "local"
-    status: str = FAIL
+    status: str = FAIL                # default, so any early return with an
+                                      # error set is recorded as a failure
     stage: str = ""                   # HF runtime stage, or "LOCAL"
     hardware: str = ""                # HF hardware (e.g. "zero-a10g", "cpu-basic")
     controls_ok: bool = False

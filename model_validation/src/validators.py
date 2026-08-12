@@ -60,7 +60,7 @@ def validator(name):
     Register a validator function under a config-referenceable name.
 
     Args:
-        name (str): The name test cases use in their `validator` entry.
+        name (str): The name test cases use in their `validators` entry.
 
     Returns:
         register (callable): Decorator that records the function.

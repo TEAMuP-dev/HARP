@@ -119,7 +119,8 @@ example.
 
 Each run writes to its own timestamped directory under
 `model_validation/reports/` (override the base with `--output-dir`), so runs
-never overwrite each other — e.g. `model_validation/reports/2026-07-18T14-30-00Z/`.
+never overwrite each other — e.g. `model_validation/reports/2026-07-18T14-30-00/`
+(local time, which on a UTC CI runner is UTC).
 It contains `report.json` (machine-readable) and `report.md` (human-readable
 table), with synthesized test inputs and local example logs alongside. Both
 reports record the command line the run was invoked with. Exit code is `0`
@@ -160,7 +161,7 @@ Hugging Face exposes no reliable public API for the latter. To spend none of
 the allowance, pass `--skip-zerogpu`, which skips ZeroGPU models entirely
 (they appear as `SKIP` in the report).
 
-Two mechanisms limit the ZeroGPU allowance a run can consume:
+Three mechanisms limit the ZeroGPU allowance a run can consume:
 
 - **Quota exhaustion stops the remaining ZeroGPU models.** If a ZeroGPU model
   fails with a "quota exceeded" error, every remaining ZeroGPU model is
@@ -199,9 +200,12 @@ Every model automatically gets one **`default`** test case, even with no
 configuration at all: inputs are synthesized from the model's `/controls`
 spec — a sine-sweep clip for audio tracks, a short MIDI file for MIDI tracks,
 and each control's declared default value for sliders, toggles, dropdowns,
-number boxes, and text boxes. So configuration is only needed to go beyond
-that: pinning specific control values, feeding real audio, adjusting the
-properties of the synthesized inputs, or inspecting outputs more deeply.
+number boxes, and text boxes. A control declaring no default falls back to
+something valid for its type (its minimum, or the first dropdown choice), so
+every model is exercisable without configuration. Configuration is only needed
+to go beyond that: pinning specific control values, feeding real audio,
+adjusting the properties of the synthesized inputs, or inspecting outputs more
+deeply.
 
 ### Synthesized input properties
 
@@ -328,10 +332,13 @@ apply rules to every output a rule covers — with mixed outputs, `"*"` sends
             min_bytes: 1000      # every file output must be non-trivial
 ```
 
-**Mistakes on a named output are configuration errors, not model failures.**
-An unrecognized rule name, an unknown output label, or a rule aimed at a named
-output whose type it does not cover (_e.g._, `min_labels` on an audio output)
-raises an error naming the problem and listing what is valid. A rule under
+**Mistakes on a named output are surfaced as configuration mistakes, not as
+model faults.** An unrecognized rule name, an unknown output label, or a rule
+aimed at a named output whose type it does not cover (_e.g._, `min_labels` on
+an audio output) fails the case with a message naming the problem and listing
+what is valid, rather than passing silently or reading as a defect in the
+model. The run still exits `1`, since the case did not pass — it is the
+config that needs the fix. A rule under
 `"*"` is more forgiving: when it matches no compatible output, it is skipped
 instead of raising an error. This lets a generic case (see
 [common test cases](#step-4-reuse-a-case-across-models)) target output types

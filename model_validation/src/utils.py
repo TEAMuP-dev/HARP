@@ -48,6 +48,27 @@ def qualify(model: str, owner: str) -> str:
     return model if "/" in model else f"{owner}/{model}"
 
 
+def next_in_chain(exc: BaseException) -> BaseException | None:
+    """
+    The next exception to report from an exception's chain.
+
+    An explicit `raise ... from <cause>` wins, and `raise ... from None`
+    suppresses the implicit context, so a deliberately replaced error is not
+    reported alongside the one it replaced.
+
+    Args:
+        exc (BaseException): The exception being described.
+
+    Returns:
+        cause (BaseException | None): The next exception, or None to stop.
+    """
+
+    if exc.__cause__ is not None:
+        return exc.__cause__
+
+    return None if exc.__suppress_context__ else exc.__context__
+
+
 def describe_exception(exc: BaseException) -> str:
     """
     Render an exception with as much detail as it carries.
@@ -73,11 +94,11 @@ def describe_exception(exc: BaseException) -> str:
         parts.append(f"[{title}]")
 
     # Follow the chain so the root cause survives (bounded to stay one line)
-    seen, cause = {id(exc)}, exc.__cause__ or exc.__context__
+    seen, cause = {id(exc)}, next_in_chain(exc)
     while cause is not None and id(cause) not in seen and len(parts) < 4:
         seen.add(id(cause))
         parts.append(f"caused by {type(cause).__name__}: {cause}".strip())
-        cause = cause.__cause__ or cause.__context__
+        cause = next_in_chain(cause)
 
     return " | ".join(parts)
 

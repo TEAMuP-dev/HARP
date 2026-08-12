@@ -55,6 +55,9 @@ DEFAULT_OUTPUT_DIR = MODEL_VALIDATION_DIR / "reports"
 
 LOCAL_PORT_BASE = 7861
 
+# Cap on the error text shown on a model's console line (see result_line)
+CONSOLE_ERROR_CHARS = 200
+
 
 def parse_args() -> argparse.Namespace:
     """
@@ -120,6 +123,10 @@ def result_line(result, extra: str = "", token: str = "") -> str:
     """
     Format one model's console line.
 
+    The error is collapsed onto one line and truncated so a run of many models
+    stays scannable; the full text follows in the end-of-run summary and in
+    the reports.
+
     Args:
         result (ModelResult): The completed validation record.
         extra (str): Text inserted before the error note (e.g. hardware).
@@ -129,7 +136,10 @@ def result_line(result, extra: str = "", token: str = "") -> str:
         line (str): The formatted line.
     """
 
-    note = f" - {result.error}" if result.error else ""
+    error = " ".join(result.error.split())
+    if len(error) > CONSOLE_ERROR_CHARS:
+        error = error[:CONSOLE_ERROR_CHARS] + " […]"
+    note = f" - {error}" if error else ""
 
     return (f"{status_emoji(result)} {result.status:4s} {result.target} "
             f"({result.duration}s){extra}{scrub(note, token)}")
@@ -178,9 +188,20 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
 
     if opts.local_examples:
         app_dirs = [resolve_example_dir(name) for name in opts.local_examples]
-    else:
+        # A named example that does not exist is a mistake in the invocation,
+        # not a broken model, so report it as such rather than failing it
+        unresolved = [d for d in app_dirs if not (d / "app.py").exists()]
+        if unresolved:
+            print("ERROR: no app.py in " +
+                  ", ".join(str(d) for d in unresolved), file=sys.stderr)
+            return None
+    elif DEFAULT_EXAMPLES_DIR.is_dir():
         app_dirs = sorted(d for d in DEFAULT_EXAMPLES_DIR.iterdir()
                           if (d / "app.py").exists())
+    else:
+        print(f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist; check out the "
+              f"pyharp submodule (git submodule update --init)", file=sys.stderr)
+        return None
     app_dirs = [d for d in app_dirs if f"examples/{d.name}" not in excluded]
 
     if not app_dirs:
