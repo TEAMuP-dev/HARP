@@ -1,17 +1,18 @@
 """
 Synthesized test inputs for HARP model validation.
 
-Every input file is generated from scratch - audio with soundfile, MIDI with
-the standard library - so validation needs no binary fixtures checked into the
-repository. Real-world inputs for specific models belong in test_data/ and are
-referenced from a test case's `files` entry in config.yml.
+Every input file is generated from scratch, audio with soundfile and MIDI
+with the standard library, so validation needs no binary fixtures checked into
+the repository. Real-world inputs for specific models belong in test_data/ and
+are referenced from a test case's `files` entry in config.yml.
 
 Input properties (sample rate, channels, length, format, ...) are configurable
-via `synthesized_inputs` - see config.yml for the schema. Each distinct set of
-properties is generated once and cached for the run.
+via `synthesized_inputs`, whose schema is documented in config.yml. Each
+distinct set of properties is generated once and cached for the run.
 """
 
 import struct
+import tempfile
 import threading
 from pathlib import Path
 
@@ -23,7 +24,8 @@ __all__ = [
     'Assets',
     'AUDIO_DEFAULTS',
     'MIDI_DEFAULTS',
-    'merge_specs'
+    'merge_specs',
+    'check_configured_audio'
 ]
 
 
@@ -40,7 +42,7 @@ MIDI_DEFAULTS = {
     "ext": ".mid",
 }
 
-# Extensions understood as audio; a component accepting one of these gets a
+# Extensions understood as audio. A component accepting one of these gets a
 # synthesized clip in that format (written via soundfile, so only formats this
 # libsndfile build supports can be produced).
 AUDIO_EXTS = {".wav", ".flac", ".ogg", ".oga", ".opus", ".aiff", ".aif",
@@ -74,6 +76,93 @@ def merge_specs(*specs) -> dict:
             merged.setdefault(kind, {}).update(props or {})
 
     return merged
+
+
+def can_write_audio(ext: str) -> bool:
+    """
+    Whether this libsndfile build can write audio with the given extension.
+
+    Args:
+        ext (str): File extension to test, leading dot included.
+
+    Returns:
+        writable (bool): True when a file with that extension can be written.
+    """
+
+    with tempfile.TemporaryDirectory() as probe_dir:
+        try:
+            soundfile.write(str(Path(probe_dir) / f"probe{ext}"),
+                            numpy.zeros((1, 1)), 44100)
+        except Exception:  # noqa: BLE001 - the format is not writable here
+            return False
+
+    return True
+
+
+def configured_audio_exts(config: dict) -> dict:
+    """
+    Collect every audio `ext` set by a `synthesized_inputs` block.
+
+    Such a block can appear at the top level, on a common test case, on a
+    model's `overrides` entry, or on one of that model's test cases. All four
+    are collected, so a mistake is found wherever it was written.
+
+    Args:
+        config (dict): Parsed configuration.
+
+    Returns:
+        exts (dict): Extension mapped to where it was set, for reporting.
+    """
+
+    found = {}
+
+    def record(block: dict | None, where: str) -> None:
+        """Note the audio extension a single block sets, if any."""
+        ext = ((block or {}).get("audio") or {}).get("ext")
+        if ext:
+            found.setdefault(str(ext), where)
+
+    record(config.get("synthesized_inputs"), "synthesized_inputs")
+
+    for case in config.get("common_test_cases") or []:
+        record(case.get("synthesized_inputs"),
+               f"common test case '{case.get('name', 'unnamed')}'")
+
+    for model, entry in (config.get("overrides") or {}).items():
+        record((entry or {}).get("synthesized_inputs"), f"'{model}'")
+        for case in (entry or {}).get("test_cases") or []:
+            record(case.get("synthesized_inputs"),
+                   f"'{model}' test case '{case.get('name', 'unnamed')}'")
+
+    return found
+
+
+def check_configured_audio(config: dict) -> None:
+    """
+    Reject configured audio extensions this installation cannot write.
+
+    Checking up front turns a mistake such as `ext: .wave` into one error
+    naming the setting. Left to synthesis time it would instead surface as a
+    set of models whose inputs could not be produced, reported per model as a
+    skipped test case.
+
+    Args:
+        config (dict): Parsed configuration.
+
+    Raises:
+        ValueError: If a configured extension cannot be written.
+    """
+
+    unwritable = {ext: where
+                  for ext, where in configured_audio_exts(config).items()
+                  if not can_write_audio(ext)}
+
+    if unwritable:
+        settings = ", ".join(f"'{ext}' (set in {where})"
+                             for ext, where in sorted(unwritable.items()))
+        raise ValueError(f"cannot write synthesized audio as {settings}. "
+                         f"This installation writes: "
+                         f"{', '.join(sorted(soundfile.available_formats()))}")
 
 
 class Assets:
@@ -133,7 +222,7 @@ class Assets:
             if key in self._cache:
                 path = self._cache[key]
                 # None records a format this build cannot write, so it is
-                # not retried; an existing file is reused as-is
+                # not retried. An existing file is reused as it stands.
                 if path is None or path.exists():
                     return path
 
@@ -220,14 +309,14 @@ class Assets:
         Pick a synthesized file whose format matches the accepted types.
 
         Audio components get a clip in an accepted format, preferring the
-        configured `ext` when the component allows it; MIDI, JSON, and text
+        configured `ext` when the component allows it. MIDI, JSON, and text
         inputs are served from their synthesized files. A component whose
         accepted types are all unsupported (e.g. a bespoke binary format) gets
-        None - supply a real file via a test case's `files` entry.
+        None, and needs a real file supplied by a test case's `files` entry.
 
         Args:
-            file_types (list): Accepted extensions from the /controls spec;
-                empty or None means any file is accepted.
+            file_types (list): Accepted extensions from the /controls spec.
+                Empty or None means any file is accepted.
             overrides (dict | None): A merged `synthesized_inputs` block.
 
         Returns:
@@ -286,10 +375,10 @@ def write_bytes(path: Path, data: bytes) -> Path:
 def write_audio(path: Path, duration: float, sample_rate: int,
                 channels: int) -> Path:
     """
-    Write a sine sweep - a valid input for any audio model.
+    Write a sine sweep, which is a valid input for any audio model.
 
     Args:
-        path (Path): Destination path; its extension selects the format.
+        path (Path): Destination path, whose extension selects the format.
         duration (float): Length of the sweep in seconds.
         sample_rate (int): Sample rate in Hz.
         channels (int): Number of (identical) channels to write.

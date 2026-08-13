@@ -5,27 +5,24 @@
 # an entry is only needed to change a model's settings or add test cases.
 #
 # Model names here can refer to either tier. A bare "pitch_shifter" means the
-# model in whichever tier is being run - the space on a spaces run, the local
-# example on an examples run - since only one tier runs at a time. Qualify a
-# name to pin it to one tier: "teamup-tech/pitch_shifter" (or "other-org/name")
-# is only ever a space, "examples/pitch_shifter" only ever a local example.
+# model in whichever tier is being run, which is the space on a spaces run and
+# the local example on an examples run, since only one tier runs at a time.
+# Qualify a name to pin it to one tier. "teamup-tech/pitch_shifter" (or
+# "other-org/name") is only ever a space, and "examples/pitch_shifter" is only
+# ever a local example.
 #
 # Schema:
 #
-#   zerogpu_budget_seconds: 1500   # optional budget (seconds) the measured
-#                                  # ZeroGPU execution time is shown against
-#                                  # (e.g. 1500 = PRO 25 min/day). Note the
-#                                  # measured time is approximate, not the
-#                                  # amount Hugging Face bills (see README)
-#
 #   synthesized_inputs:   # properties of the generated test inputs. Set here
 #                         # as the global default, per model under `overrides`,
-#                         # or per test case; each level overrides the last.
+#                         # or per test case. Each level overrides the last.
 #     audio:
 #       sample_rate: 44100  # Hz
 #       channels: 1         # 1 = mono, 2 = stereo
 #       duration: 2.0       # seconds
-#       ext: .wav           # format to write (any libsndfile format); a
+#       ext: .wav           # format to write. Any format this libsndfile
+#                           # build can write is accepted, and one it cannot
+#                           # write is reported as a configuration error. A
 #                           # component that accepts only other extensions
 #                           # still gets one it accepts
 #     midi:
@@ -41,7 +38,7 @@
 #   include_extra:  # spaces outside the org that should also be validated
 #     - some-user/some-harp-space
 #
-#   overrides:      # per-model settings; keys are model names (bare or
+#   overrides:      # per-model settings. Keys are model names (bare or
 #                   # owner-qualified), or "examples/<example-dir>"
 #     <model key>:
 #       connect_timeout: 600   # seconds to wait for build/wake (default 420)
@@ -53,7 +50,7 @@
 #           sample_rate: 48000
 #           channels: 2
 #
-#       test_cases:            # named /process test cases; when omitted, a
+#       test_cases:            # named /process test cases. When omitted, a
 #                              # single synthesized "default" case runs
 #         - name: default      # empty case == synthesized defaults
 #
@@ -64,17 +61,18 @@
 #             "Some Slider Label": 12
 #             "Some Toggle Label": true
 #
-#           files:                 # override track/file inputs by label;
-#                                  # paths are relative to this file
+#           files:                 # override track/file inputs by label.
+#                                  # Paths are relative to this file
 #             "Input Audio": test_data/my_clip.wav
 #
 #           synthesized_inputs:    # input properties for this case only
 #             audio:
 #               duration: 10.0
 #
-#           expect:                # per-output checks, keyed by output label
-#             "Output Audio":      # ("*" applies rules to every compatible
-#                                  #  output; see the rule table below)
+#           expect:                # per-output checks, keyed by output label.
+#                                  # "*" applies rules to every compatible
+#                                  # output (see the rule table below)
+#             "Output Audio":
 #               ext: .wav          # extension: string or list of accepted
 #               min_bytes: 1000    # minimum file size, in bytes
 #               channels: 1        # audio: exact channel count
@@ -86,20 +84,20 @@
 #             "Output MIDI":
 #               min_notes: 1       # MIDI: minimum note-on count
 #             "Output Labels":
-#               min_labels: 1      # LabelList: minimum count (0 permits an
-#                                  # empty list, but requires a valid one)
+#               min_labels: 1      # LabelList: minimum count. 0 permits an
+#                                  # empty list, but still requires a valid one
 #
 #           validators:            # only for checks `expect` cannot express,
-#                                  # e.g. spanning several outputs; each
-#                                  # validator's parameters nest beneath it
+#                                  # such as ones spanning several outputs.
+#                                  # Each validator's parameters nest under it
 #             labels_within_audio:
 #               tolerance: 0.1
 #
 #       skip_common_cases: true    # opt this model out of common_test_cases
 #
 #   common_test_cases:   # generic cases run on EVERY model, on top of its
-#                        # own; keep them model-agnostic - target outputs with
-#                        # "*" rather than a label
+#                        # own. Keep them model-agnostic by targeting outputs
+#                        # with "*" rather than a label
 #     - name: outputs-nontrivial
 #       expect:
 #         "*":
@@ -113,12 +111,13 @@
 #   min_notes                                       MIDI outputs
 #   min_labels                                      JSON (LabelList) outputs
 #
-# Applying a rule to a NAMED output whose type it does not cover is reported
-# as a configuration error, not a model failure; under "*" such a rule is
-# skipped instead, which is what lets a common case target types a model
-# may not have. Audio outputs are decoded with soundfile, so any libsndfile
-# format works (WAV, FLAC, OGG, MP3, AIFF, ...); bit_depth applies only to
-# PCM formats, not compressed ones. MIDI outputs are parsed with mido.
+# Applying a rule to a NAMED output whose type it does not cover fails the
+# case with a message naming the configuration mistake, rather than reading as
+# a fault in the model. Under "*" such a rule is skipped instead, which is what
+# lets a common case target types a model may not have. Audio outputs are
+# decoded with soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3,
+# AIFF, ...). Note that bit_depth applies only to PCM formats, not compressed
+# ones. MIDI outputs are parsed with mido.
 
 exclude: []
 
@@ -130,7 +129,7 @@ overrides:
   # These run with `--local-examples` and exercise pyharp itself with no
   # Hugging Face infrastructure involved. A failure here indicates a
   # pyharp/gradio-level breakage rather than a deployment-specific one.
-  # Examples are discovered automatically; entries are only needed to add
+  # Examples are discovered automatically, so entries are only needed to add
   # test cases beyond the synthesized default.
 
   examples/pitch_shifter:

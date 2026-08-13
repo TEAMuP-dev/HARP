@@ -1,10 +1,10 @@
 """
 Custom output validators for HARP model validation.
 
-Most output checks do not belong here: anything expressible as "read a
+Most output checks do not belong here. Anything expressible as "read a
 property of one output and compare it" (extension, size, channel count,
 sample rate, duration, signal level, label count) is a declarative `expect`
-rule in config.yml - see EXPECT_RULES in cases.py.
+rule in config.yml, defined by EXPECT_RULES in cases.py.
 
 A validator covers the checks that cannot be written that way: relationships
 spanning several outputs, or logic needing real computation. Register one
@@ -20,15 +20,15 @@ parameters nested beneath the name:
                 tolerance: 0.1
 
 Each validator receives:
-    outputs (dict): output label -> value. File outputs (audio, MIDI, ...)
-        are local filesystem paths downloaded by gradio_client; JSON outputs
-        (e.g. pyharp LabelList) are the decoded objects (dict/list) or None.
+    outputs (dict): output label -> value. A file output (audio, MIDI, ...) is
+        a local filesystem path downloaded by gradio_client. A JSON output
+        (e.g. a pyharp LabelList) is the decoded object (dict/list) or None.
     controls (dict): the full /controls payload (card, inputs, outputs).
     params (dict): the parameters nested under this validator's name, keeping
         its settings separate from the test case's own fields.
 
-Validators signal failure by raising AssertionError with a message naming the
-output and what was wrong.
+Validators signal failure by raising AssertionError. The message should name
+the output at fault and say what was wrong with it.
 """
 
 from audio import read_audio_props

@@ -13,7 +13,7 @@ Parses the options, runs one of the two tiers, and writes the reports:
    pyharp itself with no Hugging Face infrastructure in the loop.
 
 Either way the checks are the same, and come from harness.py. Which models to
-validate and what to assert about their outputs is configured in config.yml;
+validate and what to assert about their outputs is configured in config.yml.
 README.md is the guide to writing that.
 
 Usage:
@@ -36,7 +36,7 @@ import threading
 import time
 from pathlib import Path
 
-from assets import Assets
+from assets import Assets, check_configured_audio
 from examples import test_local_example
 from spaces import test_space
 from quota import ZeroGPUTracker, is_zerogpu
@@ -71,18 +71,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--org", default=DEFAULT_ORG, help="HF organization to scan")
     parser.add_argument("--spaces", nargs="*", default=None,
                         help="Explicit spaces to validate, skipping discovery. A "
-                             "bare name is taken to be in --org; give 'owner/name' "
+                             "bare name is taken to be in --org. Give 'owner/name' "
                              "to reach another organization")
     parser.add_argument("--exclude", nargs="*", default=None, metavar="MODEL",
                         help="Models to exclude, in either tier. A bare name means "
-                             "the model in the tier being run; qualify it "
+                             "the model in the tier being run. Qualify it "
                              "('owner/name' or 'examples/<dir>') to pin it to one. "
                              "Merged with the config `exclude` list")
     parser.add_argument("--local-examples", nargs="*", default=None, metavar="DIR",
                         help="Validate local pyharp example apps instead of remote "
                              "spaces. Name them by directory ('pitch_shifter' or "
                              "'examples/pitch_shifter'), or give a path to an example "
-                             "kept elsewhere; with none given, every app under "
+                             "kept elsewhere. With none given, every app under "
                              "pyharp/examples/ is validated")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG,
                         help="Optional YAML config (excludes, per-model overrides/cases)")
@@ -93,9 +93,9 @@ def parse_args() -> argparse.Namespace:
                              "the shared ZeroGPU allowance")
     parser.add_argument("--restart-failed", action=argparse.BooleanOptionalAction,
                         default=True,
-                        help="Attempt to restart spaces found in an error/stopped state; "
-                             "enabled by default (requires a token with write access), "
-                             "disable with --no-restart-failed")
+                        help="Attempt to restart spaces found in an error or stopped "
+                             "state. Enabled by default, and requires a token with "
+                             "write access. Disable with --no-restart-failed")
     parser.add_argument("--workers", type=int, default=4,
                         help="Number of spaces to validate concurrently (spaces tier only)")
     parser.add_argument("--zerogpu-workers", type=int, default=1,
@@ -110,7 +110,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--zerogpu-process-timeout", type=float, default=120,
                         help="Seconds allowed for /process EXECUTION on ZeroGPU "
                              "models once they leave the queue (queue wait is "
-                             "bounded separately by --connect-timeout; default 120)")
+                             "bounded separately by --connect-timeout. Defaults to 120)")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
                         help=f"Directory for reports, synthesized assets, and "
                              f"example logs (default: {DEFAULT_OUTPUT_DIR})")
@@ -124,7 +124,7 @@ def result_line(result, extra: str = "", token: str = "") -> str:
     Format one model's console line.
 
     The error is collapsed onto one line and truncated so a run of many models
-    stays scannable; the full text follows in the end-of-run summary and in
+    stays scannable. The full text follows in the end-of-run summary and in
     the reports.
 
     Args:
@@ -199,7 +199,7 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
         app_dirs = sorted(d for d in DEFAULT_EXAMPLES_DIR.iterdir()
                           if (d / "app.py").exists())
     else:
-        print(f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist; check out the "
+        print(f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist. Check out the "
               f"pyharp submodule (git submodule update --init)", file=sys.stderr)
         return None
     app_dirs = [d for d in app_dirs if f"examples/{d.name}" not in excluded]
@@ -251,11 +251,11 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         print(f"ERROR: no spaces found for org '{opts.org}'", file=sys.stderr)
         return None
 
-    tracker = ZeroGPUTracker(config.get("zerogpu_budget_seconds"))
+    tracker = ZeroGPUTracker()
     quota_exhausted = threading.Event()
     zerogpu_limiter = threading.Semaphore(max(1, opts.zerogpu_workers))
     print(f"Validating {len(space_ids)} spaces with {opts.workers} workers "
-          f"({opts.zerogpu_workers} concurrent on ZeroGPU; "
+          f"({opts.zerogpu_workers} concurrent on ZeroGPU, "
           f"process test: {'OFF' if opts.load_only else 'ON'})\n")
 
     results = []
@@ -266,10 +266,10 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
-            # Show the hardware for every model; ZeroGPU work only accrues for
+            # Show the hardware for every model. ZeroGPU work only accrues for
             # ZeroGPU models. Count every /process call that reached the GPU
             # (including retries, which reserve again) and the wall time of the
-            # cases that made them - a queued or input-skipped case never ran
+            # cases that made them. A queued or input-skipped case never ran
             info = r.hardware or "?"
             if is_zerogpu(r.hardware):
                 ran = [c for c in r.cases if c.gpu_calls]
@@ -300,6 +300,9 @@ def main() -> int:
     owner = "examples" if examples_tier else opts.org
     try:
         config["overrides"] = qualify_keys(config.get("overrides"), owner)
+        # Rejected here rather than at synthesis time, so an unwritable format
+        # is reported once as the configuration error it is
+        check_configured_audio(config)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
@@ -308,7 +311,7 @@ def main() -> int:
     opts.common_test_cases = config.get("common_test_cases", [])
 
     # Each run writes to its own timestamped directory so runs never overwrite
-    # each other; assets, logs, and reports all live under it. Local time is
+    # each other. Assets, logs, and reports all live under it. Local time is
     # used for the directory name (on a UTC CI runner this is naturally UTC).
     run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
     opts.output_dir = opts.output_dir / run_stamp
@@ -327,8 +330,8 @@ def main() -> int:
     if results is None:
         return 2
 
-    # Record how the run was invoked (argv holds no secrets - the token comes
-    # from HF_TOKEN) plus the resolved options, so the report is reproducible
+    # Record how the run was invoked, plus the resolved options, so the report
+    # is reproducible. argv holds no secrets, as the token comes from HF_TOKEN.
     command = " ".join(sys.argv)
     options = {k: str(v) if isinstance(v, Path) else v
                for k, v in vars(opts).items()}
@@ -350,10 +353,10 @@ def main() -> int:
 
 if __name__ == "__main__":
     code = main()
-    # Hard-exit rather than sys.exit: gradio_client and timed-out calls can
-    # leave non-daemon threads behind, and a normal interpreter shutdown
-    # would join them - hanging the process after all results are printed.
-    # Reports are already flushed to disk at this point.
+    # Hard-exit rather than sys.exit, because gradio_client and timed-out calls
+    # can leave non-daemon threads behind. A normal interpreter shutdown would
+    # join them, hanging the process after all results are printed. Reports are
+    # already flushed to disk at this point.
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(code)

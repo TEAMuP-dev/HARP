@@ -4,8 +4,8 @@ app, independent of where that app is running.
 
 Both tiers funnel into run_endpoint_tests(), which verifies that:
 
-    1. the /controls and /process endpoints exist;
-    2. /controls returns a well-formed model card and component spec;
+    1. the /controls and /process endpoints exist.
+    2. /controls returns a well-formed model card and component spec.
     3. every configured /process test case produces valid outputs.
 
 The drivers that get a model to that point live alongside: spaces.py for a
@@ -47,25 +47,25 @@ JOB_POLL_INTERVAL = 1         # cadence for polling a /process job's status
 # queue (not yet executing on the GPU)
 QUEUE_STATUS_CODES = {"IN_QUEUE", "JOINING_QUEUE", "QUEUE_FULL"}
 
-# Substrings marking a "model is still loading" response - a ZeroGPU space
+# Substrings marking a "model is still loading" response. A ZeroGPU space
 # waking its GPU worker returns this immediately rather than blocking, so it
 # is retried (within connect_timeout) instead of treated as a failure.
 LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
                    "currently loading", "warming up")
 
-# Substrings marking an infrastructure fault rather than a fault in the model:
-# these come from the connection or the GPU host, and the same call typically
-# succeeds - and reveals the model's real behaviour - on a retry. Retried a
-# bounded number of times, since unlike a warm-up they have no expected
-# duration to wait out.
+# Substrings marking an infrastructure fault rather than a fault in the model.
+# These come from the connection or the GPU host. The same call typically
+# succeeds on a retry, revealing the model's real behaviour. Retried a bounded
+# number of times, since unlike a warm-up they have no expected duration to
+# wait out.
 #
 # The list is deliberately narrow, holding only faults observed to clear on a
 # retry. A retried /process call re-reserves ZeroGPU allowance, so a marker
 # that also fires on a genuine, reproducible failure spends quota three times
 # over and delays the real error by the retry interval. That rules out broad
 # matches on a dropped connection (a bare "connection reset", or the
-# RemoteProtocolError type name), because a model that crashes its own Space -
-# an OOM, say - drops the connection in exactly the same way. The specific
+# RemoteProtocolError type name), because a model that crashes its own Space
+# (an OOM, say) drops the connection in exactly the same way. The specific
 # disconnect message below stays, since it was the one seen in practice.
 # Extend this only with a fault confirmed to succeed on a retry.
 TRANSIENT_MARKERS = ("read operation timed out",           # httpx ReadTimeout
@@ -121,8 +121,8 @@ def call_with_retries(fn, deadline: float):
     Call fn(), retrying the failures that are not the model's fault.
 
     LOADING_MARKERS are retried until the deadline, the time budgeted for a
-    model to come up; TRANSIENT_MARKERS are retried a bounded number of
-    times. See those constants for what each covers and why.
+    model to come up. TRANSIENT_MARKERS are retried a bounded number of times
+    instead. See those constants for what each covers and why.
 
     Args:
         fn (callable): Zero-argument call to make.
@@ -177,9 +177,9 @@ def wait_out_queue(job, queue_deadline: float, api_name: str) -> None:
     """
     Block until a /process job leaves the ZeroGPU queue and begins executing.
 
-    A ZeroGPU job waits in a shared queue before running; that wait is not
-    part of the model's execution and is not charged against quota, so it is
-    bounded by queue_deadline (the connect timeout) rather than by the shorter
+    A ZeroGPU job waits in a shared queue before running. That wait is not part
+    of the model's execution and is not charged against quota, so it is bounded
+    by queue_deadline (the connect timeout) rather than by the shorter
     execution timeout the caller applies afterwards.
 
     Args:
@@ -206,7 +206,7 @@ def close_client(client) -> None:
     (or hangs in its heartbeat machinery) affect the result.
 
     Args:
-        client (Client | None): The client to close; None is a no-op.
+        client (Client | None): The client to close. None is a no-op.
     """
 
     if client is None:
@@ -265,7 +265,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
 
         def run_process():
             job = client.submit(*args, api_name="/process")
-            # The queue wait is bounded by connect_timeout; only once the job
+            # The queue wait is bounded by connect_timeout. Only once the job
             # is dequeued does the (shorter) execution timeout apply
             wait_out_queue(job, time.time() + connect_timeout, "/process")
             state["gpu_calls"] += 1
@@ -275,9 +275,9 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
                 # Cancelling ends the client's event stream for a job we have
                 # stopped waiting on, so its worker thread does not linger for
                 # the rest of the run. The upstream function itself keeps
-                # running - gradio can only call off a job still in the queue.
+                # running, as gradio can only call off a job still in the queue.
                 job.cancel()
-                # Future.result() raises with no message; say what timed out
+                # Future.result() raises with no message, so say what timed out
                 raise TimeoutError(f"/process did not return within "
                                    f"{int(process_timeout)}s") from None
 
@@ -319,8 +319,8 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
         result (ModelResult): The same record, completed.
     """
 
-    # ZeroGPU models default to a lower process timeout (their jobs are short
-    # once running); a per-model process_timeout override still wins
+    # ZeroGPU models default to a lower process timeout, since their jobs are
+    # short once running. A per-model process_timeout override still wins.
     default_process_timeout = (opts.zerogpu_process_timeout
                                if is_zerogpu(result.hardware)
                                else opts.process_timeout)
@@ -333,8 +333,8 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     endpoints = client.view_api(return_format="dict", print_info=False) or {}
     named = endpoints.get("named_endpoints", {})
     if "/controls" not in named or "/process" not in named:
-        result.error = (f"missing HARP endpoints (found: {sorted(named)}); "
-                        f"deployment may use an outdated pyharp")
+        result.error = (f"missing HARP endpoints (found: {sorted(named)}). "
+                        f"The deployment may use an outdated pyharp")
         return result
 
     # --- /controls (retry through a warming-up model) ------------------------
@@ -354,7 +354,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
     # --- /process test cases -------------------------------------------------
     # Common cases (generic, applied to every model) run alongside this
-    # model's own cases; their names are namespaced so both are legible in
+    # model's own cases. Their names are namespaced so both are legible in
     # the report. A model can opt out with `skip_common_cases`.
     own_cases = overrides.get("test_cases") or [{"name": "default"}]
     if overrides.get("skip_common_cases"):

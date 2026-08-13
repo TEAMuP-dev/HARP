@@ -95,11 +95,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: report-examples
-          # The per-example logs hold the app's own traceback, which is what a
-          # failure report points at, so upload them alongside the report
+          # Each example's app.log holds the app's own traceback, which is what
+          # a failure report points at, so upload those alongside the report
           path: |
             reports/examples/*/report.*
-            reports/examples/*/*.log
+            reports/examples/*/*/app.log
           if-no-files-found: ignore
 
   spaces:

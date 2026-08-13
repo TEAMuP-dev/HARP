@@ -19,7 +19,7 @@ def is_zerogpu(hardware: str) -> bool:
     """
     Whether a space's hardware consumes ZeroGPU quota.
 
-    ZeroGPU hardware ids start with "zero" (e.g. "zero-a10g"); anything
+    ZeroGPU hardware ids start with "zero", such as "zero-a10g". Anything
     else (cpu-basic, t4-small, ...) does not draw on the shared allowance.
 
     Args:
@@ -36,24 +36,26 @@ class ZeroGPUTracker:
     """
     Tracks ZeroGPU work done during a run.
 
-    ZeroGPU bills dynamically: each call reserves its declared
+    ZeroGPU bills dynamically. Each call reserves its declared
     `@spaces.GPU(duration=...)` time up front, then refunds the unused portion
-    once the function returns - so the account's usage rises during a run and
-    settles lower afterwards, and the exact billed amount is not readable from
-    the gradio client. Two figures are tracked instead:
+    once the function returns, so an account's usage rises during a run and
+    settles lower afterwards. What was actually billed cannot be read from the
+    gradio client, so two figures are tracked instead.
 
-      - the number of /process calls that reached the GPU - exact, and the
-        most reliable signal of how much of the allowance a run will use;
-      - the total /process wall time of those calls (queue plus execution) -
-        an over-estimate of the settled bill, in the range of the mid-run
-        reservation peak, not the amount that remains after refunds.
+    The number of /process calls that reached the GPU is exact. Since each one
+    reserves allowance, it is the most reliable signal of how much of the
+    allowance a run uses.
 
-    Only calls that reached the GPU count; queued or input-skipped cases do
-    not. CPU and dedicated-hardware models never contribute.
+    The total wall time of those calls, measured from submission to result, is
+    a rough ceiling on the GPU time rather than the bill. It includes the queue
+    wait, which is not GPU time, and it predates the refund described above.
+
+    Only calls that reached the GPU count. Cases that were skipped for want of
+    an input, or that never left the queue, do not, and CPU and
+    dedicated-hardware models never contribute.
     """
 
-    def __init__(self, budget: float | None):
-        self.budget = budget
+    def __init__(self):
         self.calls = 0
         self.wall_seconds = 0.0
         self._lock = threading.Lock()
@@ -83,7 +85,5 @@ class ZeroGPUTracker:
         with self._lock:
             calls, wall = self.calls, int(self.wall_seconds)
 
-        budget = f"/{int(self.budget)}s" if self.budget else ""
-
         return (f"ZeroGPU: {calls} call{'s' if calls != 1 else ''}, "
-                f"~{wall}s{budget} wall (approx)")
+                f"~{wall}s wall (approx)")

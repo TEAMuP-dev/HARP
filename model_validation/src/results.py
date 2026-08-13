@@ -126,7 +126,11 @@ def write_reports(results: list, out_dir: Path, label: str,
 
 def render_markdown(results: list, payload: dict) -> str:
     """
-    Render the human-readable report: a summary table plus full error text.
+    Render the human-readable report.
+
+    The table carries only the per-model facts that fit a uniform row. Error
+    text is reported once, in the section below it, where it can be shown in
+    full.
 
     Args:
         results (list): ModelResult objects for every validated model.
@@ -147,33 +151,26 @@ def render_markdown(results: list, payload: dict) -> str:
     lines += [f"{headline} ({payload['timestamp']})", ""]
     if payload["command"]:
         lines += [f"Command: `{payload['command']}`", ""]
-    lines += ["| Model | Status | Stage | Hardware | Controls | Cases | Time (s) | Detail |",
-              "|---|---|---|---|---|---|---|---|"]
+    lines += ["| Model | Status | Stage | Hardware | Controls | Cases | Time (s) |",
+              "|---|---|---|---|---|---|---|"]
 
     for r in ranked:
-        cases = ", ".join(f"{c.name} {case_emoji(c.ok)}" for c in r.cases) or "—"
+        cases = ", ".join(f"{c.name} {case_emoji(c.ok)}" for c in r.cases) or "-"
         link = (f"[{r.target}](https://huggingface.co/spaces/{r.target})"
                 if r.kind == "space" else f"`{r.target}`")
-        # Keep the table scannable and on one row; a newline or an unescaped
-        # pipe in an error would otherwise break the table. Truncate before
-        # escaping so a cut never lands inside an escape sequence. The
-        # untruncated text follows below.
-        detail = " ".join(r.error.split())
-        if len(detail) > 200:
-            detail = detail[:200] + " […]"
-        detail = detail.replace("|", "\\|")
         lines.append(f"| {link} | {status_emoji(r)} {r.status} | {r.stage} "
-                     f"| {r.hardware or '—'} | {'✅' if r.controls_ok else '❌'} "
-                     f"| {cases} | {r.duration} | {detail} |")
+                     f"| {r.hardware or '-'} | {'✅' if r.controls_ok else '❌'} "
+                     f"| {cases} | {r.duration} |")
 
-    # Full, untruncated text wherever something was reported - including a
-    # skipped case on an otherwise passing model
+    # Everything that reported text, including a skipped case on an otherwise
+    # passing model. A model-level error is the joined case errors whenever
+    # there are cases, so it is only printed when there are none.
     problems = [r for r in ranked
                 if r.error or r.status == FAIL or any(c.error for c in r.cases)]
     if problems:
         lines += ["", "## Details", ""]
         for r in problems:
-            lines += [f"### {r.target} — {r.status}", ""]
+            lines += [f"### {r.target} ({r.status})", ""]
             if r.error and not r.cases:
                 lines += ["```", r.error, "```", ""]
             for c in r.cases:

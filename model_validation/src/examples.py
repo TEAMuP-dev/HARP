@@ -95,8 +95,11 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
     """
     Validate one pyharp example app by launching it locally.
 
-    The app's stdout/stderr are captured to <output-dir>/<example>.log for
-    debugging failures.
+    The app runs in its own directory under the run's output directory, with
+    stdout and stderr captured to app.log there. Keeping the app out of the
+    example's source directory matters because pyharp writes model outputs to
+    an `_outputs` folder under the working directory, which would otherwise
+    accumulate inside the pyharp checkout.
 
     Args:
         app_dir (Path): Example directory containing app.py.
@@ -119,23 +122,28 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
     env["GRADIO_SERVER_PORT"] = str(port)
     env.pop("HF_TOKEN", None)  # local examples must not need credentials
 
-    log_path = opts.output_dir / f"{app_dir.name}.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    work_dir = opts.output_dir / app_dir.name
+    work_dir.mkdir(parents=True, exist_ok=True)
+    log_path = work_dir / "app.log"
     proc = None
     client = None
 
     try:
+        # Launched by absolute path so the app can run outside its own
+        # directory. Python still puts that directory on sys.path, so an
+        # example importing a module beside app.py keeps working.
         with open(log_path, "w") as log:
             proc = subprocess.Popen(
-                [sys.executable, "app.py"], cwd=app_dir, env=env,
-                stdout=log, stderr=subprocess.STDOUT)
+                [sys.executable, str((app_dir / "app.py").resolve())],
+                cwd=work_dir, env=env, stdout=log, stderr=subprocess.STDOUT)
         wait_for_local_server(port, proc, overrides.get(
             "connect_timeout", opts.connect_timeout))
         client = Client(f"http://127.0.0.1:{port}", verbose=False)
         run_endpoint_tests(client, result, assets, overrides, opts)
         return result
     except Exception as exc:  # noqa: BLE001 - any failure means invalid
-        result.error = f"{describe_exception(exc)} (see {log_path.name})"
+        result.error = (f"{describe_exception(exc)} "
+                        f"(see {work_dir.name}/{log_path.name})")
         if opts.verbose:
             traceback.print_exc()
         return result

@@ -77,7 +77,7 @@ def synthesize_default_args(controls: dict, assets: Assets,
     Returns:
         args (list): One argument per input component, in declaration order.
         missing (dict): Label -> reason for every input that could NOT be
-            synthesized. Such inputs get a None placeholder; a test case can
+            synthesized. Such inputs get a None placeholder. A test case can
             still run if its controls/files overrides cover them all.
     """
 
@@ -102,7 +102,7 @@ def synthesize_default_args(controls: dict, assets: Assets,
                 path = assets.for_file_types(spec.get("file_types"), synth)
             if path is None:
                 missing[label] = (f"cannot synthesize a {ctype} input for "
-                                  f"file_types={spec.get('file_types')}; supply "
+                                  f"file_types={spec.get('file_types')}. Supply "
                                   f"one via a test case's `files` entry")
             args.append(handle_file(str(path)) if path is not None else None)
         elif ctype in ("slider", "number_box"):
@@ -146,8 +146,8 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
         args (list): Default arguments from synthesize_default_args().
         controls (dict): The /controls payload, used to match labels.
         case (dict): Test case entry from config.yml. May contain:
-            controls: {<input label>: <value>} - override scalar values.
-            files: {<input label>: <path>} - override track/file inputs
+            controls: {<input label>: <value>}, overriding scalar values.
+            files: {<input label>: <path>}, overriding track/file inputs
                 (paths relative to config.yml).
         config_dir (Path): Directory containing config.yml, the base for
             relative file paths.
@@ -170,7 +170,7 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
         if labels.count(label) > 1:
             raise ValueError(f"test case '{case.get('name')}' references '{label}', "
                              f"but the model has {labels.count(label)} inputs with "
-                             f"that label; overriding it is ambiguous")
+                             f"that label, so overriding it is ambiguous")
         return labels.index(label)
 
     for label, value in (case.get("controls") or {}).items():
@@ -333,10 +333,10 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
         unknown = set(rules) - set(EXPECT_RULES)
         if unknown:
             raise ValueError(f"unknown expect rule(s) {sorted(unknown)} for "
-                             f"'{key}'; supported rules: {sorted(EXPECT_RULES)}")
+                             f"'{key}'. Supported rules: {sorted(EXPECT_RULES)}")
 
         if key == ALL_OUTPUTS:
-            # Fan each rule out to the outputs whose type it covers; a rule
+            # Fan each rule out to the outputs whose type it covers. A rule
             # matching nothing is dropped (lenient, so generic cases apply)
             per_label = {}
             for rule, value in rules.items():
@@ -356,7 +356,7 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
             if out_types[key] not in applicable:
                 raise ValueError(
                     f"expect rule '{rule}' does not apply to output '{key}' "
-                    f"of type '{out_types[key]}'; it applies to "
+                    f"of type '{out_types[key]}'. It applies to "
                     f"{sorted(applicable)} outputs")
 
         targets.append((key, rules))
@@ -478,10 +478,12 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
 def inspect_outputs(result, controls: dict, case: dict) -> None:
     """
-    Apply a test case's deeper output checks: its `expect` rules (declarative,
-    per output - see EXPECT_RULES) and its `validators` (custom Python for
-    checks spanning several outputs - see validators.py). Both are optional;
-    without either, outputs are still subject to validate_outputs().
+    Apply a test case's deeper output checks.
+
+    These are its `expect` rules, which are declarative and per output (see
+    EXPECT_RULES), and its `validators`, which are custom Python for checks
+    spanning several outputs (see validators.py). Both are optional. Without
+    either, outputs are still subject to validate_outputs().
 
     Args:
         result: The raw value returned by gradio_client for /process.
@@ -504,11 +506,11 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
     for name, params in (case.get("validators") or {}).items():
         if name not in VALIDATORS:
             raise ValueError(f"unknown validator '{name}' (available: "
-                             f"{sorted(VALIDATORS)}); register it in "
+                             f"{sorted(VALIDATORS)}). Register it in "
                              f"validators.py")
         try:
             VALIDATORS[name](out_map, controls, params or {})
         except ValidatorNotApplicable:
-            # The model lacks the outputs this validator needs; skip it so a
-            # common case's validator does not fail on models it does not fit
+            # The model lacks the outputs this validator needs, so skip it. A
+            # common case's validator must not fail models it does not fit.
             continue

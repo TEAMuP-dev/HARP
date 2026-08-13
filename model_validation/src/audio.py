@@ -43,8 +43,8 @@ def bit_depth_from_subtype(subtype: str):
         subtype (str): soundfile subtype, e.g. "PCM_16", "FLOAT", "VORBIS".
 
     Returns:
-        depth (int | None): Bits per sample for PCM/float encodings; None
-            for compressed encodings that have no fixed bit depth.
+        depth (int | None): Bits per sample for PCM and float encodings, or
+            None for compressed encodings, which have no fixed bit depth.
     """
 
     if subtype.startswith("PCM_"):
@@ -66,7 +66,7 @@ def read_audio_props(label: str, path: str) -> dict:
 
     Returns:
         props (dict): channels, sample_rate, duration (seconds), rms_db (RMS
-            level in dBFS; -inf for digital silence), subtype (libsndfile
+            level in dBFS, or -inf for digital silence), subtype (libsndfile
             encoding name), and bit_depth (int, or None for compressed
             encodings).
 

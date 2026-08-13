@@ -1,8 +1,8 @@
 """
 Validation driver for remote Hugging Face Spaces.
 
-Gets a Space into a state where the harness can talk to it - waiting out a
-build, restarting a crashed one, waking a sleeping one - then runs the
+Gets a Space into a state where the harness can talk to it, waiting out a
+build, restarting a crashed one, or waking a sleeping one. It then runs the
 endpoint tests under the ZeroGPU concurrency and quota safeguards.
 """
 
@@ -31,8 +31,8 @@ __all__ = [
 SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
 # Stages that resolve on their own if we wait (SLEEPING resolves on request)
 TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING", "SLEEPING"}
-# Stages a restart can recover from; DELETING is excluded as there is nothing
-# left to restart
+# Stages a restart can recover from. DELETING is excluded, as there is
+# nothing left to restart
 RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",
                       "STOPPED", "PAUSED"}
 
@@ -74,7 +74,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         assets (Assets): Synthesized input files.
         opts (argparse.Namespace): Parsed command-line options.
         overrides (dict): This space's entry from config.yml `overrides`.
-        quota_exhausted (threading.Event | None): Shared flag; when set,
+        quota_exhausted (threading.Event | None): Shared flag. When set,
             ZeroGPU models are skipped, and this model sets it if its own run
             reveals the allowance is exhausted.
         zerogpu_limiter (threading.Semaphore | None): Caps how many ZeroGPU
@@ -107,8 +107,8 @@ def test_space(space_id: str, token: str, assets: Assets,
         # Hardware is occasionally unreported for a sleeping or starting space.
         # Throttle those as if they were ZeroGPU: being wrong only costs run
         # time, whereas leaving a real ZeroGPU model unthrottled overlaps GPU
-        # reservations. Skipping, by contrast, stays strict - wrongly skipping
-        # a CPU model would silently drop it from validation.
+        # reservations. Skipping, by contrast, stays strict, since wrongly
+        # skipping a CPU model would silently drop it from validation.
         throttle = zerogpu or not result.hardware
 
         # Skip ZeroGPU models before doing any work that would spend quota
@@ -138,7 +138,7 @@ def test_space(space_id: str, token: str, assets: Assets,
                 result.error = f"space is not running (stage={stage})"
                 return result
 
-        # --- Connect (wakes sleeping spaces; retry through the wake-up) ------
+        # --- Connect (wakes sleeping spaces, retrying through the wake-up) --
         last_exc = None
         deadline = time.time() + connect_timeout
         while time.time() < deadline:
@@ -152,7 +152,7 @@ def test_space(space_id: str, token: str, assets: Assets,
                 time.sleep(CONNECT_RETRY_INTERVAL)
         if client is None:
             raise RuntimeError(f"could not connect: {last_exc}")
-        # Connecting has woken the space; reflect that rather than the stale
+        # Connecting has woken the space, so reflect that rather than the stale
         # SLEEPING/STARTING stage seen before the wake-up, and fill in the
         # hardware if it was not reported while the space was asleep
         if result.stage != "RUNNING":
@@ -162,7 +162,7 @@ def test_space(space_id: str, token: str, assets: Assets,
                 awake = api.get_space_runtime(space_id)
                 result.hardware = awake.hardware or awake.requested_hardware or ""
                 # Now that the hardware is known, throttle on fact rather than
-                # on the earlier assumption - a CPU model no longer queues
+                # on the earlier assumption, so a CPU model no longer queues
                 # behind ZeroGPU ones
                 zerogpu = is_zerogpu(result.hardware)
                 throttle = zerogpu or not result.hardware

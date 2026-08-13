@@ -28,9 +28,9 @@ def qualify(model: str, owner: str) -> str:
     """
     Expand a bare model name using the owner of the tier being validated.
 
-    Used for the names that can refer to either tier - `--exclude` and the
-    config's `exclude`, `include_extra`, and `overrides` keys. Only one tier
-    runs per invocation, so a bare name is unambiguous there: it means the
+    Used for the names that can refer to either tier, which are `--exclude`
+    and the config's `exclude`, `include_extra`, and `overrides` keys. Only one
+    tier runs per invocation, so a bare name is unambiguous there. It means the
     organization's space on a spaces run and the like-named example on an
     examples run. A name that already carries an owner is returned unchanged,
     pinning it to one tier. (`--spaces` names only spaces and
@@ -38,8 +38,8 @@ def qualify(model: str, owner: str) -> str:
 
     Args:
         model (str): A space id, bare model name, or example key.
-        owner (str): Owner to assume for bare names - the organization on a
-            spaces run, "examples" on an examples run.
+        owner (str): Owner to assume for bare names. This is the organization
+            on a spaces run and "examples" on an examples run.
 
     Returns:
         model (str): The qualified name.
@@ -134,7 +134,7 @@ def scrub(text: str, token: str) -> str:
 
     Args:
         text (str): Text that may contain the token (e.g. an error message).
-        token (str): The token to redact; empty string disables scrubbing.
+        token (str): The token to redact. An empty string disables scrubbing.
 
     Returns:
         text (str): The text with any token occurrence replaced.
@@ -145,7 +145,7 @@ def scrub(text: str, token: str) -> str:
 
 def run_with_timeout(fn, timeout: float, what: str):
     """
-    Run fn() in a daemon thread; raise TimeoutError if it exceeds timeout.
+    Run fn() in a daemon thread, raising TimeoutError if it overruns.
 
     A daemon thread (not a ThreadPoolExecutor) is essential here: executor
     workers are non-daemon and are joined at interpreter shutdown, so a hung
@@ -193,7 +193,7 @@ def load_config(path: Path) -> dict:
         path (Path): Path to the YAML configuration file.
 
     Returns:
-        config (dict): Parsed configuration; empty when the file is absent.
+        config (dict): Parsed configuration, empty when the file is absent.
     """
 
     if not path.exists():
@@ -224,7 +224,7 @@ def qualify_keys(overrides: dict, owner: str) -> dict:
         key = qualify(model, owner)
         if key in qualified:
             raise ValueError(f"config `overrides` names '{key}' twice (via "
-                             f"'{model}'); remove one of the entries")
+                             f"'{model}'). Remove one of the entries")
         qualified[key] = entry
 
     return qualified
