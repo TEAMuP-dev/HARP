@@ -99,7 +99,7 @@ jobs:
           # a failure report points at, so upload those alongside the report
           path: |
             reports/examples/*/report.*
-            reports/examples/*/*/app.log
+            reports/examples/*/examples/*/app.log
           if-no-files-found: ignore
 
   spaces:

@@ -1,91 +1,151 @@
 # Configuration for model_validation/src/validate_models.py
 #
-# All keys are optional. Models not listed here are still discovered and
-# validated automatically with a single synthesized "default" test case, so
-# an entry is only needed to change a model's settings or add test cases.
+# Every key is optional. Models are discovered automatically and validated
+# with one synthesized "default" test case, so an entry is only needed to
+# change a model's settings, add test cases, or leave a model out.
 #
-# Model names here can refer to either tier. A bare "pitch_shifter" means the
-# model in whichever tier is being run, which is the space on a spaces run and
-# the local example on an examples run, since only one tier runs at a time.
-# Qualify a name to pin it to one tier. "teamup-tech/pitch_shifter" (or
-# "other-org/name") is only ever a space, and "examples/pitch_shifter" is only
-# ever a local example.
+# model_validation/README.md explains the ideas behind these settings. What
+# follows is the reference for the settings themselves, each shown with its
+# default. A key that is not one of them is reported as a configuration error
+# rather than quietly read by nothing.
 #
-# Schema:
 #
-#   synthesized_inputs:   # properties of the generated test inputs. Set here
-#                         # as the global default, per model under `overrides`,
-#                         # or per test case. Each level overrides the last.
+# ---- What belongs here -----------------------------------------------------
+#
+# This file holds durable facts about the models: which ones to validate, and
+# what to assert about them. Those outlive any single run, which is what makes
+# them worth version-controlling and reviewing.
+#
+# Choices about one run stay on the command line, where changing them costs no
+# file edit. That covers the timeouts, how many models run at once, whether to
+# skip ZeroGPU models or inference altogether, and where output goes. Run
+# `validate_models.py --help` for the full list.
+#
+# The organization is not a setting here either. It is how spaces are
+# discovered and how a bare name is expanded, so it lives on --org. Entries in
+# this file name their models in full instead, which leaves no doubt about
+# which deployment each one is about.
+#
+#
+# ---- Naming models ---------------------------------------------------------
+#
+# Name a model the way its tier does, and qualify it:
+#
+#   teamup-tech/pitch_shifter   a Hugging Face Space (any "<owner>/<name>")
+#   examples/pitch_shifter      the pyharp example in pyharp/examples/
+#
+# A bare "pitch_shifter" also works, and means the model in whichever tier is
+# being run, since only one tier runs at a time. Prefer the qualified form.
+# It states which deployment an entry is about, and it keeps a spaces entry
+# from silently applying to a like-named example.
+#
+#
+# ---- Top-level settings ----------------------------------------------------
+#
+#   exclude: []          # models to leave out of validation entirely
+#     - some-non-harp-space
+#
+#   include_extra: []    # spaces outside the org to validate as well
+#     - some-user/some-harp-space
+#
+#   synthesized_inputs:  # properties of the generated test inputs. The values
+#                        # below are the defaults, so this block is only
+#                        # needed to depart from them
 #     audio:
 #       sample_rate: 44100  # Hz
 #       channels: 1         # 1 = mono, 2 = stereo
 #       duration: 2.0       # seconds
-#       ext: .wav           # format to write. Any format this libsndfile
-#                           # build can write is accepted, and one it cannot
-#                           # write is reported as a configuration error. A
-#                           # component that accepts only other extensions
-#                           # still gets one it accepts
+#       ext: .wav           # any format this libsndfile build can write.
+#                           # One it cannot write is a configuration error
 #     midi:
 #       num_notes: 2        # ascending notes from middle C
-#       note_duration: 0.5  # seconds per note
+#       note_duration: 0.5  # seconds per note, at 120 BPM
 #       ext: .mid
 #
-#   exclude:        # models to exclude from validation
-#     - some-non-harp-space
-#     - other-org/some-space
-#     - examples/some_example
+# This block can also be set per model and per test case, with each level
+# overriding the one before it.
 #
-#   include_extra:  # spaces outside the org that should also be validated
-#     - some-user/some-harp-space
+# Audio and MIDI are the only kinds here, since they are the only inputs built
+# from properties. A generic file input (gr.File) accepting .txt or .json is
+# handed a fixed placeholder file, which has nothing worth varying, and one
+# accepting some other format has to be supplied by a test case's `files`
+# entry.
 #
-#   overrides:      # per-model settings. Keys are model names (bare or
-#                   # owner-qualified), or "examples/<example-dir>"
-#     <model key>:
-#       connect_timeout: 600   # seconds to wait for build/wake (default 420)
-#       process_timeout: 900   # seconds to wait for /process (default 600)
-#       load_only: true        # only check availability + /controls
+# Scalar controls are not part of this block. A text box, number box, slider,
+# toggle, or dropdown takes the default value its /controls spec declares, and
+# a test case's `controls:` entry is what overrides it.
 #
-#       synthesized_inputs:    # input properties for this model's cases
+#   common_test_cases: []  # cases run on EVERY model, on top of its own. Keep
+#                          # them model-agnostic by targeting outputs with "*"
+#                          # rather than by label. Names appear in the report
+#                          # prefixed with "common:"
+#     - name: outputs-nontrivial
+#       expect:
+#         "*":
+#           min_bytes: 100
+#
+#
+# ---- Per-model settings (`overrides`) --------------------------------------
+#
+# Keyed by model name, as described under "Naming models" above:
+#
+#   overrides:
+#     teamup-tech/some_space:
+#       connect_timeout: 420   # seconds to wait for this model to build,
+#                              # wake, or start (default: --connect-timeout)
+#       process_timeout: 600   # seconds to wait for this model's /process
+#                              # (default: --process-timeout, or
+#                              # --zerogpu-process-timeout on ZeroGPU
+#                              # hardware). Raise it for a slow model
+#       load_only: false       # only check availability + /controls, running
+#                              # no inference
+#       skip_common_cases: false   # opt out of common_test_cases
+#
+#       synthesized_inputs:    # input properties for this model's cases,
+#                              # overriding the top-level block
 #         audio:
 #           sample_rate: 48000
-#           channels: 2
 #
-#       test_cases:            # named /process test cases. When omitted, a
-#                              # single synthesized "default" case runs
-#         - name: default      # empty case == synthesized defaults
+#       test_cases:            # once this key is present, ONLY these cases
+#                              # run, so include `default` to keep the
+#                              # synthesized one
+#         - name: default      # a case with no settings == synthesized
+#                              # defaults, which is what every unconfigured
+#                              # model gets
 #
-#         - name: my-case
-#           process_timeout: 300   # optional per-case override
+#         - name: some-case
+#           process_timeout: 300   # this case only (default: the model's)
 #
-#           controls:              # override control values by label
+#           controls:              # control values, by label
 #             "Some Slider Label": 12
 #             "Some Toggle Label": true
 #
-#           files:                 # override track/file inputs by label.
-#                                  # Paths are relative to this file
+#           files:                 # track/file inputs, by label. Paths are
+#                                  # relative to this file
 #             "Input Audio": test_data/my_clip.wav
 #
 #           synthesized_inputs:    # input properties for this case only
 #             audio:
 #               duration: 10.0
 #
-#           expect:                # per-output checks, keyed by output label.
-#                                  # "*" applies rules to every compatible
-#                                  # output (see the rule table below)
+#           expect:                # output checks, keyed by output label.
+#                                  # "*" applies each rule to every output
+#                                  # the rule covers
 #             "Output Audio":
-#               ext: .wav          # extension: string or list of accepted
+#               ext: .wav          # extension: one, or a list of accepted
 #               min_bytes: 1000    # minimum file size, in bytes
-#               channels: 1        # audio: exact channel count
-#               sample_rate: 44100 # audio: exact sample rate, in Hz
-#               min_duration: 1.5  # audio/MIDI: minimum length, in seconds
-#               max_duration: 10.0 # audio/MIDI: maximum length, in seconds
-#               bit_depth: 16      # audio: exact PCM bit depth (PCM formats)
-#               min_rms_db: -60    # audio: minimum RMS level, in dBFS
-#             "Output MIDI":
-#               min_notes: 1       # MIDI: minimum note-on count
+#               channels: 1        # exact channel count
+#               sample_rate: 44100 # exact sample rate, in Hz
+#               bit_depth: 16      # exact PCM bit depth (PCM formats only)
+#               min_rms_db: -60    # minimum RMS level, in dBFS
+#               min_duration: 1.5  # minimum length, in seconds
+#               max_duration: 10.0 # maximum length, in seconds
+#             "Output Midi":
+#               min_notes: 1       # minimum note-on count
 #             "Output Labels":
-#               min_labels: 1      # LabelList: minimum count. 0 permits an
-#                                  # empty list, but still requires a valid one
+#               min_labels: 1      # minimum labels in a pyharp LabelList. 0
+#                                  # permits an empty list but still requires
+#                                  # a well-formed one
 #
 #           validators:            # only for checks `expect` cannot express,
 #                                  # such as ones spanning several outputs.
@@ -93,15 +153,8 @@
 #             labels_within_audio:
 #               tolerance: 0.1
 #
-#       skip_common_cases: true    # opt this model out of common_test_cases
-#
-#   common_test_cases:   # generic cases run on EVERY model, on top of its
-#                        # own. Keep them model-agnostic by targeting outputs
-#                        # with "*" rather than a label
-#     - name: outputs-nontrivial
-#       expect:
-#         "*":
-#           min_bytes: 100   # every file output is at least minimally sized
+# Every rule above is optional, and an output with no rules is still checked
+# structurally: it must exist, be non-empty, and parse as its declared type.
 #
 # Which expect rules apply to which output types:
 #
@@ -118,64 +171,46 @@
 # decoded with soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3,
 # AIFF, ...). Note that bit_depth applies only to PCM formats, not compressed
 # ones. MIDI outputs are parsed with mido.
+#
+#
+# ---- A representative entry per tier ---------------------------------------
+#
+# Local pyharp example. These run with `--local-examples` and exercise pyharp
+# itself, with no Hugging Face infrastructure involved:
+#
+#   overrides:
+#     examples/pitch_shifter:
+#       test_cases:
+#         - name: default            # keep the synthesized case
+#         - name: shift-up-octave
+#           controls:
+#             "Pitch Shift (semitones)": 12
+#           expect:
+#             "Output Audio":
+#               ext: .wav
+#               min_rms_db: -60      # shifted audio must still carry signal
+#
+# Hugging Face Space. These run by default and validate one deployment:
+#
+#   overrides:
+#     teamup-tech/pitch_shifter:
+#       process_timeout: 900         # this model is slow, extend the timeout
+#       test_cases:
+#         - name: default
+#         - name: real-audio
+#           files:
+#             "Input Audio A": test_data/short_vocal.wav
+#           expect:
+#             "Output Audio":
+#               min_duration: 1.5
+#
+#
+# ---- Live settings ---------------------------------------------------------
 
 exclude: []
 
 include_extra: []
 
-overrides:
+common_test_cases: []
 
-  # ---- Local pyharp examples ----------------------------------------------
-  # These run with `--local-examples` and exercise pyharp itself with no
-  # Hugging Face infrastructure involved. A failure here indicates a
-  # pyharp/gradio-level breakage rather than a deployment-specific one.
-  # Examples are discovered automatically, so entries are only needed to add
-  # test cases beyond the synthesized default.
-
-  examples/pitch_shifter:
-    test_cases:
-      - name: default
-      - name: shift-up-octave
-        controls:
-          "Pitch Shift (semitones)": 12
-        expect:
-          "Output Audio":
-            ext: .wav
-            min_rms_db: -60      # shifted audio must still carry signal
-      - name: shift-down-octave
-        controls:
-          "Pitch Shift (semitones)": -12
-      - name: no-shift
-        controls:
-          "Pitch Shift (semitones)": 0
-
-  examples/midi_pitch_shifter:
-    test_cases:
-      - name: default
-      - name: shift-up-max
-        controls:
-          "Pitch Shift (semitones)": 24
-        expect:
-          "Output Midi":
-            min_notes: 1         # shifted MIDI must still contain notes
-      - name: shift-down-max
-        controls:
-          "Pitch Shift (semitones)": -24
-
-  # ---- Remote space overrides ---------------------------------------------
-  # Add per-space timeouts and extra test cases here as needed, e.g.:
-  #
-  # teamup-tech/pitch_shifter:
-  #   process_timeout: 900
-  #   test_cases:
-  #     - name: default
-  #     - name: extreme-shift
-  #       controls:
-  #         "Pitch Shift (semitones)": 24
-  #       expect:
-  #         "Output Audio":
-  #           ext: .wav
-  #           min_bytes: 10000
-  #           channels: 1
-  #           sample_rate: 44100
-  #           min_duration: 1.5
+overrides: {}

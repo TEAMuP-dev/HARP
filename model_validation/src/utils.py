@@ -3,6 +3,7 @@ Shared utilities for HARP model validation: credentials, error rendering,
 configuration, model discovery, and timeout handling.
 """
 
+import dataclasses
 import os
 import sys
 import threading
@@ -17,11 +18,24 @@ __all__ = [
     'describe_exception',
     'run_with_timeout',
     'load_config',
+    'check_config_keys',
     'qualify',
     'qualify_keys',
+    'Exclusions',
     'get_excluded',
     'discover_spaces'
 ]
+
+
+# The settings each level of the configuration accepts, mirroring the
+# reference in config.yml. Anything else is a mistake rather than a setting,
+# so it is reported instead of being read by nothing at all.
+CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases",
+               "synthesized_inputs", "overrides"}
+MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
+              "skip_common_cases", "synthesized_inputs", "test_cases"}
+CASE_KEYS = {"name", "process_timeout", "controls", "files",
+             "synthesized_inputs", "expect", "validators"}
 
 
 def qualify(model: str, owner: str) -> str:
@@ -202,6 +216,58 @@ def load_config(path: Path) -> dict:
     return yaml.safe_load(path.read_text()) or {}
 
 
+def check_keys(mapping: dict | None, allowed: set, where: str) -> None:
+    """
+    Reject keys outside the set a level of the configuration accepts.
+
+    Args:
+        mapping (dict | None): The settings written at this level.
+        allowed (set): The keys this level accepts.
+        where (str): Where these settings were written, for reporting.
+
+    Raises:
+        ValueError: If any key is not one of the accepted settings.
+    """
+
+    unknown = sorted(set(mapping or {}) - allowed)
+
+    if unknown:
+        raise ValueError(f"unknown setting{'s' if len(unknown) > 1 else ''} "
+                         f"{unknown} in {where}. Valid settings: "
+                         f"{sorted(allowed)}")
+
+
+def check_config_keys(config: dict) -> None:
+    """
+    Reject configuration keys that no setting corresponds to.
+
+    A misspelled key would otherwise be read by nothing, which is quiet in the
+    worst way. Writing `test_case` for `test_cases`, for instance, would leave
+    the model running the synthesized default case while the file appears to
+    say otherwise.
+
+    Args:
+        config (dict): Parsed configuration, with `overrides` already
+            re-keyed by qualified name.
+
+    Raises:
+        ValueError: If any level of the configuration holds an unknown key.
+    """
+
+    check_keys(config, CONFIG_KEYS, "config.yml")
+
+    for case in config.get("common_test_cases") or []:
+        check_keys(case, CASE_KEYS,
+                   f"common test case '{(case or {}).get('name', 'unnamed')}'")
+
+    for model, entry in (config.get("overrides") or {}).items():
+        check_keys(entry, MODEL_KEYS, f"'{model}'")
+        for case in (entry or {}).get("test_cases") or []:
+            check_keys(case, CASE_KEYS,
+                       f"'{model}' test case "
+                       f"'{(case or {}).get('name', 'unnamed')}'")
+
+
 def qualify_keys(overrides: dict, owner: str) -> dict:
     """
     Re-key the config's `overrides` block by qualified model name.
@@ -230,9 +296,40 @@ def qualify_keys(overrides: dict, owner: str) -> dict:
     return qualified
 
 
-def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> set:
+@dataclasses.dataclass(frozen=True)
+class Exclusions:
     """
-    Combine the models excluded from validation.
+    The models to leave out, kept apart by which selections they apply to.
+
+    A config `exclude` entry is a standing decision about a model, so it
+    applies to whatever discovery turns up. Naming a model on the command line
+    is a more specific instruction and overrides it, since asking for a model
+    by name is unambiguous about wanting it. An `--exclude` on that same
+    command line is equally specific, so it still applies.
+    """
+
+    config: frozenset
+    cli: frozenset
+
+    def excludes(self, model: str, named: bool = False) -> bool:
+        """
+        Whether a model is excluded, given how it came to be selected.
+
+        Args:
+            model (str): Qualified model name.
+            named (bool): True when the model was named on the command line
+                rather than found by discovery.
+
+        Returns:
+            excluded (bool): True when the model should be left out.
+        """
+
+        return model in self.cli or (not named and model in self.config)
+
+
+def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> Exclusions:
+    """
+    Collect the models excluded from validation, keeping the sources apart.
 
     Args:
         config (dict): Parsed configuration (its `exclude` list is used).
@@ -240,15 +337,16 @@ def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> set:
         owner (str): Owner to assume for bare names (see qualify).
 
     Returns:
-        excluded (set): Qualified model names to leave out.
+        exclusions (Exclusions): Qualified names from each source.
     """
 
-    named = set(config.get("exclude", [])) | set(cli_exclude or [])
+    return Exclusions(
+        config=frozenset(qualify(model, owner)
+                         for model in config.get("exclude", [])),
+        cli=frozenset(qualify(model, owner) for model in (cli_exclude or [])))
 
-    return {qualify(model, owner) for model in named}
 
-
-def discover_spaces(api, org: str, config: dict, excluded: set) -> list:
+def discover_spaces(api, org: str, config: dict, exclusions: Exclusions) -> list:
     """
     Enumerate the Hugging Face Spaces to validate.
 
@@ -257,7 +355,8 @@ def discover_spaces(api, org: str, config: dict, excluded: set) -> list:
         org (str): Organization whose spaces are discovered.
         config (dict): Parsed configuration (`include_extra` adds spaces
             outside the organization).
-        excluded (set): Model keys to leave out.
+        exclusions (Exclusions): Models to leave out. These spaces are found
+            rather than named, so every exclusion applies.
 
     Returns:
         space_ids (list): Sorted space ids to validate.
@@ -267,4 +366,4 @@ def discover_spaces(api, org: str, config: dict, excluded: set) -> list:
     spaces += [qualify(s, org) for s in config.get("include_extra", [])
                if qualify(s, org) not in spaces]
 
-    return sorted(s for s in spaces if s not in excluded)
+    return sorted(s for s in spaces if not exclusions.excludes(s))

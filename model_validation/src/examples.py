@@ -95,7 +95,7 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
     """
     Validate one pyharp example app by launching it locally.
 
-    The app runs in its own directory under the run's output directory, with
+    The app runs in its own directory under <output-dir>/examples/, with
     stdout and stderr captured to app.log there. Keeping the app out of the
     example's source directory matters because pyharp writes model outputs to
     an `_outputs` folder under the working directory, which would otherwise
@@ -122,7 +122,7 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
     env["GRADIO_SERVER_PORT"] = str(port)
     env.pop("HF_TOKEN", None)  # local examples must not need credentials
 
-    work_dir = opts.output_dir / app_dir.name
+    work_dir = opts.output_dir / "examples" / app_dir.name
     work_dir.mkdir(parents=True, exist_ok=True)
     log_path = work_dir / "app.log"
     proc = None
@@ -143,7 +143,7 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
         return result
     except Exception as exc:  # noqa: BLE001 - any failure means invalid
         result.error = (f"{describe_exception(exc)} "
-                        f"(see {work_dir.name}/{log_path.name})")
+                        f"(see examples/{work_dir.name}/{log_path.name})")
         if opts.verbose:
             traceback.print_exc()
         return result

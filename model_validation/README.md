@@ -51,7 +51,7 @@ downward, so a module can be read knowing nothing about the groups above it:
 | | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
 
 Alongside the code, [config.yml](config.yml) holds the validation
-configuration and [test_data/](test_data/) holds the real input files that
+configuration and [test_data/](test_data/) holds any real input files that
 test cases refer to. Everything a run produces goes under `reports/`.
 
 ## Token Setup
@@ -113,10 +113,45 @@ organization, or give `--local-examples` a path to an example kept outside
 `pyharp/examples/`.
 
 `--exclude` and the config's `exclude` and `overrides` keys can refer to
-either tier. A bare name there means the model in whichever tier is being run,
-so one entry covers a model in both. Qualify it to pin it to one tier.
-`teamup-tech/<name>` is only ever a space, and `examples/<name>` is only ever
-a local example.
+either tier, so they take a qualified name. `teamup-tech/<name>` is only ever
+a space, and `examples/<name>` is only ever a local example. Qualifying is
+worth the few extra characters in a file that outlives the run, since it
+states which deployment an entry is about and stops a spaces entry from
+silently applying to a like-named example. A bare name is still accepted, and
+means the model in whichever tier is being run.
+
+## Where Settings Live
+
+[config.yml](config.yml) holds durable facts about the models: which ones to
+validate, and what to assert about them. Those outlive any single run, which
+is what makes them worth version-controlling and reviewing.
+
+Choices about one run stay on the command line, where changing them costs no
+file edit. That covers the timeouts, how many models run at once, whether to
+skip ZeroGPU models or inference altogether, and where output goes.
+
+| In config.yml | On the command line |
+|---|---|
+| `exclude`, `include_extra` | `--spaces`, `--local-examples`, `--org`, `--exclude` |
+| per-model `test_cases`, `expect`, `validators` | `--load-only`, `--skip-zerogpu`, `--no-restart-failed` |
+| per-model `connect_timeout`, `process_timeout`, `load_only`, `skip_common_cases` | `--connect-timeout`, `--process-timeout`, `--zerogpu-process-timeout` |
+| `synthesized_inputs`, `common_test_cases` | `--workers`, `--zerogpu-workers`, `--output-dir`, `--verbose` |
+
+Two settings appear on both sides, and they combine rather than compete.
+Exclusions add up, so `--exclude` leaves a model out for one run on top of
+whatever config.yml already excludes. Naming a model is more specific than a
+standing exclusion, so `--spaces some-excluded-space` validates it anyway. The
+timeouts follow the same idea from the other direction: a model's own
+`connect_timeout` or `process_timeout` is a fact about that model, so it wins
+over the flag, which sets the value for everything else in the run.
+
+`--load-only` is the one flag that only ever restricts. It holds even where a
+model's config entry does not ask for it, so inference you asked to skip stays
+skipped.
+
+The organization is not in config.yml. It is how spaces are discovered and how
+a bare name is expanded, so it lives on `--org` with its default in the script.
+Entries in config.yml name their models in full instead.
 
 ## Run Output
 
@@ -126,20 +161,21 @@ base with `--output-dir`. A run directory looks like this:
 
 ```
 model_validation/reports/2026-07-18T14-30-00/   (local time)
-├── report.json      machine-readable results
-├── report.md        results table, with full error text below it
-├── assets/          the test inputs synthesized for this run
-└── pitch_shifter/   one per local example (examples tier only)
-    ├── app.log      the example's stdout and stderr
-    └── _outputs/    whatever the example itself wrote
+├── report.json          machine-readable results
+├── report.md            results table, with full error text below it
+├── assets/              the test inputs synthesized for this run
+└── examples/            examples tier only, one directory per example
+    └── pitch_shifter/
+        ├── app.log      the example's stdout and stderr
+        └── _outputs/    whatever the example itself wrote
 ```
 
 Both reports record the command line the run was invoked with. Exit code is
 `0` when everything passes, `1` on any model failure, and `2` when the run
 could not proceed at all (missing token, no models found, bad configuration).
 
-Each example runs in its own directory here rather than in its source
-directory. pyharp writes model outputs to an `_outputs` folder under the
+Each example runs in its own directory under `examples/` rather than in its
+source directory. pyharp writes model outputs to an `_outputs` folder under the
 working directory, so this keeps a run's files together and leaves the pyharp
 checkout untouched.
 
@@ -186,8 +222,8 @@ Three mechanisms limit the ZeroGPU allowance a run can consume:
   `--zerogpu-process-timeout` (default 120s) applies instead of
   `--process-timeout` (default 600s). It bounds execution only. The queue wait
   before a job runs is bounded separately by `--connect-timeout`, so a long
-  queue does not trip the execution timeout. A per-model `process_timeout`
-  override takes precedence over both.
+  queue does not trip the execution timeout. A `process_timeout` set for the
+  model in config.yml takes precedence over both.
 - **ZeroGPU models run one at a time.** `--zerogpu-workers` (default 1) caps
   them, since overlapping reservations tie up allowance that none of them is
   using. Non-ZeroGPU models still run at full `--workers` concurrency
@@ -249,12 +285,25 @@ synthesized_inputs:      # global default for every model
     note_duration: 0.25
 ```
 
+Audio and MIDI are the only kinds a block can configure, because they are the
+only inputs built from properties. A generic file input (`gr.File`) accepting
+`.txt` or `.json` is handed a fixed placeholder file, which has nothing worth
+varying, and one accepting some other format has to be supplied by a test
+case's `files` entry. An unrecognized kind or property name is reported as a
+configuration error before any model runs, rather than being read by nothing
+at all.
+
+Scalar controls have nothing to do with this block. A text box, number box,
+slider, toggle, or dropdown takes the default value its `/controls` spec
+declares, and a test case's `controls:` entry is what overrides it. (A JSON
+component is an output type in HARP, so it never needs an input at all.)
+
 Audio is written with soundfile, so `ext` accepts any format this libsndfile
-build can write. An extension it cannot write is reported as a configuration
-error before any model runs, rather than quietly leaving models without
-inputs. The extension is a preference rather than a guarantee. A component
-that only accepts other extensions still gets one it accepts. Each distinct
-set of properties is generated once and reused for the rest of the run.
+build can write, and one it cannot write is a configuration error too. For a
+track input the extension is used as given. For a generic file input it is a
+preference, since a component that accepts only other extensions is given one
+it accepts instead. Each distinct set of properties is generated once and
+reused for the rest of the run.
 
 ### Step 1: find the model's control labels
 
@@ -270,8 +319,9 @@ to find them:
 
 ### Step 2: add the case to config.yml
 
-Cases live under `overrides:`, keyed by space id (or by `examples/<example-dir>`
-for local examples). Each case has a `name` plus any of three optional fields.
+Cases live under `overrides:`, keyed by the model's qualified name, which is
+its space id or `examples/<example-dir>`. Each case has a `name` plus any of
+three optional fields.
 `controls` overrides scalar values by label. `files` substitutes input files by
 label, with paths taken relative to config.yml, so real inputs belong in
 `test_data/`. `process_timeout` extends the timeout for that case alone.
@@ -484,23 +534,36 @@ picks it up automatically. No workflow changes are needed.
 
 ### Reference: full config.yml schema
 
-See the comment block at the top of [config.yml](config.yml) for the complete
-schema in one place. It covers `exclude`, `include_extra`,
-`synthesized_inputs`, top-level `common_test_cases`, and per-model `overrides`
-(`connect_timeout`, `process_timeout`, `load_only`, `test_cases`,
-`skip_common_cases`).
+[config.yml](config.yml) documents every setting in one place, with each one
+shown alongside its default. The top level takes `exclude`, `include_extra`,
+`synthesized_inputs`, and `common_test_cases`. Each model's `overrides` entry
+takes `connect_timeout`, `process_timeout`, `load_only`, `skip_common_cases`,
+`synthesized_inputs`, and `test_cases`. A representative entry for each tier
+is included as an example.
+
+A key outside those sets is reported as a configuration error rather than
+quietly read by nothing, so a slip such as `test_case` for `test_cases` is
+caught before any model runs, instead of leaving the model on its default
+case while the file appears to say otherwise.
 
 ## Excluding Models
 
-There are two equivalent ways, and they are merged together:
+There are two ways, and they add up:
 
-- `exclude` in [config.yml](config.yml), for permanent exclusions such as
+- `exclude` in [config.yml](config.yml), for standing exclusions such as
   non-HARP spaces, archived deployments, and known-broken examples.
-- `--exclude <model> ...` on the command line, for ad-hoc runs.
+- `--exclude <model> ...` on the command line, for one run.
 
 Models are named as described above. `midi_synthesizer` excludes the space on
 a spaces run and the example on an examples run, while
 `examples/midi_synthesizer` excludes only the example.
+
+The two differ in one way. A config exclusion is a standing decision about a
+model, so it applies to whatever discovery turns up, but naming that model on
+the command line overrides it. That is what you want when checking whether a
+space you parked is working again, since `--spaces some-excluded-space`
+validates it without your having to edit the file first. An `--exclude` given
+on that same command line is just as specific, so it still applies.
 
 ## CI Behavior
 

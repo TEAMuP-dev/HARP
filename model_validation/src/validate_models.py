@@ -36,13 +36,13 @@ import threading
 import time
 from pathlib import Path
 
-from assets import Assets, check_configured_audio
+from assets import Assets, check_synthesized_inputs
 from examples import test_local_example
 from spaces import test_space
 from quota import ZeroGPUTracker, is_zerogpu
 from results import FAIL, status_emoji, write_reports
-from utils import (get_token, scrub, load_config, qualify, qualify_keys,
-                   get_excluded, discover_spaces)
+from utils import (get_token, scrub, load_config, check_config_keys, qualify,
+                   qualify_keys, Exclusions, get_excluded, discover_spaces)
 
 
 DEFAULT_ORG = "teamup-tech"
@@ -68,7 +68,10 @@ def parse_args() -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser(description="Validate HARP model deployments.")
-    parser.add_argument("--org", default=DEFAULT_ORG, help="HF organization to scan")
+    parser.add_argument("--org", default=DEFAULT_ORG,
+                        help=f"HF organization whose spaces are discovered, and "
+                             f"the owner a bare space name is taken to have "
+                             f"(default: {DEFAULT_ORG})")
     parser.add_argument("--spaces", nargs="*", default=None,
                         help="Explicit spaces to validate, skipping discovery. A "
                              "bare name is taken to be in --org. Give 'owner/name' "
@@ -104,13 +107,16 @@ def parse_args() -> argparse.Namespace:
                              "so 1 (the default) keeps overlapping reservations "
                              "from tying up the allowance")
     parser.add_argument("--connect-timeout", type=float, default=420,
-                        help="Seconds to wait for a deployment to build/wake/start")
+                        help="Seconds to wait for a deployment to build, wake, "
+                             "or start (default: 420)")
     parser.add_argument("--process-timeout", type=float, default=600,
-                        help="Seconds to wait for /process on non-ZeroGPU models")
+                        help="Seconds to wait for /process on non-ZeroGPU "
+                             "models (default: 600)")
     parser.add_argument("--zerogpu-process-timeout", type=float, default=120,
                         help="Seconds allowed for /process EXECUTION on ZeroGPU "
-                             "models once they leave the queue (queue wait is "
-                             "bounded separately by --connect-timeout. Defaults to 120)")
+                             "models once they leave the queue, with the queue "
+                             "wait bounded separately by --connect-timeout "
+                             "(default: 120)")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
                         help=f"Directory for reports, synthesized assets, and "
                              f"example logs (default: {DEFAULT_OUTPUT_DIR})")
@@ -166,8 +172,8 @@ def resolve_example_dir(name: str) -> Path:
     return path if path.exists() else DEFAULT_EXAMPLES_DIR / path.name
 
 
-def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
-                      assets: Assets) -> list:
+def validate_examples(opts: argparse.Namespace, config: dict,
+                      exclusions: Exclusions, assets: Assets) -> list:
     """
     Run the examples tier: launch and validate each local pyharp example.
 
@@ -177,7 +183,7 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
     Args:
         opts (argparse.Namespace): Parsed command-line options.
         config (dict): Parsed configuration.
-        excluded (set): Model keys to leave out.
+        exclusions (Exclusions): Models to leave out.
         assets (Assets): Synthesized input files.
 
     Returns:
@@ -185,6 +191,8 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
     """
 
     overrides = config.get("overrides", {})
+    # Examples named on the command line are exempt from a config exclusion
+    named = bool(opts.local_examples)
 
     if opts.local_examples:
         app_dirs = [resolve_example_dir(name) for name in opts.local_examples]
@@ -202,7 +210,8 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
         print(f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist. Check out the "
               f"pyharp submodule (git submodule update --init)", file=sys.stderr)
         return None
-    app_dirs = [d for d in app_dirs if f"examples/{d.name}" not in excluded]
+    app_dirs = [d for d in app_dirs
+                if not exclusions.excludes(f"examples/{d.name}", named)]
 
     if not app_dirs:
         print("ERROR: no local examples found", file=sys.stderr)
@@ -220,15 +229,15 @@ def validate_examples(opts: argparse.Namespace, config: dict, excluded: set,
     return results
 
 
-def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
-                    assets: Assets, token: str) -> list:
+def validate_spaces(opts: argparse.Namespace, config: dict,
+                    exclusions: Exclusions, assets: Assets, token: str) -> list:
     """
     Run the spaces tier: validate remote Hugging Face Spaces concurrently.
 
     Args:
         opts (argparse.Namespace): Parsed command-line options.
         config (dict): Parsed configuration.
-        excluded (set): Model keys to leave out.
+        exclusions (Exclusions): Models to leave out.
         assets (Assets): Synthesized input files.
         token (str): Hugging Face access token.
 
@@ -242,10 +251,11 @@ def validate_spaces(opts: argparse.Namespace, config: dict, excluded: set,
     api = HfApi(token=token)
 
     if opts.spaces:
+        # Spaces named here are exempt from a config exclusion
         space_ids = [s for s in (qualify(s, opts.org) for s in opts.spaces)
-                     if s not in excluded]
+                     if not exclusions.excludes(s, named=True)]
     else:
-        space_ids = discover_spaces(api, opts.org, config, excluded)
+        space_ids = discover_spaces(api, opts.org, config, exclusions)
 
     if not space_ids:
         print(f"ERROR: no spaces found for org '{opts.org}'", file=sys.stderr)
@@ -295,18 +305,22 @@ def main() -> int:
     opts.config = opts.config.resolve()
     config = load_config(opts.config)
 
-    # Only one tier runs, so a bare model name resolves against that tier
     examples_tier = opts.local_examples is not None
-    owner = "examples" if examples_tier else opts.org
+
     try:
+        # Checked before anything reads a setting, so a mistake is reported
+        # once, names the key as it was written, and costs no model runs
+        check_config_keys(config)
+        check_synthesized_inputs(config)
+
+        # Only one tier runs, so a bare model name resolves against that tier
+        owner = "examples" if examples_tier else opts.org
         config["overrides"] = qualify_keys(config.get("overrides"), owner)
-        # Rejected here rather than at synthesis time, so an unwritable format
-        # is reported once as the configuration error it is
-        check_configured_audio(config)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
-    excluded = get_excluded(config, opts.exclude, owner)
+
+    exclusions = get_excluded(config, opts.exclude, owner)
     # Generic cases applied to every model, on top of its own (see config.yml)
     opts.common_test_cases = config.get("common_test_cases", [])
 
@@ -320,22 +334,17 @@ def main() -> int:
 
     if examples_tier:
         token = ""
-        label = "pyharp examples"
-        results = validate_examples(opts, config, excluded, assets)
+        results = validate_examples(opts, config, exclusions, assets)
     else:
         token = get_token(required=True)
-        label = f"{opts.org} spaces"
-        results = validate_spaces(opts, config, excluded, assets, token)
+        results = validate_spaces(opts, config, exclusions, assets, token)
 
     if results is None:
         return 2
 
-    # Record how the run was invoked, plus the resolved options, so the report
-    # is reproducible. argv holds no secrets, as the token comes from HF_TOKEN.
-    command = " ".join(sys.argv)
-    options = {k: str(v) if isinstance(v, Path) else v
-               for k, v in vars(opts).items()}
-    report = write_reports(results, opts.output_dir, label, command, options)
+    # Record how the run was invoked, so the report says what produced it.
+    # argv holds no secrets, as the token comes from HF_TOKEN.
+    report = write_reports(results, opts.output_dir, " ".join(sys.argv))
 
     summary = f"\n{report['passed']}/{report['validated']} models passed"
     if report["skipped"]:

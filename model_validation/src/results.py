@@ -30,8 +30,9 @@ class CaseResult:
     name: str
     ok: bool | None = None    # None => skipped
     duration: float = 0.0     # total /process wall time (queue + execution)
-    gpu_calls: int = 0        # /process jobs that left the queue, so reserved GPU
-                              # (a retried call reserves again, and counts again)
+    gpu_calls: int = 0        # /process calls that reached the GPU, each of
+                              # which reserves ZeroGPU allowance. A retried
+                              # call reserves another time and counts again
     error: str = ""
 
 
@@ -80,18 +81,15 @@ def case_emoji(ok: bool | None) -> str:
     return {True: "✅", False: "❌", None: "⏭️"}[ok]
 
 
-def write_reports(results: list, out_dir: Path, label: str,
-                  command: str = "", options: dict | None = None) -> dict:
+def write_reports(results: list, out_dir: Path, command: str = "") -> dict:
     """
     Write the machine-readable and human-readable reports.
 
     Args:
         results (list): ModelResult objects for every validated model.
         out_dir (Path): Directory receiving report.json and report.md.
-        label (str): Report heading (e.g. "teamup-tech spaces").
-        command (str): The command line the run was invoked with.
-        options (dict | None): The resolved run options, recorded in the
-            report so a run's parameters are reproducible from it.
+        command (str): The command line the run was invoked with, which is
+            what makes the run reproducible from the report alone.
 
     Returns:
         payload (dict): The report.json contents, whose counts the caller
@@ -106,10 +104,8 @@ def write_reports(results: list, out_dir: Path, label: str,
     validated = len(results) - skipped   # denominator excludes skipped models
 
     payload = {
-        "label": label,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "command": command,
-        "options": options or {},
         "total": len(results),
         "validated": validated,
         "passed": passed,
@@ -147,7 +143,7 @@ def render_markdown(results: list, payload: dict) -> str:
     if payload["skipped"]:
         headline += f", {payload['skipped']} skipped"
 
-    lines = [f"# HARP Model Validation Report - {payload['label']}", ""]
+    lines = ["# HARP Model Validation Report", ""]
     lines += [f"{headline} ({payload['timestamp']})", ""]
     if payload["command"]:
         lines += [f"Command: `{payload['command']}`", ""]

@@ -24,8 +24,9 @@ __all__ = [
     'Assets',
     'AUDIO_DEFAULTS',
     'MIDI_DEFAULTS',
+    'SYNTHESIZED_DEFAULTS',
     'merge_specs',
-    'check_configured_audio'
+    'check_synthesized_inputs'
 ]
 
 
@@ -41,6 +42,11 @@ MIDI_DEFAULTS = {
     "note_duration": 0.5,   # seconds per note (at the default 120 BPM)
     "ext": ".mid",
 }
+
+# The media kinds a `synthesized_inputs` block can configure. The text and
+# JSON placeholders below are deliberately absent, as they only ever fill a
+# generic file input and have nothing worth varying.
+SYNTHESIZED_DEFAULTS = {"audio": AUDIO_DEFAULTS, "midi": MIDI_DEFAULTS}
 
 # Extensions understood as audio. A component accepting one of these gets a
 # synthesized clip in that format (written via soundfile, so only formats this
@@ -99,9 +105,9 @@ def can_write_audio(ext: str) -> bool:
     return True
 
 
-def configured_audio_exts(config: dict) -> dict:
+def synthesized_input_blocks(config: dict) -> list:
     """
-    Collect every audio `ext` set by a `synthesized_inputs` block.
+    Collect every `synthesized_inputs` block in the configuration.
 
     Such a block can appear at the top level, on a common test case, on a
     model's `overrides` entry, or on one of that model's test cases. All four
@@ -111,50 +117,66 @@ def configured_audio_exts(config: dict) -> dict:
         config (dict): Parsed configuration.
 
     Returns:
-        exts (dict): Extension mapped to where it was set, for reporting.
+        blocks (list): (where, block) pairs, where `where` names the setting
+            for reporting.
     """
 
-    found = {}
-
-    def record(block: dict | None, where: str) -> None:
-        """Note the audio extension a single block sets, if any."""
-        ext = ((block or {}).get("audio") or {}).get("ext")
-        if ext:
-            found.setdefault(str(ext), where)
-
-    record(config.get("synthesized_inputs"), "synthesized_inputs")
+    blocks = [("synthesized_inputs", config.get("synthesized_inputs"))]
 
     for case in config.get("common_test_cases") or []:
-        record(case.get("synthesized_inputs"),
-               f"common test case '{case.get('name', 'unnamed')}'")
+        blocks.append((f"common test case '{case.get('name', 'unnamed')}'",
+                       case.get("synthesized_inputs")))
 
     for model, entry in (config.get("overrides") or {}).items():
-        record((entry or {}).get("synthesized_inputs"), f"'{model}'")
+        blocks.append((f"'{model}'", (entry or {}).get("synthesized_inputs")))
         for case in (entry or {}).get("test_cases") or []:
-            record(case.get("synthesized_inputs"),
-                   f"'{model}' test case '{case.get('name', 'unnamed')}'")
+            blocks.append((f"'{model}' test case '{case.get('name', 'unnamed')}'",
+                           case.get("synthesized_inputs")))
 
-    return found
+    return [(where, block) for where, block in blocks if block]
 
 
-def check_configured_audio(config: dict) -> None:
+def check_synthesized_inputs(config: dict) -> None:
     """
-    Reject configured audio extensions this installation cannot write.
+    Reject `synthesized_inputs` settings that nothing would act on.
 
-    Checking up front turns a mistake such as `ext: .wave` into one error
-    naming the setting. Left to synthesis time it would instead surface as a
-    set of models whose inputs could not be produced, reported per model as a
-    skipped test case.
+    Only audio and MIDI inputs are built from properties. Text and JSON inputs
+    are fixed placeholder files, and any other input a model declares has to
+    come from a test case's `files` entry. An unrecognized media kind or
+    property name would therefore be read by nothing at all, and an audio
+    format this installation cannot write would leave models without inputs.
+    Reporting all three here turns them into one configuration error naming
+    the setting, rather than a set of models with skipped test cases.
 
     Args:
         config (dict): Parsed configuration.
 
     Raises:
-        ValueError: If a configured extension cannot be written.
+        ValueError: If a setting is unrecognized or cannot be honoured.
     """
 
-    unwritable = {ext: where
-                  for ext, where in configured_audio_exts(config).items()
+    exts = {}
+
+    for where, block in synthesized_input_blocks(config):
+        for kind, props in block.items():
+            if kind not in SYNTHESIZED_DEFAULTS:
+                raise ValueError(
+                    f"unknown synthesized_inputs kind '{kind}' (set in "
+                    f"{where}). Only {' and '.join(SYNTHESIZED_DEFAULTS)} "
+                    f"inputs are generated from properties")
+
+            unknown = sorted(set(props or {}) - set(SYNTHESIZED_DEFAULTS[kind]))
+            if unknown:
+                raise ValueError(
+                    f"unknown synthesized_inputs {kind} propert"
+                    f"{'ies' if len(unknown) > 1 else 'y'} {unknown} (set in "
+                    f"{where}). Valid properties: "
+                    f"{sorted(SYNTHESIZED_DEFAULTS[kind])}")
+
+            if kind == "audio" and (props or {}).get("ext"):
+                exts.setdefault(str(props["ext"]), where)
+
+    unwritable = {ext: where for ext, where in exts.items()
                   if not can_write_audio(ext)}
 
     if unwritable:
@@ -187,14 +209,14 @@ class Assets:
 
     @property
     def text(self) -> Path:
-        """A plain-text input file."""
+        """Placeholder file for a generic file input accepting .txt."""
 
         return self.cached(("text",), lambda: write_bytes(
             self.workdir / "test_input.txt", b"HARP model validation\n"))
 
     @property
     def json(self) -> Path:
-        """A minimal JSON input file."""
+        """Placeholder file for a generic file input accepting .json."""
 
         return self.cached(("json",), lambda: write_bytes(
             self.workdir / "test_input.json", b"{}\n"))
@@ -308,9 +330,11 @@ class Assets:
         """
         Pick a synthesized file whose format matches the accepted types.
 
-        Audio components get a clip in an accepted format, preferring the
-        configured `ext` when the component allows it. MIDI, JSON, and text
-        inputs are served from their synthesized files. A component whose
+        This serves the generic file inputs, the ones a model declares with a
+        list of accepted extensions rather than as an audio or MIDI track. One
+        accepting audio gets a clip in an accepted format, preferring the
+        configured `ext` when the component allows it. One accepting MIDI,
+        .json, or .txt gets the matching synthesized file. A component whose
         accepted types are all unsupported (e.g. a bespoke binary format) gets
         None, and needs a real file supplied by a test case's `files` entry.
 
