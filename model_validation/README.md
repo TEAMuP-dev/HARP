@@ -12,23 +12,23 @@ Two tiers share the same test harness:
 | Tier | Command | What it validates | What a failure means |
 |---|---|---|---|
 | **Examples** | `--local-examples` | The apps under `pyharp/examples/`, launched locally | pyharp or gradio itself is broken |
-| **Spaces** | (default) | Every Hugging Face Space under `teamup-tech` | That specific deployment is broken (build error, HF platform change, dependency drift, ...) |
+| **Spaces** | (default) | Every Hugging Face Space under `--org` | That specific deployment is broken (build error, HF platform change, dependency drift, ...) |
 
 Key behaviors:
 
 - **Models are validated independently.** A crash, hang, or timeout in one
   never stops the rest. All results are collected into a single report, and
   the process exits non-zero only after everything has run.
-- **Crashed and stopped spaces are restarted automatically.** Sleeping spaces
-  are woken simply by connecting. Pass `--no-restart-failed` to disable the
-  restart, which is also what lets the run work with a read-only token.
+- **Crashed and stopped spaces are restarted automatically**, and a sleeping
+  space is woken by a request that waits out its start. Pass
+  `--no-restart-failed` to disable the restart. This is also what allows a
+  run to work with a read-only token.
 - **ZeroGPU time is tracked** across the run and reported after each ZeroGPU
-  model. Pass `--skip-zerogpu` to spend no allowance at all.
+  model. Pass `--skip-zerogpu` to skip these models and avoid spending allowance.
 - A daily GitHub Action
   ([model_validation.yml](../.github/workflows/model_validation.yml)) runs
-  both tiers at 06:30 UTC. Model failures do **not** turn the run red, so no
-  notification emails arrive while deployments stabilize. Results live in the
-  run summary and the report artifacts.
+  both tiers. See [CI Behavior](#ci-behavior) for what it reports and for when
+  a run turns red.
 
 ## Code Layout
 
@@ -51,8 +51,8 @@ downward, so a module can be read knowing nothing about the groups above it:
 | | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
 
 Alongside the code, [config.yml](config.yml) holds the validation
-configuration and [test_data/](test_data/) holds any real input files that
-test cases refer to. Everything a run produces goes under `reports/`.
+configuration and [test_data/](test_data/) holds any real input files the
+test cases reference. Everything a run produces goes under `reports/`.
 
 ## Token Setup
 
@@ -94,7 +94,7 @@ python model_validation/src/validate_models.py --load-only
 # Skip ZeroGPU models, to spend none of the shared ZeroGPU allowance
 python model_validation/src/validate_models.py --skip-zerogpu
 
-# Never restart spaces (works with a read-only token)
+# Don't attempt to restart spaces (works with a read-only token)
 python model_validation/src/validate_models.py --no-restart-failed
 
 # Examples tier (needs pyharp + example deps, no token required)
@@ -112,57 +112,39 @@ name for you, so `pitch_shifter` means `teamup-tech/pitch_shifter` for
 organization, or give `--local-examples` a path to an example kept outside
 `pyharp/examples/`.
 
-These are names rather than paths. Only `--local-examples` takes a path, and
-only to locate the directory. The example is still identified by that
-directory's name, so an example kept outside `pyharp/examples/` is configured
-and referenced as `examples/<name>` like any other.
+## Selecting Models
 
-`--exclude` and the config's `exclude` and `overrides` keys can refer to
-either tier, so they take a qualified name. `teamup-tech/<name>` is only ever
-a space, and `examples/<name>` is only ever a local example. Qualifying is
-worth the few extra characters in a file that outlives the run, since it
-states which deployment an entry is about and stops a spaces entry from
-silently applying to a like-named example. A bare name is still accepted, and
-means the model in whichever tier is being run.
+A spaces run validates every space under `--org`. Two keys in
+[config.yml](config.yml) adjust that standing set in either direction.
 
-## Where Settings Live
+`include_extra` adds spaces from outside the organization, _i.e._ a HARP
+deployment kept under someone else's account. It describes discovery, so it
+does nothing when `--spaces` names what to run, and nothing on an examples run.
 
-[config.yml](config.yml) holds durable facts about the models: which ones to
-validate, and what to assert about them. Those outlive any single run, which
-is what makes them worth version-controlling and reviewing.
+`exclude` removes models, _e.g._ non-HARP spaces, archived deployments, and
+known-broken examples. It applies to both tiers, and `--exclude <model> ...`
+adds to it for one run.
 
-Choices about one run stay on the command line, where changing them costs no
-file edit. That covers the timeouts, how many models run at once, whether to
-skip ZeroGPU models or inference altogether, and where output goes.
+The two exclusion sources differ in one way. A config exclusion is a standing
+decision about a model, so it applies to whatever the organization-wide discovery
+turns up, but naming that model on the command line overrides it. That is what
+you want when checking whether a space you disabled is working again, since
+`--spaces some-excluded-space` validates it without your having to edit the
+file first. An `--exclude` given on that same command line is just as
+specific, so it still applies.
 
-| In config.yml | On the command line |
-|---|---|
-| `exclude`, `include_extra` | `--spaces`, `--local-examples`, `--org`, `--exclude` |
-| per-model `test_cases`, `expect`, `validators` | `--load-only`, `--skip-zerogpu`, `--no-restart-failed` |
-| per-model `connect_timeout`, `process_timeout`, `load_only`, `skip_common_cases` | `--connect-timeout`, `--process-timeout`, `--zerogpu-process-timeout` |
-| `synthesized_inputs`, `common_test_cases` | `--workers`, `--zerogpu-workers`, `--output-dir`, `--verbose` |
-
-Two settings appear on both sides, and they combine rather than compete.
-Exclusions add up, so `--exclude` leaves a model out for one run on top of
-whatever config.yml already excludes. Naming a model is more specific than a
-standing exclusion, so `--spaces some-excluded-space` validates it anyway. The
-timeouts follow the same idea from the other direction: a model's own
-`connect_timeout` or `process_timeout` is a fact about that model, so it wins
-over the flag, which sets the value for everything else in the run.
-
-`--load-only` is the one flag that only ever restricts. It holds even where a
-model's config entry does not ask for it, so inference you asked to skip stays
-skipped.
-
-The organization is not in config.yml. It is how spaces are discovered and how
-a bare name is expanded, so it lives on `--org` with its default in the script.
-Entries in config.yml name their models in full instead.
+**Naming.** `exclude`, `--exclude`, and the `overrides` keys can refer to
+either tier, so qualify them. `teamup-tech/<name>` is only ever a space, and
+`examples/<name>` is only ever a local example. A bare name is still accepted
+and refers to the model in whichever tier is being run, but qualifying keeps a
+spaces entry from silently applying to a like-named example and vice-versa.
+Qualify `include_extra` entries too, since a bare name there resolves
+to the organization and names a space discovery already covers.
 
 ## Run Output
 
-Each run writes to its own timestamped directory under
-`model_validation/reports/`, so runs never overwrite each other. Override the
-base with `--output-dir`. A run directory looks like this:
+Each run writes to its own timestamped directory under `model_validation/reports/`.
+Override the base with `--output-dir`. A run directory looks like this:
 
 ```
 model_validation/reports/2026-07-18T14-30-00/   (local time)
@@ -206,11 +188,11 @@ dedicated-hardware models never contribute.
 
 **Wall time** is how long those calls took, measured from submission to
 result. Treat it as a rough ceiling on the GPU time a run costs rather than as
-the bill, for two reasons. It includes the queue wait before the job ran,
-which is not GPU time. And ZeroGPU charges dynamically: a call reserves its
+the bill, for two reasons:
+1. It includes the queue wait before the job ran, which is not GPU time.
+2. ZeroGPU charges dynamically. A call reserves its
 declared `@spaces.GPU(duration=...)` up front, then refunds the unused part
-when the function returns, so the settled amount is usually lower. The
-`(approx)` marker is a reminder of both.
+when the function returns, so the settled amount is usually lower.
 
 Each case's wall time is also recorded in `report.json` as `duration`. All of
 these figures describe the work this run does. None of them say anything about
@@ -229,7 +211,7 @@ Three mechanisms limit the ZeroGPU allowance a run can consume:
   before a job runs is bounded separately by `--connect-timeout`, so a long
   queue does not trip the execution timeout. A `process_timeout` set for the
   model in config.yml takes precedence over both.
-- **ZeroGPU models run one at a time.** `--zerogpu-workers` (default 1) caps
+- **ZeroGPU models run one at a time by default.** `--zerogpu-workers` caps
   them, since overlapping reservations tie up allowance that none of them is
   using. Non-ZeroGPU models still run at full `--workers` concurrency
   alongside. The cap is held only around the endpoint tests, so slow restarts
@@ -243,19 +225,19 @@ A "model is still loading" response comes from a space starting its GPU
 worker. It is retried until `--connect-timeout`, the time budgeted for a model
 to come up.
 
-A short list of infrastructure faults is retried a few times at a short
-interval instead. It currently covers a read timeout, a GPU host ECC error,
-and a server disconnect. These have no expected duration to wait out, and the
-retry usually surfaces the model's real behaviour.
+An infrastructure fault is retried `TRANSIENT_RETRY_LIMIT` times at a short
+interval instead. Currently covered are a read timeout, a GPU host ECC error,
+and a server disconnect. None of these has an expected duration to wait out,
+which is why they are bounded by a retry count rather than by a deadline, and
+the retry usually surfaces the model's real behaviour.
 
-That list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), retried
-`TRANSIENT_RETRY_LIMIT` times. It is deliberately narrow and holds only faults
-observed to clear on a retry. A retried `/process` call reserves ZeroGPU
-allowance again, so a marker that also fires on a genuine failure multiplies
-the quota that failure costs and delays the real error. That rules out
-matching a dropped connection broadly, because a model that crashes its own
-Space drops the connection in exactly the same way. Add an entry only once a
-fault is confirmed to clear on a retry.
+This list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), and it
+is deliberately narrow. A retried `/process` call reserves ZeroGPU allowance
+again, so a marker that also fires on a genuine failure multiplies what that
+failure costs and delays the real error. It is why a dropped connection is not
+matched broadly, since a model that crashes its own Space can drop the connection
+in exactly the same way. Add an entry only once a fault is confirmed to clear
+on a retry.
 
 ## Configuring Test Cases
 
@@ -274,27 +256,29 @@ inputs, or inspecting outputs more deeply.
 ### Synthesized input properties
 
 The generated inputs default to a 2-second mono 44.1 kHz WAV and a two-note
-MIDI file. Override any of those properties with a `synthesized_inputs` block.
-It can be set globally in [config.yml](config.yml), per model under its
-`overrides` entry, or per test case. Each level overrides the one before it:
+MIDI file. A `synthesized_inputs` block departs from those defaults. It can be
+set at the top level of [config.yml](config.yml), per model under its
+`overrides` entry, or per test case, with each level overriding the one before
+it. Every property is optional, so a block sets only what it changes.
 
 ```yaml
-synthesized_inputs:      # global default for every model
+# config.yml, at the top level, so it applies to every model
+synthesized_inputs:
   audio:
-    sample_rate: 48000
-    channels: 2
-    duration: 5.0
-    ext: .flac
+    sample_rate: 48000   # default 44100
+    channels: 2          # default 1
+    duration: 5.0        # default 2.0
+    ext: .flac           # default .wav
   midi:
-    num_notes: 8
-    note_duration: 0.25
+    num_notes: 8         # default 2
+    note_duration: 0.25  # default 0.5
 ```
 
-Audio and MIDI are the only kinds a block can configure, because they are the
+Audio and MIDI are the only media a block can configure, because they are the
 only inputs built from properties. A generic file input (`gr.File`) accepting
 `.txt` or `.json` is handed a fixed placeholder file, which has nothing worth
 varying, and one accepting some other format has to be supplied by a test
-case's `files` entry. An unrecognized kind or property name is reported as a
+case's `files` entry. An unrecognized type or property name is reported as a
 configuration error before any model runs, rather than being read by nothing
 at all.
 
@@ -304,11 +288,25 @@ declares, and a test case's `controls:` entry is what overrides it. (A JSON
 component is an output type in HARP, so it never needs an input at all.)
 
 Audio is written with soundfile, so `ext` accepts any format this libsndfile
-build can write, and one it cannot write is a configuration error too. For a
-track input the extension is used as given. For a generic file input it is a
-preference, since a component that accepts only other extensions is given one
-it accepts instead. Each distinct set of properties is generated once and
-reused for the rest of the run.
+build can write, and one it cannot write is a configuration error.
+
+`ext` is set per media kind (_i.e._ audio or midi), and applies wherever a file of
+that kind is synthesized. That includes generic file inputs, because a
+`gr.File` accepting `.wav` or `.flac` is a generic file input in HARP terms
+rather than an audio track, and what it gets handed is still a synthesized
+audio clip. Only `gr.Audio` is an audio track, and only `.mid` or `.midi`
+file types make a MIDI track.
+
+An audio or MIDI track gets the configured extension as given. For a generic
+file input it is a preference instead, since the component's declared
+`file_types` are a contract and one `ext` setting spans every model. A
+component accepting only other formats is given one it accepts, and one whose
+accepted types cannot be synthesized at all, such as a bespoke binary format,
+has its case skipped with a message naming the input. When a specific input
+needs a specific file, name it in a test case's `files` entry.
+
+A file for each distinct set of properties is generated once and reused for
+the rest of the run.
 
 ### Step 1: find the model's control labels
 
@@ -325,11 +323,14 @@ to find them:
 ### Step 2: add the case to config.yml
 
 Cases live under `overrides:`, keyed by the model's qualified name, which is
-its space id or `examples/<example-dir>`. Each case has a `name` plus any of
-three optional fields.
-`controls` overrides scalar values by label. `files` substitutes input files by
-label, with paths taken relative to config.yml, so real inputs belong in
-`test_data/`. `process_timeout` extends the timeout for that case alone.
+its space id or `examples/<example-dir>`. Each case needs a `name` and takes
+several optional fields.
+
+`controls` overrides scalar values by label, and
+`files` substitutes input files by label, with paths taken relative to
+config.yml (real inputs belong under `test_data/`).
+`process_timeout` can be overridden at either the model or case level.
+See above for information about `synthesized_inputs` and Step 3 for information about `expect` and `validators`.
 
 ```yaml
 overrides:
@@ -351,11 +352,11 @@ Note: once `test_cases` is present, **only** the listed cases run. Include
 ### Step 3: check the outputs (optional)
 
 Every case already gets structural checks for free. `/process` must not error,
-file outputs must exist and be non-empty, and a JSON output (an optional
-pyharp `LabelList`) must be well-formed when present. An absent or `None`
+file outputs must exist and be non-empty, and a JSON output (_e.g._ an optional
+pyharp `LabelList`) must be well-formed when present. Note that an absent or `None`
 label output is valid, since labels are optional.
 
-Beyond that, there are two mechanisms, divided by what they can express:
+Beyond that, there are two mechanisms to validate output:
 
 - **`expect`** asserts properties of a *single* output, and covers most
   checks.
@@ -365,7 +366,7 @@ Beyond that, there are two mechanisms, divided by what they can express:
 #### `expect`: declarative per-output rules
 
 Keyed by output label, then by rule. Every rule is optional, and an output
-with no rules is still subject to the structural checks above:
+with no rules is still subject to the default structural checks:
 
 ```yaml
       - name: extreme-shift
@@ -385,7 +386,7 @@ with no rules is still subject to the structural checks above:
             min_labels: 1        # minimum labels in a pyharp LabelList
 ```
 
-The full vocabulary, and which output types each rule covers:
+The following is the full vocabulary along with which output types each rule covers:
 
 | Rule | Applies to | Asserts |
 |---|---|---|
@@ -413,13 +414,13 @@ the MIDI ones:
 
 **Mistakes on a named output are surfaced as configuration mistakes, not as
 model faults.** An unrecognized rule name, an unknown output label, or a rule
-aimed at a named output whose type it does not cover (`min_labels` on an audio
-output, say) fails the case with a message naming the problem and listing what
+aimed at a named output whose type it does not cover (_e.g._ `min_labels` on an audio
+output) fails the case with a message naming the problem and listing what
 is valid. The run still exits `1`, since the case did not pass, but it is the
 config that needs the fix. A rule under `"*"` is more forgiving. When it
-matches no compatible output it is skipped instead of raising an error. That
-is what lets a generic case (see
-[common test cases](#step-4-reuse-a-case-across-models)) target output types a
+matches no compatible output it is skipped instead of raising an error. This
+is what allows a generic case (see
+[common test cases](#step-4-reuse-a-case-across-models)) to target output types a
 given model does not have.
 
 **On `min_rms_db`:** level is measured as RMS in dBFS, where 0 dBFS is full
@@ -427,7 +428,7 @@ scale. It is a bit-depth-independent unit that is easy to set thresholds in.
 Digital silence is `-inf`, quiet noise floors sit near `-60`, and typical
 program material is above `-40`. RMS is also more robust than a peak
 measurement, since a single stray click cannot make an otherwise-silent file
-pass. `min_rms_db: -60` is the usual "this output is not silent" check.
+pass. `min_rms_db: -60` is the usual check for silence.
 
 **On `min_labels`:** `min_labels: 0` is meaningful, and is the right rule when
 a model may legitimately return no labels. It asserts that a well-formed
@@ -473,15 +474,16 @@ A validator is a function taking three arguments:
 To report a problem, a validator raises `AssertionError`. The message should
 name the output at fault and say what was wrong with it. To opt out on a model
 that lacks the outputs it needs, a validator raises `ValidatorNotApplicable`
-instead. That counts as a skip rather than a failure, which is what lets a
-validator be used in a common test case.
+instead. That counts as a skip rather than a failure, which is what allows a
+validator to be used in a common test case.
 
 The shipped `labels_within_audio` does both. It asserts that every returned
 label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
 
-To add a validator:
+Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
+under the name test cases will reference:
 
 ```python
 @validator("labels_sorted")
@@ -504,7 +506,7 @@ putting it in a one-off validator.
 A case under a model's `test_cases` only applies to that model. For a check
 that should hold for *every* model, such as "no file output is empty" or
 "audio is never silent", add a `common_test_cases` entry at the top level of
-config.yml instead. Common cases run on every model in addition to its own,
+config.yml instead. Common cases run on every model in addition to any model-specific tests,
 and their names are shown in the report prefixed with `common:`.
 
 ```yaml
@@ -522,20 +524,19 @@ common_test_cases:
 Keep common cases model-agnostic by targeting outputs with `"*"` rather than a
 specific label, which will not exist on most models. Because a `"*"` rule is
 skipped when it matches no compatible output, `audio-not-silent` above checks
-audio models and is skipped on MIDI-only ones. A validator can do the same by
-raising `ValidatorNotApplicable` when the model lacks the outputs it needs, as
-the shipped `labels_within_audio` does. A model can opt out of common cases
+audio models and is skipped on MIDI-only ones. A validator should do the same by
+raising `ValidatorNotApplicable` when the model lacks the outputs it needs.
+A model can opt out of common cases
 entirely with `skip_common_cases: true` in its `overrides` entry.
 
-### Step 5: run just that model to iterate
+### Step 5: run a single model to iterate
 
 ```bash
 python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
 ```
 
 The console shows each case's pass or fail, and `report.json` has the per-case
-timings and error details. Once the case passes reliably, the daily CI run
-picks it up automatically. No workflow changes are needed.
+timings and error details.
 
 ### Reference: full config.yml schema
 
@@ -546,29 +547,16 @@ takes `connect_timeout`, `process_timeout`, `load_only`, `skip_common_cases`,
 `synthesized_inputs`, and `test_cases`. A representative entry for each tier
 is included as an example.
 
-A key outside those sets is reported as a configuration error rather than
-quietly read by nothing, so a slip such as `test_case` for `test_cases` is
+Three of those per-model settings also exist as CLI flags. A model's
+`connect_timeout` or `process_timeout` is a fact about that model, so it wins
+over `--connect-timeout` and `--process-timeout`, which set the value for
+every other model in the run. `--load-only` works the other way around,
+because it only ever restricts, so it holds for every model whether or not one
+sets `load_only` itself.
+
+A key outside these sets is reported as a configuration error, so a slip such as `test_case` for `test_cases` is
 caught before any model runs, instead of leaving the model on its default
 case while the file appears to say otherwise.
-
-## Excluding Models
-
-There are two ways, and they add up:
-
-- `exclude` in [config.yml](config.yml), for standing exclusions such as
-  non-HARP spaces, archived deployments, and known-broken examples.
-- `--exclude <model> ...` on the command line, for one run.
-
-Models are named as described above. `midi_synthesizer` excludes the space on
-a spaces run and the example on an examples run, while
-`examples/midi_synthesizer` excludes only the example.
-
-The two differ in one way. A config exclusion is a standing decision about a
-model, so it applies to whatever discovery turns up, but naming that model on
-the command line overrides it. That is what you want when checking whether a
-space you parked is working again, since `--spaces some-excluded-space`
-validates it without your having to edit the file first. An `--exclude` given
-on that same command line is just as specific, so it still applies.
 
 ## CI Behavior
 
@@ -586,6 +574,3 @@ on that same command line is just as specific, so it still applies.
 - **Opting back into notifications later:** remove the exit-code handling in
   the two `Validate` steps of the workflow so the script's exit code 1
   propagates. Failed runs then turn red and GitHub emails maintainers.
-- A failure in the examples tier likely indicates a pyharp or gradio level
-  breakage that may affect every deployment. Fix those before debugging
-  individual spaces.

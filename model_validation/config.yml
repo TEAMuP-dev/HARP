@@ -42,10 +42,10 @@
 #
 # ---- Top-level settings ----------------------------------------------------
 #
-#   exclude: []          # models to leave out of validation entirely
+#   exclude:          # models to leave out of validation entirely
 #     - some-non-harp-space
 #
-#   include_extra: []    # spaces outside the organization to validate as well
+#   include_extra:    # spaces outside the organization to validate as well
 #     - some-user/some-harp-space
 #
 #   synthesized_inputs:  # properties of the generated test inputs. The values
@@ -66,15 +66,17 @@
 # overriding the one before it.
 #
 # Audio and MIDI are the only configurable inputs, since they can be built
-# from properties. A generic file input (gr.File) accepting .txt or .json is
-# handed a fixed placeholder file, with nothing worth varying, and file inputs
-# accepting some other format must be supplied by a test case's `files` entry.
+# from properties. A generic file input (gr.File) is covered by them too when
+# it accepts audio or MIDI formats, since what it gets handed is a synthesized
+# clip. One accepting .txt or .json is handed a fixed placeholder file, with
+# nothing worth varying, and one accepting anything else has to be supplied by
+# a test case's `files` entry.
 #
 # Scalar controls are not part of this block. A text box, number box, slider,
 # toggle, or dropdown takes the default value its /controls spec declares, and
 # a test case's `controls:` entry is what overrides this.
 #
-#   common_test_cases: []  # cases run on EVERY model, in addition to its own
+#   common_test_cases:     # cases run on EVERY model, in addition to its own
 #                          # cases. Keep these model-agnostic by targeting
 #                          # outputs with "*" rather than by label. Names
 #                          # appear in the report prefixed with "common:"

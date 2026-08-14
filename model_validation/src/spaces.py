@@ -11,6 +11,7 @@ import contextlib
 import time
 import traceback
 
+import httpx
 from gradio_client import Client
 
 from assets import Assets
@@ -29,17 +30,21 @@ __all__ = [
 # Stages a space can be talked to from: RUNNING serves immediately, SLEEPING
 # wakes on the first request
 SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
-# Stages that resolve on their own if we wait (SLEEPING resolves on request)
-TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING", "SLEEPING"}
+# Stages that resolve on their own if we wait. SLEEPING is not one of them,
+# since a sleeping space only starts once something asks it to (see wake_space)
+TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING"}
 # Stages a restart can recover from. DELETING is excluded, as there is
 # nothing left to restart
 RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",
                       "STOPPED", "PAUSED"}
 
 RUNTIME_POLL_INTERVAL = 10   # cadence for polling a space's runtime stage
+WAKE_MIN_TIMEOUT = 60        # never give a wake request less than this
+CONNECT_RESERVE = 60         # budget held back from the wake, to connect with
 
 
-def wait_for_runtime(api, space_id: str, deadline: float):
+def wait_for_runtime(api, space_id: str, deadline: float,
+                     unsettled: set = TRANSIENT_STAGES):
     """
     Poll a space's runtime until its stage settles or the deadline passes.
 
@@ -47,6 +52,9 @@ def wait_for_runtime(api, space_id: str, deadline: float):
         api (HfApi): Authenticated Hugging Face API client.
         space_id (str): The space to poll.
         deadline (float): time.time() value to stop polling at.
+        unsettled (set): Stages still considered to be in progress. SLEEPING
+            belongs here only once the space has been asked to start, since
+            otherwise it would never resolve.
 
     Returns:
         runtime (SpaceRuntime): The last observed runtime (stage, hardware).
@@ -54,12 +62,57 @@ def wait_for_runtime(api, space_id: str, deadline: float):
 
     runtime = api.get_space_runtime(space_id)
 
-    # SLEEPING resolves on first request rather than by waiting
-    while runtime.stage in TRANSIENT_STAGES - {"SLEEPING"} and time.time() < deadline:
+    while runtime.stage in unsettled and time.time() < deadline:
         time.sleep(RUNTIME_POLL_INTERVAL)
         runtime = api.get_space_runtime(space_id)
 
     return runtime
+
+
+def wake_space(api, space_id: str, timeout: float) -> bool:
+    """
+    Ask a sleeping space to start, and wait for it to answer.
+
+    Hugging Face holds a request to a sleeping space open while the app comes
+    up, answering it once the app serves, so one request both triggers the
+    start and waits it out. The timeout therefore has to cover a cold start of
+    a minute or more. gradio_client cannot be used for this, since it fetches
+    the config with httpx's 5 second default and abandons the request long
+    before the space can answer.
+
+    Args:
+        api (HfApi): Authenticated Hugging Face API client.
+        space_id (str): The space to wake.
+        timeout (float): Seconds to hold the request open.
+
+    Returns:
+        serving (bool): True when the space answered, meaning it is serving.
+    """
+
+    try:
+        host = api.space_info(space_id).host
+        return httpx.get(f"{host.rstrip('/')}/config", timeout=timeout).is_success
+    except Exception:  # noqa: BLE001 - a wake that does not answer is normal
+        return False
+
+
+def current_stage(api, space_id: str, fallback: str) -> str:
+    """
+    Read a space's stage for reporting, falling back to what we last saw.
+
+    Args:
+        api (HfApi): Authenticated Hugging Face API client.
+        space_id (str): The space to read.
+        fallback (str): Stage to report if the runtime cannot be read.
+
+    Returns:
+        stage (str): The current stage, or the fallback.
+    """
+
+    try:
+        return api.get_space_runtime(space_id).stage
+    except Exception:  # noqa: BLE001 - reporting must not raise
+        return fallback
 
 
 def test_space(space_id: str, token: str, assets: Assets,
@@ -138,9 +191,26 @@ def test_space(space_id: str, token: str, assets: Assets,
                 result.error = f"space is not running (stage={stage})"
                 return result
 
-        # --- Connect (wakes sleeping spaces, retrying through the wake-up) --
-        last_exc = None
+        # --- Wake, then wait for the app to come up -------------------------
+        # A sleeping space is servable but not yet serving. Ask it to start and
+        # then follow its stage, rather than inferring liveness from repeated
+        # connection attempts, which cannot tell "still starting" from "broken"
         deadline = time.time() + connect_timeout
+        if stage == "SLEEPING":
+            wake_budget = min(deadline - time.time(),
+                              max(WAKE_MIN_TIMEOUT,
+                                  deadline - time.time() - CONNECT_RESERVE))
+            if not wake_space(api, space_id, wake_budget):
+                # It did not answer in that window, so fall back to following
+                # the stage. SLEEPING counts as in progress here, since the
+                # start has now been requested
+                runtime = wait_for_runtime(api, space_id, deadline,
+                                           TRANSIENT_STAGES | {"SLEEPING"})
+                stage = runtime.stage
+                result.stage = stage
+
+        # --- Connect (retrying while the app finishes serving) --------------
+        last_exc = None
         while time.time() < deadline:
             try:
                 client = run_with_timeout(
@@ -151,10 +221,14 @@ def test_space(space_id: str, token: str, assets: Assets,
                 last_exc = exc
                 time.sleep(CONNECT_RETRY_INTERVAL)
         if client is None:
-            raise RuntimeError(f"could not connect: {last_exc}")
-        # Connecting has woken the space, so reflect that rather than the stale
-        # SLEEPING/STARTING stage seen before the wake-up, and fill in the
-        # hardware if it was not reported while the space was asleep
+            # Report where the space actually ended up, which separates one
+            # still coming up from one that never started at all
+            result.stage = current_stage(api, space_id, result.stage)
+            detail = last_exc or f"space was {result.stage} when time ran out"
+            raise RuntimeError(f"could not connect: {detail}")
+        # The space is serving now, so record that rather than the stale stage
+        # seen before it woke, and fill in the hardware if it was not reported
+        # while the space was asleep
         if result.stage != "RUNNING":
             result.stage = "RUNNING"
         if not result.hardware:
