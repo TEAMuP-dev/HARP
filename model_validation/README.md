@@ -112,6 +112,11 @@ name for you, so `pitch_shifter` means `teamup-tech/pitch_shifter` for
 organization, or give `--local-examples` a path to an example kept outside
 `pyharp/examples/`.
 
+These are names rather than paths. Only `--local-examples` takes a path, and
+only to locate the directory. The example is still identified by that
+directory's name, so an example kept outside `pyharp/examples/` is configured
+and referenced as `examples/<name>` like any other.
+
 `--exclude` and the config's `exclude` and `overrides` keys can refer to
 either tier, so they take a qualified name. `teamup-tech/<name>` is only ever
 a space, and `examples/<name>` is only ever a local example. Qualifying is
@@ -341,7 +346,7 @@ overrides:
 ```
 
 Note: once `test_cases` is present, **only** the listed cases run. Include
-`- name: default` to keep the synthesized one.
+`- name: default` to keep the default synthesized case.
 
 ### Step 3: check the outputs (optional)
 

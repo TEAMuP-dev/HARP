@@ -19,6 +19,7 @@ __all__ = [
     'run_with_timeout',
     'load_config',
     'check_config_keys',
+    'check_model_names',
     'qualify',
     'qualify_keys',
     'Exclusions',
@@ -266,6 +267,44 @@ def check_config_keys(config: dict) -> None:
             check_keys(case, CASE_KEYS,
                        f"'{model}' test case "
                        f"'{(case or {}).get('name', 'unnamed')}'")
+
+
+def check_model_names(config: dict, *cli_names) -> None:
+    """
+    Reject model names that were written as filesystem paths.
+
+    A model is named `<name>` or `<owner>/<name>`, never by path. An example
+    is identified by its directory name alone, so `examples/pitch_shifter`
+    names that example wherever the directory happens to live. A path written
+    in its place matches no model and would otherwise be ignored in silence,
+    which for an `overrides` entry means every setting under it goes unused.
+
+    Args:
+        config (dict): Parsed configuration.
+        *cli_names (list | None): Model names given on the command line.
+
+    Raises:
+        ValueError: If a name looks like a path rather than a model name.
+    """
+
+    named = (list(config.get("exclude") or [])
+             + list(config.get("include_extra") or [])
+             + list(config.get("overrides") or {}))
+
+    for group in cli_names:
+        named += list(group or [])
+
+    bad = sorted({str(name) for name in named
+                  if str(name).startswith("/") or str(name).count("/") > 1})
+
+    if bad:
+        subject = "model names" if len(bad) > 1 else "model name"
+        verb = "look like paths" if len(bad) > 1 else "looks like a path"
+        raise ValueError(
+            f"{subject} {bad} {verb}. Name a model `<name>` or "
+            f"`<owner>/<name>`, such as 'teamup-tech/pitch_shifter' or "
+            f"'examples/pitch_shifter'. An example is named by its directory "
+            f"alone, wherever it lives")
 
 
 def qualify_keys(overrides: dict, owner: str) -> dict:

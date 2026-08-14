@@ -2,12 +2,11 @@
 #
 # Every key is optional. Models are discovered automatically and validated
 # with one synthesized "default" test case, so an entry is only needed to
-# change a model's settings, add test cases, or leave a model out.
+# change a model's settings or add test cases.
 #
 # model_validation/README.md explains the ideas behind these settings. What
 # follows is the reference for the settings themselves, each shown with its
-# default. A key that is not one of them is reported as a configuration error
-# rather than quietly read by nothing.
+# default. Any non-matching keys are reported as configuration errors.
 #
 #
 # ---- What belongs here -----------------------------------------------------
@@ -19,12 +18,7 @@
 # Choices about one run stay on the command line, where changing them costs no
 # file edit. That covers the timeouts, how many models run at once, whether to
 # skip ZeroGPU models or inference altogether, and where output goes. Run
-# `validate_models.py --help` for the full list.
-#
-# The organization is not a setting here either. It is how spaces are
-# discovered and how a bare name is expanded, so it lives on --org. Entries in
-# this file name their models in full instead, which leaves no doubt about
-# which deployment each one is about.
+# `validate_models.py --help` for the full specification.
 #
 #
 # ---- Naming models ---------------------------------------------------------
@@ -32,12 +26,18 @@
 # Name a model the way its tier does, and qualify it:
 #
 #   teamup-tech/pitch_shifter   a Hugging Face Space (any "<owner>/<name>")
-#   examples/pitch_shifter      the pyharp example in pyharp/examples/
+#   examples/pitch_shifter      a pyharp example, by its directory name
 #
 # A bare "pitch_shifter" also works, and means the model in whichever tier is
 # being run, since only one tier runs at a time. Prefer the qualified form.
 # It states which deployment an entry is about, and it keeps a spaces entry
 # from silently applying to a like-named example.
+#
+# Note that these are not paths. An example is identified by its directory
+# name alone, so "examples/pitch_shifter" is the entry whether that directory
+# sits in pyharp/examples/ or somewhere else that --local-examples was pointed
+# at. Only --local-examples takes a path, and only to locate the directory.
+# Any paths given will be reported as configuration errors.
 #
 #
 # ---- Top-level settings ----------------------------------------------------
@@ -45,7 +45,7 @@
 #   exclude: []          # models to leave out of validation entirely
 #     - some-non-harp-space
 #
-#   include_extra: []    # spaces outside the org to validate as well
+#   include_extra: []    # spaces outside the organization to validate as well
 #     - some-user/some-harp-space
 #
 #   synthesized_inputs:  # properties of the generated test inputs. The values
@@ -65,20 +65,19 @@
 # This block can also be set per model and per test case, with each level
 # overriding the one before it.
 #
-# Audio and MIDI are the only kinds here, since they are the only inputs built
+# Audio and MIDI are the only configurable inputs, since they can be built
 # from properties. A generic file input (gr.File) accepting .txt or .json is
-# handed a fixed placeholder file, which has nothing worth varying, and one
-# accepting some other format has to be supplied by a test case's `files`
-# entry.
+# handed a fixed placeholder file, with nothing worth varying, and file inputs
+# accepting some other format must be supplied by a test case's `files` entry.
 #
 # Scalar controls are not part of this block. A text box, number box, slider,
 # toggle, or dropdown takes the default value its /controls spec declares, and
-# a test case's `controls:` entry is what overrides it.
+# a test case's `controls:` entry is what overrides this.
 #
-#   common_test_cases: []  # cases run on EVERY model, on top of its own. Keep
-#                          # them model-agnostic by targeting outputs with "*"
-#                          # rather than by label. Names appear in the report
-#                          # prefixed with "common:"
+#   common_test_cases: []  # cases run on EVERY model, in addition to its own
+#                          # cases. Keep these model-agnostic by targeting
+#                          # outputs with "*" rather than by label. Names
+#                          # appear in the report prefixed with "common:"
 #     - name: outputs-nontrivial
 #       expect:
 #         "*":
@@ -96,10 +95,10 @@
 #       process_timeout: 600   # seconds to wait for this model's /process
 #                              # (default: --process-timeout, or
 #                              # --zerogpu-process-timeout on ZeroGPU
-#                              # hardware). Raise it for a slow model
-#       load_only: false       # only check availability + /controls, running
-#                              # no inference
-#       skip_common_cases: false   # opt out of common_test_cases
+#                              # hardware). Increase it for a slow model
+#       load_only: false       # only check availability + /controls, without
+#                              # running inference
+#       skip_common_cases: false   # opt this model out of common_test_cases
 #
 #       synthesized_inputs:    # input properties for this model's cases,
 #                              # overriding the top-level block
@@ -108,10 +107,10 @@
 #
 #       test_cases:            # once this key is present, ONLY these cases
 #                              # run, so include `default` to keep the
-#                              # synthesized one
-#         - name: default      # a case with no settings == synthesized
-#                              # defaults, which is what every unconfigured
-#                              # model gets
+#                              # default synthesized case
+#         - name: default      # a case with no settings means synthesized
+#                              # defaults, which every unconfigured model
+#                              # already gets by default
 #
 #         - name: some-case
 #           process_timeout: 300   # this case only (default: the model's)
@@ -120,7 +119,7 @@
 #             "Some Slider Label": 12
 #             "Some Toggle Label": true
 #
-#           files:                 # track/file inputs, by label. Paths are
+#           files:                 # track or file inputs by label. Paths are
 #                                  # relative to this file
 #             "Input Audio": test_data/my_clip.wav
 #
@@ -165,15 +164,15 @@
 #   min_labels                                      JSON (LabelList) outputs
 #
 # Applying a rule to a NAMED output whose type it does not cover fails the
-# case with a message naming the configuration mistake, rather than reading as
-# a fault in the model. Under "*" such a rule is skipped instead, which is what
-# lets a common case target types a model may not have. Audio outputs are
+# case with a message indicating the configuration mistake, rather than reading
+# as a fault in the model. Under "*" such rules are skipped instead, which is
+# what lets a common case target types a model may not have. Audio outputs are
 # decoded with soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3,
 # AIFF, ...). Note that bit_depth applies only to PCM formats, not compressed
 # ones. MIDI outputs are parsed with mido.
 #
 #
-# ---- A representative entry per tier ---------------------------------------
+# ---- Examples --------------------------------------------------------------
 #
 # Local pyharp example. These run with `--local-examples` and exercise pyharp
 # itself, with no Hugging Face infrastructure involved:
@@ -205,7 +204,6 @@
 #               min_duration: 1.5
 #
 #
-# ---- Live settings ---------------------------------------------------------
 
 exclude: []
 

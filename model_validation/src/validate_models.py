@@ -41,8 +41,9 @@ from examples import test_local_example
 from spaces import test_space
 from quota import ZeroGPUTracker, is_zerogpu
 from results import FAIL, status_emoji, write_reports
-from utils import (get_token, scrub, load_config, check_config_keys, qualify,
-                   qualify_keys, Exclusions, get_excluded, discover_spaces)
+from utils import (get_token, scrub, load_config, check_config_keys,
+                   check_model_names, qualify, qualify_keys, Exclusions,
+                   get_excluded, discover_spaces)
 
 
 DEFAULT_ORG = "teamup-tech"
@@ -311,6 +312,7 @@ def main() -> int:
         # Checked before anything reads a setting, so a mistake is reported
         # once, names the key as it was written, and costs no model runs
         check_config_keys(config)
+        check_model_names(config, opts.exclude, opts.spaces)
         check_synthesized_inputs(config)
 
         # Only one tier runs, so a bare model name resolves against that tier
