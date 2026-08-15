@@ -14,6 +14,7 @@ import yaml
 
 __all__ = [
     'get_token',
+    'check_token',
     'scrub',
     'describe_exception',
     'run_with_timeout',
@@ -29,8 +30,8 @@ __all__ = [
 
 
 # The settings each level of the configuration accepts, mirroring the
-# reference in config.yml. Anything else is a mistake rather than a setting,
-# so it is reported instead of being read by nothing at all.
+# reference in config.yml. Anything else is a mistake and is reported
+# instead of being read by nothing at all.
 CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases",
                "synthesized_inputs", "overrides"}
 MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
@@ -44,11 +45,11 @@ def qualify(model: str, owner: str) -> str:
     Expand a bare model name using the owner of the tier being validated.
 
     Used for the names that can refer to either tier, which are `--exclude`
-    and the config's `exclude`, `include_extra`, and `overrides` keys. Only one
-    tier runs per invocation, so a bare name is unambiguous there. It means the
-    organization's space on a spaces run and the like-named example on an
-    examples run. A name that already carries an owner is returned unchanged,
-    pinning it to one tier. (`--spaces` names only spaces and
+    and the config's `exclude`, `include_extra`, and `overrides` keys. Only
+    one tier runs per invocation, so a bare name is unambiguous. It means
+    the organization's space on a spaces run and the like-named example on
+    an examples run. A name that already carries an owner is returned
+    unchanged, pinning it to one tier. (`--spaces` names only spaces and
     `--local-examples` only examples, so neither takes the other's form.)
 
     Args:
@@ -141,6 +142,85 @@ def get_token(required: bool) -> str:
         sys.exit(2)
 
     return token
+
+
+def has_write_access(info: dict, org: str) -> bool | None:
+    """
+    Whether a token can write to an organization's spaces.
+
+    Args:
+        info (dict): The `whoami` payload describing the token.
+        org (str): Organization the run will touch.
+
+    Returns:
+        allowed (bool | None): True or False when the token says plainly, and
+            None when it does not. A fine-grained token lists its permissions
+            per entity and the shapes vary, so one that says nothing about
+            this organization is reported as unknown rather than guessed at.
+    """
+
+    access = (info.get("auth") or {}).get("accessToken") or {}
+    role = access.get("role")
+
+    if role in ("write", "admin"):
+        return True
+    if role == "read":
+        return False
+
+    # A fine-grained token lists permissions per entity, so the entry for this
+    # organization is the one that decides. Its own account's entry says
+    # nothing about the organization's spaces, unless the two are the same.
+    for entry in (access.get("fineGrained") or {}).get("scoped") or []:
+        if ((entry.get("entity") or {}).get("name")) == org:
+            # Restarting a space is a repo write. Other write permissions a
+            # token may carry, such as discussion.write, do not grant it
+            return any(str(perm).startswith("repo.") and str(perm).endswith("write")
+                       for perm in entry.get("permissions") or [])
+
+    return None
+
+
+def check_token(token: str, org: str, need_write: bool) -> bool:
+    """
+    Confirm the token works and covers what the run will ask of it.
+
+    One `whoami` call answers both questions. A rejected token is fatal, since
+    every request the run makes would fail the same way. Lacking write access
+    is not fatal, since only the restart of a crashed space needs it, so that
+    is reported as a warning naming the flag that turns restarts off.
+
+    Args:
+        token (str): The Hugging Face access token.
+        org (str): Organization whose spaces the run will touch.
+        need_write (bool): Whether the run may restart spaces.
+
+    Returns:
+        usable (bool): False when the token was rejected outright.
+    """
+
+    from huggingface_hub import HfApi
+
+    try:
+        info = HfApi().whoami(token=token)
+    except Exception as exc:  # noqa: BLE001 - any failure means unusable
+        # The head of the chain carries the reason. What follows it is the
+        # HTTP status and request id, which say nothing a reader can act on
+        reason = scrub(describe_exception(exc), token).split(" | ")[0]
+        print(f"ERROR: HF_TOKEN was rejected. {' '.join(reason.split())}",
+              file=sys.stderr)
+        print("Check the token at https://huggingface.co/settings/tokens.",
+              file=sys.stderr)
+        return False
+
+    role = ((info.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
+    print(f"Token accepted for {info.get('name', 'unknown')} (role: {role})")
+
+    if need_write and has_write_access(info, org) is False:
+        print(f"WARNING: this token cannot restart spaces in {org}, so a crashed "
+              f"or stopped space will be reported rather than recovered. Pass "
+              f"--no-restart-failed to skip the attempt.", file=sys.stderr)
+
+    return True
 
 
 def scrub(text: str, token: str) -> str:
@@ -240,12 +320,11 @@ def check_keys(mapping: dict | None, allowed: set, where: str) -> None:
 
 def check_config_keys(config: dict) -> None:
     """
-    Reject configuration keys that no setting corresponds to.
+    Reject configuration keys that do not match actual settings.
 
-    A misspelled key would otherwise be read by nothing, which is quiet in the
-    worst way. Writing `test_case` for `test_cases`, for instance, would leave
-    the model running the synthesized default case while the file appears to
-    say otherwise.
+    A misspelled key would otherwise be read by nothing. Writing `test_case`
+    for `test_cases`, for instance, would leave the model running the synthesized
+    default case while the file appears to say otherwise.
 
     Args:
         config (dict): Parsed configuration, with `overrides` already

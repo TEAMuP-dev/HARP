@@ -72,6 +72,12 @@ the `HF_TOKEN` environment variable.
 - **If a token is ever exposed, rotate it immediately** at
   https://huggingface.co/settings/tokens.
 
+A spaces run checks the token once before it starts. A rejected token stops
+the run with exit code `2`, rather than failing every space in turn. A token
+that is valid but cannot restart spaces in the organization draws a warning,
+since only the restart of a crashed space needs write access. The run then
+continues, reporting crashed spaces instead of attempting to recover them.
+
 ## Running Locally
 
 ```bash

@@ -8,6 +8,7 @@ endpoint tests under the ZeroGPU concurrency and quota safeguards.
 
 import argparse
 import contextlib
+import inspect
 import time
 import traceback
 
@@ -37,6 +38,12 @@ TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING"}
 # nothing left to restart
 RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",
                       "STOPPED", "PAUSED"}
+
+# gradio_client renamed the Client's token argument from hf_token to token in
+# 2.0, and both spellings are in use, so ask this install which it accepts
+TOKEN_KWARG = ("token"
+               if "token" in inspect.signature(Client.__init__).parameters
+               else "hf_token")
 
 RUNTIME_POLL_INTERVAL = 10   # cadence for polling a space's runtime stage
 WAKE_MIN_TIMEOUT = 60        # never give a wake request less than this
@@ -214,9 +221,14 @@ def test_space(space_id: str, token: str, assets: Assets,
         while time.time() < deadline:
             try:
                 client = run_with_timeout(
-                    lambda: Client(space_id, hf_token=token, verbose=False),
+                    lambda: Client(space_id, verbose=False,
+                                   **{TOKEN_KWARG: token}),
                     max(10.0, deadline - time.time()), "connect")
                 break
+            except TypeError:
+                # The call itself is wrong rather than the space, so retrying
+                # would burn the whole connect budget to no purpose
+                raise
             except Exception as exc:  # noqa: BLE001 - space may still be waking
                 last_exc = exc
                 time.sleep(CONNECT_RETRY_INTERVAL)

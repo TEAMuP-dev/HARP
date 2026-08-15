@@ -41,7 +41,7 @@ from examples import test_local_example
 from spaces import test_space
 from quota import ZeroGPUTracker, is_zerogpu
 from results import FAIL, status_emoji, write_reports
-from utils import (get_token, scrub, load_config, check_config_keys,
+from utils import (get_token, check_token, scrub, load_config, check_config_keys,
                    check_model_names, qualify, qualify_keys, Exclusions,
                    get_excluded, discover_spaces)
 
@@ -339,6 +339,9 @@ def main() -> int:
         results = validate_examples(opts, config, exclusions, assets)
     else:
         token = get_token(required=True)
+        # Checked once here rather than discovered one failing space at a time
+        if not check_token(token, opts.org, opts.restart_failed):
+            return 2
         results = validate_spaces(opts, config, exclusions, assets, token)
 
     if results is None:
