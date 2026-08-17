@@ -223,6 +223,26 @@ Three mechanisms limit the ZeroGPU allowance a run can consume:
   alongside. The cap is held only around the endpoint tests, so slow restarts
   and connections still overlap.
 
+## When a Space Will Not Start
+
+A sleeping space wakes automatically when something requests it.
+However, sometimes this does not work and the host answers at once with a `503`
+and an empty body, and the stage stays `SLEEPING` for however long the request is
+held open or for however often it is repeated. Authenticating the request makes no
+difference, and neither does loading the space's page.
+
+In these situations a restart will work. The same space enters `BUILDING`, then
+`APP_STARTING`, then `RUNNING`. A space in the stuck `SLEEPING`
+state appears to have nothing left to resume from, so the router has no
+running app to hand the request to and no image to start, while an explicit
+restart rebuilds it.
+
+So the harness restarts a sleeping space that refuses to start, provided
+restarts are enabled, which needs a token with write access. With a read-only
+token the refusal is reported instead, naming the restart failure. The
+condition also clears by itself given a few hours, so a space that reports
+this one day often validates normally the next.
+
 ## Retried Failures
 
 Failures that are not the model's fault are retried rather than reported.

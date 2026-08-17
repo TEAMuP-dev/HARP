@@ -47,6 +47,7 @@ TOKEN_KWARG = ("token"
 
 RUNTIME_POLL_INTERVAL = 10   # cadence for polling a space's runtime stage
 WAKE_MIN_TIMEOUT = 60        # never give a wake request less than this
+WAKE_ATTEMPTS = 3            # asks before giving up on a space that stays asleep
 CONNECT_RESERVE = 60         # budget held back from the wake, to connect with
 
 
@@ -76,7 +77,7 @@ def wait_for_runtime(api, space_id: str, deadline: float,
     return runtime
 
 
-def wake_space(api, space_id: str, timeout: float) -> bool:
+def wake_space(api, space_id: str, timeout: float) -> tuple:
     """
     Ask a sleeping space to start, and wait for it to answer.
 
@@ -94,13 +95,71 @@ def wake_space(api, space_id: str, timeout: float) -> bool:
 
     Returns:
         serving (bool): True when the space answered, meaning it is serving.
+        problem (str): What stopped the request from being made, or empty when
+            it was made. A request that goes out and times out is ordinary and
+            reports nothing, since the space is simply still starting. Failing
+            to send one at all is not, and is the difference between a space
+            that would not start and one that was never asked to.
     """
 
     try:
         host = api.space_info(space_id).host
-        return httpx.get(f"{host.rstrip('/')}/config", timeout=timeout).is_success
-    except Exception:  # noqa: BLE001 - a wake that does not answer is normal
-        return False
+    except Exception as exc:  # noqa: BLE001 - reported to the caller
+        return False, f"could not look up its host: {describe_exception(exc)}"
+
+    try:
+        answer = httpx.get(f"{host.rstrip('/')}/config", timeout=timeout)
+        if answer.is_success:
+            return True, ""
+        # An answer this quick is a refusal rather than a start. Hugging Face
+        # holds the request open while an app boots, so a status instead of a
+        # wait means it declined to boot one
+        return False, f"the platform answered {answer.status_code} rather than starting it"
+    except httpx.TimeoutException:
+        return False, ""
+    except Exception as exc:  # noqa: BLE001 - reported to the caller
+        return False, f"the wake request failed: {describe_exception(exc)}"
+
+
+def start_space(api, space_id: str, deadline: float) -> tuple:
+    """
+    Get a sleeping space started.
+
+    The ask is repeated rather than made once. A space that is still SLEEPING
+    was never successfully asked, whatever the reason, and one failed lookup
+    late in a run would otherwise cost the whole connect budget waiting for
+    something nobody requested.
+
+    Args:
+        api (HfApi): Authenticated Hugging Face API client.
+        space_id (str): The space to start.
+        deadline (float): time.time() value to stop asking at.
+
+    Returns:
+        stage (str): Where the space ended up.
+        problem (str): The last reason an ask could not be made, or empty.
+    """
+
+    problem = ""
+
+    for attempt in range(WAKE_ATTEMPTS):
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+
+        share = max(WAKE_MIN_TIMEOUT, remaining / (WAKE_ATTEMPTS - attempt))
+        serving, problem = wake_space(api, space_id, min(share, remaining))
+        stage = current_stage(api, space_id, "SLEEPING")
+
+        if serving or stage != "SLEEPING":
+            return stage, problem
+
+        # A refusal comes back at once, so pause before asking again rather
+        # than spending all the attempts inside a second
+        if problem and time.time() + CONNECT_RETRY_INTERVAL < deadline:
+            time.sleep(CONNECT_RETRY_INTERVAL)
+
+    return current_stage(api, space_id, "SLEEPING"), problem
 
 
 def current_stage(api, space_id: str, fallback: str) -> str:
@@ -203,18 +262,35 @@ def test_space(space_id: str, token: str, assets: Assets,
         # then follow its stage, rather than inferring liveness from repeated
         # connection attempts, which cannot tell "still starting" from "broken"
         deadline = time.time() + connect_timeout
+        wake_problem = ""
         if stage == "SLEEPING":
-            wake_budget = min(deadline - time.time(),
-                              max(WAKE_MIN_TIMEOUT,
-                                  deadline - time.time() - CONNECT_RESERVE))
-            if not wake_space(api, space_id, wake_budget):
-                # It did not answer in that window, so fall back to following
-                # the stage. SLEEPING counts as in progress here, since the
-                # start has now been requested
-                runtime = wait_for_runtime(api, space_id, deadline,
-                                           TRANSIENT_STAGES | {"SLEEPING"})
+            stage, wake_problem = start_space(api, space_id,
+                                              deadline - CONNECT_RESERVE)
+            result.stage = stage
+        if stage == "SLEEPING" and wake_problem:
+            # A space stuck this way does not answer requests, so fall back to
+            # the documented recovery for it, which is a restart
+            if opts.restart_failed:
+                print(f"  [{space_id}] would not wake, requesting restart...")
+                try:
+                    api.restart_space(space_id)
+                except Exception as exc:  # noqa: BLE001 - e.g. read-only token
+                    raise RuntimeError(
+                        f"space would not start: {wake_problem}, and the "
+                        f"restart failed: {describe_exception(exc)}") from None
+                # Give the stage a moment to reflect the restart before
+                # following it, since it reads as SLEEPING for a beat
+                time.sleep(RUNTIME_POLL_INTERVAL)
+                runtime = wait_for_runtime(api, space_id, deadline)
                 stage = runtime.stage
                 result.stage = stage
+
+            if stage == "SLEEPING":
+                raise RuntimeError(f"space would not start: {wake_problem}")
+        if stage in TRANSIENT_STAGES:
+            runtime = wait_for_runtime(api, space_id, deadline)
+            stage = runtime.stage
+            result.stage = stage
 
         # --- Connect (retrying while the app finishes serving) --------------
         last_exc = None
@@ -237,6 +313,8 @@ def test_space(space_id: str, token: str, assets: Assets,
             # still coming up from one that never started at all
             result.stage = current_stage(api, space_id, result.stage)
             detail = last_exc or f"space was {result.stage} when time ran out"
+            if wake_problem:
+                detail = f"{detail} ({wake_problem})"
             raise RuntimeError(f"could not connect: {detail}")
         # The space is serving now, so record that rather than the stale stage
         # seen before it woke, and fill in the hardware if it was not reported

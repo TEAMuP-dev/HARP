@@ -53,21 +53,21 @@ QUEUE_STATUS_CODES = {"IN_QUEUE", "JOINING_QUEUE", "QUEUE_FULL"}
 LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
                    "currently loading", "warming up")
 
-# Substrings marking an infrastructure fault rather than a fault in the model.
-# These come from the connection or the GPU host. The same call typically
-# succeeds on a retry, revealing the model's real behaviour. Retried a bounded
-# number of times, since unlike a warm-up they have no expected duration to
-# wait out.
+# The following are substrings marking an infrastructure fault rather than a
+# fault in the model. These come from the connection or the GPU host. The same
+# call typically succeeds on a retry, revealing the model's real behaviour.
+# Retried a bounded number of times, since unlike a warm-up they have no
+# expected duration to wait out.
 #
 # The list is deliberately narrow, holding only faults observed to clear on a
 # retry. A retried /process call re-reserves ZeroGPU allowance, so a marker
-# that also fires on a genuine, reproducible failure spends quota three times
-# over and delays the real error by the retry interval. That rules out broad
-# matches on a dropped connection (a bare "connection reset", or the
-# RemoteProtocolError type name), because a model that crashes its own Space
-# (an OOM, say) drops the connection in exactly the same way. The specific
-# disconnect message below stays, since it was the one seen in practice.
-# Extend this only with a fault confirmed to succeed on a retry.
+# that also fires on a genuine, reproducible failure spends quota again and
+# delays the real error by the retry interval. This rules out broad matches on
+# a dropped connection (a bare "connection reset", or the RemoteProtocolError
+# type name), because a model that crashes its own Space (an OOM, say) drops
+# the connection in exactly the same way. The specific disconnect message below
+# stays, since it was the one seen in practice. Extend this only with a fault
+# confirmed to succeed on a retry.
 TRANSIENT_MARKERS = ("read operation timed out",           # httpx ReadTimeout
                      "uncorrectable ecc error",            # GPU host fault
                      "server disconnected without sending a response")
