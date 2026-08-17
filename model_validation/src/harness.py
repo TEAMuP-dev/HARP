@@ -234,7 +234,8 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
         assets (Assets): Synthesized input files.
         overrides (dict): This model's entry from config.yml `overrides`.
         config_dir (Path): Directory containing config.yml.
-        process_timeout (float): Seconds allowed for /process execution.
+        process_timeout (float): Seconds allowed for /process execution. The
+            model's setting, which a case's own `process_timeout` overrides.
         connect_timeout (float): Seconds allowed for the queue wait and for
             retrying a model that is still loading.
 
@@ -244,6 +245,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
 
     case_result = CaseResult(name=case.get("name", "unnamed"))
     start = time.time()
+    process_timeout = case.get("process_timeout", process_timeout)
     # Counted inside run_process so a job that reserves GPU is recorded even
     # when it then fails or times out, and a retried call counts again
     state = {"gpu_calls": 0}
@@ -367,7 +369,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     for case in cases:
         result.cases.append(run_case(
             client, case, controls, assets, overrides, config_dir,
-            case.get("process_timeout", process_timeout), connect_timeout))
+            process_timeout, connect_timeout))
 
     if any(c.ok is False for c in result.cases):
         result.error = "; ".join(

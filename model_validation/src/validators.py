@@ -4,7 +4,7 @@ Custom output validators for HARP model validation.
 Most output checks do not belong here. Anything expressible as "read a
 property of one output and compare it" (extension, size, channel count,
 sample rate, duration, signal level, label count) is a declarative `expect`
-rule in config.yml, defined by EXPECT_RULES in cases.py.
+rule in config.yml, defined by EXPECT_RULES in expectations.py.
 
 A validator covers the checks that cannot be written that way: relationships
 spanning several outputs, or logic needing real computation. Register one
@@ -107,9 +107,11 @@ def labels_within_audio(outputs, controls, params):
     if duration is None:
         raise ValidatorNotApplicable("no audio output to compare labels against")
 
+    checked = False
     for label, value in outputs.items():
         if not (isinstance(value, dict) and isinstance(value.get("labels"), list)):
             continue
+        checked = True
         for entry in value["labels"]:
             start = entry.get("t", 0.0)
             end = start + entry.get("duration", 0.0)
@@ -119,6 +121,6 @@ def labels_within_audio(outputs, controls, params):
             assert end <= duration + tolerance, \
                 (f"'{label}': label \"{entry.get('label')}\" ends at {end:.2f}s, "
                  f"past the {duration:.2f}s audio output")
-        return
 
-    raise ValidatorNotApplicable("no pyharp LabelList output to check")
+    if not checked:
+        raise ValidatorNotApplicable("no pyharp LabelList output to check")

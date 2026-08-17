@@ -19,6 +19,7 @@ __all__ = [
     'describe_exception',
     'run_with_timeout',
     'load_config',
+    'config_levels',
     'check_config_keys',
     'check_model_names',
     'qualify',
@@ -38,6 +39,9 @@ MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
               "skip_common_cases", "synthesized_inputs", "test_cases"}
 CASE_KEYS = {"name", "process_timeout", "controls", "files",
              "synthesized_inputs", "expect", "validators"}
+
+# The settings each kind of configuration level accepts (see config_levels)
+LEVEL_KEYS = {"config": CONFIG_KEYS, "model": MODEL_KEYS, "case": CASE_KEYS}
 
 
 def qualify(model: str, owner: str) -> str:
@@ -318,6 +322,38 @@ def check_keys(mapping: dict | None, allowed: set, where: str) -> None:
                          f"{sorted(allowed)}")
 
 
+def config_levels(config: dict):
+    """
+    Walk every level of the configuration that accepts settings.
+
+    The levels are the top of the file, each common test case, each model's
+    `overrides` entry, and each of that model's test cases. This is the one
+    statement of the configuration's shape: every check that inspects all
+    levels iterates this walk, so a new level is added here and reaches
+    them all.
+
+    Args:
+        config (dict): Parsed configuration.
+
+    Yields:
+        where (str): Where the level's settings were written, for reporting.
+        level (str): The kind of level, a key of LEVEL_KEYS.
+        mapping (dict | None): The settings written at that level.
+    """
+
+    yield "config.yml", "config", config
+
+    for case in config.get("common_test_cases") or []:
+        yield (f"common test case '{(case or {}).get('name', 'unnamed')}'",
+               "case", case)
+
+    for model, entry in (config.get("overrides") or {}).items():
+        yield f"'{model}'", "model", entry
+        for case in (entry or {}).get("test_cases") or []:
+            yield (f"'{model}' test case '{(case or {}).get('name', 'unnamed')}'",
+                   "case", case)
+
+
 def check_config_keys(config: dict) -> None:
     """
     Reject configuration keys that do not match actual settings.
@@ -334,18 +370,8 @@ def check_config_keys(config: dict) -> None:
         ValueError: If any level of the configuration holds an unknown key.
     """
 
-    check_keys(config, CONFIG_KEYS, "config.yml")
-
-    for case in config.get("common_test_cases") or []:
-        check_keys(case, CASE_KEYS,
-                   f"common test case '{(case or {}).get('name', 'unnamed')}'")
-
-    for model, entry in (config.get("overrides") or {}).items():
-        check_keys(entry, MODEL_KEYS, f"'{model}'")
-        for case in (entry or {}).get("test_cases") or []:
-            check_keys(case, CASE_KEYS,
-                       f"'{model}' test case "
-                       f"'{(case or {}).get('name', 'unnamed')}'")
+    for where, level, mapping in config_levels(config):
+        check_keys(mapping, LEVEL_KEYS[level], where)
 
 
 def check_model_names(config: dict, *cli_names) -> None:
@@ -460,7 +486,7 @@ def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> Exclusio
 
     return Exclusions(
         config=frozenset(qualify(model, owner)
-                         for model in config.get("exclude", [])),
+                         for model in (config.get("exclude") or [])),
         cli=frozenset(qualify(model, owner) for model in (cli_exclude or [])))
 
 
@@ -481,7 +507,7 @@ def discover_spaces(api, org: str, config: dict, exclusions: Exclusions) -> list
     """
 
     spaces = [s.id for s in api.list_spaces(author=org)]
-    spaces += [qualify(s, org) for s in config.get("include_extra", [])
+    spaces += [qualify(s, org) for s in (config.get("include_extra") or [])
                if qualify(s, org) not in spaces]
 
     return sorted(s for s in spaces if not exclusions.excludes(s))

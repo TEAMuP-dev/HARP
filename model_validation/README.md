@@ -42,6 +42,7 @@ downward, so a module can be read knowing nothing about the groups above it:
 | | [src/examples.py](src/examples.py) | Launches a local pyharp app and captures its log |
 | **Harness** | [src/harness.py](src/harness.py) | Drives /controls + /process against whatever the drivers hand it |
 | **Checking** | [src/cases.py](src/cases.py) | Input synthesis, test-case overlay, output validation and inspection |
+| | [src/expectations.py](src/expectations.py) | The declarative `expect` rule vocabulary and its checks |
 | | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
 | **Support** | [src/assets.py](src/assets.py) | Synthesizes the WAV/MIDI/text/JSON test inputs |
 | | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
@@ -524,7 +525,7 @@ def labels_sorted(outputs, controls, params):
 
 Before writing one, check whether an `expect` rule would do. If the check is a
 generally useful property of a single output, consider adding it to the
-`expect` vocabulary (`EXPECT_RULES` in [cases.py](src/cases.py)) instead of
+`expect` vocabulary (`EXPECT_RULES` in [expectations.py](src/expectations.py)) instead of
 putting it in a one-off validator.
 
 ### Step 4: reuse a case across models

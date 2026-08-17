@@ -77,7 +77,33 @@ def wait_for_runtime(api, space_id: str, deadline: float,
     return runtime
 
 
-def wake_space(api, space_id: str, timeout: float) -> tuple:
+def resolve_host(api, space_id: str) -> tuple:
+    """
+    Look up the URL a space serves from.
+
+    Kept apart from the wake request itself so a caller retrying the wake can
+    reuse a host it already resolved, since the host does not change within
+    a run.
+
+    Args:
+        api (HfApi): Authenticated Hugging Face API client.
+        space_id (str): The space to look up.
+
+    Returns:
+        host (str | None): The space's host URL, or None when the lookup
+            failed.
+        problem (str): Why the lookup failed, or empty. A failed lookup means
+            no wake request can go out at all, which is the difference between
+            a space that would not start and one that was never asked to.
+    """
+
+    try:
+        return api.space_info(space_id).host, ""
+    except Exception as exc:  # noqa: BLE001 - reported to the caller
+        return None, f"could not look up its host: {describe_exception(exc)}"
+
+
+def wake_space(host: str, timeout: float) -> tuple:
     """
     Ask a sleeping space to start, and wait for it to answer.
 
@@ -89,23 +115,15 @@ def wake_space(api, space_id: str, timeout: float) -> tuple:
     before the space can answer.
 
     Args:
-        api (HfApi): Authenticated Hugging Face API client.
-        space_id (str): The space to wake.
+        host (str): The space's host URL (see resolve_host).
         timeout (float): Seconds to hold the request open.
 
     Returns:
         serving (bool): True when the space answered, meaning it is serving.
-        problem (str): What stopped the request from being made, or empty when
-            it was made. A request that goes out and times out is ordinary and
-            reports nothing, since the space is simply still starting. Failing
-            to send one at all is not, and is the difference between a space
-            that would not start and one that was never asked to.
+        problem (str): What stopped the request, or empty. A request that goes
+            out and times out is ordinary and reports nothing, since the space
+            is simply still starting.
     """
-
-    try:
-        host = api.space_info(space_id).host
-    except Exception as exc:  # noqa: BLE001 - reported to the caller
-        return False, f"could not look up its host: {describe_exception(exc)}"
 
     try:
         answer = httpx.get(f"{host.rstrip('/')}/config", timeout=timeout)
@@ -141,14 +159,23 @@ def start_space(api, space_id: str, deadline: float) -> tuple:
     """
 
     problem = ""
+    host = None
 
     for attempt in range(WAKE_ATTEMPTS):
         remaining = deadline - time.time()
         if remaining <= 0:
             break
 
-        share = max(WAKE_MIN_TIMEOUT, remaining / (WAKE_ATTEMPTS - attempt))
-        serving, problem = wake_space(api, space_id, min(share, remaining))
+        # The host does not change within a run, so a successful lookup is
+        # reused and only a failed one is retried
+        if host is None:
+            host, problem = resolve_host(api, space_id)
+
+        serving = False
+        if host is not None:
+            share = max(WAKE_MIN_TIMEOUT, remaining / (WAKE_ATTEMPTS - attempt))
+            serving, problem = wake_space(host, min(share, remaining))
+
         stage = current_stage(api, space_id, "SLEEPING")
 
         if serving or stage != "SLEEPING":
@@ -213,12 +240,17 @@ def test_space(space_id: str, token: str, assets: Assets,
     connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)
     client = None
 
+    def follow_runtime(deadline: float):
+        """Wait for the stage to settle, mirroring it onto the result."""
+        runtime = wait_for_runtime(api, space_id, deadline)
+        result.stage = runtime.stage
+        return runtime
+
     try:
         # --- Runtime stage (restart crashed/stopped spaces by default) -------
         deadline = time.time() + connect_timeout
-        runtime = wait_for_runtime(api, space_id, deadline)
+        runtime = follow_runtime(deadline)
         stage = runtime.stage
-        result.stage = stage
         # requested_hardware reflects the space's configuration even while
         # it is sleeping or stopped (hardware itself is only set when live)
         result.hardware = runtime.requested_hardware or runtime.hardware or ""
@@ -250,9 +282,7 @@ def test_space(space_id: str, token: str, assets: Assets,
                         f"space is not running (stage={stage}) and restart "
                         f"failed: {describe_exception(exc)}", token)
                     return result
-                runtime = wait_for_runtime(api, space_id, time.time() + connect_timeout)
-                stage = runtime.stage
-                result.stage = stage
+                stage = follow_runtime(time.time() + connect_timeout).stage
             if stage not in SERVABLE_STAGES:
                 result.error = f"space is not running (stage={stage})"
                 return result
@@ -281,16 +311,12 @@ def test_space(space_id: str, token: str, assets: Assets,
                 # Give the stage a moment to reflect the restart before
                 # following it, since it reads as SLEEPING for a beat
                 time.sleep(RUNTIME_POLL_INTERVAL)
-                runtime = wait_for_runtime(api, space_id, deadline)
-                stage = runtime.stage
-                result.stage = stage
+                stage = follow_runtime(deadline).stage
 
             if stage == "SLEEPING":
                 raise RuntimeError(f"space would not start: {wake_problem}")
         if stage in TRANSIENT_STAGES:
-            runtime = wait_for_runtime(api, space_id, deadline)
-            stage = runtime.stage
-            result.stage = stage
+            stage = follow_runtime(deadline).stage
 
         # --- Connect (retrying while the app finishes serving) --------------
         last_exc = None

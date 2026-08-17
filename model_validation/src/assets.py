@@ -19,6 +19,8 @@ from pathlib import Path
 import numpy
 import soundfile
 
+from utils import config_levels
+
 
 __all__ = [
     'Assets',
@@ -109,9 +111,9 @@ def synthesized_input_blocks(config: dict) -> list:
     """
     Collect every `synthesized_inputs` block in the configuration.
 
-    Such a block can appear at the top level, on a common test case, on a
-    model's `overrides` entry, or on one of that model's test cases. All four
-    are collected, so a mistake is found wherever it was written.
+    Such a block can appear at any level of the configuration, so the levels
+    are walked via utils.config_levels() and a mistake is found wherever it
+    was written.
 
     Args:
         config (dict): Parsed configuration.
@@ -121,19 +123,8 @@ def synthesized_input_blocks(config: dict) -> list:
             for reporting.
     """
 
-    blocks = [("synthesized_inputs", config.get("synthesized_inputs"))]
-
-    for case in config.get("common_test_cases") or []:
-        blocks.append((f"common test case '{case.get('name', 'unnamed')}'",
-                       case.get("synthesized_inputs")))
-
-    for model, entry in (config.get("overrides") or {}).items():
-        blocks.append((f"'{model}'", (entry or {}).get("synthesized_inputs")))
-        for case in (entry or {}).get("test_cases") or []:
-            blocks.append((f"'{model}' test case '{case.get('name', 'unnamed')}'",
-                           case.get("synthesized_inputs")))
-
-    return [(where, block) for where, block in blocks if block]
+    return [(where, block) for where, _, mapping in config_levels(config)
+            if (block := (mapping or {}).get("synthesized_inputs"))]
 
 
 def check_synthesized_inputs(config: dict) -> None:
@@ -191,9 +182,11 @@ class Assets:
     """
     Synthesized test input files, generated on demand and cached for the run.
 
-    One instance is shared by every worker thread, so generation is guarded:
-    without the lock, two models requesting the same input would write the
-    same file concurrently and a model could be handed a truncated one.
+    One instance is shared by every worker thread, so generation is guarded
+    per cache key: without that, two models requesting the same input would
+    write the same file concurrently and a model could be handed a truncated
+    one. Distinct inputs generate in parallel, so one slow write does not
+    stall the other workers' case setup.
 
     Args:
         workdir (Path): Directory the generated files are written to.
@@ -205,6 +198,7 @@ class Assets:
         self.workdir = workdir
         self.defaults = defaults or {}
         self._cache = {}
+        self._key_locks = {}
         self._lock = threading.Lock()
 
     @property
@@ -240,21 +234,30 @@ class Assets:
                 be written in the requested format.
         """
 
+        # The shared lock guards only the bookkeeping. Generation runs under
+        # a per-key lock, so a worker waits only on the input it needs
         with self._lock:
-            if key in self._cache:
-                path = self._cache[key]
-                # None records a format this build cannot write, so it is
-                # not retried. An existing file is reused as it stands.
-                if path is None or path.exists():
-                    return path
+            key_lock = self._key_locks.setdefault(key, threading.Lock())
+
+        with key_lock:
+            with self._lock:
+                if key in self._cache:
+                    path = self._cache[key]
+                    # None records a format this build cannot write, so it is
+                    # not retried. An existing file is reused as it stands.
+                    if path is None or path.exists():
+                        return path
 
             self.workdir.mkdir(parents=True, exist_ok=True)
             try:
-                self._cache[key] = generate()
+                path = generate()
             except Exception:  # noqa: BLE001 - format not writable here
-                self._cache[key] = None
+                path = None
 
-            return self._cache[key]
+            with self._lock:
+                self._cache[key] = path
+
+            return path
 
     def resolve(self, kind: str, overrides: dict | None = None) -> dict:
         """
