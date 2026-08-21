@@ -212,7 +212,15 @@ void MainComponent::openSettingsWindow()
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new SettingsWindow([this] { restoreViewDefaults(); }));
+    // The settings dialog is a free-standing desktop window that can outlive this
+    // component, so guard the callback with a SafePointer
+    Component::SafePointer<MainComponent> safeThis(this);
+    options.content.setOwned(new SettingsWindow(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->restoreViewDefaults();
+        }));
 
     options.useNativeTitleBar = true;
     options.resizable = true;
@@ -223,12 +231,12 @@ void MainComponent::openSettingsWindow()
 
 void MainComponent::restoreViewDefaults()
 {
-    // Default: status area shown — toggle if currently hidden
+    // Defaults must match the fallbacks used when reading the settings
+    // in the constructor: status area shown, media clipboard hidden
     if (! showStatusArea)
         viewStatusAreaCallback();
 
-    // Default: media clipboard shown — toggle if currently hidden
-    if (! showMediaClipboard)
+    if (showMediaClipboard)
         viewMediaClipboardCallback();
 
     // showWelcomePopup default (true) is already restored by clearing settings;

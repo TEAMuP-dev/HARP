@@ -72,12 +72,8 @@ public:
 
         addAndMakeVisible(historyEditor);
 
-        StatusHistorySnapshot snapshot = sharedMessage->getHistorySnapshot();
         historyEditor.setText(sharedMessage->getHistoryText(), false);
         historyEditor.moveCaretToEnd();
-        lastRevisionSeen = snapshot.revision;
-        lastTrimRevisionSeen = snapshot.trimRevision;
-        lastClearRevisionSeen = snapshot.clearRevision;
 
         sharedMessage->addChangeListener(this);
     }
@@ -96,42 +92,17 @@ public:
 
     void changeListenerCallback(ChangeBroadcaster* /*source*/) override
     {
-        StatusHistorySnapshot snapshot = sharedMessage->getHistorySnapshot();
-
-        bool trimChanged = snapshot.trimRevision != lastTrimRevisionSeen;
-        bool clearChanged = snapshot.clearRevision != lastClearRevisionSeen;
-        bool noProgress = snapshot.revision <= lastRevisionSeen;
-
-        if (clearChanged || noProgress || trimChanged)
-        {
-            historyEditor.setText(sharedMessage->getHistoryText(), false);
-        }
-        else
-        {
-            // Append only entries missed since the last UI callback.
-            StringArray newEntries = sharedMessage->getEntriesSince(lastRevisionSeen);
-
-            for (const auto& entry : newEntries)
-            {
-                if (historyEditor.getText().isNotEmpty())
-                    historyEditor.insertTextAtCaret("\n");
-
-                historyEditor.insertTextAtCaret(entry);
-            }
-        }
-
-        lastRevisionSeen = snapshot.revision;
-        lastTrimRevisionSeen = snapshot.trimRevision;
-        lastClearRevisionSeen = snapshot.clearRevision;
+        /* Rebuild the full text on every change: the history is capped at
+           StatusMessage::maxHistoryEntries short lines, so this is cheap, and
+           it avoids incremental-append bookkeeping that can drop or duplicate
+           entries when messages arrive from worker threads */
+        historyEditor.setText(sharedMessage->getHistoryText(), false);
         historyEditor.moveCaretToEnd();
     }
 
 private:
     SharedResourcePointer<StatusMessage> sharedMessage;
     TextEditor historyEditor;
-    uint64 lastRevisionSeen = 0;
-    uint64 lastTrimRevisionSeen = 0;
-    uint64 lastClearRevisionSeen = 0;
 };
 
 class StatusAreaWidget : public Component

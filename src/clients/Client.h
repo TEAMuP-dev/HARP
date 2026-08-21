@@ -279,9 +279,53 @@ public:
     String acceptHeader;
     String contentTypeJSONHeader;
 
+    /* Escapes line breaks for single-line logging, and redacts any credentials.
+
+       API keys must never reach the log file: HARP asks users to open their logs
+       and to attach them to bug reports, so anything written here should be
+       assumed to end up in a public issue. */
     String toPrintableHeaders(String headers)
     {
-        return headers.replace("\r", "\\r").replace("\n", "\\n");
+        String printableHeaders = headers.replace("\r", "\\r").replace("\n", "\\n");
+
+        static const StringArray sensitivePrefixes { "Authorization:", "Cookie:", "Set-Cookie:" };
+
+        for (const auto& prefix : sensitivePrefixes)
+        {
+            int searchFrom = 0;
+
+            for (;;)
+            {
+                int prefixStart = printableHeaders.indexOfIgnoreCase(searchFrom, prefix);
+
+                if (prefixStart < 0)
+                {
+                    break;
+                }
+
+                int valueStart = prefixStart + prefix.length();
+
+                // Header values are separated by the escaped line breaks above
+                int valueEnd = printableHeaders.indexOf(valueStart, "\\r");
+
+                if (valueEnd < 0)
+                {
+                    valueEnd = printableHeaders.indexOf(valueStart, "\\n");
+                }
+
+                if (valueEnd < 0)
+                {
+                    valueEnd = printableHeaders.length();
+                }
+
+                printableHeaders = printableHeaders.replaceSection(
+                    valueStart, valueEnd - valueStart, " <redacted>");
+
+                searchFrom = valueStart;
+            }
+        }
+
+        return printableHeaders;
     }
 
     Provider provider;

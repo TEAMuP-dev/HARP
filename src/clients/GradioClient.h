@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <map>
+
 #include "Client.h"
 
 using namespace juce;
@@ -528,11 +530,24 @@ private:
         if (! isValidHuggingFacePath(modelPath))
             return false;
 
+        // The hardware type is a static property of the space, so cache it to
+        // avoid repeated blocking lookups from error-handling paths
+        {
+            const ScopedLock lock(zeroGPUCacheLock);
+
+            auto cached = zeroGPUCache.find(modelPath);
+
+            if (cached != zeroGPUCache.end())
+                return cached->second;
+        }
+
         URL runtimeEndpoint =
             URL("https://huggingface.co/api/spaces/" + inferHostSlashModel(modelPath) + "/runtime");
 
         std::unique_ptr<InputStream> stream;
 
+        // Failed lookups are not cached so a transient network error
+        // does not permanently misclassify the space
         if (makeGETRequestStream(runtimeEndpoint, stream, "", 5000).failed() || stream == nullptr)
             return false;
 
@@ -547,19 +562,23 @@ private:
         static const Identifier hardwareKey { "hardware" };
         static const Identifier currentKey { "current" };
 
-        if (! responseDict->hasProperty(hardwareKey))
-            return false;
+        String hardwareCurrent;
 
-        var hardwareVar = responseDict->getProperty(hardwareKey);
-        auto* hardwareDict = hardwareVar.getDynamicObject();
-
-        if (hardwareDict == nullptr || ! hardwareDict->hasProperty(currentKey))
-            return false;
-
-        String hardwareCurrent = hardwareDict->getProperty(currentKey).toString();
+        if (responseDict->hasProperty(hardwareKey))
+        {
+            if (auto* hardwareDict = responseDict->getProperty(hardwareKey).getDynamicObject())
+                hardwareCurrent = hardwareDict->getProperty(currentKey).toString();
+        }
 
         // ZeroGPU hardware names start with "zero-" (e.g. "zero-a10g", "zero-a100")
-        return hardwareCurrent.startsWithIgnoreCase("zero-");
+        bool isZeroGPU = hardwareCurrent.startsWithIgnoreCase("zero-");
+
+        {
+            const ScopedLock lock(zeroGPUCacheLock);
+            zeroGPUCache[modelPath] = isZeroGPU;
+        }
+
+        return isZeroGPU;
     }
 
     OpResult makePOSTRequest(URL endpoint,
@@ -623,42 +642,37 @@ private:
 
         response = stream->readEntireStreamAsString();
 
-        if (isHTMLResponse(response))
-        {
-            return OpResult::fail(HttpError {
-                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, 503 });
-        }
-
         if (statusCode != 200)
         {
-            String diagnosticText = extractErrorTextFromPayload(response);
+            String reason;
 
-            if (diagnosticText.isNotEmpty())
+            // HTML bodies (proxy/login/error pages) carry no useful diagnostics
+            if (! isHTMLResponse(response))
             {
-                String reason = extractShortReason(diagnosticText);
-
-                if (statusMessage != nullptr)
-                {
-                    statusMessage->setMessage("[error] " + reason);
-                }
-
-                // Space-level infra error (build/config failure) — report as 503
-                if (isSpaceStatusError(diagnosticText))
-                {
-                    return OpResult::fail(HttpError {
-                        HttpError::Type::BadStatusCode,
-                        HttpError::Request::POST,
-                        errorPath,
-                        503 });
-                }
-
-                GradioError::Type errorType = GradioError::Type::RuntimeError;
-
-                return OpResult::fail(GradioError { errorType, errorPath, reason });
+                reason = extractShortReason(extractErrorInfoFromPayload(response).combined());
             }
 
+            if (statusMessage != nullptr && reason.isNotEmpty())
+            {
+                statusMessage->setMessage("[error] " + reason);
+            }
+
+            // Keep the real status code so callers can react to specific
+            // failures (e.g. 404 for an invalid path, 402 for quota limits)
+            // and attach any diagnostic text from the response body
+            return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
+                                              HttpError::Request::POST,
+                                              errorPath,
+                                              statusCode,
+                                              reason });
+        }
+
+        if (isHTMLResponse(response))
+        {
+            // A 200 with an HTML body is not a Gradio API response; this typically
+            // means an HF proxy page for a Space that is sleeping or broken
             return OpResult::fail(HttpError {
-                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, statusCode });
+                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, 503 });
         }
 
         return OpResult::ok();
@@ -725,40 +739,73 @@ private:
         return payload;
     }
 
-    static bool isEventLine(const String& line, GradioEvents event)
+    // Compares a parsed SSE event type (the text after "event:") to a known event.
+    // Matching on the parsed type rather than the raw line keeps this tolerant of
+    // the SSE spec's optional space after the colon.
+    static bool isEventType(const String& eventType, GradioEvents event)
     {
-        return line.trim().equalsIgnoreCase("event: " + enumToString(event));
+        return eventType.equalsIgnoreCase(enumToString(event));
     }
 
-    static String extractErrorTextFromPayload(const String& payload)
+    /* What a Gradio error payload carries.
+
+       Gradio >= 6.13 forwards the failing event's error payload on this endpoint:
+         {"error": "<message>", "title": "<title>", "duration": .., "visible": ..}
+       The message is populated whenever the server raised a gr.Error (which is how
+       ZeroGPU reports quota exhaustion, with title "ZeroGPU quota exceeded"), and
+       for any other exception only when the app was launched with show_error=True.
+       When it was not, the payload is {"error": null} — a real runtime error whose
+       details the server deliberately withheld.
+
+       Gradio <= 6.12 discards the payload entirely and sends "data: null", so
+       nothing at all can be told apart from the response. */
+    struct GradioErrorInfo
     {
+        String title;
+        String message;
+
+        // True when the server sent no payload at all, as opposed to a payload
+        // that was present but carried no message
+        bool payloadAbsent = false;
+
+        String combined() const
+        {
+            if (title.isNotEmpty() && message.isNotEmpty())
+                return title + ": " + message;
+
+            return title.isNotEmpty() ? title : message;
+        }
+    };
+
+    static GradioErrorInfo extractErrorInfoFromPayload(const String& payload)
+    {
+        GradioErrorInfo info;
+
         String normalizedPayload = payload.trim();
 
         if (normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null")
             || normalizedPayload.equalsIgnoreCase("none"))
         {
-            return "";
+            info.payloadAbsent = true;
+
+            return info;
         }
 
         var parsedPayload = JSON::parse(normalizedPayload);
 
         if (auto* payloadDict = parsedPayload.getDynamicObject())
         {
-            for (auto key : { "error", "message", "detail" })
-            {
-                if (payloadDict->hasProperty(key))
-                {
-                    String value = payloadDict->getProperty(key).toString().trim();
+            info.title = extractFirstNonEmptyField(payloadDict, { "title" });
+            info.message =
+                extractFirstNonEmptyField(payloadDict, { "error", "message", "detail", "reason" });
 
-                    if (value.isNotEmpty() && ! value.equalsIgnoreCase("null"))
-                    {
-                        return value;
-                    }
-                }
-            }
+            return info;
         }
 
-        return normalizedPayload;
+        // A non-dictionary payload (e.g. a bare error string)
+        info.message = normalizedPayload;
+
+        return info;
     }
 
     static bool isHTMLResponse(const String& text)
@@ -945,8 +992,15 @@ private:
             return "";
         }
 
-        // Modern Gradio "log" SSE event: parse the data payload for message + level.
-        // Emitted when the server calls gr.Info() or gr.Warning().
+        /* Gradio "log" event, emitted when the server calls gr.Info() or gr.Warning().
+
+           NOTE: Gradio does not forward these on the "simple" /gradio_api/call
+           endpoint that this client uses — its translation layer drops every
+           message except process_completed, process_generating, heartbeat and
+           unexpected_error (verified against Gradio 5.28 through 6.24). They are
+           only delivered on the full queue API (/gradio_api/queue/join plus
+           /gradio_api/queue/data), so this branch is currently unreachable and
+           is kept for if/when this client moves to that API. */
         if (messageType.equalsIgnoreCase("log"))
         {
             return formatLogEventPayload(dataPayload);
@@ -984,14 +1038,13 @@ private:
                                           const String& currentSseEventType = "")
     {
         if (statusMessage == nullptr)
-        {
-            DBG_AND_LOG(
-                "GradioClient::appendProcessMessageFromDataLine: statusMessage is null, skipping.");
             return;
-        }
+
+        // Heartbeats arrive continuously and never carry a user-facing message
+        if (isEventType(currentSseEventType, GradioEvents::Heartbeat))
+            return;
 
         String payload = extractPayload(dataLine);
-        String statusText;
 
         // Prefer the SSE event type from the preceding "event:" line (modern Gradio API).
         // Fall back to extracting a "msg" field from the JSON payload (old queue API).
@@ -999,37 +1052,25 @@ private:
                                  ? currentSseEventType
                                  : extractMessageTypeFromPayload(payload);
 
-        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: payload=\""
-                    << payload << "\" sseEventType=\"" << currentSseEventType << "\" messageType=\""
-                    << messageType << "\".");
+        String statusText;
 
         if (messageType.isNotEmpty())
         {
             // For "log" events, pass the full data payload so we can extract the message text.
             statusText = formatProcessMessage(messageType, payload);
-
-            DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: formatProcessMessage -> \""
-                        << statusText << "\".");
         }
 
         if (statusText.isEmpty())
         {
             statusText = extractGradioAlertStatusFromPayload(payload);
-
-            DBG_AND_LOG(
-                "GradioClient::appendProcessMessageFromDataLine: extractGradioAlertStatus -> \""
-                << statusText << "\".");
         }
 
         if (statusText.isEmpty())
-        {
-            DBG_AND_LOG(
-                "GradioClient::appendProcessMessageFromDataLine: statusText is empty, message dropped.");
             return;
-        }
 
-        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: setting statusMessage -> \""
-                    << statusText << "\".");
+        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: \""
+                    << statusText << "\" (event type \"" << messageType << "\").");
+
         statusMessage->setMessage(statusText);
     }
 
@@ -1049,7 +1090,10 @@ private:
             return result;
         }
 
-        bool seenAnyDataEvent = false;
+        // Tracks whether any result-bearing data: lines have arrived. Heartbeat
+        // and log data lines are excluded — they say nothing about whether the
+        // job itself has produced output.
+        bool seenResultData = false;
         bool checkedFirstLine = false;
 
         // Track the most recent SSE "event: <type>" line so we can pass it to
@@ -1086,63 +1130,78 @@ private:
             if (eventLine.startsWithIgnoreCase("event:"))
             {
                 currentSseEventType = eventLine.fromFirstOccurrenceOf(":", false, false).trim();
-                DBG_AND_LOG("GradioClient::makeGETRequest: SSE event type \"" << currentSseEventType
-                                                                              << "\".");
-            }
 
-            if (isEventLine(eventLine, GradioEvents::Complete))
-            {
-                response = extractPayload(stream->readNextLine());
-
-                DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response << "\".");
-
-                break;
-            }
-            else if (isEventLine(eventLine, GradioEvents::Error))
-            {
-                String errorDataLine = stream->readNextLine();
-
-                DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << errorDataLine
-                                                                              << "\".");
-
-                String payload = extractPayload(errorDataLine);
-                String diagnosticText = extractErrorTextFromPayload(payload);
-
-                String reason = extractShortReason(diagnosticText);
-
-                if (statusMessage != nullptr && diagnosticText.isNotEmpty())
+                if (isEventType(currentSseEventType, GradioEvents::Complete))
                 {
-                    statusMessage->setMessage("[error] " + reason);
-                }
+                    response = extractPayload(stream->readNextLine());
 
-                if (isSpaceStatusError(diagnosticText))
+                    DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response
+                                                                                  << "\".");
+
+                    break;
+                }
+                else if (isEventType(currentSseEventType, GradioEvents::Error))
                 {
-                    return OpResult::fail(HttpError {
-                        HttpError::Type::BadStatusCode,
-                        HttpError::Request::GET,
-                        errorPath,
-                        503 });
-                }
+                    String errorDataLine = stream->readNextLine();
 
-                GradioError::Type errorType;
+                    DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << errorDataLine
+                                                                                  << "\".");
 
-                if (diagnosticText.isEmpty() && ! seenAnyDataEvent
-                    && isZeroGPUSpace(modelPathForQuotaCheck))
-                {
-                    // ZeroGPU quota rejections arrive before any data: events
-                    // with an empty error payload. Confirmed ZeroGPU space before concluding.
-                    errorType = GradioError::Type::QuotaExceeded;
-                }
-                else
-                {
-                    errorType = GradioError::Type::RuntimeError;
-                }
+                    String payload = extractPayload(errorDataLine);
+                    GradioErrorInfo errorInfo = extractErrorInfoFromPayload(payload);
 
-                return OpResult::fail(GradioError { errorType, errorPath, reason });
+                    String diagnosticText = errorInfo.combined();
+                    String reason = extractShortReason(diagnosticText);
+
+                    if (statusMessage != nullptr && reason.isNotEmpty())
+                    {
+                        statusMessage->setMessage("[error] " + reason);
+                    }
+
+                    if (isSpaceStatusError(diagnosticText))
+                    {
+                        return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
+                                                          HttpError::Request::GET,
+                                                          errorPath,
+                                                          503 });
+                    }
+
+                    GradioError::Type errorType = GradioError::Type::RuntimeError;
+
+                    if (diagnosticText.containsIgnoreCase("quota"))
+                    {
+                        /* ZeroGPU raises quota exhaustion as a gr.Error titled
+                           "ZeroGPU quota exceeded", which Gradio >= 6.13 forwards
+                           verbatim on this endpoint */
+                        errorType = GradioError::Type::QuotaExceeded;
+                    }
+                    else if (errorInfo.payloadAbsent && ! seenResultData
+                             && isZeroGPUSpace(modelPathForQuotaCheck))
+                    {
+                        /* Gradio <= 6.12 drops the error payload entirely, so a quota
+                           rejection really is indistinguishable from any other early
+                           failure. Report that ambiguity rather than guessing: the space
+                           runs on ZeroGPU, so quota is one possible cause, but nothing
+                           here establishes it.
+
+                           Note this is only reached when NO payload arrived. A payload
+                           that is present but carries no message (Gradio >= 6.13 with
+                           show_error=False) is a genuine runtime error whose details the
+                           server withheld, never a quota rejection, since gr.Error
+                           messages are forwarded regardless of show_error. */
+                        errorType = GradioError::Type::Indeterminate;
+                    }
+
+                    return OpResult::fail(GradioError { errorType, errorPath, reason });
+                }
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
             {
-                seenAnyDataEvent = true;
+                if (! isEventType(currentSseEventType, GradioEvents::Heartbeat)
+                    && ! currentSseEventType.equalsIgnoreCase("log"))
+                {
+                    seenResultData = true;
+                }
 
                 // Pass the current SSE event type so "log" events are not dropped.
                 appendProcessMessageFromDataLine(eventLine, currentSseEventType);
@@ -1255,12 +1314,8 @@ private:
 
         /* Note: it's very important to give Gradio enough time to yield a response
            (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
-        result = makeGETRequest(endpoint, response, inferDocumentationPath(modelPath), 120000, modelPath);
-
-        if (result.failed())
-            return result;
-
-        return OpResult::ok();
+        return makeGETRequest(
+            endpoint, response, inferDocumentationPath(modelPath), 120000, modelPath);
     }
 
     OpResult extractLabels(DynamicObject::Ptr& output, LabelList& labels)
@@ -1441,4 +1496,8 @@ private:
 
         return OpResult::ok();
     }
+
+    // Cached results of isZeroGPUSpace, keyed by model path
+    CriticalSection zeroGPUCacheLock;
+    std::map<String, bool> zeroGPUCache;
 };

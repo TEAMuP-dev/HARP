@@ -340,6 +340,19 @@ public:
             {
                 controlValue = var(comboBoxComponentInfo->value);
             }
+            else if (auto multiSelectComponentInfo =
+                         dynamic_cast<MultiSelectComponentInfo*>(componentInfo.get()))
+            {
+                // Gradio expects the selection of a multiselect dropdown as a list
+                Array<var> selectedValues;
+
+                for (const auto& selectedValue : multiSelectComponentInfo->values)
+                {
+                    selectedValues.add(var(String(selectedValue)));
+                }
+
+                controlValue = var(selectedValues);
+            }
             else
             {
                 // Unsupported control was added
@@ -512,14 +525,28 @@ private:
                 }
                 else if (type == "dropdown")
                 {
+                    /* A dropdown declared with multiselect=True carries a list of
+                       values rather than a single one, and needs its own control */
+                    bool isMultiSelect = false;
+
+                    if (controlsDict->hasProperty("multiselect"))
+                    {
+                        isMultiSelect =
+                            stringToBool(controlsDict->getProperty("multiselect").toString());
+                    }
+
                     std::shared_ptr<ModelComponentInfo> dropdownControl =
-                        std::make_shared<ComboBoxComponentInfo>(controlsDict);
+                        isMultiSelect ? std::static_pointer_cast<ModelComponentInfo>(
+                                            std::make_shared<MultiSelectComponentInfo>(controlsDict))
+                                      : std::static_pointer_cast<ModelComponentInfo>(
+                                            std::make_shared<ComboBoxComponentInfo>(controlsDict));
 
                     newControls.push_back(dropdownControl);
                     tempComponentIDs.push_back(dropdownControl->id);
 
-                    DBG_AND_LOG("Model::extractInputs: Dropdown control \"" + dropdownControl->label
-                                + "\" extracted.");
+                    DBG_AND_LOG("Model::extractInputs: "
+                                + String(isMultiSelect ? "Multiselect dropdown" : "Dropdown")
+                                + " control \"" + dropdownControl->label + "\" extracted.");
                 }
                 else
                 {

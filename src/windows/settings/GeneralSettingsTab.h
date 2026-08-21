@@ -8,6 +8,7 @@
 
 #include <JuceHeader.h>
 
+#include "../../clients/Client.h"
 #include "../../utils/Logging.h"
 #include "../../utils/Settings.h"
 
@@ -28,6 +29,8 @@ private:
     void handleRestoreDefaults();
 
     std::function<void()> onRestoreDefaults;
+
+    SharedResourcePointer<SharedAPIKeys> sharedTokens;
 
     TextButton openLogFolderButton;
     TextButton clearLogsButton;

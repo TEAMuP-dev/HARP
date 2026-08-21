@@ -22,6 +22,9 @@ ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
     tokenEditor.setTextToShowWhenEmpty(emptyText, Colours::grey);
     tokenEditor.setReturnKeyStartsNewLine(false);
     tokenEditor.setSelectAllWhenFocused(true);
+
+    // Keep the key obscured by default so it is not revealed by a screen share
+    tokenEditor.setPasswordCharacter(passwordCharacter);
     tokenEditor.onTextChange = [this]()
     {
         String currentText = tokenEditor.getText().trim();
@@ -59,6 +62,14 @@ ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
 
     addAndMakeVisible(tokenEditor);
 
+    revealTokenButton.onClick = [this]
+    {
+        tokenEditor.setPasswordCharacter(revealTokenButton.getToggleState() ? 0
+                                                                           : passwordCharacter);
+    };
+
+    addAndMakeVisible(revealTokenButton);
+
     updateButton.addShortcut(KeyPress(KeyPress::returnKey));
     updateButton.onClick = [this] { updateTokenCallback(); };
     removeButton.onClick = [this] { removeTokenCallback(); };
@@ -81,6 +92,7 @@ void ProviderPage::resized()
     pageArea.items.add(FlexItem(titleLabel).withHeight(rowHeight).withMargin(marginSize));
     pageArea.items.add(FlexItem().withHeight(gapSize)); // Filler space
     pageArea.items.add(FlexItem(tokenEditor).withHeight(rowHeight).withMargin(marginSize));
+    pageArea.items.add(FlexItem(revealTokenButton).withHeight(rowHeight).withMargin(marginSize));
 
     FlexBox buttonsArea;
     buttonsArea.flexDirection = FlexBox::Direction::row;

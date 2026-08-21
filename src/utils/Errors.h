@@ -120,6 +120,9 @@ struct HttpError
     String endpointPath;
 
     int statusCode = 0;
+
+    // Optional diagnostic text extracted from the response body
+    String detail = {};
 };
 
 inline String toUserMessage(const HttpError& e)
@@ -172,17 +175,13 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.statusCode == 402)
             {
-                if (e.endpointPath.containsIgnoreCase("stability.ai"))
+                userMessage = "This request could not be completed because the service "
+                              "reported payment/quota limits. Please check your account "
+                              "usage/billing and try again.";
+
+                if (e.detail.isNotEmpty())
                 {
-                    userMessage = "Stability AI could not complete this request because your usage "
-                                  "credits or quota may be exhausted. Please check your Stability "
-                                  "account usage/billing and try again.";
-                }
-                else
-                {
-                    userMessage = "This request could not be completed because the service "
-                                  "reported payment/quota limits. Please check your account "
-                                  "usage/billing and try again.";
+                    userMessage += "\n\nDetails: " + e.detail;
                 }
 
                 return userMessage;
@@ -211,6 +210,11 @@ inline String toUserMessage(const HttpError& e)
 
             userMessage += ".";
 
+            if (e.detail.isNotEmpty())
+            {
+                userMessage += "\n\nDetails: " + e.detail;
+            }
+
             if (e.statusCode == 503)
             {
                 userMessage +=
@@ -227,7 +231,8 @@ struct GradioError
     enum class Type
     {
         RuntimeError,
-        QuotaExceeded
+        QuotaExceeded,
+        Indeterminate
     };
 
     Type type;
@@ -252,18 +257,42 @@ inline String toUserMessage(const GradioError& e)
             }
             else
             {
-                userMessage += "\n\nNo error details were provided by the Space."
-                               " Check the Space page for the specific error message.";
+                userMessage += "\n\nNo details were reported. A Space only forwards the text "
+                               "of an error when it is launched with \"show_error=True\" or "
+                               "raises a \"gr.Error\". Otherwise the cause appears only in "
+                               "its logs, which only the Space's owner can read.";
             }
 
-            userMessage += "\n\nClick 'Open URL' to open the Space on Hugging Face for more information.";
+            userMessage += "\n\nClick 'Open URL' to check the Space's status on Hugging Face.";
 
             return userMessage;
 
         case GradioError::Type::QuotaExceeded:
 
-            userMessage = "ZeroGPU quota appears to be exceeded for this Space. "
-                          "Please try again later or use an account with available quota.";
+            userMessage = "GPU quota has been exceeded for this Space.";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nDetails: " + e.reason;
+            }
+
+            userMessage += "\n\nPlease try again later, or use an account with available quota.";
+
+            return userMessage;
+
+        case GradioError::Type::Indeterminate:
+
+            userMessage = "The Space reported an error, but gave no indication of its cause.";
+
+            userMessage +=
+                "\n\nThis Space runs on ZeroGPU, so the GPU quota may have been exhausted, "
+                "but it could equally be a runtime error in the model. Spaces using a version "
+                "of Gradio before 6.13 do not report enough for HARP to tell the two apart.";
+
+            userMessage +=
+                "\n\nRunning the model from the Space's own page will report a quota message "
+                "if that is the cause, and nothing further if it is not. Click 'Open URL' to "
+                "open it on Hugging Face.";
 
             return userMessage;
     }
@@ -405,6 +434,7 @@ struct FileError
         DoesNotExist,
         UploadFailed,
         DownloadFailed,
+        WriteFailed,
         UnsupportedFormat
     };
 
@@ -458,6 +488,19 @@ inline String toUserMessage(const FileError& e)
 
             return userMessage;
 
+        case FileError::Type::WriteFailed:
+
+            userMessage = "Failed to write file";
+
+            if (e.path.isNotEmpty())
+            {
+                userMessage += " at path \"" + e.path + "\"";
+            }
+
+            userMessage += ".";
+
+            return userMessage;
+
         case FileError::Type::UnsupportedFormat:
 
             userMessage = "File format";
@@ -500,7 +543,12 @@ inline std::optional<String> getOpenablePath(const Error& error)
 
     if (const auto* e = std::get_if<GradioError>(&error))
     {
-        if (e->type == GradioError::Type::RuntimeError && e->endpointPath.isNotEmpty())
+        /* Both of these messages send the user to the Space page, since that is
+           where the underlying error is actually reported */
+        bool pathIsUseful = e->type == GradioError::Type::RuntimeError
+                            || e->type == GradioError::Type::Indeterminate;
+
+        if (pathIsUseful && e->endpointPath.isNotEmpty())
         {
             return e->endpointPath;
         }

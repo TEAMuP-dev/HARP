@@ -13,6 +13,8 @@
 
 #include "../gui/ComboBoxWithLabel.h"
 #include "../gui/HoverHandler.h"
+#include "../gui/MultiSelectWithLabel.h"
+#include "../gui/NumberBoxWithLabel.h"
 #include "../gui/SliderWithLabel.h"
 #include "../gui/TextBoxWithLabel.h"
 #include "../gui/ToggleWithLabel.h"
@@ -100,6 +102,8 @@ public:
         checkGroup(toggleComponents);
         checkGroup(dropdownComponents);
         checkGroup(textComponents);
+        checkGroup(numberComponents);
+        checkGroup(multiSelectComponents);
 
         return requiredWidth + 2 * (marginSize + minEdgeGap);
     }
@@ -136,7 +140,11 @@ public:
         }
         textComponents.clear();
 
-        // TODO - numberComponents
+        for (auto& c : numberComponents)
+        {
+            removeChildComponent(c.get());
+        }
+        numberComponents.clear();
 
         for (auto& c : toggleComponents)
         {
@@ -156,6 +164,12 @@ public:
         }
         dropdownComponents.clear();
 
+        for (auto& c : multiSelectComponents)
+        {
+            removeChildComponent(c.get());
+        }
+        multiSelectComponents.clear();
+
         handlers.clear();
     }
 
@@ -169,7 +183,10 @@ public:
             {
                 addTextBox(textInfo);
             }
-            //else if (const auto* numberInfo = dynamic_cast<NumberBoxComponentInfo*>(info.get())) { addNumberBox(numberInfo); }
+            else if (auto* numberInfo = dynamic_cast<NumberBoxComponentInfo*>(info.get()))
+            {
+                addNumberBox(numberInfo);
+            }
             else if (auto* toggleInfo = dynamic_cast<ToggleComponentInfo*>(info.get()))
             {
                 addToggle(toggleInfo);
@@ -181,6 +198,10 @@ public:
             else if (auto* dropdownInfo = dynamic_cast<ComboBoxComponentInfo*>(info.get()))
             {
                 addDropdown(dropdownInfo);
+            }
+            else if (auto* multiSelectInfo = dynamic_cast<MultiSelectComponentInfo*>(info.get()))
+            {
+                addMultiSelect(multiSelectInfo);
             }
             else
             {
@@ -210,7 +231,23 @@ private:
         textComponents.push_back(std::move(textComponent));
     }
 
-    // TODO - void addNumberBox() {}
+    void addNumberBox(NumberBoxComponentInfo* info)
+    {
+        std::unique_ptr<NumberBoxWithLabel> numberComponent =
+            std::make_unique<NumberBoxWithLabel>(info->label);
+
+        auto& numberBox = numberComponent->getNumberBox();
+
+        numberBox.setRange(info->minimum, info->maximum);
+        numberBox.setValue(info->value, dontSendNotification);
+
+        addHandler(&numberBox, info);
+        numberBox.addListener(info);
+
+        addAndMakeVisible(*numberComponent);
+
+        numberComponents.push_back(std::move(numberComponent));
+    }
 
     void addToggle(ToggleComponentInfo* info)
     {
@@ -287,6 +324,35 @@ private:
         dropdownComponents.push_back(std::move(dropdownComponent));
     }
 
+    void addMultiSelect(MultiSelectComponentInfo* info)
+    {
+        std::unique_ptr<MultiSelectWithLabel> multiSelectComponent =
+            std::make_unique<MultiSelectWithLabel>(info->label);
+
+        std::vector<String> options;
+
+        for (const auto& option : info->options)
+        {
+            options.push_back(String(option));
+        }
+
+        multiSelectComponent->setOptions(options);
+
+        multiSelectComponent->isOptionSelected = [info](const String& option)
+        { return info->isSelected(option.toStdString()); };
+
+        multiSelectComponent->onOptionToggled = [info](const String& option, bool isSelected)
+        { info->setSelected(option.toStdString(), isSelected); };
+
+        multiSelectComponent->updateSelectionText();
+
+        addHandler(&multiSelectComponent->getSelectionButton(), info);
+
+        addAndMakeVisible(*multiSelectComponent);
+
+        multiSelectComponents.push_back(std::move(multiSelectComponent));
+    }
+
     void addHandler(Component* comp, ModelComponentInfo* info)
     {
         std::unique_ptr<HoverHandler> handler = std::make_unique<HoverHandler>(*comp);
@@ -341,6 +407,8 @@ private:
         addGroupToRows(rows, toggleComponents, 1, width);
         addGroupToRows(rows, dropdownComponents, 2, width);
         addGroupToRows(rows, textComponents, 3, width);
+        addGroupToRows(rows, numberComponents, 4, width);
+        addGroupToRows(rows, multiSelectComponents, 5, width);
 
         return rows;
     }
@@ -403,6 +471,10 @@ private:
                 return { preferredDropdownWidth, minDropdownHeight };
             case 3:
                 return { preferredTextBoxWidth, minTextBoxHeight };
+            case 4:
+                return { preferredNumberBoxWidth, minNumberBoxHeight };
+            case 5:
+                return { preferredDropdownWidth, minDropdownHeight };
         }
 
         return { preferredDropdownWidth, minDropdownHeight };
@@ -426,21 +498,24 @@ private:
     static constexpr int minToggleHeight = 34;
     static constexpr int minDropdownHeight = 44;
     static constexpr int minTextBoxHeight = 84;
+    static constexpr int minNumberBoxHeight = 56;
 
     static constexpr int preferredSliderWidth = 108;
     static constexpr int preferredToggleWidth = 112;
     static constexpr int preferredDropdownWidth = 140;
     static constexpr int preferredTextBoxWidth = 200;
+    static constexpr int preferredNumberBoxWidth = 140;
 
     static constexpr int minInterItemGap = 6;
     static constexpr int minEdgeGap = 4;
     static constexpr int minRowGap = 6;
 
     std::vector<std::unique_ptr<TextBoxWithLabel>> textComponents;
-    // TODO - numberComponents
+    std::vector<std::unique_ptr<NumberBoxWithLabel>> numberComponents;
     std::vector<std::unique_ptr<ToggleWithLabel>> toggleComponents;
     std::vector<std::unique_ptr<SliderWithLabel>> sliderComponents;
     std::vector<std::unique_ptr<ComboBoxWithLabel>> dropdownComponents;
+    std::vector<std::unique_ptr<MultiSelectWithLabel>> multiSelectComponents;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
 

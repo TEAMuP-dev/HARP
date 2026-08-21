@@ -550,18 +550,24 @@ private:
             PopupMenu::Options opts = lf.getOptionsForComboBoxPopupMenu(*this, *label)
                                          .withItemThatMustBeVisible(0);
 
+            // Guard against the ComboBox being destroyed while the menu is open,
+            // as JUCE's own ComboBox::showPopup does via ModalCallbackFunction
+            Component::SafePointer<FullListComboBox> safeThis(this);
+
             menu.showMenuAsync(opts,
-                               [this](int result)
+                               [safeThis](int result)
                                {
+                                   if (safeThis == nullptr)
+                                       return;
+
                                    // Match JUCE's standard comboBoxPopupMenuFinishedCallback:
                                    // clear the popup-active flag before updating selection.
-                                   hidePopup();
+                                   safeThis->hidePopup();
 
                                    if (result != 0)
-                                       setSelectedId(result, sendNotification);
+                                       safeThis->setSelectedId(result, sendNotification);
                                });
         }
-
     };
 
     FullListComboBox modelPathComboBox;

@@ -59,7 +59,17 @@ void GeneralSettingsTab::handleOpenSettings()
 
 void GeneralSettingsTab::handleClearLogs()
 {
-    HARPLogger::getInstance()->clearLog();
+    OpResult result = HARPLogger::getInstance()->clearLog();
+
+    if (result.failed())
+    {
+        AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                         "Clear Logs Failed",
+                                         toUserMessage(result.getError()),
+                                         "Ok");
+
+        return;
+    }
 
     AlertWindow::showMessageBoxAsync(
         AlertWindow::InfoIcon,
@@ -70,16 +80,20 @@ void GeneralSettingsTab::handleClearLogs()
 
 void GeneralSettingsTab::handleRestoreDefaults()
 {
+    bool saved = false;
+
     if (auto* settings = Settings::getUserSettings())
     {
-        StringArray allKeys = settings->getAllProperties().getAllKeys();
+        const StringArray allKeys = settings->getAllProperties().getAllKeys();
 
-        // Preserve any API token keys (prefix "apikeys.") so the user's
-        // credentials are not wiped by a settings restore.
+        // Preserve any API token keys so the user's credentials
+        // are not wiped by a settings restore
+        const String tokenKeyPrefix = sharedTokens->settingsPrefix + ".";
+
         StringPairArray tokenValues;
         for (const auto& key : allKeys)
         {
-            if (key.startsWith("apikeys."))
+            if (key.startsWith(tokenKeyPrefix))
                 tokenValues.set(key, settings->getValue(key));
         }
 
@@ -87,14 +101,25 @@ void GeneralSettingsTab::handleRestoreDefaults()
             settings->removeValue(key);
 
         // Restore saved tokens
-        for (int i = 0; i < tokenValues.size(); ++i)
-            settings->setValue(tokenValues.getAllKeys()[i], tokenValues.getAllValues()[i]);
+        const StringArray tokenKeys = tokenValues.getAllKeys();
+        for (const auto& key : tokenKeys)
+            settings->setValue(key, tokenValues[key]);
 
-        settings->saveIfNeeded();
+        saved = settings->saveIfNeeded();
     }
 
     if (onRestoreDefaults)
         onRestoreDefaults();
+
+    if (! saved)
+    {
+        AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
+                                         "Restore Defaults Failed",
+                                         "The settings file could not be written.",
+                                         "Ok");
+
+        return;
+    }
 
     AlertWindow::showMessageBoxAsync(
         AlertWindow::InfoIcon,

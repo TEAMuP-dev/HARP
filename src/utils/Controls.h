@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include <juce_core/juce_core.h>
 
 using namespace juce;
@@ -103,30 +105,33 @@ struct TextBoxComponentInfo : public ModelComponentInfo, public TextEditor::List
     }
 };
 
-struct NumberBoxComponentInfo : public ModelComponentInfo // TODO - Listener
+struct NumberBoxComponentInfo : public ModelComponentInfo, public Slider::Listener
 {
-    // TODO - consistency with SliderComponent
-    double min;
-    double max;
-    double value;
+    double minimum = 0.0;
+    double maximum = 0.0;
+    double value = 0.0;
 
     NumberBoxComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
         // TODO - check that the following properties are of the correct type
 
-        if (input->hasProperty("min"))
+        if (input->hasProperty("minimum"))
         {
-            min = input->getProperty("min").toString().getFloatValue();
+            minimum = input->getProperty("minimum").toString().getFloatValue();
         }
-        if (input->hasProperty("max"))
+        if (input->hasProperty("maximum"))
         {
-            max = input->getProperty("max").toString().getFloatValue();
+            maximum = input->getProperty("maximum").toString().getFloatValue();
         }
         if (input->hasProperty("value"))
         {
             value = input->getProperty("value").toString().getFloatValue();
         }
     }
+
+    /* Unlike a slider, a number box is edited by typing or by clicking the
+       increment buttons, so the value is committed on every change */
+    void sliderValueChanged(Slider* slider) override { value = slider->getValue(); }
 };
 
 struct ToggleComponentInfo : public ModelComponentInfo, public Button::Listener
@@ -231,6 +236,80 @@ struct ComboBoxComponentInfo : public ModelComponentInfo, public ComboBox::Liste
     }
 
     void comboBoxChanged(ComboBox* comboBox) override { value = comboBox->getText().toStdString(); }
+};
+
+/**
+ * A dropdown allowing any number of its options to be selected at once,
+ * corresponding to a gr.Dropdown declared with multiselect=True.
+ */
+struct MultiSelectComponentInfo : public ModelComponentInfo
+{
+    std::vector<std::string> options;
+
+    std::vector<std::string> values;
+
+    MultiSelectComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
+    {
+        if (input->hasProperty("choices"))
+        {
+            if (Array<var>* choices = input->getProperty("choices").getArray())
+            {
+                for (const auto& choice : *choices)
+                {
+                    /* Gradio normalizes choices to (label, value) pairs, but
+                       tolerate a plain list of labels as well */
+                    if (Array<var>* choicePair = choice.getArray())
+                    {
+                        if (! choicePair->isEmpty())
+                        {
+                            options.push_back(choicePair->getFirst().toString().toStdString());
+                        }
+                    }
+                    else
+                    {
+                        options.push_back(choice.toString().toStdString());
+                    }
+                }
+            }
+        }
+
+        if (input->hasProperty("value"))
+        {
+            var value = input->getProperty("value");
+
+            if (Array<var>* selectedValues = value.getArray())
+            {
+                for (const auto& selectedValue : *selectedValues)
+                {
+                    values.push_back(selectedValue.toString().toStdString());
+                }
+            }
+            else if (value.toString().isNotEmpty())
+            {
+                // A multiselect dropdown may still be given a single default
+                values.push_back(value.toString().toStdString());
+            }
+        }
+    }
+
+    bool isSelected(const std::string& option) const
+    {
+        return std::find(values.begin(), values.end(), option) != values.end();
+    }
+
+    void setSelected(const std::string& option, bool shouldBeSelected)
+    {
+        auto existing = std::find(values.begin(), values.end(), option);
+
+        if (shouldBeSelected && existing == values.end())
+        {
+            values.push_back(option);
+        }
+        else if (! shouldBeSelected && existing != values.end())
+        {
+            values.erase(existing);
+        }
+    }
 };
 
 using ModelComponentInfoList = std::vector<std::shared_ptr<ModelComponentInfo>>;
