@@ -284,7 +284,9 @@ public:
                                           requestBody,
                                           responseJSON,
                                           inferDocumentationPath(modelPath),
-                                          fileToUpload);
+                                          fileToUpload,
+                                          10000,
+                                          modelPath);
 
         if (result.failed())
         {
@@ -339,7 +341,8 @@ public:
     {
         String responseJSON;
 
-        OpResult result = makeRequest(modelPath, "process", payloadJSON, responseJSON);
+        OpResult result =
+            makeRequest(modelPath, "process", payloadJSON, responseJSON, processTimeoutMs);
 
         if (result.failed())
         {
@@ -525,6 +528,51 @@ private:
         return array.size() == 2;
     }
 
+    /* The lifecycle stage reported by the Hub, e.g. RUNNING, SLEEPING, APP_STARTING,
+       BUILDING, RUNTIME_ERROR, PAUSED. Returns an empty string when it cannot be
+       determined. Unlike the hardware type this changes constantly, so it is never
+       cached. */
+    String querySpaceStage(const String& modelPath)
+    {
+        if (! isValidHuggingFacePath(modelPath))
+            return {};
+
+        URL runtimeEndpoint =
+            URL("https://huggingface.co/api/spaces/" + inferHostSlashModel(modelPath) + "/runtime");
+
+        std::unique_ptr<InputStream> stream;
+
+        if (makeGETRequestStream(runtimeEndpoint, stream, "", 5000).failed() || stream == nullptr)
+            return {};
+
+        DynamicObject::Ptr responseDict;
+
+        if (stringJSONToDict(stream->readEntireStreamAsString(), responseDict).failed())
+            return {};
+
+        static const Identifier stageKey { "stage" };
+
+        return responseDict->hasProperty(stageKey)
+                   ? responseDict->getProperty(stageKey).toString().toUpperCase()
+                   : String();
+    }
+
+    /* Turns a Space stage into the error it should be reported as. Asking the Hub
+       directly avoids guessing from the status code alone: a Space that is merely
+       waking up answers a request exactly like one that is genuinely broken. */
+    static bool isStartingStage(const String& stage)
+    {
+        return stage == "SLEEPING" || stage == "APP_STARTING" || stage == "BUILDING"
+               || stage == "RUNNING";
+    }
+
+    static bool isUnavailableStage(const String& stage)
+    {
+        return stage == "RUNTIME_ERROR" || stage == "BUILD_ERROR" || stage == "CONFIG_ERROR"
+               || stage == "NO_APP_FILE" || stage == "PAUSED" || stage == "STOPPED"
+               || stage == "DELETING";
+    }
+
     bool isZeroGPUSpace(const String& modelPath)
     {
         if (! isValidHuggingFacePath(modelPath))
@@ -587,7 +635,8 @@ private:
                              String& response,
                              const String errorPath = "",
                              const File& fileToUpload = File(),
-                             const int timeoutMs = 10000)
+                             const int timeoutMs = 10000,
+                             const String modelPath = "")
     {
         String debugMessage =
             "GradioClient::makePOSTRequest: Attempting to make POST request for endpoint \""
@@ -655,6 +704,28 @@ private:
             if (statusMessage != nullptr && reason.isNotEmpty())
             {
                 statusMessage->setMessage("[error] " + reason);
+            }
+
+            /* A 503 from a Space is ambiguous on its own: the Hub answers the same way
+               whether the Space is waking up or genuinely broken. Ask the Hub which it
+               is rather than reporting it as down. */
+            if (statusCode == 503 && modelPath.isNotEmpty())
+            {
+                String stage = querySpaceStage(modelPath);
+
+                DBG_AND_LOG("GradioClient::makePOSTRequest: Space stage \"" << stage << "\".");
+
+                if (isStartingStage(stage))
+                {
+                    return OpResult::fail(
+                        GradioError { GradioError::Type::SpaceStarting, errorPath, stage });
+                }
+
+                if (isUnavailableStage(stage))
+                {
+                    return OpResult::fail(
+                        GradioError { GradioError::Type::SpaceUnavailable, errorPath, stage });
+                }
             }
 
             // Keep the real status code so callers can react to specific
@@ -1208,7 +1279,16 @@ private:
             }
         }
 
-        return OpResult::ok();
+        /* Falling out of the loop means the stream ended without ever delivering a
+           "complete" or "error" event, so there is no response to parse. Reporting
+           success here would leave the caller to fail on an empty string, which
+           surfaces as a confusing JSON error rather than a connection problem.
+
+           The most common cause is the transfer being aborted while the model was
+           still working: JUCE's curl backend turns the timeout into a low-speed
+           abort (CURLOPT_LOW_SPEED_LIMIT/TIME), and a stream carrying nothing but
+           Gradio's periodic heartbeats sits far below that threshold. */
+        return OpResult::fail(GradioError { GradioError::Type::IncompleteResponse, errorPath });
     }
 
     OpResult downloadFile(String downloadPath, File& fileToDownload) //override
@@ -1267,15 +1347,22 @@ private:
     OpResult makeRequest(const String modelPath,
                          const String requestType,
                          const String body,
-                         String& response)
+                         String& response,
+                         const int timeoutMs = controlsTimeoutMs)
     {
         URL endpoint = URL(inferEndpointPath(modelPath))
                            .getChildURL("gradio_api")
                            .getChildURL("call")
                            .getChildURL(requestType);
 
-        OpResult result = makePOSTRequest(
-            endpoint, getJSONHeaders(), body, response, inferDocumentationPath(modelPath));
+        OpResult result = makePOSTRequest(endpoint,
+                                          getJSONHeaders(),
+                                          body,
+                                          response,
+                                          inferDocumentationPath(modelPath),
+                                          File(),
+                                          10000,
+                                          modelPath);
 
         if (result.failed())
         {
@@ -1315,7 +1402,7 @@ private:
         /* Note: it's very important to give Gradio enough time to yield a response
            (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
         return makeGETRequest(
-            endpoint, response, inferDocumentationPath(modelPath), 120000, modelPath);
+            endpoint, response, inferDocumentationPath(modelPath), timeoutMs, modelPath);
     }
 
     OpResult extractLabels(DynamicObject::Ptr& output, LabelList& labels)
@@ -1496,6 +1583,12 @@ private:
 
         return OpResult::ok();
     }
+
+    /* How long a request may go without meaningful traffic before the transfer is
+       abandoned. Gradio only emits a heartbeat every 15 seconds while a model runs,
+       so on the curl backend this acts as a ceiling on total processing time. */
+    static constexpr int controlsTimeoutMs = 120000; // 2 minutes
+    static constexpr int processTimeoutMs = 1800000; // 30 minutes
 
     // Cached results of isZeroGPUSpace, keyed by model path
     CriticalSection zeroGPUCacheLock;

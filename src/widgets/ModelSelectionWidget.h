@@ -326,9 +326,36 @@ public:
             {
                 updatedEntry += validPathTryAgainTag;
             }
-            if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 503)
+            else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 429)
+            {
+                // Rate limiting says nothing about the model, only about how
+                // quickly it was asked for
+                updatedEntry += validPathTryAgainTag;
+            }
+            else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 503)
             {
                 updatedEntry += validPathBrokenTag;
+            }
+            else
+            {
+                updatedEntry += validPathErrorTag;
+            }
+        }
+        else if (const auto* e = std::get_if<GradioError>(&error))
+        {
+            /* A Space that is waking up is not a broken one, so it must not be
+               marked as down. The Hub was queried to determine the stage. */
+            if (e->type == GradioError::Type::SpaceStarting)
+            {
+                updatedEntry += validPathTryAgainTag;
+            }
+            else if (e->type == GradioError::Type::SpaceUnavailable)
+            {
+                updatedEntry += validPathBrokenTag;
+            }
+            else
+            {
+                updatedEntry += validPathErrorTag;
             }
         }
         else

@@ -173,6 +173,22 @@ inline String toUserMessage(const HttpError& e)
 
         case HttpError::Type::BadStatusCode:
 
+            if (e.statusCode == 429)
+            {
+                userMessage = "The service is rate-limiting requests from this machine.";
+
+                if (e.detail.isNotEmpty())
+                {
+                    userMessage += "\n\nDetails: " + e.detail;
+                }
+
+                userMessage += "\n\nThis happens when requests are made in quick succession, "
+                               "such as starting and canceling repeatedly. Wait a few moments "
+                               "before trying again.";
+
+                return userMessage;
+            }
+
             if (e.statusCode == 402)
             {
                 userMessage = "This request could not be completed because the service "
@@ -232,7 +248,10 @@ struct GradioError
     {
         RuntimeError,
         QuotaExceeded,
-        Indeterminate
+        Indeterminate,
+        IncompleteResponse,
+        SpaceStarting,
+        SpaceUnavailable
     };
 
     Type type;
@@ -277,6 +296,51 @@ inline String toUserMessage(const GradioError& e)
             }
 
             userMessage += "\n\nPlease try again later, or use an account with available quota.";
+
+            return userMessage;
+
+        case GradioError::Type::SpaceStarting:
+
+            userMessage = "The Space is still starting up.";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nIts current state is \"" + e.reason + "\".";
+            }
+
+            userMessage += "\n\nSpaces are suspended when idle and take a short while to wake. "
+                           "Try loading it again in a minute.";
+
+            return userMessage;
+
+        case GradioError::Type::SpaceUnavailable:
+
+            userMessage = "The Space is not currently available.";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nIts current state is \"" + e.reason + "\".";
+            }
+
+            userMessage += "\n\nThis usually means it has been paused by its owner, or has "
+                           "stopped because of a build or runtime error. Click 'Open URL' to "
+                           "check its status on Hugging Face.";
+
+            return userMessage;
+
+        case GradioError::Type::IncompleteResponse:
+
+            userMessage = "Lost contact with the Space before it returned a result.";
+
+            userMessage +=
+                "\n\nThe connection is dropped when nothing arrives for a prolonged period, "
+                "which usually means the model was still running. The job may well have "
+                "finished on the Space afterwards, but HARP was no longer listening for it.";
+
+            userMessage +=
+                "\n\nTry again with a shorter input, or on a Space with faster hardware. "
+                "Models that routinely take this long are better suited to a dedicated GPU "
+                "Space than to a free CPU one.";
 
             return userMessage;
 
@@ -546,7 +610,10 @@ inline std::optional<String> getOpenablePath(const Error& error)
         /* Both of these messages send the user to the Space page, since that is
            where the underlying error is actually reported */
         bool pathIsUseful = e->type == GradioError::Type::RuntimeError
-                            || e->type == GradioError::Type::Indeterminate;
+                            || e->type == GradioError::Type::Indeterminate
+                            || e->type == GradioError::Type::IncompleteResponse
+                            || e->type == GradioError::Type::SpaceStarting
+                            || e->type == GradioError::Type::SpaceUnavailable;
 
         if (pathIsUseful && e->endpointPath.isNotEmpty())
         {
