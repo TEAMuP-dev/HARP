@@ -88,6 +88,9 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
+    // Returns a fixed height in pixels this display should occupy, or 0 to use flex sizing.
+    virtual int getFixedHeight() const { return 0; }
+
     void setTrackID(Uuid id) { trackID = id; }
     Uuid getTrackID() { return trackID; }
 

@@ -890,13 +890,14 @@ void MediaDisplayComponent::saveFileCallback()
                     File chosenFile = fc.getResult();
                     if (chosenFile != File {})
                     {
-                        if (chosenFile.getFileExtension().compare("") == 0)
+                        if (chosenFile.getFileExtension().isEmpty() && ! validExtensions.isEmpty())
                         {
-                            // Add default extension in none provided
+                            // Add default extension if none provided and a specific list exists
                             chosenFile = chosenFile.withFileExtension(validExtensions[0]);
                         }
 
-                        if (validExtensions.contains(chosenFile.getFileExtension()))
+                        if (validExtensions.isEmpty()
+                            || validExtensions.contains(chosenFile.getFileExtension()))
                         {
                             //URL tempFilePath = mediaDisplay->getTempFilePath();
 

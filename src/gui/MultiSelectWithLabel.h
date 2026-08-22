@@ -37,6 +37,10 @@ public:
         selectionButton.setBounds(selectionArea);
     }
 
+    int getPreferredWidth() const override { return preferredSelectionWidth; }
+
+    int getPreferredHeight() const override { return preferredSelectionHeight; }
+
     int getMinimumRequiredWidth() const override
     {
         const int labelWidth = getLabelWidth(label);
@@ -120,6 +124,9 @@ private:
                 safeThis->updateSelectionText();
             });
     }
+
+    static constexpr int preferredSelectionWidth = 140;
+    static constexpr int preferredSelectionHeight = 44;
 
     static constexpr int minSelectionWidth = 120;
 

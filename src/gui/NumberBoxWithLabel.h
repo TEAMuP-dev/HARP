@@ -34,6 +34,10 @@ public:
         numberBox.setBounds(numberBoxArea);
     }
 
+    int getPreferredWidth() const override { return preferredNumberBoxWidth; }
+
+    int getPreferredHeight() const override { return preferredNumberBoxHeight; }
+
     int getMinimumRequiredWidth() const override
     {
         const int labelWidth = getLabelWidth(label);
@@ -43,6 +47,9 @@ public:
     Slider& getNumberBox() { return numberBox; }
 
 private:
+    static constexpr int preferredNumberBoxWidth = 140;
+    static constexpr int preferredNumberBoxHeight = 56;
+
     static constexpr int minNumberBoxBody = 100;
 
     Label label;
