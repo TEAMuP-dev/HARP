@@ -10,6 +10,10 @@
 
 #include "utils/Settings.h"
 
+#if JUCE_LINUX
+    #include <dlfcn.h>
+#endif
+
 using namespace juce;
 
 class GuiAppApplication : public JUCEApplication, public FocusChangeListener
@@ -217,6 +221,147 @@ public:
             restoreWindowPosition();
 
             setVisible(true);
+        }
+
+        /**
+         * Keeps the window manager's idea of the minimum size up to date.
+         *
+         * JUCE only publishes size limits when the peer is flagged resizable, which
+         * Desktop::supportsBorderlessNonClientResize() prevents on Linux, so the
+         * constrainer governs resizes HARP makes itself but not those driven by the
+         * window manager. Snapping back afterwards is not a workable substitute: the
+         * window manager may refuse, leaving the window and its contents at different
+         * sizes, so the limit is handed to the window manager instead.
+         */
+        /**
+         * Hands the constrainer's minimum size to the window manager.
+         *
+         * Xlib is reached through dlopen rather than its headers, whose Window,
+         * Time and KeyPress macros collide with JUCE's types. Does nothing on
+         * platforms where JUCE already applies the limits itself.
+         */
+        void publishMinimumSizeToWindowManager()
+        {
+           #if JUCE_LINUX
+            auto* constrainer = getConstrainer();
+            auto* peer = getPeer();
+
+            if (constrainer == nullptr || peer == nullptr)
+            {
+                return;
+            }
+
+            const auto windowHandle = (unsigned long) (pointer_sized_int) peer->getNativeHandle();
+
+            if (windowHandle == 0)
+            {
+                return;
+            }
+
+            /* Mirrors Xlib's XSizeHints, whose layout is fixed by the X11 ABI */
+            struct SizeHints
+            {
+                long flags;
+                int x, y, width, height;
+                int minWidth, minHeight;
+                int maxWidth, maxHeight;
+                int widthInc, heightInc;
+                struct { int x, y; } minAspect, maxAspect;
+                int baseWidth, baseHeight;
+                int winGravity;
+            };
+
+            static constexpr long minSizeFlag = 1L << 4; // PMinSize
+
+            struct XLib
+            {
+                void* handle = nullptr;
+                void* (*openDisplay)(const char*) = nullptr;
+                int (*closeDisplay)(void*) = nullptr;
+                SizeHints* (*allocSizeHints)() = nullptr;
+                int (*getWMNormalHints)(void*, unsigned long, SizeHints*, long*) = nullptr;
+                void (*setWMNormalHints)(void*, unsigned long, SizeHints*) = nullptr;
+                int (*freeMemory)(void*) = nullptr;
+                int (*flush)(void*) = nullptr;
+
+                XLib()
+                {
+                    handle = dlopen("libX11.so.6", RTLD_LAZY);
+
+                    if (handle == nullptr)
+                    {
+                        return;
+                    }
+
+                    openDisplay = (decltype(openDisplay)) dlsym(handle, "XOpenDisplay");
+                    closeDisplay = (decltype(closeDisplay)) dlsym(handle, "XCloseDisplay");
+                    allocSizeHints = (decltype(allocSizeHints)) dlsym(handle, "XAllocSizeHints");
+                    getWMNormalHints = (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
+                    setWMNormalHints = (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
+                    freeMemory = (decltype(freeMemory)) dlsym(handle, "XFree");
+                    flush = (decltype(flush)) dlsym(handle, "XFlush");
+                }
+
+                bool isUsable() const
+                {
+                    return openDisplay != nullptr && closeDisplay != nullptr
+                           && allocSizeHints != nullptr && getWMNormalHints != nullptr
+                           && setWMNormalHints != nullptr && freeMemory != nullptr
+                           && flush != nullptr;
+                }
+            };
+
+            static const XLib xlib;
+
+            if (! xlib.isUsable())
+            {
+                return;
+            }
+
+            void* display = xlib.openDisplay(nullptr);
+
+            if (display == nullptr)
+            {
+                return;
+            }
+
+            if (SizeHints* hints = xlib.allocSizeHints())
+            {
+                long supplied = 0;
+
+                // Preserve whatever the window already advertises
+                xlib.getWMNormalHints(display, windowHandle, hints, &supplied);
+
+                hints->flags |= minSizeFlag;
+                hints->minWidth = constrainer->getMinimumWidth();
+                hints->minHeight = constrainer->getMinimumHeight();
+
+                xlib.setWMNormalHints(display, windowHandle, hints);
+                xlib.freeMemory(hints);
+            }
+
+            xlib.flush(display);
+            xlib.closeDisplay(display);
+           #endif
+        }
+
+        void resized() override
+        {
+            DocumentWindow::resized();
+
+            /* JUCE rewrites WM_NORMAL_HINTS while setting the window bounds, and
+               replaces the structure rather than merging into it, so the minimum
+               has to be applied once that has happened. */
+            Component::SafePointer<HARPWindow> safeThis(this);
+
+            MessageManager::callAsync(
+                [safeThis]
+                {
+                    if (safeThis != nullptr)
+                    {
+                        safeThis->publishMinimumSizeToWindowManager();
+                    }
+                });
         }
 
         /**

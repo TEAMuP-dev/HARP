@@ -111,6 +111,11 @@ public:
     {
         status = ModelStatus::FAILURE;
 
+        /* Record the classification alongside the raw traffic already logged by the
+           client, so that a log attached to a report shows which branch was taken */
+        DBG_AND_LOG("Model::setFailure: " + toLogString(result.getError())
+                    + (pathContext.isNotEmpty() ? " for \"" + pathContext + "\"" : String()));
+
         if (statusMessage != nullptr)
         {
             String errMsg = toUserMessage(result.getError());
@@ -169,6 +174,22 @@ public:
 
             return result;
         }
+
+        /* Settle on the address the provider itself uses before anything is queried
+           or recorded, so that the same model entered several ways is loaded, listed,
+           and linked to as one. */
+        String canonicalPath;
+
+        result = tempClient->resolveCanonicalPath(pathToLoad, canonicalPath);
+
+        if (result.failed())
+        {
+            setFailure(result, pathToLoad);
+
+            return result;
+        }
+
+        pathToLoad = canonicalPath;
 
         setStatus(ModelStatus::QUERYING_CONTROLS, pathToLoad);
 

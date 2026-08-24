@@ -183,6 +183,31 @@ public:
     Client() = default;
     virtual ~Client() {};
 
+    /**
+     * Reduces the many ways of writing one model's address to a single form.
+     *
+     * A model can be entered abbreviated, as a full page URL, or as the API
+     * subdomain, and all three should be recognized as the same model rather than
+     * accumulating as separate entries. Returns the path unchanged when there is
+     * no canonical form to reduce it to.
+     */
+    virtual String canonicalizePath(String modelPath) { return modelPath; }
+
+    /**
+     * Confirms a model's address with the provider and returns its exact spelling.
+     *
+     * Some of the addresses a model can be entered as cannot be reduced without
+     * asking the provider, so this may make a network request and must not be
+     * called from the message thread. Providers that need no such lookup keep the
+     * default, which reduces the path offline and succeeds.
+     */
+    virtual OpResult resolveCanonicalPath(const String& modelPath, String& canonicalPath)
+    {
+        canonicalPath = canonicalizePath(modelPath);
+
+        return OpResult::ok();
+    }
+
     virtual String inferHostSlashModel(String modelPath) = 0;
     virtual String inferEndpointPath(String modelPath) = 0;
     virtual String inferDocumentationPath(String modelPath) = 0;

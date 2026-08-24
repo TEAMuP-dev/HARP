@@ -251,7 +251,7 @@ private:
 
         auto& numberBox = numberComponent->getNumberBox();
 
-        numberBox.setRange(info->minimum, info->maximum);
+        numberBox.setRange(info->minimum, info->maximum, info->step);
         numberBox.setValue(info->value, dontSendNotification);
 
         addHandler(&numberBox, info);

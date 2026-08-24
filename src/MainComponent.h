@@ -109,6 +109,8 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
+    void refreshTutorialHighlight();
+    Rectangle<int> getVisibleTabArea(Rectangle<int> tabBounds);
 
 private:
     /* File Menu */
@@ -152,6 +154,66 @@ private:
     bool showMediaClipboard;
 
     ModelTab mainModelTab;
+
+    /**
+     * Viewport that leaves the mouse wheel to the tracks.
+     *
+     * Tracks use the wheel to zoom their contents, so the panel must not treat a
+     * wheel event over one as a request to scroll. Viewport::useMouseWheelMoveIfNeeded
+     * is not virtual, so the decision is made here instead.
+     */
+    struct MainPanelViewport : public Viewport
+    {
+        void mouseWheelMove(const MouseEvent& e, const MouseWheelDetails& wheel) override
+        {
+            /* Test originalComponent, not eventComponent: a wheel event that goes
+               unhandled is passed up the hierarchy with getEventRelativeTo, which
+               rewrites eventComponent to each parent in turn, so by the time it
+               arrives here eventComponent is this viewport. originalComponent still
+               names the component the wheel was actually over. */
+            if (isWithinTrack(e.originalComponent))
+            {
+                return;
+            }
+
+            Viewport::mouseWheelMove(e, wheel);
+        }
+
+        /* Scrolling moves the tab under the tutorial overlay, which draws its
+           highlight in window coordinates and would otherwise keep pointing at
+           where a component used to be. */
+        void visibleAreaChanged(const Rectangle<int>&) override
+        {
+            if (onScrolled != nullptr)
+            {
+                onScrolled();
+            }
+        }
+
+        std::function<void()> onScrolled;
+
+        /* True when the wheel landed on a track that will act on it. A track with
+           no media loaded does not, so the panel should still scroll over it. */
+        static bool isWithinTrack(Component* c)
+        {
+            for (auto* candidate = c; candidate != nullptr;
+                 candidate = candidate->getParentComponent())
+            {
+                if (auto* track = dynamic_cast<MediaDisplayComponent*>(candidate))
+                {
+                    return track->usesMouseWheel();
+                }
+            }
+
+            return false;
+        }
+    };
+
+    /* The tab is scrolled rather than squeezed when the window cannot be made
+       large enough to show it, which happens once the required size exceeds the
+       display. Declared after the tab so that it is torn down first. */
+    MainPanelViewport mainPanelViewport;
+
     StatusAreaWidget statusAreaWidget;
     DragOverlayComponent dragOverlay;
     MediaClipboardWidget mediaClipboardWidget { &dragOverlay };

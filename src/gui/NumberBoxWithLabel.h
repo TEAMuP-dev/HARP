@@ -21,17 +21,30 @@ public:
 
         numberBox.setIncDecButtonsMode(Slider::incDecButtonsDraggable_Vertical);
 
+        // Fixing the text box size keeps the buttons from growing taller than it
+        numberBox.setTextBoxStyle(Slider::TextBoxLeft, false, textBoxWidth, rowHeight);
+
         addAndMakeVisible(label);
         addAndMakeVisible(numberBox);
     }
 
     void resized() override
     {
-        auto numberBoxArea = getLocalBounds();
-        auto labelArea = numberBoxArea.removeFromTop(numberBoxArea.getHeight() / 3);
+        auto area = getLocalBounds();
 
-        label.setBounds(labelArea);
-        numberBox.setBounds(numberBoxArea);
+        if (area.isEmpty())
+        {
+            return;
+        }
+
+        label.setBounds(area.removeFromTop(jmin(labelHeight, area.getHeight())));
+
+        /* JUCE sizes the increment / decrement buttons to fill whatever is left of
+           the slider, so the slider is limited to one row and centered instead of
+           being given the whole remaining area. */
+        int boxHeight = jmin(rowHeight, area.getHeight());
+
+        numberBox.setBounds(area.withSizeKeepingCentre(area.getWidth(), boxHeight));
     }
 
     int getPreferredWidth() const override { return preferredNumberBoxWidth; }
@@ -51,6 +64,9 @@ private:
     static constexpr int preferredNumberBoxHeight = 56;
 
     static constexpr int minNumberBoxBody = 100;
+    static constexpr int labelHeight = 20;
+    static constexpr int rowHeight = 24;
+    static constexpr int textBoxWidth = 64;
 
     Label label;
     Slider numberBox;

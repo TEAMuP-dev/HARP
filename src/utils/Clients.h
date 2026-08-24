@@ -33,6 +33,29 @@ inline std::unique_ptr<Client> multiplexClients(Provider provider)
     }
 }
 
+/**
+ * Reduces a model path to the single form its provider recognizes it by.
+ *
+ * Returns the path unchanged when no provider claims it, so that an unrecognised
+ * path still reaches the client selection above and fails there with a message
+ * about the path itself.
+ */
+inline String canonicalizeModelPath(String modelPath)
+{
+    std::unique_ptr<Client> client;
+
+    if (StabilityClient::matchesPathSpec(modelPath))
+    {
+        client = std::make_unique<StabilityClient>();
+    }
+    else if (GradioClient::matchesPathSpec(modelPath))
+    {
+        client = std::make_unique<GradioClient>();
+    }
+
+    return client != nullptr ? client->canonicalizePath(modelPath) : modelPath;
+}
+
 inline OpResult multiplexClients(String modelPath, std::unique_ptr<Client>& client)
 {
     if (StabilityClient::matchesPathSpec(modelPath))

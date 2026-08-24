@@ -32,18 +32,32 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        label.setBounds(area.removeFromTop(labelHeight));
+
+        label.setBounds(area.removeFromTop(jmin(labelHeight, area.getHeight())));
 
         if (! required)
-            area.removeFromTop(bannerHeight);
+            area.removeFromTop(jmin(bannerHeight, area.getHeight()));
 
-        int buttonSize = area.getHeight();
+        if (area.isEmpty())
+        {
+            actionButton.setBounds({});
+            return;
+        }
+
+        int buttonSize = jmin(area.getHeight(), area.getWidth());
         actionButton.setBounds(area.removeFromRight(buttonSize));
     }
 
     void paint(Graphics& g) override
     {
         auto area = getLocalBounds();
+
+        // Drawing into a negative-sized rectangle trips a JUCE assertion
+        if (area.getHeight() <= labelHeight || area.getWidth() <= 0)
+        {
+            return;
+        }
+
         area.removeFromTop(labelHeight);
 
         if (! required)
@@ -69,7 +83,8 @@ public:
         g.setColour(outline);
         g.drawRoundedRectangle(body.reduced(0.5f), r, 1.0f);
 
-        auto textArea = bodyInt.withTrimmedRight(bodyInt.getHeight()).withTrimmedLeft(4);
+        auto textArea = bodyInt.withTrimmedRight(jmin(bodyInt.getHeight(), bodyInt.getWidth()))
+                            .withTrimmedLeft(jmin(4, bodyInt.getWidth()));
 
         g.setFont(Font(13.0f));
         g.setColour(currentPath.isEmpty() ? textCol.withAlpha(0.4f) : textCol.withAlpha(0.85f));

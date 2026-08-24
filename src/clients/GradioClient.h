@@ -39,6 +39,142 @@ public:
                || isValidHuggingFacePath(modelPath);
     }
 
+    String canonicalizePath(String modelPath) override
+    {
+        /* "user/name" is the form Hugging Face itself uses, and the only one both
+           the page URL and the API subdomain can be derived from. A page URL carries
+           that form verbatim, so it can be reduced here without asking anyone.
+
+           The API subdomain cannot: it lowercases the name and replaces both the
+           separating "/" and every "_" with "-", so neither the boundary nor the
+           original spelling survives. Reducing it offline would only guess, which is
+           what resolveCanonicalPath below asks the Hub to avoid. Local and Gradio
+           addresses have no canonical form at all and are left alone. */
+        if (isValidLongHuggingFacePath(modelPath))
+        {
+            const String hostSlashModel = inferHostSlashModel(modelPath);
+
+            if (hostSlashModel.isNotEmpty())
+            {
+                return hostSlashModel;
+            }
+        }
+
+        return modelPath;
+    }
+
+    /**
+     * Asks the provider for a model's exact address.
+     *
+     * The Hub answers for the two written forms and the running app answers for the
+     * API subdomain, so an address that only appears to work — a "-" typed where the
+     * name has a "_", or the wrong capitalization — is corrected here rather than
+     * silently loading a different model or producing a broken documentation link.
+     */
+    OpResult resolveCanonicalPath(const String& modelPath, String& canonicalPath) override
+    {
+        canonicalPath = canonicalizePath(modelPath);
+
+        // Only Hugging Face publishes a canonical spelling to resolve against
+        if (! isValidHuggingFacePath(canonicalPath))
+        {
+            return OpResult::ok();
+        }
+
+        /* A subdomain has to be asked for its own identity, since the Hub cannot be
+           queried for it without already knowing the answer. It advertises that
+           identity in a "canonical" link header, which it sends whether it is awake
+           or asleep, so no request to the app itself is needed. */
+        if (isValidShortHuggingFacePath(canonicalPath))
+        {
+            const String advertisedPath = queryCanonicalSpace(inferEndpointPath(canonicalPath));
+
+            if (advertisedPath.isNotEmpty())
+            {
+                if (advertisedPath != canonicalPath)
+                {
+                    DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                                << modelPath << "\" resolved to \"" << advertisedPath << "\".");
+                }
+
+                canonicalPath = advertisedPath;
+            }
+            else
+            {
+                /* Without an answer only the ambiguous reading of the subdomain is
+                   left, which is no basis for rejecting the path. */
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                            << modelPath << "\" advertises no identity. Continuing with \""
+                            << canonicalPath << "\".");
+            }
+
+            return OpResult::ok();
+        }
+
+        static const Identifier identityKey { "id" };
+
+        std::unique_ptr<InputStream> stream;
+
+        OpResult result = makeGETRequestStream(
+            URL("https://huggingface.co/api/spaces/" + canonicalPath), stream, modelPath, 10000);
+
+        if (result.failed())
+        {
+            const auto* e = std::get_if<HttpError>(&result.getError());
+
+            /* 401 and 404 are the Hub's answers for "no such Space" and for "private,
+               and you are not signed in", which it does not distinguish between. Both
+               mean this address cannot be loaded, so say so now with a message about
+               the address rather than letting the request fail later as a transport
+               error. */
+            if (e != nullptr && e->type == HttpError::Type::BadStatusCode
+                && (e->statusCode == 401 || e->statusCode == 404))
+            {
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \"" << modelPath
+                            << "\" was not recognized by the provider (status code \""
+                            << String(e->statusCode) << "\").");
+
+                return OpResult::fail(
+                    ClientError { ClientError::Type::ModelNotFound, modelPath, "Gradio" });
+            }
+
+            /* Anything else is a problem reaching the provider rather than a verdict
+               on the path, and must not stop a load that would otherwise succeed. */
+            DBG_AND_LOG("GradioClient::resolveCanonicalPath: Could not confirm path \""
+                        << modelPath << "\" (" << toLogString(result.getError())
+                        << "). Continuing with \"" << canonicalPath << "\".");
+
+            return OpResult::ok();
+        }
+
+        DynamicObject::Ptr responseDict;
+
+        if (stream == nullptr
+            || stringJSONToDict(stream->readEntireStreamAsString(), responseDict).failed()
+            || ! responseDict->hasProperty(identityKey))
+        {
+            DBG_AND_LOG("GradioClient::resolveCanonicalPath: Provider gave no identity for path \""
+                        << modelPath << "\". Continuing with \"" << canonicalPath << "\".");
+
+            return OpResult::ok();
+        }
+
+        const String resolvedPath = responseDict->getProperty(identityKey).toString().trim();
+
+        if (resolvedPath.isNotEmpty() && isValidAbbrevHuggingFacePath(resolvedPath))
+        {
+            if (resolvedPath != canonicalPath)
+            {
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                            << modelPath << "\" resolved to \"" << resolvedPath << "\".");
+            }
+
+            canonicalPath = resolvedPath;
+        }
+
+        return OpResult::ok();
+    }
+
     String inferHostSlashModel(String modelPath) override
     {
         String hostSlashModel;
@@ -51,13 +187,15 @@ public:
         {
             if (isValidShortHuggingFacePath(modelPath))
             {
-                StringArray array = StringArray::fromTokens(
-                    modelPath.fromFirstOccurrenceOf("https://", false, false)
-                        .upToFirstOccurrenceOf(".hf.space", false, false),
-                    "-",
-                    "");
+                /* Only the first "-" is known to be the owner boundary; the rest
+                   belong to the name, whose original spelling the subdomain does not
+                   preserve. This is a best guess for display and for addressing the
+                   Hub, which resolveCanonicalPath replaces with the exact spelling. */
+                const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
+                                             .upToFirstOccurrenceOf(".hf.space", false, false);
 
-                hostSlashModel = array[0] + "/" + array[1];
+                hostSlashModel = subdomain.upToFirstOccurrenceOf("-", false, false) + "/"
+                                 + subdomain.fromFirstOccurrenceOf("-", false, false);
             }
             else if (isValidLongHuggingFacePath(modelPath))
             {
@@ -115,7 +253,6 @@ public:
                 String host = array[0];
                 String model = array[1];
 
-                // TODO - this can load paths that were incorrectly added with "-" instead of "_" resulting in a broken documentation link
                 endpointPath = "https://" + host + "-" + model.replace("_", "-") + ".hf.space/";
             }
         }
@@ -477,34 +614,23 @@ private:
           e.g., "https://xribene-midi-pitch-shifter.hf.space/"
         */
 
-        StringArray array =
-            StringArray::fromTokens(modelPath.fromFirstOccurrenceOf("https://", false, false)
-                                        .upToFirstOccurrenceOf(".hf.space", false, false),
-                                    "-",
-                                    "");
-
-        if (array.size() == 2)
-        {
-            return true;
-        }
-        else if (array.size() != 0)
-        {
-            /*
-              This is ambiguous. There's no way to tell where the delimeter
-              belongs and which hypens were converted from underscores.
-            */
-
-            DBG_AND_LOG(
-                "GradioClient::isValidShortHuggingFacePath: Path \""
-                << modelPath
-                << "\" is ambiguous. Please use the abbreviated or long-form path instead.");
-
-            return false;
-        }
-        else
+        /* Without this the check below is meaningless for any other address:
+           upToFirstOccurrenceOf returns the whole string when the needle is
+           absent, so a long-form path that happens to contain a single hyphen
+           splits into two tokens and is mistaken for a subdomain. */
+        if (! modelPath.contains(".hf.space"))
         {
             return false;
         }
+
+        const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
+                                     .upToFirstOccurrenceOf(".hf.space", false, false);
+
+        /* The owner and the name are joined by a "-", so at least one is needed for
+           this to name a Space at all. Where that "-" falls, and which of the others
+           were underscores, cannot be told from the address; resolveCanonicalPath
+           asks the running app which Space it is rather than guessing. */
+        return subdomain.isNotEmpty() && subdomain.containsChar('-');
     }
 
     static bool isValidLongHuggingFacePath(String modelPath)
@@ -512,6 +638,11 @@ private:
         /*
           e.g., "https://huggingface.co/spaces/xribene/midi_pitch_shifter"
         */
+
+        if (! modelPath.startsWith("https://huggingface.co/spaces/"))
+        {
+            return false;
+        }
 
         return isValidAbbrevHuggingFacePath(
             modelPath.fromFirstOccurrenceOf("https://huggingface.co/spaces/", false, false));
@@ -571,6 +702,52 @@ private:
         return stage == "RUNTIME_ERROR" || stage == "BUILD_ERROR" || stage == "CONFIG_ERROR"
                || stage == "NO_APP_FILE" || stage == "PAUSED" || stage == "STOPPED"
                || stage == "DELETING";
+    }
+
+    /* The exact "user/Name" a Space host answers for, taken from the "canonical"
+       link header it sends alongside its page. The address used to reach a Space
+       lowercases its name and replaces every "_" with "-", so this header is the
+       only way to recover the original spelling. Returns an empty string when the
+       host does not answer or does not advertise one. */
+    String queryCanonicalSpace(const String& hostURL)
+    {
+        const URL host { hostURL };
+
+        if (! host.isWellFormed())
+            return {};
+
+        StringPairArray responseHeaders;
+
+        auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+                           .withExtraHeaders(getCommonHeaders())
+                           .withConnectionTimeoutMs(10000)
+                           .withResponseHeaders(&responseHeaders)
+                           .withNumRedirectsToFollow(5);
+
+        /* A sleeping Space answers with an error status but still sends the header,
+           so the status code is deliberately not consulted here. */
+        if (host.createInputStream(options) == nullptr)
+            return {};
+
+        static const String spacesPrefix { "https://huggingface.co/spaces/" };
+
+        /* Several link headers can be sent at once and are joined into one value, so
+           the canonical entry is picked out rather than the header taken whole. */
+        for (const String& entry :
+             StringArray::fromTokens(responseHeaders["link"], ",", "\"'"))
+        {
+            if (! entry.contains("canonical") || ! entry.contains(spacesPrefix))
+                continue;
+
+            const String advertised = entry.fromFirstOccurrenceOf(spacesPrefix, false, false)
+                                          .upToFirstOccurrenceOf(">", false, false)
+                                          .trim();
+
+            if (isValidAbbrevHuggingFacePath(advertised))
+                return advertised;
+        }
+
+        return {};
     }
 
     bool isZeroGPUSpace(const String& modelPath)
@@ -718,13 +895,13 @@ private:
                 if (isStartingStage(stage))
                 {
                     return OpResult::fail(
-                        GradioError { GradioError::Type::SpaceStarting, errorPath, stage });
+                        GradioError { GradioError::Type::SpaceStarting, errorPath, stage, true });
                 }
 
                 if (isUnavailableStage(stage))
                 {
                     return OpResult::fail(
-                        GradioError { GradioError::Type::SpaceUnavailable, errorPath, stage });
+                        GradioError { GradioError::Type::SpaceUnavailable, errorPath, stage, true });
                 }
             }
 
@@ -740,10 +917,9 @@ private:
 
         if (isHTMLResponse(response))
         {
-            // A 200 with an HTML body is not a Gradio API response; this typically
-            // means an HF proxy page for a Space that is sleeping or broken
+            // A 200 with an HTML body is not a Gradio API response at all
             return OpResult::fail(HttpError {
-                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, 503 });
+                HttpError::Type::UnexpectedResponse, HttpError::Request::POST, errorPath });
         }
 
         return OpResult::ok();
@@ -1150,7 +1326,7 @@ private:
                             String& response,
                             const String errorPath = "",
                             const int timeoutMs = -1,
-                            const String modelPathForQuotaCheck = "")
+                            const String modelPath = "")
     {
         std::unique_ptr<InputStream> stream;
 
@@ -1166,6 +1342,9 @@ private:
         // job itself has produced output.
         bool seenResultData = false;
         bool checkedFirstLine = false;
+
+        // Set when a "complete" event delivers the response the caller is waiting for
+        bool receivedCompleteEvent = false;
 
         // Track the most recent SSE "event: <type>" line so we can pass it to
         // appendProcessMessageFromDataLine when the next "data:" line arrives.
@@ -1193,7 +1372,7 @@ private:
                 if (isHTMLResponse(eventLine))
                 {
                     return OpResult::fail(HttpError {
-                        HttpError::Type::BadStatusCode, HttpError::Request::GET, errorPath, 503 });
+                        HttpError::Type::UnexpectedResponse, HttpError::Request::GET, errorPath });
                 }
             }
 
@@ -1208,6 +1387,8 @@ private:
 
                     DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response
                                                                                   << "\".");
+
+                    receivedCompleteEvent = true;
 
                     break;
                 }
@@ -1247,7 +1428,7 @@ private:
                         errorType = GradioError::Type::QuotaExceeded;
                     }
                     else if (errorInfo.payloadAbsent && ! seenResultData
-                             && isZeroGPUSpace(modelPathForQuotaCheck))
+                             && isZeroGPUSpace(modelPath))
                     {
                         /* Gradio <= 6.12 drops the error payload entirely, so a quota
                            rejection really is indistinguishable from any other early
@@ -1263,7 +1444,10 @@ private:
                         errorType = GradioError::Type::Indeterminate;
                     }
 
-                    return OpResult::fail(GradioError { errorType, errorPath, reason });
+                    return OpResult::fail(GradioError { errorType,
+                                                        errorPath,
+                                                        reason,
+                                                        isValidHuggingFacePath(modelPath) });
                 }
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
@@ -1279,16 +1463,24 @@ private:
             }
         }
 
-        /* Falling out of the loop means the stream ended without ever delivering a
-           "complete" or "error" event, so there is no response to parse. Reporting
-           success here would leave the caller to fail on an empty string, which
-           surfaces as a confusing JSON error rather than a connection problem.
+        if (! receivedCompleteEvent)
+        {
+            /* The stream ended without ever delivering a "complete" or "error" event,
+               so there is no response to parse. Reporting success here would leave the
+               caller to fail on an empty string, which surfaces as a confusing JSON
+               error rather than the connection problem it is.
 
-           The most common cause is the transfer being aborted while the model was
-           still working: JUCE's curl backend turns the timeout into a low-speed
-           abort (CURLOPT_LOW_SPEED_LIMIT/TIME), and a stream carrying nothing but
-           Gradio's periodic heartbeats sits far below that threshold. */
-        return OpResult::fail(GradioError { GradioError::Type::IncompleteResponse, errorPath });
+               The most common cause is the transfer being aborted while the model was
+               still working: JUCE's curl backend turns the timeout into a low-speed
+               abort (CURLOPT_LOW_SPEED_LIMIT/TIME), and a stream carrying nothing but
+               Gradio's periodic heartbeats sits far below that threshold. */
+            return OpResult::fail(GradioError { GradioError::Type::IncompleteResponse,
+                                                errorPath,
+                                                "",
+                                                isValidHuggingFacePath(modelPath) });
+        }
+
+        return OpResult::ok();
     }
 
     OpResult downloadFile(String downloadPath, File& fileToDownload) //override

@@ -30,11 +30,18 @@ public:
 
     void resized() override
     {
-        auto selectionArea = getLocalBounds();
-        auto labelArea = selectionArea.removeFromTop(20);
+        auto area = getLocalBounds();
 
-        label.setBounds(labelArea);
-        selectionButton.setBounds(selectionArea);
+        if (area.isEmpty())
+        {
+            return;
+        }
+
+        label.setBounds(area.removeFromTop(jmin(labelHeight, area.getHeight())));
+        selectionButton.setBounds(area);
+
+        // What fits in the button depends on its width, so recompute the summary
+        updateSelectionText();
     }
 
     int getPreferredWidth() const override { return preferredSelectionWidth; }
@@ -67,20 +74,32 @@ public:
             }
         }
 
+        const String allSelected = selected.joinIntoString(", ");
+
         if (selected.isEmpty())
         {
             selectionButton.setButtonText("None selected");
         }
-        else if (selected.size() == 1)
-        {
-            selectionButton.setButtonText(selected[0]);
-        }
         else
         {
-            selectionButton.setButtonText(String(selected.size()) + " selected");
+            /* Name the choices rather than counting them, falling back to a count
+               only when the list cannot fit in the button */
+            const Font font = selectionButton.getLookAndFeel().getTextButtonFont(
+                selectionButton, selectionButton.getHeight());
+
+            const int available = selectionButton.getWidth() - textPadding;
+
+            if (available <= 0 || font.getStringWidth(allSelected) <= available)
+            {
+                selectionButton.setButtonText(allSelected);
+            }
+            else
+            {
+                selectionButton.setButtonText(String(selected.size()) + " selected");
+            }
         }
 
-        selectionButton.setTooltip(selected.joinIntoString(", "));
+        selectionButton.setTooltip(allSelected);
     }
 
     TextButton& getSelectionButton() { return selectionButton; }
@@ -103,7 +122,9 @@ private:
         Component::SafePointer<MultiSelectWithLabel> safeThis(this);
 
         menu.showMenuAsync(
-            PopupMenu::Options().withTargetComponent(&selectionButton),
+            PopupMenu::Options()
+                .withTargetComponent(&selectionButton)
+                .withMinimumWidth(selectionButton.getWidth()),
             [safeThis](int result)
             {
                 if (safeThis == nullptr || result == 0)
@@ -129,6 +150,8 @@ private:
     static constexpr int preferredSelectionHeight = 44;
 
     static constexpr int minSelectionWidth = 120;
+    static constexpr int labelHeight = 20;
+    static constexpr int textPadding = 16;
 
     std::vector<String> options;
 

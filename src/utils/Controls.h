@@ -154,6 +154,11 @@ struct NumberBoxComponentInfo : public ModelComponentInfo, public Slider::Listen
 {
     double minimum = 0.0;
     double maximum = 0.0;
+
+    /* How much the increment / decrement buttons move the value. A zero step
+       would make them do nothing, so fall back to whole numbers. */
+    double step = 1.0;
+
     double value = 0.0;
 
     NumberBoxComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
@@ -168,6 +173,16 @@ struct NumberBoxComponentInfo : public ModelComponentInfo, public Slider::Listen
         {
             maximum = input->getProperty("maximum").toString().getFloatValue();
         }
+        if (input->hasProperty("step"))
+        {
+            step = input->getProperty("step").toString().getFloatValue();
+        }
+
+        if (step <= 0.0)
+        {
+            step = 1.0;
+        }
+
         if (input->hasProperty("value"))
         {
             value = input->getProperty("value").toString().getFloatValue();

@@ -76,14 +76,14 @@ public:
         {
             url = newURL;
 
-            modelLabel.setHoverColour(Colours::coral);
+            modelLabel.setHoverColor(Colours::coral);
             modelLabel.setHoverable(true);
 
             resized();
         }
         else
         {
-            modelLabel.setHoverColour(Colours::white);
+            modelLabel.setHoverColor(Colours::white);
             modelLabel.setHoverable(false);
         }
     }

@@ -16,6 +16,7 @@
 #include "../gui/HoverHandler.h"
 #include "../gui/MultiButton.h"
 
+#include "../utils/Clients.h"
 #include "../utils/Errors.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
@@ -111,7 +112,7 @@ public:
         cancelButton.onClick = [this] { closePopup(); };
         addAndMakeVisible(cancelButton);
 
-        setSize(400, 80);
+        setSize(popupWidth, popupHeight);
     }
 
     ~CustomPathComponent() override
@@ -135,21 +136,51 @@ public:
     {
         Rectangle<int> fullArea = getLocalBounds();
 
+        /* TopLevelWindow::centreAroundComponent shrinks a dialog to fit the area it
+           is centered within, so this can be laid out smaller than the size asked
+           for. Fixed items would then exceed the space and leave the rest negative. */
+        if (fullArea.isEmpty())
+        {
+            pathEditor.setBounds({});
+            loadButton.setBounds({});
+            cancelButton.setBounds({});
+
+            return;
+        }
+
+        const int editorHeight = jmin(editorRowHeight, fullArea.getHeight());
+
         FlexBox fullPopup;
         fullPopup.flexDirection = FlexBox::Direction::column;
 
-        fullPopup.items.add(FlexItem(pathEditor).withHeight(30).withMargin(2));
+        fullPopup.items.add(FlexItem(pathEditor)
+                                .withHeight((float) editorHeight)
+                                .withMargin(jmin(2.0f, (float) fullArea.getHeight() / 4.0f)));
 
         FlexBox buttonsArea;
         buttonsArea.flexDirection = FlexBox::Direction::row;
 
-        buttonsArea.items.add(FlexItem(loadButton).withFlex(1).withMargin(10));
-        buttonsArea.items.add(FlexItem().withFlex(0.25));
-        buttonsArea.items.add(FlexItem(cancelButton).withFlex(1).withMargin(10));
+        // Margins have to shrink with the popup, or they consume more than there is
+        const float buttonMargin =
+            jmin(10.0f, (float) jmin(fullArea.getWidth(), fullArea.getHeight()) / 8.0f);
 
-        fullPopup.items.add(FlexItem(buttonsArea).withFlex(1));
+        buttonsArea.items.add(FlexItem(loadButton).withFlex(1).withMargin(buttonMargin));
+        buttonsArea.items.add(FlexItem().withFlex(0.25));
+        buttonsArea.items.add(FlexItem(cancelButton).withFlex(1).withMargin(buttonMargin));
+
+        fullPopup.items.add(FlexItem(buttonsArea).withFlex(1).withMinHeight(0.0f));
 
         fullPopup.performLayout(fullArea);
+
+        // FlexBox can still hand out negative sizes when the space runs out
+        for (auto* child : getChildren())
+        {
+            if (child->getWidth() < 0 || child->getHeight() < 0)
+            {
+                child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
+                                                            jmax(0, child->getHeight())));
+            }
+        }
     }
 
     void paint(Graphics& g) override
@@ -171,6 +202,10 @@ private:
             popup->exitModalState(0);
         }
     }
+
+    static constexpr int popupWidth = 400;
+    static constexpr int popupHeight = 80;
+    static constexpr int editorRowHeight = 30;
 
     TextEditor pathEditor;
     TextButton loadButton { "Load" };
@@ -212,7 +247,17 @@ public:
 
     void loadModelBypass(const String& modelPath)
     {
-        selectedPath = modelPath;
+        /* Reduce to the canonical form on the way in, so that the same model
+           entered three different ways is loaded, listed, and matched as one
+           entry rather than accumulating duplicates in the dropdown. */
+        selectedPath = canonicalizeModelPath(modelPath);
+
+        if (selectedPath != modelPath)
+        {
+            DBG_AND_LOG("ModelSelectionWidget::loadModelBypass: Path \"" << modelPath
+                        << "\" resolved to \"" << selectedPath << "\".");
+        }
+
         sendChangeMessage();
     }
 
@@ -245,8 +290,16 @@ public:
         modelPathComboBox.setSelectedId(lastLoadedPathIndex + 1);
     }
 
-    void setSuccessfulState()
+    /* The path a model actually loaded from can differ from the one entered, since
+       the provider is asked for its exact spelling. The dropdown lists that one, so
+       the three ways of writing an address collapse to a single entry. */
+    void setSuccessfulState(const String& resolvedPath)
     {
+        if (resolvedPath.isNotEmpty())
+        {
+            selectedPath = resolvedPath;
+        }
+
         std::string loadedPath = selectedPath.toStdString();
 
         if (! sharedChoices->containsPath(loadedPath))

@@ -8,6 +8,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include "Enums.h"
+
 using namespace juce;
 
 struct ClientError
@@ -16,6 +18,7 @@ struct ClientError
     {
         UnknownClient,
         InvalidModelPath,
+        ModelNotFound,
         InsufficientPermissions
     };
 
@@ -28,7 +31,7 @@ struct ClientError
 
 inline String toUserMessage(const ClientError& e)
 {
-    String userMessage = "A client error occurred.";
+    String userMessage = "Something went wrong while setting up the model.";
 
     switch (e.type)
     {
@@ -62,6 +65,28 @@ inline String toUserMessage(const ClientError& e)
             }
 
             userMessage += ".";
+
+            return userMessage;
+
+        case ClientError::Type::ModelNotFound:
+
+            userMessage = "No model was found at ";
+
+            if (e.path.isNotEmpty())
+            {
+                userMessage += "\"" + e.path + "\"";
+            }
+            else
+            {
+                userMessage += "the given path";
+            }
+
+            /* Underscores and hyphens are interchangeable in the address used to
+               reach a model but not in its name, so a misspelling of one for the
+               other is the likeliest reason to land here. */
+            userMessage += ". Please check the spelling, including any underscores"
+                           " and capitalization. If the model is private, make sure"
+                           " you have added a valid API key in settings.";
 
             return userMessage;
 
@@ -104,7 +129,7 @@ struct HttpError
         InvalidURL,
         ConnectionFailed,
         BadStatusCode,
-        //InvalidResponse
+        UnexpectedResponse
     };
 
     Type type;
@@ -127,51 +152,72 @@ struct HttpError
 
 inline String toUserMessage(const HttpError& e)
 {
-    String userMessage = "An HTTP error occurred.";
+    String userMessage = "Something went wrong while contacting the model.";
 
     switch (e.type)
     {
         case HttpError::Type::InvalidURL:
 
-            userMessage = "Endpoint URL ";
+            userMessage = "";
 
             if (e.endpointPath.isNotEmpty())
             {
-                userMessage += "\"" + e.endpointPath + "\" ";
+                userMessage += "\"" + e.endpointPath + "\" is not a valid address.";
             }
-
-            userMessage += "is malformed.";
+            else
+            {
+                userMessage += "The model's address is not valid.";
+            }
 
             return userMessage;
 
         case HttpError::Type::ConnectionFailed:
 
-            userMessage = "Unable to make ";
+            userMessage = "Could not reach the model.";
 
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage += "POST";
-            }
-            else if (e.request == HttpError::Request::GET)
-            {
-                userMessage += "GET";
-            }
-            else
-            {
-            }
+            userMessage += "\n\nIt may be asleep, starting up, or temporarily unavailable."
+                           "\n\nTry again in a few seconds, or click 'Open URL' to view the "
+                           "model's page.";
 
-            userMessage += " request.";
+            return userMessage;
 
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage +=
-                    "\n\nThe server may be sleeping or temporarily unavailable."
-                    "\n\nTry loading again in a few seconds, or click 'Open URL' to view the model's page.";
-            }
+        case HttpError::Type::UnexpectedResponse:
+
+            userMessage = "This address did not respond like a model endpoint.";
+
+            userMessage += "\n\nA web page was returned instead of model data. Check that the "
+                           "address points at a running Gradio app, and that it does not require "
+                           "signing in through a browser.";
 
             return userMessage;
 
         case HttpError::Type::BadStatusCode:
+
+            if (e.statusCode == 401 || e.statusCode == 403)
+            {
+                userMessage = "This model requires authentication.";
+
+                if (e.detail.isNotEmpty())
+                {
+                    userMessage += "\n\nDetails: " + e.detail;
+                }
+
+                userMessage += "\n\nIt may be private or gated. Add an API key for this "
+                               "provider under Settings, and make sure the account it belongs "
+                               "to has been granted access.";
+
+                return userMessage;
+            }
+
+            if (e.statusCode == 404)
+            {
+                userMessage = "No model was found at this address.";
+
+                userMessage += "\n\nCheck the path for typos. If the model is hosted on "
+                               "Hugging Face, confirm the Space still exists and is public.";
+
+                return userMessage;
+            }
 
             if (e.statusCode == 429)
             {
@@ -203,25 +249,11 @@ inline String toUserMessage(const HttpError& e)
                 return userMessage;
             }
 
-            userMessage.clear();
-
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage += "POST";
-            }
-            else if (e.request == HttpError::Request::GET)
-            {
-                userMessage += "GET";
-            }
-            else
-            {
-            }
-
-            userMessage += " request failed";
+            userMessage = "The server could not complete the request";
 
             if (e.statusCode != 0)
             {
-                userMessage += " with status code " + String(e.statusCode);
+                userMessage += " (error " + String(e.statusCode) + ")";
             }
 
             userMessage += ".";
@@ -233,9 +265,8 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.statusCode == 503)
             {
-                userMessage +=
-                    "\n\nIf this is a valid Hugging Face Space, this could indicate "
-                    "the Space is paused or down due to a build or runtime error.";
+                userMessage += "\n\nThe model may be paused, or down because of a build "
+                               "or runtime error.";
             }
     }
 
@@ -258,17 +289,25 @@ struct GradioError
 
     String endpointPath;
     String reason;
+
+    /* Whether the endpoint is a Hugging Face Space, so that messages can name it
+       accurately instead of guessing. Set by the client, which is the only layer
+       that knows how to classify a model path. */
+    bool isSpace = false;
+
+    /** "Space" or "model", whichever this endpoint actually is. */
+    String describeTarget() const { return isSpace ? "Space" : "model"; }
 };
 
 inline String toUserMessage(const GradioError& e)
 {
-    String userMessage = "A Gradio error occurred.";
+    String userMessage = "The model reported an error.";
 
     switch (e.type)
     {
         case GradioError::Type::RuntimeError:
 
-            userMessage = "The Gradio server reported a runtime error.";
+            userMessage = "The " + e.describeTarget() + " reported an error while processing.";
 
             if (e.reason.isNotEmpty())
             {
@@ -276,26 +315,28 @@ inline String toUserMessage(const GradioError& e)
             }
             else
             {
-                userMessage += "\n\nNo details were reported. A Space only forwards the text "
-                               "of an error when it is launched with \"show_error=True\" or "
-                               "raises a \"gr.Error\". Otherwise the cause appears only in "
-                               "its logs, which only the Space's owner can read.";
+                userMessage += "\n\nNo details were reported. A Gradio app only forwards the "
+                               "text of an error when it is launched with \"show_error=True\" "
+                               "or raises a \"gr.Error\". Otherwise the cause appears only in "
+                               "the server's own logs, which are visible only to whoever runs it.";
             }
 
-            userMessage += "\n\nClick 'Open URL' to check the Space's status on Hugging Face.";
+            userMessage += "\n\nClick 'Open URL' to open the " + e.describeTarget() + "'s page.";
 
             return userMessage;
 
         case GradioError::Type::QuotaExceeded:
 
-            userMessage = "GPU quota has been exceeded for this Space.";
+            userMessage = "GPU quota has been exceeded for this " + e.describeTarget() + ".";
 
             if (e.reason.isNotEmpty())
             {
                 userMessage += "\n\nDetails: " + e.reason;
             }
 
-            userMessage += "\n\nPlease try again later, or use an account with available quota.";
+            userMessage += "\n\nPlease try again later, or use an account with available quota."
+                           "\n\nClick 'Open URL' to open the "
+                           + e.describeTarget() + "'s page.";
 
             return userMessage;
 
@@ -330,17 +371,18 @@ inline String toUserMessage(const GradioError& e)
 
         case GradioError::Type::IncompleteResponse:
 
-            userMessage = "Lost contact with the Space before it returned a result.";
+            userMessage = "Lost contact with the " + e.describeTarget()
+                          + " before it returned a result.";
 
             userMessage +=
                 "\n\nThe connection is dropped when nothing arrives for a prolonged period, "
-                "which usually means the model was still running. The job may well have "
-                "finished on the Space afterwards, but HARP was no longer listening for it.";
+                "which most often means the model was still working. The job may well have "
+                "finished on the server afterwards, but HARP was no longer listening for it.";
 
             userMessage +=
-                "\n\nTry again with a shorter input, or on a Space with faster hardware. "
-                "Models that routinely take this long are better suited to a dedicated GPU "
-                "Space than to a free CPU one.";
+                "\n\nTry again with a shorter input, or on faster hardware. A model that "
+                "routinely takes this long is better suited to a dedicated GPU than to a "
+                "free CPU instance.";
 
             return userMessage;
 
@@ -591,6 +633,53 @@ inline String toUserMessage(const Error& error)
     return std::visit([](const auto& e) { return toUserMessage(e); }, error);
 }
 
+/**
+ * A compact technical description intended for the log file.
+ *
+ * This is deliberately separate from toUserMessage: the popup explains what to do
+ * about a failure, whereas this records which branch produced it, so that a report
+ * accompanied by a log can be traced back to a specific decision.
+ */
+inline String toLogString(const Error& error)
+{
+    if (const auto* e = std::get_if<ClientError>(&error))
+    {
+        return "ClientError(" + enumToString(e->type) + ", path=\"" + e->path + "\", client=\""
+               + e->client + "\")";
+    }
+
+    if (const auto* e = std::get_if<HttpError>(&error))
+    {
+        return "HttpError(" + enumToString(e->type) + ", " + enumToString(e->request)
+               + ", status=" + String(e->statusCode) + ", endpoint=\"" + e->endpointPath
+               + "\", detail=\"" + e->detail + "\")";
+    }
+
+    if (const auto* e = std::get_if<GradioError>(&error))
+    {
+        return "GradioError(" + enumToString(e->type) + ", isSpace=" + (e->isSpace ? "1" : "0")
+               + ", endpoint=\"" + e->endpointPath + "\", reason=\"" + e->reason + "\")";
+    }
+
+    if (const auto* e = std::get_if<JsonError>(&error))
+    {
+        return "JsonError(" + enumToString(e->type) + ", key=\"" + e->key + "\", json=\""
+               + e->stringJSON.substring(0, 400) + "\")";
+    }
+
+    if (const auto* e = std::get_if<FileError>(&error))
+    {
+        return "FileError(" + enumToString(e->type) + ", path=\"" + e->path + "\")";
+    }
+
+    if (const auto* e = std::get_if<ControlError>(&error))
+    {
+        return "ControlError(" + enumToString(e->type) + ")";
+    }
+
+    return "UnknownError";
+}
+
 inline std::optional<String> getOpenablePath(const Error& error)
 {
     if (const auto* e = std::get_if<HttpError>(&error))
@@ -610,6 +699,7 @@ inline std::optional<String> getOpenablePath(const Error& error)
         /* Both of these messages send the user to the Space page, since that is
            where the underlying error is actually reported */
         bool pathIsUseful = e->type == GradioError::Type::RuntimeError
+                            || e->type == GradioError::Type::QuotaExceeded
                             || e->type == GradioError::Type::Indeterminate
                             || e->type == GradioError::Type::IncompleteResponse
                             || e->type == GradioError::Type::SpaceStarting

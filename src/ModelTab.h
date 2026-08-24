@@ -150,8 +150,9 @@ public:
             controlAreaWidget.setBounds(0, 0, 0, 0);
         }
 
-        const float totalTracks =
-            inputTrackAreaWidget.getNumTracks() + outputTrackAreaWidget.getNumTracks();
+        // Weighting is by flexible tracks, so the total has to be of those too
+        const float totalTracks = (float) (inputTrackAreaWidget.getNumFlexibleTracks()
+                                           + outputTrackAreaWidget.getNumFlexibleTracks());
 
         /* Input Tracks Area Widget */
 
@@ -295,9 +296,8 @@ private:
             return 0;
         }
 
-        const int perTrackWithMargin = minVisibleTrackHeight + 2 * marginSize;
-
-        return numTracks * perTrackWithMargin;
+        // The track area applies its own margins, so it owns this calculation
+        return TrackAreaWidget::getRequiredHeightForTracks(numTracks);
     }
 
     void addTrackSection(FlexBox& box,
@@ -315,9 +315,18 @@ private:
                               .withFlex(0)
                               .withMargin(marginSize));
 
-            float flex = 4.0f * (numTracks / totalTracks);
+            /* Weight by the tracks that actually stretch. Counting a fixed-height
+               track (a generic file picker) as a full share of flexible space gives
+               its section too much, so the flexible tracks beside it end up taller
+               than those in the other section. */
+            auto* area = dynamic_cast<const TrackAreaWidget*>(&trackArea);
 
-            int minHeight = getTrackAreaMinimumHeight(numTracks);
+            const int flexibleTracks = area != nullptr ? area->getNumFlexibleTracks() : numTracks;
+            const int fixedHeight = area != nullptr ? area->getFixedTracksHeight() : 0;
+
+            float flex = totalTracks > 0.0f ? 4.0f * ((float) flexibleTracks / totalTracks) : 0.0f;
+
+            int minHeight = getTrackAreaMinimumHeight(flexibleTracks) + fixedHeight;
 
             box.items.add(FlexItem(trackArea)
                               .withFlex(flex)
@@ -335,6 +344,8 @@ private:
     {
         std::optional<String> openablePath = getOpenablePath(error);
         String errorMessage = toUserMessage(error);
+
+        DBG_AND_LOG("ModelTab::openErrorPopup: " + toLogString(error));
 
         // Determine whether this error warrants a GitHub bug report.
         // Quota errors, invalid paths, and expected HTTP failures are user-actionable
@@ -445,8 +456,8 @@ private:
                           + popupEdgeGap + buttonH + popupButtonBottomPadding;
         popupHeight = jlimit(180, jmax(180, windowHeight - 24), popupHeight);
 
-        // Find the window's centre in screen space, then convert to ModelTab's
-        // local coordinate space so the popup is centred in the full window
+        // Find the window's center in screen space, then convert to ModelTab's
+        // local coordinate space so the popup is centered in the full window
         // regardless of where ModelTab sits within it.
         Point<int> windowCentreScreen =
             (topLevel != nullptr)
@@ -537,7 +548,7 @@ private:
                     {
                         if (result.wasOk())
                         {
-                            modelSelectionWidget.setSuccessfulState();
+                            modelSelectionWidget.setSuccessfulState(model->getLoadedPath());
 
                             modelInfoWidget.updateLabels(model->getMetadata());
                             modelInfoWidget.addOpenablePath(model->getOpenablePath());
@@ -721,7 +732,7 @@ private:
     static constexpr int popupTitleHeight = 24;
     static constexpr float popupMessageFontHeight = 16.0f;
 
-    /* LookAndFeel override that draws the AlertWindow message text centred.
+    /* LookAndFeel override that draws the AlertWindow message text centered.
     We re-derive both from the ACTUAL window height here so that
     text fills the real available space and buttons are accounted for at the
     bottom where BottomButtonAlertWindow will move them. */
@@ -760,7 +771,7 @@ private:
             {
                 Path icon;
                 char character;
-                uint32 colour;
+                uint32 color;
 
                 if (alert.getAlertType() == MessageBoxIconType::WarningIcon)
                 {
@@ -772,11 +783,11 @@ private:
                                      (float) iconRect.getX(),
                                      (float) iconRect.getBottom());
                     icon = icon.createPathWithRoundedCorners(5.0f);
-                    colour = 0x66ff2a00;
+                    color = 0x66ff2a00;
                 }
                 else
                 {
-                    colour = Colour(0xff00b0b9).withAlpha(0.4f).getARGB();
+                    color = Colour(0xff00b0b9).withAlpha(0.4f).getARGB();
                     character = alert.getAlertType() == MessageBoxIconType::InfoIcon ? 'i' : '?';
                     icon.addEllipse(iconRect.toFloat());
                 }
@@ -792,7 +803,7 @@ private:
                                  false);
                 ga.createPath(icon);
                 icon.setUsingNonZeroWinding(false);
-                g.setColour(Colour(colour));
+                g.setColour(Colour(color));
                 g.fillPath(icon);
 
                 iconSpaceUsed = iconWidth;
@@ -867,7 +878,6 @@ private:
     static constexpr int processButtonWidth = 150;
     static constexpr int processButtonRowHeight = 30;
     static constexpr int trackSectionLabelHeight = 20;
-    static constexpr int minVisibleTrackHeight = 50;
 
     std::shared_ptr<Model> model { new Model() };
 

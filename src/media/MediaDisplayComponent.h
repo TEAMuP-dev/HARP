@@ -103,7 +103,7 @@ public:
     bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
-    bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
+    bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -122,7 +122,10 @@ public:
     //bool iterateNextTempFile();
 
     //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
-    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
+    bool isFileLoaded() const { return ! originalFilePath.isEmpty(); }
+
+    /** Whether a wheel event over this track is used to zoom or scrub its media. */
+    bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
     //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
     //void clearFutureTempFiles(); // Prune temp files after currently selected index
@@ -173,9 +176,28 @@ protected:
 
     virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
-    const int controlSpacing = 1;
-    const int scrollBarSize = 8;
-    const int timeAxisHeight = 20;
+    static constexpr int controlSpacing = 1;
+    static constexpr int scrollBarSize = 8;
+    static constexpr int timeAxisHeight = 20;
+    static constexpr int labelHeight = 20;
+
+    /* A track stacks fixed chrome above and below its media: a strip for overhead
+       labels, the time axis, and the horizontal scrollbar. A track shorter than
+       these plus a usable content area cannot show the media at all, and leaves
+       the content area with a negative height to paint into. */
+    static constexpr int overheadPanelHeight = labelHeight + 2 * controlSpacing;
+    static constexpr int horizontalScrollBarHeight = scrollBarSize + 2 * controlSpacing;
+    static constexpr int minimumContentHeight = 40;
+
+public:
+    /** Height consumed by the strips a track always stacks around its media. */
+    static constexpr int fixedChromeHeight =
+        overheadPanelHeight + timeAxisHeight + horizontalScrollBarHeight;
+
+    /** Shortest a track can be and still show anything of its media. */
+    static constexpr int minimumUsefulHeight = fixedChromeHeight + minimumContentHeight;
+
+protected:
 
     // Media (audio or MIDI) content area
     Component contentComponent;
@@ -214,6 +236,9 @@ private:
 
     virtual Component* getMediaComponent() { return this; }
 
+    /** Whether this track has a timeline for a playback cursor to move along. */
+    virtual bool hasPlaybackCursor() const { return ! isThumbnailTrack(); }
+
     virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
     virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
     virtual float getVerticalControlsWidth() { return 0.0f; }
@@ -249,7 +274,6 @@ private:
 
     const int textSpacing = 2;
     const int minFontSize = 10;
-    const int labelHeight = 20;
 
     Colour defaultColor = Colours::darkgrey;
     Colour graphicsColor = Colours::lightblue;
