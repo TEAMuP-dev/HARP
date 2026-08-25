@@ -20,9 +20,8 @@ public:
 
     double getTotalLengthInSecs() override;
 
-    /* A generic file has no timeline, so the playback cursor would only ever be a
-       stray sliver drawn at the top of the track. */
     bool hasPlaybackCursor() const override { return false; }
+    bool usesMouseWheel() const override { return false; }
 
     void paint(Graphics& g) override;
     void resized() override;

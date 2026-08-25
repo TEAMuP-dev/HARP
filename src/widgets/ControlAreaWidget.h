@@ -351,13 +351,15 @@ private:
 
         multiSelectComponent->setOptions(options);
 
-        multiSelectComponent->isOptionSelected = [info](const String& option)
-        { return info->isSelected(option.toStdString()); };
+        std::vector<String> selected;
 
-        multiSelectComponent->onOptionToggled = [info](const String& option, bool isSelected)
-        { info->setSelected(option.toStdString(), isSelected); };
+        for (const auto& value : info->values)
+        {
+            selected.push_back(String(value));
+        }
 
-        multiSelectComponent->updateSelectionText();
+        multiSelectComponent->setSelection(selected);
+        multiSelectComponent->addListener(info);
 
         addHandler(&multiSelectComponent->getSelectionButton(), info);
 
@@ -377,8 +379,7 @@ private:
         fileChooserComponent->setRequired(info->required);
         fileChooserComponent->setFileTypes(info->fileTypes);
 
-        fileChooserComponent->onFileSelected = [info](const String& path)
-        { info->path = path.toStdString(); };
+        fileChooserComponent->addListener(info);
 
         addHandler(fileChooserComponent.get(), info);
 

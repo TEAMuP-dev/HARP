@@ -125,7 +125,7 @@ public:
     bool isFileLoaded() const { return ! originalFilePath.isEmpty(); }
 
     /** Whether a wheel event over this track is used to zoom or scrub its media. */
-    bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
+    virtual bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
     //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
     //void clearFutureTempFiles(); // Prune temp files after currently selected index

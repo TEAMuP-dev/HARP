@@ -10,6 +10,9 @@
 
 #include <juce_core/juce_core.h>
 
+#include "../gui/FileChooserWithLabel.h"
+#include "../gui/MultiSelectWithLabel.h"
+
 using namespace juce;
 
 /**
@@ -85,7 +88,7 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
-struct FileComponentInfo : public ModelComponentInfo // TODO - Listener?
+struct FileComponentInfo : public ModelComponentInfo, public FileChooserWithLabel::Listener
 {
     bool required = true;
 
@@ -127,6 +130,11 @@ struct FileComponentInfo : public ModelComponentInfo // TODO - Listener?
                 // TODO - handle error case: no types
             }
         }
+    }
+
+    void fileChooserChanged(FileChooserWithLabel* fileChooser) override
+    {
+        path = fileChooser->getPath().toStdString();
     }
 };
 
@@ -302,7 +310,8 @@ struct ComboBoxComponentInfo : public ModelComponentInfo, public ComboBox::Liste
  * A dropdown allowing any number of its options to be selected at once,
  * corresponding to a gr.Dropdown declared with multiselect=True.
  */
-struct MultiSelectComponentInfo : public ModelComponentInfo
+struct MultiSelectComponentInfo : public ModelComponentInfo,
+                                 public MultiSelectWithLabel::Listener
 {
     std::vector<std::string> options;
 
@@ -352,22 +361,13 @@ struct MultiSelectComponentInfo : public ModelComponentInfo
         }
     }
 
-    bool isSelected(const std::string& option) const
+    void multiSelectChanged(MultiSelectWithLabel* multiSelect) override
     {
-        return std::find(values.begin(), values.end(), option) != values.end();
-    }
+        values.clear();
 
-    void setSelected(const std::string& option, bool shouldBeSelected)
-    {
-        auto existing = std::find(values.begin(), values.end(), option);
-
-        if (shouldBeSelected && existing == values.end())
+        for (const String& selected : multiSelect->getSelection())
         {
-            values.push_back(option);
-        }
-        else if (! shouldBeSelected && existing != values.end())
-        {
-            values.erase(existing);
+            values.push_back(selected.toStdString());
         }
     }
 };

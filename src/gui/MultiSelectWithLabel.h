@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include "ControlComponent.h"
 
 using namespace juce;
@@ -54,29 +56,58 @@ public:
         return jmax(minSelectionWidth, labelWidth + defaultPadding);
     }
 
-    void setOptions(const std::vector<String>& newOptions) { options = newOptions; }
+    /** Receives notification when the selection is changed by the user. */
+    struct Listener
+    {
+        virtual ~Listener() = default;
 
-    /** Returns whether the given option is currently selected. */
-    std::function<bool(const String&)> isOptionSelected;
+        virtual void multiSelectChanged(MultiSelectWithLabel* multiSelect) = 0;
+    };
 
-    /** Called when an option is ticked or unticked. */
-    std::function<void(const String&, bool)> onOptionToggled;
+    void addListener(Listener* listener) { listeners.add(listener); }
 
+    void removeListener(Listener* listener) { listeners.remove(listener); }
+
+    void setOptions(const std::vector<String>& newOptions)
+    {
+        options = newOptions;
+
+        updateSelectionText();
+    }
+
+    /** Sets the selection without notifying listeners, as JUCE controls do. */
+    void setSelection(const std::vector<String>& newSelection)
+    {
+        selected = newSelection;
+
+        updateSelectionText();
+    }
+
+    const std::vector<String>& getSelection() const { return selected; }
+
+    bool isSelected(const String& option) const
+    {
+        return std::find(selected.begin(), selected.end(), option) != selected.end();
+    }
+
+    TextButton& getSelectionButton() { return selectionButton; }
+
+private:
     void updateSelectionText()
     {
-        StringArray selected;
+        StringArray chosen;
 
         for (const auto& option : options)
         {
-            if (isOptionSelected && isOptionSelected(option))
+            if (isSelected(option))
             {
-                selected.add(option);
+                chosen.add(option);
             }
         }
 
-        const String allSelected = selected.joinIntoString(", ");
+        const String allSelected = chosen.joinIntoString(", ");
 
-        if (selected.isEmpty())
+        if (chosen.isEmpty())
         {
             selectionButton.setButtonText("None selected");
         }
@@ -95,16 +126,13 @@ public:
             }
             else
             {
-                selectionButton.setButtonText(String(selected.size()) + " selected");
+                selectionButton.setButtonText(String(chosen.size()) + " selected");
             }
         }
 
         selectionButton.setTooltip(allSelected);
     }
 
-    TextButton& getSelectionButton() { return selectionButton; }
-
-private:
     void showSelectionMenu()
     {
         PopupMenu menu;
@@ -112,7 +140,7 @@ private:
         for (int i = 0; i < (int) options.size(); ++i)
         {
             const auto& option = options[(size_t) i];
-            const bool ticked = isOptionSelected && isOptionSelected(option);
+            const bool ticked = isSelected(option);
 
             // Item IDs are 1-based, so that 0 can signal a dismissed menu
             menu.addItem(i + 1, option, true, ticked);
@@ -132,18 +160,26 @@ private:
                     return;
                 }
 
-                const auto& option = safeThis->options[(size_t) (result - 1)];
-
-                const bool wasSelected =
-                    safeThis->isOptionSelected && safeThis->isOptionSelected(option);
-
-                if (safeThis->onOptionToggled)
-                {
-                    safeThis->onOptionToggled(option, ! wasSelected);
-                }
-
-                safeThis->updateSelectionText();
+                safeThis->toggle(safeThis->options[(size_t) (result - 1)]);
             });
+    }
+
+    void toggle(const String& option)
+    {
+        auto existing = std::find(selected.begin(), selected.end(), option);
+
+        if (existing == selected.end())
+        {
+            selected.push_back(option);
+        }
+        else
+        {
+            selected.erase(existing);
+        }
+
+        updateSelectionText();
+
+        listeners.call([this](Listener& l) { l.multiSelectChanged(this); });
     }
 
     static constexpr int preferredSelectionWidth = 140;
@@ -154,6 +190,9 @@ private:
     static constexpr int textPadding = 16;
 
     std::vector<String> options;
+    std::vector<String> selected;
+
+    ListenerList<Listener> listeners;
 
     Label label;
     TextButton selectionButton;

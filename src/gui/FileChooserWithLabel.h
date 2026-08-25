@@ -136,7 +136,19 @@ public:
         return jmax(minFilePickerWidth, labelWidth + defaultPadding);
     }
 
-    std::function<void(const String&)> onFileSelected;
+    /** Receives notification when the chosen file is changed by the user. */
+    struct Listener
+    {
+        virtual ~Listener() = default;
+
+        virtual void fileChooserChanged(FileChooserWithLabel* fileChooser) = 0;
+    };
+
+    void addListener(Listener* listener) { listeners.add(listener); }
+
+    void removeListener(Listener* listener) { listeners.remove(listener); }
+
+    const String& getPath() const { return currentPath; }
 
 private:
     void initializeButton()
@@ -178,20 +190,13 @@ private:
         return "No file selected (" + exts.joinIntoString(", ") + ")";
     }
 
-    void clearFile()
-    {
-        setPath({});
-
-        if (onFileSelected)
-            onFileSelected({});
-    }
+    void clearFile() { setAndNotify({}); }
 
     void setAndNotify(const String& path)
     {
         setPath(path);
 
-        if (onFileSelected)
-            onFileSelected(path);
+        listeners.call([this](Listener& l) { l.fileChooserChanged(this); });
     }
 
     void launchFileChooser()
@@ -244,6 +249,8 @@ private:
     MultiButton actionButton;
     MultiButton::Mode chooseFileModeInfo;
     MultiButton::Mode removeFileModeInfo;
+
+    ListenerList<Listener> listeners;
 
     String currentPath;
     bool required = true;

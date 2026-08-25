@@ -36,7 +36,7 @@ inline std::unique_ptr<Client> multiplexClients(Provider provider)
 /**
  * Reduces a model path to the single form its provider recognizes it by.
  *
- * Returns the path unchanged when no provider claims it, so that an unrecognised
+ * Returns the path unchanged when no provider claims it, so that an unrecognized
  * path still reaches the client selection above and fails there with a message
  * about the path itself.
  */

@@ -1135,11 +1135,15 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    if (isThumbnailTrack())
+    /* Whatever this track does not act on has to be handed upwards explicitly:
+       Component::mouseWheelMove is what walks the event up to the panel viewport,
+       so returning without calling it swallows the scroll. The same predicate the
+       viewport consults decides that, so the two cannot disagree. */
+    if (! usesMouseWheel())
     {
         Component::mouseWheelMove(evt, wheel);
     }
-    else if (isFileLoaded())
+    else
     {
 #if (JUCE_MAC)
         bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
@@ -1173,10 +1177,6 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 // Do nothing
             }
         }
-    }
-    else
-    {
-        // Ignore mouse wheel events
     }
 }
 
