@@ -67,8 +67,8 @@ public:
      * Asks the provider for a model's exact address.
      *
      * The Hub answers for the two written forms and the running app answers for the
-     * API subdomain, so an address that only appears to work — a "-" typed where the
-     * name has a "_", or the wrong capitalization — is corrected here rather than
+     * API subdomain, so an address that only appears to work (e.g., a "-" typed where the
+     * name has a "_" or the wrong capitalization) is corrected here rather than
      * silently loading a different model or producing a broken documentation link.
      */
     OpResult resolveCanonicalPath(const String& modelPath, String& canonicalPath) override

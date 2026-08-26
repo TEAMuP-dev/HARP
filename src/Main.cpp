@@ -224,21 +224,25 @@ public:
         }
 
         /**
-         * Keeps the window manager's idea of the minimum size up to date.
-         *
-         * JUCE only publishes size limits when the peer is flagged resizable, which
-         * Desktop::supportsBorderlessNonClientResize() prevents on Linux, so the
-         * constrainer governs resizes HARP makes itself but not those driven by the
-         * window manager. Snapping back afterwards is not a workable substitute: the
-         * window manager may refuse, leaving the window and its contents at different
-         * sizes, so the limit is handed to the window manager instead.
-         */
-        /**
          * Hands the constrainer's minimum size to the window manager.
          *
-         * Xlib is reached through dlopen rather than its headers, whose Window,
-         * Time and KeyPress macros collide with JUCE's types. Does nothing on
-         * platforms where JUCE already applies the limits itself.
+         * JUCE publishes size limits from the constrainer in
+         * XWindowSystem::updateConstraints, but only reaches the branch that reads it
+         * when the peer carries ComponentPeer::windowIsResizable. ResizableWindow only
+         * sets that flag where Desktop::supportsBorderlessNonClientResize() is true,
+         * which on Linux it never is, so the other branch pins the limits to the
+         * current size instead. Either way XWindowSystem::setBounds then assigns
+         * WM_NORMAL_HINTS outright as USSize | USPosition, dropping whatever was just
+         * published, so the window advertises no limits at all and the window manager
+         * allows any size. Re-applying the minimum here, after each resize, is what
+         * the window manager actually ends up seeing.
+         *
+         * Snapping back afterwards is not a workable substitute: the window manager
+         * may refuse, leaving the window and its contents at different sizes.
+         *
+         * Xlib is reached through dlopen rather than its headers, whose Window, Time
+         * and KeyPress macros collide with JUCE's types. Does nothing on platforms
+         * where JUCE already applies the limits itself.
          */
         void publishMinimumSizeToWindowManager()
         {
@@ -273,11 +277,15 @@ public:
 
             static constexpr long minSizeFlag = 1L << 4; // PMinSize
 
+            /* Opened once and held for the lifetime of the process. This runs on
+               every resize, and a connection set up and torn down per call would
+               mean a full X handshake many times a second while a resize is being
+               dragged. The connection is deliberately separate from the one JUCE
+               holds: Xlib's locking is per-display, so nothing here can race with
+               JUCE's own X calls and no ScopedXLock equivalent is needed. */
             struct XLib
             {
-                void* handle = nullptr;
-                void* (*openDisplay)(const char*) = nullptr;
-                int (*closeDisplay)(void*) = nullptr;
+                void* display = nullptr;
                 SizeHints* (*allocSizeHints)() = nullptr;
                 int (*getWMNormalHints)(void*, unsigned long, SizeHints*, long*) = nullptr;
                 void (*setWMNormalHints)(void*, unsigned long, SizeHints*) = nullptr;
@@ -286,29 +294,30 @@ public:
 
                 XLib()
                 {
-                    handle = dlopen("libX11.so.6", RTLD_LAZY);
+                    void* handle = dlopen("libX11.so.6", RTLD_LAZY);
 
                     if (handle == nullptr)
                     {
                         return;
                     }
 
-                    openDisplay = (decltype(openDisplay)) dlsym(handle, "XOpenDisplay");
-                    closeDisplay = (decltype(closeDisplay)) dlsym(handle, "XCloseDisplay");
+                    auto* openDisplay = (void* (*) (const char*) ) dlsym(handle, "XOpenDisplay");
+
                     allocSizeHints = (decltype(allocSizeHints)) dlsym(handle, "XAllocSizeHints");
                     getWMNormalHints = (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
                     setWMNormalHints = (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
                     freeMemory = (decltype(freeMemory)) dlsym(handle, "XFree");
                     flush = (decltype(flush)) dlsym(handle, "XFlush");
+
+                    if (openDisplay != nullptr && allocSizeHints != nullptr
+                        && getWMNormalHints != nullptr && setWMNormalHints != nullptr
+                        && freeMemory != nullptr && flush != nullptr)
+                    {
+                        display = openDisplay(nullptr);
+                    }
                 }
 
-                bool isUsable() const
-                {
-                    return openDisplay != nullptr && closeDisplay != nullptr
-                           && allocSizeHints != nullptr && getWMNormalHints != nullptr
-                           && setWMNormalHints != nullptr && freeMemory != nullptr
-                           && flush != nullptr;
-                }
+                bool isUsable() const { return display != nullptr; }
             };
 
             static const XLib xlib;
@@ -318,30 +327,22 @@ public:
                 return;
             }
 
-            void* display = xlib.openDisplay(nullptr);
-
-            if (display == nullptr)
-            {
-                return;
-            }
-
             if (SizeHints* hints = xlib.allocSizeHints())
             {
                 long supplied = 0;
 
                 // Preserve whatever the window already advertises
-                xlib.getWMNormalHints(display, windowHandle, hints, &supplied);
+                xlib.getWMNormalHints(xlib.display, windowHandle, hints, &supplied);
 
                 hints->flags |= minSizeFlag;
                 hints->minWidth = constrainer->getMinimumWidth();
                 hints->minHeight = constrainer->getMinimumHeight();
 
-                xlib.setWMNormalHints(display, windowHandle, hints);
+                xlib.setWMNormalHints(xlib.display, windowHandle, hints);
                 xlib.freeMemory(hints);
             }
 
-            xlib.flush(display);
-            xlib.closeDisplay(display);
+            xlib.flush(xlib.display);
            #endif
         }
 

@@ -733,7 +733,7 @@ private:
     static constexpr float popupMessageFontHeight = 16.0f;
 
     /* LookAndFeel override that draws the AlertWindow message text centered.
-    We re-derive both from the ACTUAL window height here so that
+    We re-derive both from the actual window height here so that
     text fills the real available space and buttons are accounted for at the
     bottom where BottomButtonAlertWindow will move them. */
 

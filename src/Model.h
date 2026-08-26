@@ -245,15 +245,17 @@ public:
 
         resetState(/*suppressStatus=*/true);
 
+        // Update model information if all loading operations are successful
         metadata = newMetadata;
         controlComponents = newControls;
         inputTrackComponents = newInputs;
         outputTrackComponents = newOutputs;
 
+        // Register extracted component IDs
         orderedInputComponentIDs = std::move(tempComponentIDs);
-
+        // Replace existing client
         client = std::move(tempClient);
-
+        // Keep track of successfully loaded path
         loadedPath = pathToLoad;
         openablePath = client->inferDocumentationPath(loadedPath);
 

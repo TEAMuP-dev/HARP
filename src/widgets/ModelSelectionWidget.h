@@ -614,8 +614,10 @@ private:
 
     SharedResourcePointer<SharedChoices> sharedChoices;
 
-    // A ComboBox that always opens its popup from the top of the list, showing all
-    // items without scrolling to the currently-selected one first.
+    /* A ComboBox that always opens its popup from the top of the list, showing all
+       items without scrolling to the currently-selected one first. Item 0 is the
+       custom path entry, which must stay reachable however far down the list the
+       loaded model sits. */
     struct FullListComboBox : public ComboBox
     {
         void showPopup() override
@@ -625,8 +627,9 @@ private:
 
             auto menu = getRootMenu() ? *getRootMenu() : PopupMenu();
 
-            // Build options without withItemThatMustBeVisible so the popup
-            // always opens at the top, showing every item.
+            /* The LookAndFeel asks for the selected item to be visible, which scrolls
+               the popup to it. Overriding that with an id no item can have leaves
+               nothing to scroll to, so the popup opens at the top showing every item. */
             PopupMenu::Options opts = lf.getOptionsForComboBoxPopupMenu(*this, *label)
                                          .withItemThatMustBeVisible(0);
 
