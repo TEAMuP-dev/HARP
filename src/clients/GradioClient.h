@@ -878,11 +878,6 @@ private:
                 reason = extractShortReason(extractErrorInfoFromPayload(response).combined());
             }
 
-            if (statusMessage != nullptr && reason.isNotEmpty())
-            {
-                statusMessage->setMessage("[error] " + reason);
-            }
-
             /* A 503 from a Space is ambiguous on its own: the Hub answers the same way
                whether the Space is waking up or genuinely broken. Ask the Hub which it
                is rather than reporting it as down. */
@@ -1341,11 +1336,6 @@ private:
 
                     String diagnosticText = errorInfo.combined();
                     String reason = extractShortReason(diagnosticText);
-
-                    if (statusMessage != nullptr && reason.isNotEmpty())
-                    {
-                        statusMessage->setMessage("[error] " + reason);
-                    }
 
                     /* The proxy has stated outright that the Space is down, so unlike
                        the ambiguous 503 handled in makePOSTRequest there is nothing to
