@@ -227,7 +227,7 @@ public:
         return OpResult::ok();
     }
 
-    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls)
+    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
         String responseJSON;
 
@@ -334,7 +334,7 @@ public:
     OpResult process(String modelPath,
                      String& payloadJSON,
                      std::vector<File>& outputFiles,
-                     LabelList& labels)
+                     LabelList& labels) override
     {
         String responseJSON;
 
@@ -428,7 +428,7 @@ public:
         return OpResult::ok();
     }
 
-    OpResult cancel(String modelPath)
+    OpResult cancel(String modelPath) override
     {
         String response;
 

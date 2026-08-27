@@ -10,9 +10,9 @@ MainComponent::MainComponent()
 
     initializeMenuBar();
 
-    mainModelTab.addChangeListener(this);
+    modelTabs.addChangeListener(this);
 
-    addAndMakeVisible(mainModelTab);
+    addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
     addAndMakeVisible(dragOverlay);
@@ -34,7 +34,7 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     deinitializeMenuBar();
-    mainModelTab.removeChangeListener(this);
+    modelTabs.removeChangeListener(this);
 }
 
 void MainComponent::paint(Graphics& g)
@@ -86,6 +86,16 @@ void MainComponent::paintOverChildren(Graphics& g)
     }
 }
 
+ModelTab* MainComponent::getCurrentModelTab() const
+{
+    return modelTabs.getCurrentModelTab();
+}
+
+ModelTab* MainComponent::getFirstModelTab() const
+{
+    return modelTabs.getFirstModelTab();
+}
+
 void MainComponent::resized()
 {
     Rectangle<int> fullArea = getLocalBounds();
@@ -95,13 +105,20 @@ void MainComponent::resized()
         fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
 
+
+
     FlexBox fullWindow;
     fullWindow.flexDirection = FlexBox::Direction::row;
 
     FlexBox mainPanel;
     mainPanel.flexDirection = FlexBox::Direction::column;
 
-    mainPanel.items.add(FlexItem(mainModelTab).withFlex(1.0));
+    mainPanel.items.add(FlexItem(modelTabs).withFlex(1.0));
+
+        auto bounds = getLocalBounds();
+
+    // Give full area to tabs
+    modelTabs.setBounds(bounds);
 
     if (showStatusArea)
     {
@@ -133,8 +150,13 @@ void MainComponent::resized()
     dragOverlay.setBounds(getLocalBounds());
 }
 
+
+
 void MainComponent::updateWindowConstraints()
 {
+    auto* tab = getCurrentModelTab();
+    if (!tab) return;
+
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
         // Compute percentage of total window width given to main panel
@@ -143,12 +165,13 @@ void MainComponent::updateWindowConstraints()
         // Determine minimum width needed to display controls plus padding
         const int requiredMainPanelWidth =
             jmax(minimumMainPanelWidth,
-                 mainModelTab.getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
-        // Determine current width of main panel
-        const int mainPanelWidth = jmax(requiredMainPanelWidth, mainModelTab.getWidth());
-        // Determine minimum height needed to display all model contents plus status widget
+                tab->getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
+
+        const int mainPanelWidth =
+            jmax(requiredMainPanelWidth, tab->getWidth());
+
         const int requiredMainPanelHeight =
-            mainModelTab.getMinimumRequiredHeightForWidth(mainPanelWidth)
+            tab->getMinimumRequiredHeightForWidth(mainPanelWidth)
             + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
@@ -412,61 +435,108 @@ void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bound
 
 void MainComponent::ensureTutorialModelLoaded()
 {
-    if (! mainModelTab.isModelLoaded())
-        mainModelTab.loadDefaultModel();
+    auto* tab = getCurrentModelTab();
+
+    if (tab == nullptr)
+    {
+        tab = modelTabs.createNewTab();
+        modelTabs.setCurrentTabIndex(0);
+
+        if (welcomeWindow != nullptr)
+            tab->addChangeListener(welcomeWindow.get());
+
+        if (tab != nullptr)
+            tab->loadDefaultModel();
+        return;
+    }
+
+    if (! tab->isModelLoaded())
+        tab->loadDefaultModel();
 }
 
 void MainComponent::resetTutorialAutoLoadedModel()
 {
-    if (! mainModelTab.isModelLoaded())
-        return;
-
-    if (mainModelTab.getLoadedPath() == TutorialConstants::fallbackModelPath)
+    if (auto* tab = getCurrentModelTab())
     {
-        mainModelTab.resetState();
+        if (tab->isModelLoaded() && tab->getLoadedPath() == TutorialConstants::fallbackModelPath)
+            tab->resetState();
     }
 }
 
 Rectangle<int> MainComponent::getModelSelectBounds()
 {
-    auto bounds = mainModelTab.getModelSelectBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* homeTab = dynamic_cast<HomeTab*>(modelTabs.getCurrentContentComponent()))
+    {
+        auto bounds = homeTab->getModelSelectBounds();
+        return getLocalArea(homeTab, bounds);
+    }
+
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getModelSelectBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getControlsBounds()
 {
-    auto bounds = mainModelTab.getControlsBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getControlsBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputTrackBounds()
 {
-    auto bounds = mainModelTab.getInputTrackBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getInputTrackBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputFolderBounds()
 {
-    auto bounds = mainModelTab.getInputFolderBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getInputFolderBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputPlayBounds()
 {
-    auto bounds = mainModelTab.getInputPlayBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getInputPlayBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getProcessButtonBounds()
 {
-    auto bounds = mainModelTab.getProcessButtonBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getProcessButtonBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getTracksBounds()
 {
-    auto bounds = mainModelTab.getTracksBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    if (auto* tab = getCurrentModelTab())
+    {
+        auto bounds = tab->getTracksBounds();
+        return getLocalArea(tab, bounds);
+    }
+    return {};
 }
 
 Rectangle<int> MainComponent::getClipboardBounds()
@@ -612,7 +682,7 @@ void MainComponent::focusCallback()
 
 void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (source == &mainModelTab)
+    if (source == &modelTabs)
     {
         updateWindowConstraints();
     }

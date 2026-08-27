@@ -69,6 +69,8 @@ target_sources(${PROJECT_NAME}
         src/Main.cpp
         src/Application.cpp
         src/MainComponent.cpp
+        src/HomeTab.h
+        src/ModelTabContainer.h
         src/ModelTab.h
         src/Model.h
 
@@ -113,6 +115,7 @@ target_sources(${PROJECT_NAME}
         src/utils/Logging.h
         src/utils/Settings.h
         src/utils/Interface.h
+        src/utils/ModelRegistry.h
         src/utils/Controls.h
         src/utils/Labels.h
         src/utils/Clients.h

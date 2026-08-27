@@ -145,7 +145,7 @@ public:
         return documentationPath;
     }
 
-    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls)
+    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
         const char* jsonData;
         int jsonDataSize = 0;
@@ -211,7 +211,7 @@ public:
     OpResult process(String modelPath,
                      String& payloadJSON,
                      std::vector<File>& outputFiles,
-                     LabelList& labels)
+                     LabelList& labels) override
     {
         DynamicObject::Ptr dataDict;
 

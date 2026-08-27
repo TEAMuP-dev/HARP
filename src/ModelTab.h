@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "Model.h"
@@ -21,14 +23,13 @@
 
 using namespace juce;
 
-class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster
+class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster 
 {
 public:
     ModelTab()
     {
         modelSelectionWidget.addChangeListener(this);
 
-        addAndMakeVisible(modelSelectionWidget);
         addAndMakeVisible(modelInfoWidget);
         addAndMakeVisible(controlAreaWidget);
 
@@ -56,6 +57,16 @@ public:
     void loadDefaultModel()
     {
         modelSelectionWidget.loadModelBypass(TutorialConstants::fallbackModelPath);
+    }
+
+    void loadModelPath(const String& modelPath)
+    {
+        modelSelectionWidget.loadModelBypass(modelPath);
+    }
+
+    void onNextModelLoadComplete(std::function<void(ModelTab*, bool)> callback)
+    {
+        initialLoadCallback = std::move(callback);
     }
 
     // Bounds accessors for tutorial steps
@@ -115,12 +126,7 @@ public:
 
         /* Model Selection */
 
-        tabArea.items.add(FlexItem(modelSelectionWidget)
-                              .withHeight(modelSelectionRowHeight)
-                              .withMinHeight(modelSelectionRowHeight)
-                              .withMaxHeight(modelSelectionRowHeight)
-                              .withFlex(0)
-                              .withMargin(marginSize));
+        modelSelectionWidget.setBounds(0, 0, 0, 0);
 
         /* Model Info */
 
@@ -198,7 +204,6 @@ public:
     {
         int height = 0;
 
-        height += modelSelectionRowHeight + 2 * marginSize;
         height += modelInfoWidget.getPreferredHeightForWidth(width) + 2 * marginSize;
 
         if (controlAreaWidget.getNumControls() > 0)
@@ -439,6 +444,8 @@ private:
 
                             // Re-enable processing immediately
                             processCancelButton.setEnabled(true);
+
+                            notifyInitialLoadComplete(true);
                         }
                         else
                         {
@@ -450,12 +457,23 @@ private:
 
                                 // Re-enable processing after closing error window
                                 processCancelButton.setEnabled(true);
+
+                                notifyInitialLoadComplete(false);
                             };
 
                             openErrorPopup(error, onExit);
                         }
                     });
             });
+    }
+
+    void notifyInitialLoadComplete(bool wasSuccessful)
+    {
+        auto callback = std::move(initialLoadCallback);
+        initialLoadCallback = nullptr;
+
+        if (callback)
+            callback(this, wasSuccessful);
     }
 
     void processCallback()
@@ -628,4 +646,5 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    std::function<void(ModelTab*, bool)> initialLoadCallback;
 };

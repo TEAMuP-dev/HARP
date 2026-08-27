@@ -21,9 +21,9 @@ struct ClientError
 
     Type type;
 
-    String path;
-    String client;
-    String token;
+    String path {};
+    String client {};
+    String token {};
 };
 
 inline String toUserMessage(const ClientError& e)
@@ -117,7 +117,7 @@ struct HttpError
 
     Request request;
 
-    String endpointPath;
+    String endpointPath {};
 
     int statusCode = 0;
 };
@@ -226,7 +226,7 @@ struct GradioError
 
     Type type;
 
-    String endpointPath;
+    String endpointPath {};
 };
 
 inline String toUserMessage(const GradioError& e)
@@ -266,8 +266,8 @@ struct JsonError
 
     Type type;
 
-    String stringJSON;
-    String key;
+    String stringJSON {};
+    String key {};
 };
 
 inline String toUserMessage(const JsonError& e)
@@ -354,7 +354,7 @@ struct ControlError
 
     Type type;
 
-    String controlType;
+    String controlType {};
 };
 
 inline String toUserMessage(const ControlError& e)
