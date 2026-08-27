@@ -495,7 +495,7 @@ void MediaDisplayComponent::resized()
         if (child->getWidth() < 0 || child->getHeight() < 0)
         {
             child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
-                                                        jmax(0, child->getHeight())));
+                                                         jmax(0, child->getHeight())));
         }
     }
 

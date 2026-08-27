@@ -13,6 +13,8 @@
 #include "../gui/FileChooserWithLabel.h"
 #include "../gui/MultiSelectWithLabel.h"
 
+#include "Logging.h"
+
 using namespace juce;
 
 /**
@@ -31,6 +33,174 @@ inline bool stringToBool(const String& str)
     return false;
 }
 
+/*
+  Readers for the fields of a control specification.
+
+  Each returns true when the field was present, held the expected type, and was
+  applied. A field that is missing, explicitly null, or of the wrong type leaves
+  its destination untouched, so a specification HARP does not understand falls
+  back to the control's own defaults rather than to whatever the member happened
+  to hold. Returning whether a field was applied also lets a caller tell an
+  omitted field from one that was set to the default value.
+
+  A field of the wrong type is logged, since that points at a mismatch between
+  HARP and the model rather than at anything the user can correct.
+*/
+
+inline void logUnexpectedType(const Identifier& key, const String& expected, const var& value)
+{
+    DBG_AND_LOG("Controls: Field \"" << key.toString() << "\" was expected to hold a " << expected
+                                     << " but holds \"" << value.toString()
+                                     << "\". Falling back to the default.");
+}
+
+// Retrieves a field that is both present and not null, which is how an unset field arrives
+inline bool findField(DynamicObject* input, const Identifier& key, var& property)
+{
+    if (input == nullptr || ! input->hasProperty(key))
+    {
+        return false;
+    }
+
+    property = input->getProperty(key);
+
+    return ! property.isVoid();
+}
+
+inline bool readNumber(DynamicObject* input, const Identifier& key, double& destination)
+{
+    var property;
+
+    if (! findField(input, key, property))
+    {
+        return false;
+    }
+
+    if (property.isDouble() || property.isInt() || property.isInt64())
+    {
+        destination = (double) property;
+
+        return true;
+    }
+
+    // A provider may quote its numbers, so a string is accepted when it reads as one
+    const String text = property.toString().trim();
+
+    if (text.isNotEmpty() && text.containsOnly("0123456789+-.eE"))
+    {
+        destination = text.getDoubleValue();
+
+        return true;
+    }
+
+    logUnexpectedType(key, "number", property);
+
+    return false;
+}
+
+inline bool readBool(DynamicObject* input, const Identifier& key, bool& destination)
+{
+    var property;
+
+    if (! findField(input, key, property))
+    {
+        return false;
+    }
+
+    if (property.isBool() || property.isInt() || property.isInt64() || property.isDouble())
+    {
+        destination = (bool) property;
+
+        return true;
+    }
+
+    if (property.isString())
+    {
+        destination = stringToBool(property.toString());
+
+        return true;
+    }
+
+    logUnexpectedType(key, "boolean", property);
+
+    return false;
+}
+
+inline bool readString(DynamicObject* input, const Identifier& key, std::string& destination)
+{
+    var property;
+
+    if (! findField(input, key, property))
+    {
+        return false;
+    }
+
+    // Anything with structure would stringify into something meaningless to show
+    if (property.isArray() || property.isObject() || property.isMethod())
+    {
+        logUnexpectedType(key, "string", property);
+
+        return false;
+    }
+
+    destination = property.toString().toStdString();
+
+    return true;
+}
+
+/*
+  Appends the entries of a list field.
+
+  Gradio normalizes dropdown choices to (label, value) pairs, so an entry that is
+  itself a list contributes only its label, which is both what is displayed and
+  what is sent back. A lone value counts as a list of one, which is how a
+  multiselect dropdown given a single default arrives.
+*/
+inline bool readStringList(DynamicObject* input,
+                           const Identifier& key,
+                           std::vector<std::string>& destination)
+{
+    var property;
+
+    if (! findField(input, key, property))
+    {
+        return false;
+    }
+
+    const Array<var>* entries = property.getArray();
+
+    if (entries == nullptr)
+    {
+        if (property.isObject() || property.isMethod())
+        {
+            logUnexpectedType(key, "list", property);
+
+            return false;
+        }
+
+        destination.push_back(property.toString().toStdString());
+
+        return true;
+    }
+
+    for (const var& entry : *entries)
+    {
+        if (const Array<var>* pair = entry.getArray())
+        {
+            if (! pair->isEmpty())
+            {
+                destination.push_back(pair->getFirst().toString().toStdString());
+            }
+        }
+        else
+        {
+            destination.push_back(entry.toString().toStdString());
+        }
+    }
+
+    return true;
+}
+
 struct ModelComponentInfo
 {
     Uuid id { "" };
@@ -45,16 +215,8 @@ struct ModelComponentInfo
     {
         id = Uuid();
 
-        // TODO - check that the following properties are of the correct type
-
-        if (input->hasProperty("label"))
-        {
-            label = input->getProperty("label").toString().toStdString();
-        }
-        if (input->hasProperty("info"))
-        {
-            info = input->getProperty("info").toString().toStdString();
-        }
+        readString(input, "label", label);
+        readString(input, "info", info);
     }
 };
 
@@ -69,12 +231,7 @@ struct TrackComponentInfo : public ModelComponentInfo
 
     TrackComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
-
-        if (input->hasProperty("required"))
-        {
-            required = stringToBool(input->getProperty("required").toString());
-        }
+        readBool(input, "required", required);
     }
 };
 
@@ -97,39 +254,12 @@ struct FileComponentInfo : public ModelComponentInfo, public FileChooserWithLabe
 
     FileComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        if (input->hasProperty("required"))
-        {
-            required = stringToBool(input->getProperty("required").toString());
-        }
+        readBool(input, "required", required);
+        readString(input, "path", path);
 
-        if (input->hasProperty("path"))
-        {
-            path = input->getProperty("path").toString().toStdString();
-        }
-
-        if (input->hasProperty("file_types"))
-        {
-            Array<var>* types = input->getProperty("file_types").getArray();
-
-            if (types == nullptr)
-            {
-                // TODO - handle error case: couldn't load types
-            }
-
-            int numTypes = types->size();
-
-            if (numTypes > 0)
-            {
-                for (int j = 0; j < numTypes; j++)
-                {
-                    fileTypes.push_back(types->getReference(j).toString().toStdString());
-                }
-            }
-            else
-            {
-                // TODO - handle error case: no types
-            }
-        }
+        /* An empty list is not an error here: a file chooser with no declared types
+           accepts any file, which is what an unrestricted gr.File means. */
+        readStringList(input, "file_types", fileTypes);
     }
 
     void fileChooserChanged(FileChooserWithLabel* fileChooser) override
@@ -144,12 +274,7 @@ struct TextBoxComponentInfo : public ModelComponentInfo, public TextEditor::List
 
     TextBoxComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
-
-        if (input->hasProperty("value"))
-        {
-            value = input->getProperty("value").toString().toStdString();
-        }
+        readString(input, "value", value);
     }
 
     void textEditorTextChanged(TextEditor& textEditor) override
@@ -160,8 +285,14 @@ struct TextBoxComponentInfo : public ModelComponentInfo, public TextEditor::List
 
 struct NumberBoxComponentInfo : public ModelComponentInfo, public Slider::Listener
 {
-    double minimum = 0.0;
-    double maximum = 0.0;
+    /* A number box carries no bounds unless the model sets them, and an unset one
+       arrives as null. The box still has to be given a concrete range, so an unset
+       bound becomes a wide one. Leaving it at zero would make the range empty and
+       pin the box to a single value it could never be edited away from. */
+    static constexpr double unboundedLimit = 1.0e9;
+
+    double minimum = -unboundedLimit;
+    double maximum = unboundedLimit;
 
     /* How much the increment / decrement buttons move the value. A zero step
        would make them do nothing, so fall back to whole numbers. */
@@ -171,30 +302,16 @@ struct NumberBoxComponentInfo : public ModelComponentInfo, public Slider::Listen
 
     NumberBoxComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
-
-        if (input->hasProperty("minimum"))
-        {
-            minimum = input->getProperty("minimum").toString().getFloatValue();
-        }
-        if (input->hasProperty("maximum"))
-        {
-            maximum = input->getProperty("maximum").toString().getFloatValue();
-        }
-        if (input->hasProperty("step"))
-        {
-            step = input->getProperty("step").toString().getFloatValue();
-        }
+        readNumber(input, "minimum", minimum);
+        readNumber(input, "maximum", maximum);
+        readNumber(input, "step", step);
 
         if (step <= 0.0)
         {
             step = 1.0;
         }
 
-        if (input->hasProperty("value"))
-        {
-            value = input->getProperty("value").toString().getFloatValue();
-        }
+        readNumber(input, "value", value);
     }
 
     /* Unlike a slider, a number box is edited by typing or by clicking the
@@ -208,12 +325,7 @@ struct ToggleComponentInfo : public ModelComponentInfo, public Button::Listener
 
     ToggleComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
-
-        if (input->hasProperty("value"))
-        {
-            value = stringToBool(input->getProperty("value").toString());
-        }
+        readBool(input, "value", value);
     }
 
     void buttonClicked(Button* button) override { value = button->getToggleState(); }
@@ -221,30 +333,26 @@ struct ToggleComponentInfo : public ModelComponentInfo, public Button::Listener
 
 struct SliderComponentInfo : public ModelComponentInfo, public Slider::Listener
 {
-    double minimum;
-    double maximum;
-    double step;
-    double value;
+    /* The range a gr.Slider falls back on when it declares none of its own */
+    double minimum = 0.0;
+    double maximum = 100.0;
+
+    /* Zero is the slider's own notion of a continuous range, so unlike the number
+       box above it needs no substitute when the model leaves the step unset. */
+    double step = 0.0;
+
+    double value = 0.0;
 
     SliderComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
+        readNumber(input, "minimum", minimum);
+        readNumber(input, "maximum", maximum);
+        readNumber(input, "step", step);
 
-        if (input->hasProperty("minimum"))
+        if (! readNumber(input, "value", value))
         {
-            minimum = input->getProperty("minimum").toString().getFloatValue();
-        }
-        if (input->hasProperty("maximum"))
-        {
-            maximum = input->getProperty("maximum").toString().getFloatValue();
-        }
-        if (input->hasProperty("step"))
-        {
-            step = input->getProperty("step").toString().getFloatValue();
-        }
-        if (input->hasProperty("value"))
-        {
-            value = input->getProperty("value").toString().getFloatValue();
+            // With no starting value given, the low end of the range is the safe choice
+            value = minimum;
         }
     }
 
@@ -260,46 +368,23 @@ struct ComboBoxComponentInfo : public ModelComponentInfo, public ComboBox::Liste
 
     ComboBoxComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        // TODO - check that the following properties are of the correct type
+        readStringList(input, "choices", options);
 
-        if (input->hasProperty("choices"))
+        if (options.empty())
         {
-            Array<var>* choices = input->getProperty("choices").getArray();
+            /* A dropdown with nothing to choose from cannot be operated. It is left
+               empty rather than refused, since the rest of the controls are still
+               usable and the model may not depend on this one. */
+            DBG_AND_LOG("ComboBoxComponentInfo: Dropdown \"" << String(label)
+                                                             << "\" offers no choices.");
 
-            if (choices == nullptr)
-            {
-                // TODO - handle error case: couldn't load choices
-            }
-
-            int numChoices = choices->size();
-
-            if (numChoices > 0)
-            {
-                for (int j = 0; j < numChoices; j++)
-                {
-                    options.push_back(
-                        choices->getReference(j).getArray()->getFirst().toString().toStdString());
-                }
-
-                if (! input->hasProperty("value"))
-                {
-                    // Set selection to first option
-                    value = options[0];
-                }
-                else
-                {
-                    // Set selection to chosen value
-                    value = input->getProperty("value").toString().toStdString();
-                }
-            }
-            else
-            {
-                // TODO - handle error case: no choices
-            }
+            return;
         }
-        else
+
+        // Falling back to the first option keeps the box and this value in agreement
+        if (! readString(input, "value", value))
         {
-            // TODO - handle error case: no choises provided
+            value = options.front();
         }
     }
 
@@ -310,8 +395,7 @@ struct ComboBoxComponentInfo : public ModelComponentInfo, public ComboBox::Liste
  * A dropdown allowing any number of its options to be selected at once,
  * corresponding to a gr.Dropdown declared with multiselect=True.
  */
-struct MultiSelectComponentInfo : public ModelComponentInfo,
-                                 public MultiSelectWithLabel::Listener
+struct MultiSelectComponentInfo : public ModelComponentInfo, public MultiSelectWithLabel::Listener
 {
     std::vector<std::string> options;
 
@@ -319,46 +403,17 @@ struct MultiSelectComponentInfo : public ModelComponentInfo,
 
     MultiSelectComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
-        if (input->hasProperty("choices"))
+        readStringList(input, "choices", options);
+
+        if (options.empty())
         {
-            if (Array<var>* choices = input->getProperty("choices").getArray())
-            {
-                for (const auto& choice : *choices)
-                {
-                    /* Gradio normalizes choices to (label, value) pairs, but
-                       tolerate a plain list of labels as well */
-                    if (Array<var>* choicePair = choice.getArray())
-                    {
-                        if (! choicePair->isEmpty())
-                        {
-                            options.push_back(choicePair->getFirst().toString().toStdString());
-                        }
-                    }
-                    else
-                    {
-                        options.push_back(choice.toString().toStdString());
-                    }
-                }
-            }
+            DBG_AND_LOG("MultiSelectComponentInfo: Dropdown \"" << String(label)
+                                                                << "\" offers no choices.");
         }
 
-        if (input->hasProperty("value"))
-        {
-            var value = input->getProperty("value");
-
-            if (Array<var>* selectedValues = value.getArray())
-            {
-                for (const auto& selectedValue : *selectedValues)
-                {
-                    values.push_back(selectedValue.toString().toStdString());
-                }
-            }
-            else if (value.toString().isNotEmpty())
-            {
-                // A multiselect dropdown may still be given a single default
-                values.push_back(value.toString().toStdString());
-            }
-        }
+        /* Nothing selected is a valid starting state for a multiselect dropdown, so
+           unlike the single-selection box above there is no fallback to apply. */
+        readStringList(input, "value", values);
     }
 
     void multiSelectChanged(MultiSelectWithLabel* multiSelect) override

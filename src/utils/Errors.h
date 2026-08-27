@@ -158,15 +158,13 @@ inline String toUserMessage(const HttpError& e)
     {
         case HttpError::Type::InvalidURL:
 
-            userMessage = "";
-
             if (e.endpointPath.isNotEmpty())
             {
-                userMessage += "\"" + e.endpointPath + "\" is not a valid address.";
+                userMessage = "\"" + e.endpointPath + "\" is not a valid address.";
             }
             else
             {
-                userMessage += "The model's address is not valid.";
+                userMessage = "The model's address is not valid.";
             }
 
             return userMessage;
@@ -371,8 +369,8 @@ inline String toUserMessage(const GradioError& e)
 
         case GradioError::Type::IncompleteResponse:
 
-            userMessage = "Lost contact with the " + e.describeTarget()
-                          + " before it returned a result.";
+            userMessage =
+                "Lost contact with the " + e.describeTarget() + " before it returned a result.";
 
             userMessage +=
                 "\n\nThe connection is dropped when nothing arrives for a prolonged period, "
@@ -684,11 +682,9 @@ inline std::optional<String> getOpenablePath(const Error& error)
 {
     if (const auto* e = std::get_if<HttpError>(&error))
     {
-        if (e->type == HttpError::Type::ConnectionFailed && e->endpointPath.isNotEmpty())
-        {
-            return e->endpointPath;
-        }
-        else if (e->type == HttpError::Type::BadStatusCode && e->endpointPath.isNotEmpty())
+        /* A malformed address is the one case with nothing to open, since it is the
+           address itself that is at fault. */
+        if (e->type != HttpError::Type::InvalidURL && e->endpointPath.isNotEmpty())
         {
             return e->endpointPath;
         }
@@ -696,16 +692,9 @@ inline std::optional<String> getOpenablePath(const Error& error)
 
     if (const auto* e = std::get_if<GradioError>(&error))
     {
-        /* Both of these messages send the user to the Space page, since that is
-           where the underlying error is actually reported */
-        bool pathIsUseful = e->type == GradioError::Type::RuntimeError
-                            || e->type == GradioError::Type::QuotaExceeded
-                            || e->type == GradioError::Type::Indeterminate
-                            || e->type == GradioError::Type::IncompleteResponse
-                            || e->type == GradioError::Type::SpaceStarting
-                            || e->type == GradioError::Type::SpaceUnavailable;
-
-        if (pathIsUseful && e->endpointPath.isNotEmpty())
+        /* Every one of these messages sends the user to the model's own page, since
+           that is where the underlying error is actually reported. */
+        if (e->endpointPath.isNotEmpty())
         {
             return e->endpointPath;
         }

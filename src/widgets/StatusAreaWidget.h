@@ -50,7 +50,6 @@ private:
     Label messageLabel;
 };
 
-using StatusBox = MessageBox<StatusMessage>;
 using InstructionsBox = MessageBox<InstructionsMessage>;
 
 class StatusHistoryBox : public Component, ChangeListener

@@ -200,8 +200,8 @@ void MainComponent::updateWindowConstraints()
         /* The panel scrolls vertically, so the window does not have to be tall
            enough for every control; it only has to stay usably large. Width is
            still content-driven, since there is no horizontal scrolling. */
-        const int requiredMainPanelHeight =
-            minimumWindowHeight - minimumMainPanelVertPadding + (showStatusArea ? statusAreaHeight : 0);
+        const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
+                                            + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
@@ -516,8 +516,7 @@ void MainComponent::resetTutorialAutoLoadedModel()
  */
 Rectangle<int> MainComponent::getVisibleTabArea(Rectangle<int> tabBounds)
 {
-    return getLocalArea(&mainModelTab, tabBounds)
-        .getIntersection(mainPanelViewport.getBounds());
+    return getLocalArea(&mainModelTab, tabBounds).getIntersection(mainPanelViewport.getBounds());
 }
 
 Rectangle<int> MainComponent::getModelSelectBounds()

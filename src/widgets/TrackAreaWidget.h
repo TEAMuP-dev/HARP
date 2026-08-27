@@ -224,7 +224,10 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight).withMargin(marginSize);
+                            gap = FlexItem(ghostTrack)
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     else
                     {
@@ -232,7 +235,10 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem().withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight).withMargin(marginSize);
+                            gap = FlexItem()
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     mainBox.items.add(gap);
                 }
@@ -269,7 +275,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight).withMargin(marginSize);
+                        gap = FlexItem(ghostTrack)
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 else
                 {
@@ -277,7 +286,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem().withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight).withMargin(marginSize);
+                        gap = FlexItem()
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 mainBox.items.add(gap);
             }

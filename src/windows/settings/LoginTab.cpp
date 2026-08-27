@@ -65,7 +65,7 @@ ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
     revealTokenButton.onClick = [this]
     {
         tokenEditor.setPasswordCharacter(revealTokenButton.getToggleState() ? 0
-                                                                           : passwordCharacter);
+                                                                            : passwordCharacter);
     };
 
     addAndMakeVisible(revealTokenButton);

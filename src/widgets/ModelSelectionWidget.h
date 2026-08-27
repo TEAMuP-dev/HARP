@@ -178,7 +178,7 @@ public:
             if (child->getWidth() < 0 || child->getHeight() < 0)
             {
                 child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
-                                                            jmax(0, child->getHeight())));
+                                                             jmax(0, child->getHeight())));
             }
         }
     }
@@ -254,8 +254,8 @@ public:
 
         if (selectedPath != modelPath)
         {
-            DBG_AND_LOG("ModelSelectionWidget::loadModelBypass: Path \"" << modelPath
-                        << "\" resolved to \"" << selectedPath << "\".");
+            DBG_AND_LOG("ModelSelectionWidget::loadModelBypass: Path \""
+                        << modelPath << "\" resolved to \"" << selectedPath << "\".");
         }
 
         sendChangeMessage();
@@ -630,8 +630,8 @@ private:
             /* The LookAndFeel asks for the selected item to be visible, which scrolls
                the popup to it. Overriding that with an id no item can have leaves
                nothing to scroll to, so the popup opens at the top showing every item. */
-            PopupMenu::Options opts = lf.getOptionsForComboBoxPopupMenu(*this, *label)
-                                         .withItemThatMustBeVisible(0);
+            PopupMenu::Options opts =
+                lf.getOptionsForComboBoxPopupMenu(*this, *label).withItemThatMustBeVisible(0);
 
             // Guard against the ComboBox being destroyed while the menu is open,
             // as JUCE's own ComboBox::showPopup does via ModalCallbackFunction

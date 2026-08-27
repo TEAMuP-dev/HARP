@@ -149,19 +149,18 @@ private:
         // The menu outlives this component if the tab is torn down while it is open
         Component::SafePointer<MultiSelectWithLabel> safeThis(this);
 
-        menu.showMenuAsync(
-            PopupMenu::Options()
-                .withTargetComponent(&selectionButton)
-                .withMinimumWidth(selectionButton.getWidth()),
-            [safeThis](int result)
-            {
-                if (safeThis == nullptr || result == 0)
-                {
-                    return;
-                }
+        menu.showMenuAsync(PopupMenu::Options()
+                               .withTargetComponent(&selectionButton)
+                               .withMinimumWidth(selectionButton.getWidth()),
+                           [safeThis](int result)
+                           {
+                               if (safeThis == nullptr || result == 0)
+                               {
+                                   return;
+                               }
 
-                safeThis->toggle(safeThis->options[(size_t) (result - 1)]);
-            });
+                               safeThis->toggle(safeThis->options[(size_t) (result - 1)]);
+                           });
     }
 
     void toggle(const String& option)

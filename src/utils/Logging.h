@@ -60,6 +60,11 @@ public:
     {
         const ScopedLock lock(loggerLock);
 
+        if (logger == nullptr)
+        {
+            return OpResult::fail(FileError { FileError::Type::WriteFailed, "" });
+        }
+
         File logFile = logger->getLogFile();
         logger.reset(); // release file handle before truncating
         bool truncated = logFile.replaceWithText("");

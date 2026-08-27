@@ -11,7 +11,7 @@
 #include "utils/Settings.h"
 
 #if JUCE_LINUX
-    #include <dlfcn.h>
+#include <dlfcn.h>
 #endif
 
 using namespace juce;
@@ -246,7 +246,7 @@ public:
          */
         void publishMinimumSizeToWindowManager()
         {
-           #if JUCE_LINUX
+#if JUCE_LINUX
             auto* constrainer = getConstrainer();
             auto* peer = getPeer();
 
@@ -270,7 +270,10 @@ public:
                 int minWidth, minHeight;
                 int maxWidth, maxHeight;
                 int widthInc, heightInc;
-                struct { int x, y; } minAspect, maxAspect;
+                struct
+                {
+                    int x, y;
+                } minAspect, maxAspect;
                 int baseWidth, baseHeight;
                 int winGravity;
             };
@@ -304,8 +307,10 @@ public:
                     auto* openDisplay = (void* (*) (const char*) ) dlsym(handle, "XOpenDisplay");
 
                     allocSizeHints = (decltype(allocSizeHints)) dlsym(handle, "XAllocSizeHints");
-                    getWMNormalHints = (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
-                    setWMNormalHints = (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
+                    getWMNormalHints =
+                        (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
+                    setWMNormalHints =
+                        (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
                     freeMemory = (decltype(freeMemory)) dlsym(handle, "XFree");
                     flush = (decltype(flush)) dlsym(handle, "XFlush");
 
@@ -343,7 +348,7 @@ public:
             }
 
             xlib.flush(xlib.display);
-           #endif
+#endif
         }
 
         void resized() override

@@ -497,7 +497,6 @@ private:
 
     static constexpr float marginSize = 4;
 
-
     static constexpr int minInterItemGap = 6;
     static constexpr int minEdgeGap = 4;
     static constexpr int minRowGap = 6;

@@ -198,7 +198,6 @@ public:
     static constexpr int minimumUsefulHeight = fixedChromeHeight + minimumContentHeight;
 
 protected:
-
     // Media (audio or MIDI) content area
     Component contentComponent;
 

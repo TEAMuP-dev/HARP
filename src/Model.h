@@ -607,17 +607,14 @@ private:
                        values rather than a single one, and needs its own control */
                     bool isMultiSelect = false;
 
-                    if (controlsDict->hasProperty("multiselect"))
-                    {
-                        isMultiSelect =
-                            stringToBool(controlsDict->getProperty("multiselect").toString());
-                    }
+                    readBool(controlsDict, "multiselect", isMultiSelect);
 
                     std::shared_ptr<ModelComponentInfo> dropdownControl =
-                        isMultiSelect ? std::static_pointer_cast<ModelComponentInfo>(
-                                            std::make_shared<MultiSelectComponentInfo>(controlsDict))
-                                      : std::static_pointer_cast<ModelComponentInfo>(
-                                            std::make_shared<ComboBoxComponentInfo>(controlsDict));
+                        isMultiSelect
+                            ? std::static_pointer_cast<ModelComponentInfo>(
+                                  std::make_shared<MultiSelectComponentInfo>(controlsDict))
+                            : std::static_pointer_cast<ModelComponentInfo>(
+                                  std::make_shared<ComboBoxComponentInfo>(controlsDict));
 
                     newControls.push_back(dropdownControl);
                     tempComponentIDs.push_back(dropdownControl->id);

@@ -63,10 +63,8 @@ void GeneralSettingsTab::handleClearLogs()
 
     if (result.failed())
     {
-        AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
-                                         "Clear Logs Failed",
-                                         toUserMessage(result.getError()),
-                                         "Ok");
+        AlertWindow::showMessageBoxAsync(
+            AlertWindow::WarningIcon, "Clear Logs Failed", toUserMessage(result.getError()), "Ok");
 
         return;
     }

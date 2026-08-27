@@ -349,7 +349,7 @@ private:
 
         // Determine whether this error warrants a GitHub bug report.
         // Quota errors, invalid paths, and expected HTTP failures are user-actionable
-        // and don't need a report; only unexpected runtime/parse errors do.
+        // and do not need a report. Only unexpected runtime and parse errors do.
         bool isReportableError = false;
         if (const auto* gradioErr = std::get_if<GradioError>(&error))
             isReportableError = (gradioErr->type == GradioError::Type::RuntimeError);
@@ -380,8 +380,7 @@ private:
                            [openablePath] { URL(*openablePath).launchInDefaultBrowser(); });
         }
 
-        addPopupButton("Open Logs",
-                       [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
+        addPopupButton("Open Logs", [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
 
         if (isReportableError)
         {
@@ -389,7 +388,7 @@ private:
                            [this, error, errorMessage]
                            {
                                // Open GitHub issue but keep the popup open
-                               openGitHubIssue(error, errorMessage, "");
+                               openGitHubIssue(error, errorMessage);
                            });
         }
 
@@ -448,8 +447,7 @@ private:
         attrStr.append(centredAlertLF.messageText, Font(popupMessageFontHeight));
 
         TextLayout layout;
-        layout.createLayout(attrStr,
-                            (float) (popupWidth - 2 * (popupEdgeGap + popupIconWidth)));
+        layout.createLayout(attrStr, (float) (popupWidth - 2 * (popupEdgeGap + popupIconWidth)));
 
         const int buttonH = centredAlertLF.getAlertWindowButtonHeight();
         int popupHeight = popupEdgeGap + popupTitleHeight + (int) std::ceil(layout.getHeight())
@@ -469,7 +467,7 @@ private:
             Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
     }
 
-    void openGitHubIssue(const Error& error, const String& errorMessage, const String& notes)
+    void openGitHubIssue(const Error& error, const String& errorMessage)
     {
         static const String issueBaseUrl = "https://github.com/TEAMuP-dev/HARP/issues/new";
         static const String issueTemplate = "runtime_error_report.yml";
@@ -496,7 +494,7 @@ private:
         environment << "- Time (local): " << Time::getCurrentTime().toString(true, true) << "\n";
         environment << "- Log file: " << HARPLogger::getInstance()->getLogFile().getFullPathName();
 
-        /* Only values are supplied here; the report's structure lives solely in
+        /* Only values are supplied here. The report's structure lives solely in
            the issue form, whose field ids these query parameters correspond to.
            See .github/ISSUE_TEMPLATE/runtime_error_report.yml */
         StringPairArray fields;
@@ -507,11 +505,6 @@ private:
         if (endpointPath.isNotEmpty())
         {
             fields.set("endpoint", endpointPath);
-        }
-
-        if (notes.isNotEmpty())
-        {
-            fields.set("notes", notes);
         }
 
         String query = "?template=" + URL::addEscapeChars(issueTemplate, true);
@@ -732,11 +725,10 @@ private:
     static constexpr int popupTitleHeight = 24;
     static constexpr float popupMessageFontHeight = 16.0f;
 
-    /* LookAndFeel override that draws the AlertWindow message text centered.
-    We re-derive both from the actual window height here so that
-    text fills the real available space and buttons are accounted for at the
-    bottom where BottomButtonAlertWindow will move them. */
-
+    /* LookAndFeel override that lays the AlertWindow message out over the whole
+       window rather than JUCE's default text area. The text area is re-derived from
+       the actual window height, reserving the strip at the bottom that
+       BottomButtonAlertWindow moves the buttons into. */
     struct CentredAlertLookAndFeel : public LookAndFeel_V4
     {
         String messageText; // set before showing the popup
