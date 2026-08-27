@@ -17,9 +17,11 @@ using namespace juce;
 class SettingsWindow : public Component
 {
 public:
-    SettingsWindow() : tabComponent(TabbedButtonBar::TabsAtTop)
+    SettingsWindow(std::function<void()> onRestoreDefaults = {})
+        : tabComponent(TabbedButtonBar::TabsAtTop)
     {
-        tabComponent.addTab("General", Colours::darkgrey, new GeneralSettingsTab(), true);
+        tabComponent.addTab(
+            "General", Colours::darkgrey, new GeneralSettingsTab(onRestoreDefaults), true);
         tabComponent.addTab("API Keys", Colours::darkgrey, new LoginTab(), true);
         //tabComponent.addTab("Audio", Colours::darkgrey, new AudioSettingsTab(), true);
         addAndMakeVisible(tabComponent);

@@ -54,7 +54,15 @@ double FileDisplayComponent::getTotalLengthInSecs() { return 0.0; }
 
 void FileDisplayComponent::paint(Graphics& g)
 {
-    auto body = getLocalBounds().withTrimmedTop(labelHeight).toFloat();
+    auto area = getLocalBounds();
+
+    // Trimming past the available size yields a negative extent
+    if (area.getHeight() <= labelHeight || area.getWidth() <= 0)
+    {
+        return;
+    }
+
+    auto body = area.withTrimmedTop(labelHeight).toFloat();
     auto bodyInt = body.toNearestInt();
     float r = 3.0f;
 
@@ -75,7 +83,9 @@ void FileDisplayComponent::paint(Graphics& g)
     g.drawRoundedRectangle(body.reduced(0.5f), r, 1.0f);
 
     // Draw filename text (leaves space for the square button on the right)
-    auto textArea = bodyInt.withTrimmedRight(bodyInt.getHeight()).withTrimmedLeft(4);
+    // The square button occupies the right of the body, but only if it fits
+    auto textArea = bodyInt.withTrimmedRight(jmin(bodyInt.getHeight(), bodyInt.getWidth()))
+                        .withTrimmedLeft(jmin(4, bodyInt.getWidth()));
 
     g.setFont(Font(13.0f));
     g.setColour(isFileLoaded() ? textCol.withAlpha(0.85f) : textCol.withAlpha(0.4f));
@@ -87,8 +97,17 @@ void FileDisplayComponent::paint(Graphics& g)
 
 void FileDisplayComponent::resized()
 {
-    auto area = getLocalBounds().withTrimmedTop(labelHeight);
-    int buttonSize = area.getHeight();
+    auto area = getLocalBounds();
+
+    if (area.getHeight() <= labelHeight || area.getWidth() <= 0)
+    {
+        downloadButton.setBounds({});
+        return;
+    }
+
+    area = area.withTrimmedTop(labelHeight);
+
+    int buttonSize = jmin(area.getHeight(), area.getWidth());
     downloadButton.setBounds(area.removeFromRight(buttonSize));
 }
 

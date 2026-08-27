@@ -20,6 +20,9 @@ public:
 
     double getTotalLengthInSecs() override;
 
+    bool hasPlaybackCursor() const override { return false; }
+    bool usesMouseWheel() const override { return false; }
+
     void paint(Graphics& g) override;
     void resized() override;
 

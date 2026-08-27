@@ -36,6 +36,9 @@ private:
     const float rowHeight = 26;
     const float buttonWidth = 120;
 
+    // Character used to obscure the API key in the editor
+    static constexpr juce_wchar passwordCharacter = 0x2022; // Bullet
+
     Provider provider;
     String displayName;
 
@@ -43,6 +46,7 @@ private:
     HyperlinkButton getTokenLink;
 
     TextEditor tokenEditor;
+    ToggleButton revealTokenButton { "Show key" };
 
     TextButton updateButton { "Update" };
     TextButton removeButton { "Remove" };

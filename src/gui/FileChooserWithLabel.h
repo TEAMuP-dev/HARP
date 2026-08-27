@@ -32,18 +32,32 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        label.setBounds(area.removeFromTop(labelHeight));
+
+        label.setBounds(area.removeFromTop(jmin(labelHeight, area.getHeight())));
 
         if (! required)
-            area.removeFromTop(bannerHeight);
+            area.removeFromTop(jmin(bannerHeight, area.getHeight()));
 
-        int buttonSize = area.getHeight();
+        if (area.isEmpty())
+        {
+            actionButton.setBounds({});
+            return;
+        }
+
+        int buttonSize = jmin(area.getHeight(), area.getWidth());
         actionButton.setBounds(area.removeFromRight(buttonSize));
     }
 
     void paint(Graphics& g) override
     {
         auto area = getLocalBounds();
+
+        // Drawing into a negative-sized rectangle trips a JUCE assertion
+        if (area.getHeight() <= labelHeight || area.getWidth() <= 0)
+        {
+            return;
+        }
+
         area.removeFromTop(labelHeight);
 
         if (! required)
@@ -69,7 +83,8 @@ public:
         g.setColour(outline);
         g.drawRoundedRectangle(body.reduced(0.5f), r, 1.0f);
 
-        auto textArea = bodyInt.withTrimmedRight(bodyInt.getHeight()).withTrimmedLeft(4);
+        auto textArea = bodyInt.withTrimmedRight(jmin(bodyInt.getHeight(), bodyInt.getWidth()))
+                            .withTrimmedLeft(jmin(4, bodyInt.getWidth()));
 
         g.setFont(Font(13.0f));
         g.setColour(currentPath.isEmpty() ? textCol.withAlpha(0.4f) : textCol.withAlpha(0.85f));
@@ -108,6 +123,8 @@ public:
         repaint();
     }
 
+    int getPreferredWidth() const override { return minFilePickerWidth; }
+
     int getPreferredHeight() const override
     {
         return minFilePickerHeight + (required ? 0 : bannerHeight);
@@ -119,7 +136,19 @@ public:
         return jmax(minFilePickerWidth, labelWidth + defaultPadding);
     }
 
-    std::function<void(const String&)> onFileSelected;
+    /** Receives notification when the chosen file is changed by the user. */
+    struct Listener
+    {
+        virtual ~Listener() = default;
+
+        virtual void fileChooserChanged(FileChooserWithLabel* fileChooser) = 0;
+    };
+
+    void addListener(Listener* listener) { listeners.add(listener); }
+
+    void removeListener(Listener* listener) { listeners.remove(listener); }
+
+    const String& getPath() const { return currentPath; }
 
 private:
     void initializeButton()
@@ -161,20 +190,13 @@ private:
         return "No file selected (" + exts.joinIntoString(", ") + ")";
     }
 
-    void clearFile()
-    {
-        setPath({});
-
-        if (onFileSelected)
-            onFileSelected({});
-    }
+    void clearFile() { setAndNotify({}); }
 
     void setAndNotify(const String& path)
     {
         setPath(path);
 
-        if (onFileSelected)
-            onFileSelected(path);
+        listeners.call([this](Listener& l) { l.fileChooserChanged(this); });
     }
 
     void launchFileChooser()
@@ -227,6 +249,8 @@ private:
     MultiButton actionButton;
     MultiButton::Mode chooseFileModeInfo;
     MultiButton::Mode removeFileModeInfo;
+
+    ListenerList<Listener> listeners;
 
     String currentPath;
     bool required = true;

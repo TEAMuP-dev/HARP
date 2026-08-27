@@ -12,8 +12,10 @@ using namespace juce;
 
 /**
  * Abstract base class for control components that display a label.
- * Provides common functionality for calculating minimum required width
- * based on label text.
+ *
+ * Each control owns its own sizing: the area laying them out asks for these
+ * metrics rather than keeping a table of its own, so a control's appearance is
+ * described in exactly one place.
  */
 class ControlComponent : public Component
 {
@@ -21,9 +23,15 @@ public:
     virtual ~ControlComponent() = default;
 
     /**
-     * Returns the preferred height for this control, or 0 to use the layout default.
+     * Returns the width this control should be given when there is room for it.
+     * The layout falls back to getMinimumRequiredWidth() when space is tight.
      */
-    virtual int getPreferredHeight() const { return 0; }
+    virtual int getPreferredWidth() const = 0;
+
+    /**
+     * Returns the height this control needs in order to lay itself out.
+     */
+    virtual int getPreferredHeight() const = 0;
 
     /**
      * Returns the minimum width required to display this control properly.

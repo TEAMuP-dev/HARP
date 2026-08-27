@@ -1,7 +1,7 @@
 /**
  * @file Model.h
  * @brief Model state and interface for loading and processing.
- * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz
+ * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
@@ -85,19 +85,51 @@ struct ModelMetadata
 class Model
 {
 public:
-    Model() { resetState(); }
-    ~Model() { resetState(); }
+    Model() { resetState(/*suppressStatus=*/true); }
+    ~Model() { resetState(/*suppressStatus=*/true); }
 
     bool isEmpty() { return loadedPath.isEmpty() || client == nullptr; }
     bool isLoaded() { return ! isEmpty(); }
 
-    void setStatus(ModelStatus newStatus)
+    void setStatus(ModelStatus newStatus, const String& pathContext = "")
     {
         status = newStatus;
 
         if (statusMessage != nullptr)
         {
-            statusMessage->setMessage("Model Status: " + enumToString(status));
+            String msg = enumToString(status);
+
+            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
+            if (shortPath.isNotEmpty())
+                msg += " | " + shortPath;
+
+            statusMessage->setMessage(msg);
+        }
+    }
+
+    void setFailure(const OpResult& result, const String& pathContext = "")
+    {
+        status = ModelStatus::FAILURE;
+
+        /* Record the classification alongside the raw traffic already logged by the
+           client, so that a log attached to a report shows which branch was taken */
+        DBG_AND_LOG("Model::setFailure: " + toLogString(result.getError())
+                    + (pathContext.isNotEmpty() ? " for \"" + pathContext + "\"" : String()));
+
+        if (statusMessage != nullptr)
+        {
+            String errMsg = toUserMessage(result.getError());
+            // Keep only the first line so the status bar stays readable
+            String shortMsg = errMsg.upToFirstOccurrenceOf("\n", false, false).trim();
+            if (shortMsg.isEmpty())
+                shortMsg = errMsg.trim();
+
+            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
+            String msg = "[error] " + shortMsg;
+            if (shortPath.isNotEmpty())
+                msg += " | " + shortPath;
+
+            statusMessage->setMessage(msg);
         }
     }
 
@@ -109,7 +141,7 @@ public:
     ModelComponentInfoList getInputTracks() { return inputTrackComponents; }
     ModelComponentInfoList getOutputTracks() { return outputTrackComponents; }
 
-    void resetState()
+    void resetState(bool suppressStatus = false)
     {
         metadata = ModelMetadata {};
 
@@ -124,7 +156,8 @@ public:
         loadedPath.clear();
         openablePath.clear();
 
-        setStatus(ModelStatus::EMPTY);
+        if (! suppressStatus)
+            setStatus(ModelStatus::EMPTY);
     }
 
     OpResult load(String pathToLoad)
@@ -137,12 +170,28 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, pathToLoad);
 
             return result;
         }
 
-        setStatus(ModelStatus::QUERYING_CONTROLS);
+        /* Settle on the address the provider itself uses before anything is queried
+           or recorded, so that the same model entered several ways is loaded, listed,
+           and linked to as one. */
+        String canonicalPath;
+
+        result = tempClient->resolveCanonicalPath(pathToLoad, canonicalPath);
+
+        if (result.failed())
+        {
+            setFailure(result, pathToLoad);
+
+            return result;
+        }
+
+        pathToLoad = canonicalPath;
+
+        setStatus(ModelStatus::QUERYING_CONTROLS, pathToLoad);
 
         // Initialize empty dictionary to hold query response
         DynamicObject::Ptr controls;
@@ -152,7 +201,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -164,7 +213,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -177,7 +226,7 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, pathToLoad);
 
             return result;
         }
@@ -189,12 +238,12 @@ public:
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, pathToLoad);
 
             return result;
         }
 
-        resetState();
+        resetState(/*suppressStatus=*/true);
 
         // Update model information if all loading operations are successful
         metadata = newMetadata;
@@ -210,7 +259,7 @@ public:
         loadedPath = pathToLoad;
         openablePath = client->inferDocumentationPath(loadedPath);
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return OpResult::ok();
     }
@@ -222,7 +271,7 @@ public:
 
         OpResult result = OpResult::ok();
 
-        setStatus(ModelStatus::PREPARING_REQUEST);
+        setStatus(ModelStatus::PREPARING_REQUEST, loadedPath);
 
         for (auto& fileEntry : inputFiles)
         {
@@ -235,7 +284,7 @@ public:
 
             if (result.failed())
             {
-                setStatus(ModelStatus::FAILURE);
+                setFailure(result, loadedPath);
 
                 return result;
             }
@@ -275,7 +324,7 @@ public:
 
                 if (result.failed())
                 {
-                    setStatus(ModelStatus::FAILURE);
+                    setFailure(result, loadedPath);
 
                     return result;
                 }
@@ -339,6 +388,19 @@ public:
             {
                 controlValue = var(comboBoxComponentInfo->value);
             }
+            else if (auto multiSelectComponentInfo =
+                         dynamic_cast<MultiSelectComponentInfo*>(componentInfo.get()))
+            {
+                // Gradio expects the selection of a multiselect dropdown as a list
+                Array<var> selectedValues;
+
+                for (const auto& selectedValue : multiSelectComponentInfo->values)
+                {
+                    selectedValues.add(var(String(selectedValue)));
+                }
+
+                controlValue = var(selectedValues);
+            }
             else if (auto fileComponentInfo = dynamic_cast<FileComponentInfo*>(componentInfo.get()))
             {
                 auto it = fileControlRemotePaths.find(fileComponentInfo->id);
@@ -375,36 +437,36 @@ public:
 
         DBG_AND_LOG("Model::process: Payload \"" + payloadJSON + "\" prepared for processing.");
 
-        setStatus(ModelStatus::PROCESSING);
+        setStatus(ModelStatus::PROCESSING, loadedPath);
 
         result = client->process(loadedPath, payloadJSON, outputFiles, labels);
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, loadedPath);
 
             return result;
         }
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return result;
     }
 
     OpResult cancel()
     {
-        setStatus(ModelStatus::CANCELING);
+        setStatus(ModelStatus::CANCELING, loadedPath);
 
         OpResult result = client->cancel(loadedPath);
 
         if (result.failed())
         {
-            setStatus(ModelStatus::FAILURE);
+            setFailure(result, loadedPath);
 
             return result;
         }
 
-        setStatus(ModelStatus::READY);
+        setStatus(ModelStatus::READY, loadedPath);
 
         return OpResult::ok();
     }
@@ -541,14 +603,25 @@ private:
                 }
                 else if (type == "dropdown")
                 {
+                    /* A dropdown declared with multiselect=True carries a list of
+                       values rather than a single one, and needs its own control */
+                    bool isMultiSelect = false;
+
+                    readBool(controlsDict, "multiselect", isMultiSelect);
+
                     std::shared_ptr<ModelComponentInfo> dropdownControl =
-                        std::make_shared<ComboBoxComponentInfo>(controlsDict);
+                        isMultiSelect
+                            ? std::static_pointer_cast<ModelComponentInfo>(
+                                  std::make_shared<MultiSelectComponentInfo>(controlsDict))
+                            : std::static_pointer_cast<ModelComponentInfo>(
+                                  std::make_shared<ComboBoxComponentInfo>(controlsDict));
 
                     newControls.push_back(dropdownControl);
                     tempComponentIDs.push_back(dropdownControl->id);
 
-                    DBG_AND_LOG("Model::extractInputs: Dropdown control \"" + dropdownControl->label
-                                + "\" extracted.");
+                    DBG_AND_LOG("Model::extractInputs: "
+                                + String(isMultiSelect ? "Multiselect dropdown" : "Dropdown")
+                                + " control \"" + dropdownControl->label + "\" extracted.");
                 }
                 else
                 {
