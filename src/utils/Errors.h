@@ -6,9 +6,12 @@
 
 #pragma once
 
+#include <optional>
+
 #include <juce_core/juce_core.h>
 
 #include "Enums.h"
+#include "Providers.h"
 
 using namespace juce;
 
@@ -27,6 +30,9 @@ struct ClientError
     String path;
     String client;
     String token;
+
+    // Absent when no client had been chosen yet, and so no key applies
+    std::optional<Provider> provider;
 };
 
 inline String toUserMessage(const ClientError& e)
@@ -148,6 +154,8 @@ struct HttpError
 
     // Optional diagnostic text extracted from the response body
     String detail = {};
+
+    std::optional<Provider> provider;
 };
 
 inline String toUserMessage(const HttpError& e)
@@ -332,7 +340,10 @@ inline String toUserMessage(const GradioError& e)
                 userMessage += "\n\nDetails: " + e.reason;
             }
 
-            userMessage += "\n\nPlease try again later, or use an account with available quota."
+            userMessage += "\n\nQuota is counted against whoever is signed in, and without an "
+                           "API key that is an anonymous session with only a few minutes of it. "
+                           "Click 'Settings' to add a key, or to switch to an account that has "
+                           "quota left, then try again."
                            "\n\nClick 'Open URL' to open the "
                            + e.describeTarget() + "'s page.";
 
@@ -392,6 +403,11 @@ inline String toUserMessage(const GradioError& e)
                 "\n\nThis Space runs on ZeroGPU, so the GPU quota may have been exhausted, "
                 "but it could equally be a runtime error in the model. Spaces using a version "
                 "of Gradio before 6.13 do not report enough for HARP to tell the two apart.";
+
+            userMessage +=
+                "\n\nIf it is quota, an API key is what raises it: quota is counted against "
+                "whoever is signed in, and without a key that is an anonymous session with "
+                "only a few minutes of it. Click 'Settings' to add one.";
 
             userMessage +=
                 "\n\nRunning the model from the Space's own page will report a quota message "
@@ -676,6 +692,54 @@ inline String toLogString(const Error& error)
     }
 
     return "UnknownError";
+}
+
+/**
+ * The provider whose API key an error points at, when adding or changing one could
+ * plausibly resolve it, and nothing when no key applies.
+ *
+ * This is what puts the settings button on the popup, so it covers exactly those
+ * messages that tell the user to add a key.
+ */
+inline std::optional<Provider> getAPIKeyProvider(const Error& error)
+{
+    if (const auto* e = std::get_if<ClientError>(&error))
+    {
+        if (e->type == ClientError::Type::InsufficientPermissions
+            || e->type == ClientError::Type::ModelNotFound)
+        {
+            return e->provider;
+        }
+    }
+
+    if (const auto* e = std::get_if<HttpError>(&error))
+    {
+        // The message for these asks the user to add a key for this provider
+        if (e->type == HttpError::Type::BadStatusCode
+            && (e->statusCode == 401 || e->statusCode == 403))
+        {
+            return e->provider;
+        }
+    }
+
+    if (const auto* e = std::get_if<GradioError>(&error))
+    {
+        /* Quota is charged against whoever is signed in, and an anonymous user is
+           allowed only a couple of minutes before it runs out, so adding a key is
+           the usual remedy rather than waiting. Indeterminate is included because
+           quota is one of the two causes it cannot tell apart.
+
+           Only a Space draws on that allowance. A Gradio app served from localhost
+           has no key to add, which is what isSpace distinguishes. */
+        if (e->isSpace
+            && (e->type == GradioError::Type::QuotaExceeded
+                || e->type == GradioError::Type::Indeterminate))
+        {
+            return Provider::HuggingFace;
+        }
+    }
+
+    return std::nullopt;
 }
 
 inline std::optional<String> getOpenablePath(const Error& error)
