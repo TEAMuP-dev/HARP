@@ -196,6 +196,19 @@ void PageSwitcher::resized()
     }
 }
 
+int PageSwitcher::getIndexForProvider(Provider provider) const
+{
+    for (int i = 0; i < (int) entries.size(); ++i)
+    {
+        if (entries[(size_t) i].page->getProvider() == provider)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void PageSwitcher::showPage(int idx)
 {
     for (int i = 0; i < (int) entries.size(); ++i)
@@ -233,6 +246,22 @@ LoginTab::LoginTab()
 
     sidebar.updateContent();
     sidebar.selectRow(0);
+}
+
+void LoginTab::showProvider(Provider provider)
+{
+    const int idx = loginPages.getIndexForProvider(provider);
+
+    if (idx < 0)
+    {
+        DBG_AND_LOG("LoginTab::showProvider: No page serves the requested provider.");
+
+        return;
+    }
+
+    /* Selecting the row rather than the page directly, so the sidebar highlight and
+       the visible page cannot disagree. */
+    sidebar.selectRow(idx);
 }
 
 void LoginTab::resized()

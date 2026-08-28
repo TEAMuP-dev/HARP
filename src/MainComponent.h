@@ -62,7 +62,8 @@ public:
 
     // File
     void importNewFile(File mediaFile, bool fromDAW = false);
-    void openSettingsWindow();
+    // Opens on a provider's API key when a failure points at one
+    void openSettingsWindow(std::optional<Provider> focusProvider = {});
 
     // View
     void viewStatusAreaCallback();

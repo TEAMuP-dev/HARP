@@ -15,18 +15,13 @@
 #include "../utils/Labels.h"
 #include "../utils/Logging.h"
 #include "../utils/Messages.h"
+#include "../utils/Providers.h"
 #include "../utils/Settings.h"
 
 using namespace juce;
 
 // TODO - hard-coded client strings for error-reporting
 //        can be deterministic based off of these enums
-enum class Provider
-{
-    HuggingFace,
-    Stability
-};
-
 struct SharedAPIKeys
 {
     void initializeAPIKeys()
@@ -221,7 +216,7 @@ public:
 
         if (! tokenValidationURL.isWellFormed())
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::InvalidURL, HttpError::Request::GET, tokenValidationPath });
         }
 
@@ -236,7 +231,7 @@ public:
 
         if (stream == nullptr)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::ConnectionFailed, HttpError::Request::GET, tokenValidationPath });
         }
 
@@ -247,10 +242,10 @@ public:
 
         if (statusCode != 200)
         {
-            return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
-                                              HttpError::Request::GET,
-                                              tokenValidationPath,
-                                              statusCode });
+            return fail(HttpError { HttpError::Type::BadStatusCode,
+                                    HttpError::Request::GET,
+                                    tokenValidationPath,
+                                    statusCode });
         }
 
         return OpResult::ok();
@@ -363,6 +358,23 @@ protected:
     String getJSONHeaders() const { return getCommonHeaders() + contentTypeJSONHeader; }
 
     SharedResourcePointer<StatusMessage> statusMessage;
+
+    /* Records which provider an error came from on its way out, the client being the
+       only layer that knows. Overloaded rather than templated so that error types
+       carrying no provider cannot be passed here by mistake. */
+    OpResult fail(ClientError error) const
+    {
+        error.provider = provider;
+
+        return OpResult::fail(error);
+    }
+
+    OpResult fail(HttpError error) const
+    {
+        error.provider = provider;
+
+        return OpResult::fail(error);
+    }
 
 private:
     String getAuthorizationHeader() const
