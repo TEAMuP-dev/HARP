@@ -79,13 +79,16 @@ public:
     void setTutorialHighlight(Rectangle<int> bounds);
     void setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds);
     void ensureTutorialModelLoaded();
+    bool isTutorialModelLoadInFlight() const { return tutorialModelLoadInFlight; }
     void resetTutorialAutoLoadedModel();
+    void ensureMediaClipboardVisible();
 
     ModelTab* getCurrentModelTab() const;
     ModelTab* getFirstModelTab() const;
-    
+
 
     // Bounds accessors for tutorial steps (public for WelcomeWindow)
+    Rectangle<int> getTabBarBounds();
     Rectangle<int> getModelSelectBounds();
     Rectangle<int> getControlsBounds();
     Rectangle<int> getInputTrackBounds();
@@ -162,6 +165,12 @@ private:
     Rectangle<int> tutorialHighlightRect;
     std::vector<Rectangle<int>> tutorialExtraHighlights;
     std::unique_ptr<WelcomeWindow> welcomeWindow;
+
+    // Set while the tutorial's fallback model is loading, so that repeated
+    // requests to load it do not stack up. The tab the tutorial opened on the
+    // user's behalf is remembered so that it can be closed again at the end.
+    bool tutorialModelLoadInFlight = false;
+    Component::SafePointer<ModelTab> tutorialCreatedTab;
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;

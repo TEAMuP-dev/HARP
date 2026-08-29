@@ -571,7 +571,7 @@ private:
                            .withNumRedirectsToFollow(5)
                            .withHttpRequestCmd("POST");
 
-        std::unique_ptr<InputStream> stream(endpoint.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(endpoint, options));
 
         if (stream == nullptr)
         {
@@ -622,7 +622,7 @@ private:
                            .withStatusCode(&statusCode)
                            .withNumRedirectsToFollow(5);
 
-        stream = endpoint.createInputStream(options);
+        stream = createRequestStream(endpoint, options);
 
         if (stream == nullptr)
         {
@@ -742,6 +742,12 @@ private:
         std::unique_ptr<InputStream> stream;
 
         OpResult result = makeGETRequestStream(endpoint, stream, errorPath, timeoutMs);
+
+        if (result.failed())
+        {
+            // No stream was opened, e.g. because the request was aborted
+            return result;
+        }
 
         // Remove file at target path if one already exists
         fileToDownload.deleteFile();

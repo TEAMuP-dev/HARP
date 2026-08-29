@@ -25,9 +25,12 @@ struct TutorialStep
     String description;
     std::function<Rectangle<int>(MainComponent*)> getHighlightBounds;
     std::function<std::vector<Rectangle<int>>(MainComponent*)> getExtraHighlights = nullptr;
+    // Steps that highlight the media clipboard need it on screen: it is hidden
+    // by default, and a step with no highlight just dims the whole window.
+    bool requiresMediaClipboard = false;
 };
 
-class WelcomeWindow : public DocumentWindow, public ChangeListener
+class WelcomeWindow : public DocumentWindow
 {
 public:
     WelcomeWindow(MainComponent* mainComp)
@@ -53,11 +56,7 @@ public:
         positionOnMainComponentDisplay();
 
         if (mainComponent)
-        {
-            if (auto* tab = mainComponent->getFirstModelTab())
-                tab->addChangeListener(this);
             mainComponent->setTutorialActive(true);
-        }
 
         rebuildSteps();
         updateStep();
@@ -66,53 +65,40 @@ public:
     ~WelcomeWindow() override
     {
         if (mainComponent)
-        {
-            if (auto* tab = mainComponent->getFirstModelTab())
-                tab->removeChangeListener(this);
             mainComponent->setTutorialActive(false);
-        }
     }
 
-    void changeListenerCallback(ChangeBroadcaster*) override
+    // Called by MainComponent whenever a model tab is opened, closed, or
+    // finishes loading a model.
+    void notifyModelStateChanged()
     {
-        // Model loaded/changed
-        if (pendingTutorialFallbackLoad)
-        {
-            if (mainComponent != nullptr)
-            {
-                auto* tab = mainComponent->getFirstModelTab();
-                auto model = tab != nullptr ? tab->getModel() : nullptr;
-                auto loadedPath = model ? model->getLoadedPath() : String();
-
-                autoLoadedByTutorialFallback = (loadedPath == TutorialConstants::fallbackModelPath);
-            }
-            pendingTutorialFallbackLoad = false;
-        }
-        else if (autoLoadedByTutorialFallback && mainComponent != nullptr)
-        {
-            auto* tab = mainComponent->getFirstModelTab();
-            auto model = tab != nullptr ? tab->getModel() : nullptr;
-            auto loadedPath = model ? model->getLoadedPath() : String();
-            if (loadedPath != TutorialConstants::fallbackModelPath)
-                autoLoadedByTutorialFallback = false;
-        }
-
         rebuildSteps();
 
-        if (content->currentStep > 0)
+        if (content->currentStep > 0 && steps.size() > 2 && isModelLoadedInCurrentTab())
         {
-            // Auto-jump to Step 3 ("Quick Start") if user loads a new model
+            // Auto-jump to Step 3 ("Quick Start") once a model is loaded
             // (Index 2 corresponds to "Quick Start")
-            if (steps.size() > 2)
-            {
-                content->currentStep = 2;
-            }
+            content->currentStep = 2;
         }
 
         updateStep();
     }
 
     void refreshHighlightForCurrentStep() { updateStep(); }
+
+    // The tutorial describes and highlights the tab that is on screen, so every
+    // step reads the model from the current tab rather than the first one.
+    std::shared_ptr<Model> getCurrentModel() const
+    {
+        auto* tab = mainComponent != nullptr ? mainComponent->getCurrentModelTab() : nullptr;
+        return tab != nullptr ? tab->getModel() : nullptr;
+    }
+
+    bool isModelLoadedInCurrentTab() const
+    {
+        auto model = getCurrentModel();
+        return model != nullptr && model->isLoaded();
+    }
 
     void rebuildSteps()
     {
@@ -136,10 +122,8 @@ public:
 
         String modelName = "current model";
 
-        if (mainComponent)
         {
-            auto* tab = mainComponent->getFirstModelTab();
-            auto model = tab != nullptr ? tab->getModel() : nullptr;
+            auto model = getCurrentModel();
             if (model && model->isLoaded())
             {
                 modelName = model->getMetadata().name;
@@ -183,8 +167,7 @@ public:
         // 4. Configure Parameters (Dynamic)
         if (mainComponent)
         {
-            auto* tab = mainComponent->getFirstModelTab();
-            auto model = tab != nullptr ? tab->getModel() : nullptr;
+            auto model = getCurrentModel();
             if (model && model->isLoaded())
             {
                 String controlsStepTitle = "Configure Parameters (Optional)";
@@ -275,7 +258,8 @@ public:
                   std::vector<Rectangle<int>> v;
                   v.push_back(c->getClipboardControlsBounds());
                   return v;
-              } });
+              },
+              true });
 
         // 8. Interface Summary
         steps.push_back(
@@ -291,7 +275,8 @@ public:
                   v.push_back(c->getInputTrackBounds());
                   v.push_back(c->getClipboardBounds());
                   return v;
-              } });
+              },
+              true });
 
         steps.push_back(
             { "All Set!",
@@ -663,6 +648,13 @@ private:
         if (steps.empty())
             return;
 
+        content->currentStep = jlimit(0, (int) steps.size() - 1, content->currentStep);
+
+        // Showing the clipboard resizes the main window, which re-enters this
+        // method, so it happens before anything holds a reference into steps
+        if (mainComponent != nullptr && steps[size_t(content->currentStep)].requiresMediaClipboard)
+            mainComponent->ensureMediaClipboardVisible();
+
         const auto& step = steps[size_t(content->currentStep)];
 
         content->titleLabel.setText(step.title, dontSendNotification);
@@ -718,16 +710,22 @@ private:
 
     void nextStep()
     {
-        if (content->currentStep == 1 && mainComponent != nullptr)
+        if (content->currentStep == 1 && mainComponent != nullptr && ! isModelLoadedInCurrentTab())
         {
-            auto* tab = mainComponent->getFirstModelTab();
-            auto model = tab != nullptr ? tab->getModel() : nullptr;
-            if (! model || ! model->isLoaded())
+            // A load is already running; the step advances by itself once the
+            // model arrives (see notifyModelStateChanged)
+            if (mainComponent->isTutorialModelLoadInFlight())
+                return;
+
+            if (! attemptedFallbackLoad)
             {
-                pendingTutorialFallbackLoad = true;
+                attemptedFallbackLoad = true;
                 mainComponent->ensureTutorialModelLoaded();
                 return;
             }
+
+            // The fallback load did not succeed. Carry on rather than leaving
+            // the user stuck on this step with a button that does nothing.
         }
 
         if (content->currentStep < (int) steps.size() - 1)
@@ -758,14 +756,15 @@ private:
             ! content->dontShowAgainToggle.getToggleState() ? "1" : "0";
         Settings::setValue("view.showWelcomePopup", showWelcomePopupUponNextStartup, true);
 
-        if (autoLoadedByTutorialFallback && mainComponent != nullptr)
+        if (mainComponent != nullptr)
             mainComponent->resetTutorialAutoLoadedModel();
 
         closeButtonPressed();
     }
 
-    bool pendingTutorialFallbackLoad = false;
-    bool autoLoadedByTutorialFallback = false;
+    // Whether the tutorial has already asked for the fallback model on the
+    // user's behalf, so that a failed load does not trap them on that step
+    bool attemptedFallbackLoad = false;
 
     std::vector<TutorialStep> steps;
 

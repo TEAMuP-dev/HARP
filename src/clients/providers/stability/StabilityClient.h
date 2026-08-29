@@ -396,7 +396,7 @@ private:
                            .withNumRedirectsToFollow(5)
                            .withHttpRequestCmd("POST");
 
-        std::unique_ptr<InputStream> stream(endpoint.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(endpoint, options));
 
         if (stream == nullptr)
         {

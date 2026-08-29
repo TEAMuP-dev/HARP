@@ -64,7 +64,8 @@ void MainComponent::paintOverChildren(Graphics& g)
             // Add extra highlights to the cutout path
             for (auto& rect : tutorialExtraHighlights)
             {
-                highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
+                if (! rect.isEmpty())
+                    highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
             }
 
             backgroundPath.setUsingNonZeroWinding(false);
@@ -73,11 +74,16 @@ void MainComponent::paintOverChildren(Graphics& g)
             g.fillPath(backgroundPath);
 
             g.setColour(Colours::white);
-            g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
+
+            // An empty rectangle is a region the current step has nothing to
+            // point at; outlining it would leave a stray mark in the corner
+            if (! tutorialHighlightRect.isEmpty())
+                g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
 
             for (auto& rect : tutorialExtraHighlights)
             {
-                g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
+                if (! rect.isEmpty())
+                    g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
             }
         }
     }
@@ -430,32 +436,63 @@ void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bound
 
 void MainComponent::ensureTutorialModelLoaded()
 {
+    // Loading is asynchronous, so without this guard every repeated call that
+    // arrives before the first load finishes - clicking Next again, say - would
+    // open yet another tab or start yet another load.
+    if (tutorialModelLoadInFlight)
+        return;
+
     auto* tab = getCurrentModelTab();
 
     if (tab == nullptr)
     {
+        // createNewTab() selects the tab it creates, which is what the tutorial
+        // steps compute their highlights against; leave it selected.
         tab = modelTabs.createNewTab();
-        modelTabs.setCurrentTabIndex(0);
-
-        if (welcomeWindow != nullptr)
-            tab->addChangeListener(welcomeWindow.get());
-
-        if (tab != nullptr)
-            tab->loadDefaultModel();
-        return;
+        tutorialCreatedTab = tab;
     }
 
-    if (! tab->isModelLoaded())
-        tab->loadDefaultModel();
+    if (tab->isModelLoaded())
+        return;
+
+    tutorialModelLoadInFlight = true;
+
+    Component::SafePointer<MainComponent> safeThis(this);
+    tab->onNextModelLoadComplete(
+        [safeThis](ModelTab*, bool)
+        {
+            if (safeThis != nullptr)
+                safeThis->tutorialModelLoadInFlight = false;
+        });
+
+    tab->loadDefaultModel();
 }
 
 void MainComponent::resetTutorialAutoLoadedModel()
 {
-    if (auto* tab = getCurrentModelTab())
-    {
-        if (tab->isModelLoaded() && tab->getLoadedPath() == TutorialConstants::fallbackModelPath)
-            tab->resetState();
-    }
+    // Close the tab the tutorial opened on the user's behalf. Resetting it in
+    // place would leave a blank tab behind, since a model tab has no model
+    // selection of its own - models are chosen on the Home tab.
+    if (auto* tab = tutorialCreatedTab.getComponent())
+        modelTabs.closeTab(tab);
+
+    tutorialCreatedTab = nullptr;
+}
+
+void MainComponent::ensureMediaClipboardVisible()
+{
+    if (! showMediaClipboard)
+        viewMediaClipboardCallback();
+}
+
+Rectangle<int> MainComponent::getTabBarBounds()
+{
+    auto& tabBar = modelTabs.getTabbedButtonBar();
+
+    if (tabBar.getNumTabs() == 0)
+        return {};
+
+    return getLocalArea(&tabBar, tabBar.getLocalBounds());
 }
 
 Rectangle<int> MainComponent::getModelSelectBounds()
@@ -469,9 +506,14 @@ Rectangle<int> MainComponent::getModelSelectBounds()
     if (auto* tab = getCurrentModelTab())
     {
         auto bounds = tab->getModelSelectBounds();
-        return getLocalArea(tab, bounds);
+
+        if (! bounds.isEmpty())
+            return getLocalArea(tab, bounds);
     }
-    return {};
+
+    // Models are selected on the Home tab, so while a model tab is showing,
+    // point at the tab bar that leads back to it.
+    return getTabBarBounds();
 }
 
 Rectangle<int> MainComponent::getControlsBounds()
@@ -680,5 +722,10 @@ void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
     if (source == &modelTabs)
     {
         updateWindowConstraints();
+
+        // Model tabs are created and closed while the tutorial is open, so it
+        // follows the container rather than subscribing to individual tabs.
+        if (welcomeWindow != nullptr)
+            welcomeWindow->notifyModelStateChanged();
     }
 }
