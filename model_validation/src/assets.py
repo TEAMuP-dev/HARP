@@ -35,14 +35,34 @@ __all__ = [
 # Configurable properties of synthesized inputs, with their default values
 AUDIO_DEFAULTS = {
     "sample_rate": 44100,   # Hz
-    "channels": 1,          # 1 = mono, 2 = stereo, ...
+    "num_channels": 1,      # 1 = mono, 2 = stereo, ...
     "duration": 2.0,        # seconds
     "ext": ".wav",          # container/format to write
 }
 MIDI_DEFAULTS = {
     "num_notes": 2,         # ascending notes from middle C
     "note_duration": 0.5,   # seconds per note (at the default 120 BPM)
+    "instrument": 0,        # General MIDI program number (0 = grand piano)
+    "channel": 0,           # MIDI channel (see MIDI_DRUM_CHANNEL)
     "ext": ".mid",
+}
+
+# Channels are numbered 0 to 15 throughout validation, as they are on the
+# wire and in mido, rather than the 1 to 16 a DAW displays. The two namings
+# are one apart, which is why the General MIDI drum channel is 9 here and is
+# the same channel widely called "channel 10". HARP counts from 1 internally
+# (juce::MidiMessage::getChannel), so a note written here on channel 9 is the
+# one HARP reports as channel 10 and marks as drums.
+MIDI_DRUM_CHANNEL = 9
+
+# The MIDI properties written into the file as numbers, with the range each
+# accepts and how to describe it. Both land in bytes the MIDI spec reserves
+# for a limited range, so an out-of-range value corrupts the stream rather
+# than failing on the way out, which is why they are checked as configuration.
+MIDI_RANGES = {
+    "instrument": (0, 127, "a General MIDI program number (0 is a grand "
+                           "piano, 24 a nylon guitar)"),
+    "channel": (0, 15, "a MIDI channel counted from 0"),
 }
 
 # The media kinds a `synthesized_inputs` block can configure. The text and
@@ -127,6 +147,30 @@ def synthesized_input_blocks(config: dict) -> list:
             if (block := (mapping or {}).get("synthesized_inputs"))]
 
 
+def check_midi_number(prop: str, value, where: str) -> None:
+    """
+    Reject a numeric MIDI property that falls outside the range it accepts.
+
+    Args:
+        prop (str): The property being checked, a key of MIDI_RANGES.
+        value: The configured value.
+        where (str): Where it was written, for reporting.
+
+    Raises:
+        ValueError: If the value is not a whole number within the range.
+    """
+
+    low, high, description = MIDI_RANGES[prop]
+
+    # bool is a subclass of int, so `channel: true` would otherwise pass as
+    # channel 1 rather than being reported as the mistake it is
+    if isinstance(value, bool) or not isinstance(value, int) \
+            or not low <= value <= high:
+        raise ValueError(
+            f"synthesized_inputs midi {prop} {value!r} (set in {where}) is "
+            f"not {description}. Give a whole number from {low} to {high}")
+
+
 def check_synthesized_inputs(config: dict) -> None:
     """
     Reject `synthesized_inputs` settings that nothing would act on.
@@ -134,10 +178,11 @@ def check_synthesized_inputs(config: dict) -> None:
     Only audio and MIDI inputs are built from properties. Text and JSON inputs
     are fixed placeholder files, and any other input a model declares has to
     come from a test case's `files` entry. An unrecognized media kind or
-    property name would therefore be read by nothing at all, and an audio
-    format this installation cannot write would leave models without inputs.
-    Reporting all three here turns them into one configuration error naming
-    the setting, rather than a set of models with skipped test cases.
+    property name would therefore be read by nothing at all, an audio format
+    this installation cannot write would leave models without inputs, and an
+    out-of-range MIDI number would corrupt the file it is written into.
+    Reporting them here turns each into one configuration error naming the
+    setting, rather than a set of models with skipped or misleading cases.
 
     Args:
         config (dict): Parsed configuration.
@@ -166,6 +211,11 @@ def check_synthesized_inputs(config: dict) -> None:
 
             if kind == "audio" and (props or {}).get("ext"):
                 exts.setdefault(str(props["ext"]), where)
+
+            if kind == "midi":
+                for prop in MIDI_RANGES:
+                    if (props or {}).get(prop) is not None:
+                        check_midi_number(prop, props[prop], where)
 
     unwritable = {ext: where for ext, where in exts.items()
                   if not can_write_audio(ext)}
@@ -296,15 +346,16 @@ class Assets:
 
         props = self.resolve("audio", overrides)
         sample_rate = int(props["sample_rate"])
-        channels = int(props["channels"])
+        num_channels = int(props["num_channels"])
         duration = float(props["duration"])
         ext = (ext or props["ext"]).lower()
 
-        path = (self.workdir /
-                f"test_input_{sample_rate}hz_{channels}ch_{duration:g}s{ext}")
+        path = (self.workdir / f"test_input_{sample_rate}hz_{num_channels}ch"
+                               f"_{duration:g}s{ext}")
 
-        return self.cached(("audio", sample_rate, channels, duration, ext),
-                           lambda: write_audio(path, duration, sample_rate, channels))
+        return self.cached(("audio", sample_rate, num_channels, duration, ext),
+                           lambda: write_audio(path, duration, sample_rate,
+                                               num_channels))
 
     def midi(self, overrides: dict | None = None, ext: str | None = None) -> Path:
         """
@@ -321,12 +372,18 @@ class Assets:
         props = self.resolve("midi", overrides)
         num_notes = int(props["num_notes"])
         note_duration = float(props["note_duration"])
+        instrument = int(props["instrument"])
+        channel = int(props["channel"])
         ext = (ext or props["ext"]).lower()
 
-        path = self.workdir / f"test_input_{num_notes}n_{note_duration:g}s{ext}"
+        path = (self.workdir /
+                f"test_input_{num_notes}n_{note_duration:g}s"
+                f"_inst{instrument}_ch{channel}{ext}")
 
-        return self.cached(("midi", num_notes, note_duration, ext),
-                           lambda: write_midi(path, num_notes, note_duration))
+        return self.cached(
+            ("midi", num_notes, note_duration, instrument, channel, ext),
+            lambda: write_midi(path, num_notes, note_duration, instrument,
+                               channel))
 
     def for_file_types(self, file_types: list,
                        overrides: dict | None = None) -> Path | None:
@@ -400,7 +457,7 @@ def write_bytes(path: Path, data: bytes) -> Path:
 
 
 def write_audio(path: Path, duration: float, sample_rate: int,
-                channels: int) -> Path:
+                num_channels: int) -> Path:
     """
     Write a sine sweep, which is a valid input for any audio model.
 
@@ -408,7 +465,7 @@ def write_audio(path: Path, duration: float, sample_rate: int,
         path (Path): Destination path, whose extension selects the format.
         duration (float): Length of the sweep in seconds.
         sample_rate (int): Sample rate in Hz.
-        channels (int): Number of (identical) channels to write.
+        num_channels (int): Number of (identical) channels to write.
 
     Returns:
         path (Path): The written file, for chaining.
@@ -419,12 +476,14 @@ def write_audio(path: Path, duration: float, sample_rate: int,
     # Sweep from 220 Hz up one octave over the clip
     freq = 220.0 + 220.0 * numpy.arange(n) / n
     mono = 0.5 * numpy.sin(2 * numpy.pi * freq * t)
-    soundfile.write(str(path), numpy.tile(mono[:, None], (1, channels)), sample_rate)
+    soundfile.write(str(path), numpy.tile(mono[:, None], (1, num_channels)),
+                    sample_rate)
 
     return path
 
 
-def write_midi(path: Path, num_notes: int, note_duration: float) -> Path:
+def write_midi(path: Path, num_notes: int, note_duration: float,
+               instrument: int = 0, channel: int = 0) -> Path:
     """
     Write a standard MIDI file (format 0) of ascending notes from middle C.
 
@@ -432,6 +491,8 @@ def write_midi(path: Path, num_notes: int, note_duration: float) -> Path:
         path (Path): Destination .mid path.
         num_notes (int): Number of notes to write.
         note_duration (float): Seconds each note sounds, at 120 BPM.
+        instrument (int): General MIDI program number the notes are played with
+        channel (int): MIDI channel the notes are written on, 0 to 15.
 
     Returns:
         path (Path): The written file, for chaining.
@@ -448,12 +509,13 @@ def write_midi(path: Path, num_notes: int, note_duration: float) -> Path:
             value >>= 7
         return bytes(out)
 
-    events = bytearray([0x00, 0xC0, 0x00])          # program change: grand piano
+    # The channel numbering matches the low nibble of a status byte directly
+    events = bytearray([0x00, 0xC0 | channel, instrument])   # program change
     for i in range(max(0, num_notes)):
-        pitch = 60 + (i * 2) % 24                   # ascending from middle C
-        events += bytes([0x00, 0x90, pitch, 0x64])  # note on
-        events += delta(ticks) + bytes([0x80, pitch, 0x40])
-    events += bytes([0x00, 0xFF, 0x2F, 0x00])       # end of track
+        pitch = 60 + (i * 2) % 24                            # from middle C
+        events += bytes([0x00, 0x90 | channel, pitch, 0x64])  # note on
+        events += delta(ticks) + bytes([0x80 | channel, pitch, 0x40])
+    events += bytes([0x00, 0xFF, 0x2F, 0x00])                # end of track
 
     header = b"MThd" + struct.pack(">IHHH", 6, 0, 1, MIDI_TICKS_PER_BEAT)
     track = b"MTrk" + struct.pack(">I", len(events)) + bytes(events)

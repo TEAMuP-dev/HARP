@@ -11,7 +11,8 @@ import mido
 
 
 __all__ = [
-    'read_midi_props'
+    'read_midi_props',
+    'note_voices'
 ]
 
 
@@ -25,8 +26,9 @@ def read_midi_props(label: str, path: str) -> dict:
 
     Returns:
         props (dict): num_tracks, num_notes (note-on events with non-zero
-            velocity), and duration (seconds, or None when it cannot be
-            determined, e.g. an asynchronous format-2 file).
+            velocity), duration (seconds, or None when it cannot be
+            determined, e.g. an asynchronous format-2 file), and the sorted
+            instruments and channels the notes use (see note_voices).
 
     Raises:
         AssertionError: If the file cannot be parsed as MIDI.
@@ -46,8 +48,44 @@ def read_midi_props(label: str, path: str) -> dict:
         # length is undefined for asynchronous (format 2) files
         duration = None
 
+    instruments, channels = note_voices(midi)
+
     return {
         "num_tracks": len(midi.tracks),
         "num_notes": num_notes,
         "duration": duration,
+        "instruments": instruments,
+        "channels": channels,
     }
+
+
+def note_voices(midi) -> tuple:
+    """
+    Collect the instruments and channels the notes are played with.
+
+    A note's instrument is the program last set on its channel. Program
+    changes apply only to their own channel, so each channel is tracked
+    separately. A file may spread one channel's events over several tracks
+    that play together, so the tracks are merged into a single time-ordered
+    stream before scanning. Notes preceding any program change on their
+    channel report the General MIDI default of 0.
+
+    Args:
+        midi (mido.MidiFile): The parsed file.
+
+    Returns:
+        instruments (list): Sorted program numbers the notes use, 0 to 127.
+        channels (list): Sorted channels the notes use, 0 to 15.
+    """
+
+    programs = {}
+    instruments, channels = set(), set()
+
+    for msg in mido.merge_tracks(midi.tracks):
+        if msg.type == "program_change":
+            programs[msg.channel] = msg.program
+        elif msg.type == "note_on" and msg.velocity > 0:
+            instruments.add(programs.get(msg.channel, 0))
+            channels.add(msg.channel)
+
+    return sorted(instruments), sorted(channels)

@@ -65,10 +65,10 @@ def read_audio_props(label: str, path: str) -> dict:
         path (str): Path to the audio file.
 
     Returns:
-        props (dict): channels, sample_rate, duration (seconds), rms_db (RMS
-            level in dBFS, or -inf for digital silence), subtype (libsndfile
-            encoding name), and bit_depth (int, or None for compressed
-            encodings).
+        props (dict): num_channels, sample_rate, duration (seconds), rms_db
+            (RMS level in dBFS, or -inf for digital silence), subtype
+            (libsndfile encoding name), and bit_depth (int, or None for
+            compressed encodings).
 
     Raises:
         AssertionError: If the file cannot be decoded or contains no audio.
@@ -95,7 +95,7 @@ def read_audio_props(label: str, path: str) -> dict:
     rms = math.sqrt(float((data * data).sum()) / data.size)
 
     return {
-        "channels": channels,
+        "num_channels": channels,
         "sample_rate": sample_rate,
         "duration": frames / sample_rate,
         "rms_db": 20 * math.log10(rms) if rms > 0 else float("-inf"),
