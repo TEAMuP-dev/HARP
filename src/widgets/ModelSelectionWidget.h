@@ -16,6 +16,7 @@
 #include "../gui/HoverHandler.h"
 #include "../gui/MultiButton.h"
 
+#include "../utils/Clients.h"
 #include "../utils/Errors.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
@@ -111,7 +112,7 @@ public:
         cancelButton.onClick = [this] { closePopup(); };
         addAndMakeVisible(cancelButton);
 
-        setSize(400, 80);
+        setSize(popupWidth, popupHeight);
     }
 
     ~CustomPathComponent() override
@@ -135,21 +136,51 @@ public:
     {
         Rectangle<int> fullArea = getLocalBounds();
 
+        /* TopLevelWindow::centreAroundComponent shrinks a dialog to fit the area it
+           is centered within, so this can be laid out smaller than the size asked
+           for. Fixed items would then exceed the space and leave the rest negative. */
+        if (fullArea.isEmpty())
+        {
+            pathEditor.setBounds({});
+            loadButton.setBounds({});
+            cancelButton.setBounds({});
+
+            return;
+        }
+
+        const int editorHeight = jmin(editorRowHeight, fullArea.getHeight());
+
         FlexBox fullPopup;
         fullPopup.flexDirection = FlexBox::Direction::column;
 
-        fullPopup.items.add(FlexItem(pathEditor).withHeight(30).withMargin(2));
+        fullPopup.items.add(FlexItem(pathEditor)
+                                .withHeight((float) editorHeight)
+                                .withMargin(jmin(2.0f, (float) fullArea.getHeight() / 4.0f)));
 
         FlexBox buttonsArea;
         buttonsArea.flexDirection = FlexBox::Direction::row;
 
-        buttonsArea.items.add(FlexItem(loadButton).withFlex(1).withMargin(10));
-        buttonsArea.items.add(FlexItem().withFlex(0.25));
-        buttonsArea.items.add(FlexItem(cancelButton).withFlex(1).withMargin(10));
+        // Margins have to shrink with the popup, or they consume more than there is
+        const float buttonMargin =
+            jmin(10.0f, (float) jmin(fullArea.getWidth(), fullArea.getHeight()) / 8.0f);
 
-        fullPopup.items.add(FlexItem(buttonsArea).withFlex(1));
+        buttonsArea.items.add(FlexItem(loadButton).withFlex(1).withMargin(buttonMargin));
+        buttonsArea.items.add(FlexItem().withFlex(0.25));
+        buttonsArea.items.add(FlexItem(cancelButton).withFlex(1).withMargin(buttonMargin));
+
+        fullPopup.items.add(FlexItem(buttonsArea).withFlex(1).withMinHeight(0.0f));
 
         fullPopup.performLayout(fullArea);
+
+        // FlexBox can still hand out negative sizes when the space runs out
+        for (auto* child : getChildren())
+        {
+            if (child->getWidth() < 0 || child->getHeight() < 0)
+            {
+                child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
+                                                             jmax(0, child->getHeight())));
+            }
+        }
     }
 
     void paint(Graphics& g) override
@@ -171,6 +202,10 @@ private:
             popup->exitModalState(0);
         }
     }
+
+    static constexpr int popupWidth = 400;
+    static constexpr int popupHeight = 80;
+    static constexpr int editorRowHeight = 30;
 
     TextEditor pathEditor;
     TextButton loadButton { "Load" };
@@ -212,7 +247,17 @@ public:
 
     void loadModelBypass(const String& modelPath)
     {
-        selectedPath = modelPath;
+        /* Reduce to the canonical form on the way in, so that the same model
+           entered three different ways is loaded, listed, and matched as one
+           entry rather than accumulating duplicates in the dropdown. */
+        selectedPath = canonicalizeModelPath(modelPath);
+
+        if (selectedPath != modelPath)
+        {
+            DBG_AND_LOG("ModelSelectionWidget::loadModelBypass: Path \""
+                        << modelPath << "\" resolved to \"" << selectedPath << "\".");
+        }
+
         sendChangeMessage();
     }
 
@@ -245,8 +290,16 @@ public:
         modelPathComboBox.setSelectedId(lastLoadedPathIndex + 1);
     }
 
-    void setSuccessfulState()
+    /* The path a model actually loaded from can differ from the one entered, since
+       the provider is asked for its exact spelling. The dropdown lists that one, so
+       the three ways of writing an address collapse to a single entry. */
+    void setSuccessfulState(const String& resolvedPath)
     {
+        if (resolvedPath.isNotEmpty())
+        {
+            selectedPath = resolvedPath;
+        }
+
         std::string loadedPath = selectedPath.toStdString();
 
         if (! sharedChoices->containsPath(loadedPath))
@@ -326,9 +379,36 @@ public:
             {
                 updatedEntry += validPathTryAgainTag;
             }
-            if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 503)
+            else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 429)
+            {
+                // Rate limiting says nothing about the model, only about how
+                // quickly it was asked for
+                updatedEntry += validPathTryAgainTag;
+            }
+            else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 503)
             {
                 updatedEntry += validPathBrokenTag;
+            }
+            else
+            {
+                updatedEntry += validPathErrorTag;
+            }
+        }
+        else if (const auto* e = std::get_if<GradioError>(&error))
+        {
+            /* A Space that is waking up is not a broken one, so it must not be
+               marked as down. The Hub was queried to determine the stage. */
+            if (e->type == GradioError::Type::SpaceStarting)
+            {
+                updatedEntry += validPathTryAgainTag;
+            }
+            else if (e->type == GradioError::Type::SpaceUnavailable)
+            {
+                updatedEntry += validPathBrokenTag;
+            }
+            else
+            {
+                updatedEntry += validPathErrorTag;
             }
         }
         else
@@ -534,7 +614,46 @@ private:
 
     SharedResourcePointer<SharedChoices> sharedChoices;
 
-    ComboBox modelPathComboBox;
+    /* A ComboBox that always opens its popup from the top of the list, showing all
+       items without scrolling to the currently-selected one first. Item 0 is the
+       custom path entry, which must stay reachable however far down the list the
+       loaded model sits. */
+    struct FullListComboBox : public ComboBox
+    {
+        void showPopup() override
+        {
+            auto& lf = getLookAndFeel();
+            auto label = std::unique_ptr<Label>(lf.createComboBoxTextBox(*this));
+
+            auto menu = getRootMenu() ? *getRootMenu() : PopupMenu();
+
+            /* The LookAndFeel asks for the selected item to be visible, which scrolls
+               the popup to it. Overriding that with an id no item can have leaves
+               nothing to scroll to, so the popup opens at the top showing every item. */
+            PopupMenu::Options opts =
+                lf.getOptionsForComboBoxPopupMenu(*this, *label).withItemThatMustBeVisible(0);
+
+            // Guard against the ComboBox being destroyed while the menu is open,
+            // as JUCE's own ComboBox::showPopup does via ModalCallbackFunction
+            Component::SafePointer<FullListComboBox> safeThis(this);
+
+            menu.showMenuAsync(opts,
+                               [safeThis](int result)
+                               {
+                                   if (safeThis == nullptr)
+                                       return;
+
+                                   // Match JUCE's standard comboBoxPopupMenuFinishedCallback:
+                                   // clear the popup-active flag before updating selection.
+                                   safeThis->hidePopup();
+
+                                   if (result != 0)
+                                       safeThis->setSelectedId(result, sendNotification);
+                               });
+        }
+    };
+
+    FullListComboBox modelPathComboBox;
     HoverHandler modelPathComboBoxHandler { modelPathComboBox };
 
     int lastLoadedPathIndex; // Keep track of last loaded index for load failure cases

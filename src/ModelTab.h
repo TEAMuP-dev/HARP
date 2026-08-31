@@ -1,10 +1,12 @@
 /**
  * @file ModelTab.h
  * @brief Reusable component containing HARP GUI elements and state for a single model.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author hugofloresgarcia, xribene, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
+
+#include <cmath>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -17,6 +19,7 @@
 
 #include "utils/Errors.h"
 #include "utils/Logging.h"
+#include "utils/Settings.h"
 #include "utils/Tutorial.h"
 
 using namespace juce;
@@ -147,8 +150,9 @@ public:
             controlAreaWidget.setBounds(0, 0, 0, 0);
         }
 
-        const float totalTracks =
-            inputTrackAreaWidget.getNumTracks() + outputTrackAreaWidget.getNumTracks();
+        // Weighting is by flexible tracks, so the total has to be of those too
+        const float totalTracks = (float) (inputTrackAreaWidget.getNumFlexibleTracks()
+                                           + outputTrackAreaWidget.getNumFlexibleTracks());
 
         /* Input Tracks Area Widget */
 
@@ -190,6 +194,8 @@ public:
                         totalTracks);
 
         tabArea.performLayout(getLocalBounds());
+
+        positionErrorPopup();
     }
 
     int getMinimumRequiredControlWidth() { return controlAreaWidget.getMinimumRequiredWidth(); }
@@ -229,6 +235,10 @@ public:
     void resetState()
     {
         model = std::make_shared<Model>();
+
+        // Publish the empty state so the status area does not keep
+        // showing the previous model's last status
+        model->setStatus(ModelStatus::EMPTY);
 
         modelSelectionWidget.resetState();
         modelInfoWidget.resetState();
@@ -286,9 +296,8 @@ private:
             return 0;
         }
 
-        const int perTrackWithMargin = minVisibleTrackHeight + 2 * marginSize;
-
-        return numTracks * perTrackWithMargin;
+        // The track area applies its own margins, so it owns this calculation
+        return TrackAreaWidget::getRequiredHeightForTracks(numTracks);
     }
 
     void addTrackSection(FlexBox& box,
@@ -306,9 +315,18 @@ private:
                               .withFlex(0)
                               .withMargin(marginSize));
 
-            float flex = 4.0f * (numTracks / totalTracks);
+            /* Weight by the tracks that actually stretch. Counting a fixed-height
+               track (a generic file picker) as a full share of flexible space gives
+               its section too much, so the flexible tracks beside it end up taller
+               than those in the other section. */
+            auto* area = dynamic_cast<const TrackAreaWidget*>(&trackArea);
 
-            int minHeight = getTrackAreaMinimumHeight(numTracks);
+            const int flexibleTracks = area != nullptr ? area->getNumFlexibleTracks() : numTracks;
+            const int fixedHeight = area != nullptr ? area->getFixedTracksHeight() : 0;
+
+            float flex = totalTracks > 0.0f ? 4.0f * ((float) flexibleTracks / totalTracks) : 0.0f;
+
+            int minHeight = getTrackAreaMinimumHeight(flexibleTracks) + fixedHeight;
 
             box.items.add(FlexItem(trackArea)
                               .withFlex(flex)
@@ -324,79 +342,179 @@ private:
 
     void openErrorPopup(const Error error, std::function<void()> onExit = {})
     {
-        MessageBoxOptions errorPopup =
-            MessageBoxOptions()
-                .withIconType(AlertWindow::WarningIcon)
-                .withTitle("Error") // TODO - Name of error family would be nice here
-                // error ? toUserMessage(*error) : "An unknown error occurred."
-                .withMessage(toUserMessage(error));
-
         std::optional<String> openablePath = getOpenablePath(error);
+        String errorMessage = toUserMessage(error);
+
+        DBG_AND_LOG("ModelTab::openErrorPopup: " + toLogString(error));
+
+        // Determine whether this error warrants a GitHub bug report.
+        // Quota errors, invalid paths, and expected HTTP failures are user-actionable
+        // and do not need a report. Only unexpected runtime and parse errors do.
+        bool isReportableError = false;
+        if (const auto* gradioErr = std::get_if<GradioError>(&error))
+            isReportableError = (gradioErr->type == GradioError::Type::RuntimeError);
+        else if (std::get_if<JsonError>(&error) || std::get_if<ControlError>(&error))
+            isReportableError = true;
+
+        // If a popup is being replaced, its pending cleanup must still run so the
+        // widgets it was responsible for re-enabling do not stay disabled
+        dismissErrorPopup();
+
+        errorPopupWindow = std::make_unique<BottomButtonAlertWindow>(
+            "Error", errorMessage, AlertWindow::WarningIcon);
+        centredAlertLF.messageText = errorMessage;
+        errorPopupWindow->setLookAndFeel(&centredAlertLF);
+        errorPopupOnExit = std::move(onExit);
+
+        auto addPopupButton = [this](const String& buttonText, std::function<void()> callback)
+        {
+            errorPopupWindow->addButton(buttonText, 0);
+
+            if (auto* button = errorPopupWindow->getButton(buttonText))
+                button->onClick = std::move(callback);
+        };
 
         if (openablePath.has_value())
         {
-            errorPopup = errorPopup.withButton("Open URL");
+            addPopupButton("Open URL",
+                           [openablePath] { URL(*openablePath).launchInDefaultBrowser(); });
         }
 
-        errorPopup = errorPopup.withButton("Open Logs").withButton("Ok");
+        addPopupButton("Open Logs", [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
 
-        auto alertCallback = [this, error, openablePath, onExit, errorPopup](int choice)
+        if (isReportableError)
         {
-            DBG_AND_LOG("ModelTab::loadModelCallback::alertCallback: Chose button index: " << choice
-                                                                                           << ".");
+            addPopupButton("Report",
+                           [this, error, errorMessage]
+                           {
+                               // Open GitHub issue but keep the popup open
+                               openGitHubIssue(error, errorMessage);
+                           });
+        }
 
-            enum Choice
+        addPopupButton("Ok", [this] { dismissErrorPopup(); });
+
+        addAndMakeVisible(*errorPopupWindow);
+        errorPopupWindow->setAlwaysOnTop(true);
+
+        positionErrorPopup();
+        errorPopupWindow->toFront(true);
+    }
+
+    void dismissErrorPopup()
+    {
+        if (errorPopupOnExit)
+        {
+            // Clear before invoking in case the callback opens another popup
+            auto pendingOnExit = std::move(errorPopupOnExit);
+            errorPopupOnExit = {};
+            pendingOnExit();
+        }
+
+        if (errorPopupWindow != nullptr)
+        {
+            removeChildComponent(errorPopupWindow.get());
+            errorPopupWindow->setVisible(false);
+            errorPopupWindow->setLookAndFeel(nullptr);
+
+            /* Defer destruction: this can be reached from one of the popup's own
+               button callbacks, and a Button must not be destroyed from inside
+               its own onClick. The lambda holds the last reference and releases
+               it on the message thread. */
+            std::shared_ptr<BottomButtonAlertWindow> oldPopup = std::move(errorPopupWindow);
+            MessageManager::callAsync([oldPopup] {});
+        }
+    }
+
+    void positionErrorPopup()
+    {
+        if (errorPopupWindow == nullptr)
+        {
+            return;
+        }
+
+        Component* topLevel = getTopLevelComponent();
+
+        // Size based on full window width so the popup is never squashed when
+        // the media clipboard panel is open and ModelTab is narrow.
+        int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
+        int windowHeight = (topLevel != nullptr) ? topLevel->getHeight() : getHeight();
+        int popupWidth = jmin(520, windowWidth - 24);
+
+        /* Measure the wrapped message so the popup is tall enough to show all
+           of it, using the same font and insets as CentredAlertLookAndFeel */
+        AttributedString attrStr;
+        attrStr.append(centredAlertLF.messageText, Font(popupMessageFontHeight));
+
+        TextLayout layout;
+        layout.createLayout(attrStr, (float) (popupWidth - 2 * (popupEdgeGap + popupIconWidth)));
+
+        const int buttonH = centredAlertLF.getAlertWindowButtonHeight();
+        int popupHeight = popupEdgeGap + popupTitleHeight + (int) std::ceil(layout.getHeight())
+                          + popupEdgeGap + buttonH + popupButtonBottomPadding;
+        popupHeight = jlimit(180, jmax(180, windowHeight - 24), popupHeight);
+
+        // Find the window's center in screen space, then convert to ModelTab's
+        // local coordinate space so the popup is centered in the full window
+        // regardless of where ModelTab sits within it.
+        Point<int> windowCentreScreen =
+            (topLevel != nullptr)
+                ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
+                : localPointToGlobal(getLocalBounds().getCentre());
+        Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
+
+        errorPopupWindow->setBounds(
+            Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
+    }
+
+    void openGitHubIssue(const Error& error, const String& errorMessage)
+    {
+        static const String issueBaseUrl = "https://github.com/TEAMuP-dev/HARP/issues/new";
+        static const String issueTemplate = "runtime_error_report.yml";
+
+        String issueTitle = "HARP runtime error report";
+        String endpointPath;
+
+        if (const auto* gradioError = std::get_if<GradioError>(&error))
+        {
+            if (gradioError->reason.isNotEmpty())
             {
-                OpenURL,
-                OpenLogs,
-                OK
-            };
-
-            /*
-            TODO - The button indices assigned by MessageBoxOptions do not follow the order in which
-            they were added. This should be fixed in JUCE v8. The following is a temporary workaround.
-
-            See https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
-
-            When this is fixed, errorPopup can be removed from the argument list.
-            */
+                issueTitle = "HARP: " + gradioError->reason;
+            }
+            else if (gradioError->type == GradioError::Type::QuotaExceeded)
             {
-                std::map<int, int> observedButtonIndicesMap = {};
-
-                if (errorPopup.getNumButtons() == 3)
-                {
-                    observedButtonIndicesMap.insert({ 1, Choice::OpenURL });
-                }
-
-                observedButtonIndicesMap.insert(
-                    { errorPopup.getNumButtons() - 1, Choice::OpenLogs });
-
-                observedButtonIndicesMap.insert({ 0, Choice::OK });
-
-                choice = observedButtonIndicesMap[choice];
+                issueTitle = "HARP: Hugging Face quota exceeded";
             }
 
-            if (choice == Choice::OpenURL)
-            {
-                URL(*openablePath).launchInDefaultBrowser();
-            }
-            else if (choice == Choice::OpenLogs)
-            {
-                HARPLogger::getInstance()->getLogFile().revealToUser();
-            }
-            else
-            {
-                // Nothing to do
-            }
+            endpointPath = gradioError->endpointPath;
+        }
 
-            if (onExit)
-            {
-                // Perform optional state cleanup
-                onExit();
-            }
-        };
+        String environment;
+        environment << "- HARP version: " << JUCE_APPLICATION_VERSION_STRING << "\n";
+        environment << "- Time (local): " << Time::getCurrentTime().toString(true, true) << "\n";
+        environment << "- Log file: " << HARPLogger::getInstance()->getLogFile().getFullPathName();
 
-        AlertWindow::showAsync(errorPopup, alertCallback);
+        /* Only values are supplied here. The report's structure lives solely in
+           the issue form, whose field ids these query parameters correspond to.
+           See .github/ISSUE_TEMPLATE/runtime_error_report.yml */
+        StringPairArray fields;
+        fields.set("title", issueTitle);
+        fields.set("summary", errorMessage);
+        fields.set("environment", environment);
+
+        if (endpointPath.isNotEmpty())
+        {
+            fields.set("endpoint", endpointPath);
+        }
+
+        String query = "?template=" + URL::addEscapeChars(issueTemplate, true);
+
+        for (const auto& key : fields.getAllKeys())
+        {
+            query += "&" + key + "=" + URL::addEscapeChars(fields[key], true);
+        }
+
+        URL(issueBaseUrl + query).launchInDefaultBrowser();
     }
 
     void loadModelCallback()
@@ -423,7 +541,7 @@ private:
                     {
                         if (result.wasOk())
                         {
-                            modelSelectionWidget.setSuccessfulState();
+                            modelSelectionWidget.setSuccessfulState(model->getLoadedPath());
 
                             modelInfoWidget.updateLabels(model->getMetadata());
                             modelInfoWidget.addOpenablePath(model->getOpenablePath());
@@ -599,6 +717,152 @@ private:
         inputTrackAreaWidget.setLoadTrackEnabled(true);
     }
 
+    // Shared popup layout metrics, used by CentredAlertLookAndFeel when drawing
+    // and by positionErrorPopup when measuring the required popup height
+    static constexpr int popupButtonBottomPadding = 24;
+    static constexpr int popupEdgeGap = 10;
+    static constexpr int popupIconWidth = 80;
+    static constexpr int popupTitleHeight = 24;
+    static constexpr float popupMessageFontHeight = 16.0f;
+
+    /* LookAndFeel override that lays the AlertWindow message out over the whole
+       window rather than JUCE's default text area. The text area is re-derived from
+       the actual window height, reserving the strip at the bottom that
+       BottomButtonAlertWindow moves the buttons into. */
+    struct CentredAlertLookAndFeel : public LookAndFeel_V4
+    {
+        String messageText; // set before showing the popup
+
+        void drawAlertBox(Graphics& g,
+                          AlertWindow& alert,
+                          const Rectangle<int>& /*textArea*/,
+                          TextLayout& /*unused*/) override
+        {
+            // Background
+            auto cornerSize = 4.0f;
+            g.setColour(alert.findColour(AlertWindow::outlineColourId));
+            g.drawRoundedRectangle(alert.getLocalBounds().toFloat(), cornerSize, 2.0f);
+
+            auto bounds = alert.getLocalBounds().reduced(1);
+            g.reduceClipRegion(bounds);
+
+            g.setColour(alert.findColour(AlertWindow::backgroundColourId));
+            g.fillRoundedRectangle(bounds.toFloat(), cornerSize);
+
+            // Icon
+            auto iconSpaceUsed = 0;
+            const auto iconWidth = popupIconWidth;
+            auto iconSize = jmin(iconWidth + 50, bounds.getHeight() + 20);
+
+            if (alert.containsAnyExtraComponents() || alert.getNumButtons() > 2)
+                iconSize = jmin(iconSize, 200);
+
+            Rectangle<int> iconRect(iconSize / -10, iconSize / -10, iconSize, iconSize);
+
+            if (alert.getAlertType() != MessageBoxIconType::NoIcon)
+            {
+                Path icon;
+                char character;
+                uint32 color;
+
+                if (alert.getAlertType() == MessageBoxIconType::WarningIcon)
+                {
+                    character = '!';
+                    icon.addTriangle((float) iconRect.getX() + (float) iconRect.getWidth() * 0.5f,
+                                     (float) iconRect.getY(),
+                                     (float) iconRect.getRight(),
+                                     (float) iconRect.getBottom(),
+                                     (float) iconRect.getX(),
+                                     (float) iconRect.getBottom());
+                    icon = icon.createPathWithRoundedCorners(5.0f);
+                    color = 0x66ff2a00;
+                }
+                else
+                {
+                    color = Colour(0xff00b0b9).withAlpha(0.4f).getARGB();
+                    character = alert.getAlertType() == MessageBoxIconType::InfoIcon ? 'i' : '?';
+                    icon.addEllipse(iconRect.toFloat());
+                }
+
+                GlyphArrangement ga;
+                ga.addFittedText({ (float) iconRect.getHeight() * 0.9f, Font::bold },
+                                 String::charToString((juce_wchar) (uint8) character),
+                                 (float) iconRect.getX(),
+                                 (float) iconRect.getY(),
+                                 (float) iconRect.getWidth(),
+                                 (float) iconRect.getHeight(),
+                                 Justification::centred,
+                                 false);
+                ga.createPath(icon);
+                icon.setUsingNonZeroWinding(false);
+                g.setColour(Colour(color));
+                g.fillPath(icon);
+
+                iconSpaceUsed = iconWidth;
+            }
+
+            if (messageText.isNotEmpty())
+            {
+                const int buttonH = getAlertWindowButtonHeight();
+                const int titleH = popupTitleHeight;
+                const int edgeGap = popupEdgeGap;
+                const int bottomOfText =
+                    alert.getHeight() - buttonH - popupButtonBottomPadding - edgeGap;
+
+                const int rightPadding = edgeGap + iconSpaceUsed;
+                Rectangle<float> fullTextArea(
+                    (float) (edgeGap + iconSpaceUsed),
+                    (float) (edgeGap + titleH),
+                    (float) (alert.getWidth() - edgeGap - iconSpaceUsed - rightPadding),
+                    (float) (bottomOfText - (edgeGap + titleH)));
+
+                Font msgFont(popupMessageFontHeight);
+
+                AttributedString attrStr;
+                attrStr.setJustification(Justification::topLeft);
+                attrStr.append(messageText, msgFont, alert.findColour(AlertWindow::textColourId));
+
+                TextLayout layout;
+                layout.createLayout(attrStr, fullTextArea.getWidth());
+                layout.draw(g, fullTextArea);
+            }
+        }
+    };
+
+    class BottomButtonAlertWindow : public AlertWindow
+    {
+    public:
+        BottomButtonAlertWindow(const String& title,
+                                const String& message,
+                                MessageBoxIconType iconType)
+            : AlertWindow(title, message, iconType)
+        {
+        }
+
+        void resized() override
+        {
+            const int buttonH = getLookAndFeel().getAlertWindowButtonHeight();
+            const int targetY = getHeight() - popupButtonBottomPadding - buttonH;
+            const int spacer = 16;
+
+            Array<TextButton*> btns;
+            for (int i = 0; i < getNumChildComponents(); ++i)
+                if (auto* btn = dynamic_cast<TextButton*>(getChildComponent(i)))
+                    btns.add(btn);
+
+            int totalWidth = -spacer;
+            for (auto* btn : btns)
+                totalWidth += btn->getWidth() + spacer;
+
+            int x = (getWidth() - totalWidth) / 2;
+            for (auto* btn : btns)
+            {
+                btn->setTopLeftPosition(x, targetY);
+                x += btn->getWidth() + spacer;
+            }
+        }
+    };
+
     static constexpr float marginSize = 2;
 
     static constexpr int modelSelectionRowHeight = 30;
@@ -606,7 +870,6 @@ private:
     static constexpr int processButtonWidth = 150;
     static constexpr int processButtonRowHeight = 30;
     static constexpr int trackSectionLabelHeight = 20;
-    static constexpr int minVisibleTrackHeight = 50;
 
     std::shared_ptr<Model> model { new Model() };
 
@@ -628,4 +891,7 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    CentredAlertLookAndFeel centredAlertLF;
+    std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;
+    std::function<void()> errorPopupOnExit;
 };

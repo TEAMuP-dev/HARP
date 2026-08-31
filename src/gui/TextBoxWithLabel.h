@@ -46,6 +46,10 @@ public:
         textBox.setBounds(textBoxArea);
     }
 
+    int getPreferredWidth() const override { return preferredTextBoxWidth; }
+
+    int getPreferredHeight() const override { return preferredTextBoxHeight; }
+
     int getMinimumRequiredWidth() const override
     {
         const int labelWidth = getLabelWidth(label);
@@ -57,6 +61,9 @@ public:
     void setText(const String& text) { textBox.setText(text, dontSendNotification); }
 
 private:
+    static constexpr int preferredTextBoxWidth = 200;
+    static constexpr int preferredTextBoxHeight = 84;
+
     static constexpr int minTextBoxWidth = 120;
 
     Label label;

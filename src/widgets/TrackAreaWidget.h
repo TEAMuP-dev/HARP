@@ -134,6 +134,63 @@ public:
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
+    /** Tracks that expand to fill the space given to them. */
+    int getNumFlexibleTracks() const
+    {
+        int count = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            if (m->getFixedHeight() <= 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /** Height claimed by tracks with a fixed height, margins included. */
+    int getFixedTracksHeight() const
+    {
+        int total = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            const int fixed = m->getFixedHeight();
+
+            if (fixed > 0)
+            {
+                total += fixed + 2 * static_cast<int>(marginSize);
+            }
+        }
+
+        return total;
+    }
+
+    /**
+     * Height needed to show a number of tracks at their minimum size.
+     *
+     * The margin applied to each track lives here, so the calculation does too:
+     * a caller reserving space with its own margin will come up short, by more
+     * for every additional track.
+     */
+    static int getRequiredHeightForTracks(int numTracks)
+    {
+        if (numTracks <= 0)
+        {
+            return 0;
+        }
+
+        return numTracks
+               * (MediaDisplayComponent::minimumUsefulHeight + 2 * static_cast<int>(marginSize));
+    }
+
+    static_assert(MediaDisplayComponent::minimumUsefulHeight
+                      > MediaDisplayComponent::fixedChromeHeight,
+                  "A track must be taller than its fixed strips, or the media content is "
+                  "laid out with a negative height.");
+
     void resized() override
     {
         FlexBox mainBox;
@@ -168,7 +225,10 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                            gap = FlexItem(ghostTrack)
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     else
                     {
@@ -176,7 +236,10 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                            gap = FlexItem()
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     mainBox.items.add(gap);
                 }
@@ -195,7 +258,7 @@ public:
                 }
                 else
                 {
-                    i = i.withFlex(1).withMinHeight(50);
+                    i = i.withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight);
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
@@ -213,7 +276,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                        gap = FlexItem(ghostTrack)
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 else
                 {
@@ -221,7 +287,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                        gap = FlexItem()
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 mainBox.items.add(gap);
             }
@@ -744,7 +813,7 @@ private:
     const DisplayMode displayMode;
     const int fixedTrackHeight = 0;
 
-    const float marginSize = 4;
+    static constexpr float marginSize = 4;
     int fixedTotalWidth = 0;
     int minTotalHeight = 0;
 

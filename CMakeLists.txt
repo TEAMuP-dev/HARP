@@ -1,6 +1,6 @@
 # The first line of any CMake project should be a call to `cmake_minimum_required`, which checks
 # that the installed CMake will be able to understand the following CMakeLists, and ensures that
-# CMake's behaviour is compatible with the named version. This is a standard CMake command, so more
+# CMake's behavior is compatible with the named version. This is a standard CMake command, so more
 # information can be found in the CMake docs.
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "HARP")
@@ -88,8 +88,10 @@ target_sources(${PROJECT_NAME}
         src/gui/MultiButton.cpp
         src/gui/HoverableLabel.h
         src/gui/TextBoxWithLabel.h
+        src/gui/NumberBoxWithLabel.h
         src/gui/SliderWithLabel.h
         src/gui/ComboBoxWithLabel.h
+        src/gui/MultiSelectWithLabel.h
         src/gui/HoverHandler.h
         src/gui/ControlComponent.h
         src/gui/ToggleWithLabel.h
@@ -109,9 +111,10 @@ target_sources(${PROJECT_NAME}
 
         src/clients/Client.h
         src/clients/GradioClient.h
-        src/clients/GradioClient.h
+        src/clients/providers/stability/StabilityClient.h
 
         src/utils/Logging.h
+        src/utils/Messages.h
         src/utils/Settings.h
         src/utils/Interface.h
         src/utils/Controls.h

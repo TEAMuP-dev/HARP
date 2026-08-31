@@ -459,8 +459,10 @@ void MediaDisplayComponent::resized()
         overheadPanel.setBounds(0, 0, 0, 0);
     }
 
-    // Media component takes remaining space
-    mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1));
+    /* Media component takes the remaining space. FlexBox hands it whatever is left
+       after the fixed strips above and below, which can be nothing at all when the
+       track is very short, so a floor of zero is enforced. */
+    mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1).withMinHeight(0.0f));
 
     if (timeAxisStrip != nullptr)
     {
@@ -489,6 +491,16 @@ void MediaDisplayComponent::resized()
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
+
+    // Protect against a negative height when the fixed strips exceed the container
+    for (auto* child : mediaAreaContainer.getChildren())
+    {
+        if (child->getWidth() < 0 || child->getHeight() < 0)
+        {
+            child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
+                                                         jmax(0, child->getHeight())));
+        }
+    }
 
     if (! isLabelRepositioningScheduled)
     {
@@ -1081,9 +1093,12 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     if (pps <= 0.0f)
         return;
 
-    const double minVisibleSeconds = 5.0;
+    const double minVisibleSeconds = 0.1;
+
     const float minPps = static_cast<float>(mediaWidth / totalLength);
     float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
+
+    // Media shorter than the floor can still only be shown in full
     maxPps = jmax(maxPps, minPps);
 
     float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
@@ -1123,11 +1138,15 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    if (isThumbnailTrack())
+    /* Whatever this track does not act on has to be handed upwards explicitly:
+       Component::mouseWheelMove is what walks the event up to the panel viewport,
+       so returning without calling it swallows the scroll. The same predicate the
+       viewport consults decides that, so the two cannot disagree. */
+    if (! usesMouseWheel())
     {
         Component::mouseWheelMove(evt, wheel);
     }
-    else if (isFileLoaded())
+    else
     {
 #if (JUCE_MAC)
         bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
@@ -1161,10 +1180,6 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 // Do nothing
             }
         }
-    }
-    else
-    {
-        // Ignore mouse wheel events
     }
 }
 
@@ -1256,13 +1271,13 @@ void MediaDisplayComponent::updateCursorPosition()
 
     if (isPlaying() && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
     {
-        currentPositionCursor.setVisible(! isThumbnailTrack());
+        currentPositionCursor.setVisible(hasPlaybackCursor());
     }
     else if (isFileLoaded() && ! isPlaying()
              && (getMediaComponent()->isMouseButtonDown(false)
                  && getLocalBounds().contains(getMouseXYRelative())))
     {
-        currentPositionCursor.setVisible(! isThumbnailTrack());
+        currentPositionCursor.setVisible(hasPlaybackCursor());
     }
     else
     {
