@@ -1,0 +1,407 @@
+name: PR - Build / Test
+
+# triggers the workflow to run on pull request or manually.
+# DESIGN CHOICES: could add daily auto trigger, 
+# trigger on github release, trigger on issue open, etc.
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# assign actions permissions
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04 # run job on ubuntu linux compiler
+
+    steps:
+
+      # pulls repo to be built by workflow
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # install compilers, build system, coverage tool, and python
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+      
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            lcov \
+            python3 \
+            ninja-build \
+            libasound2-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libfreetype6-dev \
+            libwebkit2gtk-4.0-dev \
+            libglu1-mesa-dev \
+            libcurl4-openssl-dev
+
+      # configure project into a build directory, 
+      # set to debug mode, and set coverage flags
+      - name: Configure CMake (with coverage)
+        run: cmake -S . -B build -G Ninja -DHARP_BUILD_TESTS=ON -DHARP_ENABLE_COVERAGE=ON  -DCMAKE_BUILD_TYPE=Debug
+
+      # compile library and tests
+      - name: Build HARP application
+        run: cmake --build build --target HARP --parallel 2
+
+      - name: Build unit tests
+        run: cmake --build build --target harp_tests --parallel 2
+
+      - name: Capture coverage baseline
+        shell: bash
+        run: |
+          lcov \
+            --capture \
+            --initial \
+            --directory build \
+            --output-file coverage-base.info \
+            --rc geninfo_unexecuted_blocks=1
+
+      # runs all tests registered by add_test()
+      # GTEST_OUTPUT creates a structured XML report containing each GoogleTest case.
+      - name: Run tests
+        id: tests
+        shell: bash
+        env:
+          GTEST_OUTPUT: xml:${{ github.workspace }}/test-results.xml
+        run: |
+          set -o pipefail
+          ctest \
+            --test-dir build \
+            --output-on-failure \
+            2>&1 | tee test-results.txt
+      
+      # report which tests failed and what lines 
+      - name: Add test failure details
+        if: failure() && steps.tests.outcome == 'failure'
+        shell: bash
+        run: |
+          {
+            echo "## ❌ Failed Tests"
+            echo
+            echo '```text'
+            grep -E "FAILED|Failure|error:|Errors while running CTest" test-results.txt || cat test-results.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+            # Convert failed GoogleTest results into native GitHub source annotations.
+      - name: Annotate failed tests
+        if: ${{ always() && steps.tests.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+
+          report_path = "test-results.xml"
+          workspace = os.path.normpath(
+              os.environ.get("GITHUB_WORKSPACE", "")
+          )
+
+          if not os.path.exists(report_path):
+              print(
+                  f"GoogleTest XML report not found: {report_path}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          try:
+              tree = ET.parse(report_path)
+          except ET.ParseError as error:
+              print(
+                  f"Could not parse {report_path}: {error}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          # Matches locations such as:
+          # /home/runner/work/HARP/HARP/tests/example_tests.cpp:42:
+          # tests/example_tests.cpp:42:
+          location_pattern = re.compile(
+              r"(?P<file>(?:[A-Za-z]:)?[^:\n]+?\."
+              r"(?:cpp|cc|cxx|c|h|hpp|hxx))"
+              r":(?P<line>\d+):"
+          )
+
+          def escape_message(value: str) -> str:
+              """Escape text used after the :: separator."""
+              return (
+                  value
+                  .replace("%", "%25")
+                  .replace("\r", "%0D")
+                  .replace("\n", "%0A")
+              )
+
+          def escape_property(value: str) -> str:
+              """Escape annotation properties such as file and title."""
+              return (
+                  value
+                  .replace("%", "%25")
+                  .replace("\r", "%0D")
+                  .replace("\n", "%0A")
+                  .replace(":", "%3A")
+                  .replace(",", "%2C")
+              )
+
+          def repository_relative_path(path: str) -> str:
+              if not path:
+                  return ""
+
+              normalized = os.path.normpath(path.strip())
+
+              if workspace:
+                  try:
+                      relative = os.path.relpath(normalized, workspace)
+
+                      if (
+                          relative != ".."
+                          and not relative.startswith(f"..{os.sep}")
+                      ):
+                          return relative
+                  except ValueError:
+                      pass
+
+              return normalized
+
+          def find_failure_location(
+              failure_text: str,
+              fallback_file: str,
+              fallback_line: str,
+          ) -> tuple[str, int]:
+              match = location_pattern.search(failure_text)
+
+              if match:
+                  return (
+                      repository_relative_path(match.group("file")),
+                      int(match.group("line")),
+                  )
+
+              try:
+                  line = int(fallback_line)
+              except (TypeError, ValueError):
+                  line = 1
+
+              return repository_relative_path(fallback_file), line
+
+          annotation_count = 0
+
+          for test_case in tree.findall(".//testcase"):
+              failures = test_case.findall("failure")
+
+              if not failures:
+                  continue
+
+              suite_name = test_case.get("classname", "UnknownSuite")
+              test_name = test_case.get("name", "UnknownTest")
+              fallback_file = test_case.get("file", "")
+              fallback_line = test_case.get("line", "1")
+
+              for failure in failures:
+                  message = failure.get("message", "").strip()
+                  body = (failure.text or "").strip()
+                  
+                  failure_text = "\n".join(
+                      part for part in (message, body) if part
+                  )
+                  
+                  details = failure_text or "GoogleTest assertion failed"
+                  
+                  source_file, source_line = find_failure_location(
+                      failure_text,
+                      fallback_file,
+                      fallback_line,
+                  )
+
+                  title = escape_property(
+                      f"{suite_name}.{test_name}"
+                  )
+                  details = escape_message(details)
+
+                  if source_file:
+                      source_file = escape_property(source_file)
+
+                      print(
+                          f"::error file={source_file},"
+                          f"line={source_line},"
+                          f"title={title}::{details}"
+                      )
+                  else:
+                      print(
+                          f"::error title={title}::{details}"
+                      )
+
+                  annotation_count += 1
+
+          if annotation_count == 0:
+              print("No failed GoogleTest assertions found.")
+          else:
+              print(
+                  f"Created {annotation_count} "
+                  f"GitHub test annotation(s)."
+              )
+          PY
+      
+      # uploads ctest result as an artifact to be downloaded.
+      # runs even on test failure.
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results
+          path: |
+            build/Testing
+            test-results.txt
+            test-results.xml
+          if-no-files-found: warn
+
+      # write test results into summary UI
+      - name: Add test results to summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## 🧪 Test Results"
+            echo
+            echo '```text'
+            cat test-results.txt 2>/dev/null || echo "Tests did not run."
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # capture coverage, filter noise, generate html report
+      - name: Generate coverage report
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p coverage
+      
+          lcov \
+            --capture \
+            --directory build \
+            --output-file coverage-tests.info \
+            --rc geninfo_unexecuted_blocks=1
+      
+          lcov \
+            --add-tracefile coverage-base.info \
+            --add-tracefile coverage-tests.info \
+            --output-file coverage-all.info
+      
+          lcov \
+            --extract coverage-all.info \
+            "$GITHUB_WORKSPACE/src/*" \
+            --output-file coverage.info
+      
+          lcov \
+            --remove coverage.info \
+            "$GITHUB_WORKSPACE/tests/*" \
+            "$GITHUB_WORKSPACE/JUCE/*" \
+            "*/_deps/*" \
+            "/usr/*" \
+            --output-file coverage.info
+      
+          if grep -q '^SF:' coverage.info; then
+            lcov --list coverage.info
+      
+            genhtml coverage.info \
+              --output-directory coverage \
+              --title "HARP Unit Test Coverage" \
+              --legend
+          else
+            echo "No HARP source files were found in the coverage data."
+      
+            cat > coverage/index.html <<'EOF'
+          <!doctype html>
+          <html>
+            <body>
+              <h1>HARP coverage unavailable</h1>
+              <p>No instrumented HARP source files appeared in the coverage data.</p>
+            </body>
+          </html>
+          EOF
+          fi
+
+      # update html coverage dashboard
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage
+            coverage.info
+          if-no-files-found: warn
+
+      # AI-generated markdown test summary
+
+      # parse coverage.info to compute coverage %. 
+      # writes .md file containing percentage & progress bars
+      - name: Generate Markdown Coverage Dashboard
+        if: always()
+        shell: bash
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          python3 <<'EOF'
+          import os
+      
+          covered = 0
+          total = 0
+      
+          if os.path.exists("coverage.info"):
+              with open("coverage.info", encoding="utf-8") as report:
+                  for raw_line in report:
+                      line = raw_line.strip()
+      
+                      if line.startswith("LF:"):
+                          total += int(line.split(":", 1)[1])
+                      elif line.startswith("LH:"):
+                          covered += int(line.split(":", 1)[1])
+      
+          percentage = round((covered / total) * 100, 1) if total else 0.0
+          bar_length = 40
+          filled = round(bar_length * percentage / 100)
+          bar = "█" * filled + "░" * (bar_length - filled)
+      
+          test_outcome = os.environ.get("TEST_OUTCOME", "unknown")
+      
+          status = {
+              "success": "🟢 Passed",
+              "failure": "🔴 Failed",
+              "cancelled": "⚪ Cancelled",
+              "skipped": "⚪ Skipped",
+          }.get(test_outcome, "⚪ Not available")
+      
+          with open("coverage-dashboard.md", "w", encoding="utf-8") as output:
+              output.write("# 📈 Build Quality Dashboard\n\n")
+              output.write("## 🧪 Tests\n\n")
+              output.write(f"- Status: {status}\n\n")
+              output.write("## 📊 HARP Source Coverage\n\n")
+              output.write(f"- Covered lines: **{covered} / {total}**\n")
+              output.write(f"- Line coverage: **{percentage:.1f}%**\n\n")
+              output.write(f"`{bar}`\n\n")
+      
+              if total == 0:
+                  output.write(
+                      "> No HARP source coverage data was generated. "
+                      "Check whether the tests exercised instrumented code.\n\n"
+                  )
+      
+              output.write("_Dashboard generated automatically._\n")
+          EOF
+
+      # put .md dashboard into actions summary
+      - name: Add Dashboard to Summary
+        if: always()
+        run: cat coverage-dashboard.md >> $GITHUB_STEP_SUMMARY

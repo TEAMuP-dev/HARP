@@ -98,9 +98,9 @@ target_sources(${PROJECT_NAME}
         src/gui/FileChooserWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
+        src/media/FileDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
-        src/media/FileDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
         src/media/pianoroll/KeyboardComponent.cpp
@@ -135,6 +135,7 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioIcons.h
 )
 
+# Include the platform-specific clipboard implementation.
 if(APPLE)
     target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
 elseif(WIN32)
@@ -217,8 +218,8 @@ endif()
 if (WIN32)
     install(TARGETS ${PROJECT_NAME}
         RUNTIME_DEPENDENCIES
-            PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-            POST_EXCLUDE_REGEXES "system32"
+        PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+        POST_EXCLUDE_REGEXES "system32"
         RUNTIME DESTINATION .
         RESOURCE DESTINATION .
     )
@@ -247,3 +248,50 @@ if (APPLE)
 
     set(CMAKE_SKIP_RPATH "NO" CACHE INTERNAL "")
 endif(APPLE)
+
+# --------------------------------------------------
+# Unit Testing and Coverage
+# --------------------------------------------------
+
+option(HARP_BUILD_TESTS "Build HARP unit tests" OFF)
+option(HARP_ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
+
+function(enable_harp_coverage target_name)
+    if(NOT TARGET ${target_name})
+        message(FATAL_ERROR
+            "Cannot enable coverage because target '${target_name}' does not exist."
+        )
+    endif()
+
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target_name} PRIVATE
+            -O0
+            -g
+            --coverage
+        )
+
+        target_link_options(${target_name} PRIVATE
+            --coverage
+        )
+    else()
+        message(WARNING
+            "HARP_ENABLE_COVERAGE is enabled, but coverage is only configured for GCC and Clang."
+        )
+    endif()
+endfunction()
+
+# Instrument the complete HARP application target so the coverage baseline
+# includes production files that have not yet been exercised by unit tests.
+if(HARP_ENABLE_COVERAGE)
+    enable_harp_coverage(${PROJECT_NAME})
+endif()
+
+if(HARP_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+
+    # harp_tests does not exist until tests/CMakeLists.txt has been processed.
+    if(HARP_ENABLE_COVERAGE)
+        enable_harp_coverage(harp_tests)
+    endif()
+endif()
