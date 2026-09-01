@@ -1,3 +1,9 @@
+/**
+ * @file TextDisplayComponent.h
+ * @brief Display specifics for text (txt).
+ * @author ChughVansh
+ */
+
 #pragma once
 
 #include "MediaDisplayComponent.h"
@@ -20,6 +26,10 @@ public:
     }
 
     int getFixedHeight() const override { return fixedHeight; }
+
+    bool supportsPlayback() const override { return false; }
+
+    bool usesMouseWheel() const override { return false; }
 
     double getTotalLengthInSecs() override { return 0.0; }
 

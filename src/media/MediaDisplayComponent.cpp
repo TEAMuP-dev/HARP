@@ -424,8 +424,12 @@ void MediaDisplayComponent::resized()
     buttonsFlexBox.items.clear();
 
     // Add buttons to flex with equal height
-    buttonsFlexBox.items.add(
-        FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+    playStopButton.setVisible(supportsPlayback());
+    if (supportsPlayback())
+    {
+        buttonsFlexBox.items.add(
+            FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+    }
     if (isInputTrack())
     {
         buttonsFlexBox.items.add(

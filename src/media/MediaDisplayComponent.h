@@ -91,6 +91,10 @@ public:
     // Returns a fixed height in pixels this display should occupy, or 0 to use flex sizing.
     virtual int getFixedHeight() const { return 0; }
 
+    // Whether display offers playback and navigation.
+    // Mediums like text override this to hide the play/stop button.
+    virtual bool supportsPlayback() const { return true; }
+
     void setTrackID(Uuid id) { trackID = id; }
     Uuid getTrackID() { return trackID; }
 
