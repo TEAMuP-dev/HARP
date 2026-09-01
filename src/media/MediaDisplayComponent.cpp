@@ -666,7 +666,7 @@ void MediaDisplayComponent::initializeDisplay(const URL& filePath)
     setOriginalFilePath(filePath);
     updateDisplay(filePath);
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && supportsPlayback())
     {
         horizontalScrollBar.setVisible(true);
     }
