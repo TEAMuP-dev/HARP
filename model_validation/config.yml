@@ -1,0 +1,221 @@
+# Configuration for model_validation/src/validate_models.py
+#
+# Every key is optional. Models are discovered automatically and validated
+# with one synthesized "default" test case, so an entry is only needed to
+# change a model's settings or add test cases.
+#
+# model_validation/README.md explains the ideas behind these settings. What
+# follows is the reference for the settings themselves, each shown with its
+# default. Any non-matching keys are reported as configuration errors.
+#
+#
+# ---- What belongs here -----------------------------------------------------
+#
+# This file holds durable facts about the models: which ones to validate, and
+# what to assert about them. Those outlive any single run, which is what makes
+# them worth version-controlling and reviewing.
+#
+# Choices about one run stay on the command line, where changing them costs no
+# file edit. That covers the timeouts, how many models run at once, whether to
+# skip ZeroGPU models or inference altogether, and where output goes. Run
+# `validate_models.py --help` for the full specification.
+#
+#
+# ---- Naming models ---------------------------------------------------------
+#
+# Name a model the way its tier does, and qualify it:
+#
+#   teamup-tech/pitch_shifter   a Hugging Face Space (any "<owner>/<name>")
+#   examples/pitch_shifter      a pyharp example, by its directory name
+#
+# A bare "pitch_shifter" also works, and means the model in whichever tier is
+# being run, since only one tier runs at a time. Prefer the qualified form.
+# It states which deployment an entry is about, and it keeps a spaces entry
+# from silently applying to a like-named example.
+#
+# Note that these are not paths. An example is identified by its directory
+# name alone, so "examples/pitch_shifter" is the entry whether that directory
+# sits in pyharp/examples/ or somewhere else that --local-examples was pointed
+# at. Only --local-examples takes a path, and only to locate the directory.
+# Any paths given will be reported as configuration errors.
+#
+#
+# ---- Top-level settings ----------------------------------------------------
+#
+#   exclude:          # models to leave out of validation entirely
+#     - some-non-harp-space
+#
+#   include_extra:    # spaces outside the organization to validate as well
+#     - some-user/some-harp-space
+#
+#   synthesized_inputs:  # properties of the generated test inputs. The values
+#                        # below are the defaults, so this block is only
+#                        # needed to depart from them
+#     audio:
+#       sample_rate: 44100  # Hz
+#       num_channels: 1     # 1 = mono, 2 = stereo
+#       duration: 2.0       # seconds
+#       ext: .wav           # any format this libsndfile build can write.
+#                           # One it cannot write is a configuration error
+#     midi:
+#       num_notes: 2        # ascending notes from middle C
+#       note_duration: 0.5  # seconds per note, at 120 BPM
+#       instrument: 0       # General MIDI program number, 0 to 127
+#       channel: 0          # MIDI channel, 0 to 15 (9 = drums)
+#       ext: .mid
+#
+# This block can also be set per model and per test case, with each level
+# overriding the one before it.
+#
+# Audio and MIDI are the only configurable inputs, since they can be built
+# from properties. A generic file input (gr.File) is covered by them too when
+# it accepts audio or MIDI formats, since what it gets handed is a synthesized
+# clip. One accepting .txt or .json is handed a fixed placeholder file, with
+# nothing worth varying, and one accepting anything else has to be supplied by
+# a test case's `files` entry.
+#
+# Scalar controls are not part of this block. A text box, number box, slider,
+# toggle, or dropdown takes the default value its /controls spec declares, and
+# a test case's `controls:` entry is what overrides this.
+#
+#   common_test_cases:     # cases run on EVERY model, in addition to its own
+#                          # cases. Keep these model-agnostic by targeting
+#                          # outputs with "*" rather than by label. Names
+#                          # appear in the report prefixed with "common:"
+#     - name: outputs-nontrivial
+#       expect:
+#         "*":
+#           min_bytes: 100
+#
+#
+# ---- Per-model settings (`overrides`) --------------------------------------
+#
+# Keyed by model name, as described under "Naming models" above:
+#
+#   overrides:
+#     teamup-tech/some_space:
+#       connect_timeout: 420   # seconds to wait for this model to build,
+#                              # wake, or start (default: --connect-timeout)
+#       process_timeout: 600   # seconds to wait for this model's /process
+#                              # (default: --process-timeout, or
+#                              # --zerogpu-process-timeout on ZeroGPU
+#                              # hardware). Increase it for a slow model
+#       load_only: false       # only check availability + /controls, without
+#                              # running inference
+#       skip_common_cases: false   # opt this model out of common_test_cases
+#
+#       synthesized_inputs:    # input properties for this model's cases,
+#                              # overriding the top-level block
+#         audio:
+#           sample_rate: 48000
+#
+#       test_cases:            # once this key is present, ONLY these cases
+#                              # run, so include `default` to keep the
+#                              # default synthesized case
+#         - name: default      # a case with no settings means synthesized
+#                              # defaults, which every unconfigured model
+#                              # already gets by default
+#
+#         - name: some-case
+#           process_timeout: 300   # this case only (default: the model's)
+#
+#           controls:              # control values, by label
+#             "Some Slider Label": 12
+#             "Some Toggle Label": true
+#
+#           files:                 # track or file inputs by label. Paths are
+#                                  # relative to this file
+#             "Input Audio": test_data/my_clip.wav
+#
+#           synthesized_inputs:    # input properties for this case only
+#             audio:
+#               duration: 10.0
+#
+#           expect:                # output checks, keyed by output label.
+#                                  # "*" applies each rule to every output
+#                                  # the rule covers
+#             "Output Audio":
+#               ext: .wav          # extension: one, or a list of accepted
+#               min_bytes: 1000    # minimum file size, in bytes
+#               num_channels: 1    # exact channel count
+#               sample_rate: 44100 # exact sample rate, in Hz
+#               bit_depth: 16      # exact PCM bit depth (PCM formats only)
+#               min_rms_db: -60    # minimum RMS level, in dBFS
+#               min_duration: 1.5  # minimum length, in seconds
+#               max_duration: 10.0 # maximum length, in seconds
+#             "Output Midi":
+#               min_notes: 1           # minimum note-on count
+#               note_instruments: 24   # program number(s) the notes may use
+#               note_channels: 0       # channel(s) the notes may use
+#             "Output Labels":
+#               min_labels: 1      # minimum labels in a pyharp LabelList. 0
+#                                  # permits an empty list but still requires
+#                                  # a well-formed one
+#
+#           validators:            # only for checks `expect` cannot express,
+#                                  # such as ones spanning several outputs.
+#                                  # Each validator's parameters nest under it
+#             labels_within_audio:
+#               tolerance: 0.1
+#
+# Every rule above is optional, and an output with no rules is still checked
+# structurally: it must exist, be non-empty, and parse as its declared type.
+#
+# Which expect rules apply to which output types:
+#
+#   ext, min_bytes                                  any file output
+#   num_channels, sample_rate, bit_depth,
+#   min_rms_db                                      audio outputs
+#   min_duration, max_duration                      audio and MIDI outputs
+#   min_notes, note_instruments, note_channels      MIDI outputs
+#   min_labels                                      JSON (LabelList) outputs
+#
+# Applying a rule to a NAMED output whose type it does not cover fails the
+# case with a message indicating the configuration mistake, rather than reading
+# as a fault in the model. Under "*" such rules are skipped instead, which is
+# what lets a common case target types a model may not have. Audio outputs are
+# decoded with soundfile, so any libsndfile format works (WAV, FLAC, OGG, MP3,
+# AIFF, ...). Note that bit_depth applies only to PCM formats, not compressed
+# ones. MIDI outputs are parsed with mido.
+#
+#
+# ---- Examples --------------------------------------------------------------
+#
+# Local pyharp example. These run with `--local-examples` and exercise pyharp
+# itself, with no Hugging Face infrastructure involved:
+#
+#   overrides:
+#     examples/pitch_shifter:
+#       test_cases:
+#         - name: default            # keep the synthesized case
+#         - name: shift-up-octave
+#           controls:
+#             "Pitch Shift (semitones)": 12
+#           expect:
+#             "Output Audio":
+#               ext: .wav
+#               min_rms_db: -60      # shifted audio must still carry signal
+#
+# Hugging Face Space. These run by default and validate one deployment:
+#
+#   overrides:
+#     teamup-tech/pitch_shifter:
+#       process_timeout: 900         # this model is slow, extend the timeout
+#       test_cases:
+#         - name: default
+#         - name: real-audio
+#           files:
+#             "Input Audio A": test_data/short_vocal.wav
+#           expect:
+#             "Output Audio":
+#               min_duration: 1.5
+#
+#
+
+exclude: []
+
+include_extra: []
+
+common_test_cases: []
+
+overrides: {}
