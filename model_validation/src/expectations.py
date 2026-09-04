@@ -36,20 +36,29 @@ EXPECT_RULES = {
     "min_bytes": FILE_TYPES,
     "min_duration": AUDIO | MIDI,
     "max_duration": AUDIO | MIDI,
-    "channels": AUDIO,
+    "num_channels": AUDIO,
     "sample_rate": AUDIO,
     "bit_depth": AUDIO,
     "min_rms_db": AUDIO,
     "min_notes": MIDI,
+    "note_instruments": MIDI,
+    "note_channels": MIDI,
     "min_labels": JSON,
 }
+
+# The note_* rules, mapped to the decoded property each reads. Both name the
+# notes rather than the file, since a MIDI file carries no single instrument
+# or channel of its own, only notes that each use one.
+NOTE_VALUE_RULES = {"note_instruments": "instruments",
+                    "note_channels": "channels"}
 
 # Rule groups, by what they need decoded. Duration rules are shared: they read
 # from whichever of audio/MIDI props matches the output's type.
 DURATION_RULES = {"min_duration", "max_duration"}
 DECODED_RULES = {
-    "audio_track": {"channels", "sample_rate", "bit_depth", "min_rms_db"} | DURATION_RULES,
-    "midi_track": {"min_notes"} | DURATION_RULES,
+    "audio_track": {"num_channels", "sample_rate", "bit_depth",
+                    "min_rms_db"} | DURATION_RULES,
+    "midi_track": {"min_notes"} | set(NOTE_VALUE_RULES) | DURATION_RULES,
 }
 
 # Key selecting every compatible output rather than one named output
@@ -138,6 +147,34 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
     return targets
 
 
+def check_note_values(label: str, rule: str, found: list, allowed) -> None:
+    """
+    Assert the notes use only the instruments or channels a rule permits.
+
+    The check is one of coverage rather than presence: every value the notes
+    carry has to be one the rule lists, and a rule can list values the file
+    does not use. A file with no notes therefore satisfies it, since
+    requiring notes is what `min_notes` is for.
+
+    Args:
+        label (str): Output label the rule applies to.
+        rule (str): The rule name, a key of NOTE_VALUE_RULES.
+        found (list): The values the notes actually use.
+        allowed: The permitted value, or a list of them.
+
+    Raises:
+        AssertionError: If the notes use a value the rule does not list.
+    """
+
+    noun = rule.removeprefix("note_")
+    allowed = [allowed] if isinstance(allowed, int) else list(allowed)
+    unexpected = sorted(set(found) - set(allowed))
+
+    assert not unexpected, \
+        (f"output '{label}' has notes using {noun} {unexpected}, expected "
+         f"only {sorted(allowed)}")
+
+
 def check_duration(label: str, duration, rules: dict) -> None:
     """
     Apply the shared min_duration / max_duration rules to a decoded length.
@@ -208,10 +245,10 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
         props = reader(label, require_file(label, value))
 
     if props is not None and otype == "audio_track":
-        if "channels" in rules:
-            assert props["channels"] == rules["channels"], \
-                (f"output '{label}': expected {rules['channels']} channel(s), "
-                 f"got {props['channels']}")
+        if "num_channels" in rules:
+            assert props["num_channels"] == rules["num_channels"], \
+                (f"output '{label}': expected {rules['num_channels']} "
+                 f"channel(s), got {props['num_channels']}")
 
         if "sample_rate" in rules:
             assert props["sample_rate"] == rules["sample_rate"], \
@@ -236,6 +273,10 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
             assert props["num_notes"] >= rules["min_notes"], \
                 (f"output '{label}' has {props['num_notes']} note(s), expected "
                  f"at least {rules['min_notes']}")
+
+        for rule, prop in NOTE_VALUE_RULES.items():
+            if rule in rules:
+                check_note_values(label, rule, props[prop], rules[rule])
 
     if props is not None:
         check_duration(label, props["duration"], rules)

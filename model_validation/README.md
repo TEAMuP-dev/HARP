@@ -293,13 +293,27 @@ it. Every property is optional, so a block sets only what it changes.
 synthesized_inputs:
   audio:
     sample_rate: 48000   # default 44100
-    channels: 2          # default 1
+    num_channels: 2      # default 1
     duration: 5.0        # default 2.0
     ext: .flac           # default .wav
   midi:
     num_notes: 8         # default 2
     note_duration: 0.25  # default 0.5
+    instrument: 24       # default 0
+    channel: 0           # default 0
 ```
+
+The MIDI `instrument` is the General MIDI program number, written as a program
+change, and it is where both HARP and a model read a note's instrument from.
+A model that processes only one instrument family needs it set to a program it
+accepts, since the default of 0 is a grand piano.
+
+Channels are counted from 0 here, matching the MIDI wire format, so they run 0
+to 15 wherever validation reads or reports one. Most DAWs count the same
+channels from 1, which is why the General MIDI drum channel is 9 here and is
+the channel commonly called "channel 10". Both `instrument` and `channel` are
+checked as configuration, so a value outside its range is reported before any
+model runs rather than being written into a file the model cannot parse.
 
 Audio and MIDI are the only media a block can configure, because they are the
 only inputs built from properties. A generic file input (`gr.File`) accepting
@@ -403,7 +417,7 @@ with no rules is still subject to the default structural checks:
           "Output Audio":
             ext: .wav            # extension: a string, or a list of accepted ones
             min_bytes: 10000     # minimum file size
-            channels: 1          # exact channel count (1 = mono, 2 = stereo)
+            num_channels: 1      # exact channel count (1 = mono, 2 = stereo)
             sample_rate: 44100   # exact sample rate, in Hz
             min_duration: 1.5    # minimum length, in seconds
             max_duration: 10.0   # maximum length, in seconds
@@ -419,13 +433,22 @@ The following is the full vocabulary along with which output types each rule cov
 |---|---|---|
 | `ext` | any file output | Extension matches (string, or list of accepted extensions) |
 | `min_bytes` | any file output | File is at least this many bytes |
-| `channels` | audio output | Exact channel count |
+| `num_channels` | audio output | Exact channel count |
 | `sample_rate` | audio output | Exact sample rate in Hz |
 | `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...), and errors on compressed formats such as MP3 or OGG |
 | `min_rms_db` | audio output | RMS level is at least this many dBFS |
 | `min_duration` / `max_duration` | audio or MIDI output | Length in seconds is within bounds |
 | `min_notes` | MIDI output | At least this many note-on events |
+| `note_instruments` | MIDI output | Notes use only these General MIDI program numbers (one, or a list of accepted) |
+| `note_channels` | MIDI output | Notes use only these channels (one, or a list of accepted) |
 | `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
+
+`note_instruments` and `note_channels` assert coverage rather than presence.
+Every instrument or channel the notes carry has to be one the rule lists, and
+the rule may list values the file never uses. A file with no notes satisfies
+both, since requiring notes is what `min_notes` is for. They name the notes
+because a MIDI file has no single instrument or channel of its own, only notes
+that each use one.
 
 **Targeting outputs.** A model with several outputs gets one block per output
 label, each checked independently. Use `"*"` instead of a label to apply rules

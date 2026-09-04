@@ -53,13 +53,15 @@
 #                        # needed to depart from them
 #     audio:
 #       sample_rate: 44100  # Hz
-#       channels: 1         # 1 = mono, 2 = stereo
+#       num_channels: 1     # 1 = mono, 2 = stereo
 #       duration: 2.0       # seconds
 #       ext: .wav           # any format this libsndfile build can write.
 #                           # One it cannot write is a configuration error
 #     midi:
 #       num_notes: 2        # ascending notes from middle C
 #       note_duration: 0.5  # seconds per note, at 120 BPM
+#       instrument: 0       # General MIDI program number, 0 to 127
+#       channel: 0          # MIDI channel, 0 to 15 (9 = drums)
 #       ext: .mid
 #
 # This block can also be set per model and per test case, with each level
@@ -135,14 +137,16 @@
 #             "Output Audio":
 #               ext: .wav          # extension: one, or a list of accepted
 #               min_bytes: 1000    # minimum file size, in bytes
-#               channels: 1        # exact channel count
+#               num_channels: 1    # exact channel count
 #               sample_rate: 44100 # exact sample rate, in Hz
 #               bit_depth: 16      # exact PCM bit depth (PCM formats only)
 #               min_rms_db: -60    # minimum RMS level, in dBFS
 #               min_duration: 1.5  # minimum length, in seconds
 #               max_duration: 10.0 # maximum length, in seconds
 #             "Output Midi":
-#               min_notes: 1       # minimum note-on count
+#               min_notes: 1           # minimum note-on count
+#               note_instruments: 24   # program number(s) the notes may use
+#               note_channels: 0       # channel(s) the notes may use
 #             "Output Labels":
 #               min_labels: 1      # minimum labels in a pyharp LabelList. 0
 #                                  # permits an empty list but still requires
@@ -160,9 +164,10 @@
 # Which expect rules apply to which output types:
 #
 #   ext, min_bytes                                  any file output
-#   channels, sample_rate, bit_depth, min_rms_db    audio outputs
+#   num_channels, sample_rate, bit_depth,
+#   min_rms_db                                      audio outputs
 #   min_duration, max_duration                      audio and MIDI outputs
-#   min_notes                                       MIDI outputs
+#   min_notes, note_instruments, note_channels      MIDI outputs
 #   min_labels                                      JSON (LabelList) outputs
 #
 # Applying a rule to a NAMED output whose type it does not cover fails the
