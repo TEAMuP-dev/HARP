@@ -448,8 +448,7 @@ Every instrument or channel the notes carry has to be one the rule lists, and
 the rule may list values the file never uses. A file with no notes satisfies
 both, since requiring notes is what `min_notes` is for. They name the notes
 because a MIDI file has no single instrument or channel of its own, only notes
-that each use one, and the prefix keeps them from reading as counts the way
-`num_channels` does.
+that each use one.
 
 **Targeting outputs.** A model with several outputs gets one block per output
 label, each checked independently. Use `"*"` instead of a label to apply rules
