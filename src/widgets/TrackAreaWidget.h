@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../media/AudioDisplayComponent.h"
+#include "../media/FileDisplayComponent.h"
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
 
@@ -18,15 +19,111 @@
 
 using namespace juce;
 
+class DragOverlayComponent : public Component
+{
+public:
+    DragOverlayComponent()
+    {
+        setInterceptsMouseClicks(false, false);
+    }
+
+    void startDrag(Image snapshot, Point<int> offset)
+    {
+        if (isActive) return;
+        dragImage = snapshot;
+        dragOffset = offset;
+        isActive = true;
+        setVisible(true);
+        repaint();
+    }
+
+    // Called every mouseDrag event with the current mouse position
+    void updatePosition(Point<int> newPos)
+    {
+        if (newPos == currentPos) return;
+
+        // Clear old position
+        repaint(currentPos.x - dragOffset.x,
+                currentPos.y - dragOffset.y,
+                dragImage.getWidth(),
+                dragImage.getHeight());
+
+        currentPos = newPos;
+
+        // Repaint only new position
+        repaint(currentPos.x - dragOffset.x,
+                currentPos.y - dragOffset.y,
+                dragImage.getWidth(),
+                dragImage.getHeight());
+    }
+
+    void stopDrag()
+    {
+        isActive = false;
+        dragImage = Image(); // Releases the image data
+        setVisible(false);
+        repaint();
+    }
+
+    void paint(Graphics& g) override
+    {
+        if (!isActive || dragImage.isNull())
+            return;
+
+        g.drawImage(dragImage,
+                    currentPos.x - dragOffset.x,
+                    currentPos.y - dragOffset.y,
+                    dragImage.getWidth(),
+                    dragImage.getHeight(),
+                    0,
+                    0,
+                    dragImage.getWidth(),
+                    dragImage.getHeight());
+    }
+
+private:
+    Image dragImage;
+    Point<int> currentPos;
+    Point<int> dragOffset;
+    bool isActive = false;
+};
+
+class GhostTrackComponent : public Component
+{
+public:
+    void setImage(const Image& img)
+    {
+        ghostImage = img;
+        repaint();
+    }
+
+    void paint(Graphics& g) override
+    {
+        if (ghostImage.isNull()) return;
+
+        g.setOpacity(0.4f);
+        g.drawImage(ghostImage,
+                    getLocalBounds().toFloat(),
+                    RectanglePlacement::stretchToFit);
+    }
+
+private:
+    Image ghostImage;
+};
+
 class TrackAreaWidget : public Component,
                         public ChangeListener,
                         public ChangeBroadcaster,
                         public FileDragAndDropTarget
 {
 public:
-    TrackAreaWidget(DisplayMode mode = DisplayMode::Input, int trackHeight = 0)
-        : displayMode(mode), fixedTrackHeight(trackHeight)
+    TrackAreaWidget(DisplayMode mode = DisplayMode::Input,
+                    int trackHeight = 0,
+                    DragOverlayComponent* overlay = nullptr)
+        : displayMode(mode), fixedTrackHeight(trackHeight), dragOverlay(overlay)
     {
+        addMouseListener(this, true);
+        addChildComponent(ghostTrack);
     }
 
     ~TrackAreaWidget() { resetState(); }
@@ -35,6 +132,63 @@ public:
     {
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
+
+    /** Tracks that expand to fill the space given to them. */
+    int getNumFlexibleTracks() const
+    {
+        int count = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            if (m->getFixedHeight() <= 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /** Height claimed by tracks with a fixed height, margins included. */
+    int getFixedTracksHeight() const
+    {
+        int total = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            const int fixed = m->getFixedHeight();
+
+            if (fixed > 0)
+            {
+                total += fixed + 2 * static_cast<int>(marginSize);
+            }
+        }
+
+        return total;
+    }
+
+    /**
+     * Height needed to show a number of tracks at their minimum size.
+     *
+     * The margin applied to each track lives here, so the calculation does too:
+     * a caller reserving space with its own margin will come up short, by more
+     * for every additional track.
+     */
+    static int getRequiredHeightForTracks(int numTracks)
+    {
+        if (numTracks <= 0)
+        {
+            return 0;
+        }
+
+        return numTracks
+               * (MediaDisplayComponent::minimumUsefulHeight + 2 * static_cast<int>(marginSize));
+    }
+
+    static_assert(MediaDisplayComponent::minimumUsefulHeight
+                      > MediaDisplayComponent::fixedChromeHeight,
+                  "A track must be taller than its fixed strips, or the media content is "
+                  "laid out with a negative height.");
 
     void resized() override
     {
@@ -47,20 +201,97 @@ public:
 
         if (getNumTracks() > 0)
         {
+            int draggedIndex = isDraggingTrack ? getDraggedTrackIndex() : -1;
+
+            int visualGapIndex = dragInsertIndex;
+            if (isDraggingTrack && draggedIndex >= 0 && dragInsertIndex > draggedIndex)
+                visualGapIndex = dragInsertIndex - 1;
+
+            int layoutIndex = 0;
+
             for (auto& m : mediaDisplays)
             {
+                // Don't draw dragged track
+                if (m.get() == draggedTrack && isDraggingTrack)
+                    continue;
+
+                if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
+                {
+                    FlexItem gap;
+                    if (isDraggingOutside)
+                    {
+                        ghostTrack.setVisible(true);
+                        if (fixedTrackHeight)
+                            gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
+                        else
+                            gap = FlexItem(ghostTrack)
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
+                    }
+                    else
+                    {
+                        ghostTrack.setVisible(false);
+                        if (fixedTrackHeight)
+                            gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                        else
+                            gap = FlexItem()
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
+                    }
+                    mainBox.items.add(gap);
+                }
+
                 FlexItem i = FlexItem(*m);
+
+                int fixedH = m->getFixedHeight();
 
                 if (fixedTrackHeight)
                 {
                     i = i.withHeight(fixedTrackHeight);
                 }
+                else if (fixedH > 0)
+                {
+                    i = i.withHeight(fixedH).withFlex(0);
+                }
                 else
                 {
-                    i = i.withFlex(1).withMinHeight(50);
+                    i = i.withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight);
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
+
+                layoutIndex++;
+            }
+
+            // If the drag gap is at the end of the list
+            if (isDraggingTrack && dragInsertIndex >= 0 && layoutIndex == visualGapIndex)
+            {
+                FlexItem gap;
+                if (isDraggingOutside)
+                {
+                    ghostTrack.setVisible(true);
+                    if (fixedTrackHeight)
+                        gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
+                    else
+                        gap = FlexItem(ghostTrack)
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
+                }
+                else
+                {
+                    ghostTrack.setVisible(false);
+                    if (fixedTrackHeight)
+                        gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
+                    else
+                        gap = FlexItem()
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
+                }
+                mainBox.items.add(gap);
             }
 
             if (fixedTrackHeight)
@@ -243,6 +474,25 @@ public:
         }
     }
 
+    void addFileOutputFromComponentInfo(FileComponentInfo* fileInfo)
+    {
+        std::string label = fileInfo->label.empty() ? "File Output" : fileInfo->label;
+
+        auto m = std::make_unique<FileDisplayComponent>(String(label), false, false, displayMode);
+
+        m->setTrackID(fileInfo->id);
+        m->setInstanceFileTypes(fileInfo->fileTypes);
+
+        if (! fileInfo->info.empty())
+            m->setMediaInstructions(fileInfo->info);
+
+        m->addChangeListener(this);
+        addAndMakeVisible(m.get());
+        mediaDisplays.push_back(std::move(m));
+
+        resized();
+    }
+
     void updateTracks(const ModelComponentInfoList& trackComponents)
     {
         resetState();
@@ -253,9 +503,13 @@ public:
             {
                 addTrackFromComponentInfo(trackInfo);
             }
+            else if (auto* fileInfo = dynamic_cast<FileComponentInfo*>(info.get()))
+            {
+                addFileOutputFromComponentInfo(fileInfo);
+            }
             else
             {
-                // Invalid input track
+                // Invalid track component
                 jassertfalse;
             }
         }
@@ -336,6 +590,32 @@ public:
         resized();
     }
 
+    void reorderTrack(MediaDisplayComponent* draggedDisplay, int newIndex)
+    {
+        auto it =
+            std::find_if(mediaDisplays.begin(), 
+                         mediaDisplays.end(),
+                         [draggedDisplay](const auto& ptr) { return ptr.get() == draggedDisplay; });
+        
+        if (it == mediaDisplays.end()) return;
+
+        // Track the old index for downward reordering
+        int oldIndex = std::distance(mediaDisplays.begin(), it);
+
+        auto draggedPtr = std::move(*it);
+        mediaDisplays.erase(it);
+
+        // Decrement index if moving downward to account for shifting indicies
+        if (newIndex > oldIndex)
+            newIndex--;
+
+        newIndex = jlimit(0, (int)mediaDisplays.size(), newIndex);
+
+        mediaDisplays.insert(mediaDisplays.begin() + newIndex, std::move(draggedPtr));
+
+        resized();
+    }
+
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
         for (String f : files)
@@ -365,12 +645,172 @@ private:
         }
     }
 
+    int getInsertIndexAtY(int y)
+    {
+        int trackSlotHeight = fixedTrackHeight + static_cast<int>(2 * marginSize);
+        
+        if (isDraggingTrack && draggedTrack != nullptr)
+        {
+            int draggedIndex = getDraggedTrackIndex();
+
+            int draggedSlotTop = draggedIndex * trackSlotHeight;
+
+            if (draggedIndex >= 0 && y > draggedSlotTop)
+                y += trackSlotHeight;
+        }
+
+        int index = y / trackSlotHeight;
+        return jlimit(0, getNumTracks(), index);
+    }
+
+    int getDraggedTrackIndex() const
+    {
+        if (draggedTrack == nullptr) return -1;
+
+        for (int i = 0; i < (int)mediaDisplays.size(); i++)
+        {
+            if (mediaDisplays[i].get() == draggedTrack)
+                return i;
+        }
+
+        return -1;
+    }
+
+    void mouseDown(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget()) return;
+
+        // Reset drag state at the start of every click
+        draggedTrack = nullptr;
+        isDraggingTrack = false;
+
+        Component* clicked = e.eventComponent;
+        
+        MediaDisplayComponent* clickedDisplay = nullptr;
+        Component* c = clicked;
+        while (c != nullptr && c != this)
+        {
+            if (auto* md = dynamic_cast<MediaDisplayComponent*>(c))
+            {
+                clickedDisplay = md;
+                break;
+            }
+            c = c->getParentComponent();
+        }
+
+        if (clickedDisplay)
+        {
+            draggedTrack = clickedDisplay;
+            dragOriginIndex = getDraggedTrackIndex();
+
+            Point<int> mouseInThis = e.getEventRelativeTo(this).getPosition();
+            Point<int> trackTopLeft = draggedTrack->getBounds().getTopLeft();
+            dragClickOffset = mouseInThis - trackTopLeft;
+        }
+    }
+
+    void mouseDrag(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget() || draggedTrack == nullptr) return;
+
+        Point<int> posInThis = e.getEventRelativeTo(this).getPosition();
+
+        if (!isDraggingTrack && e.getDistanceFromDragStart() > 5)
+        {
+            isDraggingTrack = true;
+
+            // Takes a snapshot of the track at the moment dragging starts
+            if (dragOverlay != nullptr)
+            {
+                Image snapshot = draggedTrack->createComponentSnapshot(draggedTrack->getLocalBounds());
+                ghostTrack.setImage(snapshot);
+                dragOverlay->startDrag(snapshot, dragClickOffset);
+                draggedTrack->setVisible(false);
+            }
+        }
+
+        if (isDraggingTrack)
+        {
+            int newInsertIndex = -1;
+            bool wasOutside = isDraggingOutside;
+
+            if (getLocalBounds().contains(posInThis))
+            {
+                newInsertIndex = getInsertIndexAtY(posInThis.y);
+                isDraggingOutside = false;
+            }
+            else
+            {
+                newInsertIndex = dragOriginIndex;
+                isDraggingOutside = true;
+            }
+
+            if (newInsertIndex != dragInsertIndex || isDraggingOutside != wasOutside)
+            {
+                dragInsertIndex = newInsertIndex;
+                resized();
+            }
+
+            // Converts the position to the overlay's coordinate space
+            if (dragOverlay != nullptr)
+            {
+                Point<int> posInOverlay = dragOverlay->getLocalPoint(this, posInThis);
+                dragOverlay->updatePosition(posInOverlay);
+            }
+        }
+    }
+
+    void mouseUp(const MouseEvent& e) override
+    {
+        if (!isThumbnailWidget()) return;
+
+        // Tracks the release position of the mouse
+        Point<int> releasePos = e.getEventRelativeTo(this).getPosition();
+
+        // Only reorders if the mouse was released inside the widget
+        if (isDraggingTrack && draggedTrack != nullptr && getLocalBounds().contains(releasePos))
+        {
+            int currentIndex = getDraggedTrackIndex();
+
+            if (dragInsertIndex != currentIndex)
+            {
+                reorderTrack(draggedTrack, dragInsertIndex);
+            }
+        }
+
+        // Restore the track's appearance and stop the overlay
+        if (draggedTrack != nullptr)
+            draggedTrack->setVisible(true);
+        if (dragOverlay != nullptr)
+            dragOverlay->stopDrag();
+
+        // Reset the drag state
+        draggedTrack = nullptr;
+        dragInsertIndex = -1;
+        dragOriginIndex = -1;
+        isDraggingTrack = false;
+        isDraggingOutside = false;
+        ghostTrack.setVisible(false);
+
+        resized();
+    }
+
     const DisplayMode displayMode;
     const int fixedTrackHeight = 0;
 
-    const float marginSize = 4;
+    static constexpr float marginSize = 4;
     int fixedTotalWidth = 0;
     int minTotalHeight = 0;
+
+    // For reordering tracks via dragging
+    MediaDisplayComponent* draggedTrack = nullptr;
+    DragOverlayComponent* dragOverlay = nullptr;
+    GhostTrackComponent ghostTrack;
+    int dragInsertIndex = -1;
+    int dragOriginIndex = -1;
+    bool isDraggingTrack = false;
+    bool isDraggingOutside = false;
+    Point<int> dragClickOffset { 0, 0 };
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };

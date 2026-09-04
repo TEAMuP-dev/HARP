@@ -17,12 +17,31 @@
 
 using namespace juce;
 
+class MediaDisplayComponent;
+
 enum class DisplayMode
 {
     Input,
     Output,
     Hybrid, // All functionality
     Thumbnail // Reduced functionality
+};
+
+class OptionalBannerComponent : public Component
+{
+public:
+    void paint(Graphics& g) override;
+};
+
+class TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override;
+
+private:
+    MediaDisplayComponent* owner = nullptr;
 };
 
 class ColorablePanel : public Component
@@ -69,6 +88,9 @@ public:
     virtual void resized() override;
     void repositionLabels();
 
+    // Returns a fixed height in pixels this display should occupy, or 0 to use flex sizing.
+    virtual int getFixedHeight() const { return 0; }
+
     void setTrackID(Uuid id) { trackID = id; }
     Uuid getTrackID() { return trackID; }
 
@@ -81,7 +103,7 @@ public:
     bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
-    bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
+    bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -100,7 +122,10 @@ public:
     //bool iterateNextTempFile();
 
     //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
-    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
+    bool isFileLoaded() const { return ! originalFilePath.isEmpty(); }
+
+    /** Whether a wheel event over this track is used to zoom or scrub its media. */
+    virtual bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
     //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
 
     //void clearFutureTempFiles(); // Prune temp files after currently selected index
@@ -111,10 +136,12 @@ public:
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
+    void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
+    const Range<double>& getVisibleRange() const { return visibleRange; }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -149,15 +176,36 @@ protected:
 
     virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
-    const int controlSpacing = 1;
-    const int scrollBarSize = 8;
+    static constexpr int controlSpacing = 1;
+    static constexpr int scrollBarSize = 8;
+    static constexpr int timeAxisHeight = 20;
+    static constexpr int labelHeight = 20;
 
+    /* A track stacks fixed chrome above and below its media: a strip for overhead
+       labels, the time axis, and the horizontal scrollbar. A track shorter than
+       these plus a usable content area cannot show the media at all, and leaves
+       the content area with a negative height to paint into. */
+    static constexpr int overheadPanelHeight = labelHeight + 2 * controlSpacing;
+    static constexpr int horizontalScrollBarHeight = scrollBarSize + 2 * controlSpacing;
+    static constexpr int minimumContentHeight = 40;
+
+public:
+    /** Height consumed by the strips a track always stacks around its media. */
+    static constexpr int fixedChromeHeight =
+        overheadPanelHeight + timeAxisHeight + horizontalScrollBarHeight;
+
+    /** Shortest a track can be and still show anything of its media. */
+    static constexpr int minimumUsefulHeight = fixedChromeHeight + minimumContentHeight;
+
+protected:
     // Media (audio or MIDI) content area
     Component contentComponent;
 
     String mediaInstructions;
 
     Range<double> visibleRange;
+
+    std::unique_ptr<TimeAxisStrip> timeAxisStrip;
 
     AudioFormatManager formatManager;
     AudioDeviceManager deviceManager;
@@ -186,6 +234,9 @@ private:
     void chooseFileCallback();
 
     virtual Component* getMediaComponent() { return this; }
+
+    /** Whether this track has a timeline for a playback cursor to move along. */
+    virtual bool hasPlaybackCursor() const { return ! isThumbnailTrack(); }
 
     virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
     virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
@@ -222,7 +273,6 @@ private:
 
     const int textSpacing = 2;
     const int minFontSize = 10;
-    const int labelHeight = 20;
 
     Colour defaultColor = Colours::darkgrey;
     Colour graphicsColor = Colours::lightblue;
@@ -250,6 +300,12 @@ private:
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
+
+    // Banner shown on left edge of optional input tracks
+    OptionalBannerComponent optionalBanner;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };

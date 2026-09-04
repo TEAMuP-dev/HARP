@@ -1,6 +1,6 @@
 # The first line of any CMake project should be a call to `cmake_minimum_required`, which checks
 # that the installed CMake will be able to understand the following CMakeLists, and ensures that
-# CMake's behaviour is compatible with the named version. This is a standard CMake command, so more
+# CMake's behavior is compatible with the named version. This is a standard CMake command, so more
 # information can be found in the CMake docs.
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "HARP")
@@ -88,15 +88,19 @@ target_sources(${PROJECT_NAME}
         src/gui/MultiButton.cpp
         src/gui/HoverableLabel.h
         src/gui/TextBoxWithLabel.h
+        src/gui/NumberBoxWithLabel.h
         src/gui/SliderWithLabel.h
         src/gui/ComboBoxWithLabel.h
+        src/gui/MultiSelectWithLabel.h
         src/gui/HoverHandler.h
         src/gui/ControlComponent.h
         src/gui/ToggleWithLabel.h
+        src/gui/FileChooserWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
+        src/media/FileDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
         src/media/pianoroll/KeyboardComponent.cpp
@@ -106,9 +110,10 @@ target_sources(${PROJECT_NAME}
 
         src/clients/Client.h
         src/clients/GradioClient.h
-        src/clients/GradioClient.h
+        src/clients/providers/stability/StabilityClient.h
 
         src/utils/Logging.h
+        src/utils/Messages.h
         src/utils/Settings.h
         src/utils/Interface.h
         src/utils/Controls.h
@@ -129,6 +134,14 @@ target_sources(${PROJECT_NAME}
         src/external/fontaudio/data/FontAudioData.cpp
         src/external/fontaudio/data/FontAudioIcons.h
 )
+
+if(APPLE)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyMacOS.mm)
+elseif(WIN32)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyWindows.cpp)
+elseif(LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE src/utils/copy/CopyLinux.cpp)
+endif()
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
 # project, these might be passed in the 'Preprocessor Definitions' field. JUCE modules also make use
@@ -196,59 +209,21 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_recommended_warning_flags
 )
 
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\msvcp140.dll
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140_1.dll
-# C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT\vcruntime140.dll
-if (WIN32)
-    # Function to find the specific runtime DLLs
-    function(find_vc_runtime_dlls out_var)
-        message(STATUS "Searching for specific runtime DLLs...")
-
-        # Define the target DLLs
-        set(target_dlls
-            "msvcp140.dll"
-            "vcruntime140_1.dll"
-            "vcruntime140.dll"
-        )
-
-        # Set the base path for Visual Studio 2022 redistributable DLLs
-        set(VS_CRT_BASE_PATH "C:/Program Files/Microsoft Visual Studio/2022/*/VC/Redist/MSVC/*/x64/Microsoft.VC143.CRT")
-
-        # Search for the DLLs in the specified base path
-        file(GLOB_RECURSE all_runtime_dlls
-            LIST_DIRECTORIES false
-            "${VS_CRT_BASE_PATH}/*.dll"
-        )
-
-        set(runtime_dlls)
-
-        foreach(dll ${all_runtime_dlls})
-            get_filename_component(dll_name ${dll} NAME)
-            if(dll_name IN_LIST target_dlls)
-                list(APPEND runtime_dlls ${dll})
-            endif()
-        endforeach()
-
-        if(runtime_dlls)
-            message(STATUS "Found specific runtime DLLs:")
-            foreach(dll ${runtime_dlls})
-                message(STATUS "${dll}")
-            endforeach()
-            set(${out_var} ${runtime_dlls} PARENT_SCOPE)
-        else()
-            message(FATAL_ERROR "Required specific runtime DLLs not found")
-        endif()
-    endfunction()
-
-    # Call the function to find the specific DLLs
-    find_vc_runtime_dlls(RUNTIME_DLLS)
-
-    # Add a post-build step to copy the specific DLLs to the output directory
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${RUNTIME_DLLS}
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+if(LINUX)
+    find_package(X11 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11)
 endif()
+
+if (WIN32)
+    install(TARGETS ${PROJECT_NAME}
+        RUNTIME_DEPENDENCIES
+            PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+            POST_EXCLUDE_REGEXES "system32"
+        RUNTIME DESTINATION .
+        RESOURCE DESTINATION .
+    )
+endif()
+
 # copy the pyinstaller tools to the  bundle
 # if (APPLE)
 #     add_custom_command(TARGET ${PROJECT_NAME}
