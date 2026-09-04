@@ -546,6 +546,17 @@ private:
                     DBG_AND_LOG("Model::extractInputs: MIDI track input \"" + midiTrack->label
                                 + "\" extracted.");
                 }
+                else if (type == "text_track")
+                {
+                    std::shared_ptr<ModelComponentInfo> textFile =
+                        std::make_shared<TextTrackComponentInfo>(controlsDict);
+
+                    newInputs.push_back(textFile);
+                    tempComponentIDs.push_back(textFile->id);
+
+                    DBG_AND_LOG("Model::extractInputs: Text file input \"" + textFile->label
+                                + "\" extracted.");
+                }
                 else if (type == "generic_file")
                 {
                     std::shared_ptr<ModelComponentInfo> fileChooser =
@@ -689,6 +700,16 @@ private:
                     newOutputs.push_back(midiTrack);
 
                     DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
+                                + "\" extracted.");
+                }
+                else if (type == "text_track")
+                {
+                    std::shared_ptr<ModelComponentInfo> textFile =
+                        std::make_shared<TextTrackComponentInfo>(controlsDict);
+
+                    newOutputs.push_back(textFile);
+
+                    DBG_AND_LOG("Model::extractOutputs: Text file output \"" + textFile->label
                                 + "\" extracted.");
                 }
                 else if (type == "generic_file")

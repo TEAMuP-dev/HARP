@@ -12,6 +12,7 @@
 #include "../media/FileDisplayComponent.h"
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
+#include "../media/TextDisplayComponent.h"
 
 #include "../utils/Controls.h"
 #include "../utils/Interface.h"
@@ -445,6 +446,11 @@ public:
             m = std::make_unique<MidiDisplayComponent>(
                 label, midiTrackInfo->required, fromDAW, displayMode);
         }
+        else if (auto textTrackInfo = dynamic_cast<TextTrackComponentInfo*>(trackInfo))
+        {
+            m = std::make_unique<TextDisplayComponent>(
+                label, textTrackInfo->required, fromDAW, displayMode);
+        }
         else
         {
             DBG_AND_LOG(
@@ -559,6 +565,15 @@ public:
             midiTrackInfo->label = label.toStdString();
 
             trackInfo = std::move(midiTrackInfo);
+        }
+        else if (TextDisplayComponent::getSupportedExtensions().contains(ext))
+        {
+            auto textTrackInfo = std::make_unique<TextTrackComponentInfo>();
+
+            textTrackInfo->required = false;
+            textTrackInfo->label = label.toStdString();
+
+            trackInfo = std::move(textTrackInfo);
         }
         else
         {

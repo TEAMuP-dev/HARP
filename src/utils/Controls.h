@@ -245,6 +245,11 @@ struct MidiTrackComponentInfo : public TrackComponentInfo
     using TrackComponentInfo::TrackComponentInfo;
 };
 
+struct TextTrackComponentInfo : public TrackComponentInfo
+{
+    using TrackComponentInfo::TrackComponentInfo;
+};
+
 struct FileComponentInfo : public ModelComponentInfo, public FileChooserWithLabel::Listener
 {
     bool required = true;

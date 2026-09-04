@@ -1,6 +1,7 @@
 #include "MediaDisplayComponent.h"
 #include "AudioDisplayComponent.h"
 #include "MidiDisplayComponent.h"
+#include "TextDisplayComponent.h"
 
 #include "../utils/Interface.h"
 
@@ -295,9 +296,11 @@ StringArray MediaDisplayComponent::getSupportedExtensions()
 {
     StringArray audioExtensions = AudioDisplayComponent::getSupportedExtensions();
     StringArray midiExtensions = MidiDisplayComponent::getSupportedExtensions();
+    StringArray textExtensions = TextDisplayComponent::getSupportedExtensions();
 
     StringArray allExtensions = StringArray(audioExtensions);
     allExtensions.mergeArray(midiExtensions);
+    allExtensions.mergeArray(textExtensions);
 
     return allExtensions;
 }
@@ -421,8 +424,12 @@ void MediaDisplayComponent::resized()
     buttonsFlexBox.items.clear();
 
     // Add buttons to flex with equal height
-    buttonsFlexBox.items.add(
-        FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+    playStopButton.setVisible(supportsPlayback());
+    if (supportsPlayback())
+    {
+        buttonsFlexBox.items.add(
+            FlexItem(playStopButton).withHeight(25).withWidth(25).withMargin({ 2, 0, 2, 0 }));
+    }
     if (isInputTrack())
     {
         buttonsFlexBox.items.add(
@@ -659,7 +666,7 @@ void MediaDisplayComponent::initializeDisplay(const URL& filePath)
     setOriginalFilePath(filePath);
     updateDisplay(filePath);
 
-    if (! isThumbnailTrack())
+    if (! isThumbnailTrack() && supportsPlayback())
     {
         horizontalScrollBar.setVisible(true);
     }
