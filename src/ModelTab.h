@@ -200,6 +200,9 @@ public:
 
     int getMinimumRequiredControlWidth() { return controlAreaWidget.getMinimumRequiredWidth(); }
 
+    // Set by the owner, which is the layer that knows how to open a window
+    std::function<void(Provider)> onOpenAPIKeySettings;
+
     int getMinimumRequiredHeightForWidth(int width)
     {
         int height = 0;
@@ -381,6 +384,20 @@ private:
         }
 
         addPopupButton("Open Logs", [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
+
+        /* Left open rather than dismissed, since the key is entered elsewhere and the
+           message is worth keeping in view while doing so. */
+        if (auto keyProvider = getAPIKeyProvider(error))
+        {
+            addPopupButton("Settings",
+                           [this, provider = *keyProvider]
+                           {
+                               if (onOpenAPIKeySettings)
+                               {
+                                   onOpenAPIKeySettings(provider);
+                               }
+                           });
+        }
 
         if (isReportableError)
         {

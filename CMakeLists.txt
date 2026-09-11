@@ -114,6 +114,7 @@ target_sources(${PROJECT_NAME}
 
         src/utils/Logging.h
         src/utils/Messages.h
+        src/utils/Providers.h
         src/utils/Settings.h
         src/utils/Interface.h
         src/utils/Controls.h

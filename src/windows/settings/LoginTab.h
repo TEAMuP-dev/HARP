@@ -25,6 +25,8 @@ public:
 
     String getDisplayName() { return displayName; }
 
+    Provider getProvider() const { return provider; }
+
     void resetState();
 
 private:
@@ -78,6 +80,9 @@ public:
 
     const String& getNameForIndex(int idx) const { return entries[(size_t) idx].displayName; }
 
+    /** Index of the page for a provider, or -1 when none of them serves it. */
+    int getIndexForProvider(Provider provider) const;
+
     void showPage(int idx);
     void addPage(std::unique_ptr<ProviderPage> page);
 
@@ -91,6 +96,9 @@ public:
     LoginTab();
 
     void resized() override;
+
+    /** Brings the page for a provider to the front. */
+    void showProvider(Provider provider);
 
 private:
     int getNumRows() override { return loginPages.getNumPages(); }

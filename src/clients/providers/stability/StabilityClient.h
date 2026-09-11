@@ -381,7 +381,7 @@ private:
 
         if (! endpoint.isWellFormed())
         {
-            return OpResult::fail(
+            return fail(
                 HttpError { HttpError::Type::InvalidURL, HttpError::Request::POST, errorPath });
         }
 
@@ -400,7 +400,7 @@ private:
 
         if (stream == nullptr)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::ConnectionFailed, HttpError::Request::POST, errorPath });
         }
 
@@ -414,25 +414,24 @@ private:
 
             if (response.contains("authorization"))
             {
-                return OpResult::fail(
+                return fail(
                     ClientError { ClientError::Type::InsufficientPermissions, "", "Stability AI" });
             }
             else if (statusCode == 402)
             {
-                return OpResult::fail(
-                    HttpError { HttpError::Type::BadStatusCode,
-                                HttpError::Request::POST,
-                                errorPath,
-                                statusCode,
-                                "Stability AI reported insufficient usage credits." });
+                return fail(HttpError { HttpError::Type::BadStatusCode,
+                                        HttpError::Request::POST,
+                                        errorPath,
+                                        statusCode,
+                                        "Stability AI reported insufficient usage credits." });
             }
             // TODO - could potentially identify other errors (e.g., copyrighted material)
             else
             {
-                return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
-                                                  HttpError::Request::POST,
-                                                  errorPath,
-                                                  statusCode });
+                return fail(HttpError { HttpError::Type::BadStatusCode,
+                                        HttpError::Request::POST,
+                                        errorPath,
+                                        statusCode });
             }
         }
 
