@@ -1,10 +1,12 @@
 /**
  * @file GradioClient.h
  * @brief Client specifics for Gradio and Hugging Face (simple JSON requests).
- * @author xribene, huiranyu, cwitkowitz
+ * @author xribene, huiranyu, cwitkowitz, saumya-pailwan
  */
 
 #pragma once
+
+#include <map>
 
 #include "Client.h"
 
@@ -18,7 +20,6 @@ public:
         Complete,
         Heartbeat,
         Error
-        //Generating
     };
 
     GradioClient()
@@ -38,6 +39,142 @@ public:
                || isValidHuggingFacePath(modelPath);
     }
 
+    String canonicalizePath(String modelPath) override
+    {
+        /* "user/name" is the form Hugging Face itself uses, and the only one both
+           the page URL and the API subdomain can be derived from. A page URL carries
+           that form verbatim, so it can be reduced here without asking anyone.
+
+           The API subdomain cannot: it lowercases the name and replaces both the
+           separating "/" and every "_" with "-", so neither the boundary nor the
+           original spelling survives. Reducing it offline would only guess, which is
+           what resolveCanonicalPath below asks the Hub to avoid. Local and Gradio
+           addresses have no canonical form at all and are left alone. */
+        if (isValidLongHuggingFacePath(modelPath))
+        {
+            const String hostSlashModel = inferHostSlashModel(modelPath);
+
+            if (hostSlashModel.isNotEmpty())
+            {
+                return hostSlashModel;
+            }
+        }
+
+        return modelPath;
+    }
+
+    /**
+     * Asks the provider for a model's exact address.
+     *
+     * The Hub answers for the two written forms and the running app answers for the
+     * API subdomain, so an address that only appears to work (e.g., a "-" typed where the
+     * name has a "_" or the wrong capitalization) is corrected here rather than
+     * silently loading a different model or producing a broken documentation link.
+     */
+    OpResult resolveCanonicalPath(const String& modelPath, String& canonicalPath) override
+    {
+        canonicalPath = canonicalizePath(modelPath);
+
+        // Only Hugging Face publishes a canonical spelling to resolve against
+        if (! isValidHuggingFacePath(canonicalPath))
+        {
+            return OpResult::ok();
+        }
+
+        /* A subdomain has to be asked for its own identity, since the Hub cannot be
+           queried for it without already knowing the answer. It advertises that
+           identity in a "canonical" link header, which it sends whether it is awake
+           or asleep, so no request to the app itself is needed. */
+        if (isValidShortHuggingFacePath(canonicalPath))
+        {
+            const String advertisedPath = queryCanonicalSpace(inferEndpointPath(canonicalPath));
+
+            if (advertisedPath.isNotEmpty())
+            {
+                if (advertisedPath != canonicalPath)
+                {
+                    DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                                << modelPath << "\" resolved to \"" << advertisedPath << "\".");
+                }
+
+                canonicalPath = advertisedPath;
+            }
+            else
+            {
+                /* Without an answer only the ambiguous reading of the subdomain is
+                   left, which is no basis for rejecting the path. */
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                            << modelPath << "\" advertises no identity. Continuing with \""
+                            << canonicalPath << "\".");
+            }
+
+            return OpResult::ok();
+        }
+
+        static const Identifier identityKey { "id" };
+
+        std::unique_ptr<InputStream> stream;
+
+        OpResult result = makeGETRequestStream(
+            URL("https://huggingface.co/api/spaces/" + canonicalPath), stream, modelPath, 10000);
+
+        if (result.failed())
+        {
+            const auto* e = std::get_if<HttpError>(&result.getError());
+
+            /* 401 and 404 are the Hub's answers for "no such Space" and for "private,
+               and you are not signed in", which it does not distinguish between. Both
+               mean this address cannot be loaded, so say so now with a message about
+               the address rather than letting the request fail later as a transport
+               error. */
+            if (e != nullptr && e->type == HttpError::Type::BadStatusCode
+                && (e->statusCode == 401 || e->statusCode == 404))
+            {
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                            << modelPath << "\" was not recognized by the provider (status code \""
+                            << String(e->statusCode) << "\").");
+
+                return OpResult::fail(
+                    ClientError { ClientError::Type::ModelNotFound, modelPath, "Gradio" });
+            }
+
+            /* Anything else is a problem reaching the provider rather than a verdict
+               on the path, and must not stop a load that would otherwise succeed. */
+            DBG_AND_LOG("GradioClient::resolveCanonicalPath: Could not confirm path \""
+                        << modelPath << "\" (" << toLogString(result.getError())
+                        << "). Continuing with \"" << canonicalPath << "\".");
+
+            return OpResult::ok();
+        }
+
+        DynamicObject::Ptr responseDict;
+
+        if (stream == nullptr
+            || stringJSONToDict(stream->readEntireStreamAsString(), responseDict).failed()
+            || ! responseDict->hasProperty(identityKey))
+        {
+            DBG_AND_LOG("GradioClient::resolveCanonicalPath: Provider gave no identity for path \""
+                        << modelPath << "\". Continuing with \"" << canonicalPath << "\".");
+
+            return OpResult::ok();
+        }
+
+        const String resolvedPath = responseDict->getProperty(identityKey).toString().trim();
+
+        if (resolvedPath.isNotEmpty() && isValidAbbrevHuggingFacePath(resolvedPath))
+        {
+            if (resolvedPath != canonicalPath)
+            {
+                DBG_AND_LOG("GradioClient::resolveCanonicalPath: Path \""
+                            << modelPath << "\" resolved to \"" << resolvedPath << "\".");
+            }
+
+            canonicalPath = resolvedPath;
+        }
+
+        return OpResult::ok();
+    }
+
     String inferHostSlashModel(String modelPath) override
     {
         String hostSlashModel;
@@ -50,13 +187,15 @@ public:
         {
             if (isValidShortHuggingFacePath(modelPath))
             {
-                StringArray array = StringArray::fromTokens(
-                    modelPath.fromFirstOccurrenceOf("https://", false, false)
-                        .upToFirstOccurrenceOf(".hf.space", false, false),
-                    "-",
-                    "");
+                /* Only the first "-" is known to be the owner boundary. The rest
+                   belong to the name, whose original spelling the subdomain does not
+                   preserve. This is a best guess for display and for addressing the
+                   Hub, which resolveCanonicalPath replaces with the exact spelling. */
+                const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
+                                             .upToFirstOccurrenceOf(".hf.space", false, false);
 
-                hostSlashModel = array[0] + "/" + array[1];
+                hostSlashModel = subdomain.upToFirstOccurrenceOf("-", false, false) + "/"
+                                 + subdomain.fromFirstOccurrenceOf("-", false, false);
             }
             else if (isValidLongHuggingFacePath(modelPath))
             {
@@ -114,7 +253,6 @@ public:
                 String host = array[0];
                 String model = array[1];
 
-                // TODO - this can load paths that were incorrectly added with "-" instead of "_" resulting in a broken documentation link
                 endpointPath = "https://" + host + "-" + model.replace("_", "-") + ".hf.space/";
             }
         }
@@ -133,7 +271,7 @@ public:
 
         if (isValidLocalPath(modelPath) || isValidGradioPath(modelPath))
         {
-            documentationPath = inferEndpointPath(documentationPath);
+            documentationPath = inferEndpointPath(modelPath);
         }
         else if (isValidHuggingFacePath(modelPath))
         {
@@ -283,7 +421,9 @@ public:
                                           requestBody,
                                           responseJSON,
                                           inferDocumentationPath(modelPath),
-                                          fileToUpload);
+                                          fileToUpload,
+                                          10000,
+                                          modelPath);
 
         if (result.failed())
         {
@@ -338,7 +478,8 @@ public:
     {
         String responseJSON;
 
-        OpResult result = makeRequest(modelPath, "process", payloadJSON, responseJSON);
+        OpResult result =
+            makeRequest(modelPath, "process", payloadJSON, responseJSON, processTimeoutMs);
 
         if (result.failed())
         {
@@ -473,34 +614,23 @@ private:
           e.g., "https://xribene-midi-pitch-shifter.hf.space/"
         */
 
-        StringArray array =
-            StringArray::fromTokens(modelPath.fromFirstOccurrenceOf("https://", false, false)
-                                        .upToFirstOccurrenceOf(".hf.space", false, false),
-                                    "-",
-                                    "");
-
-        if (array.size() == 2)
-        {
-            return true;
-        }
-        else if (array.size() != 0)
-        {
-            /*
-              This is ambiguous. There's no way to tell where the delimeter
-              belongs and which hypens were converted from underscores.
-            */
-
-            DBG_AND_LOG(
-                "GradioClient::isValidShortHuggingFacePath: Path \""
-                << modelPath
-                << "\" is ambiguous. Please use the abbreviated or long-form path instead.");
-
-            return false;
-        }
-        else
+        /* Without this the check below is meaningless for any other address:
+           upToFirstOccurrenceOf returns the whole string when the needle is
+           absent, so a long-form path that happens to contain a single hyphen
+           splits into two tokens and is mistaken for a subdomain. */
+        if (! modelPath.contains(".hf.space"))
         {
             return false;
         }
+
+        const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
+                                     .upToFirstOccurrenceOf(".hf.space", false, false);
+
+        /* The owner and the name are joined by a "-", so at least one is needed for
+           this to name a Space at all. Where that "-" falls, and which of the others
+           were underscores, cannot be told from the address; resolveCanonicalPath
+           asks the running app which Space it is rather than guessing. */
+        return subdomain.isNotEmpty() && subdomain.containsChar('-');
     }
 
     static bool isValidLongHuggingFacePath(String modelPath)
@@ -508,6 +638,11 @@ private:
         /*
           e.g., "https://huggingface.co/spaces/xribene/midi_pitch_shifter"
         */
+
+        if (! modelPath.startsWith("https://huggingface.co/spaces/"))
+        {
+            return false;
+        }
 
         return isValidAbbrevHuggingFacePath(
             modelPath.fromFirstOccurrenceOf("https://huggingface.co/spaces/", false, false));
@@ -524,13 +659,161 @@ private:
         return array.size() == 2;
     }
 
+    /* The Hub's report on how a Space is currently deployed, covering both its
+       lifecycle stage and its hardware. Returns false when it cannot be obtained,
+       which the callers treat as "unknown" rather than as a verdict. */
+    bool querySpaceRuntime(const String& modelPath, DynamicObject::Ptr& runtime)
+    {
+        if (! isValidHuggingFacePath(modelPath))
+            return false;
+
+        URL runtimeEndpoint =
+            URL("https://huggingface.co/api/spaces/" + inferHostSlashModel(modelPath) + "/runtime");
+
+        std::unique_ptr<InputStream> stream;
+
+        if (makeGETRequestStream(runtimeEndpoint, stream, "", 5000).failed() || stream == nullptr)
+            return false;
+
+        return stringJSONToDict(stream->readEntireStreamAsString(), runtime).wasOk();
+    }
+
+    /* The lifecycle stage reported by the Hub, e.g. RUNNING, SLEEPING, APP_STARTING,
+       BUILDING, RUNTIME_ERROR, PAUSED. Returns an empty string when it cannot be
+       determined. Unlike the hardware type this changes constantly, so it is never
+       cached. */
+    String querySpaceStage(const String& modelPath)
+    {
+        DynamicObject::Ptr runtime;
+
+        if (! querySpaceRuntime(modelPath, runtime))
+            return {};
+
+        static const Identifier stageKey { "stage" };
+
+        return runtime->hasProperty(stageKey)
+                   ? runtime->getProperty(stageKey).toString().toUpperCase()
+                   : String();
+    }
+
+    /* Which of the two verdicts a stage amounts to. Asking the Hub for the stage is
+       what separates them, since a Space that is merely waking up answers a request
+       exactly like one that is genuinely broken. A stage matching neither is left
+       unclassified so that the original failure is reported as it stands. */
+    static bool isStartingStage(const String& stage)
+    {
+        /* RUNNING belongs here because the Hub marks a Space running as soon as its
+           container is up, a moment before the app behind it accepts requests. */
+        return stage == "SLEEPING" || stage == "APP_STARTING" || stage == "BUILDING"
+               || stage == "RUNNING";
+    }
+
+    static bool isUnavailableStage(const String& stage)
+    {
+        return stage == "RUNTIME_ERROR" || stage == "BUILD_ERROR" || stage == "CONFIG_ERROR"
+               || stage == "NO_APP_FILE" || stage == "PAUSED" || stage == "STOPPED"
+               || stage == "DELETING";
+    }
+
+    /* The exact "user/Name" a Space host answers for, taken from the "canonical"
+       link header it sends alongside its page. The address used to reach a Space
+       lowercases its name and replaces every "_" with "-", so this header is the
+       only way to recover the original spelling. Returns an empty string when the
+       host does not answer or does not advertise one. */
+    String queryCanonicalSpace(const String& hostURL)
+    {
+        const URL host { hostURL };
+
+        if (! host.isWellFormed())
+            return {};
+
+        StringPairArray responseHeaders;
+
+        auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+                           .withExtraHeaders(getCommonHeaders())
+                           .withConnectionTimeoutMs(10000)
+                           .withResponseHeaders(&responseHeaders)
+                           .withNumRedirectsToFollow(5);
+
+        /* A sleeping Space answers with an error status but still sends the header,
+           so the status code is deliberately not consulted here. */
+        if (host.createInputStream(options) == nullptr)
+            return {};
+
+        static const String spacesPrefix { "https://huggingface.co/spaces/" };
+
+        /* Several link headers can be sent at once and are joined into one value, so
+           the canonical entry is picked out rather than the header taken whole. */
+        for (const String& entry : StringArray::fromTokens(responseHeaders["link"], ",", "\"'"))
+        {
+            if (! entry.contains("canonical") || ! entry.contains(spacesPrefix))
+                continue;
+
+            const String advertised = entry.fromFirstOccurrenceOf(spacesPrefix, false, false)
+                                          .upToFirstOccurrenceOf(">", false, false)
+                                          .trim();
+
+            if (isValidAbbrevHuggingFacePath(advertised))
+                return advertised;
+        }
+
+        return {};
+    }
+
+    bool isZeroGPUSpace(const String& modelPath)
+    {
+        if (! isValidHuggingFacePath(modelPath))
+            return false;
+
+        // The hardware type is a static property of the space, so cache it to
+        // avoid repeated blocking lookups from error-handling paths
+        {
+            const ScopedLock lock(zeroGPUCacheLock);
+
+            auto cached = zeroGPUCache.find(modelPath);
+
+            if (cached != zeroGPUCache.end())
+                return cached->second;
+        }
+
+        DynamicObject::Ptr runtime;
+
+        // Failed lookups are not cached so a transient network error
+        // does not permanently misclassify the space
+        if (! querySpaceRuntime(modelPath, runtime))
+            return false;
+
+        // Navigate: hardware -> current
+        static const Identifier hardwareKey { "hardware" };
+        static const Identifier currentKey { "current" };
+
+        String hardwareCurrent;
+
+        if (runtime->hasProperty(hardwareKey))
+        {
+            if (auto* hardwareDict = runtime->getProperty(hardwareKey).getDynamicObject())
+                hardwareCurrent = hardwareDict->getProperty(currentKey).toString();
+        }
+
+        // ZeroGPU hardware names start with "zero-" (e.g. "zero-a10g", "zero-a100")
+        bool isZeroGPU = hardwareCurrent.startsWithIgnoreCase("zero-");
+
+        {
+            const ScopedLock lock(zeroGPUCacheLock);
+            zeroGPUCache[modelPath] = isZeroGPU;
+        }
+
+        return isZeroGPU;
+    }
+
     OpResult makePOSTRequest(URL endpoint,
                              const String headers,
                              const String body,
                              String& response,
                              const String errorPath = "",
                              const File& fileToUpload = File(),
-                             const int timeoutMs = 10000)
+                             const int timeoutMs = 10000,
+                             const String modelPath = "")
     {
         String debugMessage =
             "GradioClient::makePOSTRequest: Attempting to make POST request for endpoint \""
@@ -587,8 +870,51 @@ private:
 
         if (statusCode != 200)
         {
+            String reason;
+
+            // HTML bodies (proxy/login/error pages) carry no useful diagnostics
+            if (! isHTMLResponse(response))
+            {
+                reason = extractShortReason(extractErrorInfoFromPayload(response).combined());
+            }
+
+            /* A 503 from a Space is ambiguous on its own: the Hub answers the same way
+               whether the Space is waking up or genuinely broken. Ask the Hub which it
+               is rather than reporting it as down. */
+            if (statusCode == 503 && modelPath.isNotEmpty())
+            {
+                String stage = querySpaceStage(modelPath);
+
+                DBG_AND_LOG("GradioClient::makePOSTRequest: Space stage \"" << stage << "\".");
+
+                if (isStartingStage(stage))
+                {
+                    return OpResult::fail(
+                        GradioError { GradioError::Type::SpaceStarting, errorPath, stage, true });
+                }
+
+                if (isUnavailableStage(stage))
+                {
+                    return OpResult::fail(GradioError {
+                        GradioError::Type::SpaceUnavailable, errorPath, stage, true });
+                }
+            }
+
+            // Keep the real status code so callers can react to specific
+            // failures (e.g. 404 for an invalid path, 402 for quota limits)
+            // and attach any diagnostic text from the response body
+            return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
+                                              HttpError::Request::POST,
+                                              errorPath,
+                                              statusCode,
+                                              reason });
+        }
+
+        if (isHTMLResponse(response))
+        {
+            // A 200 with an HTML body is not a Gradio API response at all
             return OpResult::fail(HttpError {
-                HttpError::Type::BadStatusCode, HttpError::Request::POST, errorPath, statusCode });
+                HttpError::Type::UnexpectedResponse, HttpError::Request::POST, errorPath });
         }
 
         return OpResult::ok();
@@ -643,7 +969,7 @@ private:
         return OpResult::ok();
     }
 
-    String extractPayLoad(String response)
+    String extractPayload(String response)
     {
         String payload = response.trim();
 
@@ -655,11 +981,284 @@ private:
         return payload;
     }
 
+    // Compares a parsed SSE event type (the text after "event:") to a known event.
+    // Matching on the parsed type rather than the raw line keeps this tolerant of
+    // the SSE spec's optional space after the colon.
+    static bool isEventType(const String& eventType, GradioEvents event)
+    {
+        return eventType.equalsIgnoreCase(enumToString(event));
+    }
+
+    /* What a Gradio error payload carries.
+
+       Gradio >= 6.13 forwards the failing event's error payload on this endpoint:
+         {"error": "<message>", "title": "<title>", "duration": .., "visible": ..}
+       The message is populated whenever the server raised a gr.Error (which is how
+       ZeroGPU reports quota exhaustion, with title "ZeroGPU quota exceeded"), and
+       for any other exception only when the app was launched with show_error=True.
+       When it was not, the payload is {"error": null}, which is a real runtime
+       error whose details the server deliberately withheld.
+
+       Gradio <= 6.12 discards the payload entirely and sends "data: null", so
+       nothing at all can be told apart from the response. */
+    struct GradioErrorInfo
+    {
+        String title;
+        String message;
+
+        // True when the server sent no payload at all, as opposed to a payload
+        // that was present but carried no message
+        bool payloadAbsent = false;
+
+        String combined() const
+        {
+            if (title.isNotEmpty() && message.isNotEmpty())
+                return title + ": " + message;
+
+            return title.isNotEmpty() ? title : message;
+        }
+    };
+
+    /* Whether a data line carries nothing at all. Gradio writes an absent payload as
+       a bare "null", so that has to be told apart from text worth parsing. */
+    static bool isPayloadAbsent(const String& payload)
+    {
+        String normalizedPayload = payload.trim();
+
+        return normalizedPayload.isEmpty() || normalizedPayload.equalsIgnoreCase("null")
+               || normalizedPayload.equalsIgnoreCase("none");
+    }
+
+    static GradioErrorInfo extractErrorInfoFromPayload(const String& payload)
+    {
+        GradioErrorInfo info;
+
+        if (isPayloadAbsent(payload))
+        {
+            info.payloadAbsent = true;
+
+            return info;
+        }
+
+        String normalizedPayload = payload.trim();
+
+        var parsedPayload = JSON::parse(normalizedPayload);
+
+        if (auto* payloadDict = parsedPayload.getDynamicObject())
+        {
+            info.title = extractFirstNonEmptyField(payloadDict, { "title" });
+            info.message =
+                extractFirstNonEmptyField(payloadDict, { "error", "message", "detail", "reason" });
+
+            return info;
+        }
+
+        // A non-dictionary payload (e.g. a bare error string)
+        info.message = normalizedPayload;
+
+        return info;
+    }
+
+    static bool isHTMLResponse(const String& text)
+    {
+        String trimmed = text.trimStart();
+        return trimmed.startsWithIgnoreCase("<!DOCTYPE") || trimmed.startsWithIgnoreCase("<html");
+    }
+
+    // Returns true when the Hugging Face proxy reports that the Space itself is broken
+    static bool isSpaceStatusError(const String& text)
+    {
+        String lower = text.toLowerCase();
+
+        return lower.contains("space is in error") || lower.contains("check its status on hf");
+    }
+
+    static String extractShortReason(const String& text)
+    {
+        String firstLine = text.upToFirstOccurrenceOf("\n", false, false).trim();
+
+        if (firstLine.length() > 200)
+        {
+            firstLine = firstLine.substring(0, 200).trimEnd() + "...";
+        }
+
+        return firstLine;
+    }
+
+    /* The message type named inside the payload itself, which is how the queue API
+       labels its events. The endpoint used here labels them with a preceding
+       "event:" line instead, so this only applies when that line is missing. */
+    static String extractMessageTypeFromPayload(const String& payload)
+    {
+        if (isPayloadAbsent(payload))
+        {
+            return "";
+        }
+
+        var parsedPayload = JSON::parse(payload.trim());
+
+        if (auto* payloadDict = parsedPayload.getDynamicObject())
+        {
+            if (payloadDict->hasProperty("msg"))
+            {
+                String value = payloadDict->getProperty("msg").toString().trim();
+
+                if (value.isNotEmpty() && ! value.equalsIgnoreCase("null"))
+                {
+                    return value;
+                }
+            }
+        }
+
+        return "";
+    }
+
+    static String extractFirstNonEmptyField(const DynamicObject* object,
+                                            std::initializer_list<const char*> keys)
+    {
+        if (object == nullptr)
+        {
+            return "";
+        }
+
+        for (auto key : keys)
+        {
+            Identifier id(key);
+
+            if (! object->hasProperty(id))
+            {
+                continue;
+            }
+
+            String value = object->getProperty(id).toString().trim();
+
+            if (value.isNotEmpty() && ! value.equalsIgnoreCase("null")
+                && ! value.equalsIgnoreCase("undefined"))
+            {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    // Formats a "log" SSE event payload (e.g. {"log": "...", "level": "info"})
+    // into a user-visible status string like "[info] Starting inference...".
+    // Returns an empty string if the payload is not a valid log event.
+    static String formatLogEventPayload(const String& payload)
+    {
+        if (isPayloadAbsent(payload))
+        {
+            return "";
+        }
+
+        var parsed = JSON::parse(payload.trim());
+        auto* dict = parsed.getDynamicObject();
+
+        if (dict == nullptr)
+        {
+            return "";
+        }
+
+        String message = extractFirstNonEmptyField(dict, { "log", "message", "detail" });
+
+        if (message.isEmpty())
+        {
+            return "";
+        }
+
+        String level =
+            extractFirstNonEmptyField(dict, { "level", "type", "severity" }).toLowerCase();
+
+        if (level.isEmpty())
+        {
+            level = "info";
+        }
+
+        return "[" + level + "] " + message;
+    }
+
+    static String formatProcessMessage(const String& messageType, const String& dataPayload = "")
+    {
+        if (messageType.isEmpty())
+        {
+            return "";
+        }
+
+        /* Gradio "log" event, emitted when the server calls gr.Info() or gr.Warning().
+
+           NOTE: Gradio does not forward these on the "simple" /gradio_api/call
+           endpoint that this client uses. Its translation layer drops every message
+           except process_completed, process_generating, heartbeat and
+           unexpected_error (verified against Gradio 5.28 through 6.24). They are
+           only delivered on the full queue API (/gradio_api/queue/join plus
+           /gradio_api/queue/data), so this branch is currently unreachable and is
+           kept for if/when this client moves to that API. */
+        if (messageType.equalsIgnoreCase("log"))
+        {
+            return formatLogEventPayload(dataPayload);
+        }
+
+        // Spelled out because the generic form below would read "[process] starts"
+        if (messageType.equalsIgnoreCase("process_starts"))
+        {
+            return "[process] started";
+        }
+
+        if (messageType.startsWithIgnoreCase("process_"))
+        {
+            String detail =
+                messageType.fromFirstOccurrenceOf("process_", false, false).replace("_", " ");
+            return "[process] " + detail;
+        }
+
+        if (messageType.equalsIgnoreCase("heartbeat") || messageType.equalsIgnoreCase("complete")
+            || messageType.equalsIgnoreCase("error"))
+        {
+            return "";
+        }
+
+        return "[status] " + messageType.replace("_", " ");
+    }
+
+    // currentSseEventType: the value from the preceding "event: <type>" line, e.g. "log",
+    //                       "process_starts", "heartbeat". Empty if no event: line preceded this.
+    void appendProcessMessageFromDataLine(const String& dataLine,
+                                          const String& currentSseEventType = "")
+    {
+        if (statusMessage == nullptr)
+            return;
+
+        // Heartbeats arrive continuously and never carry a user-facing message
+        if (isEventType(currentSseEventType, GradioEvents::Heartbeat))
+            return;
+
+        String payload = extractPayload(dataLine);
+
+        // Prefer the SSE event type from the preceding "event:" line (modern Gradio API).
+        // Fall back to extracting a "msg" field from the JSON payload (old queue API).
+        String messageType = currentSseEventType.isNotEmpty()
+                                 ? currentSseEventType
+                                 : extractMessageTypeFromPayload(payload);
+
+        // For "log" events, pass the full data payload so the message text can be extracted
+        String statusText = formatProcessMessage(messageType, payload);
+
+        if (statusText.isEmpty())
+            return;
+
+        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: \""
+                    << statusText << "\" (event type \"" << messageType << "\").");
+
+        statusMessage->setMessage(statusText);
+    }
+
     // String response version
     OpResult makeGETRequest(const URL endpoint,
                             String& response,
                             const String errorPath = "",
-                            const int timeoutMs = -1)
+                            const int timeoutMs = -1,
+                            const String modelPath = "")
     {
         std::unique_ptr<InputStream> stream;
 
@@ -670,39 +1269,150 @@ private:
             return result;
         }
 
+        // Tracks whether any result-bearing data: lines have arrived. Heartbeat
+        // and log data lines are excluded, since they say nothing about whether
+        // the job itself has produced output.
+        bool seenResultData = false;
+        bool checkedFirstLine = false;
+
+        // Set when a "complete" event delivers the response the caller is waiting for
+        bool receivedCompleteEvent = false;
+
+        // Track the most recent SSE "event: <type>" line so we can pass it to
+        // appendProcessMessageFromDataLine when the next "data:" line arrives.
+        String currentSseEventType;
+
         while (! stream->isExhausted())
         {
             response = stream->readNextLine();
 
             DBG_AND_LOG("GradioClient::makeGETRequest: Streamed response \"" << response << "\".");
 
-            if (response.containsIgnoreCase(enumToString(GradioEvents::Complete)))
+            String eventLine = response.trim();
+
+            if (eventLine.isEmpty())
             {
-                response = extractPayLoad(stream->readNextLine());
-
-                DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response << "\".");
-
-                break;
+                // Blank line signals the end of one SSE message block
+                currentSseEventType = "";
+                continue;
             }
-            else if (response.containsIgnoreCase(enumToString(GradioEvents::Error)))
+
+            if (! checkedFirstLine)
             {
-                response = stream->readNextLine();
+                checkedFirstLine = true;
 
-                DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << response << "\".");
-
-                // TODO - could potentially identify other errors (e.g., too many requests)
-
-                return OpResult::fail(GradioError { GradioError::Type::RuntimeError, errorPath });
+                if (isHTMLResponse(eventLine))
+                {
+                    return OpResult::fail(HttpError {
+                        HttpError::Type::UnexpectedResponse, HttpError::Request::GET, errorPath });
+                }
             }
-            else
+
+            // Capture the SSE event type from "event: <type>" lines.
+            if (eventLine.startsWithIgnoreCase("event:"))
             {
-                // TODO - what other information is available?
-                // Informational or progress events
-                // Examples:
-                // - event: heartbeat
-                // - event: log
-                // - event: progress
+                currentSseEventType = eventLine.fromFirstOccurrenceOf(":", false, false).trim();
+
+                if (isEventType(currentSseEventType, GradioEvents::Complete))
+                {
+                    response = extractPayload(stream->readNextLine());
+
+                    DBG_AND_LOG("GradioClient::makeGETRequest: Final response \"" << response
+                                                                                  << "\".");
+
+                    receivedCompleteEvent = true;
+
+                    break;
+                }
+                else if (isEventType(currentSseEventType, GradioEvents::Error))
+                {
+                    String errorDataLine = stream->readNextLine();
+
+                    DBG_AND_LOG("GradioClient::makeGETRequest: Error response \"" << errorDataLine
+                                                                                  << "\".");
+
+                    String payload = extractPayload(errorDataLine);
+                    GradioErrorInfo errorInfo = extractErrorInfoFromPayload(payload);
+
+                    String diagnosticText = errorInfo.combined();
+                    String reason = extractShortReason(diagnosticText);
+
+                    /* The proxy has stated outright that the Space is down, so unlike
+                       the ambiguous 503 handled in makePOSTRequest there is nothing to
+                       decide. The Hub is still asked for the stage, purely so that the
+                       message can name it, and only a stage that agrees is reported. */
+                    if (isSpaceStatusError(diagnosticText))
+                    {
+                        const String stage = querySpaceStage(modelPath);
+
+                        DBG_AND_LOG("GradioClient::makeGETRequest: Space stage \"" << stage
+                                                                                   << "\".");
+
+                        return OpResult::fail(
+                            GradioError { GradioError::Type::SpaceUnavailable,
+                                          errorPath,
+                                          isUnavailableStage(stage) ? stage : String(),
+                                          true });
+                    }
+
+                    GradioError::Type errorType = GradioError::Type::RuntimeError;
+
+                    if (diagnosticText.containsIgnoreCase("quota"))
+                    {
+                        /* ZeroGPU raises quota exhaustion as a gr.Error titled
+                           "ZeroGPU quota exceeded", which Gradio >= 6.13 forwards
+                           verbatim on this endpoint */
+                        errorType = GradioError::Type::QuotaExceeded;
+                    }
+                    else if (errorInfo.payloadAbsent && ! seenResultData
+                             && isZeroGPUSpace(modelPath))
+                    {
+                        /* Gradio <= 6.12 drops the error payload entirely, so a quota
+                           rejection really is indistinguishable from any other early
+                           failure. Report that ambiguity rather than guessing: the space
+                           runs on ZeroGPU, so quota is one possible cause, but nothing
+                           here establishes it.
+
+                           Note this is only reached when NO payload arrived. A payload
+                           that is present but carries no message (Gradio >= 6.13 with
+                           show_error=False) is a genuine runtime error whose details the
+                           server withheld, never a quota rejection, since gr.Error
+                           messages are forwarded regardless of show_error. */
+                        errorType = GradioError::Type::Indeterminate;
+                    }
+
+                    return OpResult::fail(GradioError {
+                        errorType, errorPath, reason, isValidHuggingFacePath(modelPath) });
+                }
             }
+            else if (eventLine.startsWithIgnoreCase("data:"))
+            {
+                if (! isEventType(currentSseEventType, GradioEvents::Heartbeat)
+                    && ! currentSseEventType.equalsIgnoreCase("log"))
+                {
+                    seenResultData = true;
+                }
+
+                // Pass the current SSE event type so "log" events are not dropped.
+                appendProcessMessageFromDataLine(eventLine, currentSseEventType);
+            }
+        }
+
+        if (! receivedCompleteEvent)
+        {
+            /* The stream ended without ever delivering a "complete" or "error" event,
+               so there is no response to parse. Reporting success here would leave the
+               caller to fail on an empty string, which surfaces as a confusing JSON
+               error rather than the connection problem it is.
+
+               The most common cause is the transfer being aborted while the model was
+               still working: JUCE's curl backend turns the timeout into a low-speed
+               abort (CURLOPT_LOW_SPEED_LIMIT/TIME), and a stream carrying nothing but
+               Gradio's periodic heartbeats sits far below that threshold. */
+            return OpResult::fail(GradioError { GradioError::Type::IncompleteResponse,
+                                                errorPath,
+                                                "",
+                                                isValidHuggingFacePath(modelPath) });
         }
 
         return OpResult::ok();
@@ -743,6 +1453,12 @@ private:
 
         OpResult result = makeGETRequestStream(endpoint, stream, errorPath, timeoutMs);
 
+        // Nothing was opened to copy from, so report why rather than reading a null stream
+        if (result.failed())
+        {
+            return result;
+        }
+
         // Remove file at target path if one already exists
         fileToDownload.deleteFile();
 
@@ -764,15 +1480,22 @@ private:
     OpResult makeRequest(const String modelPath,
                          const String requestType,
                          const String body,
-                         String& response)
+                         String& response,
+                         const int timeoutMs = controlsTimeoutMs)
     {
         URL endpoint = URL(inferEndpointPath(modelPath))
                            .getChildURL("gradio_api")
                            .getChildURL("call")
                            .getChildURL(requestType);
 
-        OpResult result = makePOSTRequest(
-            endpoint, getJSONHeaders(), body, response, inferDocumentationPath(modelPath));
+        OpResult result = makePOSTRequest(endpoint,
+                                          getJSONHeaders(),
+                                          body,
+                                          response,
+                                          inferDocumentationPath(modelPath),
+                                          File(),
+                                          10000,
+                                          modelPath);
 
         if (result.failed())
         {
@@ -809,16 +1532,10 @@ private:
 
         response.clear();
 
-        /* WARNING: it's very important to give Gradio enough time to yield a response
+        /* Note: it's very important to give Gradio enough time to yield a response
            (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
-        result = makeGETRequest(endpoint, response, inferDocumentationPath(modelPath), 120000);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
-        return OpResult::ok();
+        return makeGETRequest(
+            endpoint, response, inferDocumentationPath(modelPath), timeoutMs, modelPath);
     }
 
     OpResult extractLabels(DynamicObject::Ptr& output, LabelList& labels)
@@ -999,4 +1716,14 @@ private:
 
         return OpResult::ok();
     }
+
+    /* How long a request may go without meaningful traffic before the transfer is
+       abandoned. Gradio only emits a heartbeat every 15 seconds while a model runs,
+       so on the curl backend this acts as a ceiling on total processing time. */
+    static constexpr int controlsTimeoutMs = 120000; // 2 minutes
+    static constexpr int processTimeoutMs = 1800000; // 30 minutes
+
+    // Cached results of isZeroGPUSpace, keyed by model path
+    CriticalSection zeroGPUCacheLock;
+    std::map<String, bool> zeroGPUCache;
 };

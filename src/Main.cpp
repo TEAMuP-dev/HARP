@@ -10,6 +10,10 @@
 
 #include "utils/Settings.h"
 
+#if JUCE_LINUX
+#include <dlfcn.h>
+#endif
+
 using namespace juce;
 
 class GuiAppApplication : public JUCEApplication, public FocusChangeListener
@@ -217,6 +221,153 @@ public:
             restoreWindowPosition();
 
             setVisible(true);
+        }
+
+        /**
+         * Hands the constrainer's minimum size to the window manager.
+         *
+         * JUCE publishes size limits from the constrainer in
+         * XWindowSystem::updateConstraints, but only reaches the branch that reads it
+         * when the peer carries ComponentPeer::windowIsResizable. ResizableWindow only
+         * sets that flag where Desktop::supportsBorderlessNonClientResize() is true,
+         * which on Linux it never is, so the other branch pins the limits to the
+         * current size instead. Either way XWindowSystem::setBounds then assigns
+         * WM_NORMAL_HINTS outright as USSize | USPosition, dropping whatever was just
+         * published, so the window advertises no limits at all and the window manager
+         * allows any size. Re-applying the minimum here, after each resize, is what
+         * the window manager actually ends up seeing.
+         *
+         * Snapping back afterwards is not a workable substitute: the window manager
+         * may refuse, leaving the window and its contents at different sizes.
+         *
+         * Xlib is reached through dlopen rather than its headers, whose Window, Time
+         * and KeyPress macros collide with JUCE's types. Does nothing on platforms
+         * where JUCE already applies the limits itself.
+         */
+        void publishMinimumSizeToWindowManager()
+        {
+#if JUCE_LINUX
+            auto* constrainer = getConstrainer();
+            auto* peer = getPeer();
+
+            if (constrainer == nullptr || peer == nullptr)
+            {
+                return;
+            }
+
+            const auto windowHandle = (unsigned long) (pointer_sized_int) peer->getNativeHandle();
+
+            if (windowHandle == 0)
+            {
+                return;
+            }
+
+            /* Mirrors Xlib's XSizeHints, whose layout is fixed by the X11 ABI */
+            struct SizeHints
+            {
+                long flags;
+                int x, y, width, height;
+                int minWidth, minHeight;
+                int maxWidth, maxHeight;
+                int widthInc, heightInc;
+                struct
+                {
+                    int x, y;
+                } minAspect, maxAspect;
+                int baseWidth, baseHeight;
+                int winGravity;
+            };
+
+            static constexpr long minSizeFlag = 1L << 4; // PMinSize
+
+            /* Opened once and held for the lifetime of the process. This runs on
+               every resize, and a connection set up and torn down per call would
+               mean a full X handshake many times a second while a resize is being
+               dragged. The connection is deliberately separate from the one JUCE
+               holds: Xlib's locking is per-display, so nothing here can race with
+               JUCE's own X calls and no ScopedXLock equivalent is needed. */
+            struct XLib
+            {
+                void* display = nullptr;
+                SizeHints* (*allocSizeHints)() = nullptr;
+                int (*getWMNormalHints)(void*, unsigned long, SizeHints*, long*) = nullptr;
+                void (*setWMNormalHints)(void*, unsigned long, SizeHints*) = nullptr;
+                int (*freeMemory)(void*) = nullptr;
+                int (*flush)(void*) = nullptr;
+
+                XLib()
+                {
+                    void* handle = dlopen("libX11.so.6", RTLD_LAZY);
+
+                    if (handle == nullptr)
+                    {
+                        return;
+                    }
+
+                    auto* openDisplay = (void* (*) (const char*) ) dlsym(handle, "XOpenDisplay");
+
+                    allocSizeHints = (decltype(allocSizeHints)) dlsym(handle, "XAllocSizeHints");
+                    getWMNormalHints =
+                        (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
+                    setWMNormalHints =
+                        (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
+                    freeMemory = (decltype(freeMemory)) dlsym(handle, "XFree");
+                    flush = (decltype(flush)) dlsym(handle, "XFlush");
+
+                    if (openDisplay != nullptr && allocSizeHints != nullptr
+                        && getWMNormalHints != nullptr && setWMNormalHints != nullptr
+                        && freeMemory != nullptr && flush != nullptr)
+                    {
+                        display = openDisplay(nullptr);
+                    }
+                }
+
+                bool isUsable() const { return display != nullptr; }
+            };
+
+            static const XLib xlib;
+
+            if (! xlib.isUsable())
+            {
+                return;
+            }
+
+            if (SizeHints* hints = xlib.allocSizeHints())
+            {
+                long supplied = 0;
+
+                // Preserve whatever the window already advertises
+                xlib.getWMNormalHints(xlib.display, windowHandle, hints, &supplied);
+
+                hints->flags |= minSizeFlag;
+                hints->minWidth = constrainer->getMinimumWidth();
+                hints->minHeight = constrainer->getMinimumHeight();
+
+                xlib.setWMNormalHints(xlib.display, windowHandle, hints);
+                xlib.freeMemory(hints);
+            }
+
+            xlib.flush(xlib.display);
+#endif
+        }
+
+        void resized() override
+        {
+            DocumentWindow::resized();
+
+            /* JUCE rewrites WM_NORMAL_HINTS while setting the window bounds, and
+               replaces the structure rather than merging into it, so the minimum
+               has to be applied once that has happened. */
+            Component::SafePointer<HARPWindow> safeThis(this);
+
+            MessageManager::callAsync(
+                [safeThis]
+                {
+                    if (safeThis != nullptr)
+                    {
+                        safeThis->publishMinimumSizeToWindowManager();
+                    }
+                });
         }
 
         /**

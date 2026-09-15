@@ -19,7 +19,9 @@ using namespace juce;
 class MediaClipboardWidget : public Component, public ChangeListener
 {
 public:
-    MediaClipboardWidget()
+    MediaClipboardWidget(DragOverlayComponent* overlay)
+        : dragOverlay(overlay),
+          trackAreaWidget(DisplayMode::Thumbnail, 75, overlay)
     {
         selectionTextBox.onReturnKey = [this] { renameSelectionCallback(); };
         controlsComponent.addAndMakeVisible(selectionTextBox);
@@ -133,7 +135,10 @@ public:
 
     Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
 
-    Rectangle<int> getClipboardControlsBounds() const { return controlsComponent.getBounds().expanded(2); }
+    Rectangle<int> getClipboardControlsBounds() const
+    {
+        return controlsComponent.getBounds().expanded(2);
+    }
 
     Rectangle<int> getClipboardNameBoxBounds() const
     {
@@ -261,7 +266,7 @@ public:
                                     File selectedFile =
                                         selectedTrack->getOriginalFilePath().getLocalFile();
 
-                                    /*StringArray validExtensions =
+                                    StringArray validExtensions =
                                         originalTrack->getInstanceExtensions();
 
                                     if (! validExtensions.contains(selectedFile.getFileExtension()))
@@ -269,51 +274,88 @@ public:
                                         AlertWindow::showMessageBoxAsync(
                                             AlertWindow::WarningIcon,
                                             "Invalid File",
-                                            "This track can only be overwritten with data of the following file types: "
-                                                + validExtensions.joinIntoString(", ") + ".",
+                                            "This track cannot be overwritten with the selected file.",
                                             "OK");
-                                    }*/
 
-                                    if (originalFile.getFileExtension()
-                                        != selectedFile.getFileExtension())
+                                        return;
+                                    }
+
+                                    bool successfulOverwrite = false;
+
+                                    String ext = originalFile.getFileExtension().toLowerCase();
+
+                                    if (AudioDisplayComponent::getSupportedExtensions().contains(
+                                            ext)
+                                        && ext != selectedFile.getFileExtension().toLowerCase())
                                     {
-                                        AlertWindow::showMessageBoxAsync(
-                                            AlertWindow::WarningIcon,
-                                            "File Type Mismatch",
-                                            "Cannot overwrite file of type \""
-                                                + originalFile.getFileExtension()
-                                                + "\" with file of type \""
-                                                + selectedFile.getFileExtension() + "\".",
-                                            "OK");
+                                        File tempFile = selectedFile.getSiblingFile(
+                                            selectedFile.getFileNameWithoutExtension()
+                                            + "_converted" + originalFile.getFileExtension());
 
-                                        // TODO - perform conversion if possible
+                                        if (convertAudioFile(selectedFile, tempFile))
+                                        {
+                                            if (tempFile.copyFileTo(originalFile))
+                                            {
+                                                DBG_AND_LOG(
+                                                    "MediaClipboardWidget::sendToDAWCallback: Converted and overwrote \""
+                                                    << originalFile.getFullPathName()
+                                                    << "\" with \""
+                                                    << selectedFile.getFullPathName() << "\".");
+
+                                                successfulOverwrite = true;
+                                            }
+                                            else
+                                            {
+                                                DBG_AND_LOG(
+                                                    "MediaClipboardWidget::sendToDAWCallback: Conversion succeeded "
+                                                    "but failed to copy to \""
+                                                    << originalFile.getFullPathName() << "\".");
+                                            }
+
+                                            tempFile.deleteFile();
+                                        }
+                                        else
+                                        {
+                                            AlertWindow::showMessageBoxAsync(
+                                                AlertWindow::WarningIcon,
+                                                "File Type Mismatch",
+                                                "Cannot convert file of type \""
+                                                    + selectedFile.getFileExtension() + "\" to \""
+                                                    + originalFile.getFileExtension() + "\".",
+                                                "OK");
+                                        }
                                     }
                                     else
                                     {
                                         if (selectedFile.copyFileTo(originalFile))
                                         {
                                             DBG_AND_LOG(
-                                                "MediaClipboardWidget::sendToDAWCallback: Overwriting file "
-                                                << originalFile.getFullPathName() << " with "
-                                                << selectedFile.getFullPathName() << ".");
+                                                "MediaClipboardWidget::sendToDAWCallback: Overwriting file \""
+                                                << originalFile.getFullPathName() << "\" with \""
+                                                << selectedFile.getFullPathName() << "\".");
 
-                                            // Update display with overwritten media
-                                            linkedDisplays[selectedIndex]->initializeDisplay(
-                                                URL(originalFile));
-
-                                            // Remove selected track
-                                            removeSelectionCallback();
-
-                                            // Select overwritten track
-                                            linkedDisplays[selectedIndex]->selectTrack();
+                                            successfulOverwrite = true;
                                         }
                                         else
                                         {
                                             DBG_AND_LOG(
-                                                "MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file "
-                                                << originalFile.getFullPathName() << " with "
-                                                << selectedFile.getFullPathName() << ".");
+                                                "MediaClipboardWidget::sendToDAWCallback: Failed to overwrite file \""
+                                                << originalFile.getFullPathName() << "\" with \""
+                                                << selectedFile.getFullPathName() << "\".");
                                         }
+                                    }
+
+                                    if (successfulOverwrite)
+                                    {
+                                        // Update display with overwritten media
+                                        linkedDisplays[selectedIndex]->initializeDisplay(
+                                            URL(originalFile));
+
+                                        // Remove selected track
+                                        removeSelectionCallback();
+
+                                        // Select overwritten track
+                                        linkedDisplays[selectedIndex]->selectTrack();
                                     }
                                 }
                             }
@@ -544,6 +586,81 @@ private:
         }
     }
 
+    // TODO - move to utils/?
+    bool convertAudioFile(const File& source, const File& target)
+    {
+        AudioFormatManager formatManager;
+        formatManager.registerBasicFormats();
+
+        std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(source));
+
+        if (! reader)
+        {
+            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Could not read source file \""
+                        << source.getFullPathName() << "\".");
+
+            return false;
+        }
+
+        String ext = target.getFileExtension().toLowerCase();
+        AudioFormat* format = nullptr;
+
+        if (ext == ".wav")
+            format = formatManager.findFormatForFileExtension("wav");
+        else if (ext == ".aiff" || ext == ".aif")
+            format = formatManager.findFormatForFileExtension("aiff");
+        else if (ext == ".flac")
+            format = formatManager.findFormatForFileExtension("flac");
+        else
+        {
+            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Unsupported target format \""
+                        << ext << "\".");
+
+            return false;
+        }
+
+        target.deleteFile();
+
+        auto outputStream = target.createOutputStream();
+
+        if (! outputStream)
+        {
+            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Could not create output file \""
+                        << target.getFullPathName() << "\".");
+
+            return false;
+        }
+
+        std::unique_ptr<AudioFormatWriter> writer(format->createWriterFor(
+            outputStream.release(), reader->sampleRate, reader->numChannels, 16, {}, 0));
+
+        if (! writer)
+        {
+            DBG_AND_LOG("convertAudioFile: Could not create writer for \""
+                        << target.getFullPathName() << "\".");
+
+            return false;
+        }
+
+        const int blockSize = 4096;
+        AudioBuffer<float> buffer((int) reader->numChannels, blockSize);
+        int64 totalFrames = (int64) reader->lengthInSamples;
+        int64 position = 0;
+
+        while (position < totalFrames)
+        {
+            int64 framesToRead = jmin((int64) blockSize, totalFrames - position);
+            reader->read(&buffer, 0, (int) framesToRead, position, true, true);
+            writer->writeFromAudioSampleBuffer(buffer, 0, (int) framesToRead);
+            position += framesToRead;
+        }
+
+        DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Converted and saved \""
+                    << source.getFullPathName() << "\" to \"" << target.getFullPathName() << "\".");
+
+        return true;
+    }
+
     void resetState()
     {
         selectionTextBox.clear();
@@ -624,6 +741,8 @@ private:
     MultiButton::Mode sendToDAWButtonSelectedInfo;
     MultiButton::Mode sendToDAWButtonInactiveInfo1;
     MultiButton::Mode sendToDAWButtonInactiveInfo2;
+
+    DragOverlayComponent* dragOverlay = nullptr;
 
     Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };

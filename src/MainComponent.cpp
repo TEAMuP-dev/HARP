@@ -12,12 +12,19 @@ MainComponent::MainComponent()
 
     mainModelTab.addChangeListener(this);
 
-    addAndMakeVisible(mainModelTab);
+    mainPanelViewport.setViewedComponent(&mainModelTab, false);
+    mainPanelViewport.setScrollBarsShown(true, false);
+    mainPanelViewport.setScrollOnDragMode(Viewport::ScrollOnDragMode::never);
+    mainPanelViewport.onScrolled = [this] { refreshTutorialHighlight(); };
+    addAndMakeVisible(mainPanelViewport);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+    addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    dragOverlay.setVisible(false);
+    dragOverlay.toFront(false);
 
     requiredWindowWidth = minimumWindowWidth;
     requiredWindowHeight = minimumWindowHeight;
@@ -98,7 +105,7 @@ void MainComponent::resized()
     FlexBox mainPanel;
     mainPanel.flexDirection = FlexBox::Direction::column;
 
-    mainPanel.items.add(FlexItem(mainModelTab).withFlex(1.0));
+    mainPanel.items.add(FlexItem(mainPanelViewport).withFlex(1.0));
 
     if (showStatusArea)
     {
@@ -122,10 +129,59 @@ void MainComponent::resized()
 
     fullWindow.performLayout(fullArea);
 
-    if (welcomeWindow != nullptr)
+    /* Give the tab the width the viewport can show and whatever height it needs,
+       so that a window too small for the content scrolls instead of clipping it */
+    auto layOutTab = [this]
     {
-        welcomeWindow->refreshHighlightForCurrentStep();
+        const int visibleWidth = mainPanelViewport.getMaximumVisibleWidth();
+
+        if (visibleWidth <= 0)
+        {
+            return 0;
+        }
+
+        const int requiredHeight = mainModelTab.getMinimumRequiredHeightForWidth(visibleWidth);
+
+        mainModelTab.setSize(visibleWidth,
+                             jmax(requiredHeight, mainPanelViewport.getMaximumVisibleHeight()));
+
+        return visibleWidth;
+    };
+
+    /* Laying out once can make the scrollbar appear, which narrows the visible
+       area and would leave it overlapping the content. Lay out again whenever the
+       available width changed as a result. */
+    const int firstWidth = layOutTab();
+
+    if (firstWidth > 0 && mainPanelViewport.getMaximumVisibleWidth() != firstWidth)
+    {
+        layOutTab();
     }
+
+    /* Deferred: the highlight is measured from component bounds, which are only
+       final once this layout pass and the tab's own have completed. */
+    refreshTutorialHighlight();
+
+    dragOverlay.setBounds(getLocalBounds());
+}
+
+void MainComponent::refreshTutorialHighlight()
+{
+    if (welcomeWindow == nullptr)
+    {
+        return;
+    }
+
+    Component::SafePointer<MainComponent> safeThis(this);
+
+    MessageManager::callAsync(
+        [safeThis]
+        {
+            if (safeThis != nullptr && safeThis->welcomeWindow != nullptr)
+            {
+                safeThis->welcomeWindow->refreshHighlightForCurrentStep();
+            }
+        });
 }
 
 void MainComponent::updateWindowConstraints()
@@ -141,10 +197,11 @@ void MainComponent::updateWindowConstraints()
                  mainModelTab.getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
         // Determine current width of main panel
         const int mainPanelWidth = jmax(requiredMainPanelWidth, mainModelTab.getWidth());
-        // Determine minimum height needed to display all model contents plus status widget
-        const int requiredMainPanelHeight =
-            mainModelTab.getMinimumRequiredHeightForWidth(mainPanelWidth)
-            + (showStatusArea ? statusAreaHeight : 0);
+        /* The panel scrolls vertically, so the window does not have to be tall
+           enough for every control; it only has to stay usably large. Width is
+           still content-driven, since there is no horizontal scrolling. */
+        const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
+                                            + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
@@ -185,6 +242,12 @@ void MainComponent::updateWindowConstraints()
             window->setBounds(bounds);
         }
     }
+
+    /* Whatever prompted this - a model loading, a panel being toggled - changed how
+       much there is to show, and so how much the viewport has to scroll. The window
+       itself may not have changed size, in which case nothing else would recompute
+       the scrollable area and the scrollbar would not appear until the next resize. */
+    resized();
 }
 
 /* --File-- */
@@ -207,13 +270,35 @@ void MainComponent::openSettingsWindow()
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new SettingsWindow());
+    // The settings dialog is a free-standing desktop window that can outlive this
+    // component, so guard the callback with a SafePointer
+    Component::SafePointer<MainComponent> safeThis(this);
+    options.content.setOwned(new SettingsWindow(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->restoreViewDefaults();
+        }));
 
     options.useNativeTitleBar = true;
     options.resizable = true;
     options.escapeKeyTriggersCloseButton = true;
 
     options.launchAsync();
+}
+
+void MainComponent::restoreViewDefaults()
+{
+    // Defaults must match the fallbacks used when reading the settings
+    // in the constructor: status area shown, media clipboard hidden
+    if (! showStatusArea)
+        viewStatusAreaCallback();
+
+    if (showMediaClipboard)
+        viewMediaClipboardCallback();
+
+    // showWelcomePopup default (true) is already restored by clearing settings;
+    // it will show on the next launch automatically.
 }
 
 /* --View-- */
@@ -422,46 +507,58 @@ void MainComponent::resetTutorialAutoLoadedModel()
     }
 }
 
+/**
+ * Converts a rectangle from the model tab's coordinates into this component's,
+ * clipped to the part of the tab the viewport is showing.
+ *
+ * The tab can be taller than its viewport, so a component that is scrolled out of
+ * view could otherwise produce a highlight lying over the status area beneath it.
+ */
+Rectangle<int> MainComponent::getVisibleTabArea(Rectangle<int> tabBounds)
+{
+    return getLocalArea(&mainModelTab, tabBounds).getIntersection(mainPanelViewport.getBounds());
+}
+
 Rectangle<int> MainComponent::getModelSelectBounds()
 {
     auto bounds = mainModelTab.getModelSelectBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getControlsBounds()
 {
     auto bounds = mainModelTab.getControlsBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getInputTrackBounds()
 {
     auto bounds = mainModelTab.getInputTrackBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getInputFolderBounds()
 {
     auto bounds = mainModelTab.getInputFolderBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getInputPlayBounds()
 {
     auto bounds = mainModelTab.getInputPlayBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getProcessButtonBounds()
 {
     auto bounds = mainModelTab.getProcessButtonBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getTracksBounds()
 {
     auto bounds = mainModelTab.getTracksBounds();
-    return getLocalArea(&mainModelTab, bounds);
+    return getVisibleTabArea(bounds);
 }
 
 Rectangle<int> MainComponent::getClipboardBounds()

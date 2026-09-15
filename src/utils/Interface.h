@@ -1,7 +1,7 @@
 /**
  * @file Interface.h
  * @brief Simple helper functions for interface.
- * @author hugofloresgarcia
+ * @author hugofloresgarcia, JEYuhas
  */
 
 #pragma once
@@ -20,3 +20,5 @@ inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiCo
 
     return fallback;
 }
+
+void copyFileToClipboard(const File& file);

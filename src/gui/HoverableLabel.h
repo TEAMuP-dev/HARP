@@ -91,7 +91,7 @@ public:
         Label::mouseDown(event);
     }
 
-    void setHoverColour(Colour color) { hoverColor = color; }
+    void setHoverColor(Colour color) { hoverColor = color; }
 
     // Callbacks for mouse events
     std::function<void()> onHover;
