@@ -218,4 +218,287 @@ include_extra: []
 
 common_test_cases: []
 
-overrides: {}
+overrides:
+
+  # ---- Singing voice transcription ----------------------------------------
+
+  teamup-tech/GAME:
+    # Synthetic tones may produce an empty transcription.
+    process_timeout: 150
+    test_cases:
+      - name: default
+        expect:
+          "Transcribed MIDI":
+            ext: .mid
+            min_notes: 0
+          "Detailed Note Data":
+            ext: .csv
+            min_bytes: 20
+      - name: english-four-step-8s
+        synthesized_inputs:
+          audio:
+            duration: 8.0
+        controls:
+          "Language": "English"
+          "D3PM Steps": "4"
+        expect:
+          "Transcribed MIDI":
+            ext: .mid
+            min_notes: 0
+          "Detailed Note Data":
+            ext: .csv
+            min_bytes: 20
+
+  # ---- Music similarity ---------------------------------------------------
+
+  teamup-tech/MERIT:
+    # Both inputs are required to be between 5 and 10 seconds.
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: default
+        expect:
+          "Similarity Results":
+            ext: .json
+        validators:
+          merit_scores: {}
+
+  teamup-tech/MuQ-MuLan:
+    # The Space accepts 10-60 second clips and up to eight descriptions.
+    process_timeout: 300
+    synthesized_inputs:
+      audio:
+        duration: 12.0
+    test_cases:
+      - name: default
+        controls:
+          "Candidate Descriptions": "a solo piano melody"
+        expect:
+          "Similarity Ranking":
+            ext: .json
+        validators:
+          muq_ranking:
+            count: 1
+      - name: three-candidate-ranking
+        controls:
+          "Candidate Descriptions": "calm solo piano\nenergetic rock band\nambient synthesizer pad"
+        expect:
+          "Similarity Ranking":
+            ext: .json
+        validators:
+          muq_ranking:
+            count: 3
+
+  # ---- Music emotion recognition -----------------------------------------
+
+  teamup-tech/Music2Emo:
+    process_timeout: 150
+    test_cases:
+      - name: default
+        expect:
+          "Emotion Analysis":
+            ext: .json
+        validators:
+          music2emo_analysis:
+            threshold: 0.5
+      - name: minimum-mood-threshold
+        controls:
+          "Mood Threshold": 0.1
+        expect:
+          "Emotion Analysis":
+            ext: .json
+        validators:
+          music2emo_analysis:
+            threshold: 0.1
+
+  # ---- Music generation ---------------------------------------------------
+
+  teamup-tech/magenta-rt:
+    process_timeout: 75
+    test_cases:
+      - name: default
+        expect:
+          "Generated Music":
+            ext: .wav
+            num_channels: 2
+            sample_rate: 48000
+            bit_depth: 16
+            min_duration: 3.9
+            max_duration: 4.1
+            min_rms_db: -60
+      - name: seeded-two-second-piano
+        controls:
+          "Music Prompt": "a calm solo piano melody"
+          "Duration (seconds)": "2"
+          "Temperature": 0.7
+          "Top-k": 25
+          "Seed": 42
+        expect:
+          "Generated Music":
+            ext: .wav
+            num_channels: 2
+            sample_rate: 48000
+            bit_depth: 16
+            min_duration: 1.9
+            max_duration: 2.1
+            min_rms_db: -60
+
+  # ---- Symbolic music infilling ------------------------------------------
+
+  teamup-tech/MIDI-GPT:
+    # 20 × 0.5s = 5 bars at 120 BPM; the Space needs at least 4.
+    process_timeout: 150
+    synthesized_inputs:
+      midi:
+        num_notes: 20
+        note_duration: 0.5
+        instrument: 0
+        channel: 0
+    test_cases:
+      - name: default
+        expect:
+          "Rewritten MIDI":
+            ext: .mid
+            min_notes: 1
+            min_duration: 8.0
+      - name: seeded-four-bar-rewrite
+        controls:
+          "Number of Bars": "4"
+          "Temperature": 0.8
+          "Top-p": 0.9
+          "Seed": 42
+          "Maximum Polyphony": 4
+        expect:
+          "Rewritten MIDI":
+            ext: .mid
+            min_notes: 1
+            min_duration: 8.0
+
+  # ---- MIDI-to-audio synthesis -------------------------------------------
+
+  teamup-tech/DDSP-Guitar:
+    # Program 24 is General MIDI nylon-string guitar.
+    process_timeout: 150
+    synthesized_inputs:
+      midi:
+        num_notes: 12
+        note_duration: 0.4
+        instrument: 24
+        channel: 0
+    test_cases:
+      - name: synthesized-guitar-program
+        expect:
+          "Synthesized Guitar":
+            ext: .wav
+            min_duration: 4.0
+            min_rms_db: -60
+      - name: real-guitar-midi
+        files:
+          "MIDI File": test_data/guitar_riff.mid
+        expect:
+          "Synthesized Guitar":
+            ext: .wav
+            min_duration: 4.0
+            min_rms_db: -60
+      - name: real-guitar-five-second-cap
+        files:
+          "MIDI File": test_data/guitar_riff.mid
+        controls:
+          "Max Duration (seconds)": "5"
+        expect:
+          "Synthesized Guitar":
+            ext: .wav
+            min_duration: 4.0
+            max_duration: 5.1
+            min_rms_db: -60
+
+  # ---- Audio editing / restyling -----------------------------------------
+
+  teamup-tech/Stable-Audio-3:
+    # Restyle and Inpaint both preserve the six-second input duration.
+    process_timeout: 240
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: restyle-default
+        controls:
+          "Prompt": "a warm synthwave groove"
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_duration: 5.8
+            max_duration: 6.2
+            min_rms_db: -60
+      - name: inpaint-middle
+        controls:
+          "Prompt": "jazz piano with brushed drums"
+          "Edit Mode": "Inpaint"
+          "Edit Start (seconds)": 1.0
+          "Edit End (seconds)": 3.0
+          "Seed": 42
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_duration: 5.8
+            max_duration: 6.2
+            min_rms_db: -60
+
+  # ---- CPU audio analysis and speech -------------------------------------
+
+  teamup-tech/audiobox-aesthetics:
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 4.0
+    test_cases:
+      - name: default
+        validators:
+          aesthetics_scores: {}
+
+  teamup-tech/pocket-tts:
+    process_timeout: 90
+    test_cases:
+      - name: default-voice
+        controls:
+          "English Text": "The quick brown fox jumps over the lazy dog."
+          "Voice": "alba"
+        expect:
+          "Synthesized Speech":
+            ext: .wav
+            num_channels: 1
+            sample_rate: 24000
+            bit_depth: 16
+            min_duration: 0.2
+            min_rms_db: -60
+      - name: alternate-voice
+        controls:
+          "English Text": "Hello from HARP."
+          "Voice": "george"
+        expect:
+          "Synthesized Speech":
+            ext: .wav
+            num_channels: 1
+            sample_rate: 24000
+            bit_depth: 16
+            min_duration: 0.2
+            min_rms_db: -60
+
+  teamup-tech/chord-extractor:
+    process_timeout: 90
+    synthesized_inputs:
+      audio:
+        duration: 4.0
+    test_cases:
+      - name: default-roll-on
+        validators:
+          chord_sequence: {}
+      - name: minimum-roll-on
+        controls:
+          "Spectral Roll-on": 0
+        validators:
+          chord_sequence: {}

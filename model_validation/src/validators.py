@@ -31,6 +31,10 @@ Validators signal failure by raising AssertionError. The message should name
 the output at fault and say what was wrong with it.
 """
 
+import json
+import math
+from pathlib import Path
+
 from audio import read_audio_props
 
 
@@ -70,6 +74,94 @@ def validator(name):
         VALIDATORS[name] = fn
         return fn
     return register
+
+
+def json_file(outputs, label):
+    """Read a model's JSON file output."""
+    with Path(outputs[label]).open(encoding="utf-8") as stream:
+        result = json.load(stream)
+    assert isinstance(result, dict), f"'{label}' must contain a JSON object"
+    return result
+
+
+def finite_number(value, label):
+    """Require a numeric prediction rather than null, a string, or NaN."""
+    assert type(value) in (int, float) and math.isfinite(value), \
+        f"'{label}' must be a finite number, got {value!r}"
+
+
+@validator("merit_scores")
+def merit_scores(outputs, controls, params):
+    """Check the three similarity scores in MERIT's result file."""
+    result = json_file(outputs, "Similarity Results")
+    for name in ("melody", "rhythm", "timbre"):
+        value = result["scores"][name]
+        finite_number(value, name)
+        assert -1.000001 <= value <= 1.000001, \
+            f"MERIT {name} cosine similarity is outside [-1, 1]: {value}"
+
+
+@validator("muq_ranking")
+def muq_ranking(outputs, controls, params):
+    """Check candidate count, ranks, and descending similarity scores."""
+    result = json_file(outputs, "Similarity Ranking")
+    rows = result["results"]
+    assert isinstance(rows, list) and len(rows) == params["count"], \
+        f"MuQ must return {params['count']} ranked candidates"
+    previous = math.inf
+    for rank, row in enumerate(rows, start=1):
+        assert row["rank"] == rank, f"MuQ rank must be {rank}"
+        assert isinstance(row["description"], str) and row["description"].strip(), \
+            "MuQ candidate description must be nonempty"
+        score = row["similarity"]
+        finite_number(score, "similarity")
+        assert score <= previous, "MuQ candidates must be sorted by similarity"
+        previous = score
+
+
+@validator("music2emo_analysis")
+def music2emo_analysis(outputs, controls, params):
+    """Check emotion dimensions and thresholded mood probabilities."""
+    result = json_file(outputs, "Emotion Analysis")
+    for name in ("valence", "arousal"):
+        finite_number(result[name], name)
+    assert result["threshold"] == params["threshold"], "Unexpected mood threshold"
+    assert isinstance(result["moods"], list), "Music2Emo moods must be a list"
+    for mood in result["moods"]:
+        assert isinstance(mood["label"], str) and mood["label"], "Missing mood label"
+        score = mood["probability"]
+        finite_number(score, "mood probability")
+        # The Space rounds probabilities to four decimal places.
+        assert params["threshold"] - 0.0001 <= score <= 1, \
+            f"Mood probability {score} does not meet the threshold"
+
+
+@validator("aesthetics_scores")
+def aesthetics_scores(outputs, controls, params):
+    """Require all four predicted aesthetic scores."""
+    result = outputs["Aesthetic Scores"]
+    assert isinstance(result, dict), "Aesthetic Scores must be an object"
+    for name in ("content_enjoyment", "content_usefulness",
+                 "production_complexity", "production_quality"):
+        finite_number(result["scores"][name], name)
+
+
+@validator("chord_sequence")
+def chord_sequence(outputs, controls, params):
+    """Check chord labels and nonnegative, ordered analysis-frame timestamps."""
+    result = outputs["Chord Sequence"]
+    assert isinstance(result, dict), "Chord Sequence must be an object"
+    rows = result["chords"]
+    assert isinstance(rows, list), "Chord Sequence chords must be a list"
+    previous = 0.0
+    for row in rows:
+        timestamp = row["timestamp_seconds"]
+        finite_number(timestamp, "chord timestamp")
+        # Chordino's final analysis frame can extend beyond the input audio.
+        assert previous <= timestamp, \
+            f"Chord timestamp {timestamp} is negative or out of order"
+        assert isinstance(row["chord"], str) and row["chord"], "Missing chord label"
+        previous = timestamp
 
 
 @validator("labels_within_audio")
