@@ -100,6 +100,16 @@ class ModelOutputsTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             check_expectations("Transcribed MIDI", "midi_track", str(path), {"min_notes": 0})
 
+    def test_deepafx_st_params(self):
+        self.check_file("deepafx_st_params", "DSP Parameters",
+                        {"raw_parameters": [0.5, 0.3, -0.1, 0.8]})
+        with self.assertRaises(KeyError):
+            self.check_file("deepafx_st_params", "DSP Parameters", {})
+        for value in (None, True, "0.9", float("nan")):
+            with self.subTest(value=value), self.assertRaises(AssertionError):
+                self.check_file("deepafx_st_params", "DSP Parameters",
+                                {"raw_parameters": [value]})
+
 
 if __name__ == "__main__":
     unittest.main()

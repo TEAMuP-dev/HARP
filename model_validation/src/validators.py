@@ -216,3 +216,11 @@ def labels_within_audio(outputs, controls, params):
 
     if not checked:
         raise ValidatorNotApplicable("no pyharp LabelList output to check")
+
+
+@validator("deepafx_st_params")
+def deepafx_st_params(outputs, controls, params):
+    """Check predicted EQ and compressor parameters."""
+    result = json_file(outputs, "DSP Parameters")
+    for i, v in enumerate(result["raw_parameters"]):
+        finite_number(v, f"raw_parameters[{i}]")

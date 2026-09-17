@@ -414,7 +414,101 @@ overrides:
             max_duration: 5.1
             min_rms_db: -60
 
+  teamup-tech/DDSP-Piano:
+    # Any MIDI input works; all notes are rendered as piano.
+    process_timeout: 300
+    synthesized_inputs:
+      midi:
+        num_notes: 8
+        note_duration: 0.5
+    test_cases:
+      - name: default
+        expect:
+          "Synthesized Piano":
+            ext: .wav
+            sample_rate: 24000
+            min_duration: 3.0
+            min_rms_db: -60
+      - name: real-piano-midi
+        files:
+          "MIDI File": test_data/piano_chords.mid
+        expect:
+          "Synthesized Piano":
+            ext: .wav
+            sample_rate: 24000
+            min_duration: 4.0
+            min_rms_db: -40
+      - name: bright-timbre-five-seconds
+        files:
+          "MIDI File": test_data/piano_chords.mid
+        controls:
+          "Piano Timbre": "Piano 0 (Bright)"
+          "Max Duration (seconds)": "5"
+        expect:
+          "Synthesized Piano":
+            ext: .wav
+            sample_rate: 24000
+            min_duration: 4.0
+            max_duration: 5.5
+            min_rms_db: -60
+      - name: warm-timbre-long-duration
+        files:
+          "MIDI File": test_data/piano_chords.mid
+        controls:
+          "Piano Timbre": "Piano 9 (Warm)"
+          "Max Duration (seconds)": "10"
+        expect:
+          "Synthesized Piano":
+            ext: .wav
+            sample_rate: 24000
+            min_duration: 7.0
+            min_rms_db: -40
+
+  # ---- Audio dynamics processing -----------------------------------------
+
+  teamup-tech/micro-TCN:
+    # Neural LA-2A compressor/limiter emulation. Valid convolution shortens
+    # output by ~0.3s at 44.1kHz.
+    process_timeout: 90
+    test_cases:
+      - name: default
+        expect:
+          "Processed Audio":
+            ext: .wav
+            min_duration: 1.5
+            min_rms_db: -60
+      - name: limiter-heavy-reduction
+        controls:
+          "Mode": "Limit"
+          "Peak Reduction": 0.8
+        expect:
+          "Processed Audio":
+            ext: .wav
+            min_duration: 1.5
+            min_rms_db: -60
+
   # ---- Audio editing / restyling -----------------------------------------
+
+  teamup-tech/DeepAFx-ST:
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 8.0
+    test_cases:
+      - name: default
+        expect:
+          "Styled Output":
+            ext: .wav
+            num_channels: 1
+            sample_rate: 24000
+            min_duration: 7.0
+            max_duration: 9.0
+            min_rms_db: -60
+          "DSP Parameters":
+            ext: .json
+            min_bytes: 50
+        validators:
+          deepafx_st_params: {}
 
   teamup-tech/Stable-Audio-3:
     # Restyle and Inpaint both preserve the six-second input duration.
@@ -502,3 +596,28 @@ overrides:
           "Spectral Roll-on": 0
         validators:
           chord_sequence: {}
+
+  # ---- Music source separation ---------------------------------------------
+
+  teamup-tech/MelBandRoFormer:
+    process_timeout: 300
+    test_cases:
+      - name: default
+        expect:
+          "Vocals":
+            ext: .wav
+          "Instrumental":
+            ext: .wav
+            min_rms_db: -60
+      - name: ten-second-chunked
+        synthesized_inputs:
+          audio:
+            duration: 10.0
+        expect:
+          "Vocals":
+            min_duration: 9.5
+            max_duration: 10.5
+          "Instrumental":
+            min_duration: 9.5
+            max_duration: 10.5
+            min_rms_db: -60
