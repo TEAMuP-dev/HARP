@@ -101,6 +101,11 @@
 #       load_only: false       # only check availability + /controls, without
 #                              # running inference
 #       skip_common_cases: false   # opt this model out of common_test_cases
+#       quota_error_exhausts_validation_token: true
+#                              # set false when this Space calls a downstream
+#                              # Space with different credentials. Its quota
+#                              # error still fails this Space, but does not
+#                              # skip other ZeroGPU Spaces in this run
 #
 #       synthesized_inputs:    # input properties for this model's cases,
 #                              # overriding the top-level block

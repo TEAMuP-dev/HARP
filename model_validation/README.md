@@ -212,6 +212,12 @@ Three mechanisms limit the ZeroGPU allowance a run can consume:
 - **Quota exhaustion stops the remaining ZeroGPU models.** If a ZeroGPU model
   fails with a "quota exceeded" error, every remaining ZeroGPU model is
   skipped (as `SKIP`) rather than run against an exhausted allowance.
+  This is enabled per Space by default because the client is authenticated
+  with the validation token. A two-stage Space can instead report quota
+  exhaustion from a downstream Space authenticated with different credentials;
+  that response has no account identity once it reaches the harness. Set its
+  `quota_error_exhausts_validation_token: false` override to report that model
+  as failed without skipping unrelated ZeroGPU Spaces.
 - **ZeroGPU models use a lower execution timeout.**
   `--zerogpu-process-timeout` (default 120s) applies instead of
   `--process-timeout` (default 600s). It bounds execution only. The queue wait
@@ -571,8 +577,8 @@ timings and error details.
 shown alongside its default. The top level takes `exclude`, `include_extra`,
 `synthesized_inputs`, and `common_test_cases`. Each model's `overrides` entry
 takes `connect_timeout`, `process_timeout`, `load_only`, `skip_common_cases`,
-`synthesized_inputs`, and `test_cases`. A representative entry for each tier
-is included as an example.
+`quota_error_exhausts_validation_token`, `synthesized_inputs`, and
+`test_cases`. A representative entry for each tier is included as an example.
 
 Three of those per-model settings also exist as CLI flags. A model's
 `connect_timeout` or `process_timeout` is a fact about that model, so it wins
