@@ -218,4 +218,21 @@ include_extra: []
 
 common_test_cases: []
 
-overrides: {}
+overrides:
+  # These HARP Spaces forward processing to a downstream Space authenticated
+  # with a separate TEAMuP token. A downstream quota error must fail that
+  # model alone, not skip subsequent ZeroGPU validation using HF_TOKEN.
+  teamup-tech/SoulX-Singer:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/SonicMaster:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/MelodyFlow:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/DiffRhythm2:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/OmniVoice:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/ACE-Step:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/Matchering:
+    quota_error_exhausts_validation_token: false
