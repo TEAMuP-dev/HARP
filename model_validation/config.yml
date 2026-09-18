@@ -272,6 +272,25 @@ overrides:
             min_notes: 1
             min_duration: 8.0
 
+  # ---- Audio dynamics / style transfer ------------------------------------
+
+  teamup-tech/DeepAFx-ST:
+    # The convolutional encoder needs at least ~5s of audio at 24kHz.
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 8.0
+    test_cases:
+      - name: default
+        expect:
+          "Styled Output":
+            ext: .wav
+            num_channels: 1
+            sample_rate: 24000
+            min_duration: 7.0
+            max_duration: 9.0
+            min_rms_db: -60
+
   # ---- Audio editing / restyling -----------------------------------------
 
   teamup-tech/Stable-Audio-3:
