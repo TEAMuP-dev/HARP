@@ -532,11 +532,8 @@ label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
 
-The model-specific validators check MERIT's similarity scores, MuQ's ranked
-candidates (`count`), Music2Emo's mood probabilities (`threshold`), AudioBox's
-four aesthetic scores, and Chord Extractor's ordered timestamps.
-The file-based results are parsed as JSON. Empty mood and chord lists are valid.
-Run their local regression checks with:
+The model-specific validators check MERIT's similarity scores and MuQ's ranked
+candidates (`count`). Run their local regression checks with:
 
 ```bash
 python -m unittest discover -s model_validation/tests -v

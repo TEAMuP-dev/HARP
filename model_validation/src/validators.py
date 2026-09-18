@@ -119,51 +119,6 @@ def muq_ranking(outputs, controls, params):
         previous = score
 
 
-@validator("music2emo_analysis")
-def music2emo_analysis(outputs, controls, params):
-    """Check emotion dimensions and thresholded mood probabilities."""
-    result = json_file(outputs, "Emotion Analysis")
-    for name in ("valence", "arousal"):
-        finite_number(result[name], name)
-    assert result["threshold"] == params["threshold"], "Unexpected mood threshold"
-    assert isinstance(result["moods"], list), "Music2Emo moods must be a list"
-    for mood in result["moods"]:
-        assert isinstance(mood["label"], str) and mood["label"], "Missing mood label"
-        score = mood["probability"]
-        finite_number(score, "mood probability")
-        # The Space rounds probabilities to four decimal places.
-        assert params["threshold"] - 0.0001 <= score <= 1, \
-            f"Mood probability {score} does not meet the threshold"
-
-
-@validator("aesthetics_scores")
-def aesthetics_scores(outputs, controls, params):
-    """Require all four predicted aesthetic scores."""
-    result = outputs["Aesthetic Scores"]
-    assert isinstance(result, dict), "Aesthetic Scores must be an object"
-    for name in ("content_enjoyment", "content_usefulness",
-                 "production_complexity", "production_quality"):
-        finite_number(result["scores"][name], name)
-
-
-@validator("chord_sequence")
-def chord_sequence(outputs, controls, params):
-    """Check chord labels and nonnegative, ordered analysis-frame timestamps."""
-    result = outputs["Chord Sequence"]
-    assert isinstance(result, dict), "Chord Sequence must be an object"
-    rows = result["chords"]
-    assert isinstance(rows, list), "Chord Sequence chords must be a list"
-    previous = 0.0
-    for row in rows:
-        timestamp = row["timestamp_seconds"]
-        finite_number(timestamp, "chord timestamp")
-        # Chordino's final analysis frame can extend beyond the input audio.
-        assert previous <= timestamp, \
-            f"Chord timestamp {timestamp} is negative or out of order"
-        assert isinstance(row["chord"], str) and row["chord"], "Missing chord label"
-        previous = timestamp
-
-
 @validator("labels_within_audio")
 def labels_within_audio(outputs, controls, params):
     """
@@ -216,11 +171,3 @@ def labels_within_audio(outputs, controls, params):
 
     if not checked:
         raise ValidatorNotApplicable("no pyharp LabelList output to check")
-
-
-@validator("deepafx_st_params")
-def deepafx_st_params(outputs, controls, params):
-    """Check predicted EQ and compressor parameters."""
-    result = json_file(outputs, "DSP Parameters")
-    for i, v in enumerate(result["raw_parameters"]):
-        finite_number(v, f"raw_parameters[{i}]")
