@@ -218,4 +218,95 @@ include_extra: []
 
 common_test_cases: []
 
-overrides: {}
+overrides:
+
+  # ---- Music similarity ---------------------------------------------------
+
+  teamup-tech/MERIT:
+    # Both inputs are required to be between 5 and 10 seconds.
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: default
+        expect:
+          "Similarity Results":
+            ext: .json
+        validators:
+          merit_scores: {}
+
+  teamup-tech/MuQ-MuLan:
+    # The Space accepts 10-60 second clips and up to eight descriptions.
+    process_timeout: 300
+    synthesized_inputs:
+      audio:
+        duration: 12.0
+    test_cases:
+      - name: default
+        controls:
+          "Candidate Descriptions": "a solo piano melody"
+        expect:
+          "Similarity Ranking":
+            ext: .json
+        validators:
+          muq_ranking:
+            count: 1
+
+  # ---- Symbolic music infilling ------------------------------------------
+
+  teamup-tech/MIDI-GPT:
+    # 20 × 0.5s = 5 bars at 120 BPM; the Space needs at least 4.
+    process_timeout: 150
+    synthesized_inputs:
+      midi:
+        num_notes: 20
+        note_duration: 0.5
+        instrument: 0
+        channel: 0
+    test_cases:
+      - name: default
+        expect:
+          "Rewritten MIDI":
+            ext: .mid
+            min_notes: 1
+            min_duration: 8.0
+
+  # ---- Audio dynamics / style transfer ------------------------------------
+
+  teamup-tech/DeepAFx-ST:
+    # The convolutional encoder needs at least ~5s of audio at 24kHz.
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 8.0
+    test_cases:
+      - name: default
+        expect:
+          "Styled Output":
+            ext: .wav
+            num_channels: 1
+            sample_rate: 24000
+            min_duration: 7.0
+            max_duration: 9.0
+            min_rms_db: -60
+
+  # ---- Audio editing / restyling -----------------------------------------
+
+  teamup-tech/Stable-Audio-3:
+    # Restyle and Inpaint both preserve the six-second input duration.
+    process_timeout: 240
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: restyle-default
+        controls:
+          "Prompt": "a warm synthwave groove"
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_duration: 5.8
+            max_duration: 6.2
+            min_rms_db: -60
