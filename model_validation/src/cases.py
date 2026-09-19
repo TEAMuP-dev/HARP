@@ -205,6 +205,14 @@ def validate_outputs(result, controls: dict) -> str | None:
                 return f"label list output '{spec.get('label')}' is malformed"
             continue
 
+        if spec.get("type") == "text_box":
+            if out is None:
+                return f"output '{spec.get('label')}' is None"
+            if not isinstance(out, str):
+                return (f"text output '{spec.get('label')}' is not a string: "
+                        f"{type(out).__name__}")
+            continue
+
         if out is None:
             return f"output '{spec.get('label')}' is None"
 
