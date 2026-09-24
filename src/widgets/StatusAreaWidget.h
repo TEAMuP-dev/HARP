@@ -18,7 +18,7 @@ class MessageBox : public Component, ChangeListener
 public:
     MessageBox(float fontSize = 15.0f, Justification justification = Justification::centred)
     {
-        messageLabel.setFont(fontSize);
+        messageLabel.setFont(FontOptions { fontSize });
         messageLabel.setColour(Label::textColourId, Colour(0xE0, 0xE0, 0xE0));
 
         messageLabel.setJustificationType(justification);

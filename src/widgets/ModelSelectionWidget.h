@@ -8,6 +8,7 @@
 
 #include <any>
 #include <functional>
+#include <map>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -20,18 +21,33 @@
 #include "../utils/Errors.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
+#include "../utils/ModelRegistry.h"
 
 using namespace juce;
 
 struct SharedChoices : public ChangeBroadcaster
 {
+    enum class LoadStatus
+    {
+        None,
+        Error,
+        Down,
+        TryAgain
+    };
+
+    SharedChoices()
+        : savedModelPaths(ModelRegistry::getFeaturedModelPaths())
+    {
+    }
+
     int getIndexForPath(const std::string& p)
     {
         int idx = -1;
+        const auto cleanedPath = stripStatusTag(p);
 
         for (unsigned int i = 0; i < savedModelPaths.size(); ++i)
         {
-            if (savedModelPaths[i] == p)
+            if (savedModelPaths[i] == cleanedPath)
             {
                 idx = (int) i;
 
@@ -47,34 +63,83 @@ struct SharedChoices : public ChangeBroadcaster
 
     void addNewPath(const std::string& p)
     {
-        savedModelPaths.push_back(p);
+        const auto cleanedPath = stripStatusTag(p);
+
+        if (! containsPath(cleanedPath))
+            savedModelPaths.push_back(cleanedPath);
+
         sendSynchronousChangeMessage();
     }
 
     void updatePath(unsigned int idx, const std::string& p)
     {
-        savedModelPaths[idx] = p;
+        savedModelPaths[idx] = stripStatusTag(p);
         sendSynchronousChangeMessage();
     }
 
-    std::vector<std::string> savedModelPaths = {
-        "click here to enter a custom path...",
-        "stability/text-to-audio",
-        "stability/audio-to-audio",
-        "teamup-tech/text2midi-symbolic-music-generation",
-        "teamup-tech/demucs-source-separation",
-        "teamup-tech/solo-piano-audio-to-midi-transcription",
-        "teamup-tech/transkun", // TODO - more intuitive name
-        "teamup-tech/TRIA", // TODO - more intuitive name: (The Rhythm In Anything) conditional drum generation
-        "teamup-tech/anticipatory-music-transformer",
-        "teamup-tech/vampnet-conditional-music-generation",
-        "teamup-tech/harmonic-percussive-separation",
-        "teamup-tech/Kokoro-TTS",
-        "teamup-tech/MegaTTS3-Voice-Cloning",
-        "teamup-tech/midi-synthesizer",
-        "teamup-tech/audioseal", // TODO - more intuitive name
-        // "xribene/HARP-UI-TEST-v3"
-    };
+    void setLoadStatus(const std::string& p, LoadStatus status)
+    {
+        const auto cleanedPath = stripStatusTag(p);
+
+        if (! containsPath(cleanedPath))
+            savedModelPaths.push_back(cleanedPath);
+
+        if (status == LoadStatus::None)
+            loadStatuses.erase(cleanedPath);
+        else
+            loadStatuses[cleanedPath] = status;
+
+        sendSynchronousChangeMessage();
+    }
+
+    String getDisplayTextForIndex(unsigned int idx) const
+    {
+        if (idx >= savedModelPaths.size())
+            return {};
+
+        const auto& path = savedModelPaths[idx];
+        const auto status = loadStatuses.find(path);
+
+        if (status == loadStatuses.end())
+            return path;
+
+        return String(path) + getStatusTag(status->second);
+    }
+
+    static std::string stripStatusTag(const std::string& p)
+    {
+        auto cleaned = String(p).trim();
+
+        for (const auto& tag : { errorTag, downTag, tryAgainTag })
+            cleaned = cleaned.replace(String(tag), "");
+
+        return cleaned.trim().toStdString();
+    }
+
+    std::vector<std::string> savedModelPaths;
+
+private:
+    static String getStatusTag(LoadStatus status)
+    {
+        switch (status)
+        {
+            case LoadStatus::Error:
+                return errorTag;
+            case LoadStatus::Down:
+                return downTag;
+            case LoadStatus::TryAgain:
+                return tryAgainTag;
+            case LoadStatus::None:
+            default:
+                return {};
+        }
+    }
+
+    inline static const String errorTag { " [ERROR]" };
+    inline static const String downTag { " [DOWN]" };
+    inline static const String tryAgainTag { " [TRY AGAIN]" };
+
+    std::map<std::string, LoadStatus> loadStatuses;
 };
 
 class CustomPathComponent : public Component
@@ -250,7 +315,7 @@ public:
         /* Reduce to the canonical form on the way in, so that the same model
            entered three different ways is loaded, listed, and matched as one
            entry rather than accumulating duplicates in the dropdown. */
-        selectedPath = canonicalizeModelPath(modelPath);
+        selectedPath = canonicalizeModelPath(SharedChoices::stripStatusTag(modelPath.toStdString()));
 
         if (selectedPath != modelPath)
         {
@@ -300,42 +365,17 @@ public:
             selectedPath = resolvedPath;
         }
 
-        std::string loadedPath = selectedPath.toStdString();
+        std::string loadedPath = SharedChoices::stripStatusTag(selectedPath.toStdString());
 
         if (! sharedChoices->containsPath(loadedPath))
         {
-            if (sharedChoices->containsPath(loadedPath + validPathBrokenTag))
-            {
-                unsigned int currentIdx =
-                    (unsigned int) sharedChoices->getIndexForPath(loadedPath + validPathBrokenTag);
+            // Add a new entry for custom path
+            sharedChoices->addNewPath(loadedPath);
 
-                // Remove broken tag from existing entry for path
-                sharedChoices->updatePath(currentIdx, loadedPath);
-            }
-            else if (sharedChoices->containsPath(loadedPath + validPathTryAgainTag))
-            {
-                unsigned int currentIdx = (unsigned int) sharedChoices->getIndexForPath(
-                    loadedPath + validPathTryAgainTag);
-
-                // Remove try again tag from existing entry for path
-                sharedChoices->updatePath(currentIdx, loadedPath);
-            }
-            else if (sharedChoices->containsPath(loadedPath + validPathErrorTag))
-            {
-                unsigned int currentIdx =
-                    (unsigned int) sharedChoices->getIndexForPath(loadedPath + validPathErrorTag);
-
-                // Remove error tag from existing entry for path
-                sharedChoices->updatePath(currentIdx, loadedPath);
-            }
-            else
-            {
-                // Add a new entry for custom path
-                sharedChoices->addNewPath(loadedPath);
-
-                lastSelectedPathIndex = sharedChoices->getIndexForPath(loadedPath);
-            }
+            lastSelectedPathIndex = sharedChoices->getIndexForPath(loadedPath);
         }
+
+        sharedChoices->setLoadStatus(loadedPath, SharedChoices::LoadStatus::None);
 
         lastLoadedPathIndex = sharedChoices->getIndexForPath(loadedPath);
 
@@ -369,29 +409,25 @@ public:
             }
         }
 
-        std::string originalEntry = selectedPath.toStdString();
-        std::string updatedEntry = selectedPath.toStdString();
+        std::string originalEntry = SharedChoices::stripStatusTag(selectedPath.toStdString());
+        auto status = SharedChoices::LoadStatus::Error;
 
         if (const auto* e = std::get_if<HttpError>(&error))
         {
             if (e->type == HttpError::Type::ConnectionFailed
                 && e->request == HttpError::Request::POST)
             {
-                updatedEntry += validPathTryAgainTag;
+                status = SharedChoices::LoadStatus::TryAgain;
             }
             else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 429)
             {
                 // Rate limiting says nothing about the model, only about how
                 // quickly it was asked for
-                updatedEntry += validPathTryAgainTag;
+                status = SharedChoices::LoadStatus::TryAgain;
             }
             else if (e->type == HttpError::Type::BadStatusCode && e->statusCode == 503)
             {
-                updatedEntry += validPathBrokenTag;
-            }
-            else
-            {
-                updatedEntry += validPathErrorTag;
+                status = SharedChoices::LoadStatus::Down;
             }
         }
         else if (const auto* e = std::get_if<GradioError>(&error))
@@ -400,52 +436,15 @@ public:
                marked as down. The Hub was queried to determine the stage. */
             if (e->type == GradioError::Type::SpaceStarting)
             {
-                updatedEntry += validPathTryAgainTag;
+                status = SharedChoices::LoadStatus::TryAgain;
             }
             else if (e->type == GradioError::Type::SpaceUnavailable)
             {
-                updatedEntry += validPathBrokenTag;
-            }
-            else
-            {
-                updatedEntry += validPathErrorTag;
+                status = SharedChoices::LoadStatus::Down;
             }
         }
-        else
-        {
-            updatedEntry += validPathErrorTag;
-        }
 
-        // Check for previously added unsuccessful tags before querying
-        if (sharedChoices->containsPath(originalEntry + validPathErrorTag))
-        {
-            originalEntry += validPathErrorTag;
-        }
-        if (sharedChoices->containsPath(originalEntry + validPathBrokenTag))
-        {
-            originalEntry += validPathBrokenTag;
-        }
-        if (sharedChoices->containsPath(originalEntry + validPathTryAgainTag))
-        {
-            originalEntry += validPathTryAgainTag;
-        }
-
-        if (sharedChoices->containsPath(updatedEntry))
-        {
-            // Path has already been updated
-        }
-        else if (sharedChoices->containsPath(originalEntry))
-        {
-            unsigned int currentIdx = (unsigned int) sharedChoices->getIndexForPath(originalEntry);
-
-            // Update entry with tag for existing path
-            sharedChoices->updatePath(currentIdx, updatedEntry);
-        }
-        else
-        {
-            // Add a new entry with tag for custom path
-            sharedChoices->addNewPath(updatedEntry);
-        }
+        sharedChoices->setLoadStatus(originalEntry, status);
 
         lastSelectedPathIndex = lastLoadedPathIndex;
 
@@ -464,7 +463,8 @@ private:
         for (unsigned int i = 0; i < sharedChoices->savedModelPaths.size(); ++i)
         {
             // Add saved path to combo box (skipping 0 for custom path)
-            modelPathComboBox.addItem(sharedChoices->savedModelPaths[i], static_cast<int>(i) + 1);
+            modelPathComboBox.addItem(sharedChoices->getDisplayTextForIndex(i),
+                                      static_cast<int>(i) + 1);
         }
     }
 
@@ -528,22 +528,8 @@ private:
         {
             if (modelPathComboBox.getSelectedItemIndex() != 0)
             {
-                selectedPath = modelPathComboBox.getText();
-
-                if (selectedPath.contains(validPathBrokenTag))
-                {
-                    selectedPath = selectedPath.replace(validPathBrokenTag, "");
-                }
-
-                if (selectedPath.contains(validPathTryAgainTag))
-                {
-                    selectedPath = selectedPath.replace(validPathTryAgainTag, "");
-                }
-
-                if (selectedPath.contains(validPathErrorTag))
-                {
-                    selectedPath = selectedPath.replace(validPathErrorTag, "");
-                }
+                const auto selectedIndex = modelPathComboBox.getSelectedItemIndex();
+                selectedPath = sharedChoices->savedModelPaths[(unsigned int) selectedIndex];
 
                 sendChangeMessage();
             }
@@ -560,7 +546,7 @@ private:
     }
 
     /**
-     * Create callbacks for and launch the custom path popup.
+     * Create caollbacks for and launch the custom path popup.
      */
     void openCustomPathPopup(const String& prefillText = "")
     {
@@ -658,10 +644,6 @@ private:
 
     int lastLoadedPathIndex; // Keep track of last loaded index for load failure cases
     int lastSelectedPathIndex;
-
-    const std::string validPathErrorTag = " [ERROR]";
-    const std::string validPathBrokenTag = " [DOWN]";
-    const std::string validPathTryAgainTag = " [TRY AGAIN]";
 
     String selectedPath;
 

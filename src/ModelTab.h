@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cmath>
+#include <functional>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -24,14 +25,13 @@
 
 using namespace juce;
 
-class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster
+class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster 
 {
 public:
     ModelTab()
     {
         modelSelectionWidget.addChangeListener(this);
 
-        addAndMakeVisible(modelSelectionWidget);
         addAndMakeVisible(modelInfoWidget);
         addAndMakeVisible(controlAreaWidget);
 
@@ -61,10 +61,28 @@ public:
         modelSelectionWidget.loadModelBypass(TutorialConstants::fallbackModelPath);
     }
 
+    void loadModelPath(const String& modelPath)
+    {
+        modelSelectionWidget.loadModelBypass(modelPath);
+    }
+
+    void onNextModelLoadComplete(std::function<void(ModelTab*, bool)> callback)
+    {
+        initialLoadCallback = std::move(callback);
+    }
+
     // Bounds accessors for tutorial steps
     Rectangle<int> getModelSelectBounds() const
     {
-        return modelSelectionWidget.getBounds().expanded(2, 2);
+        auto bounds = modelSelectionWidget.getBounds();
+
+        // The model browser lives on the Home tab, so this widget is laid out
+        // with an empty size here. Report nothing rather than a stray rectangle
+        // in the top left corner.
+        if (bounds.getWidth() > 0 && bounds.getHeight() > 0)
+            return bounds.expanded(2, 2);
+
+        return {};
     }
 
     Rectangle<int> getControlsBounds() const
@@ -109,6 +127,32 @@ public:
 
     bool isModelLoaded() { return model->isLoaded(); }
 
+    // True while a model load or process request is still queued or running on
+    // one of this tab's thread pools. Used to defer destruction of the tab: if
+    // its ThreadPool is destroyed while a worker is blocked in a network call,
+    // JUCE force-kills the worker thread, which can corrupt the shared
+    // networking subsystem and hang all future requests.
+    bool hasPendingRequests() const
+    {
+        return loadingThreadPool.getNumJobs() > 0 || processingThreadPool.getNumJobs() > 0;
+    }
+
+    // Called once this tab has left the UI but cannot be destroyed yet because a
+    // request is still in flight. Aborts the connection locally so that the
+    // request settles within moments instead of whenever the server or the
+    // request timeout gets around to it - which may be long after the app has
+    // started shutting down, at which point delivering the result crashes. Any
+    // result that does still arrive is dropped, since the user closed this tab.
+    void abandon()
+    {
+        abandoned = true;
+
+        // Invalidate any in-flight jobs
+        ++currentProcessID;
+
+        model->abortActiveRequests();
+    }
+
     void resized() override
     {
         FlexBox tabArea;
@@ -118,12 +162,7 @@ public:
 
         /* Model Selection */
 
-        tabArea.items.add(FlexItem(modelSelectionWidget)
-                              .withHeight(modelSelectionRowHeight)
-                              .withMinHeight(modelSelectionRowHeight)
-                              .withMaxHeight(modelSelectionRowHeight)
-                              .withFlex(0)
-                              .withMargin(marginSize));
+        modelSelectionWidget.setBounds(0, 0, 0, 0);
 
         /* Model Info */
 
@@ -204,7 +243,6 @@ public:
     {
         int height = 0;
 
-        height += modelSelectionRowHeight + 2 * marginSize;
         height += modelInfoWidget.getPreferredHeightForWidth(width) + 2 * marginSize;
 
         if (controlAreaWidget.getNumControls() > 0)
@@ -539,6 +577,12 @@ private:
                 MessageManager::callAsync(
                     [this, result]
                     {
+                        if (abandoned)
+                        {
+                            // Tab was closed while this load was in flight
+                            return;
+                        }
+
                         if (result.wasOk())
                         {
                             modelSelectionWidget.setSuccessfulState(model->getLoadedPath());
@@ -557,6 +601,8 @@ private:
 
                             // Re-enable processing immediately
                             processCancelButton.setEnabled(true);
+
+                            notifyInitialLoadComplete(true);
                         }
                         else
                         {
@@ -568,12 +614,23 @@ private:
 
                                 // Re-enable processing after closing error window
                                 processCancelButton.setEnabled(true);
+
+                                notifyInitialLoadComplete(false);
                             };
 
                             openErrorPopup(error, onExit);
                         }
                     });
             });
+    }
+
+    void notifyInitialLoadComplete(bool wasSuccessful)
+    {
+        auto callback = std::move(initialLoadCallback);
+        initialLoadCallback = nullptr;
+
+        if (callback)
+            callback(this, wasSuccessful);
     }
 
     void processCallback()
@@ -656,6 +713,12 @@ private:
                 MessageManager::callAsync(
                     [this, result, outputFilesPtr, labelsPtr]
                     {
+                        if (abandoned)
+                        {
+                            // Tab was closed while this process was in flight
+                            return;
+                        }
+
                         std::function<void()> onExit = [this]
                         {
                             // Re-enable processing immediately
@@ -891,6 +954,9 @@ private:
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    std::atomic<bool> abandoned { false };
+    std::function<void(ModelTab*, bool)> initialLoadCallback;
+
     CentredAlertLookAndFeel centredAlertLF;
     std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;
     std::function<void()> errorPopupOnExit;

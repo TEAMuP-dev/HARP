@@ -365,7 +365,7 @@ public:
         return OpResult::ok();
     }
 
-    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls)
+    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
         String responseJSON;
 
@@ -474,7 +474,7 @@ public:
     OpResult process(String modelPath,
                      String& payloadJSON,
                      std::vector<File>& outputFiles,
-                     LabelList& labels)
+                     LabelList& labels) override
     {
         String responseJSON;
 
@@ -569,7 +569,7 @@ public:
         return OpResult::ok();
     }
 
-    OpResult cancel(String modelPath)
+    OpResult cancel(String modelPath) override
     {
         String response;
 
@@ -737,7 +737,7 @@ private:
 
         /* A sleeping Space answers with an error status but still sends the header,
            so the status code is deliberately not consulted here. */
-        if (host.createInputStream(options) == nullptr)
+        if (createRequestStream(host, options) == nullptr)
             return {};
 
         static const String spacesPrefix { "https://huggingface.co/spaces/" };
@@ -854,7 +854,7 @@ private:
                            .withNumRedirectsToFollow(5)
                            .withHttpRequestCmd("POST");
 
-        std::unique_ptr<InputStream> stream(endpoint.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(endpoint, options));
 
         if (stream == nullptr)
         {
@@ -948,7 +948,7 @@ private:
                            .withStatusCode(&statusCode)
                            .withNumRedirectsToFollow(5);
 
-        stream = endpoint.createInputStream(options);
+        stream = createRequestStream(endpoint, options);
 
         if (stream == nullptr)
         {
@@ -1453,7 +1453,8 @@ private:
 
         OpResult result = makeGETRequestStream(endpoint, stream, errorPath, timeoutMs);
 
-        // Nothing was opened to copy from, so report why rather than reading a null stream
+        // Nothing was opened to copy from (e.g., the request failed or was aborted), so
+        // report why rather than reading a null stream
         if (result.failed())
         {
             return result;

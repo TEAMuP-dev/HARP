@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "ModelTab.h"
+#include "ModelTabContainer.h"
 
 #include "clients/Client.h"
 
@@ -75,15 +76,18 @@ public:
 
     /* Tutorial */
 
-    ModelTab* getModelTab() { return &mainModelTab; }
+    ModelTab* getCurrentModelTab() const { return modelTabs.getCurrentModelTab(); }
 
     void setTutorialActive(bool active);
     void setTutorialHighlight(Rectangle<int> bounds);
     void setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds);
     void ensureTutorialModelLoaded();
+    bool isTutorialModelLoadInFlight() const { return tutorialModelLoadInFlight; }
     void resetTutorialAutoLoadedModel();
+    void ensureMediaClipboardVisible();
 
     // Bounds accessors for tutorial steps (public for WelcomeWindow)
+    Rectangle<int> getTabBarBounds();
     Rectangle<int> getModelSelectBounds();
     Rectangle<int> getControlsBounds();
     Rectangle<int> getInputTrackBounds();
@@ -129,7 +133,7 @@ private:
 
     // Miscellaneous
     //void focusCallback();
-    void changeListenerCallback(ChangeBroadcaster* source);
+    void changeListenerCallback(ChangeBroadcaster* source) override;
 
     /* Interface */
 
@@ -153,66 +157,8 @@ private:
     bool showStatusArea;
     bool showMediaClipboard;
 
-    ModelTab mainModelTab;
-
-    /**
-     * Viewport that leaves the mouse wheel to the tracks.
-     *
-     * Tracks use the wheel to zoom their contents, so the panel must not treat a
-     * wheel event over one as a request to scroll. Viewport::useMouseWheelMoveIfNeeded
-     * is not virtual, so the decision is made here instead.
-     */
-    struct MainPanelViewport : public Viewport
-    {
-        void mouseWheelMove(const MouseEvent& e, const MouseWheelDetails& wheel) override
-        {
-            /* Test originalComponent, not eventComponent: a wheel event that goes
-               unhandled is passed up the hierarchy with getEventRelativeTo, which
-               rewrites eventComponent to each parent in turn, so by the time it
-               arrives here eventComponent is this viewport. originalComponent still
-               names the component the wheel was actually over. */
-            if (isWithinTrack(e.originalComponent))
-            {
-                return;
-            }
-
-            Viewport::mouseWheelMove(e, wheel);
-        }
-
-        /* Scrolling moves the tab under the tutorial overlay, which draws its
-           highlight in window coordinates and would otherwise keep pointing at
-           where a component used to be. */
-        void visibleAreaChanged(const Rectangle<int>&) override
-        {
-            if (onScrolled != nullptr)
-            {
-                onScrolled();
-            }
-        }
-
-        std::function<void()> onScrolled;
-
-        /* True when the wheel landed on a track that will act on it. A track with
-           no media loaded does not, so the panel should still scroll over it. */
-        static bool isWithinTrack(Component* c)
-        {
-            for (auto* candidate = c; candidate != nullptr;
-                 candidate = candidate->getParentComponent())
-            {
-                if (auto* track = dynamic_cast<MediaDisplayComponent*>(candidate))
-                {
-                    return track->usesMouseWheel();
-                }
-            }
-
-            return false;
-        }
-    };
-
-    /* The tab is scrolled rather than squeezed when the window cannot be made
-       large enough to show it, which happens once the required size exceeds the
-       display. Declared after the tab so that it is torn down first. */
-    MainPanelViewport mainPanelViewport;
+    // Home tab plus one tab per opened model, each of which scrolls on its own
+    ModelTabContainer modelTabs;
 
     StatusAreaWidget statusAreaWidget;
     DragOverlayComponent dragOverlay;
@@ -222,6 +168,12 @@ private:
     Rectangle<int> tutorialHighlightRect;
     std::vector<Rectangle<int>> tutorialExtraHighlights;
     std::unique_ptr<WelcomeWindow> welcomeWindow;
+
+    // Set while the tutorial's fallback model is loading, so that repeated
+    // requests to load it do not stack up. The tab the tutorial opened on the
+    // user's behalf is remembered so that it can be closed again at the end.
+    bool tutorialModelLoadInFlight = false;
+    Component::SafePointer<ModelTab> tutorialCreatedTab;
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;

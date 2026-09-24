@@ -10,13 +10,10 @@ MainComponent::MainComponent()
 
     initializeMenuBar();
 
-    mainModelTab.addChangeListener(this);
+    modelTabs.addChangeListener(this);
 
-    mainPanelViewport.setViewedComponent(&mainModelTab, false);
-    mainPanelViewport.setScrollBarsShown(true, false);
-    mainPanelViewport.setScrollOnDragMode(Viewport::ScrollOnDragMode::never);
-    mainPanelViewport.onScrolled = [this] { refreshTutorialHighlight(); };
-    addAndMakeVisible(mainPanelViewport);
+    modelTabs.onPageScrolled = [this] { refreshTutorialHighlight(); };
+    addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
     addAndMakeVisible(dragOverlay);
@@ -38,7 +35,7 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     deinitializeMenuBar();
-    mainModelTab.removeChangeListener(this);
+    modelTabs.removeChangeListener(this);
 }
 
 void MainComponent::paint(Graphics& g)
@@ -71,7 +68,8 @@ void MainComponent::paintOverChildren(Graphics& g)
             // Add extra highlights to the cutout path
             for (auto& rect : tutorialExtraHighlights)
             {
-                highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
+                if (! rect.isEmpty())
+                    highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
             }
 
             backgroundPath.setUsingNonZeroWinding(false);
@@ -80,11 +78,16 @@ void MainComponent::paintOverChildren(Graphics& g)
             g.fillPath(backgroundPath);
 
             g.setColour(Colours::white);
-            g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
+
+            // An empty rectangle is a region the current step has nothing to
+            // point at; outlining it would leave a stray mark in the corner
+            if (! tutorialHighlightRect.isEmpty())
+                g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
 
             for (auto& rect : tutorialExtraHighlights)
             {
-                g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
+                if (! rect.isEmpty())
+                    g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
             }
         }
     }
@@ -105,7 +108,7 @@ void MainComponent::resized()
     FlexBox mainPanel;
     mainPanel.flexDirection = FlexBox::Direction::column;
 
-    mainPanel.items.add(FlexItem(mainPanelViewport).withFlex(1.0));
+    mainPanel.items.add(FlexItem(modelTabs).withFlex(1.0));
 
     if (showStatusArea)
     {
@@ -128,35 +131,6 @@ void MainComponent::resized()
     }
 
     fullWindow.performLayout(fullArea);
-
-    /* Give the tab the width the viewport can show and whatever height it needs,
-       so that a window too small for the content scrolls instead of clipping it */
-    auto layOutTab = [this]
-    {
-        const int visibleWidth = mainPanelViewport.getMaximumVisibleWidth();
-
-        if (visibleWidth <= 0)
-        {
-            return 0;
-        }
-
-        const int requiredHeight = mainModelTab.getMinimumRequiredHeightForWidth(visibleWidth);
-
-        mainModelTab.setSize(visibleWidth,
-                             jmax(requiredHeight, mainPanelViewport.getMaximumVisibleHeight()));
-
-        return visibleWidth;
-    };
-
-    /* Laying out once can make the scrollbar appear, which narrows the visible
-       area and would leave it overlapping the content. Lay out again whenever the
-       available width changed as a result. */
-    const int firstWidth = layOutTab();
-
-    if (firstWidth > 0 && mainPanelViewport.getMaximumVisibleWidth() != firstWidth)
-    {
-        layOutTab();
-    }
 
     /* Deferred: the highlight is measured from component bounds, which are only
        final once this layout pass and the tab's own have completed. */
@@ -186,6 +160,10 @@ void MainComponent::refreshTutorialHighlight()
 
 void MainComponent::updateWindowConstraints()
 {
+    // The Home tab has no controls, so only the general minimums apply while it is showing
+    auto* tab = getCurrentModelTab();
+    const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
+
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
         // Compute percentage of total window width given to main panel
@@ -193,13 +171,10 @@ void MainComponent::updateWindowConstraints()
 
         // Determine minimum width needed to display controls plus padding
         const int requiredMainPanelWidth =
-            jmax(minimumMainPanelWidth,
-                 mainModelTab.getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
-        // Determine current width of main panel
-        const int mainPanelWidth = jmax(requiredMainPanelWidth, mainModelTab.getWidth());
-        /* The panel scrolls vertically, so the window does not have to be tall
-           enough for every control; it only has to stay usably large. Width is
-           still content-driven, since there is no horizontal scrolling. */
+            jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+        /* Each tab scrolls vertically, so the window does not have to be tall enough
+           for every control; it only has to stay usably large. Width is still
+           content-driven, since there is no horizontal scrolling. */
         const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
                                             + (showStatusArea ? statusAreaHeight : 0);
 
@@ -244,10 +219,11 @@ void MainComponent::updateWindowConstraints()
     }
 
     /* Whatever prompted this - a model loading, a panel being toggled - changed how
-       much there is to show, and so how much the viewport has to scroll. The window
-       itself may not have changed size, in which case nothing else would recompute
-       the scrollable area and the scrollbar would not appear until the next resize. */
-    resized();
+       much there is to show, and so how much the current tab has to scroll. The
+       window itself may not have changed size, in which case nothing else would
+       recompute the scrollable area and the scrollbar would not appear until the
+       next resize. */
+    modelTabs.layOutCurrentPage();
 }
 
 /* --File-- */
@@ -492,73 +468,139 @@ void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bound
 
 void MainComponent::ensureTutorialModelLoaded()
 {
-    if (! mainModelTab.isModelLoaded())
-        mainModelTab.loadDefaultModel();
+    // Loading is asynchronous, so without this guard every repeated call that
+    // arrives before the first load finishes - clicking Next again, say - would
+    // open yet another tab or start yet another load.
+    if (tutorialModelLoadInFlight)
+        return;
+
+    auto* tab = getCurrentModelTab();
+
+    if (tab == nullptr)
+    {
+        // createNewTab() selects the tab it creates, which is what the tutorial
+        // steps compute their highlights against; leave it selected.
+        tab = modelTabs.createNewTab();
+        tutorialCreatedTab = tab;
+    }
+
+    if (tab->isModelLoaded())
+        return;
+
+    tutorialModelLoadInFlight = true;
+
+    Component::SafePointer<MainComponent> safeThis(this);
+    tab->onNextModelLoadComplete(
+        [safeThis](ModelTab*, bool)
+        {
+            if (safeThis != nullptr)
+                safeThis->tutorialModelLoadInFlight = false;
+        });
+
+    tab->loadDefaultModel();
 }
 
 void MainComponent::resetTutorialAutoLoadedModel()
 {
-    if (! mainModelTab.isModelLoaded())
-        return;
+    // Close the tab the tutorial opened on the user's behalf. Resetting it in
+    // place would leave a blank tab behind, since a model tab has no model
+    // selection of its own - models are chosen on the Home tab.
+    if (auto* tab = tutorialCreatedTab.getComponent())
+        modelTabs.closeTab(tab);
 
-    if (mainModelTab.getLoadedPath() == TutorialConstants::fallbackModelPath)
-    {
-        mainModelTab.resetState();
-    }
+    tutorialCreatedTab = nullptr;
+}
+
+void MainComponent::ensureMediaClipboardVisible()
+{
+    if (! showMediaClipboard)
+        viewMediaClipboardCallback();
+}
+
+Rectangle<int> MainComponent::getTabBarBounds()
+{
+    auto& tabBar = modelTabs.getTabbedButtonBar();
+
+    if (tabBar.getNumTabs() == 0)
+        return {};
+
+    return getLocalArea(&tabBar, tabBar.getLocalBounds());
 }
 
 /**
- * Converts a rectangle from the model tab's coordinates into this component's,
- * clipped to the part of the tab the viewport is showing.
+ * Converts a rectangle from the current model tab's coordinates into this component's,
+ * clipped to the part of the tab its page is showing.
  *
- * The tab can be taller than its viewport, so a component that is scrolled out of
- * view could otherwise produce a highlight lying over the status area beneath it.
+ * The tab can be taller than its page, so a component that is scrolled out of view
+ * could otherwise produce a highlight lying over the status area beneath it.
  */
 Rectangle<int> MainComponent::getVisibleTabArea(Rectangle<int> tabBounds)
 {
-    return getLocalArea(&mainModelTab, tabBounds).getIntersection(mainPanelViewport.getBounds());
+    auto* page = modelTabs.getCurrentModelTabPage();
+
+    if (page == nullptr || tabBounds.isEmpty())
+        return {};
+
+    return getLocalArea(&page->getModelTab(), tabBounds)
+        .getIntersection(getLocalArea(page, page->getLocalBounds()));
 }
 
 Rectangle<int> MainComponent::getModelSelectBounds()
 {
-    auto bounds = mainModelTab.getModelSelectBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* homeTab = modelTabs.getHomeTabIfShowing())
+        return getLocalArea(homeTab, homeTab->getModelSelectBounds());
+
+    // Models are selected on the Home tab, so while a model tab is showing,
+    // point at the tab bar that leads back to it.
+    return getTabBarBounds();
 }
 
 Rectangle<int> MainComponent::getControlsBounds()
 {
-    auto bounds = mainModelTab.getControlsBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getControlsBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputTrackBounds()
 {
-    auto bounds = mainModelTab.getInputTrackBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getInputTrackBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputFolderBounds()
 {
-    auto bounds = mainModelTab.getInputFolderBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getInputFolderBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getInputPlayBounds()
 {
-    auto bounds = mainModelTab.getInputPlayBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getInputPlayBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getProcessButtonBounds()
 {
-    auto bounds = mainModelTab.getProcessButtonBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getProcessButtonBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getTracksBounds()
 {
-    auto bounds = mainModelTab.getTracksBounds();
-    return getVisibleTabArea(bounds);
+    if (auto* tab = getCurrentModelTab())
+        return getVisibleTabArea(tab->getTracksBounds());
+
+    return {};
 }
 
 Rectangle<int> MainComponent::getClipboardBounds()
@@ -704,8 +746,13 @@ void MainComponent::focusCallback()
 
 void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (source == &mainModelTab)
+    if (source == &modelTabs)
     {
         updateWindowConstraints();
+
+        // Model tabs are created and closed while the tutorial is open, so it
+        // follows the container rather than subscribing to individual tabs.
+        if (welcomeWindow != nullptr)
+            welcomeWindow->notifyModelStateChanged();
     }
 }

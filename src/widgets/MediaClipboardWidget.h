@@ -36,9 +36,9 @@ public:
         addAndMakeVisible(trackArea);
     }
 
-    ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
+    ~MediaClipboardWidget() override { trackAreaWidget.removeChangeListener(this); }
 
-    void paint(Graphics& g) { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
+    void paint(Graphics& g) override { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
 
     void resized() override
     {

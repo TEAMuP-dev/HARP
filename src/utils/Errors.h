@@ -24,9 +24,9 @@ struct ClientError
 
     Type type;
 
-    String path;
-    String client;
-    String token;
+    String path {};
+    String client {};
+    String token {};
 };
 
 inline String toUserMessage(const ClientError& e)
@@ -142,7 +142,7 @@ struct HttpError
 
     Request request;
 
-    String endpointPath;
+    String endpointPath {};
 
     int statusCode = 0;
 
@@ -285,8 +285,8 @@ struct GradioError
 
     Type type;
 
-    String endpointPath;
-    String reason;
+    String endpointPath {};
+    String reason {};
 
     /* Whether the endpoint is a Hugging Face Space, so that messages can name it
        accurately instead of guessing. Set by the client, which is the only layer
@@ -417,8 +417,8 @@ struct JsonError
 
     Type type;
 
-    String stringJSON;
-    String key;
+    String stringJSON {};
+    String key {};
 };
 
 inline String toUserMessage(const JsonError& e)
@@ -505,7 +505,7 @@ struct ControlError
 
     Type type;
 
-    String controlType;
+    String controlType {};
 };
 
 inline String toUserMessage(const ControlError& e)
@@ -544,7 +544,7 @@ struct FileError
 
     Type type;
 
-    String path;
+    String path {};
 };
 
 inline String toUserMessage(const FileError& e)

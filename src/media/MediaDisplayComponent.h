@@ -48,7 +48,7 @@ class ColorablePanel : public Component
 {
 public:
     ColorablePanel(Colour color = Colours::darkgrey)
-        : defaultColor(color), backgroundColor(color) {};
+        : defaultColor(color), backgroundColor(color) {}
 
     void paint(Graphics& g) override { g.fillAll(backgroundColor); }
 
