@@ -2,7 +2,7 @@
 
 This website is built using [Vitepress](https://vitepress.dev/).
 
-We use [Netlify](https://www.netlify.com/) to deploy it under the domain [harp-plugin.netlify.app](https://harp-plugin.netlify.app/).
+We use [Netlify](https://www.netlify.com/) to deploy it under the domain [harp3.netlify.app](https://harp3.netlify.app/).
 
 ## Build locally
 
@@ -63,7 +63,7 @@ The website's content is primarily managed through Markdown files and VitePress 
 
 ## Deploy to Netlify
 
-*   **Production Deployment:** The `main` branch of the `HARP` repository is automatically deployed to our live URL: [harp-plugin.netlify.app](https://harp-plugin.netlify.app/).
+*   **Production Deployment:** The `main` branch of the `HARP` repository is automatically deployed to our live URL: [harp3.netlify.app](https://harp3.netlify.app/).
 *   **Deployment Previews:** Netlify automatically generates deployment previews for:
     *   All Pull Requests (PRs) made against the `main` branch.
     *   Any branch whose name starts with the prefix `website/*` (e.g., `website/new-feature`, `website/docs-update`).

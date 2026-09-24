@@ -19,7 +19,9 @@ using namespace juce;
 class MediaClipboardWidget : public Component, public ChangeListener
 {
 public:
-    MediaClipboardWidget()
+    MediaClipboardWidget(DragOverlayComponent* overlay)
+        : dragOverlay(overlay),
+          trackAreaWidget(DisplayMode::Thumbnail, 75, overlay)
     {
         selectionTextBox.onReturnKey = [this] { renameSelectionCallback(); };
         controlsComponent.addAndMakeVisible(selectionTextBox);
@@ -739,6 +741,8 @@ private:
     MultiButton::Mode sendToDAWButtonSelectedInfo;
     MultiButton::Mode sendToDAWButtonInactiveInfo1;
     MultiButton::Mode sendToDAWButtonInactiveInfo2;
+
+    DragOverlayComponent* dragOverlay = nullptr;
 
     Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };

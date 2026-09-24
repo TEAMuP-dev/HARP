@@ -12,12 +12,16 @@ MainComponent::MainComponent()
 
     modelTabs.addChangeListener(this);
 
+    modelTabs.onPageScrolled = [this] { refreshTutorialHighlight(); };
     addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+    addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    dragOverlay.setVisible(false);
+    dragOverlay.toFront(false);
 
     requiredWindowWidth = minimumWindowWidth;
     requiredWindowHeight = minimumWindowHeight;
@@ -89,16 +93,6 @@ void MainComponent::paintOverChildren(Graphics& g)
     }
 }
 
-ModelTab* MainComponent::getCurrentModelTab() const
-{
-    return modelTabs.getCurrentModelTab();
-}
-
-ModelTab* MainComponent::getFirstModelTab() const
-{
-    return modelTabs.getFirstModelTab();
-}
-
 void MainComponent::resized()
 {
     Rectangle<int> fullArea = getLocalBounds();
@@ -108,8 +102,6 @@ void MainComponent::resized()
         fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
 
-
-
     FlexBox fullWindow;
     fullWindow.flexDirection = FlexBox::Direction::row;
 
@@ -117,11 +109,6 @@ void MainComponent::resized()
     mainPanel.flexDirection = FlexBox::Direction::column;
 
     mainPanel.items.add(FlexItem(modelTabs).withFlex(1.0));
-
-        auto bounds = getLocalBounds();
-
-    // Give full area to tabs
-    modelTabs.setBounds(bounds);
 
     if (showStatusArea)
     {
@@ -145,18 +132,37 @@ void MainComponent::resized()
 
     fullWindow.performLayout(fullArea);
 
-    if (welcomeWindow != nullptr)
-    {
-        welcomeWindow->refreshHighlightForCurrentStep();
-    }
+    /* Deferred: the highlight is measured from component bounds, which are only
+       final once this layout pass and the tab's own have completed. */
+    refreshTutorialHighlight();
+
+    dragOverlay.setBounds(getLocalBounds());
 }
 
+void MainComponent::refreshTutorialHighlight()
+{
+    if (welcomeWindow == nullptr)
+    {
+        return;
+    }
 
+    Component::SafePointer<MainComponent> safeThis(this);
+
+    MessageManager::callAsync(
+        [safeThis]
+        {
+            if (safeThis != nullptr && safeThis->welcomeWindow != nullptr)
+            {
+                safeThis->welcomeWindow->refreshHighlightForCurrentStep();
+            }
+        });
+}
 
 void MainComponent::updateWindowConstraints()
 {
+    // The Home tab has no controls, so only the general minimums apply while it is showing
     auto* tab = getCurrentModelTab();
-    if (!tab) return;
+    const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
 
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
@@ -165,15 +171,12 @@ void MainComponent::updateWindowConstraints()
 
         // Determine minimum width needed to display controls plus padding
         const int requiredMainPanelWidth =
-            jmax(minimumMainPanelWidth,
-                tab->getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
-
-        const int mainPanelWidth =
-            jmax(requiredMainPanelWidth, tab->getWidth());
-
-        const int requiredMainPanelHeight =
-            tab->getMinimumRequiredHeightForWidth(mainPanelWidth)
-            + (showStatusArea ? statusAreaHeight : 0);
+            jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+        /* Each tab scrolls vertically, so the window does not have to be tall enough
+           for every control; it only has to stay usably large. Width is still
+           content-driven, since there is no horizontal scrolling. */
+        const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
+                                            + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
@@ -214,6 +217,13 @@ void MainComponent::updateWindowConstraints()
             window->setBounds(bounds);
         }
     }
+
+    /* Whatever prompted this - a model loading, a panel being toggled - changed how
+       much there is to show, and so how much the current tab has to scroll. The
+       window itself may not have changed size, in which case nothing else would
+       recompute the scrollable area and the scrollbar would not appear until the
+       next resize. */
+    modelTabs.layOutCurrentPage();
 }
 
 /* --File-- */
@@ -236,13 +246,35 @@ void MainComponent::openSettingsWindow()
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new SettingsWindow());
+    // The settings dialog is a free-standing desktop window that can outlive this
+    // component, so guard the callback with a SafePointer
+    Component::SafePointer<MainComponent> safeThis(this);
+    options.content.setOwned(new SettingsWindow(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->restoreViewDefaults();
+        }));
 
     options.useNativeTitleBar = true;
     options.resizable = true;
     options.escapeKeyTriggersCloseButton = true;
 
     options.launchAsync();
+}
+
+void MainComponent::restoreViewDefaults()
+{
+    // Defaults must match the fallbacks used when reading the settings
+    // in the constructor: status area shown, media clipboard hidden
+    if (! showStatusArea)
+        viewStatusAreaCallback();
+
+    if (showMediaClipboard)
+        viewMediaClipboardCallback();
+
+    // showWelcomePopup default (true) is already restored by clearing settings;
+    // it will show on the next launch automatically.
 }
 
 /* --View-- */
@@ -495,21 +527,28 @@ Rectangle<int> MainComponent::getTabBarBounds()
     return getLocalArea(&tabBar, tabBar.getLocalBounds());
 }
 
+/**
+ * Converts a rectangle from the current model tab's coordinates into this component's,
+ * clipped to the part of the tab its page is showing.
+ *
+ * The tab can be taller than its page, so a component that is scrolled out of view
+ * could otherwise produce a highlight lying over the status area beneath it.
+ */
+Rectangle<int> MainComponent::getVisibleTabArea(Rectangle<int> tabBounds)
+{
+    auto* page = modelTabs.getCurrentModelTabPage();
+
+    if (page == nullptr || tabBounds.isEmpty())
+        return {};
+
+    return getLocalArea(&page->getModelTab(), tabBounds)
+        .getIntersection(getLocalArea(page, page->getLocalBounds()));
+}
+
 Rectangle<int> MainComponent::getModelSelectBounds()
 {
-    if (auto* homeTab = dynamic_cast<HomeTab*>(modelTabs.getCurrentContentComponent()))
-    {
-        auto bounds = homeTab->getModelSelectBounds();
-        return getLocalArea(homeTab, bounds);
-    }
-
-    if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getModelSelectBounds();
-
-        if (! bounds.isEmpty())
-            return getLocalArea(tab, bounds);
-    }
+    if (auto* homeTab = modelTabs.getHomeTabIfShowing())
+        return getLocalArea(homeTab, homeTab->getModelSelectBounds());
 
     // Models are selected on the Home tab, so while a model tab is showing,
     // point at the tab bar that leads back to it.
@@ -519,60 +558,48 @@ Rectangle<int> MainComponent::getModelSelectBounds()
 Rectangle<int> MainComponent::getControlsBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getControlsBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getControlsBounds());
+
     return {};
 }
 
 Rectangle<int> MainComponent::getInputTrackBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getInputTrackBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getInputTrackBounds());
+
     return {};
 }
 
 Rectangle<int> MainComponent::getInputFolderBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getInputFolderBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getInputFolderBounds());
+
     return {};
 }
 
 Rectangle<int> MainComponent::getInputPlayBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getInputPlayBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getInputPlayBounds());
+
     return {};
 }
 
 Rectangle<int> MainComponent::getProcessButtonBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getProcessButtonBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getProcessButtonBounds());
+
     return {};
 }
 
 Rectangle<int> MainComponent::getTracksBounds()
 {
     if (auto* tab = getCurrentModelTab())
-    {
-        auto bounds = tab->getTracksBounds();
-        return getLocalArea(tab, bounds);
-    }
+        return getVisibleTabArea(tab->getTracksBounds());
+
     return {};
 }
 

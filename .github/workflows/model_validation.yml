@@ -1,0 +1,160 @@
+# Daily validation of HARP model deployments.
+#
+# Two tiers:
+#   1. examples - local pyharp examples run inside the CI runner; no Hugging
+#                 Face infrastructure involved. A failure here means pyharp
+#                 or gradio itself is broken - fix that before debugging
+#                 individual spaces.
+#   2. spaces   - every Hugging Face Space under teamup-tech, validated
+#                 end-to-end (/controls + /process) via gradio_client.
+#
+# Results are published to the run summary and uploaded as artifacts.
+#
+# Model failures do NOT fail the workflow, since deployments are not yet
+# stable enough for a daily red run to be actionable; they appear as warning
+# annotations instead. Only infrastructure errors (bad token, discovery
+# failure, ...) turn the run red, since those mean validation itself has
+# stopped working. To get notified on model failures later, remove the
+# exit-code handling in the two Validate steps so exit code 1 propagates.
+#
+# Requires the repository secret HF_TOKEN: a Hugging Face token with read
+# access to the teamup-tech spaces (write access if you want the workflow to
+# auto-restart crashed spaces). NEVER commit the token; GitHub masks secrets
+# in logs automatically.
+
+name: Model Validation
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # daily, 06:30 UTC
+  workflow_dispatch:
+    inputs:
+      spaces:
+        description: 'Spaces to validate, space-separated (bare names allowed); empty = all'
+        required: false
+        default: ''
+      load_only:
+        description: 'Skip /process inference tests (availability only)'
+        type: boolean
+        default: false
+      restart_failed:
+        description: 'Attempt to restart crashed/stopped spaces (needs write token)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-validation
+  cancel-in-progress: false
+
+jobs:
+
+  examples:
+    name: Examples (local pyharp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install pyharp (local submodule) and example dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # CPU torch/torchaudio must be installed BEFORE pyharp, otherwise
+          # descript-audiotools pulls mismatched CUDA builds from PyPI
+          pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ./pyharp
+          pip install -r model_validation/requirements.txt
+
+      - name: Validate local examples
+        run: |
+          set +e
+          python model_validation/src/validate_models.py --local-examples \
+            --output-dir reports/examples
+          CODE=$?
+          if [ "$CODE" -eq 1 ]; then
+            echo "::warning title=Example failures::Some local examples failed - see the run summary and report artifact."
+            exit 0
+          fi
+          exit "$CODE"
+
+      - name: Publish summary
+        if: always()
+        run: cat reports/examples/*/report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-examples
+          # Each example's app.log holds the app's own traceback, which is what
+          # a failure report points at, so upload those alongside the report
+          path: |
+            reports/examples/*/report.*
+            reports/examples/*/examples/*/app.log
+          if-no-files-found: ignore
+
+  spaces:
+    name: Hugging Face Spaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r model_validation/requirements.txt
+
+      - name: Validate spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          INPUT_SPACES: ${{ inputs.spaces }}
+          INPUT_LOAD_ONLY: ${{ inputs.load_only }}
+          INPUT_RESTART_FAILED: ${{ inputs.restart_failed }}
+        run: |
+          ARGS=(--output-dir reports/spaces)
+          if [ -n "$INPUT_SPACES" ]; then
+            read -r -a SPACE_IDS <<< "$INPUT_SPACES"
+            ARGS+=(--spaces "${SPACE_IDS[@]}")
+          fi
+          if [ "$INPUT_LOAD_ONLY" = "true" ]; then
+            ARGS+=(--load-only)
+          fi
+          # restart is the script default; scheduled runs leave INPUT empty
+          if [ "$INPUT_RESTART_FAILED" = "false" ]; then
+            ARGS+=(--no-restart-failed)
+          fi
+          set +e
+          python model_validation/src/validate_models.py "${ARGS[@]}"
+          CODE=$?
+          if [ "$CODE" -eq 1 ]; then
+            echo "::warning title=Space failures::Some spaces failed validation - see the run summary and report artifact."
+            exit 0
+          fi
+          exit "$CODE"
+
+      - name: Publish summary
+        if: always()
+        run: cat reports/spaces/*/report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-spaces
+          path: reports/spaces/*/report.*
+          if-no-files-found: ignore

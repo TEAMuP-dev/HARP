@@ -417,6 +417,15 @@ private:
                 return OpResult::fail(
                     ClientError { ClientError::Type::InsufficientPermissions, "", "Stability AI" });
             }
+            else if (statusCode == 402)
+            {
+                return OpResult::fail(
+                    HttpError { HttpError::Type::BadStatusCode,
+                                HttpError::Request::POST,
+                                errorPath,
+                                statusCode,
+                                "Stability AI reported insufficient usage credits." });
+            }
             // TODO - could potentially identify other errors (e.g., copyrighted material)
             else
             {

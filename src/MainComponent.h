@@ -68,12 +68,15 @@ public:
     // View
     void viewStatusAreaCallback();
     void viewMediaClipboardCallback();
+    void restoreViewDefaults();
 
     // Help
     void openAboutWindow();
     void openWelcomeWindow(bool ensureDefaultModelLoaded = false);
 
     /* Tutorial */
+
+    ModelTab* getCurrentModelTab() const { return modelTabs.getCurrentModelTab(); }
 
     void setTutorialActive(bool active);
     void setTutorialHighlight(Rectangle<int> bounds);
@@ -82,10 +85,6 @@ public:
     bool isTutorialModelLoadInFlight() const { return tutorialModelLoadInFlight; }
     void resetTutorialAutoLoadedModel();
     void ensureMediaClipboardVisible();
-
-    ModelTab* getCurrentModelTab() const;
-    ModelTab* getFirstModelTab() const;
-
 
     // Bounds accessors for tutorial steps (public for WelcomeWindow)
     Rectangle<int> getTabBarBounds();
@@ -114,6 +113,8 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
+    void refreshTutorialHighlight();
+    Rectangle<int> getVisibleTabArea(Rectangle<int> tabBounds);
 
 private:
     /* File Menu */
@@ -156,10 +157,12 @@ private:
     bool showStatusArea;
     bool showMediaClipboard;
 
-    
+    // Home tab plus one tab per opened model, each of which scrolls on its own
     ModelTabContainer modelTabs;
+
     StatusAreaWidget statusAreaWidget;
-    MediaClipboardWidget mediaClipboardWidget;
+    DragOverlayComponent dragOverlay;
+    MediaClipboardWidget mediaClipboardWidget { &dragOverlay };
 
     bool isTutorialActive = false;
     Rectangle<int> tutorialHighlightRect;

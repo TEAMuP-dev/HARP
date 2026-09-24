@@ -21,6 +21,8 @@
 #include "utils/ModelRegistry.h"
 #include "utils/Tutorial.h"
 
+#include "media/MediaDisplayComponent.h"
+
 using namespace juce;
 
 class ModelTabsLookAndFeel : public LookAndFeel_V4
@@ -97,6 +99,111 @@ private:
     static constexpr int tabTextInset = 10;
 };
 
+/**
+ * Scrolling page that holds one model tab.
+ *
+ * The tab is given the width the page can show and whatever height it needs, so that a
+ * window too small for the content scrolls instead of clipping it. The tab itself is
+ * owned by ModelTabContainer, since its lifetime is tied to the requests it has in flight.
+ */
+class ModelTabPage : public Viewport
+{
+public:
+    explicit ModelTabPage(ModelTab& tabToShow) : modelTab(tabToShow)
+    {
+        setViewedComponent(&modelTab, false);
+        setScrollBarsShown(true, false);
+        setScrollOnDragMode(Viewport::ScrollOnDragMode::never);
+    }
+
+    ModelTab& getModelTab() const { return modelTab; }
+
+    void resized() override
+    {
+        Viewport::resized();
+
+        layOutTab();
+    }
+
+    void layOutTab()
+    {
+        /* Laying out once can make the scrollbar appear, which narrows the visible
+           area and would leave it overlapping the content. Lay out again whenever the
+           available width changed as a result. */
+        const int firstWidth = layOutTabForVisibleWidth();
+
+        if (firstWidth > 0 && getMaximumVisibleWidth() != firstWidth)
+        {
+            layOutTabForVisibleWidth();
+        }
+    }
+
+    /* Tracks use the wheel to zoom their contents, so the page must not treat a wheel
+       event over one as a request to scroll. Viewport::useMouseWheelMoveIfNeeded is not
+       virtual, so the decision is made here instead. */
+    void mouseWheelMove(const MouseEvent& e, const MouseWheelDetails& wheel) override
+    {
+        /* Test originalComponent, not eventComponent: a wheel event that goes unhandled
+           is passed up the hierarchy with getEventRelativeTo, which rewrites
+           eventComponent to each parent in turn, so by the time it arrives here
+           eventComponent is this viewport. originalComponent still names the component
+           the wheel was actually over. */
+        if (isWithinTrack(e.originalComponent))
+        {
+            return;
+        }
+
+        Viewport::mouseWheelMove(e, wheel);
+    }
+
+    /* Scrolling moves the tab under the tutorial overlay, which draws its highlight in
+       window coordinates and would otherwise keep pointing at where a component used
+       to be. */
+    void visibleAreaChanged(const Rectangle<int>&) override
+    {
+        if (onScrolled != nullptr)
+        {
+            onScrolled();
+        }
+    }
+
+    std::function<void()> onScrolled;
+
+private:
+    int layOutTabForVisibleWidth()
+    {
+        const int visibleWidth = getMaximumVisibleWidth();
+
+        if (visibleWidth <= 0)
+        {
+            return 0;
+        }
+
+        const int requiredHeight = modelTab.getMinimumRequiredHeightForWidth(visibleWidth);
+
+        modelTab.setSize(visibleWidth, jmax(requiredHeight, getMaximumVisibleHeight()));
+
+        return visibleWidth;
+    }
+
+    /* True when the wheel landed on a track that will act on it. A track with no media
+       loaded does not, so the page should still scroll over it. */
+    static bool isWithinTrack(Component* c)
+    {
+        for (auto* candidate = c; candidate != nullptr; candidate = candidate->getParentComponent())
+        {
+            if (auto* track = dynamic_cast<MediaDisplayComponent*>(candidate))
+            {
+                return track->usesMouseWheel();
+            }
+        }
+
+        return false;
+    }
+
+    ModelTab& modelTab;
+};
+
 class ModelTabContainer : public TabbedComponent,
                           private ChangeListener,
                           public ChangeBroadcaster
@@ -167,38 +274,62 @@ public:
         return tab;
     }
 
+    ModelTabPage* getCurrentModelTabPage() const
+    {
+        return dynamic_cast<ModelTabPage*>(getCurrentContentComponent());
+    }
+
     ModelTab* getCurrentModelTab() const
     {
-        return dynamic_cast<ModelTab*>(getCurrentContentComponent());
+        auto* page = getCurrentModelTabPage();
+        return page != nullptr ? &page->getModelTab() : nullptr;
     }
+
+    HomeTab* getHomeTabIfShowing() const
+    {
+        return dynamic_cast<HomeTab*>(getCurrentContentComponent());
+    }
+
+    void layOutCurrentPage()
+    {
+        if (auto* page = getCurrentModelTabPage())
+            page->layOutTab();
+    }
+
+    void currentTabChanged(int newCurrentTabIndex, const String& newCurrentTabName) override
+    {
+        TabbedComponent::currentTabChanged(newCurrentTabIndex, newCurrentTabName);
+
+        // Window constraints and the tutorial both follow whichever tab is showing
+        sendChangeMessage();
+    }
+
+    // Called whenever the page showing a model tab scrolls
+    std::function<void()> onPageScrolled;
 
     // Closes a model tab as if its close button had been clicked. Does nothing
     // if the tab is no longer in the tab bar.
     void closeTab(ModelTab* tab) { closeModelTab(tab); }
-
-    ModelTab* getFirstModelTab() const
-    {
-        for (int i = 0; i < getNumTabs(); ++i)
-        {
-            if (auto* tab = dynamic_cast<ModelTab*>(getTabContentComponent(i)))
-                return tab;
-        }
-
-        return nullptr;
-    }
 
 private:
     void addLoadedModelTab(ModelTab* tab, const String& tabName)
     {
         tab->addChangeListener(this);
 
-        // The tab is already owned by modelTabs, so it is added with
+        auto* page = pages.add(new ModelTabPage(*tab));
+        page->onScrolled = [this]
+        {
+            if (onPageScrolled != nullptr)
+                onPageScrolled();
+        };
+
+        // The page is owned by pages and the tab by modelTabs, so it is added with
         // deleteComponentWhenNotNeeded = false: closing it must not force JUCE
-        // to destroy it synchronously in removeTab(); see closeModelTab() for
+        // to destroy the tab synchronously in removeTab(); see closeModelTab() for
         // why destruction may need to be deferred.
         addTab(tabName,
                tabBackgroundColour,
-               tab,
+               page,
                false);
 
         addCloseButtonToModelTab(tab);
@@ -225,7 +356,9 @@ private:
     {
         for (int i = 1; i < getNumTabs(); ++i)
         {
-            if (getTabContentComponent(i) == tabToClose)
+            auto* page = dynamic_cast<ModelTabPage*>(getTabContentComponent(i));
+
+            if (page != nullptr && &page->getModelTab() == tabToClose)
             {
                 const auto currentIndex = getCurrentTabIndex();
                 const auto targetIndex = currentIndex == i ? jmax(0, i - 1)
@@ -237,6 +370,9 @@ private:
                 // deleteComponentWhenNotNeeded = false, removeTab() does not
                 // destroy it; we own it via modelTabs.
                 removeTab(i);
+
+                // Deleting the page only detaches the tab from it
+                pages.removeObject(page);
 
                 if (getNumTabs() > 0)
                     setCurrentTabIndex(jlimit(0, getNumTabs() - 1, targetIndex));
@@ -309,8 +445,15 @@ private:
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        if (dynamic_cast<ModelTab*>(source))
+        if (auto* tab = dynamic_cast<ModelTab*>(source))
         {
+            // What the tab has to show changed, and so how far its page has to scroll
+            for (auto* page : pages)
+            {
+                if (&page->getModelTab() == tab)
+                    page->layOutTab();
+            }
+
             sendChangeMessage(); // bubble up to MainComponent
         }
     }
@@ -376,5 +519,7 @@ private:
     ModelTabsLookAndFeel tabsLookAndFeel;
 
     OwnedArray<ModelTab> modelTabs;
+    // Declared after modelTabs so that each page is destroyed before the tab it shows
+    OwnedArray<ModelTabPage> pages;
     DeferredTabReaper tabReaper;
 };
