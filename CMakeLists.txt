@@ -75,13 +75,14 @@ target_sources(${PROJECT_NAME}
         src/Model.h
 
         src/windows/AboutWindow.h
+        src/windows/CustomPathWindow.h
         src/windows/WelcomeWindow.h
         src/windows/settings/SettingsWindow.h
         src/windows/settings/GeneralSettingsTab.cpp
         src/windows/settings/LoginTab.cpp
 
-        src/widgets/ModelSelectionWidget.h
         src/widgets/ModelInfoWidget.h
+        src/widgets/ModelStyle.h
         src/widgets/ControlAreaWidget.h
         src/widgets/TrackAreaWidget.h
         src/widgets/StatusAreaWidget.h
@@ -118,7 +119,8 @@ target_sources(${PROJECT_NAME}
         src/utils/Messages.h
         src/utils/Settings.h
         src/utils/Interface.h
-        src/utils/ModelRegistry.h
+        src/utils/ModelCatalog.h
+        src/utils/ModelTags.h
         src/utils/Controls.h
         src/utils/Labels.h
         src/utils/Clients.h
@@ -185,6 +187,14 @@ juce_add_binary_data(stability_controls
         ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/audio-to-audio.json
 )
 
+# The model taxonomy is defined once, in pyharp, where models declare their tags
+juce_add_binary_data(model_taxonomy
+    HEADER_NAME TaxonomyData.h
+    NAMESPACE TaxonomyData
+    SOURCES
+        ${CMAKE_SOURCE_DIR}/pyharp/pyharp/taxonomy.json
+)
+
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_gui_extra` module. Inter-module
 # dependencies are resolved automatically, so `juce_core`, `juce_events` and so on will also be
@@ -206,6 +216,7 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_gui_basics
         juce::juce_gui_extra
         stability_controls
+        model_taxonomy
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

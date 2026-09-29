@@ -7,7 +7,6 @@
 #pragma once
 
 #include <cmath>
-#include <functional>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -15,76 +14,73 @@
 
 #include "widgets/ControlAreaWidget.h"
 #include "widgets/ModelInfoWidget.h"
-#include "widgets/ModelSelectionWidget.h"
 #include "widgets/TrackAreaWidget.h"
 
 #include "utils/Errors.h"
 #include "utils/Logging.h"
+#include "utils/ModelCatalog.h"
 #include "utils/Settings.h"
-#include "utils/Tutorial.h"
 
 using namespace juce;
 
-class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster 
+/**
+ * Sends a change message once a model has loaded, and once the error from a failed load
+ * has been dismissed. A tab whose first load failed is then left without a model.
+ */
+class ModelTab : public Component, public ChangeBroadcaster
 {
 public:
     ModelTab()
     {
-        modelSelectionWidget.addChangeListener(this);
-
         addAndMakeVisible(modelInfoWidget);
         addAndMakeVisible(controlAreaWidget);
-
-        inputTracksLabel.setJustificationType(Justification::centred);
-        inputTracksLabel.setFont(Font(20.0f, Font::bold));
 
         addAndMakeVisible(inputTracksLabel);
         addAndMakeVisible(inputTrackAreaWidget);
 
         initializeProcessCancelButton();
 
-        outputTracksLabel.setJustificationType(Justification::centred);
-        outputTracksLabel.setFont(Font(20.0f, Font::bold));
-
         addAndMakeVisible(outputTracksLabel);
         addAndMakeVisible(outputTrackAreaWidget);
     }
-
-    ~ModelTab() { modelSelectionWidget.removeChangeListener(this); }
 
     // Accessor methods for WelcomeWindow tutorial
     std::shared_ptr<Model> getModel() const { return model; }
     String getLoadedPath() const { return model->getLoadedPath(); }
 
-    void loadDefaultModel()
+    // Loads a model in the background, reporting the outcome with a change message
+    void loadModel(const String& modelPath)
     {
-        modelSelectionWidget.loadModelBypass(TutorialConstants::fallbackModelPath);
+        loading = true;
+
+        // Disable processing until model is loaded
+        processCancelButton.setEnabled(false);
+
+        const String pathToLoad = canonicalizeModelPath(modelPath);
+
+        DBG_AND_LOG("ModelTab::loadModel: Attempting to load path \"" << pathToLoad << "\".");
+
+        SafePointer<ModelTab> safeThis(this);
+
+        loadingThreadPool.addJob(
+            [this, safeThis, pathToLoad]
+            {
+                OpResult result = model->load(pathToLoad);
+
+                // Perform updates on message (GUI) thread
+                MessageManager::callAsync(
+                    [safeThis, result, pathToLoad]
+                    {
+                        if (safeThis != nullptr)
+                            safeThis->finishLoading(result, pathToLoad);
+                    });
+            });
     }
 
-    void loadModelPath(const String& modelPath)
-    {
-        modelSelectionWidget.loadModelBypass(modelPath);
-    }
-
-    void onNextModelLoadComplete(std::function<void(ModelTab*, bool)> callback)
-    {
-        initialLoadCallback = std::move(callback);
-    }
+    // True from the moment a load is requested until its outcome has been reported
+    bool isLoading() const { return loading; }
 
     // Bounds accessors for tutorial steps
-    Rectangle<int> getModelSelectBounds() const
-    {
-        auto bounds = modelSelectionWidget.getBounds();
-
-        // The model browser lives on the Home tab, so this widget is laid out
-        // with an empty size here. Report nothing rather than a stray rectangle
-        // in the top left corner.
-        if (bounds.getWidth() > 0 && bounds.getHeight() > 0)
-            return bounds.expanded(2, 2);
-
-        return {};
-    }
-
     Rectangle<int> getControlsBounds() const
     {
         auto bounds = controlAreaWidget.getBounds();
@@ -158,11 +154,8 @@ public:
         FlexBox tabArea;
         tabArea.flexDirection = FlexBox::Direction::column;
 
-        const int width = getWidth();
-
-        /* Model Selection */
-
-        modelSelectionWidget.setBounds(0, 0, 0, 0);
+        const auto contentArea = getLocalBounds().reduced(pagePadding);
+        const int width = contentArea.getWidth();
 
         /* Model Info */
 
@@ -232,7 +225,7 @@ public:
                         outputTrackAreaWidget.getNumTracks(),
                         totalTracks);
 
-        tabArea.performLayout(getLocalBounds());
+        tabArea.performLayout(contentArea);
 
         positionErrorPopup();
     }
@@ -241,7 +234,9 @@ public:
 
     int getMinimumRequiredHeightForWidth(int width)
     {
-        int height = 0;
+        width -= 2 * pagePadding;
+
+        int height = 2 * pagePadding;
 
         height += modelInfoWidget.getPreferredHeightForWidth(width) + 2 * marginSize;
 
@@ -270,28 +265,6 @@ public:
         return height;
     }
 
-    void resetState()
-    {
-        model = std::make_shared<Model>();
-
-        // Publish the empty state so the status area does not keep
-        // showing the previous model's last status
-        model->setStatus(ModelStatus::EMPTY);
-
-        modelSelectionWidget.resetState();
-        modelInfoWidget.resetState();
-        controlAreaWidget.resetState();
-        inputTrackAreaWidget.resetState();
-        outputTrackAreaWidget.resetState();
-
-        processCancelButton.setMode(processButtonInfo.displayLabel);
-        processCancelButton.setEnabled(false);
-
-        currentProcessID = 0;
-
-        resized();
-    }
-
 private:
     void initializeProcessCancelButton()
     {
@@ -314,14 +287,6 @@ private:
         addAndMakeVisible(processCancelButton);
     }
 
-    void changeListenerCallback(ChangeBroadcaster* source)
-    {
-        if (source == &modelSelectionWidget)
-        {
-            loadModelCallback();
-        }
-    }
-
     int getControlAreaRequiredHeightForTabWidth(int tabWidth) const
     {
         return jmax(minControlAreaHeight, controlAreaWidget.getRequiredHeightForWidth(tabWidth));
@@ -339,7 +304,7 @@ private:
     }
 
     void addTrackSection(FlexBox& box,
-                         Label& label,
+                         Component& label,
                          Component& trackArea,
                          int numTracks,
                          float totalTracks) const
@@ -555,82 +520,53 @@ private:
         URL(issueBaseUrl + query).launchInDefaultBrowser();
     }
 
-    void loadModelCallback()
+    void finishLoading(const OpResult& result, const String& requestedPath)
     {
-        modelSelectionWidget.setDisabled();
+        if (abandoned)
+        {
+            // Tab was closed while this load was in flight
+            return;
+        }
 
-        // Disable processing until model is loaded
-        processCancelButton.setEnabled(false);
+        if (result.wasOk())
+        {
+            loading = false;
 
-        // Obtain currently selected path
-        String selectedPath = modelSelectionWidget.getCurrentlySelectedPath();
+            catalog->recordLoadSuccess(model->getLoadedPath(), model->getMetadata());
 
-        DBG_AND_LOG("ModelTab::loadModelCallback: Attempting to load path \"" << selectedPath
-                                                                              << "\".");
+            modelInfoWidget.updateLabels(model->getMetadata());
+            modelInfoWidget.addOpenablePath(model->getOpenablePath());
 
-        loadingThreadPool.addJob(
-            [this, selectedPath]
-            {
-                OpResult result = model->load(selectedPath);
+            // Once loaded, only how the model is deployed is worth noting
+            if (const auto* entry = catalog->findEntry(model->getLoadedPath()))
+                modelInfoWidget.setBadges(ModelStyle::getBadges(*entry, false));
 
-                // Perform updates on message (GUI) thread
-                MessageManager::callAsync(
-                    [this, result]
-                    {
-                        if (abandoned)
-                        {
-                            // Tab was closed while this load was in flight
-                            return;
-                        }
+            controlAreaWidget.updateControls(model->getControls());
 
-                        if (result.wasOk())
-                        {
-                            modelSelectionWidget.setSuccessfulState(model->getLoadedPath());
+            inputTrackAreaWidget.updateTracks(model->getInputTracks());
+            outputTrackAreaWidget.updateTracks(model->getOutputTracks());
 
-                            modelInfoWidget.updateLabels(model->getMetadata());
-                            modelInfoWidget.addOpenablePath(model->getOpenablePath());
+            resized();
 
-                            controlAreaWidget.updateControls(model->getControls());
+            // Enable processing now that a model is loaded
+            processCancelButton.setEnabled(true);
 
-                            inputTrackAreaWidget.updateTracks(model->getInputTracks());
-                            outputTrackAreaWidget.updateTracks(model->getOutputTracks());
+            sendSynchronousChangeMessage();
+        }
+        else
+        {
+            const Error error = result.getError();
 
-                            resized();
+            catalog->recordLoadFailure(requestedPath, error);
 
-                            sendSynchronousChangeMessage();
-
-                            // Re-enable processing immediately
-                            processCancelButton.setEnabled(true);
-
-                            notifyInitialLoadComplete(true);
-                        }
-                        else
-                        {
-                            const Error error = result.getError();
-
-                            std::function<void()> onExit = [this, error]
-                            {
-                                modelSelectionWidget.setUnsuccessfulState(error);
-
-                                // Re-enable processing after closing error window
-                                processCancelButton.setEnabled(true);
-
-                                notifyInitialLoadComplete(false);
-                            };
-
-                            openErrorPopup(error, onExit);
-                        }
-                    });
-            });
-    }
-
-    void notifyInitialLoadComplete(bool wasSuccessful)
-    {
-        auto callback = std::move(initialLoadCallback);
-        initialLoadCallback = nullptr;
-
-        if (callback)
-            callback(this, wasSuccessful);
+            // The outcome is reported once the error has been seen
+            openErrorPopup(error,
+                           [this]
+                           {
+                               loading = false;
+                               sendChangeMessage();
+                           });
+        }
     }
 
     void processCallback()
@@ -679,7 +615,6 @@ private:
             }
         }
 
-        modelSelectionWidget.setDisabled();
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
         // Switch choose-file button to inactive mode on all tracks during processing
@@ -687,8 +622,10 @@ private:
 
         uint64_t processID = currentProcessID;
 
+        SafePointer<ModelTab> safeThis(this);
+
         processingThreadPool.addJob(
-            [this, loadedInputFiles, processID]
+            [this, safeThis, loadedInputFiles, processID]
             {
                 std::vector<File> outputFiles;
                 LabelList labels;
@@ -711,46 +648,49 @@ private:
 
                 // Perform updates on message (GUI) thread
                 MessageManager::callAsync(
-                    [this, result, outputFilesPtr, labelsPtr]
+                    [safeThis, result, outputFilesPtr, labelsPtr]
                     {
-                        if (abandoned)
-                        {
-                            // Tab was closed while this process was in flight
-                            return;
-                        }
-
-                        std::function<void()> onExit = [this]
-                        {
-                            // Re-enable processing immediately
-                            modelSelectionWidget
-                                .setFinishedState(); // TODO - should this be last selected?
-                            processCancelButton.setMode(processButtonInfo.displayLabel);
-
-                            // Switch choose-file button back to active on all tracks
-                            inputTrackAreaWidget.setLoadTrackEnabled(true);
-                        };
-
-                        if (result.wasOk())
-                        {
-                            auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
-
-                            for (size_t i = 0;
-                                 i < outputMediaDisplays.size() && i < outputFilesPtr->size();
-                                 ++i)
-                            {
-                                outputMediaDisplays[i]->initializeDisplay(
-                                    URL((*outputFilesPtr)[i]));
-                                outputMediaDisplays[i]->addLabels(*labelsPtr);
-                            }
-
-                            onExit();
-                        }
-                        else
-                        {
-                            openErrorPopup(result.getError(), onExit);
-                        }
+                        if (safeThis != nullptr)
+                            safeThis->finishProcessing(result, *outputFilesPtr, *labelsPtr);
                     });
             });
+    }
+
+    void finishProcessing(const OpResult& result,
+                          const std::vector<File>& outputFiles,
+                          const LabelList& labels)
+    {
+        if (abandoned)
+        {
+            // Tab was closed while this process was in flight
+            return;
+        }
+
+        std::function<void()> onExit = [this]
+        {
+            // Re-enable processing immediately
+            processCancelButton.setMode(processButtonInfo.displayLabel);
+
+            // Switch choose-file button back to active on all tracks
+            inputTrackAreaWidget.setLoadTrackEnabled(true);
+        };
+
+        if (result.wasOk())
+        {
+            auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
+
+            for (size_t i = 0; i < outputMediaDisplays.size() && i < outputFiles.size(); ++i)
+            {
+                outputMediaDisplays[i]->initializeDisplay(URL(outputFiles[i]));
+                outputMediaDisplays[i]->addLabels(labels);
+            }
+
+            onExit();
+        }
+        else
+        {
+            openErrorPopup(result.getError(), onExit);
+        }
     }
 
     void cancelCallback()
@@ -771,8 +711,6 @@ private:
         }
 
         // Re-enable processing immediately
-        modelSelectionWidget.setFinishedState(); // TODO - should this be last selected?
-
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
 
@@ -927,27 +865,27 @@ private:
     };
 
     static constexpr float marginSize = 2;
+    // Space around the whole tab, matching the Home tab's
+    static constexpr int pagePadding = 8;
 
-    static constexpr int modelSelectionRowHeight = 30;
     static constexpr int minControlAreaHeight = 96;
     static constexpr int processButtonWidth = 150;
     static constexpr int processButtonRowHeight = 30;
-    static constexpr int trackSectionLabelHeight = 20;
+    static constexpr int trackSectionLabelHeight = ModelStyle::sectionHeaderHeight - 2;
 
     std::shared_ptr<Model> model { new Model() };
 
-    ModelSelectionWidget modelSelectionWidget;
     ModelInfoWidget modelInfoWidget;
     ControlAreaWidget controlAreaWidget;
 
-    Label inputTracksLabel { "Input Tracks", "Input Tracks" };
+    ModelStyle::SectionHeader inputTracksLabel { "Input Tracks" };
     TrackAreaWidget inputTrackAreaWidget { DisplayMode::Input };
 
     MultiButton processCancelButton;
     MultiButton::Mode processButtonInfo;
     MultiButton::Mode cancelButtonInfo;
 
-    Label outputTracksLabel { "Output Tracks", "Output Tracks" };
+    ModelStyle::SectionHeader outputTracksLabel { "Output Tracks" };
     TrackAreaWidget outputTrackAreaWidget { DisplayMode::Output };
 
     ThreadPool loadingThreadPool { 1 };
@@ -955,7 +893,9 @@ private:
 
     std::atomic<uint64_t> currentProcessID { 0 };
     std::atomic<bool> abandoned { false };
-    std::function<void(ModelTab*, bool)> initialLoadCallback;
+    bool loading = false;
+
+    SharedResourcePointer<ModelCatalog> catalog;
 
     CentredAlertLookAndFeel centredAlertLF;
     std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;

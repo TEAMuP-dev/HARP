@@ -1,6 +1,7 @@
 /**
  * @file HomeTab.h
- * @brief Home tab for model discovery and loading.
+ * @brief Home tab for browsing the model catalog and opening models in new tabs.
+ * @author JEYuhas, 2cylu2, VedMistry42, cwitkowitz
  */
 
 #pragma once
@@ -11,607 +12,760 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "gui/HoverHandler.h"
+
 #include "utils/Interface.h"
-#include "utils/ModelRegistry.h"
-#include "widgets/ModelSelectionWidget.h"
+#include "utils/Messages.h"
+#include "utils/ModelCatalog.h"
+#include "utils/ModelTags.h"
+
+#include "widgets/ModelStyle.h"
+
+#include "windows/CustomPathWindow.h"
 
 using namespace juce;
 
-class TagLabel : public Component
+/**
+ * Clickable card summarizing one catalog entry.
+ */
+class ModelCard : public Button
 {
 public:
-    TagLabel(const String& text) : tagText(text)
+    ModelCard(const CatalogEntry& catalogEntry, std::function<void(const CatalogEntry&)> onOpen)
+        : Button(catalogEntry.name),
+          entry(catalogEntry),
+          badges(ModelStyle::getBadges(catalogEntry)),
+          tagLabels(catalogEntry.tags.getDisplayLabels()),
+          searchableText(catalogEntry.getSearchableText()),
+          onOpenRequested(std::move(onOpen))
     {
-        setSize(getPreferredWidth(), getPreferredHeight());
+        setMouseCursor(MouseCursor::PointingHandCursor);
     }
 
-    int getPreferredWidth() const { return font.getStringWidth(tagText) + horizontalPadding * 2; }
-    int getPreferredHeight() const { return roundToInt(font.getHeight()) + verticalPadding * 2; }
+    const CatalogEntry& getEntry() const { return entry; }
+
+    bool matchesSearch(const String& lowercaseQuery) const
+    {
+        return lowercaseQuery.isEmpty() || searchableText.contains(lowercaseQuery);
+    }
+
+    // Removing a custom path is offered from the context menu
+    std::function<void(const CatalogEntry&)> onRemoveRequested;
+
+    // Opens the model on a click, or offers to remove a custom path on a right-click
+    using Button::clicked;
+    void clicked(const ModifierKeys& modifiers) override
+    {
+        if (! modifiers.isPopupMenu())
+        {
+            if (onOpenRequested)
+                onOpenRequested(entry);
+
+            return;
+        }
+
+        if (entry.isCustom && onRemoveRequested)
+        {
+            PopupMenu menu;
+            menu.addItem("Remove from list",
+                         [safeThis = SafePointer<ModelCard>(this)]
+                         {
+                             if (safeThis != nullptr)
+                                 safeThis->onRemoveRequested(safeThis->entry);
+                         });
+            menu.showMenuAsync(PopupMenu::Options().withTargetComponent(this));
+        }
+    }
+
+    // Everything the card has no room for is shown in the instructions box while hovering
+    void mouseEnter(const MouseEvent& e) override
+    {
+        Button::mouseEnter(e);
+
+        StringArray lines;
+
+        if (entry.description.isNotEmpty())
+            lines.add(entry.description);
+
+        if (const String tags = ModelStyle::describeTags(entry.tags); tags.isNotEmpty())
+            lines.add(tags);
+
+        lines.add("Click to open " + entry.path + " in a new tab."
+                  + (entry.isCustom ? " Right-click to remove it from the list." : ""));
+
+        instructionsMessage->setMessage(lines.joinIntoString("\n"));
+    }
+
+    void mouseExit(const MouseEvent& e) override
+    {
+        Button::mouseExit(e);
+        instructionsMessage->clearMessage();
+    }
+
+    void paintButton(Graphics& g, bool isHighlighted, bool isDown) override
+    {
+        using namespace ModelStyle;
+
+        drawCard(g, getLocalBounds().toFloat().reduced(1.0f), isHighlighted, isDown);
+
+        auto area = getLocalBounds().reduced(12, 9);
+
+        /* Name, with badges on the right */
+
+        auto nameRow = area.removeFromTop(20);
+        const int badgesLeft = drawBadges(g, badges, nameRow);
+
+        g.setColour(Colours::white);
+        g.setFont(font(15.0f, true));
+        g.drawText(
+            entry.name, nameRow.withRight(badgesLeft - chipGap), Justification::centredLeft, true);
+
+        /* Description */
+
+        area.removeFromTop(2);
+
+        g.setColour(Colours::whitesmoke.withAlpha(0.85f));
+        g.setFont(font(13.0f));
+        g.drawFittedText(entry.description.isNotEmpty() ? entry.description
+                                                        : String("No description provided."),
+                         area.removeFromTop(30),
+                         Justification::topLeft,
+                         2,
+                         1.0f);
+
+        /* Tags, as many as fit (all of them are described while hovering) */
+
+        area.removeFromTop(4);
+        drawTagRow(g, tagLabels, area.removeFromTop(chipHeight));
+
+        /* Path */
+
+        area.removeFromTop(4);
+
+        g.setColour(Colours::grey);
+        g.setFont(font(11.0f));
+        g.drawText(entry.path, area.removeFromTop(13), Justification::centredLeft, true);
+    }
+
+    static constexpr int preferredHeight = 110;
+    static constexpr int minimumWidth = 300;
+
+private:
+    const CatalogEntry entry;
+    const std::vector<ModelStyle::Badge> badges;
+    const StringArray tagLabels;
+    const String searchableText;
+
+    std::function<void(const CatalogEntry&)> onOpenRequested;
+
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
+};
+
+/**
+ * The catalog as a responsive grid of cards, in one section per category.
+ */
+class ModelGrid : public Component
+{
+public:
+    // Stands for models that declare no category
+    static inline const String otherSectionId { "other" };
+
+    std::function<void(const CatalogEntry&)> onOpenRequested;
+    std::function<void(const CatalogEntry&)> onRemoveRequested;
+
+    void setEntries(const std::vector<CatalogEntry>& entries)
+    {
+        sections.clear();
+        removeAllChildren();
+
+        auto addSection = [&](const String& id, const String& title)
+        {
+            auto section = std::make_unique<Section>();
+            section->id = id;
+            section->title = title;
+
+            for (const auto& entry : entries)
+            {
+                const bool belongs = id == otherSectionId ? ! entry.tags.isCategorized()
+                                                              : entry.tags.isInCategory(id);
+
+                if (! belongs)
+                    continue;
+
+                auto* card = section->cards.add(new ModelCard(entry, onOpenRequested));
+                card->onRemoveRequested = onRemoveRequested;
+                addChildComponent(card);
+            }
+
+            // A model that belongs to several categories is listed in each of them
+            sections.push_back(std::move(section));
+        };
+
+        for (const auto& category : Taxonomy::getCategories())
+            addSection(category.id, category.displayName);
+
+        addSection(otherSectionId, "Other");
+    }
+
+    // Number of models in a section, or across all sections for an empty id
+    int countEntries(const String& sectionId) const
+    {
+        StringArray paths;
+
+        for (const auto& section : sections)
+        {
+            if (sectionId.isNotEmpty() && section->id != sectionId)
+                continue;
+
+            for (auto* card : section->cards)
+                paths.addIfNotAlreadyThere(card->getEntry().path);
+        }
+
+        return paths.size();
+    }
+
+    /**
+     * Shows the cards in a section (or all sections, for an empty id) that match a
+     * search, and returns how many distinct models are shown. The grid has to be laid out
+     * again afterwards.
+     */
+    int applyFilter(const String& sectionId, const String& searchText)
+    {
+        const String query = searchText.trim().toLowerCase();
+
+        StringArray shownPaths;
+
+        for (auto& section : sections)
+        {
+            const bool sectionShown = sectionId.isEmpty() || section->id == sectionId;
+
+            for (auto* card : section->cards)
+            {
+                const bool shown = sectionShown && card->matchesSearch(query);
+                card->setVisible(shown);
+
+                if (shown)
+                    shownPaths.addIfNotAlreadyThere(card->getEntry().path);
+            }
+        }
+
+        return shownPaths.size();
+    }
+
+    int getHeightForWidth(int width) const { return layOut(width, false); }
+
+    void resized() override { layOut(getWidth(), true); }
 
     void paint(Graphics& g) override
     {
-        auto bounds = getLocalBounds().toFloat().reduced(0.5f);
-        g.setColour(Colour(0xff183238));
-        g.fillRoundedRectangle(bounds, 4.0f);
-        g.setColour(Colour(0xff2dd4bf).withAlpha(0.42f));
-        g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-
-        g.setColour(Colour(0xff9eeadf));
-        g.setFont(font);
-        g.drawText(tagText, getLocalBounds(), Justification::centred, true);
+        for (const auto& section : sections)
+        {
+            if (! section->headerBounds.isEmpty())
+                ModelStyle::drawSectionHeader(g, section->title, section->headerBounds);
+        }
     }
 
 private:
-    String tagText;
-    Font font { 10.0f, Font::bold };
-    static constexpr int horizontalPadding = 7;
-    static constexpr int verticalPadding = 4;
+    struct Section
+    {
+        String id;
+        String title;
+        OwnedArray<ModelCard> cards;
+        Rectangle<int> headerBounds;
+    };
+
+    // Lays the visible cards out in as many columns as fit, and returns the height used
+    int layOut(int width, bool applyBounds) const
+    {
+        const int columns = jmax(1, (width + gap) / (ModelCard::minimumWidth + gap));
+        const int cardWidth = jmax(0, (width - gap * (columns - 1)) / columns);
+
+        int y = 0;
+
+        for (const auto& section : sections)
+        {
+            Array<ModelCard*> visibleCards;
+
+            for (auto* card : section->cards)
+            {
+                if (card->isVisible())
+                    visibleCards.add(card);
+            }
+
+            if (visibleCards.isEmpty())
+            {
+                if (applyBounds)
+                    section->headerBounds = {};
+
+                continue;
+            }
+
+            if (applyBounds)
+                section->headerBounds = { 0, y, width, ModelStyle::sectionHeaderHeight };
+
+            y += ModelStyle::sectionHeaderHeight;
+
+            for (int i = 0; i < visibleCards.size(); ++i)
+            {
+                const int column = i % columns;
+
+                if (column == 0 && i > 0)
+                    y += ModelCard::preferredHeight + gap;
+
+                if (applyBounds)
+                    visibleCards[i]->setBounds(
+                        column * (cardWidth + gap), y, cardWidth, ModelCard::preferredHeight);
+            }
+
+            y += ModelCard::preferredHeight + sectionGap;
+        }
+
+        return y;
+    }
+
+    static constexpr int gap = 8;
+    static constexpr int sectionGap = 10;
+
+    std::vector<std::unique_ptr<Section>> sections;
 };
 
-class CategoryChip : public Button
-{
-public:
-    CategoryChip(const String& name, bool selected)
-        : Button(name), isSelected(selected)
-    {
-    }
-
-    void setSelected(bool selected)
-    {
-        if (isSelected != selected)
-        {
-            isSelected = selected;
-            repaint();
-        }
-    }
-
-    bool getSelected() const { return isSelected; }
-
-    int getPreferredWidth() const { return font.getStringWidth(getName()) + horizontalPadding * 2; }
-    int getPreferredHeight() const { return roundToInt(font.getHeight()) + verticalPadding * 2; }
-
-    void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
-    {
-        auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-        
-        Colour bg;
-        Colour textColour;
-        
-        if (isSelected)
-        {
-            bg = Colour(0xff0f766e);
-            textColour = Colours::white;
-        }
-        else if (shouldDrawButtonAsHighlighted || shouldDrawButtonAsDown)
-        {
-            bg = Colour(0xff263a3d);
-            textColour = Colours::white;
-        }
-        else
-        {
-            bg = Colour(0xff1e1e24);
-            textColour = Colours::lightgrey;
-        }
-
-        g.setColour(bg);
-        g.fillRoundedRectangle(bounds, 5.0f);
-
-        g.setColour(isSelected ? Colour(0xff5eead4) : Colours::white.withAlpha(0.1f));
-        g.drawRoundedRectangle(bounds, 5.0f, 1.0f);
-
-        g.setColour(textColour);
-        g.setFont(font);
-        g.drawText(getName(), getLocalBounds().reduced(horizontalPadding, 0), Justification::centred, true);
-    }
-
-private:
-    bool isSelected = false;
-    Font font { 13.0f, Font::bold };
-    static constexpr int horizontalPadding = 12;
-    static constexpr int verticalPadding = 7;
-};
-
+/**
+ * Chips for choosing which section of the catalog to show, wrapped onto as many rows as
+ * the width requires.
+ */
 class CategoryFilterBar : public Component
 {
 public:
-    CategoryFilterBar(std::function<void(String)> onCategorySelectedCallback)
-        : onCategorySelected(std::move(onCategorySelectedCallback))
-    {
-        categories = {
-            "All",
-            "Generation",
-            "Performance Rendering and Synthesis",
-            "Effects",
-            "Enhancement",
-            "Production",
-            "Source Separation",
-            "Analysis",
-            "Custom"
-        };
+    std::function<void()> onSelectionChanged;
 
-        for (int i = 0; i < categories.size(); ++i)
-        {
-            auto chip = std::make_unique<CategoryChip>(categories[i], i == 0);
-            chip->onClick = [this, category = categories[i]]
-            {
-                selectCategory(category);
-            };
-            addAndMakeVisible(*chip);
-            chips.push_back(std::move(chip));
-        }
+    CategoryFilterBar()
+    {
+        addChip({}, "All");
+
+        for (const auto& category : Taxonomy::getCategories())
+            addChip(category.id, category.displayName);
+
+        addChip(ModelGrid::otherSectionId, "Other");
+
+        chips.getFirst()->setToggleState(true, dontSendNotification);
     }
 
-    void selectCategory(const String& category)
+    // Id of the selected section, or empty for all of them
+    String getSelectedId() const
     {
-        for (auto& chip : chips)
+        for (auto* chip : chips)
         {
-            chip->setSelected(chip->getName() == category);
+            if (chip->getToggleState())
+                return chip->id;
         }
 
-        if (onCategorySelected)
-            onCategorySelected(category);
+        return {};
     }
 
-    void resized() override
+    void setCounts(const ModelGrid& grid)
     {
-        auto area = getLocalBounds();
-        int x = 0;
-        int y = 0;
-        int spacingX = 6;
-        int spacingY = 6;
-        int rowHeight = 0;
-
-        for (auto& chip : chips)
-        {
-            int chipWidth = chip->getPreferredWidth();
-            int chipHeight = chip->getPreferredHeight();
-            
-            if (x + chipWidth > area.getWidth() && x > 0)
-            {
-                x = 0;
-                y += rowHeight + spacingY;
-                rowHeight = 0;
-            }
-
-            chip->setBounds(x, y, chipWidth, chipHeight);
-            x += chipWidth + spacingX;
-            rowHeight = jmax(rowHeight, chipHeight);
-        }
-        
-        int newHeight = y + jmax(rowHeight, 1);
-        if (newHeight != preferredHeight)
-        {
-            preferredHeight = newHeight;
-            MessageManager::callAsync([this]()
-            {
-                if (auto* parent = getParentComponent())
-                    parent->resized();
-            });
-        }
-    }
-
-    int getPreferredHeight() const { return preferredHeight; }
-
-private:
-    std::vector<String> categories;
-    std::vector<std::unique_ptr<CategoryChip>> chips;
-    std::function<void(String)> onCategorySelected;
-    int preferredHeight = 28;
-};
-
-class CategoryHeader : public Component
-{
-public:
-    CategoryHeader(const String& name) : categoryName(name) {}
-
-    void paint(Graphics& g) override
-    {
-        auto bounds = getLocalBounds().toFloat();
-        
-        g.setColour(Colours::white);
-        g.setFont(Font(16.0f, Font::bold));
-        g.drawText(categoryName, getLocalBounds().reduced(4, 0), Justification::centredLeft, true);
-        
-        auto textWidth = Font(16.0f, Font::bold).getStringWidth(categoryName);
-        g.setColour(Colour(0xff2dd4bf).withAlpha(0.6f));
-        g.fillRect(textWidth + 12.0f, bounds.getCentreY() - 1.0f, bounds.getWidth() - textWidth - 16.0f, 2.0f);
-    }
-
-    static constexpr int preferredHeight = 32;
-
-private:
-    String categoryName;
-};
-
-class ModelRegistryCard : public Component
-{
-public:
-    ModelRegistryCard(ModelRegistry::Entry registryEntry,
-                      std::function<void(ModelRegistry::Entry)> loadCallback)
-        : entry(std::move(registryEntry)), onLoad(std::move(loadCallback))
-    {
-        nameLabel.setText(entry.displayName, dontSendNotification);
-        nameLabel.setJustificationType(Justification::centredLeft);
-        nameLabel.setFont(Font(17.0f, Font::bold));
-        addAndMakeVisible(nameLabel);
-
-        providerLabel.setText(entry.provider, dontSendNotification);
-        providerLabel.setJustificationType(Justification::centredLeft);
-        providerLabel.setColour(Label::textColourId, Colours::lightgrey);
-        addAndMakeVisible(providerLabel);
-
-        summaryLabel.setText(entry.summary, dontSendNotification);
-        summaryLabel.setJustificationType(Justification::centredLeft);
-        summaryLabel.setColour(Label::textColourId, Colours::whitesmoke);
-        addAndMakeVisible(summaryLabel);
-
-        pathLabel.setText(entry.path, dontSendNotification);
-        pathLabel.setJustificationType(Justification::centredLeft);
-        pathLabel.setColour(Label::textColourId, Colours::grey);
-        addAndMakeVisible(pathLabel);
-
-        loadButton.setButtonText("Load");
-        loadButton.onClick = [this]
-        {
-            if (onLoad)
-                onLoad(entry);
-        };
-        addAndMakeVisible(loadButton);
-
-        for (const auto& tag : entry.tags)
-        {
-            auto label = std::make_unique<TagLabel>(tag);
-            addAndMakeVisible(*label);
-            tagLabels.push_back(std::move(label));
-        }
-    }
-
-    void paint(Graphics& g) override
-    {
-        auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-        g.setColour(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::widgetBackground)
-                        .brighter(0.06f));
-        g.fillRoundedRectangle(bounds, 6.0f);
-
-        g.setColour(Colours::white.withAlpha(0.12f));
-        g.drawRoundedRectangle(bounds, 6.0f, 1.0f);
-    }
-
-    void resized() override
-    {
-        auto area = getLocalBounds().reduced(12, 10);
-        auto buttonArea = area.removeFromRight(92);
-        loadButton.setBounds(buttonArea.withSizeKeepingCentre(80, 30));
-
-        auto topRow = area.removeFromTop(18);
-        providerLabel.setBounds(topRow.removeFromLeft(150));
-        
-        for (auto& tagLabel : tagLabels)
-        {
-            tagLabel->setBounds(topRow.removeFromRight(tagLabel->getPreferredWidth() + 4)
-                                      .withSizeKeepingCentre(tagLabel->getPreferredWidth(),
-                                                             tagLabel->getPreferredHeight()));
-        }
-
-        nameLabel.setBounds(area.removeFromTop(24));
-        summaryLabel.setBounds(area.removeFromTop(24));
-        pathLabel.setBounds(area.removeFromTop(18));
-    }
-
-    static constexpr int preferredHeight = 104;
-
-private:
-    ModelRegistry::Entry entry;
-    std::function<void(ModelRegistry::Entry)> onLoad;
-
-    Label nameLabel;
-    Label providerLabel;
-    Label summaryLabel;
-    Label pathLabel;
-    TextButton loadButton;
-    std::vector<std::unique_ptr<TagLabel>> tagLabels;
-};
-
-class ModelRegistryList : public Component
-{
-public:
-    struct Section
-    {
-        String category;
-        std::vector<ModelRegistry::Entry> entries;
-    };
-
-    void setSections(std::vector<Section> newSections,
-                     std::function<void(ModelRegistry::Entry)> loadCallback)
-    {
-        items.clear();
-        removeAllChildren();
-
-        for (auto& sec : newSections)
-        {
-            if (sec.entries.empty())
-                continue;
-
-            auto header = std::make_unique<CategoryHeader>(sec.category);
-            addAndMakeVisible(*header);
-            items.push_back(std::move(header));
-
-            for (auto& entry : sec.entries)
-            {
-                auto card = std::make_unique<ModelRegistryCard>(std::move(entry), loadCallback);
-                addAndMakeVisible(*card);
-                items.push_back(std::move(card));
-            }
-        }
+        for (auto* chip : chips)
+            chip->count = grid.countEntries(chip->id);
 
         resized();
         repaint();
     }
 
-    void resized() override
+    int getHeightForWidth(int width) const
     {
-        auto area = getLocalBounds();
+        FlexBox box = createLayout();
+        box.performLayout(Rectangle<int>(0, 0, width, 1000));
 
-        for (auto& item : items)
-        {
-            if (dynamic_cast<CategoryHeader*>(item.get()))
-                item->setBounds(area.removeFromTop(CategoryHeader::preferredHeight));
-            else if (dynamic_cast<ModelRegistryCard*>(item.get()))
-                item->setBounds(area.removeFromTop(ModelRegistryCard::preferredHeight).reduced(0, 4));
-        }
+        float bottom = 0.0f;
+
+        for (const auto& item : box.items)
+            bottom = jmax(bottom, item.currentBounds.getBottom() + item.margin.bottom);
+
+        return roundToInt(bottom);
     }
 
-    int getRequiredHeight() const
-    {
-        int height = 0;
-        for (const auto& item : items)
-        {
-            if (dynamic_cast<CategoryHeader*>(item.get()))
-                height += CategoryHeader::preferredHeight;
-            else if (dynamic_cast<ModelRegistryCard*>(item.get()))
-                height += ModelRegistryCard::preferredHeight;
-        }
-        return height;
-    }
+    void resized() override { createLayout().performLayout(getLocalBounds()); }
 
 private:
-    std::vector<std::unique_ptr<Component>> items;
+    struct Chip : public Button
+    {
+        Chip(const String& chipId, const String& chipName) : Button(chipName), id(chipId)
+        {
+            setClickingTogglesState(true);
+            setRadioGroupId(1);
+        }
+
+        String getText() const { return getName() + "  " + String(count); }
+
+        int getPreferredWidth() const
+        {
+            return ModelStyle::getTextWidth(chipFont, getText()) + 2 * horizontalPadding;
+        }
+
+        void paintButton(Graphics& g, bool isHighlighted, bool isDown) override
+        {
+            const auto bounds = getLocalBounds().toFloat().reduced(1.0f);
+            const bool selected = getToggleState();
+
+            g.setColour(selected ? ModelStyle::accentDark
+                                 : Colour(isHighlighted || isDown ? 0xff263a3d : 0xff1e1e24));
+            g.fillRoundedRectangle(bounds, 5.0f);
+
+            g.setColour(selected ? ModelStyle::accent : Colours::white.withAlpha(0.1f));
+            g.drawRoundedRectangle(bounds, 5.0f, 1.0f);
+
+            g.setColour(selected || isHighlighted ? Colours::white : Colours::lightgrey);
+            g.setFont(chipFont);
+            g.drawText(getText(), getLocalBounds(), Justification::centred, false);
+        }
+
+        void mouseEnter(const MouseEvent& e) override
+        {
+            Button::mouseEnter(e);
+
+            if (id.isEmpty())
+                instructionsMessage->setMessage("Click to show every model.");
+            else if (id == ModelGrid::otherSectionId)
+                instructionsMessage->setMessage(
+                    "Click to show the models that declare no category.");
+            else
+                instructionsMessage->setMessage("Click to show only the " + getName() + " models.");
+        }
+
+        void mouseExit(const MouseEvent& e) override
+        {
+            Button::mouseExit(e);
+            instructionsMessage->clearMessage();
+        }
+
+        const String id;
+        int count = 0;
+
+        const Font chipFont = ModelStyle::font(12.0f, true);
+        static constexpr int horizontalPadding = 10;
+
+        SharedResourcePointer<InstructionsMessage> instructionsMessage;
+    };
+
+    void addChip(const String& id, const String& name)
+    {
+        auto* chip = chips.add(new Chip(id, name));
+        chip->onClick = [this]
+        {
+            if (onSelectionChanged)
+                onSelectionChanged();
+        };
+        addAndMakeVisible(chip);
+    }
+
+    FlexBox createLayout() const
+    {
+        FlexBox box;
+        box.flexWrap = FlexBox::Wrap::wrap;
+        box.alignContent = FlexBox::AlignContent::flexStart;
+
+        for (auto* chip : chips)
+        {
+            box.items.add(FlexItem(*chip)
+                              .withWidth((float) chip->getPreferredWidth())
+                              .withHeight((float) chipHeight)
+                              .withMargin(FlexItem::Margin(0, 6, 6, 0)));
+        }
+
+        return box;
+    }
+
+    static constexpr int chipHeight = 26;
+
+    OwnedArray<Chip> chips;
 };
 
-class HomeTab : public Component,
-                private ChangeListener
+/**
+ * A small note on the state of the catalog (e.g., "Offline" or "2 hidden"), shown only when
+ * there is something to note, and explained in the instructions box while hovering over it.
+ */
+class CatalogStatusIndicator : public Component
+{
+public:
+    void setStatus(const String& newText, Colour newColour, const String& newDetails)
+    {
+        text = newText;
+        colour = newColour;
+        details = newDetails;
+
+        setVisible(text.isNotEmpty());
+        repaint();
+    }
+
+    int getPreferredWidth() const
+    {
+        return text.isEmpty() ? 0 : ModelStyle::getTextWidth(textFont, text) + 16;
+    }
+
+    void paint(Graphics& g) override
+    {
+        const auto bounds = getLocalBounds().toFloat().reduced(0.5f, 3.0f);
+
+        g.setColour(colour.withAlpha(0.18f));
+        g.fillRoundedRectangle(bounds, bounds.getHeight() / 2.0f);
+
+        g.setColour(colour);
+        g.setFont(textFont);
+        g.drawText(text, getLocalBounds(), Justification::centred, false);
+    }
+
+    void mouseEnter(const MouseEvent&) override { instructionsMessage->setMessage(details); }
+
+    void mouseExit(const MouseEvent&) override { instructionsMessage->clearMessage(); }
+
+private:
+    String text;
+    Colour colour;
+    String details;
+
+    const Font textFont = ModelStyle::font(12.0f, true);
+
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
+};
+
+class HomeTab : public Component, private ChangeListener
 {
 public:
     HomeTab()
     {
-        sharedChoices->addChangeListener(this);
-
         titleLabel.setText("Models", dontSendNotification);
-        titleLabel.setJustificationType(Justification::centredLeft);
-        titleLabel.setFont(Font(24.0f, Font::bold));
+        titleLabel.setFont(ModelStyle::font(20.0f, true));
+        titleLabel.setBorderSize({ 0, 0, 0, 0 });
+        addAndMakeVisible(titleLabel);
 
-        subtitleLabel.setText("Search HARP-compatible models and open one in a new tab.",
-                              dontSendNotification);
-        subtitleLabel.setJustificationType(Justification::centredLeft);
+        addChildComponent(statusIndicator);
 
-        searchEditor.setTextToShowWhenEmpty("Search models...", Colours::grey);
+        addInstructions(refreshButton,
+                        "Click to fetch the latest list of models from Hugging Face.");
+        refreshButton.onClick = [this] { catalog->refresh(); };
+        addAndMakeVisible(refreshButton);
+
+        addInstructions(customPathButton,
+                        "Click to open a model that is not listed, by its Hugging Face Space, "
+                        "Gradio URL, or local address.");
+        customPathButton.onClick = [this]
+        {
+            CustomPathComponent::launch(this,
+                                        [safeThis = SafePointer<HomeTab>(this)](String path)
+                                        {
+                                            if (safeThis != nullptr)
+                                                safeThis->requestOpen(path, {});
+                                        });
+        };
+        addAndMakeVisible(customPathButton);
+
+        searchEditor.setTextToShowWhenEmpty("Search by name, task, tag, or path...", Colours::grey);
         searchEditor.setMultiLine(false);
         searchEditor.setReturnKeyStartsNewLine(false);
-        searchEditor.onTextChange = [this] { rebuildModelList(); };
-
-        customPathButton.setButtonText("Custom Path");
-        customPathButton.onClick = [this] { openCustomPathPopup(); };
-
-        viewport.setViewedComponent(&modelList, false);
-        viewport.setScrollBarsShown(true, false);
-
-        addAndMakeVisible(titleLabel);
-        addAndMakeVisible(subtitleLabel);
+        searchEditor.onTextChange = [this] { applyFilter(); };
+        addInstructions(searchEditor,
+                        "Type to show only the models whose name, description, tags, or path "
+                        "contain the text.");
         addAndMakeVisible(searchEditor);
-        addAndMakeVisible(customPathButton);
+
+        categoryFilterBar.onSelectionChanged = [this] { applyFilter(); };
         addAndMakeVisible(categoryFilterBar);
+
+        modelGrid.onOpenRequested = [this](const CatalogEntry& entry)
+        { requestOpen(entry.path, entry.name); };
+        modelGrid.onRemoveRequested = [this](const CatalogEntry& entry)
+        { catalog->removeCustomPath(entry.path); };
+
+        viewport.setViewedComponent(&modelGrid, false);
+        viewport.setScrollBarsShown(true, false);
         addAndMakeVisible(viewport);
 
-        rebuildModelList();
+        noResultsLabel.setJustificationType(Justification::centredTop);
+        noResultsLabel.setColour(Label::textColourId, Colours::grey);
+        addChildComponent(noResultsLabel);
+
+        catalog->addChangeListener(this);
+        updateFromCatalog();
     }
 
     ~HomeTab() override
     {
-        sharedChoices->removeChangeListener(this);
+        catalog->removeChangeListener(this);
+
+        for (auto& handler : hoverHandlers)
+            handler->detach();
+    }
+
+    // Called with the path and display name of the model to open
+    std::function<void(const String&, const String&)> onModelOpenRequested;
+
+    // Bounds accessor for the tutorial step on selecting a model
+    Rectangle<int> getModelSelectBounds() const
+    {
+        return searchEditor.getBounds().getUnion(viewport.getBounds()).expanded(2, 2);
     }
 
     void resized() override
     {
-        auto area = getLocalBounds().reduced(16);
+        auto area = getLocalBounds().reduced(14, 12);
 
-        titleLabel.setBounds(area.removeFromTop(34));
-        subtitleLabel.setBounds(area.removeFromTop(26));
+        FlexBox header;
+        header.alignItems = FlexBox::AlignItems::center;
+        header.items.add(FlexItem(titleLabel).withFlex(1).withHeight(28));
+        header.items.add(FlexItem(statusIndicator)
+                             .withWidth((float) statusIndicator.getPreferredWidth())
+                             .withHeight(26)
+                             .withMargin({ 0, 8, 0, 0 }));
+        header.items.add(
+            FlexItem(refreshButton).withWidth(80).withHeight(26).withMargin({ 0, 6, 0, 0 }));
+        header.items.add(FlexItem(customPathButton).withWidth(110).withHeight(26));
+        header.performLayout(area.removeFromTop(28));
 
         area.removeFromTop(8);
-        auto searchRow = area.removeFromTop(34);
-        customPathButton.setBounds(searchRow.removeFromRight(120).reduced(0, 1));
-        searchRow.removeFromRight(8);
-        searchEditor.setBounds(searchRow);
+        searchEditor.setBounds(area.removeFromTop(28));
 
-        area.removeFromTop(10);
-        categoryFilterBar.setBounds(area.removeFromTop(categoryFilterBar.getPreferredHeight()));
+        area.removeFromTop(8);
+        categoryFilterBar.setBounds(
+            area.removeFromTop(categoryFilterBar.getHeightForWidth(area.getWidth())));
 
-        area.removeFromTop(10);
         viewport.setBounds(area);
+        noResultsLabel.setBounds(area.withTrimmedTop(24));
 
-        updateListBounds();
+        layOutGrid();
     }
-
-    void resetSelection()
-    {
-        searchEditor.setEnabled(true);
-        customPathButton.setEnabled(true);
-        categoryFilterBar.setEnabled(true);
-        viewport.setEnabled(true);
-    }
-
-    Rectangle<int> getModelSelectBounds() const
-    {
-        return searchEditor.getBounds().expanded(2, 2);
-    }
-
-    std::function<void(String, String)> onModelLoadRequested;
 
 private:
-    void changeListenerCallback(ChangeBroadcaster* source) override
+    void changeListenerCallback(ChangeBroadcaster*) override { updateFromCatalog(); }
+
+    void updateFromCatalog()
     {
-        if (source == static_cast<SharedChoices*>(sharedChoices))
-            rebuildModelList();
+        modelGrid.setEntries(catalog->getEntries());
+        categoryFilterBar.setCounts(modelGrid);
+
+        updateStatusIndicator();
+        refreshButton.setEnabled(catalog->getFetchState() != ModelCatalog::FetchState::Fetching);
+
+        // The chip counts, and so the rows they wrap onto, may have changed as well
+        updateVisibleModels();
+        resized();
     }
 
-    void requestModelLoad(const ModelRegistry::Entry& entry)
+    void updateStatusIndicator()
     {
-        searchEditor.setEnabled(false);
-        customPathButton.setEnabled(false);
-        categoryFilterBar.setEnabled(false);
-        viewport.setEnabled(false);
+        const String source = "huggingface.co/" + String(ModelCatalog::hubOrganization);
+        const auto& hidden = catalog->getHiddenEntries();
 
-        if (onModelLoadRequested)
-            onModelLoadRequested(entry.path, entry.displayName);
-    }
+        StringArray notes;
+        StringArray details;
+        Colour colour = ModelStyle::secondaryText;
 
-    void rebuildModelList()
-    {
-        std::vector<ModelRegistry::Entry> entries;
-        const auto searchText = searchEditor.getText().trim().toLowerCase();
-
-        for (const auto& savedPath : sharedChoices->savedModelPaths)
+        switch (catalog->getFetchState())
         {
-            const String path(savedPath);
+            case ModelCatalog::FetchState::Fetching:
+                notes.add("Updating...");
+                details.add("Fetching the latest list of models from " + source + ".");
+                colour = ModelStyle::information;
+                break;
 
-            if (path.startsWithIgnoreCase("click here"))
-                continue;
-
-            auto entry = ModelRegistry::getEntryForPath(path);
-            const auto searchableText =
-                (entry.displayName + " " + entry.summary + " " + entry.path + " " + entry.provider)
-                    .toLowerCase();
-
-            if (searchText.isEmpty() || searchableText.contains(searchText))
+            case ModelCatalog::FetchState::Failed:
             {
-                if (activeCategory == "All")
-                {
-                    entries.push_back(std::move(entry));
-                }
-                else if (activeCategory == "Custom")
-                {
-                    if (entry.tags.empty())
-                        entries.push_back(std::move(entry));
-                }
-                else
-                {
-                    bool matchesCategory = false;
-                    for (const auto& tag : entry.tags)
-                    {
-                        if (tag == activeCategory)
-                        {
-                            matchesCategory = true;
-                            break;
-                        }
-                    }
-                    if (matchesCategory)
-                        entries.push_back(std::move(entry));
-                }
+                const Time listingTime = catalog->getListingTime();
+
+                notes.add("Offline");
+                details.add("Could not reach " + source + " (" + catalog->getFetchError() + "). "
+                            + (listingTime != Time()
+                                   ? "Showing the list from "
+                                         + listingTime.toString(true, true, false) + "."
+                                   : String("Only built-in and custom models are shown."))
+                            + " Click Refresh to try again.");
+                colour = ModelStyle::problem;
+                break;
             }
+
+            case ModelCatalog::FetchState::Succeeded:
+                break;
         }
 
-        std::vector<ModelRegistryList::Section> sections;
-        std::vector<String> categoriesToShow;
-        
-        if (activeCategory == "All")
+        if (! hidden.empty())
         {
-            categoriesToShow = {
-                "Generation",
-                "Performance Rendering and Synthesis",
-                "Effects",
-                "Enhancement",
-                "Production",
-                "Source Separation",
-                "Analysis",
-                "Custom"
-            };
+            notes.add(String((int) hidden.size()) + " hidden");
+
+            StringArray hiddenLines { "Hidden, since they cannot currently be loaded:" };
+
+            for (const auto& entry : hidden)
+                hiddenLines.add(entry.name + " (" + entry.reason + ")");
+
+            details.add(hiddenLines.joinIntoString("\n"));
         }
+
+        statusIndicator.setStatus(notes.joinIntoString(String::fromUTF8(" \xc2\xb7 ")),
+                                  colour,
+                                  details.joinIntoString("\n"));
+    }
+
+    void applyFilter()
+    {
+        updateVisibleModels();
+        layOutGrid();
+    }
+
+    void updateVisibleModels()
+    {
+        const int numShown =
+            modelGrid.applyFilter(categoryFilterBar.getSelectedId(), searchEditor.getText());
+
+        noResultsLabel.setText(searchEditor.isEmpty()
+                                   ? "No models in this category yet."
+                                   : "No models match \"" + searchEditor.getText().trim() + "\".",
+                               dontSendNotification);
+        noResultsLabel.setVisible(numShown == 0);
+    }
+
+    void layOutGrid()
+    {
+        const int width = jmax(0, viewport.getWidth() - viewport.getScrollBarThickness());
+        const int height = jmax(viewport.getHeight(), modelGrid.getHeightForWidth(width));
+
+        // Which cards are shown can change without the size changing
+        if (modelGrid.getWidth() == width && modelGrid.getHeight() == height)
+            modelGrid.resized();
         else
-        {
-            categoriesToShow = { activeCategory };
-        }
+            modelGrid.setSize(width, height);
 
-        for (const auto& cat : categoriesToShow)
-        {
-            ModelRegistryList::Section sec;
-            sec.category = cat;
-            
-            for (const auto& entry : entries)
-            {
-                if (cat == "Custom")
-                {
-                    if (entry.tags.empty())
-                        sec.entries.push_back(entry);
-                }
-                else
-                {
-                    for (const auto& tag : entry.tags)
-                    {
-                        if (tag == cat)
-                        {
-                            sec.entries.push_back(entry);
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (! sec.entries.empty())
-                sections.push_back(std::move(sec));
-        }
-
-        modelList.setSections(std::move(sections),
-                             [this](ModelRegistry::Entry entry) { requestModelLoad(entry); });
-        updateListBounds();
+        modelGrid.repaint();
     }
 
-    void updateListBounds()
+    void requestOpen(const String& path, const String& name)
     {
-        const auto width = jmax(0, viewport.getWidth() - viewport.getScrollBarThickness());
-        modelList.setSize(width, jmax(viewport.getHeight(), modelList.getRequiredHeight()));
+        if (onModelOpenRequested)
+            onModelOpenRequested(path, name);
     }
 
-    void openCustomPathPopup()
+    // Shows instructions for a component in the instructions box while hovering over it
+    void addInstructions(Component& component, const String& instructions)
     {
-        std::function<void(String)> loadCallback = [this](String path)
-        {
-            auto entry = ModelRegistry::getEntryForPath(path);
-            requestModelLoad(entry);
-        };
+        auto handler = std::make_unique<HoverHandler>(component);
 
-        auto* content = new CustomPathComponent(std::move(loadCallback), [] {});
+        handler->onMouseEnter = [this, instructions]
+        { instructionsMessage->setMessage(instructions); };
+        handler->onMouseExit = [this] { instructionsMessage->clearMessage(); };
+        handler->attach();
 
-        DialogWindow::LaunchOptions options;
-        options.dialogTitle = "Enter Custom Path";
-        options.dialogBackgroundColour = Colours::darkgrey;
-        options.content.setOwned(content);
-
-        options.useNativeTitleBar = false;
-        options.resizable = false;
-        options.escapeKeyTriggersCloseButton = true;
-        options.componentToCentreAround = this;
-
-        options.launchAsync();
+        hoverHandlers.push_back(std::move(handler));
     }
 
     Label titleLabel;
-    Label subtitleLabel;
+    CatalogStatusIndicator statusIndicator;
+    TextButton refreshButton { "Refresh" };
+    TextButton customPathButton { "Custom Path..." };
     TextEditor searchEditor;
-    TextButton customPathButton;
-    CategoryFilterBar categoryFilterBar { [this](String cat) { activeCategory = cat; rebuildModelList(); } };
-    String activeCategory { "All" };
+    CategoryFilterBar categoryFilterBar;
     Viewport viewport;
-    ModelRegistryList modelList;
+    ModelGrid modelGrid;
+    Label noResultsLabel;
 
-    SharedResourcePointer<SharedChoices> sharedChoices;
+    std::vector<std::unique_ptr<HoverHandler>> hoverHandlers;
+
+    SharedResourcePointer<ModelCatalog> catalog;
+    SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };

@@ -69,17 +69,26 @@ public:
     }
 
     // Called by MainComponent whenever a model tab is opened, closed, or
-    // finishes loading a model.
+    // selected, or finishes loading a model.
     void notifyModelStateChanged()
     {
         rebuildSteps();
 
-        if (content->currentStep > 0 && steps.size() > 2 && isModelLoadedInCurrentTab())
+        auto model = getCurrentModel();
+
+        if (model == nullptr || ! model->isLoaded())
         {
-            // Auto-jump to Step 3 ("Quick Start") once a model is loaded
-            // (Index 2 corresponds to "Quick Start")
-            content->currentStep = 2;
+            updateStep();
+            return;
         }
+
+        // Auto-jump to Step 3 ("Quick Start") once a different model is showing, whether
+        // it just loaded or its tab was selected, since the steps describe that model
+        // (Index 2 corresponds to "Quick Start")
+        if (content->currentStep > 0 && steps.size() > 2 && model != describedModel.lock())
+            content->currentStep = 2;
+
+        describedModel = model;
 
         updateStep();
     }
@@ -115,8 +124,8 @@ public:
         // 2. Select Model
         steps.push_back(
             { "Select a Model",
-              "Select a model from the dropdown menu at the top and click Load.\n\n"
-              "Once loaded, the model's details and controls will appear below.\n\n"
+              "Browse or search the models on the Home tab, and click one to open it in a new tab.\n\n"
+              "Once loaded, the model's details and controls will appear in its tab.\n\n"
               "If you click Next without loading a model, HARP loads Demucs for guidance.",
               [](MainComponent* c) { return c->getModelSelectBounds(); } });
 
@@ -264,7 +273,7 @@ public:
         // 8. Interface Summary
         steps.push_back(
             { "Interface Summary",
-              "Top Bar: Select a model from the dropdown and click Load to initialize it.\n\n"
+              "Tabs: Open models from the Home tab. Each model gets a tab of its own, so several can be used side by side.\n\n"
               "Left Panel: This is where your Input and Output tracks live. Models read from and write to these tracks.\n\n"
               "Right Panel: A scratch pad (Clipboard) to stash tracks you want to save or reuse later.",
               [](MainComponent*) { return Rectangle<int>(); },
@@ -765,6 +774,10 @@ private:
     // Whether the tutorial has already asked for the fallback model on the
     // user's behalf, so that a failed load does not trap them on that step
     bool attemptedFallbackLoad = false;
+
+    // The model the steps were last written for, so that only a different one restarts
+    // them at "Quick Start"
+    std::weak_ptr<Model> describedModel;
 
     std::vector<TutorialStep> steps;
 

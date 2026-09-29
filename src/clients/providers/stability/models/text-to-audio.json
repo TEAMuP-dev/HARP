@@ -4,7 +4,13 @@
         "description": "Enter text prompts to generate 44.1khz audio.",
         "author": "Stability AI",
         "tags": [
-            "text-to-audio",
+            "category:generation",
+            "subcategory:holistic",
+            "input:text",
+            "output:audio/wav|mp3",
+            "sample-rate:44100",
+            "channels:stereo",
+            "stable-audio",
             "stability"
         ]
     },

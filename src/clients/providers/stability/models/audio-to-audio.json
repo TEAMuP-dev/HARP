@@ -4,7 +4,14 @@
         "description": "Enter text prompt to modify an audio file.",
         "author": "Stability AI",
         "tags": [
-            "audio-to-audio",
+            "category:generation",
+            "subcategory:editing",
+            "input:audio",
+            "input:text",
+            "output:audio/wav|mp3",
+            "sample-rate:44100",
+            "channels:stereo",
+            "stable-audio",
             "stability"
         ]
     },

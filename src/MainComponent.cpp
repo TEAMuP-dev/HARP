@@ -468,36 +468,20 @@ void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bound
 
 void MainComponent::ensureTutorialModelLoaded()
 {
-    // Loading is asynchronous, so without this guard every repeated call that
-    // arrives before the first load finishes - clicking Next again, say - would
-    // open yet another tab or start yet another load.
-    if (tutorialModelLoadInFlight)
+    // A model tab that is showing either has a model or is loading one, and in both
+    // cases the tutorial describes that one
+    if (getCurrentModelTab() != nullptr)
         return;
 
+    // Opening the tab selects it, which is what the tutorial steps compute their
+    // highlights against; leave it selected.
+    tutorialCreatedTab = modelTabs.openModelTab(TutorialConstants::fallbackModelPath);
+}
+
+bool MainComponent::isTutorialModelLoadInFlight() const
+{
     auto* tab = getCurrentModelTab();
-
-    if (tab == nullptr)
-    {
-        // createNewTab() selects the tab it creates, which is what the tutorial
-        // steps compute their highlights against; leave it selected.
-        tab = modelTabs.createNewTab();
-        tutorialCreatedTab = tab;
-    }
-
-    if (tab->isModelLoaded())
-        return;
-
-    tutorialModelLoadInFlight = true;
-
-    Component::SafePointer<MainComponent> safeThis(this);
-    tab->onNextModelLoadComplete(
-        [safeThis](ModelTab*, bool)
-        {
-            if (safeThis != nullptr)
-                safeThis->tutorialModelLoadInFlight = false;
-        });
-
-    tab->loadDefaultModel();
+    return tab != nullptr && tab->isLoading();
 }
 
 void MainComponent::resetTutorialAutoLoadedModel()
