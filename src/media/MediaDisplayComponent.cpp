@@ -4,6 +4,8 @@
 
 #include "../utils/Interface.h"
 
+#include "../windows/tutorial/TutorialTargets.h"
+
 #include <cmath>
 
 void OptionalBannerComponent::paint(Graphics& g)
@@ -206,6 +208,9 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
 void MediaDisplayComponent::initializeButtons()
 {
+    playStopButton.setComponentID(TutorialTargets::trackPlayButton);
+    chooseFileButton.setComponentID(TutorialTargets::trackFolderButton);
+
     // Mode when a playable file is loaded
     playButtonActiveInfo =
         MultiButton::Mode { "Play-Active",       "Click to start playback.",
@@ -1296,26 +1301,6 @@ void MediaDisplayComponent::updateCursorPosition()
 
     currentPositionCursor.setRectangle(
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
-}
-
-Rectangle<int> MediaDisplayComponent::getChooseFileButtonBounds()
-{
-    if (auto* p = chooseFileButton.getParentComponent())
-    {
-        return getLocalArea(p, chooseFileButton.getBounds());
-    }
-
-    return chooseFileButton.getBounds();
-}
-
-Rectangle<int> MediaDisplayComponent::getPlayButtonBounds()
-{
-    if (auto* p = playStopButton.getParentComponent())
-    {
-        return getLocalArea(p, playStopButton.getBounds());
-    }
-
-    return playStopButton.getBounds();
 }
 
 void MediaDisplayComponent::mouseEnter(const MouseEvent& e)

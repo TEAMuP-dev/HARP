@@ -53,6 +53,40 @@ inline void
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 }
 
+/* Draws text over at most maxLines lines, which divide the area evenly, in the current font and
+   colour, and ends the last line with an ellipsis if the text does not fit. Line breaks in the
+   text are treated as spaces. (drawFittedText shrinks the font instead, and ignores the limit
+   altogether for text with line breaks.) */
+inline void drawTruncatedText(Graphics& g, const String& text, Rectangle<int> area, int maxLines)
+{
+    auto words = StringArray::fromTokens(text, " \t\r\n", "");
+    words.removeEmptyStrings();
+    const String flattened = words.joinIntoString(" ");
+
+    AttributedString attributed;
+    attributed.append(flattened, g.getCurrentFont());
+
+    // Laid out only to find where the lines break
+    TextLayout layout;
+    layout.createLayout(attributed, (float) area.getWidth());
+
+    const int numLines = jmin(maxLines, layout.getNumLines());
+    const int lineHeight = area.getHeight() / jmax(1, maxLines);
+
+    for (int i = 0; i < numLines; ++i)
+    {
+        const auto range = layout.getLine(i).stringRange;
+        const bool isLastLine = i == numLines - 1;
+
+        // The last line takes the rest of the text, cut short if it is too long
+        const String line = isLastLine ? flattened.substring(range.getStart())
+                                       : flattened.substring(range.getStart(), range.getEnd());
+
+        g.drawText(
+            line.trim(), area.removeFromTop(lineHeight), Justification::centredLeft, isLastLine);
+    }
+}
+
 /* Tag chips */
 
 inline constexpr int chipHeight = 18;

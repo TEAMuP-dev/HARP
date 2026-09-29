@@ -76,7 +76,11 @@ target_sources(${PROJECT_NAME}
 
         src/windows/AboutWindow.h
         src/windows/CustomPathWindow.h
-        src/windows/WelcomeWindow.h
+
+        src/windows/tutorial/TutorialTargets.h
+        src/windows/tutorial/TutorialOverlay.h
+        src/windows/tutorial/TutorialWindow.h
+
         src/windows/settings/SettingsWindow.h
         src/windows/settings/GeneralSettingsTab.cpp
         src/windows/settings/LoginTab.cpp

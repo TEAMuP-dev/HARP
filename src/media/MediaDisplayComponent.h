@@ -155,8 +155,6 @@ public:
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
 
-    Rectangle<int> getChooseFileButtonBounds();
-    Rectangle<int> getPlayButtonBounds();
 
     int getNumOverheadLabels();
 

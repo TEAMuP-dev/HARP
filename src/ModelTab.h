@@ -21,6 +21,8 @@
 #include "utils/ModelCatalog.h"
 #include "utils/Settings.h"
 
+#include "windows/tutorial/TutorialTargets.h"
+
 using namespace juce;
 
 /**
@@ -42,11 +44,14 @@ public:
 
         addAndMakeVisible(outputTracksLabel);
         addAndMakeVisible(outputTrackAreaWidget);
+
+        controlAreaWidget.setComponentID(TutorialTargets::controls);
+        inputTrackAreaWidget.setComponentID(TutorialTargets::inputTracks);
+        outputTrackAreaWidget.setComponentID(TutorialTargets::outputTracks);
+        processCancelButton.setComponentID(TutorialTargets::processButton);
     }
 
-    // Accessor methods for WelcomeWindow tutorial
     std::shared_ptr<Model> getModel() const { return model; }
-    String getLoadedPath() const { return model->getLoadedPath(); }
 
     // Loads a model in the background, reporting the outcome with a change message
     void loadModel(const String& modelPath)
@@ -79,47 +84,6 @@ public:
 
     // True from the moment a load is requested until its outcome has been reported
     bool isLoading() const { return loading; }
-
-    // Bounds accessors for tutorial steps
-    Rectangle<int> getControlsBounds() const
-    {
-        auto bounds = controlAreaWidget.getBounds();
-
-        if (bounds.getWidth() > 0 && bounds.getHeight() > 0)
-            return bounds.expanded(2, 2);
-
-        return {};
-    }
-
-    Rectangle<int> getInputFolderBounds()
-    {
-        auto bounds = inputTrackAreaWidget.getFirstTrackFolderButtonBounds();
-        return getLocalArea(&inputTrackAreaWidget, bounds);
-    }
-
-    Rectangle<int> getInputPlayBounds()
-    {
-        auto bounds = inputTrackAreaWidget.getFirstTrackPlayButtonBounds();
-        return getLocalArea(&inputTrackAreaWidget, bounds);
-    }
-
-    Rectangle<int> getInputTrackBounds() const { return inputTrackAreaWidget.getBounds(); }
-
-    Rectangle<int> getProcessButtonBounds() const { return processCancelButton.getBounds(); }
-
-    Rectangle<int> getTracksBounds() const
-    {
-        auto bounds = inputTrackAreaWidget.getBounds();
-        if (outputTrackAreaWidget.isVisible())
-            bounds = bounds.getUnion(outputTrackAreaWidget.getBounds());
-
-        if (inputTracksLabel.isVisible())
-            bounds = bounds.getUnion(inputTracksLabel.getBounds());
-        if (outputTracksLabel.isVisible())
-            bounds = bounds.getUnion(outputTracksLabel.getBounds());
-
-        return bounds.expanded(2, 2);
-    }
 
     bool isModelLoaded() { return model->isLoaded(); }
 

@@ -18,6 +18,8 @@
 #include "utils/Interface.h"
 #include "utils/ModelCatalog.h"
 
+#include "windows/tutorial/TutorialTargets.h"
+
 using namespace juce;
 
 class ModelTabsLookAndFeel : public LookAndFeel_V4
@@ -161,19 +163,6 @@ public:
         Viewport::mouseWheelMove(e, wheel);
     }
 
-    /* Scrolling moves the tab under the tutorial overlay, which draws its highlight in
-       window coordinates and would otherwise keep pointing at where a component used
-       to be. */
-    void visibleAreaChanged(const Rectangle<int>&) override
-    {
-        if (onScrolled != nullptr)
-        {
-            onScrolled();
-        }
-    }
-
-    std::function<void()> onScrolled;
-
 private:
     int layOutTabForVisibleWidth()
     {
@@ -229,6 +218,9 @@ public:
 
         addTab("Home", tabBackgroundColour, &homeTab, false);
         setCurrentTabIndex(0);
+
+        setComponentID(TutorialTargets::modelTabs);
+        getTabbedButtonBar().setComponentID(TutorialTargets::tabBar);
     }
 
     ~ModelTabContainer() override
@@ -277,11 +269,6 @@ public:
         tab->addChangeListener(this);
 
         auto* page = pages.add(new ModelTabPage(*tab));
-        page->onScrolled = [this]
-        {
-            if (onPageScrolled != nullptr)
-                onPageScrolled();
-        };
 
         // The page is owned by pages and the tab by modelTabs, so it is added with
         // deleteComponentWhenNotNeeded = false: closing it must not force JUCE
@@ -354,11 +341,6 @@ public:
         return page != nullptr ? &page->getModelTab() : nullptr;
     }
 
-    HomeTab* getHomeTabIfShowing() const
-    {
-        return getCurrentContentComponent() == &homeTab ? const_cast<HomeTab*>(&homeTab) : nullptr;
-    }
-
     void layOutCurrentPage()
     {
         if (auto* page = getCurrentModelTabPage())
@@ -372,9 +354,6 @@ public:
         // Window constraints and the tutorial both follow whichever tab is showing
         sendChangeMessage();
     }
-
-    // Called whenever the page showing a model tab scrolls
-    std::function<void()> onPageScrolled;
 
 private:
     // Close button shown on each model tab, which explains itself in the instructions box

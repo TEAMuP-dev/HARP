@@ -21,6 +21,8 @@
 
 #include "widgets/ModelStyle.h"
 
+#include "windows/tutorial/TutorialTargets.h"
+
 #include "windows/CustomPathWindow.h"
 
 using namespace juce;
@@ -120,18 +122,17 @@ public:
         g.drawText(
             entry.name, nameRow.withRight(badgesLeft - chipGap), Justification::centredLeft, true);
 
-        /* Description */
+        /* Description, cut short (all of it is shown while hovering) */
 
         area.removeFromTop(2);
 
         g.setColour(Colours::whitesmoke.withAlpha(0.85f));
         g.setFont(font(13.0f));
-        g.drawFittedText(entry.description.isNotEmpty() ? entry.description
-                                                        : String("No description provided."),
-                         area.removeFromTop(30),
-                         Justification::topLeft,
-                         2,
-                         1.0f);
+        drawTruncatedText(g,
+                          entry.description.isNotEmpty() ? entry.description
+                                                         : String("No description provided."),
+                          area.removeFromTop(30),
+                          2);
 
         /* Tags, as many as fit (all of them are described while hovering) */
 
@@ -578,6 +579,9 @@ public:
 
         viewport.setViewedComponent(&modelGrid, false);
         viewport.setScrollBarsShown(true, false);
+
+        searchEditor.setComponentID(TutorialTargets::modelSearch);
+        viewport.setComponentID(TutorialTargets::modelList);
         addAndMakeVisible(viewport);
 
         noResultsLabel.setJustificationType(Justification::centredTop);
@@ -598,12 +602,6 @@ public:
 
     // Called with the path and display name of the model to open
     std::function<void(const String&, const String&)> onModelOpenRequested;
-
-    // Bounds accessor for the tutorial step on selecting a model
-    Rectangle<int> getModelSelectBounds() const
-    {
-        return searchEditor.getBounds().getUnion(viewport.getBounds()).expanded(2, 2);
-    }
 
     void resized() override
     {
