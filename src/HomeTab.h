@@ -1,7 +1,7 @@
 /**
  * @file HomeTab.h
  * @brief Home tab for browsing the model catalog and opening models in new tabs.
- * @author JEYuhas, 2cylu2, VedMistry42, cwitkowitz
+ * @author cwitkowitz, 2cylu2, JEYuhas, VedMistry42
  */
 
 #pragma once
@@ -86,8 +86,8 @@ public:
 
         StringArray lines;
 
-        if (entry.description.isNotEmpty())
-            lines.add(entry.description);
+        if (const String description = entry.description.trim(); description.isNotEmpty())
+            lines.add(description);
 
         if (const String tags = ModelStyle::describeTags(entry.tags); tags.isNotEmpty())
             lines.add(tags);

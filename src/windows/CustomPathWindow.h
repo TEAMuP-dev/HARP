@@ -1,7 +1,7 @@
 /**
  * @file CustomPathWindow.h
  * @brief Popup for entering the path of a model that is not listed on the Home tab.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

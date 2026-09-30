@@ -1,12 +1,13 @@
 /**
  * @file ModelTags.h
  * @brief Model taxonomy and parsing of the tags models declare about themselves.
+ * @author cwitkowitz
  *
  * Tags are plain strings, read from a Space's README metadata when browsing models and
  * from the model card once a model is loaded. Structured tags take the form
  * "<key>:<value>" (e.g., "category:separation"), and anything else is a custom tag.
  *
- * The taxonomy is pyharp's (pyharp/pyharp/taxonomy.json), which is where models declare
+ * The taxonomy is pyharp's (pyharp/pyharp/taxonomy.json), and is where models declare
  * their tags, embedded at build time. A tag it does not recognize is kept as a custom tag,
  * so a model tagged against a newer taxonomy is still shown, just not categorized by it.
  */

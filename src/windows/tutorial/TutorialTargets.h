@@ -1,6 +1,7 @@
 /**
  * @file TutorialTargets.h
  * @brief Parts of the interface the tutorial can point at, and how it finds them.
+ * @author cwitkowitz, saumya-pailwan
  *
  * A component is marked for the tutorial by giving it one of these IDs (e.g.,
  * processButton.setComponentID(TutorialTargets::processButton)). The tutorial then finds

@@ -1,7 +1,7 @@
 /**
  * @file HoverableLabel.h
  * @brief Custom clickable label that changes color when hovering over the text.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

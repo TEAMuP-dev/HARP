@@ -1,7 +1,7 @@
 /**
  * @file MainComponent.h
  * @brief Top-level component containing all HARP GUI elements and state.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia
  */
 
 #pragma once
@@ -102,7 +102,7 @@ private:
 
     Component& getTutorialArea() override { return *this; }
     ModelTabContainer& getModelTabs() override { return modelTabs; }
-    void openMediaClipboard() override;
+    void showPanel(Panel panel) override;
 
     /* Interface */
 

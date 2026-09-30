@@ -1,7 +1,7 @@
 /**
  * @file MultiButton.h
  * @brief Flexible button component that supports multiple modes, hover instructions, and icons.
- * @author xribene
+ * @author cwitkowitz, xribene
  * 
  * The MultiButton class extends the JUCE TextButton to provide a button that can switch between 
  * multiple modes. Each mode can have its own label, callback function, color, icon, and hover 

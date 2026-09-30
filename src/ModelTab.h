@@ -1,7 +1,7 @@
 /**
  * @file ModelTab.h
  * @brief Reusable component containing HARP GUI elements and state for a single model.
- * @author hugofloresgarcia, xribene, cwitkowitz, saumya-pailwan
+ * @author cwitkowitz, saumya-pailwan, VedMistry42, xribene, hugofloresgarcia
  */
 
 #pragma once

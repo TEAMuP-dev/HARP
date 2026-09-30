@@ -1,7 +1,7 @@
 /**
  * @file KeyboardComponent.hpp
  * @brief Reusable component with rows of piano keys.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

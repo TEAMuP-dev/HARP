@@ -1,7 +1,7 @@
 /**
  * @file TutorialWindow.h
  * @brief Window walking a new user through HARP, step by step.
- * @author saumya-pailwan
+ * @author cwitkowitz, saumya-pailwan
  */
 
 #pragma once
@@ -33,8 +33,14 @@ struct TutorialHost
 
     virtual ModelTabContainer& getModelTabs() = 0;
 
-    // Some steps point at the media clipboard, which is hidden by default
-    virtual void openMediaClipboard() = 0;
+    // Parts of the window the user can hide, which a step that points at one shows again
+    enum class Panel
+    {
+        statusArea,
+        mediaClipboard
+    };
+
+    virtual void showPanel(Panel panel) = 0;
 };
 
 struct TutorialStep
@@ -42,7 +48,7 @@ struct TutorialStep
     String title;
     String description;
     std::vector<TutorialTargets::Target> highlights = {};
-    bool requiresMediaClipboard = false;
+    std::vector<TutorialHost::Panel> panelsToShow = {};
 };
 
 class TutorialWindow : public DocumentWindow, private ChangeListener
@@ -228,7 +234,8 @@ private:
               "The bar at the bottom has two halves.\n\n"
               "The left half is a history of what each model has done, e.g., READY once it has loaded, or PROCESSING while it runs. If something fails, the reason appears here.\n\n"
               "The right half explains whatever is under the mouse. Hover over any part of HARP to learn what it does.",
-              { { statusArea } } });
+              { { statusArea } },
+              { TutorialHost::Panel::statusArea } });
 
         steps.push_back(
             { "Media Clipboard",
@@ -236,7 +243,7 @@ private:
               "Select a file to play, save, rename (in the text box), or remove it, or drag it onto a track.\n\n"
               "When your DAW opened HARP with a file, the send icon replaces that file with the selected one, which brings the result back into your project.",
               { { clipboard }, { clipboardControls } },
-              true });
+              { TutorialHost::Panel::mediaClipboard } });
 
         steps.push_back(
             { "All Set!",
@@ -275,8 +282,8 @@ private:
     {
         const auto& step = steps[(size_t) content->currentStep];
 
-        if (step.requiresMediaClipboard)
-            host.openMediaClipboard();
+        for (const auto panel : step.panelsToShow)
+            host.showPanel(panel);
 
         overlay.setTargets(step.highlights);
 

@@ -1,7 +1,7 @@
 /**
  * @file Model.h
  * @brief Model state and interface for loading and processing.
- * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz, saumya-pailwan
+ * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia, aldo-aguilar
  */
 
 #pragma once
@@ -79,6 +79,23 @@ struct ModelMetadata
                 }
             }
         }
+    }
+
+    // The card as JSON, in the form the constructor reads
+    var toVar() const
+    {
+        Array<var> tagList;
+
+        for (const auto& tag : tags)
+            tagList.add(String(tag));
+
+        DynamicObject::Ptr card = new DynamicObject();
+        card->setProperty("name", String(name));
+        card->setProperty("author", String(author));
+        card->setProperty("description", String(description));
+        card->setProperty("tags", tagList);
+
+        return var(card.get());
     }
 };
 

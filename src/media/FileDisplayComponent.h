@@ -1,3 +1,9 @@
+/**
+ * @file FileDisplayComponent.h
+ * @brief Media display for a generic file track (neither audio nor MIDI).
+ * @author cwitkowitz, derekllanes
+ */
+
 #pragma once
 
 #include "MediaDisplayComponent.h"

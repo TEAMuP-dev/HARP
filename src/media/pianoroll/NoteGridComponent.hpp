@@ -1,7 +1,7 @@
 /**
  * @file NoteGridComponent.hpp
  * @brief Component with rows of piano keys and MIDI notes.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, derekllanes, xribene
  */
 
 #pragma once

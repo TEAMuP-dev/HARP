@@ -1,7 +1,7 @@
 /**
  * @file ModelTabContainer.h
  * @brief Tab bar holding the Home tab and one tab per opened model.
- * @author JEYuhas
+ * @author cwitkowitz, VedMistry42, 2cylu2, JEYuhas
  */
 
 #pragma once

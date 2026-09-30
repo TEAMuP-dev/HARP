@@ -1,7 +1,7 @@
 /**
  * @file Logging.h
  * @brief Handles logging to terminal and file.
- * @author xribene
+ * @author cwitkowitz, saumya-pailwan, xribene
  */
 
 #pragma once

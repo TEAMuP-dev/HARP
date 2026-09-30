@@ -1,6 +1,7 @@
 /**
  * @file TutorialOverlay.h
  * @brief Dims the window around whatever the current tutorial step points at.
+ * @author cwitkowitz, saumya-pailwan
  */
 
 #pragma once

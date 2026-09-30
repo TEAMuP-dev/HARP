@@ -371,10 +371,22 @@ void MainComponent::openTutorial()
         });
 }
 
-void MainComponent::openMediaClipboard()
+void MainComponent::showPanel(Panel panel)
 {
-    if (! showMediaClipboard)
-        viewMediaClipboardCallback();
+    switch (panel)
+    {
+        case Panel::statusArea:
+            if (! showStatusArea)
+                viewStatusAreaCallback();
+
+            break;
+
+        case Panel::mediaClipboard:
+            if (! showMediaClipboard)
+                viewMediaClipboardCallback();
+
+            break;
+    }
 }
 
 /* --Miscellaneous-- */

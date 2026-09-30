@@ -1,7 +1,7 @@
 /**
  * @file Main.cpp
  * @brief Initial JUCE launch code and window management.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, xribene, hugofloresgarcia
  */
 
 #include "MainComponent.h"

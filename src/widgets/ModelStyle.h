@@ -2,6 +2,7 @@
  * @file ModelStyle.h
  * @brief Shared look for presenting models, on the Home tab and in model tabs alike: cards,
  *        tag chips, badges, and section headers.
+ * @author cwitkowitz
  */
 
 #pragma once

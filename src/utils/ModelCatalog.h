@@ -1,6 +1,7 @@
 /**
  * @file ModelCatalog.h
  * @brief The models HARP offers for browsing on the Home tab.
+ * @author cwitkowitz
  *
  * The catalog combines the models whose controls ship with HARP (Stability AI), every
  * Space of the HARP organization on Hugging Face, and any other paths the user has loaded
@@ -8,6 +9,10 @@
  * request, which describes each Space (including its tags, see ModelTags.h) without waking
  * any of them. The last listing is cached on disk, so the Home tab is populated at once on
  * startup and still works offline.
+ *
+ * Once a model loads, its own card (description and tags) is shown in place of what the
+ * listing says about it. Cards are saved too, and a Space's card is shown again after a
+ * restart for as long as the Space runs the same revision it did when the card was saved.
  */
 
 #pragma once
@@ -56,6 +61,7 @@ struct CatalogEntry
     // Deployment details reported by the Hub, empty when unknown
     String stage; // e.g. "RUNNING", "SLEEPING", "RUNTIME_ERROR"
     String hardware; // e.g. "cpu-basic", "zero-a10g"
+    String revision; // The commit the Space runs, which its card comes from
 
     bool isCustom = false; // Added by the user rather than found
     LoadStatus loadStatus = LoadStatus::None;
@@ -123,6 +129,7 @@ public:
         customPaths.removeEmptyStrings();
 
         loadCachedListing();
+        loadSavedCards();
         rebuildEntries();
 
         refresh();
@@ -200,13 +207,16 @@ public:
     }
 
     /* A loaded model's own card is more authoritative than what its listing says about it,
-       so it is shown in the listing's place for the rest of the session. */
+       so it is shown in the listing's place, now and after a restart (see rebuildEntries). */
     void recordLoadSuccess(const String& path, const ModelMetadata& card)
     {
-        loadStatuses.erase(path.toLowerCase());
-        loadedCards[path.toLowerCase()] = card;
+        const auto* entry = findEntry(path);
 
-        if (findEntry(path) == nullptr)
+        loadStatuses.erase(path.toLowerCase());
+        loadedCards[path.toLowerCase()] = { card, entry != nullptr ? entry->revision : String() };
+        saveLoadedCards();
+
+        if (entry == nullptr)
         {
             customPaths.add(path);
             saveCustomPaths();
@@ -232,6 +242,9 @@ public:
     {
         customPaths.removeString(path, true);
         saveCustomPaths();
+
+        loadedCards.erase(path.toLowerCase());
+        saveLoadedCards();
 
         rebuildEntries();
         sendChangeMessage();
@@ -396,6 +409,20 @@ private:
             fetchError.clear();
 
             saveCachedListing(listing);
+
+            // A card saved for an earlier revision of a Space will not be shown again
+            const auto sizeBefore = loadedCards.size();
+
+            for (const auto& entry : hubEntries)
+            {
+                auto saved = loadedCards.find(entry.path.toLowerCase());
+
+                if (saved != loadedCards.end() && saved->second.revision != entry.revision)
+                    loadedCards.erase(saved);
+            }
+
+            if (loadedCards.size() != sizeBefore)
+                saveLoadedCards();
         }
         else
         {
@@ -443,6 +470,7 @@ private:
                 entry.provider = "Hugging Face";
                 entry.tags = ModelTags::parse(tags);
                 entry.hardware = space["runtime"]["hardware"]["current"].toString();
+                entry.revision = space["runtime"]["sha"].toString();
 
                 // A cached stage is stale, and would misreport whether the Space is awake
                 if (isCurrent)
@@ -511,9 +539,14 @@ private:
             entry.loadStatus =
                 status != loadStatuses.end() ? status->second : CatalogEntry::LoadStatus::None;
 
-            if (auto loaded = loadedCards.find(key); loaded != loadedCards.end())
+            auto loaded = loadedCards.find(key);
+
+            /* A Space's card is only as current as the revision it came from. Other models
+               have no revision to check, so theirs is shown until they load again. */
+            if (loaded != loadedCards.end()
+                && (entry.revision.isEmpty() || loaded->second.revision == entry.revision))
             {
-                const ModelMetadata& card = loaded->second;
+                const ModelMetadata& card = loaded->second.card;
 
                 if (! card.description.empty())
                     entry.description = card.description;
@@ -534,17 +567,21 @@ private:
         }
     }
 
-    static File getCacheFile()
+    // A file beside the settings file
+    static File getCacheFile(const String& name)
     {
         if (auto* settings = Settings::getUserSettings())
-            return settings->getFile().getSiblingFile("model_catalog.json");
+            return settings->getFile().getSiblingFile(name);
 
         return {};
     }
 
+    static File getListingFile() { return getCacheFile("model_catalog.json"); }
+    static File getCardsFile() { return getCacheFile("model_cards.json"); }
+
     void loadCachedListing()
     {
-        const File cacheFile = getCacheFile();
+        const File cacheFile = getListingFile();
 
         if (! cacheFile.existsAsFile())
             return;
@@ -555,13 +592,70 @@ private:
 
     static void saveCachedListing(const var& listing)
     {
-        const File cacheFile = getCacheFile();
+        const File cacheFile = getListingFile();
 
         if (cacheFile != File() && ! cacheFile.replaceWithText(JSON::toString(listing, true)))
         {
             DBG_AND_LOG("ModelCatalog::saveCachedListing: Could not write \""
                         << cacheFile.getFullPathName() << "\".");
         }
+    }
+
+    // Saved as {"<path>": {"card": {...}, "revision": "<sha>"}, ...}
+    void loadSavedCards()
+    {
+        const File cardsFile = getCardsFile();
+
+        if (! cardsFile.existsAsFile())
+            return;
+
+        // Held for as long as the object within it is read
+        const var saved = JSON::parse(cardsFile);
+
+        if (auto* cards = saved.getDynamicObject())
+        {
+            for (const auto& [path, value] : cards->getProperties())
+            {
+                if (auto* card = value["card"].getDynamicObject())
+                    loadedCards[path.toString()] = { ModelMetadata(card),
+                                                     value["revision"].toString() };
+            }
+        }
+    }
+
+    void saveLoadedCards() const
+    {
+        DynamicObject::Ptr saved = new DynamicObject();
+
+        for (const auto& [path, loaded] : loadedCards)
+        {
+            // Built-in cards ship with HARP, which is where an update to one comes from
+            if (isBuiltIn(path))
+                continue;
+
+            DynamicObject::Ptr value = new DynamicObject();
+            value->setProperty("card", loaded.card.toVar());
+            value->setProperty("revision", loaded.revision);
+
+            saved->setProperty(path, var(value.get()));
+        }
+
+        const File cardsFile = getCardsFile();
+
+        if (cardsFile != File()
+            && ! cardsFile.replaceWithText(JSON::toString(var(saved.get()), true)))
+        {
+            DBG_AND_LOG("ModelCatalog::saveLoadedCards: Could not write \""
+                        << cardsFile.getFullPathName() << "\".");
+        }
+    }
+
+    bool isBuiltIn(const String& path) const
+    {
+        return std::any_of(builtInEntries.begin(),
+                           builtInEntries.end(),
+                           [&](const CatalogEntry& entry)
+                           { return entry.path.equalsIgnoreCase(path); });
     }
 
     void saveCustomPaths()
@@ -576,7 +670,15 @@ private:
     StringArray customPaths;
     // Keyed by lowercase path, since the Hub does not distinguish case
     std::map<String, CatalogEntry::LoadStatus> loadStatuses;
-    std::map<String, ModelMetadata> loadedCards;
+
+    // The card of a model that has loaded, and the revision of the Space it came from
+    struct LoadedCard
+    {
+        ModelMetadata card;
+        String revision;
+    };
+
+    std::map<String, LoadedCard> loadedCards;
     std::vector<HiddenEntry> hiddenEntries;
 
     std::vector<CatalogEntry> entries;

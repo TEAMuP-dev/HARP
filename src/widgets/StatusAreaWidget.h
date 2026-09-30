@@ -1,7 +1,7 @@
 /**
  * @file StatusAreaWidget.h
  * @brief Defines shared resources and components for instructions and status.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, saumya-pailwan, xribene
  */
 
 #pragma once
@@ -12,18 +12,17 @@
 
 using namespace juce;
 
+/**
+ * Shows the latest message, at a smaller size if that is what it takes to fit the box (down to
+ * a minimum), and cut short with an ellipsis if it does not fit even then.
+ */
 template <typename MessageType>
 class MessageBox : public Component, ChangeListener
 {
 public:
     MessageBox(float fontSize = 15.0f, Justification justification = Justification::centred)
+        : maximumFontHeight(fontSize), textJustification(justification)
     {
-        messageLabel.setFont(FontOptions { fontSize });
-        messageLabel.setColour(Label::textColourId, Colour(0xE0, 0xE0, 0xE0));
-
-        messageLabel.setJustificationType(justification);
-        addAndMakeVisible(messageLabel);
-
         sharedMessage->addChangeListener(this);
     }
 
@@ -36,18 +35,113 @@ public:
 
         g.setColour(Colour(0x44, 0x44, 0x44));
         g.drawRect(getLocalBounds(), 1);
+
+        layout.draw(g, layoutArea);
+
+        if (lastLine.isNotEmpty())
+        {
+            g.setColour(textColour);
+            g.setFont(lastLineFont);
+            g.drawText(lastLine,
+                       lastLineArea,
+                       textJustification.getOnlyHorizontalFlags()
+                           | Justification::verticallyCentred,
+                       true);
+        }
     }
 
-    void resized() override { messageLabel.setBounds(getLocalBounds()); }
+    void resized() override { fitMessage(); }
 
     void changeListenerCallback(ChangeBroadcaster* /*source*/) override
     {
-        messageLabel.setText(sharedMessage->getMessage(), dontSendNotification);
+        message = sharedMessage->getMessage();
+
+        fitMessage();
+        repaint();
     }
 
 private:
+    TextLayout layOut(const String& text, float fontHeight, float width) const
+    {
+        AttributedString attributed;
+        attributed.append(text, Font(FontOptions(fontHeight)), textColour);
+        attributed.setJustification(textJustification.getOnlyHorizontalFlags());
+
+        TextLayout result;
+        result.createLayout(attributed, width);
+
+        return result;
+    }
+
+    /* Lays the message out at the largest size, from maximumFontHeight down to
+       minimumFontHeight, at which all of it fits. If it does not fit even at the smallest, the
+       lines that fit are kept, and the last of them takes the rest of the message, cut short
+       with an ellipsis. (A Label would draw text with line breaks past its bounds instead.) */
+    void fitMessage()
+    {
+        const auto area = getLocalBounds().reduced(textInsetX, textInsetY).toFloat();
+
+        layout = TextLayout();
+        lastLine = {};
+
+        if (message.isEmpty() || area.isEmpty())
+            return;
+
+        float fontHeight = maximumFontHeight;
+        layout = layOut(message, fontHeight, area.getWidth());
+
+        while (layout.getHeight() > area.getHeight() && fontHeight > minimumFontHeight)
+        {
+            fontHeight = jmax(minimumFontHeight, fontHeight - 0.5f);
+            layout = layOut(message, fontHeight, area.getWidth());
+        }
+
+        if (layout.getHeight() <= area.getHeight())
+        {
+            layoutArea = area.withSizeKeepingCentre(area.getWidth(), layout.getHeight());
+            return;
+        }
+
+        int numLines = 1;
+
+        while (numLines < layout.getNumLines()
+               && layout.getLine(numLines).getLineBoundsY().getEnd() <= area.getHeight())
+        {
+            ++numLines;
+        }
+
+        const auto& last = layout.getLine(numLines - 1);
+        const int lastStart = last.stringRange.getStart();
+        const auto lastBounds = last.getLineBoundsY();
+
+        lastLine = message.substring(lastStart).replaceCharacters("\r\n", "  ").trim();
+        lastLineFont = Font(FontOptions(fontHeight));
+        lastLineArea =
+            area.withTrimmedTop(lastBounds.getStart()).withHeight(lastBounds.getLength());
+
+        // The lines before it break where they did, since they are laid out the same way
+        layout = layOut(message.substring(0, lastStart).trimEnd(), fontHeight, area.getWidth());
+        layoutArea = area;
+    }
+
+    static constexpr float minimumFontHeight = 12.0f;
+    static constexpr int textInsetX = 6;
+    static constexpr int textInsetY = 4;
+
+    const float maximumFontHeight;
+    const Justification textJustification;
+    const Colour textColour { 0xffe0e0e0 };
+
     SharedResourcePointer<MessageType> sharedMessage;
-    Label messageLabel;
+    String message;
+
+    TextLayout layout;
+    Rectangle<float> layoutArea;
+
+    // The last line shown when the message is cut short, drawn with an ellipsis
+    String lastLine;
+    Font lastLineFont { FontOptions() };
+    Rectangle<float> lastLineArea;
 };
 
 using InstructionsBox = MessageBox<InstructionsMessage>;

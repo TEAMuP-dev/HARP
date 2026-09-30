@@ -42,7 +42,6 @@ libtorch/
 testproject
 scratch
 _downloads
-artifacts/
 
 packaging/dmg
 packaging/*.dmg

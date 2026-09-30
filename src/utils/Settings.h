@@ -1,7 +1,7 @@
 /**
  * @file Settings.h
  * @brief Handles storage and reading of persistent settings.
- * @author xribene, lindseydeng, cwitkowitz
+ * @author cwitkowitz, xribene, lindseydeng
  */
 
 #pragma once
