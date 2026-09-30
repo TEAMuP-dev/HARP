@@ -310,3 +310,11 @@ overrides:
             min_duration: 5.8
             max_duration: 6.2
             min_rms_db: -60
+
+  # ---- Music structure analysis --------------------------------------------
+
+  teamup-tech/SongFormer:
+    # The model requires at least 5 seconds of audio.
+    synthesized_inputs:
+      audio:
+        duration: 6.0
