@@ -14,6 +14,8 @@
 
 #include "../utils/Logging.h"
 
+#include "../windows/tutorial/TutorialTargets.h"
+
 using namespace juce;
 
 class MediaClipboardWidget : public Component, public ChangeListener
@@ -28,6 +30,7 @@ public:
         initializeButtons();
         controlsComponent.addAndMakeVisible(buttonsComponent);
         addAndMakeVisible(controlsComponent);
+        controlsComponent.setComponentID(TutorialTargets::clipboardControls);
 
         resetState();
 
@@ -131,43 +134,6 @@ public:
     {
         // TODO - is there an explicit way to check how HARP was invoked?
         trackAreaWidget.addTrackFromFilePath(filePath, fromDAW);
-    }
-
-    Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
-
-    Rectangle<int> getClipboardControlsBounds() const
-    {
-        return controlsComponent.getBounds().expanded(2);
-    }
-
-    Rectangle<int> getClipboardNameBoxBounds() const
-    {
-        return getLocalArea(&controlsComponent, selectionTextBox.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getClipboardButtonsBounds() const
-    {
-        return getLocalArea(&controlsComponent, buttonsComponent.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getAddFileButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, addFileButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getRemoveButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, removeSelectionButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getPlayButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, playStopButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getSendToDAWButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, sendToDAWButton.getBounds()).expanded(2);
     }
 
     void addFileCallback()

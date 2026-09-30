@@ -78,6 +78,12 @@ public:
         return isValidTextToAudioPath(modelPath) || isValidAudioToAudioPath(modelPath);
     }
 
+    // Every model this provider offers, each with built-in controls
+    static StringArray getModelPaths()
+    {
+        return { "stability/text-to-audio", "stability/audio-to-audio" };
+    }
+
     String inferHostSlashModel(String modelPath) override
     {
         String hostSlashModel;

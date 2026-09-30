@@ -6,8 +6,6 @@
 
 #include "MainComponent.h"
 
-#include "windows/WelcomeWindow.h"
-
 #include "utils/Settings.h"
 
 #if JUCE_LINUX
@@ -87,7 +85,7 @@ public:
             if (auto* mainComp =
                     dynamic_cast<MainComponent*>(getMainWindowPtr()->getContentComponent()))
             {
-                mainComp->openWelcomeWindow();
+                mainComp->openTutorial();
             }
         }
 

@@ -1,7 +1,5 @@
 #include "MainComponent.h"
 
-#include "windows/WelcomeWindow.h"
-
 JUCE_IMPLEMENT_SINGLETON(HARPLogger)
 
 MainComponent::MainComponent()
@@ -12,10 +10,12 @@ MainComponent::MainComponent()
 
     modelTabs.addChangeListener(this);
 
-    modelTabs.onPageScrolled = [this] { refreshTutorialHighlight(); };
     addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+
+    statusAreaWidget.setComponentID(TutorialTargets::statusArea);
+    mediaClipboardWidget.setComponentID(TutorialTargets::clipboard);
     addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
@@ -41,56 +41,6 @@ MainComponent::~MainComponent()
 void MainComponent::paint(Graphics& g)
 {
     g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
-}
-
-void MainComponent::paintOverChildren(Graphics& g)
-{
-    if (isTutorialActive)
-    {
-        auto area = getLocalBounds();
-        g.setColour(Colours::black.withAlpha(0.6f));
-
-        if (tutorialHighlightRect.isEmpty() && tutorialExtraHighlights.empty())
-        {
-            // Full dim if no highlight
-            g.fillAll();
-        }
-        else
-        {
-            // Dim with cutout
-            Path backgroundPath;
-            backgroundPath.addRectangle(area.toFloat());
-
-            Path highlightPath;
-            if (! tutorialHighlightRect.isEmpty())
-                highlightPath.addRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f);
-
-            // Add extra highlights to the cutout path
-            for (auto& rect : tutorialExtraHighlights)
-            {
-                if (! rect.isEmpty())
-                    highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
-            }
-
-            backgroundPath.setUsingNonZeroWinding(false);
-            backgroundPath.addPath(highlightPath);
-
-            g.fillPath(backgroundPath);
-
-            g.setColour(Colours::white);
-
-            // An empty rectangle is a region the current step has nothing to
-            // point at; outlining it would leave a stray mark in the corner
-            if (! tutorialHighlightRect.isEmpty())
-                g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
-
-            for (auto& rect : tutorialExtraHighlights)
-            {
-                if (! rect.isEmpty())
-                    g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
-            }
-        }
-    }
 }
 
 void MainComponent::resized()
@@ -132,36 +82,13 @@ void MainComponent::resized()
 
     fullWindow.performLayout(fullArea);
 
-    /* Deferred: the highlight is measured from component bounds, which are only
-       final once this layout pass and the tab's own have completed. */
-    refreshTutorialHighlight();
-
     dragOverlay.setBounds(getLocalBounds());
-}
-
-void MainComponent::refreshTutorialHighlight()
-{
-    if (welcomeWindow == nullptr)
-    {
-        return;
-    }
-
-    Component::SafePointer<MainComponent> safeThis(this);
-
-    MessageManager::callAsync(
-        [safeThis]
-        {
-            if (safeThis != nullptr && safeThis->welcomeWindow != nullptr)
-            {
-                safeThis->welcomeWindow->refreshHighlightForCurrentStep();
-            }
-        });
 }
 
 void MainComponent::updateWindowConstraints()
 {
     // The Home tab has no controls, so only the general minimums apply while it is showing
-    auto* tab = getCurrentModelTab();
+    auto* tab = modelTabs.getCurrentModelTab();
     const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
 
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
@@ -415,14 +342,11 @@ void MainComponent::openAboutWindow()
     options.launchAsync();
 }
 
-void MainComponent::openWelcomeWindow(bool ensureDefaultModelLoaded)
+void MainComponent::openTutorial()
 {
-    if (ensureDefaultModelLoaded)
-        ensureTutorialModelLoaded();
-
-    if (welcomeWindow != nullptr)
+    if (tutorialWindow != nullptr)
     {
-        welcomeWindow->toFront(true);
+        tutorialWindow->toFront(true);
         return;
     }
 
@@ -433,268 +357,24 @@ void MainComponent::openWelcomeWindow(bool ensureDefaultModelLoaded)
             if (safeThis == nullptr)
                 return;
 
-            safeThis->welcomeWindow.reset(new WelcomeWindow(safeThis.getComponent()));
-            safeThis->welcomeWindow->onClose = [safeThis]()
+            TutorialHost& host = *safeThis.getComponent();
+            safeThis->tutorialWindow = std::make_unique<TutorialWindow>(host);
+            safeThis->tutorialWindow->onClose = [safeThis]()
             {
                 if (safeThis != nullptr)
-                    safeThis->welcomeWindow.reset();
+                    safeThis->tutorialWindow.reset();
             };
 
-            safeThis->welcomeWindow->setVisible(true);
-            safeThis->welcomeWindow->positionOnMainComponentDisplay();
-            safeThis->welcomeWindow->toFront(true);
+            safeThis->tutorialWindow->setVisible(true);
+            safeThis->tutorialWindow->positionOnHostDisplay();
+            safeThis->tutorialWindow->toFront(true);
         });
 }
 
-/* --Tutorial-- */
-
-void MainComponent::setTutorialActive(bool active)
-{
-    isTutorialActive = active;
-    repaint();
-}
-
-void MainComponent::setTutorialHighlight(Rectangle<int> bounds)
-{
-    tutorialHighlightRect = bounds;
-    repaint();
-}
-
-void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds)
-{
-    tutorialExtraHighlights = bounds;
-    repaint();
-}
-
-void MainComponent::ensureTutorialModelLoaded()
-{
-    // Loading is asynchronous, so without this guard every repeated call that
-    // arrives before the first load finishes - clicking Next again, say - would
-    // open yet another tab or start yet another load.
-    if (tutorialModelLoadInFlight)
-        return;
-
-    auto* tab = getCurrentModelTab();
-
-    if (tab == nullptr)
-    {
-        // createNewTab() selects the tab it creates, which is what the tutorial
-        // steps compute their highlights against; leave it selected.
-        tab = modelTabs.createNewTab();
-        tutorialCreatedTab = tab;
-    }
-
-    if (tab->isModelLoaded())
-        return;
-
-    tutorialModelLoadInFlight = true;
-
-    Component::SafePointer<MainComponent> safeThis(this);
-    tab->onNextModelLoadComplete(
-        [safeThis](ModelTab*, bool)
-        {
-            if (safeThis != nullptr)
-                safeThis->tutorialModelLoadInFlight = false;
-        });
-
-    tab->loadDefaultModel();
-}
-
-void MainComponent::resetTutorialAutoLoadedModel()
-{
-    // Close the tab the tutorial opened on the user's behalf. Resetting it in
-    // place would leave a blank tab behind, since a model tab has no model
-    // selection of its own - models are chosen on the Home tab.
-    if (auto* tab = tutorialCreatedTab.getComponent())
-        modelTabs.closeTab(tab);
-
-    tutorialCreatedTab = nullptr;
-}
-
-void MainComponent::ensureMediaClipboardVisible()
+void MainComponent::openMediaClipboard()
 {
     if (! showMediaClipboard)
         viewMediaClipboardCallback();
-}
-
-Rectangle<int> MainComponent::getTabBarBounds()
-{
-    auto& tabBar = modelTabs.getTabbedButtonBar();
-
-    if (tabBar.getNumTabs() == 0)
-        return {};
-
-    return getLocalArea(&tabBar, tabBar.getLocalBounds());
-}
-
-/**
- * Converts a rectangle from the current model tab's coordinates into this component's,
- * clipped to the part of the tab its page is showing.
- *
- * The tab can be taller than its page, so a component that is scrolled out of view
- * could otherwise produce a highlight lying over the status area beneath it.
- */
-Rectangle<int> MainComponent::getVisibleTabArea(Rectangle<int> tabBounds)
-{
-    auto* page = modelTabs.getCurrentModelTabPage();
-
-    if (page == nullptr || tabBounds.isEmpty())
-        return {};
-
-    return getLocalArea(&page->getModelTab(), tabBounds)
-        .getIntersection(getLocalArea(page, page->getLocalBounds()));
-}
-
-Rectangle<int> MainComponent::getModelSelectBounds()
-{
-    if (auto* homeTab = modelTabs.getHomeTabIfShowing())
-        return getLocalArea(homeTab, homeTab->getModelSelectBounds());
-
-    // Models are selected on the Home tab, so while a model tab is showing,
-    // point at the tab bar that leads back to it.
-    return getTabBarBounds();
-}
-
-Rectangle<int> MainComponent::getControlsBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getControlsBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getInputTrackBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getInputTrackBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getInputFolderBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getInputFolderBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getInputPlayBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getInputPlayBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getProcessButtonBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getProcessButtonBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getTracksBounds()
-{
-    if (auto* tab = getCurrentModelTab())
-        return getVisibleTabArea(tab->getTracksBounds());
-
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-        return mediaClipboardWidget.getBounds();
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardTrackAreaBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardTrackAreaBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardControlsBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardControlsBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardNameBoxBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardNameBoxBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardButtonsBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardButtonsBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardAddButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getAddFileButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardRemoveButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getRemoveButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardPlayButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getPlayButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardSendToDAWButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getSendToDAWButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getInfoBarBounds()
-{
-    if (showStatusArea && statusAreaWidget.isVisible())
-        return statusAreaWidget.getBounds();
-    return {};
 }
 
 /* --Miscellaneous-- */
@@ -749,10 +429,5 @@ void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
     if (source == &modelTabs)
     {
         updateWindowConstraints();
-
-        // Model tabs are created and closed while the tutorial is open, so it
-        // follows the container rather than subscribing to individual tabs.
-        if (welcomeWindow != nullptr)
-            welcomeWindow->notifyModelStateChanged();
     }
 }

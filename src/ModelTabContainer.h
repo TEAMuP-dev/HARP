@@ -1,27 +1,24 @@
 /**
- * @brief Adds tab container to HARP for MultiTabs
+ * @file ModelTabContainer.h
+ * @brief Tab bar holding the Home tab and one tab per opened model.
  * @author JEYuhas
  */
+
 #pragma once
+
+#include <functional>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "HomeTab.h"
-#include "Model.h"
 #include "ModelTab.h"
 
-#include "widgets/ControlAreaWidget.h"
-#include "widgets/ModelInfoWidget.h"
-#include "widgets/ModelSelectionWidget.h"
-#include "widgets/TrackAreaWidget.h"
-
-#include "utils/Errors.h"
-#include "utils/Interface.h"
-#include "utils/Logging.h"
-#include "utils/ModelRegistry.h"
-#include "utils/Tutorial.h"
-
 #include "media/MediaDisplayComponent.h"
+
+#include "utils/Interface.h"
+#include "utils/ModelCatalog.h"
+
+#include "windows/tutorial/TutorialTargets.h"
 
 using namespace juce;
 
@@ -49,9 +46,9 @@ public:
         const auto isActive = button.isFrontTab();
         auto area = button.getActiveArea();
 
-        const auto fill = isActive
-                              ? activeTabColour
-                              : inactiveTabColour.brighter(isMouseOver || isMouseDown ? 0.08f : 0.0f);
+        const auto fill =
+            isActive ? activeTabColour
+                     : inactiveTabColour.brighter(isMouseOver || isMouseDown ? 0.08f : 0.0f);
 
         g.setColour(fill);
         g.fillRect(area);
@@ -64,20 +61,29 @@ public:
 
         auto textArea = button.getTextArea().reduced(tabTextInset, 0);
 
-        g.setColour(isActive ? activeTextColour
-                     : inactiveTextColour);
+        g.setColour(isActive ? activeTextColour : inactiveTextColour);
 
-        g.drawText(button.getButtonText(),
-                textArea,
-                Justification::centred,
-                true);
+        g.drawText(button.getButtonText(), textArea, Justification::centred, true);
     }
 
-    int getTabButtonBestWidth(TabBarButton& button, int tabDepth) override
+    int getTabButtonBestWidth(TabBarButton& button, int /*tabDepth*/) override
     {
-        return button.getButtonText() == "Home"
-           ? homeTabWidth
-           : fixedTabWidth;
+        // The Home tab is always first
+        return button.getIndex() == 0 ? homeTabWidth : fixedTabWidth;
+    }
+
+    /* The default gives a tab's close button the full height of the tab, which stretches it,
+       so it is kept square, centred, and clear of the tab's edge instead */
+    Rectangle<int> getTabButtonExtraComponentBounds(const TabBarButton& button,
+                                                    Rectangle<int>& textArea,
+                                                    Component& extraComponent) override
+    {
+        textArea.removeFromRight(extraComponentMargin);
+
+        const int side = extraComponent.getWidth();
+
+        return LookAndFeel_V4::getTabButtonExtraComponentBounds(button, textArea, extraComponent)
+            .withSizeKeepingCentre(side, side);
     }
 
     void drawTabButtonText(TabBarButton&,
@@ -97,6 +103,7 @@ private:
     static constexpr int fixedTabWidth = 140;
     static constexpr int homeTabWidth = 64;
     static constexpr int tabTextInset = 10;
+    static constexpr int extraComponentMargin = 6;
 };
 
 /**
@@ -156,19 +163,6 @@ public:
         Viewport::mouseWheelMove(e, wheel);
     }
 
-    /* Scrolling moves the tab under the tutorial overlay, which draws its highlight in
-       window coordinates and would otherwise keep pointing at where a component used
-       to be. */
-    void visibleAreaChanged(const Rectangle<int>&) override
-    {
-        if (onScrolled != nullptr)
-        {
-            onScrolled();
-        }
-    }
-
-    std::function<void()> onScrolled;
-
 private:
     int layOutTabForVisibleWidth()
     {
@@ -204,23 +198,29 @@ private:
     ModelTab& modelTab;
 };
 
-class ModelTabContainer : public TabbedComponent,
-                          private ChangeListener,
-                          public ChangeBroadcaster
+class ModelTabContainer : public TabbedComponent, private ChangeListener, public ChangeBroadcaster
 {
 public:
-    ModelTabContainer()
-        : TabbedComponent(TabbedButtonBar::TabsAtTop)
+    ModelTabContainer() : TabbedComponent(TabbedButtonBar::TabsAtTop)
     {
         getTabbedButtonBar().setLookAndFeel(&tabsLookAndFeel);
 
         setColour(TabbedComponent::backgroundColourId, tabBackgroundColour);
         getTabbedButtonBar().setColour(TabbedButtonBar::tabTextColourId, Colours::white);
         getTabbedButtonBar().setColour(TabbedButtonBar::frontTextColourId, Colours::white);
-        getTabbedButtonBar().setColour(TabbedButtonBar::tabOutlineColourId, tabBackgroundColour.darker(0.35f));
-        getTabbedButtonBar().setColour(TabbedButtonBar::frontOutlineColourId, tabBackgroundColour.darker(0.35f));
+        getTabbedButtonBar().setColour(TabbedButtonBar::tabOutlineColourId,
+                                       tabBackgroundColour.darker(0.35f));
+        getTabbedButtonBar().setColour(TabbedButtonBar::frontOutlineColourId,
+                                       tabBackgroundColour.darker(0.35f));
 
-        createHomeTab();
+        homeTab.onModelOpenRequested = [this](const String& modelPath, const String& modelName)
+        { openModelTab(modelPath, modelName); };
+
+        addTab("Home", tabBackgroundColour, &homeTab, false);
+        setCurrentTabIndex(0);
+
+        setComponentID(TutorialTargets::modelTabs);
+        getTabbedButtonBar().setComponentID(TutorialTargets::tabBar);
     }
 
     ~ModelTabContainer() override
@@ -248,30 +248,86 @@ public:
         }
     }
 
-    ModelTab* createNewTab(const String& modelPath = {}, const String& modelName = {})
+    /**
+     * Opens a model in a new tab and shows it. The tab fills in once the model has loaded,
+     * and closes by itself if loading fails, once the error has been dismissed.
+     */
+    ModelTab* openModelTab(const String& modelPath, String tabName = {})
     {
-        int index = getNumTabs();
+        if (tabName.isEmpty())
+        {
+            const auto* entry = catalog->findEntry(modelPath);
+            tabName =
+                entry != nullptr ? entry->name : modelPath.fromLastOccurrenceOf("/", false, false);
+        }
 
         auto* tab = new ModelTab();
 
         // Owned from creation, so that a tab is never left unowned while a
-        // request is in flight (see closeModelTab and the destructor)
+        // request is in flight (see closeTab and the destructor)
         modelTabs.add(tab);
+        tab->addChangeListener(this);
 
-        auto tabName = modelName;
+        auto* page = pages.add(new ModelTabPage(*tab));
 
-        if (tabName.isEmpty() && modelPath.isNotEmpty())
-            tabName = ModelRegistry::getEntryForPath(modelPath).displayName;
+        // The page is owned by pages and the tab by modelTabs, so it is added with
+        // deleteComponentWhenNotNeeded = false: closing it must not force JUCE
+        // to destroy the tab synchronously in removeTab(); see closeTab() for
+        // why destruction may need to be deferred.
+        addTab(tabName, tabBackgroundColour, page, false);
+        addCloseButton(*tab, getNumTabs() - 1);
 
-        if (tabName.isEmpty())
-            tabName = "Model " + String(index);
+        setCurrentTabIndex(getNumTabs() - 1);
 
-        addLoadedModelTab(tab, tabName);
-
-        if (modelPath.isNotEmpty())
-            tab->loadModelPath(modelPath);
+        tab->loadModel(modelPath);
 
         return tab;
+    }
+
+    // Closes a model tab as if its close button had been clicked. Does nothing
+    // if the tab is no longer in the tab bar.
+    void closeTab(ModelTab* tabToClose)
+    {
+        const int index = findTabIndex(tabToClose);
+
+        if (index < 0)
+            return;
+
+        const auto currentIndex = getCurrentTabIndex();
+        const auto targetIndex = currentIndex == index
+                                     ? jmax(0, index - 1)
+                                     : (currentIndex > index ? currentIndex - 1 : currentIndex);
+
+        // Remove the tab from the UI immediately so it looks closed to the user.
+        // Because the page was added with deleteComponentWhenNotNeeded = false,
+        // removeTab() does not destroy it; it is owned via pages.
+        removeTab(index);
+
+        // Deleting the page only detaches the tab from it
+        pages.removeObject(findPage(tabToClose));
+
+        setCurrentTabIndex(jlimit(0, getNumTabs() - 1, targetIndex));
+
+        tabToClose->removeChangeListener(this);
+
+        if (tabToClose->hasPendingRequests())
+        {
+            // A network request is still in flight. Destroying the tab
+            // (and its ThreadPool) now would force-kill a worker thread
+            // blocked in a network syscall. Abandoning it aborts the
+            // connection so the worker returns within moments; hand
+            // ownership to the reaper, which deletes it once it does.
+            tabToClose->abandon();
+
+            modelTabs.removeObject(tabToClose, false);
+            tabReaper.add(tabToClose);
+        }
+        else
+        {
+            modelTabs.removeObject(tabToClose, true);
+        }
+
+        sendChangeMessage();
     }
 
     ModelTabPage* getCurrentModelTabPage() const
@@ -283,11 +339,6 @@ public:
     {
         auto* page = getCurrentModelTabPage();
         return page != nullptr ? &page->getModelTab() : nullptr;
-    }
-
-    HomeTab* getHomeTabIfShowing() const
-    {
-        return dynamic_cast<HomeTab*>(getCurrentContentComponent());
     }
 
     void layOutCurrentPage()
@@ -304,158 +355,114 @@ public:
         sendChangeMessage();
     }
 
-    // Called whenever the page showing a model tab scrolls
-    std::function<void()> onPageScrolled;
-
-    // Closes a model tab as if its close button had been clicked. Does nothing
-    // if the tab is no longer in the tab bar.
-    void closeTab(ModelTab* tab) { closeModelTab(tab); }
-
 private:
-    void addLoadedModelTab(ModelTab* tab, const String& tabName)
+    // Close button shown on each model tab, which explains itself in the instructions box
+    struct CloseTabButton : public Button
     {
-        tab->addChangeListener(this);
+        CloseTabButton() : Button("Close") {}
 
-        auto* page = pages.add(new ModelTabPage(*tab));
-        page->onScrolled = [this]
+        void paintButton(Graphics& g, bool isHighlighted, bool isDown) override
         {
-            if (onPageScrolled != nullptr)
-                onPageScrolled();
+            // Square whatever this is given, so that the circle and cross are never stretched
+            const float side = (float) jmin(getWidth(), getHeight());
+            const auto bounds =
+                getLocalBounds().toFloat().withSizeKeepingCentre(side, side).reduced(1.0f);
+
+            if (isHighlighted || isDown)
+            {
+                g.setColour(Colours::white.withAlpha(isDown ? 0.2f : 0.12f));
+                g.fillEllipse(bounds);
+            }
+
+            // A cross drawn from two strokes, which sits centred where a glyph might not
+            const auto cross = bounds.reduced(bounds.getWidth() * 0.32f);
+
+            g.setColour(isHighlighted ? Colours::white : Colours::lightgrey);
+            g.drawLine({ cross.getTopLeft(), cross.getBottomRight() }, 1.5f);
+            g.drawLine({ cross.getBottomLeft(), cross.getTopRight() }, 1.5f);
+        }
+
+        void mouseEnter(const MouseEvent& e) override
+        {
+            Button::mouseEnter(e);
+            instructionsMessage->setMessage("Click to close this model tab.");
+        }
+
+        void mouseExit(const MouseEvent& e) override
+        {
+            Button::mouseExit(e);
+            instructionsMessage->clearMessage();
+        }
+
+        SharedResourcePointer<InstructionsMessage> instructionsMessage;
+    };
+
+    void addCloseButton(ModelTab& tab, int tabIndex)
+    {
+        auto* closeButton = new CloseTabButton();
+        closeButton->setSize(18, 18);
+        closeButton->onClick = [this, safeTab = SafePointer<ModelTab>(&tab)]
+        {
+            // Deferred, since closing deletes the tab button that owns this one
+            MessageManager::callAsync(
+                [safeThis = SafePointer<ModelTabContainer>(this), safeTab]
+                {
+                    if (safeThis != nullptr && safeTab != nullptr)
+                        safeThis->closeTab(safeTab.getComponent());
+                });
         };
 
-        // The page is owned by pages and the tab by modelTabs, so it is added with
-        // deleteComponentWhenNotNeeded = false: closing it must not force JUCE
-        // to destroy the tab synchronously in removeTab(); see closeModelTab() for
-        // why destruction may need to be deferred.
-        addTab(tabName,
-               tabBackgroundColour,
-               page,
-               false);
-
-        addCloseButtonToModelTab(tab);
-
-        setCurrentTabIndex(getNumTabs() - 1);
-    }
-
-    void addCloseButtonToModelTab(ModelTab* tab)
-    {
-        auto* closeButton = new TextButton("x");
-        closeButton->setTooltip("Close model tab");
-        closeButton->setSize(18, 18);
-        closeButton->setColour(TextButton::buttonColourId, Colours::transparentBlack);
-        closeButton->setColour(TextButton::buttonOnColourId, Colours::transparentBlack);
-        closeButton->setColour(TextButton::textColourOffId, Colours::white);
-        closeButton->setColour(TextButton::textColourOnId, Colours::white);
-        closeButton->onClick = [this, tab] { closeModelTab(tab); };
-
-        if (auto* tabButton = getTabbedButtonBar().getTabButton(getNumTabs() - 1))
+        // The tab button takes ownership of the close button
+        if (auto* tabButton = getTabbedButtonBar().getTabButton(tabIndex))
             tabButton->setExtraComponent(closeButton, TabBarButton::afterText);
+        else
+            delete closeButton;
     }
 
-    void closeModelTab(ModelTab* tabToClose)
+    ModelTabPage* findPage(const ModelTab* tab) const
+    {
+        for (auto* page : pages)
+        {
+            if (&page->getModelTab() == tab)
+                return page;
+        }
+
+        return nullptr;
+    }
+
+    int findTabIndex(const ModelTab* tab) const
     {
         for (int i = 1; i < getNumTabs(); ++i)
         {
             auto* page = dynamic_cast<ModelTabPage*>(getTabContentComponent(i));
 
-            if (page != nullptr && &page->getModelTab() == tabToClose)
-            {
-                const auto currentIndex = getCurrentTabIndex();
-                const auto targetIndex = currentIndex == i ? jmax(0, i - 1)
-                                                           : (currentIndex > i ? currentIndex - 1
-                                                                               : currentIndex);
-
-                // Remove the tab from the UI immediately so it looks closed to
-                // the user. Because the tab was added with
-                // deleteComponentWhenNotNeeded = false, removeTab() does not
-                // destroy it; we own it via modelTabs.
-                removeTab(i);
-
-                // Deleting the page only detaches the tab from it
-                pages.removeObject(page);
-
-                if (getNumTabs() > 0)
-                    setCurrentTabIndex(jlimit(0, getNumTabs() - 1, targetIndex));
-
-                tabToClose->removeChangeListener(this);
-
-                if (tabToClose->hasPendingRequests())
-                {
-                    // A network request is still in flight. Destroying the tab
-                    // (and its ThreadPool) now would force-kill a worker thread
-                    // blocked in a network syscall. Abandoning it aborts the
-                    // connection so the worker returns within moments; hand
-                    // ownership to the reaper, which deletes it once it does.
-                    tabToClose->abandon();
-
-                    modelTabs.removeObject(tabToClose, false);
-                    tabReaper.add(tabToClose);
-                }
-                else
-                {
-                    modelTabs.removeObject(tabToClose, true);
-                }
-
-                sendChangeMessage();
-                return;
-            }
+            if (page != nullptr && &page->getModelTab() == tab)
+                return i;
         }
-    }
 
-    void createHomeTab()
-    {
-        auto* homeTab = new HomeTab();
-        homeTab->onModelLoadRequested = [this, homeTab](String modelPath, String modelName)
-        {
-            // Owned from creation as well: this tab is not in the UI yet, but it
-            // has a load request in flight, so quitting the app now must find it
-            // in modelTabs and abandon it rather than leave it running.
-            auto* pendingTab = new ModelTab();
-            modelTabs.add(pendingTab);
-
-            pendingTab->onNextModelLoadComplete(
-                [this, homeTab, modelName](ModelTab* tab, bool wasSuccessful)
-                {
-                    if (wasSuccessful)
-                    {
-                        addLoadedModelTab(tab, modelName);
-                        sendChangeMessage();
-                    }
-                    else
-                    {
-                        // Deleted asynchronously because this runs from inside
-                        // the tab's own load completion handler
-                        modelTabs.removeObject(tab, false);
-                        MessageManager::callAsync([tab] { delete tab; });
-                    }
-
-                    homeTab->resetSelection();
-                });
-
-            pendingTab->loadModelPath(modelPath);
-        };
-
-        addTab("Home",
-               tabBackgroundColour,
-               homeTab,
-               false);
-
-        setCurrentTabIndex(0);
+        return -1;
     }
 
     void changeListenerCallback(ChangeBroadcaster* source) override
     {
-        if (auto* tab = dynamic_cast<ModelTab*>(source))
-        {
-            // What the tab has to show changed, and so how far its page has to scroll
-            for (auto* page : pages)
-            {
-                if (&page->getModelTab() == tab)
-                    page->layOutTab();
-            }
+        auto* tab = dynamic_cast<ModelTab*>(source);
 
-            sendChangeMessage(); // bubble up to MainComponent
+        if (tab == nullptr)
+            return;
+
+        // A tab left without a model once its load finished failed to load one, and
+        // has nothing to show now that its error has been dismissed
+        if (! tab->isModelLoaded() && ! tab->isLoading())
+        {
+            closeTab(tab);
+            return;
         }
+
+        // What the tab has to show changed, and so how far its page has to scroll
+        if (auto* page = findPage(tab))
+            page->layOutTab();
+
+        sendChangeMessage(); // bubble up to MainComponent
     }
 
     // Owns model tabs whose UI has been closed while a request was still in
@@ -512,14 +519,17 @@ private:
         OwnedArray<ModelTab> pendingTabs;
     };
 
-    const Colour tabBackgroundColour {
-        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground)
-    };
+    const Colour tabBackgroundColour { getUIColourIfAvailable(
+        LookAndFeel_V4::ColourScheme::UIColour::windowBackground) };
 
     ModelTabsLookAndFeel tabsLookAndFeel;
+
+    HomeTab homeTab;
 
     OwnedArray<ModelTab> modelTabs;
     // Declared after modelTabs so that each page is destroyed before the tab it shows
     OwnedArray<ModelTabPage> pages;
     DeferredTabReaper tabReaper;
+
+    SharedResourcePointer<ModelCatalog> catalog;
 };

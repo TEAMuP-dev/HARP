@@ -346,34 +346,6 @@ public:
         return nullptr;
     }
 
-    Rectangle<int> getFirstTrackFolderButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getChooseFileButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
-    }
-
-    Rectangle<int> getFirstTrackPlayButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getPlayButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
-    }
-
     std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()
     {
         std::vector<MediaDisplayComponent*> linkedDisplays;

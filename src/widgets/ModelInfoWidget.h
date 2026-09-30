@@ -6,9 +6,11 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <cmath>
 
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../widgets/ModelStyle.h"
 #include "../widgets/StatusAreaWidget.h"
 
 #include "../gui/HoverHandler.h"
@@ -21,28 +23,20 @@ using namespace juce;
 class ModelAuthorLabel : public Component
 {
 public:
-    ModelAuthorLabel(const String& modelName = "",
-                     const String& author = "",
-                     const URL& newURL = URL())
+    ModelAuthorLabel()
     {
-        if (modelName.isNotEmpty())
-        {
-            setModelName(modelName);
-        }
-
-        if (author.isNotEmpty())
-        {
-            setAuthor(author);
-        }
-
-        setURL(newURL);
-
-        modelLabel.setFont(Font(22.0f, Font::bold));
+        modelLabel.setFont(ModelStyle::font(18.0f, true));
+        modelLabel.setBorderSize({ 0, 0, 0, 0 });
 
         modelLabel.onHover = [this]
         { instructionsMessage->setMessage("Click to view the model's webpage or documentation."); };
         modelLabel.onExit = [this] { instructionsMessage->clearMessage(); };
         modelLabel.onClick = [this] { url.launchInDefaultBrowser(); };
+
+        authorLabel.setFont(ModelStyle::font(13.0f));
+        authorLabel.setColour(Label::textColourId, ModelStyle::secondaryText);
+
+        setURL(URL());
 
         addAndMakeVisible(modelLabel);
         addAndMakeVisible(authorLabel);
@@ -52,10 +46,11 @@ public:
     {
         Rectangle<int> totalArea = getLocalBounds();
 
-        float modelNameWidth = modelLabel.getFont().getStringWidthFloat(modelLabel.getText()) + 10;
+        const int modelNameWidth =
+            ModelStyle::getTextWidth(modelLabel.getFont(), modelLabel.getText()) + 2;
 
-        modelLabel.setBounds(totalArea.removeFromLeft(static_cast<int>(modelNameWidth)));
-        authorLabel.setBounds(totalArea.translated(0, 3));
+        modelLabel.setBounds(totalArea.removeFromLeft(jmin(modelNameWidth, totalArea.getWidth())));
+        authorLabel.setBounds(totalArea.withTrimmedTop(2));
     }
 
     void setModelName(const String& modelName)
@@ -64,28 +59,22 @@ public:
 
         resized();
     }
+
     void setAuthor(const String& author)
     {
         authorLabel.setText(author, dontSendNotification);
 
         resized();
     }
+
     void setURL(const URL& newURL)
     {
-        if (newURL.isWellFormed())
-        {
-            url = newURL;
+        const bool isLinked = newURL.isWellFormed() && newURL.toString(false).isNotEmpty();
 
-            modelLabel.setHoverColor(Colours::coral);
-            modelLabel.setHoverable(true);
+        url = newURL;
 
-            resized();
-        }
-        else
-        {
-            modelLabel.setHoverColor(Colours::white);
-            modelLabel.setHoverable(false);
-        }
+        modelLabel.setHoverColor(isLinked ? ModelStyle::accent : Colours::white);
+        modelLabel.setHoverable(isLinked);
     }
 
 private:
@@ -97,6 +86,10 @@ private:
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
 
+/**
+ * The loaded model's card, presented like the Home tab's: its name (linking to its page)
+ * and author, notes on its deployment, its description, and its tags.
+ */
 class ModelInfoWidget : public Component
 {
 public:
@@ -104,146 +97,126 @@ public:
     {
         addAndMakeVisible(modelAuthorLabel);
 
-        // Configure description as scrollable read-only text
+        // Scrollable read-only text, for descriptions longer than the widget shows
         description.setMultiLine(true);
         description.setReadOnly(true);
         description.setScrollbarsShown(true);
-        description.setCaretVisible(false); // no blinking cursor
-        description.setPopupMenuEnabled(false); // disable right-click menu
-        description.setFont(Font(15.0f));
-
-        // Make it visually match the old TextLabel appearance
+        description.setCaretVisible(false);
+        description.setPopupMenuEnabled(false);
+        description.setFont(descriptionFont);
+        description.setIndents(0, 0);
+        description.setColour(TextEditor::textColourId, Colours::whitesmoke.withAlpha(0.85f));
         description.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
         description.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
+        description.setColour(TextEditor::focusedOutlineColourId, Colours::transparentBlack);
         description.setColour(TextEditor::shadowColourId, Colours::transparentBlack);
-
         addAndMakeVisible(description);
+
+        addChildComponent(tagRow);
     }
 
-    ~ModelInfoWidget() {}
-
-    //void paint(Graphics& g) {}
+    void paint(Graphics& g) override
+    {
+        ModelStyle::drawCard(g, getLocalBounds().toFloat().reduced(1.0f));
+        ModelStyle::drawBadges(g, badges, getContentArea().removeFromTop(headerHeight));
+    }
 
     void resized() override
     {
-        Rectangle<int> bounds = getLocalBounds().reduced(marginSize);
+        auto area = getContentArea();
 
-        // Set fixed size for model and author labels
-        modelAuthorLabel.setBounds(bounds.removeFromTop(headerHeight));
-        // Grant remaining space to description
-        description.setBounds(bounds);
+        auto headerRow = area.removeFromTop(headerHeight);
+        headerRow.setRight(ModelStyle::getBadgesLeft(badges, headerRow) - ModelStyle::chipGap);
+        modelAuthorLabel.setBounds(headerRow);
+
+        area.removeFromTop(rowGap);
+        description.setBounds(area.removeFromTop(getDescriptionHeightForWidth(area.getWidth())));
+
+        if (! tagRow.isEmpty())
+        {
+            area.removeFromTop(rowGap + 2);
+            tagRow.setBounds(area.removeFromTop(ModelStyle::chipHeight));
+        }
     }
 
     int getPreferredHeightForWidth(int width) const
     {
-        const int contentWidth = jmax(120, width - 2 * (int) marginSize);
-        const int lineCount = estimateWrappedLineCount(description.getText(), contentWidth);
-        const int visibleLines = jlimit(1, 4, lineCount);
-        const int lineHeight = (int) std::ceil(description.getFont().getHeight() + 2.0f);
-        const int descriptionHeight = visibleLines * lineHeight + 4;
+        const int contentWidth = width - 2 * horizontalPadding;
 
-        return (int) (2 * marginSize + headerHeight + descriptionHeight);
-    }
+        int height = 2 * verticalPadding + headerHeight + rowGap
+                     + getDescriptionHeightForWidth(contentWidth);
 
-    void resetState()
-    {
-        ModelMetadata emptyMetadata;
+        if (! tagRow.isEmpty())
+            height += rowGap + 2 + ModelStyle::chipHeight;
 
-        updateLabels(emptyMetadata);
-        modelAuthorLabel.setURL(URL(""));
+        return height;
     }
 
     void updateLabels(const ModelMetadata& metadata)
     {
-        if (metadata.name.empty())
-        {
-            modelAuthorLabel.setModelName("");
-        }
-        else
-        {
-            modelAuthorLabel.setModelName(String(metadata.name));
-        }
+        modelAuthorLabel.setModelName(String(metadata.name));
+        modelAuthorLabel.setAuthor(metadata.author.empty() ? String()
+                                                           : "by " + String(metadata.author));
 
-        if (metadata.author.empty())
-        {
-            modelAuthorLabel.setAuthor("");
-        }
-        else
-        {
-            modelAuthorLabel.setAuthor("by " + String(metadata.author));
-        }
+        description.setText(String(metadata.description));
 
-        if (metadata.description.empty())
-        {
-            description.setText("");
-        }
-        else
-        {
-            description.setText(String(metadata.description));
-        }
+        StringArray tags;
+
+        for (const auto& tag : metadata.tags)
+            tags.add(tag);
+
+        tagRow.setTags(ModelTags::parse(tags));
+        tagRow.setVisible(! tagRow.isEmpty());
 
         resized();
+        repaint();
+    }
+
+    void setBadges(std::vector<ModelStyle::Badge> newBadges)
+    {
+        badges = std::move(newBadges);
+
+        resized();
+        repaint();
     }
 
     void addOpenablePath(const String& openablePath) { modelAuthorLabel.setURL(URL(openablePath)); }
 
 private:
-    int estimateWrappedLineCount(const String& text, int availableWidth) const
+    Rectangle<int> getContentArea() const
     {
-        if (availableWidth <= 0)
-            return 1;
-
-        auto font = description.getFont();
-        const float spaceWidth = jmax(1.0f, font.getStringWidthFloat(" "));
-        int lines = 0;
-
-        StringArray paragraphs;
-        paragraphs.addLines(text.isEmpty() ? String(" ") : text);
-
-        for (const auto& paragraph : paragraphs)
-        {
-            StringArray words;
-            words.addTokens(paragraph, " ", "");
-            words.removeEmptyStrings();
-
-            if (words.isEmpty())
-            {
-                ++lines;
-                continue;
-            }
-
-            float currentLineWidth = 0.0f;
-            for (const auto& word : words)
-            {
-                const float wordWidth = font.getStringWidthFloat(word);
-
-                if (currentLineWidth <= 0.0f)
-                {
-                    currentLineWidth = wordWidth;
-                    continue;
-                }
-
-                if (currentLineWidth + spaceWidth + wordWidth <= (float) availableWidth)
-                {
-                    currentLineWidth += spaceWidth + wordWidth;
-                }
-                else
-                {
-                    ++lines;
-                    currentLineWidth = wordWidth;
-                }
-            }
-
-            ++lines;
-        }
-
-        return jmax(1, lines);
+        return getLocalBounds().reduced(horizontalPadding, verticalPadding);
     }
 
-    const float headerHeight = 30;
-    const float marginSize = 2;
+    // Tall enough for the description, up to a limit beyond which it scrolls
+    int getDescriptionHeightForWidth(int width) const
+    {
+        if (description.isEmpty() || width <= 0)
+            return 0;
+
+        AttributedString text;
+        text.append(description.getText(), descriptionFont);
+
+        TextLayout layout;
+        // Leave room for the scrollbar, which appears once the text is too long
+        layout.createLayout(text, (float) (width - getLookAndFeel().getDefaultScrollbarWidth()));
+
+        const int lines = jlimit(1, maxDescriptionLines, layout.getNumLines());
+
+        return (int) std::ceil((float) lines * descriptionFont.getHeight()) + 2;
+    }
+
+    static constexpr int horizontalPadding = 12;
+    static constexpr int verticalPadding = 9;
+    static constexpr int headerHeight = 24;
+    static constexpr int rowGap = 2;
+    static constexpr int maxDescriptionLines = 4;
+
+    const Font descriptionFont = ModelStyle::font(13.0f);
 
     ModelAuthorLabel modelAuthorLabel;
-
     TextEditor description;
+    ModelStyle::TagRow tagRow;
+
+    std::vector<ModelStyle::Badge> badges;
 };

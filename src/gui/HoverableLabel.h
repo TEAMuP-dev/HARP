@@ -99,20 +99,16 @@ public:
     std::function<void()> onClick;
 
 private:
+    /* Where the text is drawn, in this label's own coordinates (which are what hitTest is
+       given), allowing for its border and justification */
     Rectangle<int> getTextBounds() const
     {
-        Font f = getFont();
+        const Font f = getFont();
+        const Rectangle<int> textSize(GlyphArrangement::getStringWidthInt(f, getText()),
+                                      roundToInt(f.getHeight()));
 
-        int textWidth = f.getStringWidth(getText());
-        int textHeight = f.getHeight();
-
-        float x_offset = (getBounds().getWidth() - textWidth) / 2;
-        float y_offset = (getBounds().getHeight() - textHeight) / 2;
-
-        return Rectangle<int>(getX() + static_cast<int>(x_offset),
-                              getY() + static_cast<int>(y_offset),
-                              static_cast<int>(textWidth),
-                              static_cast<int>(textHeight));
+        return getJustificationType().appliedToRectangle(
+            textSize, getBorderSize().subtractedFrom(getLocalBounds()));
     }
 
     bool hoverable;

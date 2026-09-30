@@ -16,24 +16,22 @@
 #include "widgets/MediaClipboardWidget.h"
 #include "widgets/StatusAreaWidget.h"
 
+#include "windows/tutorial/TutorialWindow.h"
+
 #include "windows/AboutWindow.h"
 #include "windows/settings/SettingsWindow.h"
 
 #include "utils/Interface.h"
 #include "utils/Logging.h"
 #include "utils/Settings.h"
-#include "utils/Tutorial.h"
 
 using namespace juce;
-
-// Forward declaration (include in .cpp)
-class WelcomeWindow;
 
 class MainComponent : public Component,
                       public MenuBarModel,
                       public ApplicationCommandTarget,
-                      private ChangeListener
-
+                      private ChangeListener,
+                      private TutorialHost
 {
 public:
     MainComponent();
@@ -72,49 +70,14 @@ public:
 
     // Help
     void openAboutWindow();
-    void openWelcomeWindow(bool ensureDefaultModelLoaded = false);
-
-    /* Tutorial */
-
-    ModelTab* getCurrentModelTab() const { return modelTabs.getCurrentModelTab(); }
-
-    void setTutorialActive(bool active);
-    void setTutorialHighlight(Rectangle<int> bounds);
-    void setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds);
-    void ensureTutorialModelLoaded();
-    bool isTutorialModelLoadInFlight() const { return tutorialModelLoadInFlight; }
-    void resetTutorialAutoLoadedModel();
-    void ensureMediaClipboardVisible();
-
-    // Bounds accessors for tutorial steps (public for WelcomeWindow)
-    Rectangle<int> getTabBarBounds();
-    Rectangle<int> getModelSelectBounds();
-    Rectangle<int> getControlsBounds();
-    Rectangle<int> getInputTrackBounds();
-    Rectangle<int> getInputFolderBounds();
-    Rectangle<int> getInputPlayBounds();
-    Rectangle<int> getProcessButtonBounds();
-    Rectangle<int> getTracksBounds();
-    Rectangle<int> getClipboardBounds();
-    Rectangle<int> getClipboardTrackAreaBounds();
-    Rectangle<int> getClipboardControlsBounds();
-    Rectangle<int> getClipboardNameBoxBounds();
-    Rectangle<int> getClipboardButtonsBounds();
-    Rectangle<int> getClipboardAddButtonBounds();
-    Rectangle<int> getClipboardRemoveButtonBounds();
-    Rectangle<int> getClipboardPlayButtonBounds();
-    Rectangle<int> getClipboardSendToDAWButtonBounds();
-    Rectangle<int> getInfoBarBounds();
+    void openTutorial();
 
     /* Component */
 
     void paint(Graphics& g) override;
-    void paintOverChildren(Graphics& g) override;
     void resized() override;
 
     void updateWindowConstraints();
-    void refreshTutorialHighlight();
-    Rectangle<int> getVisibleTabArea(Rectangle<int> tabBounds);
 
 private:
     /* File Menu */
@@ -135,6 +98,12 @@ private:
     //void focusCallback();
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
+    /* Tutorial */
+
+    Component& getTutorialArea() override { return *this; }
+    ModelTabContainer& getModelTabs() override { return modelTabs; }
+    void openMediaClipboard() override;
+
     /* Interface */
 
     const int statusAreaHeight = 100;
@@ -142,7 +111,7 @@ private:
     const float mediaClipboardScale = 1.4f;
 
     // Minimum size to ensure all controls remain visible and functional:
-    // - WelcomeWindow popup is 480x500, needs padding
+    // - Tutorial window is 500x420, needs padding
     // - Dropdown labels need adequate width
     // - Control Area needs space for sliders/toggles/textboxes
     const int minimumWindowWidth = 700;
@@ -164,16 +133,7 @@ private:
     DragOverlayComponent dragOverlay;
     MediaClipboardWidget mediaClipboardWidget { &dragOverlay };
 
-    bool isTutorialActive = false;
-    Rectangle<int> tutorialHighlightRect;
-    std::vector<Rectangle<int>> tutorialExtraHighlights;
-    std::unique_ptr<WelcomeWindow> welcomeWindow;
-
-    // Set while the tutorial's fallback model is loading, so that repeated
-    // requests to load it do not stack up. The tab the tutorial opened on the
-    // user's behalf is remembered so that it can be closed again at the end.
-    bool tutorialModelLoadInFlight = false;
-    Component::SafePointer<ModelTab> tutorialCreatedTab;
+    std::unique_ptr<TutorialWindow> tutorialWindow;
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;

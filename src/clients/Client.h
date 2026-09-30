@@ -255,6 +255,80 @@ private:
     RequestRegistry& registry;
 };
 
+/*
+   Equivalent to URL::createInputStream(), except that the stream is
+   registered with requestRegistry for its whole lifetime so that it can be
+   aborted locally (see RequestRegistry). Registering before connecting is
+   what makes the connect phase abortable too - that phase blocks for up to
+   the connection timeout, which is two minutes for process requests.
+
+   Returns nullptr if the connection could not be established, including
+   when the request was aborted. Without a registry (e.g. for the short-lived
+   client used for token validation) this behaves exactly as before.
+*/
+inline std::unique_ptr<InputStream> createRegisteredStream(RequestRegistry* requestRegistry,
+                                                           const URL& endpoint,
+                                                           const URL::InputStreamOptions& options)
+{
+    if (requestRegistry == nullptr || endpoint.isLocalFile())
+    {
+        return endpoint.createInputStream(options);
+    }
+
+    if (requestRegistry->hasBeenAborted())
+    {
+        // Requests were aborted, so do not open another connection
+        return nullptr;
+    }
+
+    auto stream = std::make_unique<RegisteredWebInputStream>(
+        *requestRegistry,
+        endpoint,
+        options.getParameterHandling() == URL::ParameterHandling::inPostData);
+
+    const String extraHeaders = options.getExtraHeaders();
+
+    if (extraHeaders.isNotEmpty())
+    {
+        stream->withExtraHeaders(extraHeaders);
+    }
+
+    const int connectionTimeoutMs = options.getConnectionTimeoutMs();
+
+    if (connectionTimeoutMs != 0)
+    {
+        stream->withConnectionTimeout(connectionTimeoutMs);
+    }
+
+    const String requestCmd = options.getHttpRequestCmd();
+
+    if (requestCmd.isNotEmpty())
+    {
+        stream->withCustomRequestCommand(requestCmd);
+    }
+
+    stream->withNumRedirectsToFollow(options.getNumRedirectsToFollow());
+
+    const bool connected = stream->connect(nullptr);
+
+    if (int* statusCode = options.getStatusCode())
+    {
+        *statusCode = stream->getStatusCode();
+    }
+
+    if (StringPairArray* responseHeaders = options.getResponseHeaders())
+    {
+        *responseHeaders = stream->getResponseHeaders();
+    }
+
+    if (! connected || stream->isError())
+    {
+        return nullptr;
+    }
+
+    return stream;
+}
+
 class Client
 {
 public:
@@ -292,77 +366,11 @@ public:
     virtual String inferEndpointPath(String modelPath) = 0;
     virtual String inferDocumentationPath(String modelPath) = 0;
 
-    /*
-       Equivalent to URL::createInputStream(), except that the stream is
-       registered with requestRegistry for its whole lifetime so that it can be
-       aborted locally (see RequestRegistry). Registering before connecting is
-       what makes the connect phase abortable too - that phase blocks for up to
-       the connection timeout, which is two minutes for process requests.
-
-       Returns nullptr if the connection could not be established, including
-       when the request was aborted. Clients without a registry (e.g. the
-       short-lived one used for token validation) behave exactly as before.
-    */
+    // See createRegisteredStream
     std::unique_ptr<InputStream> createRequestStream(const URL& endpoint,
                                                      const URL::InputStreamOptions& options) const
     {
-        if (requestRegistry == nullptr || endpoint.isLocalFile())
-        {
-            return endpoint.createInputStream(options);
-        }
-
-        if (requestRegistry->hasBeenAborted())
-        {
-            // Requests were aborted, so do not open another connection
-            return nullptr;
-        }
-
-        auto stream = std::make_unique<RegisteredWebInputStream>(
-            *requestRegistry,
-            endpoint,
-            options.getParameterHandling() == URL::ParameterHandling::inPostData);
-
-        const String extraHeaders = options.getExtraHeaders();
-
-        if (extraHeaders.isNotEmpty())
-        {
-            stream->withExtraHeaders(extraHeaders);
-        }
-
-        const int connectionTimeoutMs = options.getConnectionTimeoutMs();
-
-        if (connectionTimeoutMs != 0)
-        {
-            stream->withConnectionTimeout(connectionTimeoutMs);
-        }
-
-        const String requestCmd = options.getHttpRequestCmd();
-
-        if (requestCmd.isNotEmpty())
-        {
-            stream->withCustomRequestCommand(requestCmd);
-        }
-
-        stream->withNumRedirectsToFollow(options.getNumRedirectsToFollow());
-
-        const bool connected = stream->connect(nullptr);
-
-        if (int* statusCode = options.getStatusCode())
-        {
-            *statusCode = stream->getStatusCode();
-        }
-
-        if (StringPairArray* responseHeaders = options.getResponseHeaders())
-        {
-            *responseHeaders = stream->getResponseHeaders();
-        }
-
-        if (! connected || stream->isError())
-        {
-            return nullptr;
-        }
-
-        return stream;
+        return createRegisteredStream(requestRegistry, endpoint, options);
     }
 
     OpResult queryToken(const String& tokenToQuery, String& response, const int timeoutMs = 10000)

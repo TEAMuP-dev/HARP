@@ -77,8 +77,8 @@ HARP supports a simple workflow: pick an existing model for processing or provid
 To get started:
 
 - Open HARP as a standalone application or within your DAW
-- Select an existing model using the drop-down menu at the top of the screen, or select `custom path...` and provide a URL to any HARP-compatible Gradio endpoint 
-- Load the selected model (and its corresponding interface) using the `Load` button.
+- Browse or search the models on the `Home` tab, which lists every model hosted by [TEAMuP on Hugging Face](https://huggingface.co/teamup-tech) by category, or click `Custom Path...` and provide a URL to any HARP-compatible Gradio endpoint
+- Click a model to open it (and its corresponding interface) in a tab of its own. Several models can be open at once, each in its own tab.
 - Import audio or MIDI data to process with the model either via the `Open File` button or by dragging and dropping a file into HARP
 - Adjust controls to taste in the interface
 - Click `Process` to run the model; outputs will automatically be rendered in HARP
