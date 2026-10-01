@@ -1,7 +1,7 @@
 /**
  * @file PianoRollComponent.hpp
  * @brief Top-level container for pianoroll components.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  * 
  * Note that this pianoroll implementation was adapted from:
  * https://github.com/Sjhunt93/Piano-Roll-Editor

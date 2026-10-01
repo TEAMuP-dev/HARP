@@ -96,10 +96,9 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
         int channel = midiMessage.getChannel();
 
-        if (channel == 10)
-        {
-            // TODO - handle drums channel
-        }
+        // Handle drums channel
+        bool isDrum = (channel == 10);
+
 
         if (midiMessage.isProgramChange())
         {
@@ -137,7 +136,8 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
                                   startTime,
                                   duration,
                                   static_cast<unsigned char>(velocity),
-                                  static_cast<unsigned char>(instrument));
+                                  static_cast<unsigned char>(instrument),
+                                  isDrum);
             pianoRoll.insertNote(n);
         }
     }
@@ -246,12 +246,14 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
             // Do nothing
         }
     }
+    else if (getTotalLengthInSecs() > 0.0)
+    {
+        MediaDisplayComponent::mouseWheelMove(evt, wheel);
+    }
     else
     {
-        if (getTotalLengthInSecs() > 0.0)
-        {
-            MediaDisplayComponent::mouseWheelMove(evt, wheel);
-        }
+        // No timeline to move along, so let the panel scroll instead
+        Component::mouseWheelMove(evt, wheel);
     }
 }
 

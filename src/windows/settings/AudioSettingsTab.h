@@ -1,7 +1,7 @@
 /**
  * @file AudioSettingsTab.h
  * @brief Placeholder tab for audio settings.
- * @author lindseydeng
+ * @author lindseydeng, cwitkowitz
  */
 
 #pragma once

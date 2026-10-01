@@ -1,7 +1,7 @@
 /**
  * @file Client.h
  * @brief Helper functions, shared functionality, and parent class for interacting with APIs.
- * @author xribene, huiranyu, cwitkowitz
+ * @author cwitkowitz, VedMistry42, huiranyu, xribene
  */
 
 #pragma once
@@ -14,6 +14,7 @@
 #include "../utils/Errors.h"
 #include "../utils/Labels.h"
 #include "../utils/Logging.h"
+#include "../utils/Messages.h"
 #include "../utils/Settings.h"
 
 using namespace juce;
@@ -176,15 +177,201 @@ inline OpResult getRequiredArrayProperty(DynamicObject::Ptr& parentDict,
     return OpResult::ok();
 }
 
+/*
+   Keeps track of the network streams that are currently in flight for a single
+   model, so that they can be aborted locally.
+
+   This is not the same thing as Client::cancel(), which asks the server to stop
+   a job by sending it a brand new request: that leaves the original connection
+   open and needs the network to be reachable. Aborting here closes the
+   connection on this side, so a worker thread blocked on it returns promptly and
+   the underlying OS networking task cannot deliver its completion long after the
+   objects that started the request are gone.
+*/
+class RequestRegistry
+{
+public:
+    void abortActiveRequests()
+    {
+        const ScopedLock lock(streamsLock);
+
+        aborted = true;
+
+        for (WebInputStream* stream : streams)
+        {
+            stream->cancel();
+        }
+    }
+
+    bool hasBeenAborted() const
+    {
+        const ScopedLock lock(streamsLock);
+
+        return aborted;
+    }
+
+    void addStream(WebInputStream* stream)
+    {
+        const ScopedLock lock(streamsLock);
+
+        streams.add(stream);
+    }
+
+    void removeStream(WebInputStream* stream)
+    {
+        const ScopedLock lock(streamsLock);
+
+        streams.removeFirstMatchingValue(stream);
+    }
+
+private:
+    CriticalSection streamsLock;
+
+    Array<WebInputStream*> streams;
+
+    bool aborted = false;
+};
+
+/*
+   A WebInputStream that stays registered with a RequestRegistry for as long as
+   it exists, so the registry can abort it while a worker thread is blocked
+   connecting to it or reading from it. Unregistering in the destructor (under
+   the registry lock) guarantees the registry never holds a dangling stream.
+*/
+class RegisteredWebInputStream : public WebInputStream
+{
+public:
+    RegisteredWebInputStream(RequestRegistry& registryToUse,
+                             const URL& url,
+                             bool addParametersToRequestBody)
+        : WebInputStream(url, addParametersToRequestBody), registry(registryToUse)
+    {
+        registry.addStream(this);
+    }
+
+    ~RegisteredWebInputStream() override { registry.removeStream(this); }
+
+private:
+    RequestRegistry& registry;
+};
+
+/*
+   Equivalent to URL::createInputStream(), except that the stream is
+   registered with requestRegistry for its whole lifetime so that it can be
+   aborted locally (see RequestRegistry). Registering before connecting is
+   what makes the connect phase abortable too - that phase blocks for up to
+   the connection timeout, which is two minutes for process requests.
+
+   Returns nullptr if the connection could not be established, including
+   when the request was aborted. Without a registry (e.g. for the short-lived
+   client used for token validation) this behaves exactly as before.
+*/
+inline std::unique_ptr<InputStream> createRegisteredStream(RequestRegistry* requestRegistry,
+                                                           const URL& endpoint,
+                                                           const URL::InputStreamOptions& options)
+{
+    if (requestRegistry == nullptr || endpoint.isLocalFile())
+    {
+        return endpoint.createInputStream(options);
+    }
+
+    if (requestRegistry->hasBeenAborted())
+    {
+        // Requests were aborted, so do not open another connection
+        return nullptr;
+    }
+
+    auto stream = std::make_unique<RegisteredWebInputStream>(
+        *requestRegistry,
+        endpoint,
+        options.getParameterHandling() == URL::ParameterHandling::inPostData);
+
+    const String extraHeaders = options.getExtraHeaders();
+
+    if (extraHeaders.isNotEmpty())
+    {
+        stream->withExtraHeaders(extraHeaders);
+    }
+
+    const int connectionTimeoutMs = options.getConnectionTimeoutMs();
+
+    if (connectionTimeoutMs != 0)
+    {
+        stream->withConnectionTimeout(connectionTimeoutMs);
+    }
+
+    const String requestCmd = options.getHttpRequestCmd();
+
+    if (requestCmd.isNotEmpty())
+    {
+        stream->withCustomRequestCommand(requestCmd);
+    }
+
+    stream->withNumRedirectsToFollow(options.getNumRedirectsToFollow());
+
+    const bool connected = stream->connect(nullptr);
+
+    if (int* statusCode = options.getStatusCode())
+    {
+        *statusCode = stream->getStatusCode();
+    }
+
+    if (StringPairArray* responseHeaders = options.getResponseHeaders())
+    {
+        *responseHeaders = stream->getResponseHeaders();
+    }
+
+    if (! connected || stream->isError())
+    {
+        return nullptr;
+    }
+
+    return stream;
+}
+
 class Client
 {
 public:
     Client() = default;
-    virtual ~Client() {};
+    virtual ~Client() = default;
+
+    void setRequestRegistry(RequestRegistry* registryToUse) { requestRegistry = registryToUse; }
+
+    /**
+     * Reduces the many ways of writing one model's address to a single form.
+     *
+     * A model can be entered abbreviated, as a full page URL, or as the API
+     * subdomain, and all three should be recognized as the same model rather than
+     * accumulating as separate entries. Returns the path unchanged when there is
+     * no canonical form to reduce it to.
+     */
+    virtual String canonicalizePath(String modelPath) { return modelPath; }
+
+    /**
+     * Confirms a model's address with the provider and returns its exact spelling.
+     *
+     * Some of the addresses a model can be entered as cannot be reduced without
+     * asking the provider, so this may make a network request and must not be
+     * called from the message thread. Providers that need no such lookup keep the
+     * default, which reduces the path offline and succeeds.
+     */
+    virtual OpResult resolveCanonicalPath(const String& modelPath, String& canonicalPath)
+    {
+        canonicalPath = canonicalizePath(modelPath);
+
+        return OpResult::ok();
+    }
 
     virtual String inferHostSlashModel(String modelPath) = 0;
     virtual String inferEndpointPath(String modelPath) = 0;
     virtual String inferDocumentationPath(String modelPath) = 0;
+
+    // See createRegisteredStream
+    std::unique_ptr<InputStream> createRequestStream(const URL& endpoint,
+                                                     const URL::InputStreamOptions& options) const
+    {
+        return createRegisteredStream(requestRegistry, endpoint, options);
+    }
 
     OpResult queryToken(const String& tokenToQuery, String& response, const int timeoutMs = 10000)
     {
@@ -206,7 +393,7 @@ public:
                            .withConnectionTimeoutMs(timeoutMs)
                            .withStatusCode(&statusCode);
 
-        std::unique_ptr<InputStream> stream(tokenValidationURL.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(tokenValidationURL, options));
 
         if (stream == nullptr)
         {
@@ -271,16 +458,64 @@ public:
                              String& payloadJSON,
                              std::vector<File>& outputFiles,
                              LabelList& labels) = 0;
-    virtual OpResult cancel(String modelPath) { return OpResult::ok(); }
+    virtual OpResult cancel(String modelPath)
+    {
+        ignoreUnused(modelPath);
+        return OpResult::ok();
+    }
 
     const String emptyJSONBody = R"({"data": []})";
 
     String acceptHeader;
     String contentTypeJSONHeader;
 
+    /* Escapes line breaks for single-line logging, and redacts any credentials.
+
+       API keys must never reach the log file: HARP asks users to open their logs
+       and to attach them to bug reports, so anything written here should be
+       assumed to end up in a public issue. */
     String toPrintableHeaders(String headers)
     {
-        return headers.replace("\r", "\\r").replace("\n", "\\n");
+        String printableHeaders = headers.replace("\r", "\\r").replace("\n", "\\n");
+
+        static const StringArray sensitivePrefixes { "Authorization:", "Cookie:", "Set-Cookie:" };
+
+        for (const auto& prefix : sensitivePrefixes)
+        {
+            int searchFrom = 0;
+
+            for (;;)
+            {
+                int prefixStart = printableHeaders.indexOfIgnoreCase(searchFrom, prefix);
+
+                if (prefixStart < 0)
+                {
+                    break;
+                }
+
+                int valueStart = prefixStart + prefix.length();
+
+                // Header values are separated by the escaped line breaks above
+                int valueEnd = printableHeaders.indexOf(valueStart, "\\r");
+
+                if (valueEnd < 0)
+                {
+                    valueEnd = printableHeaders.indexOf(valueStart, "\\n");
+                }
+
+                if (valueEnd < 0)
+                {
+                    valueEnd = printableHeaders.length();
+                }
+
+                printableHeaders = printableHeaders.replaceSection(
+                    valueStart, valueEnd - valueStart, " <redacted>");
+
+                searchFrom = valueStart;
+            }
+        }
+
+        return printableHeaders;
     }
 
     Provider provider;
@@ -291,6 +526,8 @@ public:
 protected:
     String getCommonHeaders() const { return getAuthorizationHeader() + acceptHeader; }
     String getJSONHeaders() const { return getCommonHeaders() + contentTypeJSONHeader; }
+
+    SharedResourcePointer<StatusMessage> statusMessage;
 
 private:
     String getAuthorizationHeader() const
@@ -318,4 +555,8 @@ private:
     }
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
+
+    // Owned by the Model this client belongs to; null for clients that are not
+    // tied to a model, in which case requests are simply not abortable.
+    RequestRegistry* requestRegistry = nullptr;
 };

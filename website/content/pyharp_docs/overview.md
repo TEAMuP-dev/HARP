@@ -6,7 +6,7 @@ We can use a variety of [state-of-the-art models within HARP](/content/usage/mod
 
 Under the hood, HARP simply routes data (audio, MIDI, etc.) to Python applications for processing and renders the results in the editor. To make this work, we require (1) that these applications are built using [Gradio](https://www.gradio.app/), and (2) that these applications follow a simple set of specifications defined in the [PyHARP](https://github.com/TEAMuP-dev/pyharp) library. Crucially, PyHARP wraps a number of interactive components from Gradio (e.g. knobs, sliders, text boxes) to allow for rendering application-defined interfaces within the HARP editor.
 
-Within these constraints, developers can build a wide variety of audio and MIDI-processing applications. For instance, HARP is compatible with any Python deep learning framework because it only requires that applications consume and produce audio files, MIDI files, or structrued labels -- it places no limits on how these objects are created or modified.
+Within these constraints, developers can build a wide variety of audio and MIDI-processing applications. For instance, HARP is compatible with any Python deep learning framework because it only requires that applications consume and produce audio files, MIDI files, or structured labels -- it places no limits on how these objects are created or modified.
 
 ### Host Your Endpoint Locally or in the Cloud
 
