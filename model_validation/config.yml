@@ -103,6 +103,11 @@
 #       load_only: false       # only check availability + /controls, without
 #                              # running inference
 #       skip_common_cases: false   # opt this model out of common_test_cases
+#       quota_error_exhausts_validation_token: true
+#                              # set false when this Space calls a downstream
+#                              # Space with different credentials. Its quota
+#                              # error still fails this Space, but does not
+#                              # skip other ZeroGPU Spaces in this run
 #
 #       synthesized_inputs:    # input properties for this model's cases,
 #                              # overriding the top-level block
@@ -218,4 +223,21 @@ include_extra: []
 
 common_test_cases: []
 
-overrides: {}
+overrides:
+  # These HARP Spaces forward processing to a downstream Space authenticated
+  # with a separate TEAMuP token. A downstream quota error must fail that
+  # model alone, not skip subsequent ZeroGPU validation using HF_TOKEN.
+  teamup-tech/SoulX-Singer:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/SonicMaster:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/MelodyFlow:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/DiffRhythm2:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/OmniVoice:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/ACE-Step:
+    quota_error_exhausts_validation_token: false
+  teamup-tech/Matchering:
+    quota_error_exhausts_validation_token: false

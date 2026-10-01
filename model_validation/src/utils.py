@@ -22,6 +22,7 @@ __all__ = [
     'config_levels',
     'check_config_keys',
     'check_model_names',
+    'quota_error_exhausts_validation_token',
     'qualify',
     'qualify_keys',
     'Exclusions',
@@ -36,12 +37,34 @@ __all__ = [
 CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases",
                "synthesized_inputs", "overrides"}
 MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
-              "skip_common_cases", "synthesized_inputs", "test_cases"}
+              "skip_common_cases", "quota_error_exhausts_validation_token",
+              "synthesized_inputs", "test_cases"}
 CASE_KEYS = {"name", "process_timeout", "controls", "files",
              "synthesized_inputs", "expect", "validators"}
 
 # The settings each kind of configuration level accepts (see config_levels)
 LEVEL_KEYS = {"config": CONFIG_KEYS, "model": MODEL_KEYS, "case": CASE_KEYS}
+
+
+def quota_error_exhausts_validation_token(overrides: dict) -> bool:
+    """
+    Whether this Space's quota error belongs to the token running validation.
+
+    A HARP Space can call another Space using credentials configured inside the
+    deployment. Once that downstream error is returned through /process, the
+    harness has no reliable way to identify which account's ZeroGPU allowance
+    it describes. Such a Space sets this per-model override to false: its
+    failure is still reported, but it cannot suppress unrelated ZeroGPU tests.
+
+    Args:
+        overrides (dict): This Space's configuration overrides.
+
+    Returns:
+        exhausted (bool): Whether a matching quota error should stop the
+            remaining ZeroGPU validations.
+    """
+
+    return overrides.get("quota_error_exhausts_validation_token", True)
 
 
 def qualify(model: str, owner: str) -> str:

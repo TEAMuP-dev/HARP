@@ -20,7 +20,8 @@ from harness import (run_endpoint_tests, close_client, is_quota_exhausted,
                      CONNECT_RETRY_INTERVAL)
 from quota import is_zerogpu
 from results import ModelResult, FAIL, SKIP
-from utils import run_with_timeout, scrub, describe_exception
+from utils import (run_with_timeout, scrub, describe_exception,
+                   quota_error_exhausts_validation_token)
 
 
 __all__ = [
@@ -222,7 +223,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         overrides (dict): This space's entry from config.yml `overrides`.
         quota_exhausted (threading.Event | None): Shared flag. When set,
             ZeroGPU models are skipped, and this model sets it if its own run
-            reveals the allowance is exhausted.
+            reveals exhaustion of the validation token's allowance.
         zerogpu_limiter (threading.Semaphore | None): Caps how many ZeroGPU
             models make GPU calls at once. Held only around the endpoint
             tests, so slow restarts and connections still overlap.
@@ -373,9 +374,11 @@ def test_space(space_id: str, token: str, assets: Assets,
 
             run_endpoint_tests(client, result, assets, overrides, opts)
 
-        # If a ZeroGPU model failed because the allowance is gone, trip the
-        # guard so the remaining ZeroGPU models are skipped
+        # A proxy Space can surface quota exhaustion from credentials it keeps
+        # for a downstream Space. That response cannot identify its account,
+        # so only errors declared to use the validation token trip the guard.
         if zerogpu and quota_exhausted is not None and result.status == FAIL \
+                and quota_error_exhausts_validation_token(overrides) \
                 and is_quota_exhausted(result.error):
             quota_exhausted.set()
 
