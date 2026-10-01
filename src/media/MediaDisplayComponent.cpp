@@ -4,6 +4,8 @@
 
 #include "../utils/Interface.h"
 
+#include "../windows/tutorial/TutorialTargets.h"
+
 #include <cmath>
 
 void OptionalBannerComponent::paint(Graphics& g)
@@ -206,6 +208,9 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
 void MediaDisplayComponent::initializeButtons()
 {
+    playStopButton.setComponentID(TutorialTargets::trackPlayButton);
+    chooseFileButton.setComponentID(TutorialTargets::trackFolderButton);
+
     // Mode when a playable file is loaded
     playButtonActiveInfo =
         MultiButton::Mode { "Play-Active",       "Click to start playback.",
@@ -214,7 +219,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to play
     playButtonInactiveInfo =
         MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontaudio::Play };
     // Mode during playback
     stopButtonInfo = MultiButton::Mode { "Stop",
@@ -236,7 +241,7 @@ void MediaDisplayComponent::initializeButtons()
                                                      fontawesome::Folder };
     chooseFileButtonInactiveInfo = MultiButton::Mode { "ChooseFile-Inactive",
                                                        "Cannot choose file while processing.",
-                                                       [this] {},
+                                                       [] {},
                                                        MultiButton::DrawingMode::IconOnly,
                                                        Colours::lightgrey,
                                                        fontawesome::Folder };
@@ -254,7 +259,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to save
     saveFileButtonInactiveInfo =
         MultiButton::Mode { "Save-Inactive",    "Nothing to save.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontawesome::Save };
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
@@ -270,7 +275,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to copy
     copyFileButtonInactiveInfo =
         MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontawesome::Copy };
     copyFileButton.addMode(copyFileButtonActiveInfo);
     copyFileButton.addMode(copyFileButtonInactiveInfo);
@@ -991,7 +996,7 @@ void MediaDisplayComponent::copyFileCallback()
 
 float MediaDisplayComponent::getPixelsPerSecond()
 {
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return getMediaWidth() / static_cast<float>(visibleRange.getLength());
     }
@@ -1003,7 +1008,7 @@ float MediaDisplayComponent::getPixelsPerSecond()
 
 double MediaDisplayComponent::mediaXToTime(const float mX)
 {
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return static_cast<double>(mX / getPixelsPerSecond()) + getTimeAtOrigin();
     }
@@ -1017,7 +1022,7 @@ float MediaDisplayComponent::timeToMediaX(const double t)
 {
     double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return static_cast<float>(t_ - getTimeAtOrigin()) * getPixelsPerSecond();
     }
@@ -1032,7 +1037,7 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
     float offsetX = 0;
     float visibleStartX = 0;
 
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
         visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
@@ -1298,26 +1303,6 @@ void MediaDisplayComponent::updateCursorPosition()
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
 }
 
-Rectangle<int> MediaDisplayComponent::getChooseFileButtonBounds()
-{
-    if (auto* p = chooseFileButton.getParentComponent())
-    {
-        return getLocalArea(p, chooseFileButton.getBounds());
-    }
-
-    return chooseFileButton.getBounds();
-}
-
-Rectangle<int> MediaDisplayComponent::getPlayButtonBounds()
-{
-    if (auto* p = playStopButton.getParentComponent())
-    {
-        return getLocalArea(p, playStopButton.getBounds());
-    }
-
-    return playStopButton.getBounds();
-}
-
 void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
 {
     if (! isThumbnailTrack() && e.eventComponent == getMediaComponent()
@@ -1396,7 +1381,7 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
 }
 
-void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
+void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& /*e*/)
 {
     // TODO - mouseUp/Down (selectTrack()) is still called before this
 

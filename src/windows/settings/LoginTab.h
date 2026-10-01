@@ -1,7 +1,7 @@
 /**
  * @file LoginTab.h
  * @brief Tab with login for each API provider.
- * @author huiranyu, cwitkowitz
+ * @author cwitkowitz, huiranyu
  */
 
 #pragma once

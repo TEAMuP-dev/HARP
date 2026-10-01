@@ -1,7 +1,7 @@
 /**
  * @file ControlAreaWidget.h
  * @brief Component comprising all model controls.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, saumya-pailwan, hugofloresgarcia, xribene
  */
 
 #pragma once
