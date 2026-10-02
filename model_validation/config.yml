@@ -218,4 +218,102 @@ include_extra: []
 
 common_test_cases: []
 
-overrides: {}
+overrides:
+
+  teamup-tech/ACE-Step:
+    test_cases:
+      - name: default
+        controls:
+          "OSS Steps": null # repo should also type-validate this field(?)
+
+  teamup-tech/FxNorm-automix:
+    process_timeout: 300
+
+  teamup-tech/LarsNet:
+    synthesized_inputs:
+      audio:
+        num_channels: 2 # currently doesn't support mono
+
+  teamup-tech/Matchering: # needs distinct files
+    test_cases:
+      - name: default
+        files:
+          "Target Audio": test_data/test_input_44100hz_1ch_2s.wav # these can be any 2 distinct files
+          "Reference Audio": test_data/test_input_44100hz_1ch_5s.wav # i've used the default 2s and generated 5s
+
+  teamup-tech/MEGAMI:
+    synthesized_inputs:
+      audio:
+        duration: 15.0 # at least 11.9 seconds
+
+  teamup-tech/MERIT:
+    synthesized_inputs:
+      audio:
+        duration: 5.0 # at least 5 seconds
+
+  teamup-tech/MIDI-GPT: # at least 4 bars
+    synthesized_inputs:
+      midi:
+        num_notes: 32
+
+  teamup-tech/MuQ-MuLan: # at least 10 seconds
+    synthesized_inputs:
+      audio:
+        duration: 15.0
+
+  teamup-tech/PiCoGen: # at least 5 seconds
+    synthesized_inputs:
+      audio:
+        duration: 5.0
+
+  teamup-tech/banquet:
+    synthesized_inputs:
+      audio:
+        duration: 35 # at least 34 seconds
+
+  teamup-tech/generalizable-accompaniment-generation:
+    synthesized_inputs:
+      audio:
+        duration: 5.0 # btw 3 and 30 seconds
+
+  teamup-tech/improvnet: # default too short, dk by how much
+    synthesized_inputs:
+      midi:
+        num_notes: 32
+
+  teamup-tech/omnizart: # seems to be above 6 seconds for default mode (empirical)
+    synthesized_inputs:
+      audio:
+        duration: 15.0
+
+  teamup-tech/Vevo2:
+    test_cases:
+      - name: voice-conversion-default
+        controls:
+          "Task": "Voice/Singing Conversion"
+        files:
+          "Reference Voice": test_data/test_input_44100hz_1ch_5s.wav
+
+      - name: tts-default
+        controls:
+          "Task": "Text-to-Speech / Text-to-Singing"
+          "Text / Lyrics": "test"
+
+      - name: singing-editing-default
+        controls:
+          "Task": "Singing Editing"
+          "Text / Lyrics": "test"
+
+      - name: style-conversion-default
+        controls:
+          "Task": "Singing Style Conversion"
+          "Text / Lyrics": "test"
+        files:
+          "Reference Voice": test_data/test_input_44100hz_1ch_5s.wav
+
+      - name: melody-control-default
+        controls:
+          "Task": "Melody Control (Humming/Instrument to Singing)"
+          "Text / Lyrics": "test"
+        files:
+          "Reference Voice": test_data/test_input_44100hz_1ch_5s.wav
