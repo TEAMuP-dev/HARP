@@ -24,7 +24,8 @@ enum class DisplayMode
     Input,
     Output,
     Hybrid, // All functionality
-    Thumbnail // Reduced functionality
+    Thumbnail, // Reduced functionality
+    Preview // Media area only (for preview pane)
 };
 
 class OptionalBannerComponent : public Component
@@ -104,6 +105,7 @@ public:
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
+    bool isPreviewTrack() const { return displayMode == DisplayMode::Preview; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -166,8 +168,13 @@ public:
 
     void start();
     void stop();
+    void pause();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual bool isPaused() const { return paused; }
+
+    // Called whenever playback starts, pauses, or stops
+    std::function<void()> onPlaybackStateChanged;
 
 
     int getNumOverheadLabels();
@@ -338,6 +345,7 @@ private:
     const DisplayMode displayMode;
 
     bool isSelected = false;
+    bool paused = false;
 
     URL originalFilePath;
     int currentTempFileIdx;

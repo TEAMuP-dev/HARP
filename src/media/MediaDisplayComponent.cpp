@@ -38,24 +38,44 @@ struct TickScheme
     int minorCount;
 };
 
-TickScheme chooseTickScheme(double visibleLength)
+String formatTime(double t, double step);
+
+// Gap between a major tick and its label, and between the label and the next tick
+constexpr int labelOffset = 3;
+constexpr int labelGap = 5;
+
+/**
+ * Picks the finest tick spacing whose labels still fit between the major ticks, so
+ * that a narrow or zoomed-out axis gets fewer ticks instead of overlapping ones.
+ */
+TickScheme chooseTickScheme(const Range<double>& visibleRange,
+                            float pixelsPerSecond,
+                            const Font& labelFont)
 {
+    // Ordered from finest to coarsest
     static const TickScheme schemes[] = {
-        { 0.1, 0.02, 5 },   { 0.5, 0.1, 5 },    { 1.0, 0.25, 4 },    { 2.0, 0.5, 4 },
-        { 5.0, 1.0, 5 },    { 15.0, 5.0, 3 },   { 30.0, 10.0, 3 },   { 60.0, 15.0, 4 },
-        { 120.0, 30.0, 4 }, { 300.0, 60.0, 5 }, { 600.0, 120.0, 5 },
+        { 0.01, 0.002, 5 },   { 0.02, 0.005, 4 },   { 0.05, 0.01, 5 },   { 0.1, 0.02, 5 },
+        { 0.5, 0.1, 5 },      { 1.0, 0.25, 4 },     { 2.0, 0.5, 4 },     { 5.0, 1.0, 5 },
+        { 15.0, 5.0, 3 },     { 30.0, 10.0, 3 },    { 60.0, 15.0, 4 },   { 120.0, 30.0, 4 },
+        { 300.0, 60.0, 5 },   { 600.0, 120.0, 5 },  { 1800.0, 600.0, 3 }, { 3600.0, 900.0, 4 },
     };
 
     for (const auto& s : schemes)
     {
-        double numMajor = visibleLength / s.majorStep;
-        if (numMajor >= 2.0 && numMajor <= 15.0)
+        const double numMajor = visibleRange.getLength() / s.majorStep;
+        const double majorSpacing = s.majorStep * static_cast<double>(pixelsPerSecond);
+
+        // The last label in view is the longest, since times only grow
+        const double lastMajor = std::floor(visibleRange.getEnd() / s.majorStep) * s.majorStep;
+        const int labelWidth =
+            GlyphArrangement::getStringWidthInt(labelFont, formatTime(lastMajor, s.majorStep));
+
+        if (numMajor <= 15.0 && majorSpacing >= labelOffset + labelWidth + labelGap)
             return s;
     }
 
-    double majorStep = std::pow(10.0, std::floor(std::log10(visibleLength / 5.0)));
-    majorStep = std::max(0.01, majorStep);
-    return { majorStep, majorStep / 5.0, 5 };
+    // Nothing fits, so fall back to the fewest ticks available
+    return schemes[numElementsInArray(schemes) - 1];
 }
 
 String formatTime(double t, double step)
@@ -100,8 +120,9 @@ void TimeAxisStrip::paint(Graphics& g)
     g.setColour(Colours::darkgrey);
     g.fillRect(getLocalBounds());
 
-    const double visibleLength = visibleRange.getLength();
-    const auto scheme = chooseTickScheme(visibleLength);
+    const int labelH = jmin(13, h - 2);
+    const Font labelFont(FontOptions(static_cast<float>(labelH)));
+    const auto scheme = chooseTickScheme(visibleRange, pps, labelFont);
     const double majorStep = scheme.majorStep;
     const double minorStep = scheme.minorStep;
 
@@ -130,8 +151,7 @@ void TimeAxisStrip::paint(Graphics& g)
     // Major ticks and labels
     g.setColour(Colours::lightgrey.withAlpha(0.9f));
 
-    const int labelH = jmin(13, h - 2);
-    g.setFont(static_cast<float>(labelH));
+    g.setFont(labelFont);
 
     const double firstMajor = std::ceil(visibleStart / majorStep) * majorStep;
     for (double t = firstMajor; t <= visibleEnd && t <= totalLength; t += majorStep)
@@ -142,14 +162,15 @@ void TimeAxisStrip::paint(Graphics& g)
 
         g.drawVerticalLine(static_cast<int>(x), majorTickTop, majorTickBot);
 
-        String label = formatTime(t, majorStep);
-        g.drawText(label,
-                   static_cast<int>(x) + 3,
-                   0,
-                   jmin(90, w - static_cast<int>(x)),
-                   h,
-                   Justification::centredLeft,
-                   true);
+        const String label = formatTime(t, majorStep);
+        const int labelX = static_cast<int>(x) + labelOffset;
+        const int labelWidth = GlyphArrangement::getStringWidthInt(labelFont, label);
+
+        // Labels that would run off the edge of the axis are left out
+        if (labelX + labelWidth <= w)
+        {
+            g.drawText(label, labelX, 0, labelWidth + 1, h, Justification::centredLeft, false);
+        }
     }
 }
 
@@ -358,6 +379,12 @@ void MediaDisplayComponent::resized()
         mainFlexBox.items.add(FlexItem(headerComponent)
                                   .withHeight(trackNameLabel.getFont().getHeight())
                                   .withMargin(1));
+    }
+    else if(isPreviewTrack())
+    {
+        // No header because preview pane has its own title bar + controls
+        mainFlexBox.flexDirection = FlexBox::Direction::row;
+        headerComponent.setBounds(0, 0, 0, 0);
     }
     else
     {
@@ -621,6 +648,7 @@ void MediaDisplayComponent::setChooseFileButtonEnabled(bool enabled)
 
 void MediaDisplayComponent::resetDisplay()
 {
+    paused = false;
     clearLabels();
     resetMedia();
     resetPaths();
@@ -1240,15 +1268,24 @@ void MediaDisplayComponent::deselectTrack()
 
 void MediaDisplayComponent::start()
 {
+    paused = false;
+
     startPlaying();
 
     startTimerHz(40);
 
     playStopButton.setMode(stopButtonInfo.displayLabel);
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
 }
 
 void MediaDisplayComponent::stop()
 {
+    paused = false;
+
     stopPlaying();
 
     stopTimer();
@@ -1259,6 +1296,30 @@ void MediaDisplayComponent::stop()
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
 
     sendChangeMessage();
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
+}
+
+void MediaDisplayComponent::pause()
+{
+    stopPlaying();
+
+    stopTimer();
+
+    paused = true;
+
+    playStopButton.setMode(playButtonActiveInfo.displayLabel);
+    
+    // Preserves resume position
+    updateCursorPosition();
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
 }
 
 void MediaDisplayComponent::updateCursorPosition()
@@ -1271,7 +1332,7 @@ void MediaDisplayComponent::updateCursorPosition()
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
     float cursorPositionY = 0;
 
-    if (isPlaying() && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
+    if ((isPlaying() || paused) && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
     {
         currentPositionCursor.setVisible(hasPlaybackCursor());
     }
@@ -1335,7 +1396,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
     {
-        if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && ! isPlaying()
+        if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && (! isPlaying() || isPreviewTrack())
             && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = static_cast<float>(e.x);

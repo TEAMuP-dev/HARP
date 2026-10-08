@@ -438,11 +438,6 @@ public:
             mediaDisplays.push_back(std::move(m));
 
             resized();
-
-            if (isThumbnailWidget())
-            {
-                mediaDisplays.back()->selectTrack();
-            }
         }
     }
 
@@ -545,6 +540,12 @@ public:
             addTrackFromComponentInfo(trackInfo.get(), fromDAW);
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(filePath.getFileName());
+
+            // Tracks are only selected after they're loaded, so that listeners get a complete track
+            if (isThumbnailWidget())
+            {
+                mediaDisplays.back()->selectTrack();
+            }
         }
     }
 

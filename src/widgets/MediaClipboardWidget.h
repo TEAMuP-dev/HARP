@@ -107,7 +107,7 @@ public:
         // Add control elements to control flex
         controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
         controlsFlexBox.items.add(
-            FlexItem(buttonsComponent).withWidth(5 * (buttonWidth + marginSize)));
+            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
 
         controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
 
@@ -129,11 +129,7 @@ public:
         buttonsFlexBox.items.add(FlexItem(removeSelectionButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
-        buttonsFlexBox.items.add(FlexItem(playStopButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
+                                     .withMargin({ 0, 0, 0, marginSize }));;
         buttonsFlexBox.items.add(FlexItem(saveFileButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
@@ -172,43 +168,6 @@ public:
     {
         // TODO - is there an explicit way to check how HARP was invoked?
         trackAreaWidget.addTrackFromFilePath(filePath, fromDAW);
-    }
-
-    Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
-
-    Rectangle<int> getClipboardControlsBounds() const
-    {
-        return controlsComponent.getBounds().expanded(2);
-    }
-
-    Rectangle<int> getClipboardNameBoxBounds() const
-    {
-        return getLocalArea(&controlsComponent, selectionTextBox.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getClipboardButtonsBounds() const
-    {
-        return getLocalArea(&controlsComponent, buttonsComponent.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getAddFileButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, addFileButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getRemoveButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, removeSelectionButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getPlayButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, playStopButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getSendToDAWButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, sendToDAWButton.getBounds()).expanded(2);
     }
 
     std::function<void(int)> onResize;
@@ -463,30 +422,6 @@ private:
         removeSelectionButton.addMode(removeSelectionButtonInactiveInfo);
         buttonsComponent.addAndMakeVisible(removeSelectionButton);
 
-        // Mode when a playable track is selected (play enabled)
-        playButtonActiveInfo = MultiButton::Mode { "Play-Active",
-                                                   "Click to start playback.",
-                                                   [this] { playCallback(); },
-                                                   MultiButton::DrawingMode::IconOnly,
-                                                   Colours::limegreen,
-                                                   fontaudio::Play };
-        // Mode when there is no track selected (play disabled)
-        playButtonInactiveInfo =
-            MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                                [this] {},          MultiButton::DrawingMode::IconOnly,
-                                Colours::lightgrey, fontaudio::Play };
-        // Mode during playback (stop enabled)
-        stopButtonInfo = MultiButton::Mode { "Stop",
-                                             "Click to stop playback.",
-                                             [this] { stopCallback(); },
-                                             MultiButton::DrawingMode::IconOnly,
-                                             Colours::orangered,
-                                             fontaudio::Stop };
-        playStopButton.addMode(playButtonActiveInfo);
-        playStopButton.addMode(playButtonInactiveInfo);
-        playStopButton.addMode(stopButtonInfo);
-        buttonsComponent.addAndMakeVisible(playStopButton);
-
         // Mode when a track is selected (save file enabled)
         saveFileButtonActiveInfo =
             MultiButton::Mode { "Save-Active",
@@ -547,20 +482,6 @@ private:
     {
         MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
 
-        if (currentlySelectedDisplay)
-        {
-            if (currentlySelectedDisplay->isPlaying())
-            {
-                // Cancel playback and reset play/stop button state for select and stop events
-                stopCallback(currentlySelectedDisplay);
-            }
-            else
-            {
-                // Reset play/stop button state for select and stop events (avoid infinite messages)
-                playStopButton.setMode(playButtonActiveInfo.displayLabel);
-            }
-        }
-
         if (mediaDisplay)
         {
             if (mediaDisplay != currentlySelectedDisplay)
@@ -601,33 +522,6 @@ private:
 
             // Handle track area resizing after removing a track
             resized();
-        }
-    }
-
-    void playCallback()
-    {
-        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-
-        if (mediaDisplay)
-        {
-            mediaDisplay->start();
-
-            playStopButton.setMode(stopButtonInfo.displayLabel);
-        }
-    }
-
-    void stopCallback(MediaDisplayComponent* mediaDisplay = nullptr)
-    {
-        if (! mediaDisplay)
-        {
-            mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-        }
-
-        if (mediaDisplay)
-        {
-            mediaDisplay->stop();
-
-            playStopButton.setMode(playButtonActiveInfo.displayLabel);
         }
     }
 
@@ -714,9 +608,10 @@ private:
         //renameSelectionButton.setMode(renameSelectionButtonInactiveInfo.label);
         addFileButton.setMode(addFileButtonInfo.displayLabel);
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.displayLabel);
-        playStopButton.setMode(playButtonInactiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
         sendToDAWButton.setMode(sendToDAWButtonInactiveInfo1.displayLabel);
+        
+        previewPaneWidget.clearTrack();
 
         currentlySelectedDisplay = nullptr;
     }
@@ -728,7 +623,6 @@ private:
 
         //renameSelectionButton.setMode(renameSelectionButtonActiveInfo.label);
         removeSelectionButton.setMode(removeSelectionButtonActiveInfo.displayLabel);
-        playStopButton.setMode(playButtonActiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
 
         int nOtherDAWLinkedTracks =
@@ -746,6 +640,8 @@ private:
         {
             sendToDAWButton.setMode(sendToDAWButtonInactiveInfo2.displayLabel);
         }
+
+        previewPaneWidget.showTrack(mediaDisplay->getOriginalFilePath());
 
         currentlySelectedDisplay = mediaDisplay;
     }
@@ -778,11 +674,6 @@ private:
     MultiButton removeSelectionButton;
     MultiButton::Mode removeSelectionButtonActiveInfo;
     MultiButton::Mode removeSelectionButtonInactiveInfo;
-
-    MultiButton playStopButton;
-    MultiButton::Mode playButtonActiveInfo;
-    MultiButton::Mode playButtonInactiveInfo;
-    MultiButton::Mode stopButtonInfo;
 
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
