@@ -4,7 +4,30 @@
 
 #include "../utils/Interface.h"
 
+#include "../windows/tutorial/TutorialTargets.h"
+
 #include <cmath>
+
+void OptionalBannerComponent::paint(Graphics& g)
+{
+    const float cx = static_cast<float>(getWidth()) / 2.0f;
+    const float cy = static_cast<float>(getHeight()) / 2.0f;
+
+    g.setColour(Colour::fromRGB(90, 105, 105));
+    g.fillAll();
+
+    g.setColour(Colours::white);
+    g.setFont(12.0f);
+
+    Graphics::ScopedSaveState state(g);
+    g.addTransform(AffineTransform::rotation(-MathConstants<float>::halfPi, cx, cy));
+
+    Rectangle<float> textBounds(
+        0, 0, static_cast<float>(getHeight()), static_cast<float>(getWidth()));
+    textBounds.setCentre(cx, cy);
+
+    g.drawText("OPTIONAL", textBounds, Justification::centred, false);
+}
 
 namespace
 {
@@ -164,6 +187,8 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
     horizontalScrollBar.setAutoHide(false);
     horizontalScrollBar.addListener(this);
 
+    addAndMakeVisible(optionalBanner);
+
     timeAxisStrip = std::make_unique<TimeAxisStrip>(this);
 
     mediaAreaContainer.addAndMakeVisible(overheadPanel);
@@ -183,6 +208,9 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
 void MediaDisplayComponent::initializeButtons()
 {
+    playStopButton.setComponentID(TutorialTargets::trackPlayButton);
+    chooseFileButton.setComponentID(TutorialTargets::trackFolderButton);
+
     // Mode when a playable file is loaded
     playButtonActiveInfo =
         MultiButton::Mode { "Play-Active",       "Click to start playback.",
@@ -191,7 +219,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to play
     playButtonInactiveInfo =
         MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontaudio::Play };
     // Mode during playback
     stopButtonInfo = MultiButton::Mode { "Stop",
@@ -213,7 +241,7 @@ void MediaDisplayComponent::initializeButtons()
                                                      fontawesome::Folder };
     chooseFileButtonInactiveInfo = MultiButton::Mode { "ChooseFile-Inactive",
                                                        "Cannot choose file while processing.",
-                                                       [this] {},
+                                                       [] {},
                                                        MultiButton::DrawingMode::IconOnly,
                                                        Colours::lightgrey,
                                                        fontawesome::Folder };
@@ -231,7 +259,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to save
     saveFileButtonInactiveInfo =
         MultiButton::Mode { "Save-Inactive",    "Nothing to save.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontawesome::Save };
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
@@ -247,7 +275,7 @@ void MediaDisplayComponent::initializeButtons()
     // Mode when there is nothing to copy
     copyFileButtonInactiveInfo =
         MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
-                            [this] {},          MultiButton::DrawingMode::IconOnly,
+                            [] {},              MultiButton::DrawingMode::IconOnly,
                             Colours::lightgrey, fontawesome::Copy };
     copyFileButton.addMode(copyFileButtonActiveInfo);
     copyFileButton.addMode(copyFileButtonInactiveInfo);
@@ -335,6 +363,16 @@ void MediaDisplayComponent::resized()
     {
         // Place header beside media
         mainFlexBox.flexDirection = FlexBox::Direction::row;
+
+        if (! isRequired() && isInputTrack() && ! isThumbnailTrack())
+        {
+            mainFlexBox.items.add(FlexItem(optionalBanner).withWidth(24));
+        }
+        else
+        {
+            optionalBanner.setBounds(0, 0, 0, 0);
+        }
+
         // Fixed area for track label and buttons
         mainFlexBox.items.add(FlexItem(headerComponent).withFlex(1).withMaxWidth(40).withMargin(4));
     }
@@ -423,8 +461,10 @@ void MediaDisplayComponent::resized()
         overheadPanel.setBounds(0, 0, 0, 0);
     }
 
-    // Media component takes remaining space
-    mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1));
+    /* Media component takes the remaining space. FlexBox hands it whatever is left
+       after the fixed strips above and below, which can be nothing at all when the
+       track is very short, so a floor of zero is enforced. */
+    mediaAreaFlexBox.items.add(FlexItem(contentComponent).withFlex(1).withMinHeight(0.0f));
 
     if (timeAxisStrip != nullptr)
     {
@@ -453,6 +493,16 @@ void MediaDisplayComponent::resized()
 
     // Perform layout in media area
     mediaAreaFlexBox.performLayout(mediaAreaContainer.getLocalBounds());
+
+    // Protect against a negative height when the fixed strips exceed the container
+    for (auto* child : mediaAreaContainer.getChildren())
+    {
+        if (child->getWidth() < 0 || child->getHeight() < 0)
+        {
+            child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
+                                                         jmax(0, child->getHeight())));
+        }
+    }
 
     if (! isLabelRepositioningScheduled)
     {
@@ -857,13 +907,14 @@ void MediaDisplayComponent::saveFileCallback()
                     File chosenFile = fc.getResult();
                     if (chosenFile != File {})
                     {
-                        if (chosenFile.getFileExtension().compare("") == 0)
+                        if (chosenFile.getFileExtension().isEmpty() && ! validExtensions.isEmpty())
                         {
-                            // Add default extension in none provided
+                            // Add default extension if none provided and a specific list exists
                             chosenFile = chosenFile.withFileExtension(validExtensions[0]);
                         }
 
-                        if (validExtensions.contains(chosenFile.getFileExtension()))
+                        if (validExtensions.isEmpty()
+                            || validExtensions.contains(chosenFile.getFileExtension()))
                         {
                             //URL tempFilePath = mediaDisplay->getTempFilePath();
 
@@ -945,7 +996,7 @@ void MediaDisplayComponent::copyFileCallback()
 
 float MediaDisplayComponent::getPixelsPerSecond()
 {
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return getMediaWidth() / static_cast<float>(visibleRange.getLength());
     }
@@ -957,7 +1008,7 @@ float MediaDisplayComponent::getPixelsPerSecond()
 
 double MediaDisplayComponent::mediaXToTime(const float mX)
 {
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return static_cast<double>(mX / getPixelsPerSecond()) + getTimeAtOrigin();
     }
@@ -971,7 +1022,7 @@ float MediaDisplayComponent::timeToMediaX(const double t)
 {
     double t_ = jmin(getTotalLengthInSecs(), jmax(0.0, t));
 
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         return static_cast<float>(t_ - getTimeAtOrigin()) * getPixelsPerSecond();
     }
@@ -986,7 +1037,7 @@ float MediaDisplayComponent::mediaXToDisplayX(const float mX)
     float offsetX = 0;
     float visibleStartX = 0;
 
-    if (visibleRange.getLength())
+    if (visibleRange.getLength() > 0.0)
     {
         offsetX = static_cast<float>(getTimeAtOrigin()) * getPixelsPerSecond();
         visibleStartX = static_cast<float>(visibleRange.getStart() * getPixelsPerSecond());
@@ -1044,9 +1095,12 @@ void MediaDisplayComponent::horizontalZoom(double deltaZoom, double scrollPosT)
     if (pps <= 0.0f)
         return;
 
-    const double minVisibleSeconds = 5.0;
+    const double minVisibleSeconds = 0.1;
+
     const float minPps = static_cast<float>(mediaWidth / totalLength);
     float maxPps = static_cast<float>(mediaWidth / minVisibleSeconds);
+
+    // Media shorter than the floor can still only be shown in full
     maxPps = jmax(maxPps, minPps);
 
     float newPps = pps * (1.0f + 0.5f * static_cast<float>(deltaZoom));
@@ -1086,11 +1140,15 @@ void MediaDisplayComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWheelDetails& wheel)
 {
-    if (isThumbnailTrack())
+    /* Whatever this track does not act on has to be handed upwards explicitly:
+       Component::mouseWheelMove is what walks the event up to the panel viewport,
+       so returning without calling it swallows the scroll. The same predicate the
+       viewport consults decides that, so the two cannot disagree. */
+    if (! usesMouseWheel())
     {
         Component::mouseWheelMove(evt, wheel);
     }
-    else if (isFileLoaded())
+    else
     {
 #if (JUCE_MAC)
         bool commandMod = evt.mods.isCommandDown() || evt.mods.isCtrlDown();
@@ -1124,10 +1182,6 @@ void MediaDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhe
                 // Do nothing
             }
         }
-    }
-    else
-    {
-        // Ignore mouse wheel events
     }
 }
 
@@ -1219,13 +1273,13 @@ void MediaDisplayComponent::updateCursorPosition()
 
     if (isPlaying() && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
     {
-        currentPositionCursor.setVisible(! isThumbnailTrack());
+        currentPositionCursor.setVisible(hasPlaybackCursor());
     }
     else if (isFileLoaded() && ! isPlaying()
              && (getMediaComponent()->isMouseButtonDown(false)
                  && getLocalBounds().contains(getMouseXYRelative())))
     {
-        currentPositionCursor.setVisible(! isThumbnailTrack());
+        currentPositionCursor.setVisible(hasPlaybackCursor());
     }
     else
     {
@@ -1247,26 +1301,6 @@ void MediaDisplayComponent::updateCursorPosition()
 
     currentPositionCursor.setRectangle(
         Rectangle<float>(cursorPositionX, cursorPositionY, cursorWidth, mediaBounds.getHeight()));
-}
-
-Rectangle<int> MediaDisplayComponent::getChooseFileButtonBounds()
-{
-    if (auto* p = chooseFileButton.getParentComponent())
-    {
-        return getLocalArea(p, chooseFileButton.getBounds());
-    }
-
-    return chooseFileButton.getBounds();
-}
-
-Rectangle<int> MediaDisplayComponent::getPlayButtonBounds()
-{
-    if (auto* p = playStopButton.getParentComponent())
-    {
-        return getLocalArea(p, playStopButton.getBounds());
-    }
-
-    return playStopButton.getBounds();
 }
 
 void MediaDisplayComponent::mouseEnter(const MouseEvent& e)
@@ -1367,7 +1401,7 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
 }
 
-void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
+void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& /*e*/)
 {
     // TODO - mouseUp/Down (selectTrack()) is still called before this
 

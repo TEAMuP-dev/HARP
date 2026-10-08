@@ -170,7 +170,7 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 ### Efficiency
 - Avoid unnecessary or repeated calls to `resized()`, `repaint()`, and layout invalidation. This can significantly slow down the application.
 - Prefer event-driven updates over polling.
-- Be mindful of blocking calls on the message thread; long-running work belongs off the UI thread.
+- Be mindful of blocking calls on the message thread. Long-running work belongs off the UI thread.
 - Cache derived values where appropriate, but keep lifetimes explicit.
 
 ### Error Handling
@@ -188,6 +188,9 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - Windows are persistent, user-managed, and represent full workflows or views.
 - Be consistent about ownership and lifetime: who creates, shows, and destroys.
 - Launch behavior (modal vs non-modal) should be predictable across the app.
+- Do not rely on the button index passed to an `AlertWindow::showAsync` callback. Bind
+  each button's `onClick`, or pass explicit return values to `AlertWindow::addButton`
+  (see [AlertWindow Button Return Values](#alertwindow-button-return-values)).
 
 ### Buttons & MultiButtons
 - Buttons should do one thing and emit a clear intent (no hidden side effects).
@@ -204,54 +207,29 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 ### External Code
 - Use submodules for external dependencies that work out-of-the-box.
 - Organize external code with clear boundaries (_i.e._ `external/`) and treat it as read-only.
-- Do not modify third-party code unless absolutely necessary; wrap instead.
+- Do not modify third-party code unless absolutely necessary. Wrap it instead.
 - Only include what is needed in build targets—avoid leaking dependencies globally.
 
-<!-- TODOs -->
+## Known JUCE Behaviors
 
-## TODOs
+### AlertWindow Button Return Values
 
-### Upgrading JUCE
+JUCE assigns the return values for `MessageBoxOptions` buttons in an order that does not
+match the order in which they were added. `LookAndFeel_V2::createAlertWindow` (which
+`LookAndFeel_V4` delegates to) maps three buttons to `1`, `2`, `0` and two buttons to
+`1`, `0`, so the last button added is always `0`.
 
-If and when we decide to upgrade to JUCE v8, we need to be aware of the button ordering issue affecting the `alertCallback` lambda function of `ModelTab::openErrorPopup`.
-```cpp
-auto alertCallback = [this, ..., errorPopup](int choice)
-{
-    enum Choice
-    {
-        Choice1,
-        Choice2,
-        Choice3
-    };
+This is still the behavior as of JUCE 8.0.12, contrary to the expectation in
+[this forum thread](https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2).
 
-    /*
-    TODO - The button indices assigned by MessageBoxOptions do not follow the order in which
-    they were added. This should be fixed in JUCE v8. The following is a temporary workaround.
+No HARP code depends on that mapping any more, and new code should avoid it:
 
-    See https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
+- `ModelTab::openErrorPopup` constructs its own `AlertWindow` and assigns each button's
+  `onClick` via `AlertWindow::getButton`, so the return values are never consulted.
+- `Main.cpp` and `MediaClipboardWidget` construct their `AlertWindow` directly and pass
+  explicit return values to `AlertWindow::addButton`.
 
-    When this is fixed, errorPopup can be removed from the argument list.
-    */
-    {
-        std::map<int, int> observedButtonIndicesMap = {};
-
-        if (errorPopup.getNumButtons() == 3)
-        {
-            observedButtonIndicesMap.insert({ 1, Choice::Choice1 });
-        }
-
-        observedButtonIndicesMap.insert(
-            { errorPopup.getNumButtons() - 1, Choice::Choice2 });
-
-        observedButtonIndicesMap.insert({ 0, Choice::Choice3 });
-
-        choice = observedButtonIndicesMap[choice];
-    }
-
-    ...
-}
-```
-
-Note: upgrading JUCE is likely to be a breaking change for many more reasons. It may not be simple or quick.
+Prefer one of those two approaches over reading the index passed to an
+`AlertWindow::showAsync` callback.
 
 ---

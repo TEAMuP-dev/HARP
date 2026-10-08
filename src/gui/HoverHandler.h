@@ -1,7 +1,7 @@
 /**
  * @file HoverHandler.h
  * @brief Attach custom event handling functionality to an arbitrary component.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

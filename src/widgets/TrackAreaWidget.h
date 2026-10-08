@@ -1,7 +1,7 @@
 /**
  * @file TrackAreaWidget.h
  * @brief Component that displays a group of tracks in the GUI.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, NatalieElizabeth, xribene
  */
 
 #pragma once
@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../media/AudioDisplayComponent.h"
+#include "../media/FileDisplayComponent.h"
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
 
@@ -132,6 +133,63 @@ public:
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
+    /** Tracks that expand to fill the space given to them. */
+    int getNumFlexibleTracks() const
+    {
+        int count = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            if (m->getFixedHeight() <= 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /** Height claimed by tracks with a fixed height, margins included. */
+    int getFixedTracksHeight() const
+    {
+        int total = 0;
+
+        for (const auto& m : mediaDisplays)
+        {
+            const int fixed = m->getFixedHeight();
+
+            if (fixed > 0)
+            {
+                total += fixed + 2 * static_cast<int>(marginSize);
+            }
+        }
+
+        return total;
+    }
+
+    /**
+     * Height needed to show a number of tracks at their minimum size.
+     *
+     * The margin applied to each track lives here, so the calculation does too:
+     * a caller reserving space with its own margin will come up short, by more
+     * for every additional track.
+     */
+    static int getRequiredHeightForTracks(int numTracks)
+    {
+        if (numTracks <= 0)
+        {
+            return 0;
+        }
+
+        return numTracks
+               * (MediaDisplayComponent::minimumUsefulHeight + 2 * static_cast<int>(marginSize));
+    }
+
+    static_assert(MediaDisplayComponent::minimumUsefulHeight
+                      > MediaDisplayComponent::fixedChromeHeight,
+                  "A track must be taller than its fixed strips, or the media content is "
+                  "laid out with a negative height.");
+
     void resized() override
     {
         FlexBox mainBox;
@@ -166,7 +224,10 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                            gap = FlexItem(ghostTrack)
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     else
                     {
@@ -174,20 +235,29 @@ public:
                         if (fixedTrackHeight)
                             gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                         else
-                            gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                            gap = FlexItem()
+                                      .withFlex(1)
+                                      .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                      .withMargin(marginSize);
                     }
                     mainBox.items.add(gap);
                 }
 
                 FlexItem i = FlexItem(*m);
 
+                int fixedH = m->getFixedHeight();
+
                 if (fixedTrackHeight)
                 {
                     i = i.withHeight(fixedTrackHeight);
                 }
+                else if (fixedH > 0)
+                {
+                    i = i.withHeight(fixedH).withFlex(0);
+                }
                 else
                 {
-                    i = i.withFlex(1).withMinHeight(50);
+                    i = i.withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight);
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
@@ -205,7 +275,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem(ghostTrack).withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem(ghostTrack).withFlex(1).withMinHeight(50).withMargin(marginSize);
+                        gap = FlexItem(ghostTrack)
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 else
                 {
@@ -213,7 +286,10 @@ public:
                     if (fixedTrackHeight)
                         gap = FlexItem().withHeight(fixedTrackHeight).withMargin(marginSize);
                     else
-                        gap = FlexItem().withFlex(1).withMinHeight(50).withMargin(marginSize);
+                        gap = FlexItem()
+                                  .withFlex(1)
+                                  .withMinHeight(MediaDisplayComponent::minimumUsefulHeight)
+                                  .withMargin(marginSize);
                 }
                 mainBox.items.add(gap);
             }
@@ -268,34 +344,6 @@ public:
         }
 
         return nullptr;
-    }
-
-    Rectangle<int> getFirstTrackFolderButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getChooseFileButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
-    }
-
-    Rectangle<int> getFirstTrackPlayButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getPlayButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
     }
 
     std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()
@@ -398,6 +446,25 @@ public:
         }
     }
 
+    void addFileOutputFromComponentInfo(FileComponentInfo* fileInfo)
+    {
+        std::string label = fileInfo->label.empty() ? "File Output" : fileInfo->label;
+
+        auto m = std::make_unique<FileDisplayComponent>(String(label), false, false, displayMode);
+
+        m->setTrackID(fileInfo->id);
+        m->setInstanceFileTypes(fileInfo->fileTypes);
+
+        if (! fileInfo->info.empty())
+            m->setMediaInstructions(fileInfo->info);
+
+        m->addChangeListener(this);
+        addAndMakeVisible(m.get());
+        mediaDisplays.push_back(std::move(m));
+
+        resized();
+    }
+
     void updateTracks(const ModelComponentInfoList& trackComponents)
     {
         resetState();
@@ -408,9 +475,13 @@ public:
             {
                 addTrackFromComponentInfo(trackInfo);
             }
+            else if (auto* fileInfo = dynamic_cast<FileComponentInfo*>(info.get()))
+            {
+                addFileOutputFromComponentInfo(fileInfo);
+            }
             else
             {
-                // Invalid input track
+                // Invalid track component
                 jassertfalse;
             }
         }
@@ -699,7 +770,7 @@ private:
     const DisplayMode displayMode;
     const int fixedTrackHeight = 0;
 
-    const float marginSize = 4;
+    static constexpr float marginSize = 4;
     int fixedTotalWidth = 0;
     int minTotalHeight = 0;
 

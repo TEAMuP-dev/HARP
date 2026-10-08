@@ -4,16 +4,16 @@ To get the hang of building PyHARP applications, we'll deploy a state-of-the-art
 
 ### TIGER: a Powerful and Lightweight Speech Separation Model
 
-DAW users such as video editors and podcasters often work with noisy speech recordings captured in less-than-ideal conditions, and "cleaning up" these recordings can be difficult and time-intensive. Luckily, there are a number of cutting-edge deep learning models capable of automating this clean-up process by separating a speech signal from any background sounds in a recording, including environment noise and even other speakers. In this tutorial, we'll look at [TIGER](https://arxiv.org/abs/2410.01469), a lightweight speech separation model capable of running efficiently on a laptop CPU. This means that you won't need a GPU for this tutorial -- just working HARP and PyHARP installations!
+DAW users such as video editors and podcasters often work with noisy speech recordings captured in less-than-ideal conditions, and "cleaning up" these recordings can be difficult and time-intensive. Luckily, there are a number of cutting-edge deep learning models capable of automating this cleanup process by separating a speech signal from any background sounds in a recording, including environment noise and even other speakers. In this tutorial, we'll look at [TIGER](https://arxiv.org/abs/2410.01469), a lightweight speech separation model capable of running efficiently on a laptop CPU. This means that you won't need a GPU for this tutorial -- just working HARP and PyHARP installations!
 
-To get started, we'll install [the code](https://github.com/JusperLee/TIGER) needed to run TIGER:
+To get started, please set the Python version to `>=3.10, <=3.12` and install PyHARP. Then, we'll install [the code](https://github.com/JusperLee/TIGER) needed to run TIGER:
 
 ```
 git clone https://github.com/JusperLee/TIGER.git
 cd TIGER
 ```
 
-In the `requirements.txt`, remove `triton==3.1.0` to avoid dependency issues. Then pip install:
+In the `requirements.txt`, remove `triton==3.1.0` and add `typer==0.16.1` to avoid dependency issues. Then pip install:
 
 ```
 pip install -r requirements.txt

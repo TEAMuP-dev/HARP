@@ -1,0 +1,57 @@
+name: Runtime error report
+description: Report a runtime/model/space error from HARP
+title: "HARP runtime error report"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        HARP fills in the error, endpoint, and environment fields for you when
+        this form is opened from its error popup. Please add what you were doing
+        and how to reproduce it.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: The error reported by HARP.
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint
+      description: The model/space endpoint involved, if any.
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: User notes
+      description: What were you doing when this happened?
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: HARP version, local time, and log file location.
+      render: markdown
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      value: |
+        1. 
+        2. 
+        3. 
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior

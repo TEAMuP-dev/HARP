@@ -246,12 +246,14 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
             // Do nothing
         }
     }
+    else if (getTotalLengthInSecs() > 0.0)
+    {
+        MediaDisplayComponent::mouseWheelMove(evt, wheel);
+    }
     else
     {
-        if (getTotalLengthInSecs() > 0.0)
-        {
-            MediaDisplayComponent::mouseWheelMove(evt, wheel);
-        }
+        // No timeline to move along, so let the panel scroll instead
+        Component::mouseWheelMove(evt, wheel);
     }
 }
 

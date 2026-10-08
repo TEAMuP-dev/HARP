@@ -1,6 +1,6 @@
 # The first line of any CMake project should be a call to `cmake_minimum_required`, which checks
 # that the installed CMake will be able to understand the following CMakeLists, and ensures that
-# CMake's behaviour is compatible with the named version. This is a standard CMake command, so more
+# CMake's behavior is compatible with the named version. This is a standard CMake command, so more
 # information can be found in the CMake docs.
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "HARP")
@@ -69,17 +69,24 @@ target_sources(${PROJECT_NAME}
         src/Main.cpp
         src/Application.cpp
         src/MainComponent.cpp
+        src/HomeTab.h
+        src/ModelTabContainer.h
         src/ModelTab.h
         src/Model.h
 
         src/windows/AboutWindow.h
-        src/windows/WelcomeWindow.h
+        src/windows/CustomPathWindow.h
+
+        src/windows/tutorial/TutorialTargets.h
+        src/windows/tutorial/TutorialOverlay.h
+        src/windows/tutorial/TutorialWindow.h
+
         src/windows/settings/SettingsWindow.h
         src/windows/settings/GeneralSettingsTab.cpp
         src/windows/settings/LoginTab.cpp
 
-        src/widgets/ModelSelectionWidget.h
         src/widgets/ModelInfoWidget.h
+        src/widgets/ModelStyle.h
         src/widgets/ControlAreaWidget.h
         src/widgets/TrackAreaWidget.h
         src/widgets/StatusAreaWidget.h
@@ -88,15 +95,19 @@ target_sources(${PROJECT_NAME}
         src/gui/MultiButton.cpp
         src/gui/HoverableLabel.h
         src/gui/TextBoxWithLabel.h
+        src/gui/NumberBoxWithLabel.h
         src/gui/SliderWithLabel.h
         src/gui/ComboBoxWithLabel.h
+        src/gui/MultiSelectWithLabel.h
         src/gui/HoverHandler.h
         src/gui/ControlComponent.h
         src/gui/ToggleWithLabel.h
+        src/gui/FileChooserWithLabel.h
 
         src/media/MediaDisplayComponent.cpp
         src/media/AudioDisplayComponent.cpp
         src/media/MidiDisplayComponent.cpp
+        src/media/FileDisplayComponent.cpp
         src/media/OutputLabelComponent.cpp
 
         src/media/pianoroll/KeyboardComponent.cpp
@@ -106,11 +117,14 @@ target_sources(${PROJECT_NAME}
 
         src/clients/Client.h
         src/clients/GradioClient.h
-        src/clients/GradioClient.h
+        src/clients/providers/stability/StabilityClient.h
 
         src/utils/Logging.h
+        src/utils/Messages.h
         src/utils/Settings.h
         src/utils/Interface.h
+        src/utils/ModelCatalog.h
+        src/utils/ModelTags.h
         src/utils/Controls.h
         src/utils/Labels.h
         src/utils/Clients.h
@@ -177,6 +191,14 @@ juce_add_binary_data(stability_controls
         ${CMAKE_SOURCE_DIR}/src/clients/providers/stability/models/audio-to-audio.json
 )
 
+# The model taxonomy is defined once, in pyharp, where models declare their tags
+juce_add_binary_data(model_taxonomy
+    HEADER_NAME TaxonomyData.h
+    NAMESPACE TaxonomyData
+    SOURCES
+        ${CMAKE_SOURCE_DIR}/pyharp/pyharp/taxonomy.json
+)
+
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_gui_extra` module. Inter-module
 # dependencies are resolved automatically, so `juce_core`, `juce_events` and so on will also be
@@ -198,6 +220,7 @@ target_link_libraries(${PROJECT_NAME}
         juce::juce_gui_basics
         juce::juce_gui_extra
         stability_controls
+        model_taxonomy
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

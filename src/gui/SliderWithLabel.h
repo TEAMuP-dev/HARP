@@ -1,7 +1,7 @@
 /**
  * @file SliderWithLabel.h
  * @brief Custom slider component with label.
- * @author xribene
+ * @author cwitkowitz, xribene, saumya-pailwan
  */
 
 #pragma once
@@ -34,6 +34,10 @@ public:
         slider.setBounds(sliderArea);
     }
 
+    int getPreferredWidth() const override { return preferredSliderWidth; }
+
+    int getPreferredHeight() const override { return preferredSliderHeight; }
+
     int getMinimumRequiredWidth() const override
     {
         const int labelWidth = getLabelWidth(label);
@@ -43,6 +47,9 @@ public:
     Slider& getSlider() { return slider; }
 
 private:
+    static constexpr int preferredSliderWidth = 108;
+    static constexpr int preferredSliderHeight = 108;
+
     static constexpr int minSliderBody = 60;
 
     Label label;

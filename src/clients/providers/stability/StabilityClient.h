@@ -1,7 +1,7 @@
 /**
  * @file StabilityClient.h
  * @brief Client specifics for Stability AI (multipart requests).
- * @author xribene, huiranyu, lindseydeng, cwitkowitz
+ * @author cwitkowitz, xribene, huiranyu, lindseydeng
  */
 
 #pragma once
@@ -78,6 +78,12 @@ public:
         return isValidTextToAudioPath(modelPath) || isValidAudioToAudioPath(modelPath);
     }
 
+    // Every model this provider offers, each with built-in controls
+    static StringArray getModelPaths()
+    {
+        return { "stability/text-to-audio", "stability/audio-to-audio" };
+    }
+
     String inferHostSlashModel(String modelPath) override
     {
         String hostSlashModel;
@@ -145,7 +151,7 @@ public:
         return documentationPath;
     }
 
-    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls)
+    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
         const char* jsonData;
         int jsonDataSize = 0;
@@ -211,7 +217,7 @@ public:
     OpResult process(String modelPath,
                      String& payloadJSON,
                      std::vector<File>& outputFiles,
-                     LabelList& labels)
+                     LabelList& labels) override
     {
         DynamicObject::Ptr dataDict;
 
@@ -396,7 +402,7 @@ private:
                            .withNumRedirectsToFollow(5)
                            .withHttpRequestCmd("POST");
 
-        std::unique_ptr<InputStream> stream(endpoint.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(endpoint, options));
 
         if (stream == nullptr)
         {
@@ -416,6 +422,15 @@ private:
             {
                 return OpResult::fail(
                     ClientError { ClientError::Type::InsufficientPermissions, "", "Stability AI" });
+            }
+            else if (statusCode == 402)
+            {
+                return OpResult::fail(
+                    HttpError { HttpError::Type::BadStatusCode,
+                                HttpError::Request::POST,
+                                errorPath,
+                                statusCode,
+                                "Stability AI reported insufficient usage credits." });
             }
             // TODO - could potentially identify other errors (e.g., copyrighted material)
             else

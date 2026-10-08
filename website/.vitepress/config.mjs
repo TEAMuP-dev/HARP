@@ -28,7 +28,7 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/content/intro' },
-      // { text: 'API', link: 'https://harp-plugin.netlify.app/doxygen-docs/html/index.html'},
+      // { text: 'API', link: 'https://harp3.netlify.app/doxygen-docs/html/index.html'},
     ],
 
     footer: {

@@ -1,10 +1,12 @@
 /**
  * @file ModelTab.h
  * @brief Reusable component containing HARP GUI elements and state for a single model.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, saumya-pailwan, VedMistry42, xribene, hugofloresgarcia
  */
 
 #pragma once
+
+#include <cmath>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -12,115 +14,112 @@
 
 #include "widgets/ControlAreaWidget.h"
 #include "widgets/ModelInfoWidget.h"
-#include "widgets/ModelSelectionWidget.h"
 #include "widgets/TrackAreaWidget.h"
 
 #include "utils/Errors.h"
 #include "utils/Logging.h"
-#include "utils/Tutorial.h"
+#include "utils/ModelCatalog.h"
+#include "utils/Settings.h"
+
+#include "windows/tutorial/TutorialTargets.h"
 
 using namespace juce;
 
-class ModelTab : public Component, private ChangeListener, public ChangeBroadcaster
+/**
+ * Sends a change message once a model has loaded, and once the error from a failed load
+ * has been dismissed. A tab whose first load failed is then left without a model.
+ */
+class ModelTab : public Component, public ChangeBroadcaster
 {
 public:
     ModelTab()
     {
-        modelSelectionWidget.addChangeListener(this);
-
-        addAndMakeVisible(modelSelectionWidget);
         addAndMakeVisible(modelInfoWidget);
         addAndMakeVisible(controlAreaWidget);
-
-        inputTracksLabel.setJustificationType(Justification::centred);
-        inputTracksLabel.setFont(Font(20.0f, Font::bold));
 
         addAndMakeVisible(inputTracksLabel);
         addAndMakeVisible(inputTrackAreaWidget);
 
         initializeProcessCancelButton();
 
-        outputTracksLabel.setJustificationType(Justification::centred);
-        outputTracksLabel.setFont(Font(20.0f, Font::bold));
-
         addAndMakeVisible(outputTracksLabel);
         addAndMakeVisible(outputTrackAreaWidget);
+
+        controlAreaWidget.setComponentID(TutorialTargets::controls);
+        inputTrackAreaWidget.setComponentID(TutorialTargets::inputTracks);
+        outputTrackAreaWidget.setComponentID(TutorialTargets::outputTracks);
+        processCancelButton.setComponentID(TutorialTargets::processButton);
     }
 
-    ~ModelTab() { modelSelectionWidget.removeChangeListener(this); }
-
-    // Accessor methods for WelcomeWindow tutorial
     std::shared_ptr<Model> getModel() const { return model; }
-    String getLoadedPath() const { return model->getLoadedPath(); }
 
-    void loadDefaultModel()
+    // Loads a model in the background, reporting the outcome with a change message
+    void loadModel(const String& modelPath)
     {
-        modelSelectionWidget.loadModelBypass(TutorialConstants::fallbackModelPath);
+        loading = true;
+
+        // Disable processing until model is loaded
+        processCancelButton.setEnabled(false);
+
+        const String pathToLoad = canonicalizeModelPath(modelPath);
+
+        DBG_AND_LOG("ModelTab::loadModel: Attempting to load path \"" << pathToLoad << "\".");
+
+        SafePointer<ModelTab> safeThis(this);
+
+        loadingThreadPool.addJob(
+            [this, safeThis, pathToLoad]
+            {
+                OpResult result = model->load(pathToLoad);
+
+                // Perform updates on message (GUI) thread
+                MessageManager::callAsync(
+                    [safeThis, result, pathToLoad]
+                    {
+                        if (safeThis != nullptr)
+                            safeThis->finishLoading(result, pathToLoad);
+                    });
+            });
     }
 
-    // Bounds accessors for tutorial steps
-    Rectangle<int> getModelSelectBounds() const
-    {
-        return modelSelectionWidget.getBounds().expanded(2, 2);
-    }
-
-    Rectangle<int> getControlsBounds() const
-    {
-        auto bounds = controlAreaWidget.getBounds();
-
-        if (bounds.getWidth() > 0 && bounds.getHeight() > 0)
-            return bounds.expanded(2, 2);
-
-        return {};
-    }
-
-    Rectangle<int> getInputFolderBounds()
-    {
-        auto bounds = inputTrackAreaWidget.getFirstTrackFolderButtonBounds();
-        return getLocalArea(&inputTrackAreaWidget, bounds);
-    }
-
-    Rectangle<int> getInputPlayBounds()
-    {
-        auto bounds = inputTrackAreaWidget.getFirstTrackPlayButtonBounds();
-        return getLocalArea(&inputTrackAreaWidget, bounds);
-    }
-
-    Rectangle<int> getInputTrackBounds() const { return inputTrackAreaWidget.getBounds(); }
-
-    Rectangle<int> getProcessButtonBounds() const { return processCancelButton.getBounds(); }
-
-    Rectangle<int> getTracksBounds() const
-    {
-        auto bounds = inputTrackAreaWidget.getBounds();
-        if (outputTrackAreaWidget.isVisible())
-            bounds = bounds.getUnion(outputTrackAreaWidget.getBounds());
-
-        if (inputTracksLabel.isVisible())
-            bounds = bounds.getUnion(inputTracksLabel.getBounds());
-        if (outputTracksLabel.isVisible())
-            bounds = bounds.getUnion(outputTracksLabel.getBounds());
-
-        return bounds.expanded(2, 2);
-    }
+    // True from the moment a load is requested until its outcome has been reported
+    bool isLoading() const { return loading; }
 
     bool isModelLoaded() { return model->isLoaded(); }
+
+    // True while a model load or process request is still queued or running on
+    // one of this tab's thread pools. Used to defer destruction of the tab: if
+    // its ThreadPool is destroyed while a worker is blocked in a network call,
+    // JUCE force-kills the worker thread, which can corrupt the shared
+    // networking subsystem and hang all future requests.
+    bool hasPendingRequests() const
+    {
+        return loadingThreadPool.getNumJobs() > 0 || processingThreadPool.getNumJobs() > 0;
+    }
+
+    // Called once this tab has left the UI but cannot be destroyed yet because a
+    // request is still in flight. Aborts the connection locally so that the
+    // request settles within moments instead of whenever the server or the
+    // request timeout gets around to it - which may be long after the app has
+    // started shutting down, at which point delivering the result crashes. Any
+    // result that does still arrive is dropped, since the user closed this tab.
+    void abandon()
+    {
+        abandoned = true;
+
+        // Invalidate any in-flight jobs
+        ++currentProcessID;
+
+        model->abortActiveRequests();
+    }
 
     void resized() override
     {
         FlexBox tabArea;
         tabArea.flexDirection = FlexBox::Direction::column;
 
-        const int width = getWidth();
-
-        /* Model Selection */
-
-        tabArea.items.add(FlexItem(modelSelectionWidget)
-                              .withHeight(modelSelectionRowHeight)
-                              .withMinHeight(modelSelectionRowHeight)
-                              .withMaxHeight(modelSelectionRowHeight)
-                              .withFlex(0)
-                              .withMargin(marginSize));
+        const auto contentArea = getLocalBounds().reduced(pagePadding);
+        const int width = contentArea.getWidth();
 
         /* Model Info */
 
@@ -147,8 +146,9 @@ public:
             controlAreaWidget.setBounds(0, 0, 0, 0);
         }
 
-        const float totalTracks =
-            inputTrackAreaWidget.getNumTracks() + outputTrackAreaWidget.getNumTracks();
+        // Weighting is by flexible tracks, so the total has to be of those too
+        const float totalTracks = (float) (inputTrackAreaWidget.getNumFlexibleTracks()
+                                           + outputTrackAreaWidget.getNumFlexibleTracks());
 
         /* Input Tracks Area Widget */
 
@@ -189,16 +189,19 @@ public:
                         outputTrackAreaWidget.getNumTracks(),
                         totalTracks);
 
-        tabArea.performLayout(getLocalBounds());
+        tabArea.performLayout(contentArea);
+
+        positionErrorPopup();
     }
 
     int getMinimumRequiredControlWidth() { return controlAreaWidget.getMinimumRequiredWidth(); }
 
     int getMinimumRequiredHeightForWidth(int width)
     {
-        int height = 0;
+        width -= 2 * pagePadding;
 
-        height += modelSelectionRowHeight + 2 * marginSize;
+        int height = 2 * pagePadding;
+
         height += modelInfoWidget.getPreferredHeightForWidth(width) + 2 * marginSize;
 
         if (controlAreaWidget.getNumControls() > 0)
@@ -226,24 +229,6 @@ public:
         return height;
     }
 
-    void resetState()
-    {
-        model = std::make_shared<Model>();
-
-        modelSelectionWidget.resetState();
-        modelInfoWidget.resetState();
-        controlAreaWidget.resetState();
-        inputTrackAreaWidget.resetState();
-        outputTrackAreaWidget.resetState();
-
-        processCancelButton.setMode(processButtonInfo.displayLabel);
-        processCancelButton.setEnabled(false);
-
-        currentProcessID = 0;
-
-        resized();
-    }
-
 private:
     void initializeProcessCancelButton()
     {
@@ -266,14 +251,6 @@ private:
         addAndMakeVisible(processCancelButton);
     }
 
-    void changeListenerCallback(ChangeBroadcaster* source)
-    {
-        if (source == &modelSelectionWidget)
-        {
-            loadModelCallback();
-        }
-    }
-
     int getControlAreaRequiredHeightForTabWidth(int tabWidth) const
     {
         return jmax(minControlAreaHeight, controlAreaWidget.getRequiredHeightForWidth(tabWidth));
@@ -286,13 +263,12 @@ private:
             return 0;
         }
 
-        const int perTrackWithMargin = minVisibleTrackHeight + 2 * marginSize;
-
-        return numTracks * perTrackWithMargin;
+        // The track area applies its own margins, so it owns this calculation
+        return TrackAreaWidget::getRequiredHeightForTracks(numTracks);
     }
 
     void addTrackSection(FlexBox& box,
-                         Label& label,
+                         Component& label,
                          Component& trackArea,
                          int numTracks,
                          float totalTracks) const
@@ -306,9 +282,18 @@ private:
                               .withFlex(0)
                               .withMargin(marginSize));
 
-            float flex = 4.0f * (numTracks / totalTracks);
+            /* Weight by the tracks that actually stretch. Counting a fixed-height
+               track (a generic file picker) as a full share of flexible space gives
+               its section too much, so the flexible tracks beside it end up taller
+               than those in the other section. */
+            auto* area = dynamic_cast<const TrackAreaWidget*>(&trackArea);
 
-            int minHeight = getTrackAreaMinimumHeight(numTracks);
+            const int flexibleTracks = area != nullptr ? area->getNumFlexibleTracks() : numTracks;
+            const int fixedHeight = area != nullptr ? area->getFixedTracksHeight() : 0;
+
+            float flex = totalTracks > 0.0f ? 4.0f * ((float) flexibleTracks / totalTracks) : 0.0f;
+
+            int minHeight = getTrackAreaMinimumHeight(flexibleTracks) + fixedHeight;
 
             box.items.add(FlexItem(trackArea)
                               .withFlex(flex)
@@ -324,138 +309,228 @@ private:
 
     void openErrorPopup(const Error error, std::function<void()> onExit = {})
     {
-        MessageBoxOptions errorPopup =
-            MessageBoxOptions()
-                .withIconType(AlertWindow::WarningIcon)
-                .withTitle("Error") // TODO - Name of error family would be nice here
-                // error ? toUserMessage(*error) : "An unknown error occurred."
-                .withMessage(toUserMessage(error));
-
         std::optional<String> openablePath = getOpenablePath(error);
+        String errorMessage = toUserMessage(error);
+
+        DBG_AND_LOG("ModelTab::openErrorPopup: " + toLogString(error));
+
+        // Determine whether this error warrants a GitHub bug report.
+        // Quota errors, invalid paths, and expected HTTP failures are user-actionable
+        // and do not need a report. Only unexpected runtime and parse errors do.
+        bool isReportableError = false;
+        if (const auto* gradioErr = std::get_if<GradioError>(&error))
+            isReportableError = (gradioErr->type == GradioError::Type::RuntimeError);
+        else if (std::get_if<JsonError>(&error) || std::get_if<ControlError>(&error))
+            isReportableError = true;
+
+        // If a popup is being replaced, its pending cleanup must still run so the
+        // widgets it was responsible for re-enabling do not stay disabled
+        dismissErrorPopup();
+
+        errorPopupWindow = std::make_unique<BottomButtonAlertWindow>(
+            "Error", errorMessage, AlertWindow::WarningIcon);
+        centredAlertLF.messageText = errorMessage;
+        errorPopupWindow->setLookAndFeel(&centredAlertLF);
+        errorPopupOnExit = std::move(onExit);
+
+        auto addPopupButton = [this](const String& buttonText, std::function<void()> callback)
+        {
+            errorPopupWindow->addButton(buttonText, 0);
+
+            if (auto* button = errorPopupWindow->getButton(buttonText))
+                button->onClick = std::move(callback);
+        };
 
         if (openablePath.has_value())
         {
-            errorPopup = errorPopup.withButton("Open URL");
+            addPopupButton("Open URL",
+                           [openablePath] { URL(*openablePath).launchInDefaultBrowser(); });
         }
 
-        errorPopup = errorPopup.withButton("Open Logs").withButton("Ok");
+        addPopupButton("Open Logs", [] { HARPLogger::getInstance()->getLogFile().revealToUser(); });
 
-        auto alertCallback = [this, error, openablePath, onExit, errorPopup](int choice)
+        if (isReportableError)
         {
-            DBG_AND_LOG("ModelTab::loadModelCallback::alertCallback: Chose button index: " << choice
-                                                                                           << ".");
+            addPopupButton("Report",
+                           [this, error, errorMessage]
+                           {
+                               // Open GitHub issue but keep the popup open
+                               openGitHubIssue(error, errorMessage);
+                           });
+        }
 
-            enum Choice
-            {
-                OpenURL,
-                OpenLogs,
-                OK
-            };
+        addPopupButton("Ok", [this] { dismissErrorPopup(); });
 
-            /*
-            TODO - The button indices assigned by MessageBoxOptions do not follow the order in which
-            they were added. This should be fixed in JUCE v8. The following is a temporary workaround.
+        addAndMakeVisible(*errorPopupWindow);
+        errorPopupWindow->setAlwaysOnTop(true);
 
-            See https://forum.juce.com/t/wrong-callback-value-for-alertwindow-showokcancelbox/55671/2
-
-            When this is fixed, errorPopup can be removed from the argument list.
-            */
-            {
-                std::map<int, int> observedButtonIndicesMap = {};
-
-                if (errorPopup.getNumButtons() == 3)
-                {
-                    observedButtonIndicesMap.insert({ 1, Choice::OpenURL });
-                }
-
-                observedButtonIndicesMap.insert(
-                    { errorPopup.getNumButtons() - 1, Choice::OpenLogs });
-
-                observedButtonIndicesMap.insert({ 0, Choice::OK });
-
-                choice = observedButtonIndicesMap[choice];
-            }
-
-            if (choice == Choice::OpenURL)
-            {
-                URL(*openablePath).launchInDefaultBrowser();
-            }
-            else if (choice == Choice::OpenLogs)
-            {
-                HARPLogger::getInstance()->getLogFile().revealToUser();
-            }
-            else
-            {
-                // Nothing to do
-            }
-
-            if (onExit)
-            {
-                // Perform optional state cleanup
-                onExit();
-            }
-        };
-
-        AlertWindow::showAsync(errorPopup, alertCallback);
+        positionErrorPopup();
+        errorPopupWindow->toFront(true);
     }
 
-    void loadModelCallback()
+    void dismissErrorPopup()
     {
-        modelSelectionWidget.setDisabled();
+        if (errorPopupOnExit)
+        {
+            // Clear before invoking in case the callback opens another popup
+            auto pendingOnExit = std::move(errorPopupOnExit);
+            errorPopupOnExit = {};
+            pendingOnExit();
+        }
 
-        // Disable processing until model is loaded
-        processCancelButton.setEnabled(false);
+        if (errorPopupWindow != nullptr)
+        {
+            removeChildComponent(errorPopupWindow.get());
+            errorPopupWindow->setVisible(false);
+            errorPopupWindow->setLookAndFeel(nullptr);
 
-        // Obtain currently selected path
-        String selectedPath = modelSelectionWidget.getCurrentlySelectedPath();
+            /* Defer destruction: this can be reached from one of the popup's own
+               button callbacks, and a Button must not be destroyed from inside
+               its own onClick. The lambda holds the last reference and releases
+               it on the message thread. */
+            std::shared_ptr<BottomButtonAlertWindow> oldPopup = std::move(errorPopupWindow);
+            MessageManager::callAsync([oldPopup] {});
+        }
+    }
 
-        DBG_AND_LOG("ModelTab::loadModelCallback: Attempting to load path \"" << selectedPath
-                                                                              << "\".");
+    void positionErrorPopup()
+    {
+        if (errorPopupWindow == nullptr)
+        {
+            return;
+        }
 
-        loadingThreadPool.addJob(
-            [this, selectedPath]
+        Component* topLevel = getTopLevelComponent();
+
+        // Size based on full window width so the popup is never squashed when
+        // the media clipboard panel is open and ModelTab is narrow.
+        int windowWidth = (topLevel != nullptr) ? topLevel->getWidth() : getWidth();
+        int windowHeight = (topLevel != nullptr) ? topLevel->getHeight() : getHeight();
+        int popupWidth = jmin(520, windowWidth - 24);
+
+        /* Measure the wrapped message so the popup is tall enough to show all
+           of it, using the same font and insets as CentredAlertLookAndFeel */
+        AttributedString attrStr;
+        attrStr.append(centredAlertLF.messageText, Font(popupMessageFontHeight));
+
+        TextLayout layout;
+        layout.createLayout(attrStr, (float) (popupWidth - 2 * (popupEdgeGap + popupIconWidth)));
+
+        const int buttonH = centredAlertLF.getAlertWindowButtonHeight();
+        int popupHeight = popupEdgeGap + popupTitleHeight + (int) std::ceil(layout.getHeight())
+                          + popupEdgeGap + buttonH + popupButtonBottomPadding;
+        popupHeight = jlimit(180, jmax(180, windowHeight - 24), popupHeight);
+
+        // Find the window's center in screen space, then convert to ModelTab's
+        // local coordinate space so the popup is centered in the full window
+        // regardless of where ModelTab sits within it.
+        Point<int> windowCentreScreen =
+            (topLevel != nullptr)
+                ? topLevel->localPointToGlobal(topLevel->getLocalBounds().getCentre())
+                : localPointToGlobal(getLocalBounds().getCentre());
+        Point<int> centreInLocal = getLocalPoint(nullptr, windowCentreScreen);
+
+        errorPopupWindow->setBounds(
+            Rectangle<int>(popupWidth, popupHeight).withCentre(centreInLocal));
+    }
+
+    void openGitHubIssue(const Error& error, const String& errorMessage)
+    {
+        static const String issueBaseUrl = "https://github.com/TEAMuP-dev/HARP/issues/new";
+        static const String issueTemplate = "runtime_error_report.yml";
+
+        String issueTitle = "HARP runtime error report";
+        String endpointPath;
+
+        if (const auto* gradioError = std::get_if<GradioError>(&error))
+        {
+            if (gradioError->reason.isNotEmpty())
             {
-                OpResult result = model->load(selectedPath);
+                issueTitle = "HARP: " + gradioError->reason;
+            }
+            else if (gradioError->type == GradioError::Type::QuotaExceeded)
+            {
+                issueTitle = "HARP: Hugging Face quota exceeded";
+            }
 
-                // Perform updates on message (GUI) thread
-                MessageManager::callAsync(
-                    [this, result]
-                    {
-                        if (result.wasOk())
-                        {
-                            modelSelectionWidget.setSuccessfulState();
+            endpointPath = gradioError->endpointPath;
+        }
 
-                            modelInfoWidget.updateLabels(model->getMetadata());
-                            modelInfoWidget.addOpenablePath(model->getOpenablePath());
+        String environment;
+        environment << "- HARP version: " << JUCE_APPLICATION_VERSION_STRING << "\n";
+        environment << "- Time (local): " << Time::getCurrentTime().toString(true, true) << "\n";
+        environment << "- Log file: " << HARPLogger::getInstance()->getLogFile().getFullPathName();
 
-                            controlAreaWidget.updateControls(model->getControls());
+        /* Only values are supplied here. The report's structure lives solely in
+           the issue form, whose field ids these query parameters correspond to.
+           See .github/ISSUE_TEMPLATE/runtime_error_report.yml */
+        StringPairArray fields;
+        fields.set("title", issueTitle);
+        fields.set("summary", errorMessage);
+        fields.set("environment", environment);
 
-                            inputTrackAreaWidget.updateTracks(model->getInputTracks());
-                            outputTrackAreaWidget.updateTracks(model->getOutputTracks());
+        if (endpointPath.isNotEmpty())
+        {
+            fields.set("endpoint", endpointPath);
+        }
 
-                            resized();
+        String query = "?template=" + URL::addEscapeChars(issueTemplate, true);
 
-                            sendSynchronousChangeMessage();
+        for (const auto& key : fields.getAllKeys())
+        {
+            query += "&" + key + "=" + URL::addEscapeChars(fields[key], true);
+        }
 
-                            // Re-enable processing immediately
-                            processCancelButton.setEnabled(true);
-                        }
-                        else
-                        {
-                            const Error error = result.getError();
+        URL(issueBaseUrl + query).launchInDefaultBrowser();
+    }
 
-                            std::function<void()> onExit = [this, error]
-                            {
-                                modelSelectionWidget.setUnsuccessfulState(error);
+    void finishLoading(const OpResult& result, const String& requestedPath)
+    {
+        if (abandoned)
+        {
+            // Tab was closed while this load was in flight
+            return;
+        }
 
-                                // Re-enable processing after closing error window
-                                processCancelButton.setEnabled(true);
-                            };
+        if (result.wasOk())
+        {
+            loading = false;
 
-                            openErrorPopup(error, onExit);
-                        }
-                    });
-            });
+            catalog->recordLoadSuccess(model->getLoadedPath(), model->getMetadata());
+
+            modelInfoWidget.updateLabels(model->getMetadata());
+            modelInfoWidget.addOpenablePath(model->getOpenablePath());
+
+            // Once loaded, only how the model is deployed is worth noting
+            if (const auto* entry = catalog->findEntry(model->getLoadedPath()))
+                modelInfoWidget.setBadges(ModelStyle::getBadges(*entry, false));
+
+            controlAreaWidget.updateControls(model->getControls());
+
+            inputTrackAreaWidget.updateTracks(model->getInputTracks());
+            outputTrackAreaWidget.updateTracks(model->getOutputTracks());
+
+            resized();
+
+            // Enable processing now that a model is loaded
+            processCancelButton.setEnabled(true);
+
+            sendSynchronousChangeMessage();
+        }
+        else
+        {
+            const Error error = result.getError();
+
+            catalog->recordLoadFailure(requestedPath, error);
+
+            // The outcome is reported once the error has been seen
+            openErrorPopup(error,
+                           [this]
+                           {
+                               loading = false;
+                               sendChangeMessage();
+                           });
+        }
     }
 
     void processCallback()
@@ -487,7 +562,23 @@ private:
             }
         }
 
-        modelSelectionWidget.setDisabled();
+        for (const auto& controlInfo : model->getControls())
+        {
+            if (auto* fileInfo = dynamic_cast<FileComponentInfo*>(controlInfo.get()))
+            {
+                if (fileInfo->required && fileInfo->path.empty())
+                {
+                    AlertWindow::showMessageBoxAsync(
+                        AlertWindow::WarningIcon,
+                        "Error",
+                        "Required file input \"" + String(fileInfo->label)
+                            + "\" is empty. Please select a file before processing.");
+
+                    return;
+                }
+            }
+        }
+
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
         // Switch choose-file button to inactive mode on all tracks during processing
@@ -495,8 +586,10 @@ private:
 
         uint64_t processID = currentProcessID;
 
+        SafePointer<ModelTab> safeThis(this);
+
         processingThreadPool.addJob(
-            [this, loadedInputFiles, processID]
+            [this, safeThis, loadedInputFiles, processID]
             {
                 std::vector<File> outputFiles;
                 LabelList labels;
@@ -519,38 +612,49 @@ private:
 
                 // Perform updates on message (GUI) thread
                 MessageManager::callAsync(
-                    [this, result, outputFilesPtr, labelsPtr]
+                    [safeThis, result, outputFilesPtr, labelsPtr]
                     {
-                        std::function<void()> onExit = [this]
-                        {
-                            // Re-enable processing immediately
-                            modelSelectionWidget
-                                .setFinishedState(); // TODO - should this be last selected?
-                            processCancelButton.setMode(processButtonInfo.displayLabel);
-
-                            // Switch choose-file button back to active on all tracks
-                            inputTrackAreaWidget.setLoadTrackEnabled(true);
-                        };
-
-                        if (result.wasOk())
-                        {
-                            auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
-
-                            for (size_t i = 0; i < outputMediaDisplays.size(); ++i)
-                            {
-                                outputMediaDisplays[i]->initializeDisplay(
-                                    URL((*outputFilesPtr)[i]));
-                                outputMediaDisplays[i]->addLabels(*labelsPtr);
-                            }
-
-                            onExit();
-                        }
-                        else
-                        {
-                            openErrorPopup(result.getError(), onExit);
-                        }
+                        if (safeThis != nullptr)
+                            safeThis->finishProcessing(result, *outputFilesPtr, *labelsPtr);
                     });
             });
+    }
+
+    void finishProcessing(const OpResult& result,
+                          const std::vector<File>& outputFiles,
+                          const LabelList& labels)
+    {
+        if (abandoned)
+        {
+            // Tab was closed while this process was in flight
+            return;
+        }
+
+        std::function<void()> onExit = [this]
+        {
+            // Re-enable processing immediately
+            processCancelButton.setMode(processButtonInfo.displayLabel);
+
+            // Switch choose-file button back to active on all tracks
+            inputTrackAreaWidget.setLoadTrackEnabled(true);
+        };
+
+        if (result.wasOk())
+        {
+            auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
+
+            for (size_t i = 0; i < outputMediaDisplays.size() && i < outputFiles.size(); ++i)
+            {
+                outputMediaDisplays[i]->initializeDisplay(URL(outputFiles[i]));
+                outputMediaDisplays[i]->addLabels(labels);
+            }
+
+            onExit();
+        }
+        else
+        {
+            openErrorPopup(result.getError(), onExit);
+        }
     }
 
     void cancelCallback()
@@ -571,8 +675,6 @@ private:
         }
 
         // Re-enable processing immediately
-        modelSelectionWidget.setFinishedState(); // TODO - should this be last selected?
-
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
 
@@ -580,33 +682,186 @@ private:
         inputTrackAreaWidget.setLoadTrackEnabled(true);
     }
 
-    static constexpr float marginSize = 2;
+    // Shared popup layout metrics, used by CentredAlertLookAndFeel when drawing
+    // and by positionErrorPopup when measuring the required popup height
+    static constexpr int popupButtonBottomPadding = 24;
+    static constexpr int popupEdgeGap = 10;
+    static constexpr int popupIconWidth = 80;
+    static constexpr int popupTitleHeight = 24;
+    static constexpr float popupMessageFontHeight = 16.0f;
 
-    static constexpr int modelSelectionRowHeight = 30;
+    /* LookAndFeel override that lays the AlertWindow message out over the whole
+       window rather than JUCE's default text area. The text area is re-derived from
+       the actual window height, reserving the strip at the bottom that
+       BottomButtonAlertWindow moves the buttons into. */
+    struct CentredAlertLookAndFeel : public LookAndFeel_V4
+    {
+        String messageText; // set before showing the popup
+
+        void drawAlertBox(Graphics& g,
+                          AlertWindow& alert,
+                          const Rectangle<int>& /*textArea*/,
+                          TextLayout& /*unused*/) override
+        {
+            // Background
+            auto cornerSize = 4.0f;
+            g.setColour(alert.findColour(AlertWindow::outlineColourId));
+            g.drawRoundedRectangle(alert.getLocalBounds().toFloat(), cornerSize, 2.0f);
+
+            auto bounds = alert.getLocalBounds().reduced(1);
+            g.reduceClipRegion(bounds);
+
+            g.setColour(alert.findColour(AlertWindow::backgroundColourId));
+            g.fillRoundedRectangle(bounds.toFloat(), cornerSize);
+
+            // Icon
+            auto iconSpaceUsed = 0;
+            const auto iconWidth = popupIconWidth;
+            auto iconSize = jmin(iconWidth + 50, bounds.getHeight() + 20);
+
+            if (alert.containsAnyExtraComponents() || alert.getNumButtons() > 2)
+                iconSize = jmin(iconSize, 200);
+
+            Rectangle<int> iconRect(iconSize / -10, iconSize / -10, iconSize, iconSize);
+
+            if (alert.getAlertType() != MessageBoxIconType::NoIcon)
+            {
+                Path icon;
+                char character;
+                uint32 color;
+
+                if (alert.getAlertType() == MessageBoxIconType::WarningIcon)
+                {
+                    character = '!';
+                    icon.addTriangle((float) iconRect.getX() + (float) iconRect.getWidth() * 0.5f,
+                                     (float) iconRect.getY(),
+                                     (float) iconRect.getRight(),
+                                     (float) iconRect.getBottom(),
+                                     (float) iconRect.getX(),
+                                     (float) iconRect.getBottom());
+                    icon = icon.createPathWithRoundedCorners(5.0f);
+                    color = 0x66ff2a00;
+                }
+                else
+                {
+                    color = Colour(0xff00b0b9).withAlpha(0.4f).getARGB();
+                    character = alert.getAlertType() == MessageBoxIconType::InfoIcon ? 'i' : '?';
+                    icon.addEllipse(iconRect.toFloat());
+                }
+
+                GlyphArrangement ga;
+                ga.addFittedText({ (float) iconRect.getHeight() * 0.9f, Font::bold },
+                                 String::charToString((juce_wchar) (uint8) character),
+                                 (float) iconRect.getX(),
+                                 (float) iconRect.getY(),
+                                 (float) iconRect.getWidth(),
+                                 (float) iconRect.getHeight(),
+                                 Justification::centred,
+                                 false);
+                ga.createPath(icon);
+                icon.setUsingNonZeroWinding(false);
+                g.setColour(Colour(color));
+                g.fillPath(icon);
+
+                iconSpaceUsed = iconWidth;
+            }
+
+            if (messageText.isNotEmpty())
+            {
+                const int buttonH = getAlertWindowButtonHeight();
+                const int titleH = popupTitleHeight;
+                const int edgeGap = popupEdgeGap;
+                const int bottomOfText =
+                    alert.getHeight() - buttonH - popupButtonBottomPadding - edgeGap;
+
+                const int rightPadding = edgeGap + iconSpaceUsed;
+                Rectangle<float> fullTextArea(
+                    (float) (edgeGap + iconSpaceUsed),
+                    (float) (edgeGap + titleH),
+                    (float) (alert.getWidth() - edgeGap - iconSpaceUsed - rightPadding),
+                    (float) (bottomOfText - (edgeGap + titleH)));
+
+                Font msgFont(popupMessageFontHeight);
+
+                AttributedString attrStr;
+                attrStr.setJustification(Justification::topLeft);
+                attrStr.append(messageText, msgFont, alert.findColour(AlertWindow::textColourId));
+
+                TextLayout layout;
+                layout.createLayout(attrStr, fullTextArea.getWidth());
+                layout.draw(g, fullTextArea);
+            }
+        }
+    };
+
+    class BottomButtonAlertWindow : public AlertWindow
+    {
+    public:
+        BottomButtonAlertWindow(const String& title,
+                                const String& message,
+                                MessageBoxIconType iconType)
+            : AlertWindow(title, message, iconType)
+        {
+        }
+
+        void resized() override
+        {
+            const int buttonH = getLookAndFeel().getAlertWindowButtonHeight();
+            const int targetY = getHeight() - popupButtonBottomPadding - buttonH;
+            const int spacer = 16;
+
+            Array<TextButton*> btns;
+            for (int i = 0; i < getNumChildComponents(); ++i)
+                if (auto* btn = dynamic_cast<TextButton*>(getChildComponent(i)))
+                    btns.add(btn);
+
+            int totalWidth = -spacer;
+            for (auto* btn : btns)
+                totalWidth += btn->getWidth() + spacer;
+
+            int x = (getWidth() - totalWidth) / 2;
+            for (auto* btn : btns)
+            {
+                btn->setTopLeftPosition(x, targetY);
+                x += btn->getWidth() + spacer;
+            }
+        }
+    };
+
+    static constexpr float marginSize = 2;
+    // Space around the whole tab, matching the Home tab's
+    static constexpr int pagePadding = 8;
+
     static constexpr int minControlAreaHeight = 96;
     static constexpr int processButtonWidth = 150;
     static constexpr int processButtonRowHeight = 30;
-    static constexpr int trackSectionLabelHeight = 20;
-    static constexpr int minVisibleTrackHeight = 50;
+    static constexpr int trackSectionLabelHeight = ModelStyle::sectionHeaderHeight - 2;
 
     std::shared_ptr<Model> model { new Model() };
 
-    ModelSelectionWidget modelSelectionWidget;
     ModelInfoWidget modelInfoWidget;
     ControlAreaWidget controlAreaWidget;
 
-    Label inputTracksLabel { "Input Tracks", "Input Tracks" };
+    ModelStyle::SectionHeader inputTracksLabel { "Input Tracks" };
     TrackAreaWidget inputTrackAreaWidget { DisplayMode::Input };
 
     MultiButton processCancelButton;
     MultiButton::Mode processButtonInfo;
     MultiButton::Mode cancelButtonInfo;
 
-    Label outputTracksLabel { "Output Tracks", "Output Tracks" };
+    ModelStyle::SectionHeader outputTracksLabel { "Output Tracks" };
     TrackAreaWidget outputTrackAreaWidget { DisplayMode::Output };
 
     ThreadPool loadingThreadPool { 1 };
     ThreadPool processingThreadPool { 10 };
 
     std::atomic<uint64_t> currentProcessID { 0 };
+    std::atomic<bool> abandoned { false };
+    bool loading = false;
+
+    SharedResourcePointer<ModelCatalog> catalog;
+
+    CentredAlertLookAndFeel centredAlertLF;
+    std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;
+    std::function<void()> errorPopupOnExit;
 };
