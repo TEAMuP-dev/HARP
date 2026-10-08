@@ -25,4 +25,7 @@ public:
     virtual bool isKeyboardComponent() { return true; }
 
     float getKeyHeight();
+
+private:
+    void paintKeyLabels(Graphics& g, float keyHeight);
 };
