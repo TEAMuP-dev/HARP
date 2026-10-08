@@ -10,6 +10,8 @@
 
 #include "TrackAreaWidget.h"
 
+#include "PreviewPaneWidget.h"
+
 #include "../gui/MultiButton.h"
 
 #include "../utils/Logging.h"
@@ -65,6 +67,7 @@ public:
         trackAreaWidget.addChangeListener(this);
         trackArea.setViewedComponent(&trackAreaWidget, false);
         addAndMakeVisible(trackArea);
+        addAndMakeVisible(previewPaneWidget);
         addAndMakeVisible(resizeEdge);
     }
 
@@ -89,6 +92,10 @@ public:
                 .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
         mainFlexBox.items.add(
             FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
+
+        // Add preview pane to flex
+        mainFlexBox.items.add(
+            FlexItem(previewPaneWidget).withHeight(PreviewPaneWidget::defaultHeight).withMargin({ 0 , marginSize, marginSize, marginSize }));
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -791,6 +798,8 @@ private:
 
     Viewport trackArea;
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
+
+    PreviewPaneWidget previewPaneWidget;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
 
