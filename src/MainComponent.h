@@ -108,8 +108,7 @@ private:
     /* Interface */
 
     const int statusAreaHeight = 100;
-    const float mediaClipboardFlex = 0.4f;
-    const float mediaClipboardScale = 1.4f;
+    int clipboardWidth = 250;
 
     // Minimum size to ensure all controls remain visible and functional:
     // - Tutorial window is 500x420, needs padding
