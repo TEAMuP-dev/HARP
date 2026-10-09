@@ -18,6 +18,36 @@
 
 using namespace juce;
 
+// A narrow strip along the top of the pane that gets dragged to change pane height
+class PreviewPaneResizeEdge : public Component
+{
+public:
+    PreviewPaneResizeEdge() {
+        setMouseCursor(MouseCursor::UpDownResizeCursor); }
+
+    // Called once when a drag starts
+    std::function<void()> onDragStart;
+
+    // Called throughout a drag with how far down the mouse is from drag start pos
+    std::function<void(int)> onDrag;
+
+    void mouseDown(const MouseEvent&) override
+    {
+        if (onDragStart)
+        {
+            onDragStart();
+        }
+    }
+
+    void mouseDrag(const MouseEvent& e) override
+    {
+        if (onDrag)
+        {
+            onDrag(e.getScreenY() - e.getMouseDownScreenY());
+        }
+    }
+};
+
 class PreviewPaneWidget : public Component
 {
 public:
@@ -25,7 +55,19 @@ public:
     {
         initializeButtons();
         updateButtonState();
+
+        resizeEdge.onDragStart = [this] { heightAtDragStart = getHeight(); };
+        resizeEdge.onDrag = [this](int distanceDown)
+        {
+            if (onResize)
+            {
+                onResize(heightAtDragStart - distanceDown);
+            }
+        };
+        addAndMakeVisible(resizeEdge);
     }
+
+    std::function<void(int)> onResize;
 
     /**
      * Shows a media file in the pane, replacing whatever was shown before. A file
@@ -120,6 +162,8 @@ public:
 
     void resized() override
     {
+        resizeEdge.setBounds(0, 0, getWidth(), resizeEdgeHeight);
+
         Rectangle<int> contentArea = getLocalBounds();
         Rectangle<int> titleArea = contentArea.removeFromTop(titleBarHeight);
 
@@ -154,6 +198,7 @@ public:
     }
 
     static constexpr int defaultHeight = 150;
+    static constexpr int minimumHeight = 100;
 
 private:
     void initializeButtons()
@@ -245,6 +290,7 @@ private:
     }
 
     static constexpr int titleBarHeight = 24;
+    static constexpr int resizeEdgeHeight = 4;
     static constexpr int titlePadding = 8;
     static constexpr int numButtons = 2;
     static constexpr int buttonSize = 20;
@@ -265,4 +311,7 @@ private:
 
     // Whichever of the two displays is showing a track, or nullptr when the pane is empty
     MediaDisplayComponent* currentDisplay = nullptr;
+
+    PreviewPaneResizeEdge resizeEdge;
+    int heightAtDragStart = defaultHeight;
 };

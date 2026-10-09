@@ -1392,6 +1392,25 @@ void MediaDisplayComponent::mouseDown(const MouseEvent& e)
     }
 }
 
+namespace
+{
+// True if an event is from a control such as the MIDI vertical zoom.
+// Exists to prevent creating false file drag events.
+bool isFromControl(const MouseEvent& e, const Component* track)
+{
+    for (auto* c = e.eventComponent; c != nullptr && c != track; c = c->getParentComponent())
+    {
+        if (dynamic_cast<Slider*>(c) != nullptr || dynamic_cast<ScrollBar*>(c) != nullptr
+            || dynamic_cast<Button*>(c) != nullptr)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+} // namespace
+
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
@@ -1410,7 +1429,7 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             setPlaybackPosition(mediaXToTime(x_));
         }
 
-        if (! getLocalBounds().contains(getMouseXYRelative()))
+        if (! isFromControl(e, this) && ! getLocalBounds().contains(getMouseXYRelative()))
         {
             Component* topLevel = getTopLevelComponent();
             Rectangle<int> appBounds =

@@ -67,6 +67,12 @@ public:
         trackAreaWidget.addChangeListener(this);
         trackArea.setViewedComponent(&trackAreaWidget, false);
         addAndMakeVisible(trackArea);
+        previewPaneWidget.onResize = [this](int newHeight)
+        {
+            previewPaneHeight =
+                jlimit(PreviewPaneWidget::minimumHeight, getMaximumPreviewPaneHeight(), newHeight);
+            resized();
+        };
         addAndMakeVisible(previewPaneWidget);
         addAndMakeVisible(resizeEdge);
     }
@@ -95,7 +101,9 @@ public:
 
         // Add preview pane to flex
         mainFlexBox.items.add(
-            FlexItem(previewPaneWidget).withHeight(PreviewPaneWidget::defaultHeight).withMargin({ 0 , marginSize, marginSize, marginSize }));
+            FlexItem(previewPaneWidget)
+                .withHeight(static_cast<float>(jmin(previewPaneHeight, getMaximumPreviewPaneHeight())))
+                .withMargin({ 0 , marginSize, marginSize, marginSize }));
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -646,6 +654,12 @@ private:
         currentlySelectedDisplay = mediaDisplay;
     }
 
+    // The tallest the preview pane can be w/o disturbing controls
+    int getMaximumPreviewPaneHeight() const
+    {
+        return jmax(PreviewPaneWidget::minimumHeight, getHeight() - minimumTrackListSpace);
+    }
+
     friend class ResizeEdgeComponent;
 
     const float marginSize = 2;
@@ -653,6 +667,7 @@ private:
     const int resizeEdgeWidth = 6;
     const int defaultWidth = 250;
     const int minimumWidth = 150;
+    const int minimumTrackListSpace = 120;
 
     // Main controls component
     Component controlsComponent;
@@ -691,6 +706,7 @@ private:
     TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
 
     PreviewPaneWidget previewPaneWidget;
+    int previewPaneHeight = PreviewPaneWidget::defaultHeight;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
 
