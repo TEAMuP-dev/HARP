@@ -524,7 +524,11 @@ public:
     URL tokenRegistrationURL;
 
 protected:
-    String getCommonHeaders() const { return getAuthorizationHeader() + acceptHeader; }
+    String getCommonHeaders() const
+    {
+        return getAuthorizationHeader() + acceptHeader + getClientHeader();
+    }
+
     String getJSONHeaders() const { return getCommonHeaders() + contentTypeJSONHeader; }
 
     SharedResourcePointer<StatusMessage> statusMessage;
@@ -542,6 +546,13 @@ private:
         return getAuthorizationHeader(accessToken);
     }
 
+    /* Identifies this client to a PyHARP endpoint, so that a cancel it sends stops the
+       job it started rather than whatever happens to be running. Gradio scopes its own
+       cancellation to a browser session, which an endpoint reached over the API does not
+       have, so the endpoint matches on this instead. One client is created per model
+       load, which is the granularity to which a cancel belongs. */
+    String getClientHeader() const { return "X-HARP-Client: " + clientId + "\r\n"; }
+
     String getAuthorizationHeader(String accessToken) const
     {
         String authorizationHeader;
@@ -553,6 +564,8 @@ private:
 
         return authorizationHeader;
     }
+
+    const String clientId { Uuid().toDashedString() };
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
 
