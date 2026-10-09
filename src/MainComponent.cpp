@@ -15,12 +15,12 @@ MainComponent::MainComponent()
     addAndMakeVisible(mediaClipboardWidget);
     mediaClipboardWidget.onResize = [this](int newWidth)
     {
+        // Leave the main panel at least the width its controls need
         const int maximumClipboardWidth = getWidth() - getRequiredMainPanelWidth();
-        clipboardWidth = jmin(newWidth, jmax(clipboardWidth, maximumClipboardWidth));
-        resized();
 
-        // The narrowest the window can go depends on the clipboard width
-        updateWindowConstraints();
+        clipboardWidth = jmax(mediaClipboardWidget.getMinimumWidth(),
+                              jmin(newWidth, maximumClipboardWidth));
+        resized();
     };
     addAndMakeVisible(dragOverlay);
 
@@ -85,7 +85,7 @@ void MainComponent::resized()
 
     if (showMediaClipboard)
     {
-        fullWindow.items.add(FlexItem(mediaClipboardWidget).withWidth(clipboardWidth));
+        fullWindow.items.add(FlexItem(mediaClipboardWidget).withWidth(getVisibleClipboardWidth()));
     }
     else
     {
@@ -107,13 +107,24 @@ int MainComponent::getRequiredMainPanelWidth()
     return jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
 }
 
+int MainComponent::getVisibleClipboardWidth()
+{
+    /* clipboardWidth is the width the user chose. In a narrow window the clipboard
+       gives up space, down to its own minimum, so the main panel keeps the width it
+       needs; it gets that space back when the window widens again. */
+    const int availableWidth = getWidth() - getRequiredMainPanelWidth();
+
+    return jmax(mediaClipboardWidget.getMinimumWidth(), jmin(clipboardWidth, availableWidth));
+}
+
 void MainComponent::updateWindowConstraints()
 {
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
-        // The media clipboard keeps its width, so the main panel needs its own on top of that
+        // The window can shrink until both panels are down to their minimum widths
         const int requiredMainPanelWidth = getRequiredMainPanelWidth();
-        const int visibleClipboardWidth = showMediaClipboard ? clipboardWidth : 0;
+        const int requiredClipboardWidth =
+            showMediaClipboard ? mediaClipboardWidget.getMinimumWidth() : 0;
 
         /* Each tab scrolls vertically, so the window does not have to be tall enough
            for every control; it only has to stay usably large. Width is still
@@ -123,7 +134,7 @@ void MainComponent::updateWindowConstraints()
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
-            minimumWindowWidth, requiredMainPanelWidth + visibleClipboardWidth);
+            minimumWindowWidth, requiredMainPanelWidth + requiredClipboardWidth);
         // Determine effective minimum height of entire window
         const int newRequiredWindowHeight =
             jmax(minimumWindowHeight, requiredMainPanelHeight + minimumMainPanelVertPadding);
@@ -331,7 +342,7 @@ void MainComponent::viewMediaClipboardCallback()
             if (! window->isFullScreen())
             {
                 windowBounds.setWidth(
-                    jmax(minimumWindowWidth, windowBounds.getWidth() - clipboardWidth));
+                    jmax(minimumWindowWidth, windowBounds.getWidth() - getVisibleClipboardWidth()));
             }
         }
 

@@ -81,6 +81,7 @@ public:
 
     void updateWindowConstraints();
     int getRequiredMainPanelWidth();
+    int getVisibleClipboardWidth();
 
 private:
     /* File Menu */

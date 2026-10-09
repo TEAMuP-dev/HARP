@@ -197,6 +197,7 @@ public:
     std::function<void(int)> onResize;
 
     int getDefaultWidth() const { return defaultWidth; }
+    int getMinimumWidth() const { return minimumWidth; }
 
     // Called whenever preview pane is shown or hidden
     std::function<void()> onPreviewPaneVisibilityChanged;
