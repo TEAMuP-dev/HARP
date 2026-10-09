@@ -503,7 +503,7 @@ public:
         }
 
         String ext = f.getFileExtension();
-        String label = filePath.getFileName();
+        String label = f.getFileName();
 
         bool validExt = true;
 
@@ -539,7 +539,7 @@ public:
         {
             addTrackFromComponentInfo(trackInfo.get(), fromDAW);
             mediaDisplays.back()->initializeDisplay(filePath);
-            mediaDisplays.back()->setTrackName(filePath.getFileName());
+            mediaDisplays.back()->setTrackName(label);
 
             // Tracks are only selected after they're loaded, so that listeners get a complete
             if (isThumbnailWidget())
