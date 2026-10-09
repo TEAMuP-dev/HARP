@@ -673,6 +673,7 @@ private:
         Component* c = clicked;
         while (c != nullptr && c != this)
         {
+            if (dynamic_cast<TextEditor*>(c) != nullptr) return;
             if (auto* md = dynamic_cast<MediaDisplayComponent*>(c))
             {
                 clickedDisplay = md;

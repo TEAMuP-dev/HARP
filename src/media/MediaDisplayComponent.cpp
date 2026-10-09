@@ -1435,8 +1435,9 @@ bool isFromControl(const MouseEvent& e, const Component* track)
 {
     for (auto* c = e.eventComponent; c != nullptr && c != track; c = c->getParentComponent())
     {
-        if (dynamic_cast<Slider*>(c) != nullptr || dynamic_cast<ScrollBar*>(c) != nullptr
-            || dynamic_cast<Button*>(c) != nullptr)
+        if (dynamic_cast<Slider*>(c) != nullptr || dynamic_cast<ScrollBar*>(c) != nullptr 
+            || dynamic_cast<Button*>(c) != nullptr || dynamic_cast<Button*>(c) != nullptr 
+            || dynamic_cast<TextEditor*>(c) != nullptr)
         {
             return true;
         }
