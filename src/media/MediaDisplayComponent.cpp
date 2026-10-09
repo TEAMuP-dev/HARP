@@ -77,23 +77,41 @@ TickScheme chooseTickScheme(const Range<double>& visibleRange,
 
 String formatTime(double t, double step)
 {
-    if (t >= 3600.0)
-    {
-        int hrs = static_cast<int>(t / 3600.0);
-        int mins = static_cast<int>(std::fmod(t, 3600.0) / 60.0);
-        int secs = static_cast<int>(std::fmod(t, 60.0));
-        return String(hrs) + "h " + String(mins) + "m " + String(secs) + "s";
-    }
-    if (t >= 60.0)
-    {
-        int mins = static_cast<int>(t / 60.0);
-        int secs = static_cast<int>(std::fmod(t, 60.0));
-        return String(mins) + "m " + String(secs) + "s";
-    }
-    if (step >= 1.0)
-        return String(static_cast<int>(t)) + "s";
+    // Only as many decimal places as it takes to tell neighbouring ticks apart
+    const int decimals = step >= 1.0 ? 0 : (step >= 0.1 ? 1 : 2);
+    const int unitsPerSecond = decimals == 0 ? 1 : (decimals == 1 ? 10 : 100);
 
-    return String(t, 2) + "s";
+    // Rounded to a whole number of the smallest unit shown before being split up
+    const int64 totalUnits = std::llround(jmax(0.0, t) * unitsPerSecond);
+    const int64 totalSeconds = totalUnits / unitsPerSecond;
+
+    const int hours = static_cast<int>(totalSeconds / 3600);
+    const int minutes = static_cast<int>((totalSeconds % 3600) / 60);
+    const int seconds = static_cast<int>(totalSeconds % 60);
+
+    String fraction;
+
+    if (decimals > 0)
+    {
+        fraction = "." + String(totalUnits % unitsPerSecond).paddedLeft('0', decimals);
+    }
+
+    // Under a minute, uses "s" for seconds
+    if (totalSeconds < 60)
+    {
+        return String(seconds) + fraction + "s";
+    }
+
+    const String paddedSeconds = String(seconds).paddedLeft('0', 2) + fraction;
+
+    // Under an hour, minutes and seconds (e.g. "1:05" or "1:05.5")
+    if (hours == 0)
+    {
+        return String(minutes) + ":" + paddedSeconds;
+    }
+
+    // Hours, minutes, and seconds (e.g. "1:02:05")
+    return String(hours) + ":" + String(minutes).paddedLeft('0', 2) + ":" + paddedSeconds;
 }
 } // namespace
 
