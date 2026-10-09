@@ -175,6 +175,8 @@ public:
 
     // Called whenever playback starts, pauses, or stops
     std::function<void()> onPlaybackStateChanged;
+    // Called when the media of a thumbnail is double clicked
+    std::function<void()> onMediaDoubleClick;
 
 
     int getNumOverheadLabels();

@@ -434,6 +434,13 @@ public:
 
             //m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
+            m->onMediaDoubleClick = [this]
+            {
+                if (onTrackMediaDoubleClicked)
+                {
+                    onTrackMediaDoubleClicked();
+                }
+            };
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
 
@@ -589,6 +596,9 @@ public:
         resized();
     }
 
+    // Called when the media of a thumbnail track is double-clicked
+    std::function<void()> onTrackMediaDoubleClicked;
+
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
         for (String f : files)
@@ -679,6 +689,13 @@ private:
             Point<int> mouseInThis = e.getEventRelativeTo(this).getPosition();
             Point<int> trackTopLeft = draggedTrack->getBounds().getTopLeft();
             dragClickOffset = mouseInThis - trackTopLeft;
+        }
+        else
+        {
+            for (auto& m : mediaDisplays)
+            {
+                m->deselectTrack();
+            }
         }
     }
 

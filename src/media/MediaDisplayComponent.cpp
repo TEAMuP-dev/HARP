@@ -190,6 +190,26 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
     trackNameLabel.setText(trackName, dontSendNotification);
     trackNameLabel.setJustificationType(Justification::centred);
+
+    if (isThumbnailTrack())
+    {
+        trackNameLabel.setEditable(false, true, false);
+        trackNameLabel.onTextChange = [this]
+        {
+            const String newName = trackNameLabel.getText().trim();
+
+            if (newName.isEmpty())
+            {
+                trackNameLabel.setText(trackName, dontSendNotification);
+            }
+            else
+            {
+                setTrackName(newName);
+                sendChangeMessage();
+            }
+        };
+    }
+
     headerComponent.addAndMakeVisible(trackNameLabel);
     headerComponent.addMouseListener(this, true);
     initializeButtons();
@@ -1478,13 +1498,18 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
 }
 
-void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& /*e*/)
+void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
 {
-    // TODO - mouseUp/Down (selectTrack()) is still called before this
+    // (old) TODO - mouseUp/Down (selectTrack()) is still called before this
 
-    if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
+    if (! isThumbnailTrack() || ! isFileLoaded()) { return; }
+
+    // Double click on the header renames the track
+    const bool isOnHeader = e.eventComponent == &headerComponent || headerComponent.isParentOf(e.eventComponent);
+
+    if (! isOnHeader && onMediaDoubleClick)
     {
-        deselectTrack();
+        onMediaDoubleClick();
     }
 }
 

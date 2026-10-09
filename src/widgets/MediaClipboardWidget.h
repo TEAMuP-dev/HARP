@@ -65,6 +65,11 @@ public:
         resetState();
 
         trackAreaWidget.addChangeListener(this);
+        trackAreaWidget.onTrackMediaDoubleClicked = [this]
+        {
+            setPreviewPaneVisible(true);
+            previewPaneWidget.setMinimized(false);
+        };
         trackArea.setViewedComponent(&trackAreaWidget, false);
         addAndMakeVisible(trackArea);
         previewPaneWidget.onResize = [this](int newHeight)
@@ -542,6 +547,11 @@ private:
                 selectTrack(mediaDisplay);
                 // Handle track area resizing after adding a track
                 resized(); // TODO - decouple from track selection?
+            }
+            else
+            {
+                // Pick up renames made on track double-click
+                selectionTextBox.setText(mediaDisplay->getTrackName(), false);
             }
         }
         else
