@@ -434,15 +434,17 @@ public:
 
             //m->setDisplayID(trackInfo->id);
             m->addChangeListener(this);
+            m->onMediaDoubleClick = [this]
+            {
+                if (onTrackMediaDoubleClicked)
+                {
+                    onTrackMediaDoubleClicked();
+                }
+            };
             addAndMakeVisible(m.get());
             mediaDisplays.push_back(std::move(m));
 
             resized();
-
-            if (isThumbnailWidget())
-            {
-                mediaDisplays.back()->selectTrack();
-            }
         }
     }
 
@@ -508,7 +510,7 @@ public:
         }
 
         String ext = f.getFileExtension();
-        String label = filePath.getFileName();
+        String label = f.getFileName();
 
         bool validExt = true;
 
@@ -544,7 +546,13 @@ public:
         {
             addTrackFromComponentInfo(trackInfo.get(), fromDAW);
             mediaDisplays.back()->initializeDisplay(filePath);
-            mediaDisplays.back()->setTrackName(filePath.getFileName());
+            mediaDisplays.back()->setTrackName(label);
+
+            // Tracks are only selected after they're loaded, so that listeners get a complete
+            if (isThumbnailWidget())
+            {
+                mediaDisplays.back()->selectTrack();
+            }
         }
     }
 
@@ -587,6 +595,9 @@ public:
 
         resized();
     }
+
+    // Called when the media of a thumbnail track is double-clicked
+    std::function<void()> onTrackMediaDoubleClicked;
 
     void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override
     {
@@ -662,6 +673,7 @@ private:
         Component* c = clicked;
         while (c != nullptr && c != this)
         {
+            if (dynamic_cast<TextEditor*>(c) != nullptr) return;
             if (auto* md = dynamic_cast<MediaDisplayComponent*>(c))
             {
                 clickedDisplay = md;
@@ -678,6 +690,13 @@ private:
             Point<int> mouseInThis = e.getEventRelativeTo(this).getPosition();
             Point<int> trackTopLeft = draggedTrack->getBounds().getTopLeft();
             dragClickOffset = mouseInThis - trackTopLeft;
+        }
+        else
+        {
+            for (auto& m : mediaDisplays)
+            {
+                m->deselectTrack();
+            }
         }
     }
 

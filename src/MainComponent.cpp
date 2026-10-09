@@ -13,13 +13,25 @@ MainComponent::MainComponent()
     addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+    mediaClipboardWidget.onResize = [this](int newWidth)
+    {
+        // Leave the main panel at least the width its controls need
+        const int maximumClipboardWidth = getWidth() - getRequiredMainPanelWidth();
 
-    statusAreaWidget.setComponentID(TutorialTargets::statusArea);
-    mediaClipboardWidget.setComponentID(TutorialTargets::clipboard);
+        clipboardWidth = jmax(mediaClipboardWidget.getMinimumWidth(),
+                              jmin(newWidth, maximumClipboardWidth));
+        resized();
+    };
     addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    mediaClipboardWidget.setPreviewPaneVisible(Settings::getBoolValue("view.showPreviewPane", true));
+    mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
+    {
+        Settings::setValue("view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+        commandManager.commandStatusChanged();
+    };
     dragOverlay.setVisible(false);
     dragOverlay.toFront(false);
 
@@ -73,7 +85,7 @@ void MainComponent::resized()
 
     if (showMediaClipboard)
     {
-        fullWindow.items.add(FlexItem(mediaClipboardWidget).withFlex(mediaClipboardFlex));
+        fullWindow.items.add(FlexItem(mediaClipboardWidget).withWidth(getVisibleClipboardWidth()));
     }
     else
     {
@@ -85,20 +97,35 @@ void MainComponent::resized()
     dragOverlay.setBounds(getLocalBounds());
 }
 
-void MainComponent::updateWindowConstraints()
+int MainComponent::getRequiredMainPanelWidth()
 {
     // The Home tab has no controls, so only the general minimums apply while it is showing
     auto* tab = modelTabs.getCurrentModelTab();
     const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
 
+    // Determine minimum width needed to display controls plus padding
+    return jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+}
+
+int MainComponent::getVisibleClipboardWidth()
+{
+    /* clipboardWidth is the width the user chose. In a narrow window the clipboard
+       gives up space, down to its own minimum, so the main panel keeps the width it
+       needs; it gets that space back when the window widens again. */
+    const int availableWidth = getWidth() - getRequiredMainPanelWidth();
+
+    return jmax(mediaClipboardWidget.getMinimumWidth(), jmin(clipboardWidth, availableWidth));
+}
+
+void MainComponent::updateWindowConstraints()
+{
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
-        // Compute percentage of total window width given to main panel
-        const float mainPanelRatio = showMediaClipboard ? (1.0f / mediaClipboardScale) : 1.0f;
+        // The window can shrink until both panels are down to their minimum widths
+        const int requiredMainPanelWidth = getRequiredMainPanelWidth();
+        const int requiredClipboardWidth =
+            showMediaClipboard ? mediaClipboardWidget.getMinimumWidth() : 0;
 
-        // Determine minimum width needed to display controls plus padding
-        const int requiredMainPanelWidth =
-            jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
         /* Each tab scrolls vertically, so the window does not have to be tall enough
            for every control; it only has to stay usably large. Width is still
            content-driven, since there is no horizontal scrolling. */
@@ -107,7 +134,7 @@ void MainComponent::updateWindowConstraints()
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
-            minimumWindowWidth, (int) std::ceil((float) requiredMainPanelWidth / mainPanelRatio));
+            minimumWindowWidth, requiredMainPanelWidth + requiredClipboardWidth);
         // Determine effective minimum height of entire window
         const int newRequiredWindowHeight =
             jmax(minimumWindowHeight, requiredMainPanelHeight + minimumMainPanelVertPadding);
@@ -193,12 +220,15 @@ void MainComponent::openSettingsWindow()
 void MainComponent::restoreViewDefaults()
 {
     // Defaults must match the fallbacks used when reading the settings
-    // in the constructor: status area shown, media clipboard hidden
+    // in the constructor: status area shown, media clipboard hidden, preview pane shown
     if (! showStatusArea)
         viewStatusAreaCallback();
 
     if (showMediaClipboard)
         viewMediaClipboardCallback();
+
+    if (! mediaClipboardWidget.isPreviewPaneVisible())
+        viewPreviewPaneCallback();
 
     // showWelcomePopup default (true) is already restored by clearing settings;
     // it will show on the next launch automatically.
@@ -264,6 +294,13 @@ void MainComponent::viewStatusAreaCallback()
     updateWindowConstraints();
 }
 
+void MainComponent::viewPreviewPaneCallback()
+{
+    // Saving the preference and updating the menu both happen in
+    // onPreviewPaneVisibilityChanged, which also covers the pane's own close button
+    mediaClipboardWidget.setPreviewPaneVisible(! mediaClipboardWidget.isPreviewPaneVisible());
+}
+
 void MainComponent::viewMediaClipboardCallback()
 {
     // Toggle media clipboard visibility state
@@ -296,20 +333,19 @@ void MainComponent::viewMediaClipboardCallback()
 
         if (showMediaClipboard)
         {
-            // Scale bounds to extend window by 40% of main width
+            clipboardWidth = mediaClipboardWidget.getDefaultWidth();
             windowBounds.setWidth(
-                jmin(currentDisplayWidth,
-                     static_cast<int>(mediaClipboardScale * windowBounds.getWidth())));
+                jmin(currentDisplayWidth, windowBounds.getWidth() + clipboardWidth));
         }
         else
         {
             if (! window->isFullScreen())
             {
-                // Scale bounds to reduce window to main width
                 windowBounds.setWidth(
-                    static_cast<int>(windowBounds.getWidth() / mediaClipboardScale));
+                    jmax(minimumWindowWidth, windowBounds.getWidth() - getVisibleClipboardWidth()));
             }
         }
+
 
         // Set extended or reduced bounds
         window->setBounds(windowBounds);

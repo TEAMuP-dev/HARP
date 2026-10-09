@@ -24,7 +24,8 @@ enum class DisplayMode
     Input,
     Output,
     Hybrid, // All functionality
-    Thumbnail // Reduced functionality
+    Thumbnail, // Reduced functionality
+    Preview // Media area only (for preview pane)
 };
 
 class OptionalBannerComponent : public Component
@@ -68,8 +69,8 @@ private:
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
+                              public DragAndDropTarget,
                               public FileDragAndDropTarget,
-                              public DragAndDropContainer,
                               private Timer,
                               private ScrollBar::Listener
 {
@@ -104,6 +105,7 @@ public:
     bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
     bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
+    bool isPreviewTrack() const { return displayMode == DisplayMode::Preview; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -133,6 +135,20 @@ public:
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
+    bool isInterestedInDragSource(const DragAndDropTarget::SourceDetails& details) override
+    {
+        return isInputTrack() && details.description.isString();
+    }
+
+    void itemDropped(const DragAndDropTarget::SourceDetails& details) override
+    {
+        String filePath = details.description.toString();
+        if (filePath.isNotEmpty())
+        {
+            filesDropped(StringArray(filePath), 0, 0);
+        }
+    }
+
     bool isDuplicateFile(const URL& fileParth);
 
     void saveFileCallback();
@@ -152,8 +168,15 @@ public:
 
     void start();
     void stop();
+    void pause();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual bool isPaused() const { return paused; }
+
+    // Called whenever playback starts, pauses, or stops
+    std::function<void()> onPlaybackStateChanged;
+    // Called when the media of a thumbnail is double clicked
+    std::function<void()> onMediaDoubleClick;
 
 
     int getNumOverheadLabels();
@@ -324,6 +347,7 @@ private:
     const DisplayMode displayMode;
 
     bool isSelected = false;
+    bool paused = false;
 
     URL originalFilePath;
     int currentTempFileIdx;

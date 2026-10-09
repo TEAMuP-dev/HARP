@@ -38,45 +38,80 @@ struct TickScheme
     int minorCount;
 };
 
-TickScheme chooseTickScheme(double visibleLength)
+String formatTime(double t, double step);
+
+// Gap between a major tick and its label, and between the label and the next tick
+constexpr int labelOffset = 3;
+constexpr int labelGap = 5;
+
+/**
+ * Picks the finest tick spacing whose labels still fit between the major ticks, so
+ * that a narrow or zoomed-out axis gets fewer ticks instead of overlapping ones.
+ */
+TickScheme chooseTickScheme(const Range<double>& visibleRange,
+                            float pixelsPerSecond,
+                            const Font& labelFont)
 {
     static const TickScheme schemes[] = {
-        { 0.1, 0.02, 5 },   { 0.5, 0.1, 5 },    { 1.0, 0.25, 4 },    { 2.0, 0.5, 4 },
-        { 5.0, 1.0, 5 },    { 15.0, 5.0, 3 },   { 30.0, 10.0, 3 },   { 60.0, 15.0, 4 },
-        { 120.0, 30.0, 4 }, { 300.0, 60.0, 5 }, { 600.0, 120.0, 5 },
+        { 0.01, 0.002, 5 },   { 0.02, 0.005, 4 },   { 0.05, 0.01, 5 },   { 0.1, 0.02, 5 },
+        { 0.5, 0.1, 5 },      { 1.0, 0.25, 4 },     { 2.0, 0.5, 4 },     { 5.0, 1.0, 5 },
+        { 15.0, 5.0, 3 },     { 30.0, 10.0, 3 },    { 60.0, 15.0, 4 },   { 120.0, 30.0, 4 },
+        { 300.0, 60.0, 5 },   { 600.0, 120.0, 5 },  { 1800.0, 600.0, 3 }, { 3600.0, 900.0, 4 },
     };
 
     for (const auto& s : schemes)
     {
-        double numMajor = visibleLength / s.majorStep;
-        if (numMajor >= 2.0 && numMajor <= 15.0)
+        const double numMajor = visibleRange.getLength() / s.majorStep;
+        const double majorSpacing = s.majorStep * static_cast<double>(pixelsPerSecond);
+
+        const double lastMajor = std::floor(visibleRange.getEnd() / s.majorStep) * s.majorStep;
+        const int labelWidth =
+            GlyphArrangement::getStringWidthInt(labelFont, formatTime(lastMajor, s.majorStep));
+
+        if (numMajor <= 15.0 && majorSpacing >= labelOffset + labelWidth + labelGap)
             return s;
     }
 
-    double majorStep = std::pow(10.0, std::floor(std::log10(visibleLength / 5.0)));
-    majorStep = std::max(0.01, majorStep);
-    return { majorStep, majorStep / 5.0, 5 };
+    return schemes[numElementsInArray(schemes) - 1];
 }
 
 String formatTime(double t, double step)
 {
-    if (t >= 3600.0)
-    {
-        int hrs = static_cast<int>(t / 3600.0);
-        int mins = static_cast<int>(std::fmod(t, 3600.0) / 60.0);
-        int secs = static_cast<int>(std::fmod(t, 60.0));
-        return String(hrs) + "h " + String(mins) + "m " + String(secs) + "s";
-    }
-    if (t >= 60.0)
-    {
-        int mins = static_cast<int>(t / 60.0);
-        int secs = static_cast<int>(std::fmod(t, 60.0));
-        return String(mins) + "m " + String(secs) + "s";
-    }
-    if (step >= 1.0)
-        return String(static_cast<int>(t)) + "s";
+    // Only as many decimal places as it takes to tell neighbouring ticks apart
+    const int decimals = step >= 1.0 ? 0 : (step >= 0.1 ? 1 : 2);
+    const int unitsPerSecond = decimals == 0 ? 1 : (decimals == 1 ? 10 : 100);
 
-    return String(t, 2) + "s";
+    // Rounded to a whole number of the smallest unit shown before being split up
+    const int64 totalUnits = std::llround(jmax(0.0, t) * unitsPerSecond);
+    const int64 totalSeconds = totalUnits / unitsPerSecond;
+
+    const int hours = static_cast<int>(totalSeconds / 3600);
+    const int minutes = static_cast<int>((totalSeconds % 3600) / 60);
+    const int seconds = static_cast<int>(totalSeconds % 60);
+
+    String fraction;
+
+    if (decimals > 0)
+    {
+        fraction = "." + String(totalUnits % unitsPerSecond).paddedLeft('0', decimals);
+    }
+
+    // Under a minute, uses "s" for seconds
+    if (totalSeconds < 60)
+    {
+        return String(seconds) + fraction + "s";
+    }
+
+    const String paddedSeconds = String(seconds).paddedLeft('0', 2) + fraction;
+
+    // Under an hour, minutes and seconds (e.g. "1:05" or "1:05.5")
+    if (hours == 0)
+    {
+        return String(minutes) + ":" + paddedSeconds;
+    }
+
+    // Hours, minutes, and seconds (e.g. "1:02:05")
+    return String(hours) + ":" + String(minutes).paddedLeft('0', 2) + ":" + paddedSeconds;
 }
 } // namespace
 
@@ -100,8 +135,9 @@ void TimeAxisStrip::paint(Graphics& g)
     g.setColour(Colours::darkgrey);
     g.fillRect(getLocalBounds());
 
-    const double visibleLength = visibleRange.getLength();
-    const auto scheme = chooseTickScheme(visibleLength);
+    const int labelH = jmin(13, h - 2);
+    const Font labelFont(FontOptions(static_cast<float>(labelH)));
+    const auto scheme = chooseTickScheme(visibleRange, pps, labelFont);
     const double majorStep = scheme.majorStep;
     const double minorStep = scheme.minorStep;
 
@@ -130,8 +166,7 @@ void TimeAxisStrip::paint(Graphics& g)
     // Major ticks and labels
     g.setColour(Colours::lightgrey.withAlpha(0.9f));
 
-    const int labelH = jmin(13, h - 2);
-    g.setFont(static_cast<float>(labelH));
+    g.setFont(labelFont);
 
     const double firstMajor = std::ceil(visibleStart / majorStep) * majorStep;
     for (double t = firstMajor; t <= visibleEnd && t <= totalLength; t += majorStep)
@@ -142,14 +177,15 @@ void TimeAxisStrip::paint(Graphics& g)
 
         g.drawVerticalLine(static_cast<int>(x), majorTickTop, majorTickBot);
 
-        String label = formatTime(t, majorStep);
-        g.drawText(label,
-                   static_cast<int>(x) + 3,
-                   0,
-                   jmin(90, w - static_cast<int>(x)),
-                   h,
-                   Justification::centredLeft,
-                   true);
+        const String label = formatTime(t, majorStep);
+        const int labelX = static_cast<int>(x) + labelOffset;
+        const int labelWidth = GlyphArrangement::getStringWidthInt(labelFont, label);
+
+        // Labels that would run off the edge of the axis are left out
+        if (labelX + labelWidth <= w)
+        {
+            g.drawText(label, labelX, 0, labelWidth + 1, h, Justification::centredLeft, false);
+        }
     }
 }
 
@@ -172,6 +208,26 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 
     trackNameLabel.setText(trackName, dontSendNotification);
     trackNameLabel.setJustificationType(Justification::centred);
+
+    if (isThumbnailTrack())
+    {
+        trackNameLabel.setEditable(false, true, false);
+        trackNameLabel.onTextChange = [this]
+        {
+            const String newName = trackNameLabel.getText().trim();
+
+            if (newName.isEmpty())
+            {
+                trackNameLabel.setText(trackName, dontSendNotification);
+            }
+            else
+            {
+                setTrackName(newName);
+                sendChangeMessage();
+            }
+        };
+    }
+
     headerComponent.addAndMakeVisible(trackNameLabel);
     headerComponent.addMouseListener(this, true);
     initializeButtons();
@@ -358,6 +414,12 @@ void MediaDisplayComponent::resized()
         mainFlexBox.items.add(FlexItem(headerComponent)
                                   .withHeight(trackNameLabel.getFont().getHeight())
                                   .withMargin(1));
+    }
+    else if(isPreviewTrack())
+    {
+        // No header because preview pane has its own title bar + controls
+        mainFlexBox.flexDirection = FlexBox::Direction::row;
+        headerComponent.setBounds(0, 0, 0, 0);
     }
     else
     {
@@ -621,6 +683,7 @@ void MediaDisplayComponent::setChooseFileButtonEnabled(bool enabled)
 
 void MediaDisplayComponent::resetDisplay()
 {
+    paused = false;
     clearLabels();
     resetMedia();
     resetPaths();
@@ -1240,15 +1303,24 @@ void MediaDisplayComponent::deselectTrack()
 
 void MediaDisplayComponent::start()
 {
+    paused = false;
+
     startPlaying();
 
     startTimerHz(40);
 
     playStopButton.setMode(stopButtonInfo.displayLabel);
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
 }
 
 void MediaDisplayComponent::stop()
 {
+    paused = false;
+
     stopPlaying();
 
     stopTimer();
@@ -1259,6 +1331,30 @@ void MediaDisplayComponent::stop()
     playStopButton.setMode(playButtonActiveInfo.displayLabel);
 
     sendChangeMessage();
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
+}
+
+void MediaDisplayComponent::pause()
+{
+    stopPlaying();
+
+    stopTimer();
+
+    paused = true;
+
+    playStopButton.setMode(playButtonActiveInfo.displayLabel);
+    
+    // Preserves resume position
+    updateCursorPosition();
+
+    if (onPlaybackStateChanged)
+    {
+        onPlaybackStateChanged();
+    }
 }
 
 void MediaDisplayComponent::updateCursorPosition()
@@ -1271,7 +1367,7 @@ void MediaDisplayComponent::updateCursorPosition()
     float cursorPositionX = mediaXToDisplayX(timeToMediaX(getPlaybackPosition()));
     float cursorPositionY = 0;
 
-    if (isPlaying() && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
+    if ((isPlaying() || paused) && cursorPositionX >= minCursorXPos && cursorPositionX <= maxCursorXPos)
     {
         currentPositionCursor.setVisible(hasPlaybackCursor());
     }
@@ -1331,11 +1427,31 @@ void MediaDisplayComponent::mouseDown(const MouseEvent& e)
     }
 }
 
+namespace
+{
+// True if an event is from a control such as the MIDI vertical zoom.
+// Exists to prevent creating false file drag events.
+bool isFromControl(const MouseEvent& e, const Component* track)
+{
+    for (auto* c = e.eventComponent; c != nullptr && c != track; c = c->getParentComponent())
+    {
+        if (dynamic_cast<Slider*>(c) != nullptr || dynamic_cast<ScrollBar*>(c) != nullptr 
+            || dynamic_cast<Button*>(c) != nullptr || dynamic_cast<Button*>(c) != nullptr 
+            || dynamic_cast<TextEditor*>(c) != nullptr)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+} // namespace
+
 void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
 {
     if (isFileLoaded())
     {
-        if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && ! isPlaying()
+        if (! isThumbnailTrack() && e.eventComponent == getMediaComponent() && (! isPlaying() || isPreviewTrack())
             && getLocalBounds().contains(getMouseXYRelative()))
         {
             float x_ = static_cast<float>(e.x);
@@ -1349,12 +1465,32 @@ void MediaDisplayComponent::mouseDrag(const MouseEvent& e)
             setPlaybackPosition(mediaXToTime(x_));
         }
 
-        if (! getLocalBounds().contains(getMouseXYRelative()))
+        if (! isFromControl(e, this) && ! getLocalBounds().contains(getMouseXYRelative()))
         {
-            //performExternalDragDropOfFiles(
-            //    StringArray(getTempFilePath().getLocalFile().getFullPathName()), true, this);
-            performExternalDragDropOfFiles(
-                StringArray(getOriginalFilePath().getLocalFile().getFullPathName()), true, this);
+            Component* topLevel = getTopLevelComponent();
+            Rectangle<int> appBounds =
+                topLevel != nullptr ? topLevel->getScreenBounds() : Rectangle<int>();
+            Point<int> screenPos = localPointToGlobal(getMouseXYRelative());
+
+            // if the cursor goes outside the HARP window
+            if (auto* container = DragAndDropContainer::findParentDragContainerFor(this))
+            {
+                if (appBounds.contains(screenPos)) // use internal JUCE drag inside window
+                {
+                    if (!container->isDragAndDropActive())
+                    {
+                        container->startDragging(
+                            getOriginalFilePath().getLocalFile().getFullPathName(), this, ScaledImage{}, false);
+                    }
+                }
+                else // use OS file drag outside window
+                {
+                    container->performExternalDragDropOfFiles(
+                        StringArray(getOriginalFilePath().getLocalFile().getFullPathName()),
+                        false,
+                        this);
+                }
+            }
         }
 
         updateCursorPosition();
@@ -1381,13 +1517,18 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     }
 }
 
-void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& /*e*/)
+void MediaDisplayComponent::mouseDoubleClick(const MouseEvent& e)
 {
-    // TODO - mouseUp/Down (selectTrack()) is still called before this
+    // (old) TODO - mouseUp/Down (selectTrack()) is still called before this
 
-    if (isThumbnailTrack() && isFileLoaded() && isMouseOver(true))
+    if (! isThumbnailTrack() || ! isFileLoaded()) { return; }
+
+    // Double click on the header renames the track
+    const bool isOnHeader = e.eventComponent == &headerComponent || headerComponent.isParentOf(e.eventComponent);
+
+    if (! isOnHeader && onMediaDoubleClick)
     {
-        deselectTrack();
+        onMediaDoubleClick();
     }
 }
 
