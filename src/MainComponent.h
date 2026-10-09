@@ -80,6 +80,7 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
+    int getRequiredMainPanelWidth();
 
 private:
     /* File Menu */

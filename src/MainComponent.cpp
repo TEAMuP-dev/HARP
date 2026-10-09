@@ -15,8 +15,12 @@ MainComponent::MainComponent()
     addAndMakeVisible(mediaClipboardWidget);
     mediaClipboardWidget.onResize = [this](int newWidth)
     {
-        clipboardWidth = newWidth;
+        const int maximumClipboardWidth = getWidth() - getRequiredMainPanelWidth();
+        clipboardWidth = jmin(newWidth, jmax(clipboardWidth, maximumClipboardWidth));
         resized();
+
+        // The narrowest the window can go depends on the clipboard width
+        updateWindowConstraints();
     };
     addAndMakeVisible(dragOverlay);
 
@@ -93,21 +97,24 @@ void MainComponent::resized()
     dragOverlay.setBounds(getLocalBounds());
 }
 
-void MainComponent::updateWindowConstraints()
+int MainComponent::getRequiredMainPanelWidth()
 {
     // The Home tab has no controls, so only the general minimums apply while it is showing
     auto* tab = modelTabs.getCurrentModelTab();
     const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
 
+    // Determine minimum width needed to display controls plus padding
+    return jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+}
+
+void MainComponent::updateWindowConstraints()
+{
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
-        // Compute percentage of total window width given to main panel
-        const float mainPanelRatio = showMediaClipboard
-            ? (float(getWidth() - clipboardWidth) / float(jmax(1, getWidth())))
-            : 1.0f;
-        // Determine minimum width needed to display controls plus padding
-        const int requiredMainPanelWidth =
-            jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+        // The media clipboard keeps its width, so the main panel needs its own on top of that
+        const int requiredMainPanelWidth = getRequiredMainPanelWidth();
+        const int visibleClipboardWidth = showMediaClipboard ? clipboardWidth : 0;
+
         /* Each tab scrolls vertically, so the window does not have to be tall enough
            for every control; it only has to stay usably large. Width is still
            content-driven, since there is no horizontal scrolling. */
@@ -116,7 +123,7 @@ void MainComponent::updateWindowConstraints()
 
         // Determine effective minimum width of entire window
         const int newRequiredWindowWidth = jmax(
-            minimumWindowWidth, (int) std::ceil((float) requiredMainPanelWidth / mainPanelRatio));
+            minimumWindowWidth, requiredMainPanelWidth + visibleClipboardWidth);
         // Determine effective minimum height of entire window
         const int newRequiredWindowHeight =
             jmax(minimumWindowHeight, requiredMainPanelHeight + minimumMainPanelVertPadding);
