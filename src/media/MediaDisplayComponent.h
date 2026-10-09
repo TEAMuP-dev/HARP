@@ -145,7 +145,7 @@ public:
         String filePath = details.description.toString();
         if (filePath.isNotEmpty())
         {
-            initializeDisplay(URL(File(filePath)));
+            filesDropped(StringArray(filePath), 0, 0);
         }
     }
 
