@@ -52,7 +52,6 @@ TickScheme chooseTickScheme(const Range<double>& visibleRange,
                             float pixelsPerSecond,
                             const Font& labelFont)
 {
-    // Ordered from finest to coarsest
     static const TickScheme schemes[] = {
         { 0.01, 0.002, 5 },   { 0.02, 0.005, 4 },   { 0.05, 0.01, 5 },   { 0.1, 0.02, 5 },
         { 0.5, 0.1, 5 },      { 1.0, 0.25, 4 },     { 2.0, 0.5, 4 },     { 5.0, 1.0, 5 },
@@ -65,7 +64,6 @@ TickScheme chooseTickScheme(const Range<double>& visibleRange,
         const double numMajor = visibleRange.getLength() / s.majorStep;
         const double majorSpacing = s.majorStep * static_cast<double>(pixelsPerSecond);
 
-        // The last label in view is the longest, since times only grow
         const double lastMajor = std::floor(visibleRange.getEnd() / s.majorStep) * s.majorStep;
         const int labelWidth =
             GlyphArrangement::getStringWidthInt(labelFont, formatTime(lastMajor, s.majorStep));
@@ -74,7 +72,6 @@ TickScheme chooseTickScheme(const Range<double>& visibleRange,
             return s;
     }
 
-    // Nothing fits, so fall back to the fewest ticks available
     return schemes[numElementsInArray(schemes) - 1];
 }
 

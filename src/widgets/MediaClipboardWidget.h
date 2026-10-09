@@ -73,6 +73,8 @@ public:
                 jlimit(PreviewPaneWidget::minimumHeight, getMaximumPreviewPaneHeight(), newHeight);
             resized();
         };
+        previewPaneWidget.onMinimizeChanged = [this] { resized(); };
+        previewPaneWidget.onClose = [this] { setPreviewPaneVisible(false); };
         addAndMakeVisible(previewPaneWidget);
         addAndMakeVisible(resizeEdge);
     }
@@ -100,10 +102,19 @@ public:
             FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
 
         // Add preview pane to flex
-        mainFlexBox.items.add(
-            FlexItem(previewPaneWidget)
-                .withHeight(static_cast<float>(jmin(previewPaneHeight, getMaximumPreviewPaneHeight())))
-                .withMargin({ 0 , marginSize, marginSize, marginSize }));
+        if (showPreviewPane)
+        {
+            const int paneHeight = previewPaneWidget.isMinimized() ? 
+                PreviewPaneWidget::titleBarHeight : jmin(previewPaneHeight, getMaximumPreviewPaneHeight());
+
+            mainFlexBox.items.add(FlexItem(previewPaneWidget)
+                .withHeight(static_cast<float>(paneHeight))
+                .withMargin({ 0, marginSize, marginSize, marginSize }));
+        }
+        else
+        {
+            previewPaneWidget.setBounds(0, 0, 0, 0);
+        }
 
         mainFlexBox.performLayout(totalBounds);
 
@@ -182,6 +193,39 @@ public:
 
     int getDefaultWidth() const { return defaultWidth; }
 
+    // Called whenever preview pane is shown or hidden
+    std::function<void()> onPreviewPaneVisibilityChanged;
+
+    bool isPreviewPaneVisible() const { return showPreviewPane; }
+
+    void setPreviewPaneVisible(bool shouldBeVisible)
+    {
+        if (showPreviewPane == shouldBeVisible) { return; }
+
+        showPreviewPane = shouldBeVisible;
+
+        if (showPreviewPane)
+        {
+            previewPaneWidget.setMinimized(false);
+
+            if (currentlySelectedDisplay != nullptr)
+            {
+                previewPaneWidget.showTrack(currentlySelectedDisplay->getOriginalFilePath());
+            }
+        }
+        else
+        {
+            previewPaneWidget.clearTrack();
+        }
+
+        resized();
+
+        if(onPreviewPaneVisibilityChanged)
+        {
+            onPreviewPaneVisibilityChanged();
+        }
+    }
+    
     void addFileCallback()
     {
         StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
@@ -649,7 +693,10 @@ private:
             sendToDAWButton.setMode(sendToDAWButtonInactiveInfo2.displayLabel);
         }
 
-        previewPaneWidget.showTrack(mediaDisplay->getOriginalFilePath());
+        if (showPreviewPane)
+        {
+            previewPaneWidget.showTrack(mediaDisplay->getOriginalFilePath());
+        }
 
         currentlySelectedDisplay = mediaDisplay;
     }
@@ -707,6 +754,7 @@ private:
 
     PreviewPaneWidget previewPaneWidget;
     int previewPaneHeight = PreviewPaneWidget::defaultHeight;
+    bool showPreviewPane = true;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
 

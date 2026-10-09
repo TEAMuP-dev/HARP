@@ -22,6 +22,12 @@ MainComponent::MainComponent()
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    mediaClipboardWidget.setPreviewPaneVisible(Settings::getBoolValue("view.showPreviewPane", true));
+    mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
+    {
+        Settings::setValue("view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+        commandManager.commandStatusChanged();
+    };
     dragOverlay.setVisible(false);
     dragOverlay.toFront(false);
 
@@ -196,12 +202,15 @@ void MainComponent::openSettingsWindow()
 void MainComponent::restoreViewDefaults()
 {
     // Defaults must match the fallbacks used when reading the settings
-    // in the constructor: status area shown, media clipboard hidden
+    // in the constructor: status area shown, media clipboard hidden, preview pane shown
     if (! showStatusArea)
         viewStatusAreaCallback();
 
     if (showMediaClipboard)
         viewMediaClipboardCallback();
+
+    if (! mediaClipboardWidget.isPreviewPaneVisible())
+        viewPreviewPaneCallback();
 
     // showWelcomePopup default (true) is already restored by clearing settings;
     // it will show on the next launch automatically.
@@ -265,6 +274,13 @@ void MainComponent::viewStatusAreaCallback()
     commandManager.commandStatusChanged();
 
     updateWindowConstraints();
+}
+
+void MainComponent::viewPreviewPaneCallback()
+{
+    // Saving the preference and updating the menu both happen in
+    // onPreviewPaneVisibilityChanged, which also covers the pane's own close button
+    mediaClipboardWidget.setPreviewPaneVisible(! mediaClipboardWidget.isPreviewPaneVisible());
 }
 
 void MainComponent::viewMediaClipboardCallback()

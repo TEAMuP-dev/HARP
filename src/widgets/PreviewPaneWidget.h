@@ -18,17 +18,15 @@
 
 using namespace juce;
 
-// A narrow strip along the top of the pane that gets dragged to change pane height
+//Strip along the top of the preview pane that is dragged to change the pane's height.
 class PreviewPaneResizeEdge : public Component
 {
 public:
-    PreviewPaneResizeEdge() {
-        setMouseCursor(MouseCursor::UpDownResizeCursor); }
+    PreviewPaneResizeEdge() { setMouseCursor(MouseCursor::UpDownResizeCursor); }
 
-    // Called once when a drag starts
+    // Called once when a drag begins
     std::function<void()> onDragStart;
-
-    // Called throughout a drag with how far down the mouse is from drag start pos
+    // Called throughout a drag with how far down the mouse is from where the drag began
     std::function<void(int)> onDrag;
 
     void mouseDown(const MouseEvent&) override
@@ -67,7 +65,34 @@ public:
         addAndMakeVisible(resizeEdge);
     }
 
+    // Called with the height the pane is asking for while its top edge is dragged
     std::function<void(int)> onResize;
+    // Called after the pane has been minimized to its title bar, or is restored
+    std::function<void()> onMinimizeChanged;
+    // Called when the close button is clicked
+    std::function<void()> onClose;
+
+    bool isMinimized() const { return minimized; }
+
+    // Playback carries on while minimized, since the title bar keeps its controls
+    void setMinimized(bool shouldBeMinimized)
+    {
+        if (minimized == shouldBeMinimized)
+        {
+            return;
+        }
+
+        minimized = shouldBeMinimized;
+
+        minimizeButton.setMode(minimized ? restoreButtonInfo.displayLabel
+                                         : minimizeButtonInfo.displayLabel);
+        resized();
+
+        if (onMinimizeChanged)
+        {
+            onMinimizeChanged();
+        }
+    }
 
     /**
      * Shows a media file in the pane, replacing whatever was shown before. A file
@@ -141,7 +166,7 @@ public:
         g.fillRect(titleArea);
 
         // Title, in the space left of the buttons
-        titleArea.removeFromRight(numButtons * (buttonSize + buttonMargin));
+        titleArea.removeFromRight(numButtons * (buttonSize + buttonMargin) + buttonGroupGap);
 
         g.setColour(Colours::lightgrey);
         g.setFont(Font(FontOptions(12.0f, Font::bold)));
@@ -162,10 +187,12 @@ public:
 
     void resized() override
     {
-        resizeEdge.setBounds(0, 0, getWidth(), resizeEdgeHeight);
+        // A minimized pane cannot be resized, and shows nothing below its title bar
+        resizeEdge.setBounds(0, 0, getWidth(), minimized ? 0 : resizeEdgeHeight);
 
-        Rectangle<int> contentArea = getLocalBounds();
-        Rectangle<int> titleArea = contentArea.removeFromTop(titleBarHeight);
+        Rectangle<int> contentArea = minimized ? Rectangle<int>() : getLocalBounds();
+        Rectangle<int> titleArea = getLocalBounds().removeFromTop(titleBarHeight);
+        contentArea.removeFromTop(titleBarHeight);
 
         // Buttons sit at the right end of the title bar
         FlexBox buttonsFlexBox;
@@ -173,12 +200,15 @@ public:
         buttonsFlexBox.justifyContent = FlexBox::JustifyContent::flexEnd;
         buttonsFlexBox.alignItems = FlexBox::AlignItems::center;
 
-        for (MultiButton* button : { &playPauseButton, &stopButton })
+        for (MultiButton* button : { &playPauseButton, &stopButton, &minimizeButton, &closeButton })
         {
+            // A wider gap sets the playback buttons apart from the pane's own buttons
+            const float leftMargin = button == &minimizeButton ? buttonGroupGap : 0.0f;
+
             buttonsFlexBox.items.add(FlexItem(*button)
                                          .withWidth(buttonSize)
                                          .withHeight(buttonSize)
-                                         .withMargin({ 0, buttonMargin, 0, 0 }));
+                                         .withMargin({ 0, buttonMargin, 0, leftMargin }));
         }
 
         buttonsFlexBox.performLayout(titleArea);
@@ -199,6 +229,7 @@ public:
 
     static constexpr int defaultHeight = 150;
     static constexpr int minimumHeight = 100;
+    static constexpr int titleBarHeight = 24;
 
 private:
     void initializeButtons()
@@ -243,6 +274,43 @@ private:
         stopButton.addMode(stopButtonActiveInfo);
         stopButton.addMode(stopButtonInactiveInfo);
         addAndMakeVisible(stopButton);
+
+        // Mode when the pane is at its full height
+        minimizeButtonInfo = MultiButton::Mode { "Minimize",
+                                                 "Click to minimize the preview pane.",
+                                                 [this] { setMinimized(true); },
+                                                 MultiButton::DrawingMode::IconOnly,
+                                                 Colours::lightgrey,
+                                                 fontawesome::ChevronDown };
+        // Mode when the pane is minimized to its title bar
+        restoreButtonInfo = MultiButton::Mode { "Restore",
+                                                "Click to restore the preview pane.",
+                                                [this] { setMinimized(false); },
+                                                MultiButton::DrawingMode::IconOnly,
+                                                Colours::lightgrey,
+                                                fontawesome::ChevronUp };
+        minimizeButton.addMode(minimizeButtonInfo);
+        minimizeButton.addMode(restoreButtonInfo);
+        minimizeButton.setMode(minimizeButtonInfo.displayLabel);
+        addAndMakeVisible(minimizeButton);
+
+        closeButtonInfo = MultiButton::Mode {
+            "Close",
+            "Click to close the preview pane. It can be shown again from the View menu.",
+            [this]
+            {
+                if (onClose)
+                {
+                    onClose();
+                }
+            },
+            MultiButton::DrawingMode::IconOnly,
+            Colours::lightgrey,
+            fontawesome::Close
+        };
+        closeButton.addMode(closeButtonInfo);
+        closeButton.setMode(closeButtonInfo.displayLabel);
+        addAndMakeVisible(closeButton);
     }
 
     // Sets both buttons to match what the display is doing
@@ -289,12 +357,12 @@ private:
         }
     }
 
-    static constexpr int titleBarHeight = 24;
     static constexpr int resizeEdgeHeight = 4;
     static constexpr int titlePadding = 8;
-    static constexpr int numButtons = 2;
+    static constexpr int numButtons = 4;
     static constexpr int buttonSize = 20;
     static constexpr int buttonMargin = 2;
+    static constexpr int buttonGroupGap = 6;
 
     MultiButton playPauseButton;
     MultiButton::Mode playButtonActiveInfo;
@@ -305,6 +373,13 @@ private:
     MultiButton::Mode stopButtonActiveInfo;
     MultiButton::Mode stopButtonInactiveInfo;
 
+    MultiButton minimizeButton;
+    MultiButton::Mode minimizeButtonInfo;
+    MultiButton::Mode restoreButtonInfo;
+
+    MultiButton closeButton;
+    MultiButton::Mode closeButtonInfo;
+
     // Declared after the buttons, since their playback callbacks update the buttons
     std::unique_ptr<AudioDisplayComponent> audioDisplay;
     std::unique_ptr<MidiDisplayComponent> midiDisplay;
@@ -314,4 +389,6 @@ private:
 
     PreviewPaneResizeEdge resizeEdge;
     int heightAtDragStart = defaultHeight;
+
+    bool minimized = false;
 };

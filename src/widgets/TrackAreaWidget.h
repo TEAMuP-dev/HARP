@@ -541,7 +541,7 @@ public:
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(filePath.getFileName());
 
-            // Tracks are only selected after they're loaded, so that listeners get a complete track
+            // Tracks are only selected after they're loaded, so that listeners get a complete
             if (isThumbnailWidget())
             {
                 mediaDisplays.back()->selectTrack();
