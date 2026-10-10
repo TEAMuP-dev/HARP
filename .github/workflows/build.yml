@@ -1,249 +1,177 @@
-# borrowed from pamplejuce: https://github.com/sudara/pamplejuce 
-# MIT License
+# Builds and packages HARP for each platform, and publishes a GitHub release for v* tags.
+# The macOS and Windows packages are code signed with the credentials described in docs/SIGNING.md.
+# Originally adapted from pamplejuce (https://github.com/sudara/pamplejuce, MIT License).
 
-# Copyright (c) 2022 Sudara Williams
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-# follow this: https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/
 name: HARP
 
 on:
-  workflow_dispatch: # lets you run a build from the UI
   push:
+    paths-ignore:
+      - '**.md'
+      - 'website/**'
+      - 'model_validation/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/model_validation.yml'
+  pull_request:
+  workflow_dispatch:
 
-# When pushing new commits, cancel any running builds on that branch
+permissions:
+  contents: read
+
+# Cancel running builds of a branch when new commits are pushed to it
 concurrency:
-  group: ${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  PROJECT_NAME: HARP
-  BUILD_TYPE: Release
-  BUILD_DIR: Builds
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DISPLAY: :0 # Linux pluginval needs this
-  CMAKE_BUILD_PARALLEL_LEVEL: 3 # Use up to 3 cpus to build juceaide, etc
-  HOMEBREW_NO_INSTALL_CLEANUP: 1
+defaults:
+  run:
+    shell: bash
 
-# jobs are run in paralell on different machines
-# all steps run in series
+env:
+  # Forks cannot access the signing credentials, so their packages are left unsigned
+  SIGN_MACOS: ${{ secrets.MACOS_CERTIFICATE != '' }}
+  SIGN_WINDOWS: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
+
 jobs:
-  build_and_test:
+  build:
     name: ${{ matrix.name }}
+    # Pull requests from branches of this repository are already built on push
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
         include:
-          - name: Linux
-            os: ubuntu-22.04
-            pluginval-binary: ./pluginval
-            ccache: ccache
-          - name: Windows
-            os: windows-latest
-            pluginval-binary: ./pluginval.exe
-            ccache: sccache
           - name: macOS
-            os: macos-14
-            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            ccache: ccache
+            os: macos-26
+            cache: ccache
+            # Universal binary, for both Apple silicon and Intel Macs
+            cmake-args: '-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"'
+          - name: Windows-x64
+            os: windows-2025
+            cache: sccache
+          # Linux binaries require at least the glibc version used to build them, so build on the oldest Ubuntu
+          - name: Linux-x64
+            os: ubuntu-22.04
+            cache: ccache
+          - name: Linux-arm64
+            os: ubuntu-22.04-arm
+            cache: ccache
 
     steps:
-    # Setup MSVC toolchain and developer command prompt (Windows)
-    - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
-    # This also starts up our "fake" display Xvfb, needed for pluginval
-    - name: Install JUCE's Linux Deps
-      if: runner.os == 'Linux'
-      # Thanks to McMartin & co https://forum.juce.com/t/list-of-juce-dependencies-under-linux/15121/44
-      run: |
-        sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev xvfb ninja-build libcurl4-openssl-dev
-        sudo /usr/bin/Xvfb $DISPLAY &
+      # See JUCE/docs/Linux Dependencies.md (WebKit, OpenGL and JACK are not used)
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libcurl4-openssl-dev libfontconfig1-dev libfreetype-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev
 
-    - name: Install IPP (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        nuget install intelipp.static.win-x64 -Version 2022.2.0.575
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
 
-    - name: Install Ninja (Windows)
-      if: runner.os == 'Windows'
-      run: choco install ninja
+      - name: Set up compiler cache
+        uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: ${{ matrix.name }}
+          variant: ${{ matrix.cache }}
 
-    - name: Install macOS Deps
-      if: ${{ matrix.name == 'macOS' }}
-      run: brew install ninja osxutils
+      - name: Configure
+        run: |
+          cmake -B Builds -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.cache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.cache }} \
+            ${{ matrix.cmake-args }}
 
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive # Get JUCE populated
+      - name: Build
+        run: cmake --build Builds
 
-    - name: Setup Common Environment Variables
-      shell: bash
-      run: |
-        VERSION=$(cat VERSION)
-        echo "ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}" >> $GITHUB_ENV
-        echo "PRODUCT_NAME=${{ env.PROJECT_NAME }}-$VERSION-${{ matrix.name }}" >> $GITHUB_ENV
+      - name: Set package name
+        run: |
+          echo "PACKAGE=HARP-$(cat VERSION)-${{ matrix.name }}" >> "$GITHUB_ENV"
+          echo "ARTEFACTS=Builds/HARP_artefacts/Release" >> "$GITHUB_ENV"
 
-    - name: Setup Environment Variables for macOS
-      if: matrix.name == 'macOS'
-      shell: bash
-      run: |
-        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.app" >> $GITHUB_ENV
+      - name: Import Developer ID certificate (macOS)
+        if: runner.os == 'macOS' && env.SIGN_MACOS == 'true'
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
 
-    - name: Setup Environment Variables for Windows
-      if: matrix.name == 'Windows'
-      shell: bash
-      run: |
-        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}.exe" >> $GITHUB_ENV
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        env:
+          # The imported certificate is the only identity on the runner, so part of its name selects it
+          MACOS_SIGNING_IDENTITY: ${{ env.SIGN_MACOS == 'true' && 'Developer ID Application' || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          pipx install dmgbuild==1.6.7
+          packaging/package.sh "$ARTEFACTS/HARP.app" "dist/$PACKAGE.dmg"
 
-    - name: Setup Environment Variables for Linux
-      if: matrix.name == 'Linux'
-      shell: bash
-      run: |
-        echo "STANDALONE_PATH=${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}/${{ env.PROJECT_NAME }}" >> $GITHUB_ENV
+      - name: Sign (Windows)
+        if: runner.os == 'Windows' && env.SIGN_WINDOWS == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_CERTIFICATE_PROFILE }}
+          files: ${{ github.workspace }}\Builds\HARP_artefacts\Release\HARP.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@main
-      with:
-        key: v3-${{ matrix.os }}-${{ matrix.type }}
-        variant: ${{ matrix.ccache }}
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p dist
+          7z a "dist/$PACKAGE.zip" "$ARTEFACTS/HARP.exe"
 
-    - name: Import Certificates (macOS)
-      uses: apple-actions/import-codesign-certs@v1
-      if: ${{ matrix.name == 'macOS' }}
-      with:
-        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
-        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+      # A tarball keeps the executable permission, which zip archives made here would lose
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          tar -czf "dist/$PACKAGE.tar.gz" -C "$ARTEFACTS" HARP
 
-    # - name: Set up Python ${{ matrix.python-version }} (Windows)
-    #   if: matrix.name == 'Windows'
-    #   uses: actions/setup-python@v5
-    #   with:
-    #     python-version: '3.10'
-
-    - name: Configure
-      shell: bash
-      run: cmake -B ${{ env.BUILD_DIR }} -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache }} -DCMAKE_OSX_ARCHITECTURES="arm64" .
-      # dummy configure
-      # run: mkdir -p ${{ env.BUILD_DIR }}
-    - name: Build
-      shell: bash
-      run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --parallel 4
-      # dummy build
-      # run: touch dummy
-    - name: Install
-      shell: bash
-      run: cmake --install ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --prefix install
-
-    # why the python3 -m pip install packaging? see this issue: https://github.com/nodejs/node-gyp/issues/2869
-    - name: Install Python dependencies for MACOS dmg
-      if: ${{ matrix.name == 'macOS' }}
-      run: python3 -m pip install --upgrade packaging pip setuptools --break-system-packages --user
-    
-    - name: Create DMG, Notarize and Staple (macOS)
-      if: ${{ matrix.name == 'macOS' }}
-      run: |
-        /usr/local/bin/python3 -m pip install packaging 
-        chmod +x ./packaging/package.sh
-        ./packaging/package.sh "${{ secrets.DEVELOPER_ID_APPLICATION}}" "${{ env.ARTIFACTS_PATH }}" "${{ env.PROJECT_NAME }}" "${{ env.PRODUCT_NAME }}" "${{ secrets.NOTARIZATION_USERNAME }}" "${{ secrets.NOTARIZATION_PASSWORD }}" "${{ secrets.TEAM_ID }}"
-
-    - name: Upload Zip (Windows)
-      if: ${{ matrix.name == 'Windows' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PRODUCT_NAME }}
-        path: ${{ env.BUILD_DIR }}/install
-
-    - name: Upload Zip (Linux)
-      if: ${{ matrix.name == 'Linux' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PRODUCT_NAME }}
-        path: ${{ env.BUILD_DIR }}/install
-
-    - name: Upload DMG (macOS)
-      if: ${{ matrix.name == 'macOS' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PRODUCT_NAME }}
-        path: packaging/${{ env.PRODUCT_NAME }}.dmg
- 
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/*
+          archive: false # the package is already compressed
+          if-no-files-found: error
+          overwrite: true
 
   release:
-    if: contains(github.ref, 'tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
     runs-on: ubuntu-latest
-    needs: build_and_test
+    permissions:
+      contents: write
 
     steps:
+      # For RELEASE.md
+      - uses: actions/checkout@v7
 
-    # Needed to access the RELEASE.md file
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}
-        fetch-depth: 1
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
 
-    - name: Download Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ env.PRODUCT_NAME }}
-        path: ./artifacts
-    
-
-    # - name: Breakpoint if tests failed
-    #   # if: failure()
-    #   uses: namespacelabs/breakpoint-action@v0
-    #   with:
-    #     duration: 30m
-    #     authorized-users: xribene
-
-    # zip each of the folders in the artifacts folder
-    - name: Zip Artifacts
-      run: |
-        for d in ./artifacts/*; do
-          if [ -d "$d" ]; then
-            echo $d
-            pushd "$d" > /dev/null
-            echo $PWD
-            zip -r ../$(basename "$PWD").zip *
-            cd ..
-            rm -rf $(basename "$d")
-            popd > /dev/null
-          fi
-        done
-
-    # - name: Display structure of downloaded and zipped files
-    #   run: ls -R
-
-    - name: Create Release
-      id: create_release
-      uses: ncipollo/release-action@v1
-      with:
-        tag: ${{ github.ref_name }}
-        name: ${{ github.event.repository.name}} ${{ github.ref_name }}
-        # body: |
-        #   ## Changes
-        #   - Description of changes
-        bodyFile: ./RELEASE.md
-        artifacts: ./artifacts/*
-        token: ${{ secrets.GITHUB_TOKEN }}
-        allowUpdates: true
-        replacesArtifacts: true
+      # If the release already exists (e.g. on a re-run), its packages are replaced instead
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --title "HARP $GITHUB_REF_NAME" --notes-file RELEASE.md \
+            || gh release upload "$GITHUB_REF_NAME" dist/* --clobber

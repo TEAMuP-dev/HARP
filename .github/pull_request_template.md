@@ -19,5 +19,5 @@
 - [ ] I built and tested this branch, including functionality the change could affect
 - [ ] Code is formatted and CI passes
 
-Reviewers: see the [Reviewing Guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/REVIEWING.md)
+Reviewers: see the [Reviewing Guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/REVIEWING.md)
 for how to review this and for the reviewer checklist.

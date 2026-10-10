@@ -4,7 +4,7 @@
 <!-- TODO - Update this figure! -->
 ![herofig_revised](https://github.com/TEAMuP-dev/HARP/assets/26678616/c4f5cdbb-aaff-4196-b9d2-3b6f69130856)
 
-<!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/cmake_ctest.yml?branch=main) -->
+<!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main) -->
 <!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp3/deploys) -->
 <!-- TODO - Replaced with HARP 3.0 paper link -->
 <!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
@@ -90,7 +90,7 @@ To get started:
 <!-- website/content/contributing/overview.md -->
 # Contributing
 
-To get started building and deploying models for others to use in HARP, see [Adding Models with pyharp](#adding-models-with-pyharp). To get started developing the HARP app itself, see [Building HARP](#building-harp). Please also see our [Developer Notes](https://github.com/TEAMuP-dev/HARP/blob/main/DEVNOTES.md) for various conventions and suggestions.
+To get started building and deploying models for others to use in HARP, see [Adding Models with pyharp](#adding-models-with-pyharp). To get started developing the HARP app itself, see [Building HARP](#building-harp). Please also see our guidelines for [developing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEVELOPING.md), [reviewing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/REVIEWING.md), [deploying models](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md), and [code signing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/SIGNING.md).
 
 <!-- website/content/contributing/version_compat.md -->
 ## Version Compatibility
@@ -136,7 +136,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 
 #### ARM vs. x86 MacOS
 
-The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`, or to `"arm64;x86_64"` for a universal binary:
 ```bash
 cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
 ```
@@ -214,30 +214,23 @@ We provide instructions for debugging your HARP build in [Visual Studio Code](ht
 <!-- website/content/contributing/dist.md -->
 ## Distribution
 
+HARP is built and packaged for macOS (universal), Windows (x64), and Linux (x64 and arm64) by [GitHub Actions](https://github.com/TEAMuP-dev/HARP/blob/main/.github/workflows/build.yml) on every push.
+Pushing a tag of the form `v*` also publishes the packages as a release, with `RELEASE.md` as its notes.
+The macOS and Windows packages are code signed, as described in [SIGNING.md](https://github.com/TEAMuP-dev/HARP/blob/main/docs/SIGNING.md).
+
 ### MacOS
 
-Codesigning and packaging for distribution is done through the script located at `packaging/package.sh`.
-You'll need to set up a developer account with Apple and create a certificate in order to sign the plugin.
-For more information on codesigning and notarization for macOS, please refer to the [pamplejuce](https://github.com/sudara/pamplejuce) template.
-
-The script requires the following variables to be passed:
-```
-# Retrieve values from either environment variables or command-line arguments
-DEV_ID_APPLICATION # Developer ID Application certificate
-ARTIFACTS_PATH # should be packaging/dmg/HARP.app
-PROJECT_NAME # "HARP"
-PRODUCT_NAME # "HARP"
-NOTARIZATION_USERNAME # Apple ID
-NOTARIZATION_PASSWORD # App-specific password for notarization
-TEAM_ID # Team ID for notarization
-```
-
-Usage:
+A build can also be packaged locally into a DMG with [dmgbuild](https://github.com/dmgbuild/dmgbuild) (`pipx install dmgbuild`):
 ```bash
-./HARP/packaging/package.sh <DEV_ID_APPLICATION> <ARTIFACTS_PATH> <PROJECT_NAME> <PRODUCT_NAME> <NOTARIZATION_USERNAME> <NOTARIZATION_PASSWORD> <TEAM_ID>
+packaging/package.sh build/HARP_artefacts/Release/HARP.app HARP.dmg
 ```
 
-After running `package.sh`, you should have a signed and notarized `dmg` file in the `packaging/` directory.
+To sign and notarize the DMG, set the following environment variables first:
+```bash
+export MACOS_SIGNING_IDENTITY="Developer ID Application: <NAME> (<TEAM_ID>)" # Certificate in your keychain
+export APPLE_ID=<APPLE_ID>                       # Apple Account email address
+export APPLE_APP_PASSWORD=<APP_SPECIFIC_PASSWORD> # App-specific password for notarization
+```
 
 ## Citations
 
