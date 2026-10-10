@@ -10,7 +10,7 @@
 #   APPLE_ID                Apple Account used for notarization. If unset, notarization is skipped.
 #   APPLE_APP_PASSWORD      App-specific password for APPLE_ID.
 #
-# Requires dmgbuild (pipx install dmgbuild).
+# Requires dmgbuild (pip install dmgbuild).
 
 set -euo pipefail
 

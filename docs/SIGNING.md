@@ -15,10 +15,11 @@ here is mostly creating accounts and certificates, and storing the results as re
   - [Renewing and Handing Off](#renewing-and-handing-off)
   - [Troubleshooting](#troubleshooting)
 - [Windows](#windows)
-  - [Options](#options)
-  - [Setting Up Artifact Signing](#setting-up-artifact-signing)
-  - [Handing Off Artifact Signing](#handing-off-artifact-signing)
-- [Linux](#linux)
+  - [Artifact Signing](#artifact-signing)
+  - [Choosing a Service](#choosing-a-service)
+  - [Setting Up](#setting-up-1)
+  - [Renewing and Handing Off](#renewing-and-handing-off-1)
+  - [Troubleshooting](#troubleshooting-1)
 
 ## Overview
 
@@ -30,7 +31,7 @@ is signed:
   release should never require it.
 - **Windows** shows a SmartScreen warning ("Windows protected your PC") for an executable from an
   unknown publisher. Users can get past it with "More info" → "Run anyway".
-- **Linux** does not check signatures.
+- **Linux** does not check signatures, so no setup is needed.
 
 The credentials are stored in the repository under Settings → Secrets and variables → Actions,
 which requires admin access to the repository.
@@ -62,10 +63,10 @@ password_ for this purpose in place of the account's real password.
 
 | Secret | Contents | Used For |
 |---|---|---|
-| `MACOS_CERTIFICATE` | The Developer ID Application certificate and private key, as a base64-encoded `.p12` file | Signing |
-| `MACOS_CERTIFICATE_PASSWORD` | The password used to export the `.p12` file | Signing |
-| `APPLE_ID` | The email address of an Apple Account on the developer team | Notarization |
-| `APPLE_APP_PASSWORD` | An app-specific password for that Apple Account | Notarization |
+| `MACOS_CERTIFICATE` | The Developer ID Application certificate and private key, as a base64-encoded `.p12` file. | Signing |
+| `MACOS_CERTIFICATE_PASSWORD` | The password used to export the `.p12` file. | Signing |
+| `APPLE_ID` | The email address of an Apple Account on the developer team. | Notarization |
+| `APPLE_APP_PASSWORD` | An app-specific password for that Apple Account. | Notarization |
 
 The signing identity and the team ID are both read from the certificate, so they need no secrets of
 their own.
@@ -150,13 +151,17 @@ on the same Mac, since the private key is created there and never leaves it unti
     ```
 
     The output should include `accepted` and `source=Notarized Developer ID`.
+11. Delete the certificate request, the downloaded `.cer` files, and any copy of the base64 text.
+    Keep the `.p12` file, its password, and the app-specific password in a password manager shared
+    by the maintainers, or delete them as well (see
+    [Renewing and Handing Off](#renewing-and-handing-off)). The certificate and private key remain
+    in the keychain, so a new `.p12` file can be exported from it at any time.
 
 ### Renewing and Handing Off
 
 **Certificates are valid for five years**, though never beyond the expiry of Apple's intermediate
 certificate (September 2031 for G2). Packages signed while the certificate was valid keep working
-after it expires, so only new builds need a new one. Create it as under [Setting Up](#setting-up),
-and replace `MACOS_CERTIFICATE` and `MACOS_CERTIFICATE_PASSWORD`.
+after it expires, so only new builds need a new one.
 
 **Revoke a certificate only if its private key has been compromised.** Apple blocks every app signed
 with a revoked certificate, including copies users have already installed. Developer ID certificates
@@ -204,35 +209,78 @@ Either way:
   reached.
 - **No Developer ID Application option:** the membership is not active yet, or the signed-in user
   is not the Account Holder.
-- **Exporting as `.p12` is unavailable:** the certificate was selected under Certificates rather
-  than My Certificates, or its private key is missing.
 - **Notarization fails with `HTTP status code: 403`:** an agreement needs to be accepted in the
   developer account.
 - **Notarization fails with `HTTP status code: 401`:** the Apple Account and app-specific password
   do not match, or the account is not on the team that signed the app.
 - **Notarization finishes with `status: Invalid`:**
   `xcrun notarytool log <SUBMISSION_ID>`, with the same credentials as the submission, explains why.
-- **`The specified item could not be found in the keychain`:** no certificate matches
-  `MACOS_SIGNING_IDENTITY` when packaging locally, or the certificate was not imported in the
-  workflow.
+- **`The specified item could not be found in the keychain`:** no certificate in the keychain
+  matches `MACOS_SIGNING_IDENTITY`. In the workflow, this means `MACOS_CERTIFICATE` is not a
+  Developer ID Application certificate.
 - **`ambiguous`:** several certificates match `MACOS_SIGNING_IDENTITY`, such as an old and a new one
   with the same name. Use the SHA-1 hash listed by `security find-identity` instead.
 
 ## Windows
 
-### Options
+### Artifact Signing
+
+Windows has no equivalent of notarization, so signing is the only step. The workflow signs
+`HARP.exe` with [Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/)
+(formerly Trusted Signing). Rather than handing out a certificate and private key, Artifact Signing
+keeps them in Azure and signs on request, with a certificate issued to an individual or organization
+that Microsoft has validated.
+
+Requesting a signature requires signing in to Azure. As with notarization, an automated build cannot
+sign in as a person, so the workflow signs in as an _app registration_, an identity for software
+created in Microsoft Entra ID, using a _client secret_ in place of a password.
+
+| Name | Contents | Stored As |
+|---|---|---|
+| `AZURE_TENANT_ID` | The directory (tenant) ID of the app registration. | Secret |
+| `AZURE_CLIENT_ID` | The application (client) ID of the app registration. | Secret |
+| `AZURE_CLIENT_SECRET` | A client secret of the app registration. | Secret |
+| `AZURE_SIGNING_ENDPOINT` | The endpoint of the signing account's region. | Variable |
+| `AZURE_SIGNING_ACCOUNT` | The name of the Artifact Signing account. | Variable |
+| `AZURE_CERTIFICATE_PROFILE` | The name of the certificate profile. | Variable |
+
+The last three only name Azure resources, so they are stored as repository variables, on the
+Variables tab next to Secrets. Unlike secrets, variables can be read back.
+
+### Choosing a Service
+
+Windows accepts certificates from many providers, which differ in cost, in whose name is shown as the
+publisher, and in how well they suit an automated build.
 
 | Option | Cost | Publisher Shown | Limitations |
 |---|---|---|---|
-| [Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/) | About US$10 per month | The validated organization or individual | Organizations in the US, Canada, the EU, the UK, Australia, New Zealand, Japan, South Korea, Singapore, Switzerland, Norway, and Israel, or individuals in the US and Canada. |
+| [Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/) | About US$10 per month | The validated organization or individual | Organizations in certain countries, and individuals in the US and Canada. |
 | [Microsoft Store](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/) | Free for individuals | The developer | Signs only the copies installed from the Store. |
 | [SignPath Foundation](https://signpath.org) | Free for open-source projects | SignPath Foundation | Excludes HARP (see below). |
 | Certificate authority | Annual fee | The validated organization or individual | The private key has to be kept on a hardware token or cloud HSM, which is hard to use from a workflow. |
 
-The workflow uses Artifact Signing (formerly Trusted Signing), which is the cheapest option that
-signs the packages it publishes.
+The workflow uses Artifact Signing, which is the cheapest option that signs the packages it
+publishes. Like an Apple Developer Program membership, it can be set up for an individual or an
+organization, which decides whose name the certificate carries. Either way, it requires a paid Azure
+subscription, since free, trial, and sponsored subscriptions are not supported.
 
-**There is no free way to sign those packages:**
+**Individual validation is the quickest to set up.** A developer in the US or Canada verifies their
+government-issued ID with Microsoft Authenticator, and the certificate names them. The Azure billing
+account has to be of type Individual, with a legal name and address that match the ID.
+
+**Organization validation outlives any one person's involvement.** The certificate carries the
+organization's legal name, and other people can be given access to the Azure resources. The
+requirements are stricter (see
+[Microsoft's quickstart](https://learn.microsoft.com/azure/artifact-signing/quickstart)):
+
+- The organization must be a legal business entity in the US, Canada, the EU, the UK, Australia, New
+  Zealand, Japan, South Korea, Singapore, Switzerland, Norway, or Israel.
+- It needs a website, a business identifier, and a primary email address on its own domain, which
+  cannot be a distribution list.
+- Validation takes 1 to 20 business days and may require further documents. A representative of the
+  organization also verifies their own ID.
+
+**There is no free way to sign the packages the workflow publishes:**
 
 - **The Microsoft Store** has been free for individual developers since September 2025, after an ID
   check, and signs apps packaged as MSIX itself. It also gives users one-click installation and
@@ -245,15 +293,13 @@ signs the packages it publishes.
   page. Its [terms](https://signpath.org/terms) exclude projects with any component under commercial
   dual licensing, which includes JUCE (AGPLv3 or commercial).
 
-**Signing does not silence SmartScreen straight away.** It replaces the unknown publisher with the
-publisher's name, but SmartScreen may keep warning about a new publisher until its downloads build
-up reputation.
+### Setting Up
 
-### Setting Up Artifact Signing
+These steps are the same for a first setup and a handoff to a different individual or organization.
 
 1. Create an [Azure](https://portal.azure.com) account with a pay-as-you-go subscription. For an
-   individual certificate, the billing account must be of type Individual, with a legal name and
-   address that match a government-issued ID.
+   individual certificate, check that the billing account's legal name and address match a
+   government-issued ID.
 2. Under Subscriptions → (the subscription) → Settings → Resource providers, select
    `Microsoft.CodeSigning` and choose **Register**.
 3. Search the portal for **Artifact Signing Accounts** and choose **Create**. Create a new resource
@@ -264,67 +310,75 @@ up reputation.
 4. In the new account, open Access control (IAM) and assign yourself the **Artifact Signing Identity
    Verifier** role.
 5. Under Identity validations, choose **New Identity** → **Public**, as either an organization or an
-   individual, fill in the form, and follow the instructions sent by email. An organization takes 1
-   to 20 business days to validate, and an individual verifies their ID with Microsoft
-   Authenticator.
+   individual, fill in the form, and follow the instructions sent by email.
 6. Once the validation is complete, go to Certificate profiles → **Create** → **Public Trust**,
    enter a profile name, and select the validated identity.
 7. Create credentials for the workflow under Microsoft Entra ID → App registrations → **New
    registration**. Note the Application (client) ID and Directory (tenant) ID, then create a client
-   secret under Certificates & secrets and copy its value.
+   secret under Certificates & secrets and copy its value, which is shown only once.
 8. In the signing account's Access control (IAM), assign the **Artifact Signing Certificate Profile
    Signer** role to the app registration.
-9. Set these repository secrets:
+9. Set the three secrets and three variables listed under [Artifact Signing](#artifact-signing).
+10. Push a commit, download the Windows package from the workflow run, and check `HARP.exe` in
+    PowerShell:
 
-   | Secret | Value |
-   |---|---|
-   | `AZURE_TENANT_ID` | Directory (tenant) ID from step 7 |
-   | `AZURE_CLIENT_ID` | Application (client) ID from step 7 |
-   | `AZURE_CLIENT_SECRET` | Client secret value from step 7 |
+    ```powershell
+    Get-AuthenticodeSignature HARP.exe
+    ```
 
-   And these repository variables, on the Variables tab next to Secrets:
+    The status should be `Valid`. The signature is also listed under Properties → Digital
+    Signatures.
+11. Delete any copy of the client secret. It is only needed again to restore `AZURE_CLIENT_SECRET`,
+    and a new one can be created at any time.
 
-   | Variable | Value |
-   |---|---|
-   | `AZURE_SIGNING_ENDPOINT` | Endpoint from step 3 |
-   | `AZURE_SIGNING_ACCOUNT` | Account name from step 3 |
-   | `AZURE_CERTIFICATE_PROFILE` | Profile name from step 6 |
+### Renewing and Handing Off
 
-10. Push a commit, download the Windows package from the workflow run, and check that `HARP.exe`
-    lists the signature under Properties → Digital Signatures, or that
-    `Get-AuthenticodeSignature HARP.exe` reports `Valid` in PowerShell.
+**Certificates are valid for only three days**, and Artifact Signing renews them automatically. The
+workflow timestamps each signature, which keeps it valid after its certificate expires, so releases
+keep working.
 
-The certificates Artifact Signing issues are valid for only a few days, which is why the workflow
-timestamps each signature. A timestamped signature stays valid after its certificate expires.
+**Identity validations expire.** Microsoft sends reminders starting 60 days ahead of the expiration
+date. An expired validation stops certificate renewal, and with it signing, until a new identity
+validation is associated with the certificate profile.
 
-### Handing Off Artifact Signing
+**Client secrets expire, after at most 24 months.** Create a new one under Certificates & secrets
+and replace `AZURE_CLIENT_SECRET` before the old one expires.
 
-- **Grant access rather than recreating resources.** A new maintainer can be given the Owner role on
-  the resource group under Access control (IAM). Someone has to keep paying for the subscription, or
-  transfer its billing.
+**Deleting resources does not affect existing releases.** Deleting the signing account or a
+certificate profile stops new signing, but files that were already signed keep valid signatures.
+
+When signing passes to a new maintainer:
+
+- **Within the same Azure subscription**, give the new maintainer the Owner role on the resource
+  group under Access control (IAM). The app registration, secrets, and variables can stay as they
+  are.
+- **Between subscriptions**, the new maintainer recreates every resource and replaces all six
+  secrets and variables, since Artifact Signing resources cannot be moved to another subscription,
+  tenant, or resource group.
+
+Either way:
+
 - **The certificate names whoever passed identity validation.** Signing as a different individual or
   organization requires a new identity validation and certificate profile, after which
   `AZURE_CERTIFICATE_PROFILE` is updated.
-- **Client secrets expire, after at most 24 months.** Create a new one under Certificates & secrets
-  and replace `AZURE_CLIENT_SECRET` before the old one expires.
+- **Someone has to keep paying for the subscription**, so whoever does should know that it is in
+  use.
 
-## Linux
+### Troubleshooting
 
-Linux does not check signatures, so no setup is needed.
-
-Instead, the system used to build the Linux packages limits where they run. A Linux binary requires
-at least the versions of glibc and libstdc++ used to build it, so the workflow builds on the oldest
-Ubuntu available, 22.04 (glibc 2.35, and libstdc++ from GCC 12). The packages therefore run on these
-distributions:
-
-- Ubuntu 22.04 or newer, and distributions based on it, such as Linux Mint 21 and Pop!_OS 22.04
-- Debian 12 or newer, including 64-bit Raspberry Pi OS (with the `arm64` package)
-- Fedora 36 or newer, RHEL 10 and its rebuilds, openSUSE Tumbleweed and Leap 16, and Arch Linux
-
-They do not run on Ubuntu 20.04, Debian 11, RHEL 8 or 9, or openSUSE Leap 15. Reaching those would
-mean building inside an older Linux container, and reaching every distribution would mean
-publishing a Flatpak.
-
-At runtime, HARP needs ALSA, FreeType, and X11, and loads libcurl for network requests, all of
-which come with a standard desktop installation. On Wayland, it runs through XWayland, which GNOME
-and KDE enable by default.
+- **New Identity is unavailable:** the signed-in user does not have the Artifact Signing Identity
+  Verifier role (step 4 of [Setting Up](#setting-up-1)).
+- **The verification email never arrived, or its link expired:** the address has to accept external
+  email containing links. The link expires after seven days, and a new identity validation request
+  is then needed.
+- **`You don't have permission to access this page` during individual validation:** sign in with the
+  email address given in the identity validation request.
+- **Signing fails with `401`:** the workflow could not sign in to Azure. Check the tenant and client
+  IDs, and whether the client secret has expired.
+- **Signing fails with `403`:** the app registration does not have the Artifact Signing Certificate
+  Profile Signer role, the account or profile name is wrong, the endpoint does not match the
+  account's region, or the identity validation or certificate profile is not active.
+- **SmartScreen still warns about a signed release:** SmartScreen judges each file by its own
+  download history, so the warning stops once a release has been downloaded enough. A file that
+  keeps triggering it can be submitted to [Microsoft Security Intelligence](https://www.microsoft.com/wdsi)
+  for review.
