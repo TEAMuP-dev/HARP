@@ -1,7 +1,7 @@
 /**
  * @file MediaDisplayComponent.h
  * @brief Parent class for shared functionality of media displays.
- * @author cwitkowitz, xribene, nathanpruyne
+ * @author cwitkowitz, 2cylu2, xribene, nathanpruyne, JEYuhas
  */
 
 #pragma once
@@ -48,7 +48,7 @@ class ColorablePanel : public Component
 {
 public:
     ColorablePanel(Colour color = Colours::darkgrey)
-        : defaultColor(color), backgroundColor(color) {};
+        : defaultColor(color), backgroundColor(color) {}
 
     void paint(Graphics& g) override { g.fillAll(backgroundColor); }
 
@@ -155,8 +155,6 @@ public:
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
 
-    Rectangle<int> getChooseFileButtonBounds();
-    Rectangle<int> getPlayButtonBounds();
 
     int getNumOverheadLabels();
 

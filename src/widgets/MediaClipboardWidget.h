@@ -1,7 +1,7 @@
 /**
  * @file MediaClipboardWidget.h
  * @brief Component that manages cached (non-model-specific) media files HARP.
- * @author cwitkowitz
+ * @author cwitkowitz, rzhu15
  */
 
 #pragma once
@@ -13,6 +13,8 @@
 #include "../gui/MultiButton.h"
 
 #include "../utils/Logging.h"
+
+#include "../windows/tutorial/TutorialTargets.h"
 
 using namespace juce;
 
@@ -28,6 +30,7 @@ public:
         initializeButtons();
         controlsComponent.addAndMakeVisible(buttonsComponent);
         addAndMakeVisible(controlsComponent);
+        controlsComponent.setComponentID(TutorialTargets::clipboardControls);
 
         resetState();
 
@@ -36,9 +39,9 @@ public:
         addAndMakeVisible(trackArea);
     }
 
-    ~MediaClipboardWidget() { trackAreaWidget.removeChangeListener(this); }
+    ~MediaClipboardWidget() override { trackAreaWidget.removeChangeListener(this); }
 
-    void paint(Graphics& g) { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
+    void paint(Graphics& g) override { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
 
     void resized() override
     {
@@ -131,43 +134,6 @@ public:
     {
         // TODO - is there an explicit way to check how HARP was invoked?
         trackAreaWidget.addTrackFromFilePath(filePath, fromDAW);
-    }
-
-    Rectangle<int> getClipboardTrackAreaBounds() const { return trackArea.getBounds().expanded(2); }
-
-    Rectangle<int> getClipboardControlsBounds() const
-    {
-        return controlsComponent.getBounds().expanded(2);
-    }
-
-    Rectangle<int> getClipboardNameBoxBounds() const
-    {
-        return getLocalArea(&controlsComponent, selectionTextBox.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getClipboardButtonsBounds() const
-    {
-        return getLocalArea(&controlsComponent, buttonsComponent.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getAddFileButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, addFileButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getRemoveButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, removeSelectionButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getPlayButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, playStopButton.getBounds()).expanded(2);
-    }
-
-    Rectangle<int> getSendToDAWButtonBounds() const
-    {
-        return getLocalArea(&buttonsComponent, sendToDAWButton.getBounds()).expanded(2);
     }
 
     void addFileCallback()

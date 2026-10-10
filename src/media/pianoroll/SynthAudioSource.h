@@ -1,7 +1,7 @@
 /**
  * @file SynthAudioSource.h
  * @brief Handles MIDI playback for pianoroll.
- * @author nathanpruyne
+ * @author nathanpruyne, cwitkowitz
  * 
  * Note that this file was adapted from:
  * https://juce.com/tutorials/tutorial_synth_using_midi_input/

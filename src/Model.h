@@ -1,7 +1,7 @@
 /**
  * @file Model.h
  * @brief Model state and interface for loading and processing.
- * @author hugofloresgarcia, aldo-aguilar, xribene, cwitkowitz, saumya-pailwan
+ * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia, aldo-aguilar
  */
 
 #pragma once
@@ -79,6 +79,23 @@ struct ModelMetadata
                 }
             }
         }
+    }
+
+    // The card as JSON, in the form the constructor reads
+    var toVar() const
+    {
+        Array<var> tagList;
+
+        for (const auto& tag : tags)
+            tagList.add(String(tag));
+
+        DynamicObject::Ptr card = new DynamicObject();
+        card->setProperty("name", String(name));
+        card->setProperty("author", String(author));
+        card->setProperty("description", String(description));
+        card->setProperty("tags", tagList);
+
+        return var(card.get());
     }
 };
 
@@ -174,6 +191,11 @@ public:
 
             return result;
         }
+
+        // Requests made while loading belong to this model as well (so that they can be
+        // aborted), even though the client only replaces the current one once loading
+        // has succeeded
+        tempClient->setRequestRegistry(&requestRegistry);
 
         /* Settle on the address the provider itself uses before anything is queried
            or recorded, so that the same model entered several ways is loaded, listed,
@@ -452,6 +474,13 @@ public:
 
         return result;
     }
+
+    // Aborts any request this model currently has in flight, locally. Unlike
+    // cancel(), this needs neither the server nor a reachable network, and it
+    // unblocks the worker thread that is waiting on the connection. Once aborted
+    // the model will not open any further connections, so this is only for
+    // models that are being discarded (see ModelTab::abandon).
+    void abortActiveRequests() { requestRegistry.abortActiveRequests(); }
 
     OpResult cancel()
     {
@@ -754,6 +783,9 @@ private:
     }
 
     ModelStatus status;
+
+    // Declared before the client so that it is destroyed after it
+    RequestRegistry requestRegistry;
 
     std::unique_ptr<Client> client;
 

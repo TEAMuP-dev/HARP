@@ -1,4 +1,4 @@
-# Developer Notes
+# Development Guidelines
 
 <!-- Coding Conventions -->
 

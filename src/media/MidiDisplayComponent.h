@@ -1,7 +1,7 @@
 /**
  * @file MidiDisplayComponent.h
  * @brief Display specifics for MIDI (pianoroll).
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

@@ -1,12 +1,10 @@
 /**
  * @file Main.cpp
  * @brief Initial JUCE launch code and window management.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, xribene, hugofloresgarcia
  */
 
 #include "MainComponent.h"
-
-#include "windows/WelcomeWindow.h"
 
 #include "utils/Settings.h"
 
@@ -87,7 +85,7 @@ public:
             if (auto* mainComp =
                     dynamic_cast<MainComponent*>(getMainWindowPtr()->getContentComponent()))
             {
-                mainComp->openWelcomeWindow();
+                mainComp->openTutorial();
             }
         }
 

@@ -4,13 +4,20 @@
         "description": "Enter text prompts to generate 44.1khz audio.",
         "author": "Stability AI",
         "tags": [
-            "text-to-audio",
+            "category:generation",
+            "subcategory:holistic",
+            "input:text",
+            "output:audio/wav|mp3",
+            "sample-rate:44100",
+            "channels:stereo",
+            "stable-audio",
             "stability"
         ]
     },
     "inputs": [
         {
             "label": "Duration (s)",
+            "info": "Length of the generated audio, in seconds.",
             "minimum": 1,
             "maximum": 190,
             "step": 1,
@@ -19,6 +26,7 @@
         },
         {
             "label": "steps",
+            "info": "Number of diffusion steps. Higher values improve quality but take longer to process.",
             "minimum": 30,
             "maximum": 100,
             "step": 1,
@@ -27,6 +35,7 @@
         },
         {
             "label": "cfg",
+            "info": "Classifier-free guidance. Higher values make the output follow the prompt more strictly.",
             "minimum": 1,
             "maximum": 25,
             "step": 1,
@@ -35,6 +44,7 @@
         },
         {
             "label": "Output Format",
+            "info": "File format of the generated audio.",
             "choices": [
                 [
                     "wav",
@@ -50,6 +60,7 @@
         },
         {
             "label": "Text Prompt",
+            "info": "Description of the audio to generate.",
             "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
             "type": "text_box"
         }

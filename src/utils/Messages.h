@@ -1,7 +1,7 @@
 /**
  * @file Messages.h
  * @brief Shared message resources used across UI and clients.
- * @author saumya-pailwan
+ * @author saumya-pailwan, cwitkowitz
  */
 
 #pragma once

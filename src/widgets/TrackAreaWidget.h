@@ -1,7 +1,7 @@
 /**
  * @file TrackAreaWidget.h
  * @brief Component that displays a group of tracks in the GUI.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, NatalieElizabeth, xribene
  */
 
 #pragma once
@@ -344,34 +344,6 @@ public:
         }
 
         return nullptr;
-    }
-
-    Rectangle<int> getFirstTrackFolderButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getChooseFileButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
-    }
-
-    Rectangle<int> getFirstTrackPlayButtonBounds()
-    {
-        if (mediaDisplays.size() > 0)
-        {
-            auto display = mediaDisplays[0].get();
-            auto bounds = display->getPlayButtonBounds();
-
-            // Convert to TrackAreaWidget coordinates
-            return getLocalArea(display, bounds);
-        }
-
-        return {};
     }
 
     std::vector<MediaDisplayComponent*> getDAWLinkedDisplays()

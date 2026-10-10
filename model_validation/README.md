@@ -532,6 +532,13 @@ label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
 
+The model-specific validators check MERIT's similarity scores and MuQ's ranked
+candidates (`count`). Run their local regression checks with:
+
+```bash
+python -m unittest discover -s model_validation/tests -v
+```
+
 Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
 under the name test cases will reference:
 

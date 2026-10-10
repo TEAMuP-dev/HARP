@@ -31,6 +31,10 @@ Validators signal failure by raising AssertionError. The message should name
 the output at fault and say what was wrong with it.
 """
 
+import json
+import math
+from pathlib import Path
+
 from audio import read_audio_props
 
 
@@ -70,6 +74,49 @@ def validator(name):
         VALIDATORS[name] = fn
         return fn
     return register
+
+
+def json_file(outputs, label):
+    """Read a model's JSON file output."""
+    with Path(outputs[label]).open(encoding="utf-8") as stream:
+        result = json.load(stream)
+    assert isinstance(result, dict), f"'{label}' must contain a JSON object"
+    return result
+
+
+def finite_number(value, label):
+    """Require a numeric prediction rather than null, a string, or NaN."""
+    assert type(value) in (int, float) and math.isfinite(value), \
+        f"'{label}' must be a finite number, got {value!r}"
+
+
+@validator("merit_scores")
+def merit_scores(outputs, controls, params):
+    """Check the three similarity scores in MERIT's result file."""
+    result = json_file(outputs, "Similarity Results")
+    for name in ("melody", "rhythm", "timbre"):
+        value = result["scores"][name]
+        finite_number(value, name)
+        assert -1.000001 <= value <= 1.000001, \
+            f"MERIT {name} cosine similarity is outside [-1, 1]: {value}"
+
+
+@validator("muq_ranking")
+def muq_ranking(outputs, controls, params):
+    """Check candidate count, ranks, and descending similarity scores."""
+    result = json_file(outputs, "Similarity Ranking")
+    rows = result["results"]
+    assert isinstance(rows, list) and len(rows) == params["count"], \
+        f"MuQ must return {params['count']} ranked candidates"
+    previous = math.inf
+    for rank, row in enumerate(rows, start=1):
+        assert row["rank"] == rank, f"MuQ rank must be {rank}"
+        assert isinstance(row["description"], str) and row["description"].strip(), \
+            "MuQ candidate description must be nonempty"
+        score = row["similarity"]
+        finite_number(score, "similarity")
+        assert score <= previous, "MuQ candidates must be sorted by similarity"
+        previous = score
 
 
 @validator("labels_within_audio")

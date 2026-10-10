@@ -4,7 +4,14 @@
         "description": "Enter text prompt to modify an audio file.",
         "author": "Stability AI",
         "tags": [
-            "audio-to-audio",
+            "category:generation",
+            "subcategory:editing",
+            "input:audio",
+            "input:text",
+            "output:audio/wav|mp3",
+            "sample-rate:44100",
+            "channels:stereo",
+            "stable-audio",
             "stability"
         ]
     },
@@ -16,6 +23,7 @@
         },
         {
             "label": "Duration (s)",
+            "info": "Length of the generated audio, in seconds.",
             "minimum": 1,
             "maximum": 190,
             "step": 1,
@@ -24,6 +32,7 @@
         },
         {
             "label": "steps",
+            "info": "Number of diffusion steps. Higher values improve quality but take longer to process.",
             "minimum": 30,
             "maximum": 100,
             "step": 1,
@@ -32,6 +41,7 @@
         },
         {
             "label": "cfg",
+            "info": "Classifier-free guidance. Higher values make the output follow the prompt more strictly.",
             "minimum": 1,
             "maximum": 25,
             "step": 1,
@@ -40,6 +50,7 @@
         },
         {
             "label": "Output Format",
+            "info": "File format of the generated audio.",
             "choices": [
                 [
                     "wav",
@@ -55,6 +66,7 @@
         },
         {
             "label": "Text Prompt",
+            "info": "Description of how to transform the input audio.",
             "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
             "type": "text_box"
         }

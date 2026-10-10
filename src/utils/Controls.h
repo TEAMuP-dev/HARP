@@ -1,7 +1,7 @@
 /**
  * @file Controls.h
  * @brief Defines data structures representing various types of controls, inputs, and outputs.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

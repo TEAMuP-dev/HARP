@@ -1,7 +1,7 @@
 /**
  * @file GeneralSettingsTab.h
  * @brief Placeholder tab for general settings.
- * @author lindseydeng
+ * @author saumya-pailwan, cwitkowitz, lindseydeng, huiranyu
  */
 
 #pragma once

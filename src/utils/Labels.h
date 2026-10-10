@@ -1,7 +1,7 @@
 /**
  * @file Labels.h
  * @brief Defines data structures for various types of labels.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once

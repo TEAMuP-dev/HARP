@@ -286,7 +286,7 @@ bool MainComponent::perform(const InvocationInfo& info)
 
         case CommandIDs::tutorial:
             DBG_AND_LOG("MainComponent::perform: \"tutorial\" command invoked.");
-            openWelcomeWindow();
+            openTutorial();
 
             break;
 

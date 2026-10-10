@@ -1,7 +1,7 @@
 /**
  * @file ControlComponent.h
  * @brief Base class for control components with label and minimum size support.
- * @author gemini
+ * @author saumya-pailwan, cwitkowitz
  */
 
 #pragma once

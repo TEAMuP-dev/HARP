@@ -1,7 +1,7 @@
 /**
  * @file ToggleWithLabel.h
  * @brief Custom toggle button component with label.
- * @author gemini
+ * @author saumya-pailwan
  */
 
 #pragma once

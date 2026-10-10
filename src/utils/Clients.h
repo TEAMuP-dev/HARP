@@ -83,3 +83,38 @@ inline OpResult multiplexClients(String modelPath, std::unique_ptr<Client>& clie
 
     return OpResult::ok();
 }
+
+/**
+ * Whether any provider recognizes a model path, so that one no client could load can be
+ * rejected before anything is attempted with it.
+ */
+inline bool isSupportedModelPath(const String& modelPath)
+{
+    return StabilityClient::matchesPathSpec(modelPath) || GradioClient::matchesPathSpec(modelPath);
+}
+
+/**
+ * The model cards of models whose controls ship with HARP, keyed by model path, so that
+ * they can be listed without querying anything.
+ */
+inline std::vector<std::pair<String, DynamicObject::Ptr>> getBuiltInModelCards()
+{
+    static const Identifier cardKey { "card" };
+
+    std::vector<std::pair<String, DynamicObject::Ptr>> cards;
+
+    StabilityClient stabilityClient;
+
+    for (const auto& modelPath : StabilityClient::getModelPaths())
+    {
+        DynamicObject::Ptr controls;
+
+        if (stabilityClient.queryControls(modelPath, controls).wasOk() && controls != nullptr)
+        {
+            if (auto* card = controls->getProperty(cardKey).getDynamicObject())
+                cards.emplace_back(modelPath, card);
+        }
+    }
+
+    return cards;
+}

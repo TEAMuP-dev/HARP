@@ -1,7 +1,7 @@
 /**
  * @file TextBoxWithLabel.h
  * @brief Custom text box component with label.
- * @author xribene
+ * @author cwitkowitz, saumya-pailwan, xribene
  */
 
 #pragma once
