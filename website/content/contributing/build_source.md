@@ -20,7 +20,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 ```
 
 #### ARM vs. x86 MacOS
-The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`:
+The OSX architecture for the build can be specified explicitly by setting `CMAKE_OSX_ARCHITECTURES` to either `arm64` or `x86_64`, or to `"arm64;x86_64"` for a universal binary:
 ```bash
 cmake .. -DCMAKE_OSX_ARCHITECTURES=x86_64
 ```

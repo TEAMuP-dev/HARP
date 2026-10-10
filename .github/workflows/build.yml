@@ -1,0 +1,177 @@
+# Builds and packages HARP for each platform, and publishes a GitHub release for v* tags.
+# The macOS and Windows packages are code signed with the credentials described in docs/SIGNING.md.
+# Originally adapted from pamplejuce (https://github.com/sudara/pamplejuce, MIT License).
+
+name: HARP
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'website/**'
+      - 'model_validation/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/model_validation.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel running builds of a branch when new commits are pushed to it
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Forks cannot access the signing credentials, so their packages are left unsigned
+  SIGN_MACOS: ${{ secrets.MACOS_CERTIFICATE != '' }}
+  SIGN_WINDOWS: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    # Pull requests from branches of this repository are already built on push
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
+      matrix:
+        include:
+          - name: macOS
+            os: macos-26
+            cache: ccache
+            # Universal binary, for both Apple silicon and Intel Macs
+            cmake-args: '-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"'
+          - name: Windows-x64
+            os: windows-2025
+            cache: sccache
+          # Linux binaries require at least the glibc version used to build them, so build on the oldest Ubuntu
+          - name: Linux-x64
+            os: ubuntu-22.04
+            cache: ccache
+          - name: Linux-arm64
+            os: ubuntu-22.04-arm
+            cache: ccache
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      # See JUCE/docs/Linux Dependencies.md (WebKit, OpenGL and JACK are not used)
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libcurl4-openssl-dev libfontconfig1-dev libfreetype-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev
+
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: x64
+
+      - name: Set up compiler cache
+        uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: ${{ matrix.name }}
+          variant: ${{ matrix.cache }}
+
+      - name: Configure
+        run: |
+          cmake -B Builds -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.cache }} -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.cache }} \
+            ${{ matrix.cmake-args }}
+
+      - name: Build
+        run: cmake --build Builds
+
+      - name: Set package name
+        run: |
+          echo "PACKAGE=HARP-$(cat VERSION)-${{ matrix.name }}" >> "$GITHUB_ENV"
+          echo "ARTEFACTS=Builds/HARP_artefacts/Release" >> "$GITHUB_ENV"
+
+      - name: Import Developer ID certificate (macOS)
+        if: runner.os == 'macOS' && env.SIGN_MACOS == 'true'
+        uses: apple-actions/import-codesign-certs@v7
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        env:
+          # The imported certificate is the only identity on the runner, so part of its name selects it
+          MACOS_SIGNING_IDENTITY: ${{ env.SIGN_MACOS == 'true' && 'Developer ID Application' || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          pipx install dmgbuild==1.6.7
+          packaging/package.sh "$ARTEFACTS/HARP.app" "dist/$PACKAGE.dmg"
+
+      - name: Sign (Windows)
+        if: runner.os == 'Windows' && env.SIGN_WINDOWS == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_CERTIFICATE_PROFILE }}
+          files: ${{ github.workspace }}\Builds\HARP_artefacts\Release\HARP.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p dist
+          7z a "dist/$PACKAGE.zip" "$ARTEFACTS/HARP.exe"
+
+      # A tarball keeps the executable permission, which zip archives made here would lose
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          tar -czf "dist/$PACKAGE.tar.gz" -C "$ARTEFACTS" HARP
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          path: dist/*
+          archive: false # the package is already compressed
+          if-no-files-found: error
+          overwrite: true
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # For RELEASE.md
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      # If the release already exists (e.g. on a re-run), its packages are replaced instead
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --title "HARP $GITHUB_REF_NAME" --notes-file RELEASE.md \
+            || gh release upload "$GITHUB_REF_NAME" dist/* --clobber
