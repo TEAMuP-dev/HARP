@@ -10,6 +10,10 @@ MainComponent::MainComponent()
 
     modelTabs.addChangeListener(this);
 
+    /* Every model tab needs this, and tabs are opened as models are, so the container
+       carries it and hands it to each tab it creates. */
+    modelTabs.onOpenAPIKeySettings = [this](Provider provider) { openSettingsWindow(provider); };
+
     addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
@@ -168,7 +172,7 @@ void MainComponent::importNewFile(File mediaFile, bool fromDAW)
     }
 }
 
-void MainComponent::openSettingsWindow()
+void MainComponent::openSettingsWindow(std::optional<Provider> focusProvider)
 {
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
@@ -176,12 +180,21 @@ void MainComponent::openSettingsWindow()
     // The settings dialog is a free-standing desktop window that can outlive this
     // component, so guard the callback with a SafePointer
     Component::SafePointer<MainComponent> safeThis(this);
-    options.content.setOwned(new SettingsWindow(
+
+    auto* settings = new SettingsWindow(
         [safeThis]
         {
             if (safeThis != nullptr)
                 safeThis->restoreViewDefaults();
-        }));
+        });
+
+    // Selected before the window is shown, so it opens already on the right tab
+    if (focusProvider.has_value())
+    {
+        settings->showAPIKeysFor(*focusProvider);
+    }
+
+    options.content.setOwned(settings);
 
     options.useNativeTitleBar = true;
     options.resizable = true;

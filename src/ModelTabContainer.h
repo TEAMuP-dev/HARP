@@ -252,6 +252,10 @@ public:
      * Opens a model in a new tab and shows it. The tab fills in once the model has loaded,
      * and closes by itself if loading fails, once the error has been dismissed.
      */
+    /* Set by MainComponent and handed to every tab this container opens, so an error
+       popup about a missing API key can open the settings that hold it. */
+    std::function<void(Provider)> onOpenAPIKeySettings;
+
     ModelTab* openModelTab(const String& modelPath, String tabName = {})
     {
         if (tabName.isEmpty())
@@ -262,6 +266,14 @@ public:
         }
 
         auto* tab = new ModelTab();
+
+        // Forwarded rather than copied, so a callback set after this tab opened
+        // still reaches it
+        tab->onOpenAPIKeySettings = [this](Provider provider)
+        {
+            if (onOpenAPIKeySettings)
+                onOpenAPIKeySettings(provider);
+        };
 
         // Owned from creation, so that a tab is never left unowned while a
         // request is in flight (see closeTab and the destructor)

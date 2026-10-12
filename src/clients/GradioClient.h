@@ -134,8 +134,7 @@ public:
                             << modelPath << "\" was not recognized by the provider (status code \""
                             << String(e->statusCode) << "\").");
 
-                return OpResult::fail(
-                    ClientError { ClientError::Type::ModelNotFound, modelPath, "Gradio" });
+                return fail(ClientError { ClientError::Type::ModelNotFound, modelPath, "Gradio" });
             }
 
             /* Anything else is a problem reaching the provider rather than a verdict
@@ -355,10 +354,10 @@ public:
 
             if (! hasAllPermissions)
             {
-                return OpResult::fail(ClientError { ClientError::Type::InsufficientPermissions,
-                                                    "",
-                                                    "Hugging Face",
-                                                    tokenToValidate });
+                return fail(ClientError { ClientError::Type::InsufficientPermissions,
+                                          "",
+                                          "Hugging Face",
+                                          tokenToValidate });
             }
         }
 
@@ -839,7 +838,7 @@ private:
 
         if (! endpoint.isWellFormed())
         {
-            return OpResult::fail(
+            return fail(
                 HttpError { HttpError::Type::InvalidURL, HttpError::Request::POST, errorPath });
         }
 
@@ -858,7 +857,7 @@ private:
 
         if (stream == nullptr)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::ConnectionFailed, HttpError::Request::POST, errorPath });
         }
 
@@ -903,17 +902,17 @@ private:
             // Keep the real status code so callers can react to specific
             // failures (e.g. 404 for an invalid path, 402 for quota limits)
             // and attach any diagnostic text from the response body
-            return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
-                                              HttpError::Request::POST,
-                                              errorPath,
-                                              statusCode,
-                                              reason });
+            return fail(HttpError { HttpError::Type::BadStatusCode,
+                                    HttpError::Request::POST,
+                                    errorPath,
+                                    statusCode,
+                                    reason });
         }
 
         if (isHTMLResponse(response))
         {
             // A 200 with an HTML body is not a Gradio API response at all
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::UnexpectedResponse, HttpError::Request::POST, errorPath });
         }
 
@@ -934,7 +933,7 @@ private:
 
         if (! endpoint.isWellFormed())
         {
-            return OpResult::fail(
+            return fail(
                 HttpError { HttpError::Type::InvalidURL, HttpError::Request::GET, errorPath });
         }
 
@@ -952,7 +951,7 @@ private:
 
         if (stream == nullptr)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::ConnectionFailed, HttpError::Request::GET, errorPath });
         }
 
@@ -962,7 +961,7 @@ private:
 
         if (statusCode != 200)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::BadStatusCode, HttpError::Request::GET, errorPath, statusCode });
         }
 
@@ -1303,7 +1302,7 @@ private:
 
                 if (isHTMLResponse(eventLine))
                 {
-                    return OpResult::fail(HttpError {
+                    return fail(HttpError {
                         HttpError::Type::UnexpectedResponse, HttpError::Request::GET, errorPath });
                 }
             }
