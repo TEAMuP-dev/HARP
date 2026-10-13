@@ -13,6 +13,8 @@
 #include "HomeTab.h"
 #include "ModelTab.h"
 
+#include "gui/RoundIconButton.h"
+
 #include "media/MediaDisplayComponent.h"
 
 #include "utils/Interface.h"
@@ -368,50 +370,9 @@ public:
     }
 
 private:
-    // Close button shown on each model tab, which explains itself in the instructions box
-    struct CloseTabButton : public Button
-    {
-        CloseTabButton() : Button("Close") {}
-
-        void paintButton(Graphics& g, bool isHighlighted, bool isDown) override
-        {
-            // Square whatever this is given, so that the circle and cross are never stretched
-            const float side = (float) jmin(getWidth(), getHeight());
-            const auto bounds =
-                getLocalBounds().toFloat().withSizeKeepingCentre(side, side).reduced(1.0f);
-
-            if (isHighlighted || isDown)
-            {
-                g.setColour(Colours::white.withAlpha(isDown ? 0.2f : 0.12f));
-                g.fillEllipse(bounds);
-            }
-
-            // A cross drawn from two strokes, which sits centred where a glyph might not
-            const auto cross = bounds.reduced(bounds.getWidth() * 0.32f);
-
-            g.setColour(isHighlighted ? Colours::white : Colours::lightgrey);
-            g.drawLine({ cross.getTopLeft(), cross.getBottomRight() }, 1.5f);
-            g.drawLine({ cross.getBottomLeft(), cross.getTopRight() }, 1.5f);
-        }
-
-        void mouseEnter(const MouseEvent& e) override
-        {
-            Button::mouseEnter(e);
-            instructionsMessage->setMessage("Click to close this model tab.");
-        }
-
-        void mouseExit(const MouseEvent& e) override
-        {
-            Button::mouseExit(e);
-            instructionsMessage->clearMessage();
-        }
-
-        SharedResourcePointer<InstructionsMessage> instructionsMessage;
-    };
-
     void addCloseButton(ModelTab& tab, int tabIndex)
     {
-        auto* closeButton = new CloseTabButton();
+        auto* closeButton = new CloseButton("Click to close this model tab.");
         closeButton->setSize(18, 18);
         closeButton->onClick = [this, safeTab = SafePointer<ModelTab>(&tab)]
         {

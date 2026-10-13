@@ -10,6 +10,7 @@
 #include <juce_core/juce_core.h>
 
 #include "../gui/MultiButton.h"
+#include "../gui/Palette.h"
 #include "OutputLabelComponent.h"
 
 #include "../utils/Labels.h"
@@ -86,6 +87,7 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
+    void paintOverChildren(Graphics& g) override;
     virtual void resized() override;
     void repositionLabels();
 
@@ -101,9 +103,9 @@ public:
     bool isRequired() const { return required; }
     bool isLinkedToDAW() const { return linkedToDAW; }
 
-    bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
-    bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
-    bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
+    bool isInputTrack() const { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
+    bool isOutputTrack() const { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
+    bool isHybridTrack() const { return displayMode == DisplayMode::Hybrid; }
     bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
     bool isPreviewTrack() const { return displayMode == DisplayMode::Preview; }
 
@@ -175,9 +177,8 @@ public:
 
     // Called whenever playback starts, pauses, or stops
     std::function<void()> onPlaybackStateChanged;
-    // Called when the media of a thumbnail is double clicked
+    // Called when the media of a thumbnail is double-clicked
     std::function<void()> onMediaDoubleClick;
-
 
     int getNumOverheadLabels();
 
@@ -218,6 +219,9 @@ public:
     /** Shortest a track can be and still show anything of its media. */
     static constexpr int minimumUsefulHeight = fixedChromeHeight + minimumContentHeight;
 
+    /** Shortest this track can be and still show its media and every button in its header. */
+    int getMinimumHeight() const;
+
 protected:
     // Media (audio or MIDI) content area
     Component contentComponent;
@@ -245,6 +249,16 @@ private:
     void resetPaths();
     void resetScrollBar();
     void resetButtonState();
+    void updatePlaybackButtons();
+
+    // Only a header beside the media, as on input and output tracks, has buttons
+    bool hasHeaderButtons() const { return ! isThumbnailTrack() && ! isPreviewTrack(); }
+    int getNumHeaderButtons() const;
+
+    // Header buttons are stacked in a column, each with a margin above and below
+    static constexpr int headerButtonSize = 25;
+    static constexpr int headerButtonMargin = 2;
+    static constexpr int headerMargin = 4;
 
     void setOriginalFilePath(URL filePath);
 
@@ -290,6 +304,11 @@ private:
     void mouseUp(const MouseEvent& e) override;
     void mouseDoubleClick(const MouseEvent& e) override;
 
+    // Moves the playback position to the mouse, where the track allows it
+    void seekToMouse(const MouseEvent& e);
+    // Drags the track's file to another track, the media clipboard, or another application
+    void startFileDrag(const MouseEvent& e);
+
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
     const int textSpacing = 2;
@@ -298,7 +317,8 @@ private:
     Colour defaultColor = Colours::darkgrey;
     Colour graphicsColor = Colours::lightblue;
     Colour cursorColor = Colours::white.withAlpha(0.85f);
-    Colour selectionColor = Colours::darkblue.brighter();
+    // The accent used for whatever is selected or highlighted on the Home tab and model tabs
+    Colour selectionColor = ModelStyle::accentDark;
     Colour linkedToDAWColor = Colours::purple.withAlpha(0.5f);
     Colour overheadPanelColor = Colours::darkgrey.darker();
 
@@ -311,10 +331,13 @@ private:
 
     // Header sub-components
     Label trackNameLabel;
-    MultiButton playStopButton;
+    MultiButton playPauseButton;
     MultiButton::Mode playButtonActiveInfo;
     MultiButton::Mode playButtonInactiveInfo;
-    MultiButton::Mode stopButtonInfo;
+    MultiButton::Mode pauseButtonInfo;
+    MultiButton stopButton;
+    MultiButton::Mode stopButtonActiveInfo;
+    MultiButton::Mode stopButtonInactiveInfo;
     MultiButton chooseFileButton;
     MultiButton::Mode chooseFileButtonActiveInfo;
     MultiButton::Mode chooseFileButtonInactiveInfo;

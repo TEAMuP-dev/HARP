@@ -214,8 +214,8 @@ public:
 
         if (inputTrackAreaWidget.getNumTracks() > 0)
         {
-            height += trackSectionLabelHeight + 4 * marginSize
-                      + getTrackAreaMinimumHeight(inputTrackAreaWidget.getNumTracks());
+            height +=
+                trackSectionLabelHeight + 4 * marginSize + inputTrackAreaWidget.getMinimumHeight();
         }
 
         if (model->isLoaded())
@@ -225,8 +225,8 @@ public:
 
         if (outputTrackAreaWidget.getNumTracks() > 0)
         {
-            height += trackSectionLabelHeight + 4 * marginSize
-                      + getTrackAreaMinimumHeight(outputTrackAreaWidget.getNumTracks());
+            height +=
+                trackSectionLabelHeight + 4 * marginSize + outputTrackAreaWidget.getMinimumHeight();
         }
 
         return height;
@@ -259,17 +259,6 @@ private:
         return jmax(minControlAreaHeight, controlAreaWidget.getRequiredHeightForWidth(tabWidth));
     }
 
-    int getTrackAreaMinimumHeight(int numTracks) const
-    {
-        if (numTracks <= 0)
-        {
-            return 0;
-        }
-
-        // The track area applies its own margins, so it owns this calculation
-        return TrackAreaWidget::getRequiredHeightForTracks(numTracks);
-    }
-
     void addTrackSection(FlexBox& box,
                          Component& label,
                          Component& trackArea,
@@ -292,11 +281,11 @@ private:
             auto* area = dynamic_cast<const TrackAreaWidget*>(&trackArea);
 
             const int flexibleTracks = area != nullptr ? area->getNumFlexibleTracks() : numTracks;
-            const int fixedHeight = area != nullptr ? area->getFixedTracksHeight() : 0;
 
             float flex = totalTracks > 0.0f ? 4.0f * ((float) flexibleTracks / totalTracks) : 0.0f;
 
-            int minHeight = getTrackAreaMinimumHeight(flexibleTracks) + fixedHeight;
+            // The track area applies its own margins, so it owns this calculation
+            const int minHeight = area != nullptr ? area->getMinimumHeight() : 0;
 
             box.items.add(FlexItem(trackArea)
                               .withFlex(flex)

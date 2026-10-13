@@ -257,6 +257,14 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
     }
 }
 
+void MidiDisplayComponent::setPlaybackPosition(double t)
+{
+    MediaDisplayComponent::setPlaybackPosition(t);
+
+    // A seek during playback would otherwise hold the notes sounding at the old position
+    synthAudioSource.resetNotes();
+}
+
 void MidiDisplayComponent::startPlaying()
 {
     synthAudioSource.resetNotes();

@@ -10,55 +10,66 @@
 
 #include "TrackAreaWidget.h"
 
+#include "ModelStyle.h"
 #include "PreviewPaneWidget.h"
 
 #include "../gui/MultiButton.h"
 
+#include "../utils/Interface.h"
 #include "../utils/Logging.h"
 
 #include "../windows/tutorial/TutorialTargets.h"
 
 using namespace juce;
 
-class MediaClipboardWidget;
-
+// Strip along the left edge of the media clipboard that is dragged to change its width
 class ResizeEdgeComponent : public Component
 {
 public:
-    ResizeEdgeComponent(MediaClipboardWidget* ownerIn) : owner(ownerIn) {}
+    ResizeEdgeComponent() { setMouseCursor(MouseCursor::LeftRightResizeCursor); }
 
-    void mouseMove(const MouseEvent&) override
+    // Called once when a drag begins
+    std::function<void()> onDragStart;
+    // Called throughout a drag with how far right the mouse is from where the drag began
+    std::function<void(int)> onDrag;
+
+    void mouseDown(const MouseEvent&) override
     {
-        setMouseCursor(MouseCursor::LeftRightResizeCursor);
+        if (onDragStart)
+        {
+            onDragStart();
+        }
     }
 
-    void mouseDown(const MouseEvent& e) override;
-
-    void mouseDrag(const MouseEvent& e) override;
-
-    void mouseUp(const MouseEvent&) override
+    void mouseDrag(const MouseEvent& e) override
     {
-        dragStartX = -1;
-        dragStartWidth = -1;
+        if (onDrag)
+        {
+            onDrag(e.getScreenX() - e.getMouseDownScreenX());
+        }
     }
 
-private:
-    MediaClipboardWidget* owner = nullptr;
-    int dragStartX = -1;
-    int dragStartWidth = -1;
+    void mouseUp(const MouseEvent&) override { repaint(); }
+    void mouseEnter(const MouseEvent&) override { repaint(); }
+    void mouseExit(const MouseEvent&) override { repaint(); }
+
+    // Divides the clipboard from the model tab, and lights up while hovered like a card outline
+    void paint(Graphics& g) override
+    {
+        const bool isActive = isMouseOverOrDragging();
+
+        g.setColour(isActive ? ModelStyle::accent.withAlpha(0.6f) : ModelStyle::outline);
+        g.fillRect(getLocalBounds().removeFromLeft(isActive ? 2 : 1));
+    }
 };
 
 class MediaClipboardWidget : public Component, public ChangeListener
 {
 public:
     MediaClipboardWidget(DragOverlayComponent* overlay)
-        : dragOverlay(overlay),
-          trackAreaWidget(DisplayMode::Thumbnail, 75, overlay)
+        : dragOverlay(overlay), trackAreaWidget(DisplayMode::Thumbnail, thumbnailHeight, overlay)
     {
-        selectionTextBox.onReturnKey = [this] { renameSelectionCallback(); };
-        controlsComponent.addAndMakeVisible(selectionTextBox);
         initializeButtons();
-        controlsComponent.addAndMakeVisible(buttonsComponent);
         addAndMakeVisible(controlsComponent);
         controlsComponent.setComponentID(TutorialTargets::clipboardControls);
 
@@ -81,40 +92,60 @@ public:
         previewPaneWidget.onMinimizeChanged = [this] { resized(); };
         previewPaneWidget.onClose = [this] { setPreviewPaneVisible(false); };
         addAndMakeVisible(previewPaneWidget);
+
+        resizeEdge.onDragStart = [this] { widthAtDragStart = getWidth(); };
+        resizeEdge.onDrag = [this](int distanceRight)
+        {
+            // The clipboard sits at the right of the window, so dragging left widens it
+            if (onResize)
+            {
+                onResize(jmax(minimumWidth, widthAtDragStart - distanceRight));
+            }
+        };
         addAndMakeVisible(resizeEdge);
     }
 
     ~MediaClipboardWidget() override { trackAreaWidget.removeChangeListener(this); }
 
-    void paint(Graphics& g) override { g.fillAll(Colours::lightgrey.darker().withAlpha(0.5f)); }
+    void paint(Graphics& g) override
+    {
+        // The background of the model tab beside it
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+
+        // Headed like a section of a model tab, with the buttons at the end of its rule
+        ModelStyle::drawSectionHeader(
+            g,
+            "Media Clipboard",
+            controlsComponent.getBounds().withTrimmedRight(
+                numButtons * static_cast<int>(buttonWidth + marginSize) + headerGap));
+    }
 
     void resized() override
     {
         resizeEdge.setBounds(0, 0, resizeEdgeWidth, getHeight());
 
-        Rectangle<int> totalBounds = getLocalBounds();
+        // Space around the clipboard, as around a model tab
+        Rectangle<int> totalBounds = getLocalBounds().reduced(pagePadding);
 
         // Flex for whole media clipboard
         FlexBox mainFlexBox;
         mainFlexBox.flexDirection = FlexBox::Direction::column;
 
-        // Add control bar and track area to flex
+        // Add header and track area to flex
         mainFlexBox.items.add(
-            FlexItem(controlsComponent)
-                .withHeight(30)
-                .withMargin(marginSize)); //jmax(30, trackNameLabel.getFont().getHeight()))
-        mainFlexBox.items.add(
-            FlexItem(trackArea).withFlex(10).withMargin({ 0, marginSize, marginSize, marginSize }));
+            FlexItem(controlsComponent).withHeight((float) ModelStyle::sectionHeaderHeight));
+        mainFlexBox.items.add(FlexItem(trackArea).withFlex(10));
 
         // Add preview pane to flex
         if (showPreviewPane)
         {
-            const int paneHeight = previewPaneWidget.isMinimized() ? 
-                PreviewPaneWidget::titleBarHeight : jmin(previewPaneHeight, getMaximumPreviewPaneHeight());
+            const int paneHeight = previewPaneWidget.isMinimized()
+                                       ? PreviewPaneWidget::titleBarHeight
+                                       : jmin(previewPaneHeight, getMaximumPreviewPaneHeight());
 
             mainFlexBox.items.add(FlexItem(previewPaneWidget)
-                .withHeight(static_cast<float>(paneHeight))
-                .withMargin({ 0, marginSize, marginSize, marginSize }));
+                                      .withHeight(static_cast<float>(paneHeight))
+                                      .withMargin({ (float) sectionGap, 0, 0, 0 }));
         }
         else
         {
@@ -123,47 +154,31 @@ public:
 
         mainFlexBox.performLayout(totalBounds);
 
-        // Flex for controls area (text box and buttons)
-        FlexBox controlsFlexBox;
-        controlsFlexBox.flexDirection = FlexBox::Direction::row;
-        controlsFlexBox.alignItems = FlexBox::AlignItems::stretch;
-
-        // Add control elements to control flex
-        controlsFlexBox.items.add(FlexItem(selectionTextBox).withFlex(1));
-        controlsFlexBox.items.add(
-            FlexItem(buttonsComponent).withWidth(4 * (buttonWidth + marginSize)));
-
-        controlsFlexBox.performLayout(controlsComponent.getLocalBounds());
-
         // Flex for buttons
         FlexBox buttonsFlexBox;
         buttonsFlexBox.flexDirection = FlexBox::Direction::row;
         buttonsFlexBox.alignItems = FlexBox::AlignItems::center;
-        buttonsFlexBox.justifyContent = FlexBox::JustifyContent::center;
+        buttonsFlexBox.justifyContent = FlexBox::JustifyContent::flexEnd;
 
         // Add buttons to flex with equal width
-        /*buttonsFlexBox.items.add(FlexItem(renameSelectionButton)
-                                     .withWidth(buttonWidth)
-                                     .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));*/
         buttonsFlexBox.items.add(FlexItem(addFileButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
+                                     .withMargin({ 0, marginSize, 0, 0 }));
         buttonsFlexBox.items.add(FlexItem(removeSelectionButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));;
+                                     .withMargin({ 0, marginSize, 0, 0 }));
         buttonsFlexBox.items.add(FlexItem(saveFileButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
+                                     .withMargin({ 0, marginSize, 0, 0 }));
         buttonsFlexBox.items.add(FlexItem(sendToDAWButton)
                                      .withWidth(buttonWidth)
                                      .withHeight(buttonWidth)
-                                     .withMargin({ 0, 0, 0, marginSize }));
+                                     .withMargin({ 0, marginSize, 0, 0 }));
 
-        buttonsFlexBox.performLayout(buttonsComponent.getLocalBounds());
+        buttonsFlexBox.performLayout(controlsComponent.getLocalBounds());
 
         int visibleWidthBeforeResize = trackArea.getMaximumVisibleWidth();
         int visibleHeightBeforeResize = trackArea.getMaximumVisibleHeight();
@@ -206,7 +221,10 @@ public:
 
     void setPreviewPaneVisible(bool shouldBeVisible)
     {
-        if (showPreviewPane == shouldBeVisible) { return; }
+        if (showPreviewPane == shouldBeVisible)
+        {
+            return;
+        }
 
         showPreviewPane = shouldBeVisible;
 
@@ -226,12 +244,14 @@ public:
 
         resized();
 
-        if(onPreviewPaneVisibilityChanged)
+        if (onPreviewPaneVisibilityChanged)
         {
             onPreviewPaneVisibilityChanged();
         }
     }
-    
+
+    void stopPlayback() { previewPaneWidget.stopPlayback(); }
+
     void addFileCallback()
     {
         StringArray validExtensions = MediaDisplayComponent::getSupportedExtensions();
@@ -429,30 +449,6 @@ public:
 private:
     void initializeButtons()
     {
-        /*
-        // Mode when a track is selected (rename enabled)
-        renameSelectionButtonActiveInfo = MultiButton::Mode {
-            "RenameSelection-Active",
-            "Rename the currently selected track.",
-            [this] {}, // TODO
-            MultiButton::DrawingMode::IconOnly,
-            Colours::darkblue,
-            fontawesome::FileText
-        };
-        // Mode when there is no track selected (rename disabled)
-        renameSelectionButtonInactiveInfo = MultiButton::Mode {
-            "RenameSelection-Inactive",
-            "No track selected.",
-            [this] {},
-            MultiButton::DrawingMode::IconOnly,
-            Colours::lightgrey,
-            fontawesome::FileText
-        };
-        renameSelectionButton.addMode(renameSelectionButtonActiveInfo);
-        renameSelectionButton.addMode(renameSelectionButtonInactiveInfo);
-        buttonsComponent.addAndMakeVisible(renameSelectionButton);
-        */
-
         addFileButtonInfo = MultiButton::Mode { "AddFile",
                                                 "Click to add a file to the media clipboard.",
                                                 [this] { addFileCallback(); },
@@ -460,7 +456,7 @@ private:
                                                 Colours::lightblue,
                                                 fontawesome::Folder };
         addFileButton.addMode(addFileButtonInfo);
-        buttonsComponent.addAndMakeVisible(addFileButton);
+        controlsComponent.addAndMakeVisible(addFileButton);
 
         // Mode when a track is selected (remove enabled)
         removeSelectionButtonActiveInfo = MultiButton::Mode {
@@ -478,7 +474,7 @@ private:
         };
         removeSelectionButton.addMode(removeSelectionButtonActiveInfo);
         removeSelectionButton.addMode(removeSelectionButtonInactiveInfo);
-        buttonsComponent.addAndMakeVisible(removeSelectionButton);
+        controlsComponent.addAndMakeVisible(removeSelectionButton);
 
         // Mode when a track is selected (save file enabled)
         saveFileButtonActiveInfo =
@@ -495,7 +491,7 @@ private:
                                 Colours::lightgrey, fontawesome::Save };
         saveFileButton.addMode(saveFileButtonActiveInfo);
         saveFileButton.addMode(saveFileButtonInactiveInfo);
-        buttonsComponent.addAndMakeVisible(saveFileButton);
+        controlsComponent.addAndMakeVisible(saveFileButton);
 
         // Mode when DAW-linked tracks are available
         sendToDAWButtonActiveInfo = MultiButton::Mode {
@@ -533,7 +529,7 @@ private:
         sendToDAWButton.addMode(sendToDAWButtonSelectedInfo);
         sendToDAWButton.addMode(sendToDAWButtonInactiveInfo1);
         sendToDAWButton.addMode(sendToDAWButtonInactiveInfo2);
-        buttonsComponent.addAndMakeVisible(sendToDAWButton);
+        controlsComponent.addAndMakeVisible(sendToDAWButton);
     }
 
     void changeListenerCallback(ChangeBroadcaster* /*source*/) override
@@ -549,28 +545,11 @@ private:
                 // Handle track area resizing after adding a track
                 resized(); // TODO - decouple from track selection?
             }
-            else
-            {
-                // Pick up renames made on track double-click
-                selectionTextBox.setText(mediaDisplay->getTrackName(), false);
-            }
         }
         else
         {
             // Handle deselect events
             resetState();
-        }
-    }
-
-    void renameSelectionCallback()
-    {
-        MediaDisplayComponent* mediaDisplay = trackAreaWidget.getCurrentlySelectedDisplay();
-
-        String currentText = selectionTextBox.getText();
-
-        if (mediaDisplay && ! currentText.isEmpty())
-        {
-            mediaDisplay->setTrackName(currentText);
         }
     }
 
@@ -665,15 +644,11 @@ private:
 
     void resetState()
     {
-        selectionTextBox.clear();
-        selectionTextBox.setEnabled(false);
-
-        //renameSelectionButton.setMode(renameSelectionButtonInactiveInfo.label);
         addFileButton.setMode(addFileButtonInfo.displayLabel);
         removeSelectionButton.setMode(removeSelectionButtonInactiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
         sendToDAWButton.setMode(sendToDAWButtonInactiveInfo1.displayLabel);
-        
+
         previewPaneWidget.clearTrack();
 
         currentlySelectedDisplay = nullptr;
@@ -681,10 +656,6 @@ private:
 
     void selectTrack(MediaDisplayComponent* mediaDisplay)
     {
-        selectionTextBox.setText(mediaDisplay->getTrackName());
-        selectionTextBox.setEnabled(true);
-
-        //renameSelectionButton.setMode(renameSelectionButtonActiveInfo.label);
         removeSelectionButton.setMode(removeSelectionButtonActiveInfo.displayLabel);
         saveFileButton.setMode(saveFileButtonActiveInfo.displayLabel);
 
@@ -712,35 +683,37 @@ private:
         currentlySelectedDisplay = mediaDisplay;
     }
 
-    // The tallest the preview pane can be w/o disturbing controls
+    // The tallest the preview pane can be while leaving room for the header and a track
     int getMaximumPreviewPaneHeight() const
     {
-        return jmax(PreviewPaneWidget::minimumHeight, getHeight() - minimumTrackListSpace);
+        const int otherSpace =
+            2 * pagePadding + ModelStyle::sectionHeaderHeight + sectionGap + minimumTrackListHeight;
+
+        return jmax(PreviewPaneWidget::minimumHeight, getHeight() - otherSpace);
     }
 
-    friend class ResizeEdgeComponent;
-
     const float marginSize = 2;
-    const float buttonWidth = 26;
+    const float buttonWidth = 24;
+    // Buttons at the end of the header, where the title and rule fill the space left of them
+    static constexpr int numButtons = 4;
+    static constexpr int headerGap = 8;
+    // Space around the clipboard, and between its sections, as in a model tab
+    static constexpr int pagePadding = 8;
+    static constexpr int sectionGap = 8;
+    static constexpr int thumbnailHeight = 75;
+    // Room for one track in the list, with the margins the track area gives it
+    static constexpr int minimumTrackListHeight = thumbnailHeight + 8;
     const int resizeEdgeWidth = 6;
     const int defaultWidth = 250;
     const int minimumWidth = 150;
-    const int minimumTrackListSpace = 120;
 
-    // Main controls component
+    // Bar of buttons above the track list
     Component controlsComponent;
-    // Text editor subcomponent for track label of current selection
-    TextEditor selectionTextBox;
-    // Buttons area subcomponent
-    Component buttonsComponent;
     // Draggable edge component
-    ResizeEdgeComponent resizeEdge { this };
+    ResizeEdgeComponent resizeEdge;
+    int widthAtDragStart = defaultWidth;
 
     // Button components
-    /*MultiButton renameSelectionButton;
-    MultiButton::Mode renameSelectionButtonActiveInfo;
-    MultiButton::Mode renameSelectionButtonInactiveInfo;*/
-
     MultiButton addFileButton;
     MultiButton::Mode addFileButtonInfo;
 
@@ -761,7 +734,7 @@ private:
     DragOverlayComponent* dragOverlay = nullptr;
 
     Viewport trackArea;
-    TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, 75 };
+    TrackAreaWidget trackAreaWidget { DisplayMode::Thumbnail, thumbnailHeight };
 
     PreviewPaneWidget previewPaneWidget;
     int previewPaneHeight = PreviewPaneWidget::defaultHeight;
@@ -769,28 +742,5 @@ private:
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
 
-    MediaDisplayComponent* currentlySelectedDisplay;
+    MediaDisplayComponent* currentlySelectedDisplay = nullptr;
 };
-
-inline void ResizeEdgeComponent::mouseDown(const MouseEvent& e)
-{
-    dragStartX = e.getScreenX();
-    dragStartWidth = owner->getWidth();
-}
-
-inline void ResizeEdgeComponent::mouseDrag(const MouseEvent& e)
-{
-    if (dragStartX < 0)
-    {
-        return;
-    }
-    // Dragging left (negative delta) widens,
-    // Dragging right (positive delta) narrows.
-    int delta = e.getScreenX() - dragStartX;
-    int newWidth = jmax(owner->minimumWidth, dragStartWidth - delta);
-
-    if (owner->onResize)
-    {
-        owner->onResize(newWidth);
-    }
-}

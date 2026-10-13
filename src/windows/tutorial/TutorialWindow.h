@@ -240,7 +240,7 @@ private:
         steps.push_back(
             { "Media Clipboard",
               "The media clipboard keeps files at hand across models and tabs. Drag tracks into it, or add files with its folder icon.\n\n"
-              "Select a file to play, save, rename (in the text box), or remove it, or drag it onto a track.\n\n"
+              "Select a file to play it in the preview pane beneath the list, or to save or remove it. Double-click its name to rename it, and drag it to reorder the list or onto a track.\n\n"
               "When your DAW opened HARP with a file, the send icon replaces that file with the selected one, which brings the result back into your project.",
               { { clipboard }, { clipboardControls } },
               { TutorialHost::Panel::mediaClipboard } });

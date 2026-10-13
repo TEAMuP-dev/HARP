@@ -17,23 +17,30 @@ MainComponent::MainComponent()
     addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
+
+    statusAreaWidget.setComponentID(TutorialTargets::statusArea);
+    mediaClipboardWidget.setComponentID(TutorialTargets::clipboard);
+
+    clipboardWidth = mediaClipboardWidget.getDefaultWidth();
     mediaClipboardWidget.onResize = [this](int newWidth)
     {
         // Leave the main panel at least the width its controls need
         const int maximumClipboardWidth = getWidth() - getRequiredMainPanelWidth();
 
-        clipboardWidth = jmax(mediaClipboardWidget.getMinimumWidth(),
-                              jmin(newWidth, maximumClipboardWidth));
+        clipboardWidth =
+            jmax(mediaClipboardWidget.getMinimumWidth(), jmin(newWidth, maximumClipboardWidth));
         resized();
     };
     addAndMakeVisible(dragOverlay);
 
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
-    mediaClipboardWidget.setPreviewPaneVisible(Settings::getBoolValue("view.showPreviewPane", true));
+    mediaClipboardWidget.setPreviewPaneVisible(
+        Settings::getBoolValue("view.showPreviewPane", true));
     mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
     {
-        Settings::setValue("view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+        Settings::setValue(
+            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
         commandManager.commandStatusChanged();
     };
     dragOverlay.setVisible(false);
@@ -101,7 +108,7 @@ void MainComponent::resized()
     dragOverlay.setBounds(getLocalBounds());
 }
 
-int MainComponent::getRequiredMainPanelWidth()
+int MainComponent::measureRequiredMainPanelWidth()
 {
     // The Home tab has no controls, so only the general minimums apply while it is showing
     auto* tab = modelTabs.getCurrentModelTab();
@@ -123,10 +130,13 @@ int MainComponent::getVisibleClipboardWidth()
 
 void MainComponent::updateWindowConstraints()
 {
+    /* Measuring the control labels is slow, so it happens here, whenever the controls
+       can have changed, rather than on every resize of the window or the clipboard. */
+    requiredMainPanelWidth = measureRequiredMainPanelWidth();
+
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
         // The window can shrink until both panels are down to their minimum widths
-        const int requiredMainPanelWidth = getRequiredMainPanelWidth();
         const int requiredClipboardWidth =
             showMediaClipboard ? mediaClipboardWidget.getMinimumWidth() : 0;
 
@@ -137,8 +147,8 @@ void MainComponent::updateWindowConstraints()
                                             + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
-        const int newRequiredWindowWidth = jmax(
-            minimumWindowWidth, requiredMainPanelWidth + requiredClipboardWidth);
+        const int newRequiredWindowWidth =
+            jmax(minimumWindowWidth, requiredMainPanelWidth + requiredClipboardWidth);
         // Determine effective minimum height of entire window
         const int newRequiredWindowHeight =
             jmax(minimumWindowHeight, requiredMainPanelHeight + minimumMainPanelVertPadding);
@@ -319,6 +329,12 @@ void MainComponent::viewMediaClipboardCallback()
     // Toggle media clipboard visibility state
     showMediaClipboard = ! showMediaClipboard;
 
+    // A hidden preview pane has no controls left to stop it with
+    if (! showMediaClipboard)
+    {
+        mediaClipboardWidget.stopPlayback();
+    }
+
     // Find top-level window for resizing
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
@@ -358,7 +374,6 @@ void MainComponent::viewMediaClipboardCallback()
                     jmax(minimumWindowWidth, windowBounds.getWidth() - getVisibleClipboardWidth()));
             }
         }
-
 
         // Set extended or reduced bounds
         window->setBounds(windowBounds);

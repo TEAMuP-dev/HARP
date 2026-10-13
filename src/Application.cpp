@@ -137,7 +137,9 @@ void MainComponent::getAllCommands(Array<CommandID>& commands)
 
     commands.addArray(editIDs, numElementsInArray(editIDs));
 
-    const CommandID viewIDs[] = { CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard, CommandIDs::viewPreviewPane };
+    const CommandID viewIDs[] = { CommandIDs::viewStatusArea,
+                                  CommandIDs::viewMediaClipboard,
+                                  CommandIDs::viewPreviewPane };
 
     commands.addArray(viewIDs, numElementsInArray(viewIDs));
 
@@ -209,13 +211,13 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
             break;
 
-         case CommandIDs::viewPreviewPane:
-             result.setInfo("Preview Pane", "Toggles display of preview pane", "View", 0);
-             result.setTicked(mediaClipboardWidget.isPreviewPaneVisible());
-             // The pane is part of the media clipboard, so has nowhere to show without it
-             result.setActive(showMediaClipboard);
- 
-             break;
+        case CommandIDs::viewPreviewPane:
+            result.setInfo("Preview Pane", "Toggles display of preview pane", "View", 0);
+            result.setTicked(mediaClipboardWidget.isPreviewPaneVisible());
+            // The pane is part of the media clipboard, so has nowhere to show without it
+            result.setActive(showMediaClipboard);
+
+            break;
 
         /* --Help-- */
         case CommandIDs::about:
@@ -287,11 +289,11 @@ bool MainComponent::perform(const InvocationInfo& info)
 
             break;
 
-         case CommandIDs::viewPreviewPane:
-             DBG_AND_LOG("MainComponent::perform: \"viewPreviewPane\" command invoked.");
-             viewPreviewPaneCallback();
- 
-             break;
+        case CommandIDs::viewPreviewPane:
+            DBG_AND_LOG("MainComponent::perform: \"viewPreviewPane\" command invoked.");
+            viewPreviewPaneCallback();
+
+            break;
 
         /* --Help-- */
         case CommandIDs::about:

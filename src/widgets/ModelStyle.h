@@ -7,9 +7,12 @@
 
 #pragma once
 
+#include <map>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../gui/Palette.h"
 
 #include "../utils/Interface.h"
 #include "../utils/Messages.h"
@@ -20,29 +23,6 @@ using namespace juce;
 
 namespace ModelStyle
 {
-inline const Colour accent { 0xff2dd4bf };
-inline const Colour accentDark { 0xff0f766e };
-inline const Colour chipBackground { 0xff183238 };
-inline const Colour chipText { 0xff9eeadf };
-inline const Colour problem { 0xfff87171 };
-inline const Colour information { 0xff7dd3fc };
-inline const Colour zeroGPU { 0xffa78bfa };
-/* A license sits with the badges rather than the tags because it answers the
-   same kind of question they do: not what the model is, but what using it
-   entails. Amber reads as something to note without reading as an error. */
-inline const Colour license { 0xffe9c894 };
-inline const Colour secondaryText { 0xffa3a3a3 };
-
-inline Font font(float height, bool bold = false)
-{
-    return Font(FontOptions(height, bold ? Font::bold : Font::plain));
-}
-
-inline int getTextWidth(const Font& f, const String& text)
-{
-    return GlyphArrangement::getStringWidthInt(f, text);
-}
-
 /* Cards */
 
 inline constexpr float cornerSize = 6.0f;
@@ -54,7 +34,7 @@ inline void
                     .brighter(isDown ? 0.14f : (isHighlighted ? 0.1f : 0.06f)));
     g.fillRoundedRectangle(bounds, cornerSize);
 
-    g.setColour(isHighlighted ? accent.withAlpha(0.6f) : Colours::white.withAlpha(0.12f));
+    g.setColour(isHighlighted ? accent.withAlpha(0.6f) : outline);
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 }
 
@@ -244,16 +224,30 @@ inline int drawBadges(Graphics& g, const std::vector<Badge>& badges, Rectangle<i
 
 inline constexpr int sectionHeaderHeight = 26;
 
-// Draws a heading followed by a rule to the end of the area
+// Draws a heading followed by a rule to the end of the area, or only the rule where the
+// heading does not fit, since a heading cut short is harder to read than none at all
 inline void drawSectionHeader(Graphics& g, const String& title, Rectangle<int> area)
 {
     const Font titleFont = font(15.0f, true);
 
-    g.setColour(Colours::white);
-    g.setFont(titleFont);
-    g.drawText(title, area, Justification::centredLeft, false);
+    // Measured once for each title, since shaping text on every repaint is slow
+    static std::map<String, int> titleWidths;
 
-    const int lineX = area.getX() + getTextWidth(titleFont, title) + 10;
+    auto it = titleWidths.find(title);
+
+    if (it == titleWidths.end())
+        it = titleWidths.emplace(title, getTextWidth(titleFont, title)).first;
+
+    int lineX = area.getX();
+
+    if (it->second <= area.getWidth())
+    {
+        g.setColour(Colours::white);
+        g.setFont(titleFont);
+        g.drawText(title, area, Justification::centredLeft, false);
+
+        lineX += it->second + 10;
+    }
 
     g.setColour(accent.withAlpha(0.5f));
     g.fillRect(lineX, area.getCentreY(), jmax(0, area.getRight() - lineX), 1);

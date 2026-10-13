@@ -13,6 +13,8 @@
 #include "../media/MediaDisplayComponent.h"
 #include "../media/MidiDisplayComponent.h"
 
+#include "../gui/Palette.h"
+
 #include "../utils/Controls.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
@@ -114,6 +116,7 @@ private:
 class TrackAreaWidget : public Component,
                         public ChangeListener,
                         public ChangeBroadcaster,
+                        public DragAndDropTarget,
                         public FileDragAndDropTarget
 {
 public:
@@ -131,6 +134,17 @@ public:
     void paint(Graphics& g) override
     {
         g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+
+        // An empty media clipboard says how to fill it, as an empty track does
+        if (isThumbnailWidget() && getNumTracks() == 0)
+        {
+            g.setColour(ModelStyle::secondaryText);
+            g.setFont(ModelStyle::font(13.0f));
+            g.drawFittedText("Drag tracks or files here, or add files with the folder icon.",
+                             getLocalBounds().reduced(12),
+                             Justification::centred,
+                             3);
+        }
     }
 
     /** Tracks that expand to fill the space given to them. */
@@ -149,8 +163,15 @@ public:
         return count;
     }
 
-    /** Height claimed by tracks with a fixed height, margins included. */
-    int getFixedTracksHeight() const
+    /**
+     * Height needed to show every track at its minimum size, which for a track with a
+     * fixed height is that height.
+     *
+     * The margin applied to each track lives here, so the calculation does too: a
+     * caller reserving space with its own margin will come up short, by more for every
+     * additional track.
+     */
+    int getMinimumHeight() const
     {
         int total = 0;
 
@@ -158,31 +179,10 @@ public:
         {
             const int fixed = m->getFixedHeight();
 
-            if (fixed > 0)
-            {
-                total += fixed + 2 * static_cast<int>(marginSize);
-            }
+            total += (fixed > 0 ? fixed : m->getMinimumHeight()) + 2 * static_cast<int>(marginSize);
         }
 
         return total;
-    }
-
-    /**
-     * Height needed to show a number of tracks at their minimum size.
-     *
-     * The margin applied to each track lives here, so the calculation does too:
-     * a caller reserving space with its own margin will come up short, by more
-     * for every additional track.
-     */
-    static int getRequiredHeightForTracks(int numTracks)
-    {
-        if (numTracks <= 0)
-        {
-            return 0;
-        }
-
-        return numTracks
-               * (MediaDisplayComponent::minimumUsefulHeight + 2 * static_cast<int>(marginSize));
     }
 
     static_assert(MediaDisplayComponent::minimumUsefulHeight
@@ -257,7 +257,7 @@ public:
                 }
                 else
                 {
-                    i = i.withFlex(1).withMinHeight(MediaDisplayComponent::minimumUsefulHeight);
+                    i = i.withFlex(1).withMinHeight(static_cast<float>(m->getMinimumHeight()));
                 }
 
                 mainBox.items.add(i.withMargin(marginSize));
@@ -381,6 +381,32 @@ public:
         return isThumbnailWidget();
     }
 
+    /* Tracks drag their files within the window as a JUCE drag rather than an
+       operating system one, and only a DragAndDropTarget receives those. */
+    bool isInterestedInDragSource(const DragAndDropTarget::SourceDetails& details) override
+    {
+        if (! isThumbnailWidget() || ! details.description.isString())
+        {
+            return false;
+        }
+
+        // Its own tracks count too, so a drop here does not animate the drag image back
+        return isParentOf(details.sourceComponent.get())
+               || MediaDisplayComponent::getSupportedExtensions().contains(
+                   File(details.description.toString()).getFileExtension());
+    }
+
+    void itemDropped(const DragAndDropTarget::SourceDetails& details) override
+    {
+        // Moving a track within this widget is handled on mouse up
+        if (isParentOf(details.sourceComponent.get()))
+        {
+            return;
+        }
+
+        addTrackFromFilePath(URL(File(details.description.toString())));
+    }
+
     void setFixedTotalDimensions(int totalWidth, int totalHeight)
     {
         fixedTotalWidth = totalWidth;
@@ -445,6 +471,10 @@ public:
             mediaDisplays.push_back(std::move(m));
 
             resized();
+
+            // The first track replaces the hint an empty clipboard shows
+            if (isThumbnailWidget() && getNumTracks() == 1)
+                repaint();
         }
     }
 
@@ -548,7 +578,7 @@ public:
             mediaDisplays.back()->initializeDisplay(filePath);
             mediaDisplays.back()->setTrackName(label);
 
-            // Tracks are only selected after they're loaded, so that listeners get a complete
+            // Selected only once loaded, so listeners never see a track without its media
             if (isThumbnailWidget())
             {
                 mediaDisplays.back()->selectTrack();
@@ -568,6 +598,10 @@ public:
         mediaDisplays.erase(it, mediaDisplays.end());
 
         resized();
+
+        // The hint an empty clipboard shows returns with the last track removed
+        if (isThumbnailWidget() && getNumTracks() == 0)
+            repaint();
     }
 
     void reorderTrack(MediaDisplayComponent* draggedDisplay, int newIndex)
@@ -673,7 +707,12 @@ private:
         Component* c = clicked;
         while (c != nullptr && c != this)
         {
-            if (dynamic_cast<TextEditor*>(c) != nullptr) return;
+            // Clicks inside a track name being edited do not start a drag
+            if (dynamic_cast<TextEditor*>(c) != nullptr)
+            {
+                return;
+            }
+
             if (auto* md = dynamic_cast<MediaDisplayComponent*>(c))
             {
                 clickedDisplay = md;

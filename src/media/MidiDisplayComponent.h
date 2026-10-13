@@ -35,6 +35,8 @@ public:
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
     float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
 
+    void setPlaybackPosition(double t) override;
+
 private:
     void visibleRangeCallback() override {}
     void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }

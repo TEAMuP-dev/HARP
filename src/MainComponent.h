@@ -81,7 +81,7 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
-    int getRequiredMainPanelWidth();
+    int getRequiredMainPanelWidth() const { return requiredMainPanelWidth; }
     int getVisibleClipboardWidth();
 
 private:
@@ -112,7 +112,8 @@ private:
     /* Interface */
 
     const int statusAreaHeight = 100;
-    int clipboardWidth = 250;
+    // Width chosen for the media clipboard by dragging its edge
+    int clipboardWidth = 0;
 
     // Minimum size to ensure all controls remain visible and functional:
     // - Tutorial window is 500x420, needs padding
@@ -126,6 +127,10 @@ private:
 
     int requiredWindowWidth;
     int requiredWindowHeight;
+
+    // Width the main panel needs for the current tab's controls, plus padding
+    int measureRequiredMainPanelWidth();
+    int requiredMainPanelWidth = minimumMainPanelWidth;
 
     bool showStatusArea;
     bool showMediaClipboard;
