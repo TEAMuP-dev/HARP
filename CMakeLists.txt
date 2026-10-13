@@ -57,6 +57,7 @@ target_sources(${PROJECT_NAME}
         src/widgets/TrackAreaWidget.h
         src/widgets/StatusAreaWidget.h
         src/widgets/MediaClipboardWidget.h
+        src/widgets/PreviewPaneWidget.h
 
         src/gui/MultiButton.cpp
         src/gui/HoverableLabel.h

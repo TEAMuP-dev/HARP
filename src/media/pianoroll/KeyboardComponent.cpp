@@ -39,6 +39,8 @@ void KeyboardComponent::paint(Graphics& g)
             String noteName = String(i) + " (" + pitchNames[pitch] + String(octave) + ")";
 
             g.setColour(Colours::white);
+            // Shrinks the text on short keys
+            g.setFont(jmin(14.0f, keyHeight - 1.0f));
             g.drawText(noteName,
                        5,
                        static_cast<int>(cumHeight),
