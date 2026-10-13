@@ -304,11 +304,12 @@ def main() -> int:
     # Resolved so a case's `files:` paths stay relative to the config file
     # itself, whatever directory the run was launched from
     opts.config = opts.config.resolve()
-    config = load_config(opts.config)
 
     examples_tier = opts.local_examples is not None
 
     try:
+        config = load_config(opts.config)
+
         # Checked before anything reads a setting, so a mistake is reported
         # once, names the key as it was written, and costs no model runs
         check_config_keys(config)

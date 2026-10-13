@@ -27,6 +27,12 @@ __all__ = [
 FILE_TYPES = {"audio_track", "midi_track", "generic_file"}
 AUDIO, MIDI, JSON = {"audio_track"}, {"midi_track"}, {"json"}
 
+# A model returning text writes it to a .txt file, which pyharp reports as a
+# generic file: it renders a gr.Textbox as an input control and refuses it as
+# an output, and has no text track of its own, so the text is read from the
+# file these rules receive.
+TEXT = {"generic_file"}
+
 # The `expect` vocabulary: rule name -> output types it applies to. Applying
 # a rule to an output type it does not cover fails the case with a message
 # naming the configuration mistake, rather than reading as a fault in the
@@ -44,6 +50,8 @@ EXPECT_RULES = {
     "note_instruments": MIDI,
     "note_channels": MIDI,
     "min_labels": JSON,
+    "min_length": TEXT,
+    "excludes": TEXT,
 }
 
 # The note_* rules, mapped to the decoded property each reads. Both name the
@@ -51,6 +59,9 @@ EXPECT_RULES = {
 # or channel of its own, only notes that each use one.
 NOTE_VALUE_RULES = {"note_instruments": "instruments",
                     "note_channels": "channels"}
+
+# The text rules, which read a string output rather than a file
+TEXT_RULES = {"min_length", "excludes"}
 
 # Rule groups, by what they need decoded. Duration rules are shared: they read
 # from whichever of audio/MIDI props matches the output's type.
@@ -84,6 +95,29 @@ def require_file(label: str, value) -> str:
         raise AssertionError(f"output '{label}' is not a file on disk: {value}")
 
     return value
+
+
+def read_text(label: str, path: str) -> str:
+    """
+    Read a text output's contents.
+
+    Args:
+        label (str): Output label, for the error message.
+        path (str): Path to the text file.
+
+    Returns:
+        text (str): The file's contents.
+
+    Raises:
+        AssertionError: If the file cannot be read as text.
+    """
+
+    try:
+        with open(path, encoding="utf-8") as stream:
+            return stream.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise AssertionError(
+            f"output '{label}' could not be read as text: {exc}") from exc
 
 
 def resolve_expect_targets(expect: dict, out_types: dict) -> list:
@@ -280,6 +314,24 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
     if props is not None:
         check_duration(label, props["duration"], rules)
+
+    # --- Text outputs --------------------------------------------------------
+    if set(rules) & TEXT_RULES:
+        text = read_text(label, require_file(label, value))
+
+        if "min_length" in rules:
+            length = len(text.strip())
+            assert length >= rules["min_length"], \
+                (f"output '{label}' holds {length} character(s) of text, "
+                 f"expected at least {rules['min_length']}")
+
+        if "excludes" in rules:
+            excluded = rules["excludes"]
+            excluded = [excluded] if isinstance(excluded, str) else list(excluded)
+            found = [bad for bad in excluded if bad.lower() in text.lower()]
+            assert not found, \
+                (f"output '{label}' contains {found}, which the model returns "
+                 f"in place of a result: {text.strip()[:100]!r}")
 
     # --- JSON / LabelList outputs --------------------------------------------
     if "min_labels" in rules:

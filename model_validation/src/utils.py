@@ -284,6 +284,48 @@ def run_with_timeout(fn, timeout: float, what: str):
     return outcome.get("result")
 
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    """
+    A YAML loader that rejects a mapping holding the same key twice.
+
+    PyYAML keeps the last of several entries sharing a key and discards the
+    rest in silence. In `overrides` that means a model configured twice runs
+    with only the settings written under the second entry, and nothing
+    downstream can tell that from a complete one. Two branches that each
+    configured the same model produce exactly this on merge, so the
+    duplicate is reported rather than resolved.
+    """
+
+    def construct_mapping(self, node, deep=False):
+        """
+        Build a mapping, refusing one whose keys are not unique.
+
+        Args:
+            node (yaml.MappingNode): The mapping being constructed.
+            deep (bool): Whether to construct nested objects eagerly.
+
+        Returns:
+            mapping (dict): The constructed mapping.
+
+        Raises:
+            yaml.constructor.ConstructorError: If a key is written twice.
+        """
+
+        seen = set()
+
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    None, None,
+                    f"duplicate key '{key}'. The settings under the first "
+                    f"entry would be discarded, so write one entry holding "
+                    f"everything that applies", key_node.start_mark)
+            seen.add(key)
+
+        return super().construct_mapping(node, deep)
+
+
 def load_config(path: Path) -> dict:
     """
     Load the validation configuration (see config.yml for the schema).
@@ -293,12 +335,18 @@ def load_config(path: Path) -> dict:
 
     Returns:
         config (dict): Parsed configuration, empty when the file is absent.
+
+    Raises:
+        ValueError: If the file is not valid YAML, or repeats a key.
     """
 
     if not path.exists():
         return {}
 
-    return yaml.safe_load(path.read_text()) or {}
+    try:
+        return yaml.load(path.read_text(), Loader=UniqueKeyLoader) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(f"{path} could not be read: {exc}") from exc
 
 
 def check_keys(mapping: dict | None, allowed: set, where: str) -> None:

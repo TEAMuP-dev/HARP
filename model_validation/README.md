@@ -256,7 +256,7 @@ An infrastructure fault is retried `TRANSIENT_RETRY_LIMIT` times at a short
 interval instead. Currently covered are a read timeout, a GPU host ECC error,
 and a server disconnect. None of these has an expected duration to wait out,
 which is why they are bounded by a retry count rather than by a deadline, and
-the retry usually surfaces the model's real behaviour.
+the retry usually surfaces the model's real behavior.
 
 This list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), and it
 is deliberately narrow. A retried `/process` call reserves ZeroGPU allowance
@@ -344,7 +344,9 @@ file input it is a preference instead, since the component's declared
 component accepting only other formats is given one it accepts, and one whose
 accepted types cannot be synthesized at all, such as a bespoke binary format,
 has its case skipped with a message naming the input. When a specific input
-needs a specific file, name it in a test case's `files` entry.
+needs a specific file, name it in a test case's `files` entry. A model whose
+every case is skipped reports `SKIP` rather than `PASS`, since `/process` was
+never called.
 
 A file for each distinct set of properties is generated once and reused for
 the rest of the run.
@@ -442,6 +444,8 @@ The following is the full vocabulary along with which output types each rule cov
 | `note_instruments` | MIDI output | Notes use only these General MIDI program numbers (one, or a list of accepted) |
 | `note_channels` | MIDI output | Notes use only these channels (one, or a list of accepted) |
 | `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
+| `min_length` | text file output | At least this many characters in the file, ignoring surrounding whitespace |
+| `excludes` | text file output | The text does not contain any of these (one string, or a list), matched case-insensitively |
 
 `note_instruments` and `note_channels` assert coverage rather than presence.
 Every instrument or channel the notes carry has to be one the rule lists, and
@@ -485,6 +489,17 @@ a model may legitimately return no labels. It asserts that a well-formed
 `LabelList` came back while permitting it to be empty. Omitting the rule
 entirely is weaker, because a missing or `None` label output also passes.
 Labels are optional in pyharp.
+
+**On text outputs:** a model returning text writes it to a
+`gr.File(file_types=[".txt"])`, which pyharp reports as a generic file, since
+it renders a `gr.Textbox` as an input control and refuses it as an output. The
+structural checks require that file to exist and be non-empty, which a file
+holding only whitespace satisfies, so `min_length: 1` is what asserts the
+model actually said something. `excludes` covers the deployment that reports
+its own failures as text instead of raising `gr.Error`, so that the result
+arrives as a success and only its content distinguishes it from one. Neither
+rule matches a pattern: a check on what the text *says* belongs in a
+validator.
 
 **On audio formats:** audio outputs are decoded with
 [soundfile](https://python-soundfile.readthedocs.io/), a listed dependency, so
@@ -532,12 +547,26 @@ label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
 
-The model-specific validators check MERIT's similarity scores and MuQ's ranked
-candidates (`count`). Run their local regression checks with:
+Four validators ship with the harness:
+
+| Validator | Checks | Skips when |
+|---|---|---|
+| `audio_decodes` | Every audio output decodes and carries frames | The model returns no audio |
+| `labels_within_audio` | Every label falls inside the audio output's timespan (`tolerance`) | The model has no audio output or no `LabelList` |
+| `merit_scores` | MERIT's three cosine similarities are finite and within [-1, 1] | Never (model-specific) |
+| `muq_ranking` | MuQ returns `count` candidates, numbered and sorted by similarity | Never (model-specific) |
+
+The first two are model-agnostic and run as
+[common test cases](#step-4-reuse-a-case-across-models). The last two name
+MERIT's and MuQ's own outputs, so they are referenced from those models'
+entries. Run the local regression checks for all of them, plus the `expect`
+rules and config.yml itself, with:
 
 ```bash
 python -m unittest discover -s model_validation/tests -v
 ```
+
+These need no token and no network.
 
 Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
 under the name test cases will reference:
@@ -563,8 +592,16 @@ putting it in a one-off validator.
 A case under a model's `test_cases` only applies to that model. For a check
 that should hold for *every* model, such as "no file output is empty" or
 "audio is never silent", add a `common_test_cases` entry at the top level of
-config.yml instead. Common cases run on every model in addition to any model-specific tests,
-and their names are shown in the report prefixed with `common:`.
+config.yml instead.
+
+Every case costs a `/process` call, which on ZeroGPU reserves allowance, so a
+common case that only checks outputs does not run on its own. Its `expect`
+rules and `validators` are merged into each of the model's own cases, and the
+model's own settings win where the two conflict. A common case that sends
+inputs of its own (`controls`, `files`, or `synthesized_inputs`) is a
+different scenario, so it runs separately, named with a `common:` prefix in
+the report. It takes whatever inputs the model's first case sends and it does
+not set, so a model that needs particular files still gets them.
 
 ```yaml
 common_test_cases:
@@ -577,6 +614,20 @@ common_test_cases:
       "*":
         min_rms_db: -60     # applies only to models that have audio outputs
 ```
+
+Two common cases ship in [config.yml](config.yml), so that a model with no
+entry of its own is still asserted against rather than only run.
+`audio-decodes` decodes every audio output, which is what catches a
+header-only WAV from a model that wrote no samples and reported success, and
+`labels-within-audio` keeps labels inside the track they annotate.
+
+A fleet-wide "audio is not silent" rule is deliberately **not** among them.
+The synthesized input is a sine sweep, so a separation model's stems are
+legitimately near-silent for every source the sweep does not contain, and the
+rule would read as a fault in those models. Level is asserted per model
+instead, where producing signal is part of the contract. The same test
+applies to anything proposed as a common case: a rule that holds for most
+models reads as a failure on the rest.
 
 Keep common cases model-agnostic by targeting outputs with `"*"` rather than a
 specific label, which will not exist on most models. Because a `"*"` rule is
@@ -615,6 +666,13 @@ A key outside these sets is reported as a configuration error, so a slip such as
 caught before any model runs, instead of leaving the model on its default
 case while the file appears to say otherwise.
 
+A model written twice is reported the same way. YAML keeps the last of
+several entries sharing a key and discards the rest in silence, so a model
+configured in two places would run with only the settings written under the
+second entry. Two branches that each configured the same model produce
+exactly that on merge, which is why it is rejected rather than resolved:
+write one entry holding everything that applies to the model.
+
 ## CI Behavior
 
 - **Schedule:** daily at 06:30 UTC. It can also be run manually from the
@@ -622,6 +680,9 @@ case while the file appears to say otherwise.
   disable the default restart of crashed spaces.
 - **Reports:** a markdown summary on each run, plus JSON and markdown
   artifacts.
+- **Harness tests:** the examples job first runs the unit tests under
+  `tests/`, which also check config.yml, so a configuration mistake turns the
+  run red before any model runs.
 - **Failure signal:** model failures keep the run green, because deployments
   are not yet stable enough for daily failure emails to be useful. They show
   up as warning annotations and in the run summary and report instead. No

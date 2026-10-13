@@ -1,26 +1,24 @@
-# Daily validation of HARP model deployments.
-#
-# Two tiers:
-#   1. examples - local pyharp examples run inside the CI runner; no Hugging
-#                 Face infrastructure involved. A failure here means pyharp
-#                 or gradio itself is broken - fix that before debugging
-#                 individual spaces.
-#   2. spaces   - every Hugging Face Space under teamup-tech, validated
-#                 end-to-end (/controls + /process) via gradio_client.
+# Daily validation of HARP model deployments, in two tiers:
+#   1. examples: the pyharp examples, run locally inside the runner with no
+#      Hugging Face infrastructure involved. A failure here means pyharp or
+#      gradio itself is broken, which is worth fixing before debugging
+#      individual Spaces.
+#   2. spaces: every Hugging Face Space under teamup-tech, validated end to
+#      end (/controls and /process) through gradio_client.
 #
 # Results are published to the run summary and uploaded as artifacts.
 #
-# Model failures do NOT fail the workflow, since deployments are not yet
-# stable enough for a daily red run to be actionable; they appear as warning
-# annotations instead. Only infrastructure errors (bad token, discovery
-# failure, ...) turn the run red, since those mean validation itself has
-# stopped working. To get notified on model failures later, remove the
-# exit-code handling in the two Validate steps so exit code 1 propagates.
+# Model failures do not fail the workflow, since deployments are not yet
+# stable enough for a daily red run to be actionable. They appear as warning
+# annotations instead. Only infrastructure errors (e.g., a bad token, a
+# discovery failure, or a configuration mistake) turn the run red, since those
+# mean validation itself has stopped working. To be notified of model failures
+# later, remove the exit-code handling in the two Validate steps so that exit
+# code 1 propagates.
 #
-# Requires the repository secret HF_TOKEN: a Hugging Face token with read
-# access to the teamup-tech spaces (write access if you want the workflow to
-# auto-restart crashed spaces). NEVER commit the token; GitHub masks secrets
-# in logs automatically.
+# Requires the repository secret HF_TOKEN, a Hugging Face token with read
+# access to the teamup-tech Spaces (and write access to restart crashed ones).
+# Never commit the token. GitHub masks secrets in logs.
 
 name: Model Validation
 
@@ -56,11 +54,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: pip
@@ -73,6 +71,10 @@ jobs:
           pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -e ./pyharp
           pip install -r model_validation/requirements.txt
+
+      # The harness's own checks, including config.yml, which need no token or network
+      - name: Test the harness
+        run: python -m unittest discover -s model_validation/tests -v
 
       - name: Validate local examples
         run: |
@@ -92,7 +94,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: report-examples
           # Each example's app.log holds the app's own traceback, which is what
@@ -107,9 +109,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: pip
@@ -153,7 +155,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: report-spaces
           path: reports/spaces/*/report.*

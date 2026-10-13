@@ -19,6 +19,7 @@ build an app, and this document covers what to decide while doing it.
 - [Preserving the Input Format](#preserving-the-input-format)
 - [Hardware Portability](#hardware-portability)
 - [Dependency Conflicts](#dependency-conflicts)
+- [Calling Another Space](#calling-another-space)
 - [Keeping a Space Lightweight](#keeping-a-space-lightweight)
 
 ## Licensing
@@ -35,6 +36,18 @@ authors, and record the permission when it is granted.
 Where the terms are custom, commit them as a `LICENSE` file and set `license: other` with a
 `license_name`. This covers a permission the authors granted in writing, which is itself the terms.
 Prefer it to leaving the field blank, since an omission is indistinguishable from an oversight.
+
+HARP reads that field and shows it with the model, so a user sees the terms before running it.
+
+**A missing `LICENSE` file is not the same as an unlicensed project.** Read the README's own
+license section, and the other branches, before concluding that nothing was granted: a license is
+often stated in prose, or committed only on the branch the released model was built from.
+
+**Where code and weights carry different terms, declare the more restrictive of the two**, since
+that is what binds whoever uses the output, and say in the description which part carries which.
+Permissively licensed code loading non-commercial weights is common, and declaring only the code's
+license misstates what a user may do with the result. Checking the license of every weight
+repository a Space downloads from is part of deploying it.
 
 ### What Can Be Deployed
 
@@ -178,20 +191,28 @@ anyone browsing.
 
 ## Versions and Compatibility
 
-HARP and PyHARP are released as compatible pairs. **Pin `pyharp` to a tag** in `requirements.txt`,
-never to a branch:
+HARP and PyHARP are released as compatible pairs. **Pin `pyharp` to a commit** in
+`requirements.txt`, never to a branch or a tag:
 
 ```
-git+https://github.com/TEAMuP-dev/pyharp.git@<TAG>
+# pyharp v0.4.1
+git+https://github.com/TEAMuP-dev/pyharp.git@<COMMIT>
 ```
 
 A branch such as `develop` moves under the Space, so a rebuild can change how it behaves with
-nothing in the repository having changed. Gradio is pinned separately, by `sdk_version` in the
-[Space README](#space-readme), and the two have to agree. The latest PyHARP requires
-`gradio>=6.13.0,<7`, below which Gradio discards the payload carrying the reason a job failed (see
-[Error Reporting](#error-reporting)).
+nothing in the repository having changed. A tag can move as well, whenever a release is corrected,
+and that case is harder to see. pip caches the wheel it built for a URL, so a Space pinned to a tag
+goes on installing whatever that tag named when the Space was last built, through later rebuilds and
+factory reboots alike. Nothing in the installed metadata disagrees, since the version string is
+whichever one the old commit declared. A corrected `v0.4.1` tag left 45 ZeroGPU Spaces on v0.4.0,
+whose daemonic worker fails every `/process` call, while every pin still read `@v0.4.1`. A commit
+cannot move, so the pin and the install cannot drift. Name the release in a comment above it, which
+keeps the file readable without making the tag load-bearing. Gradio is pinned separately, by
+`sdk_version` in the [Space README](#space-readme), and the two have to agree. The latest PyHARP
+requires `gradio>=6.13.0,<7`, below which Gradio discards the payload carrying the reason a job
+failed (see [Error Reporting](#error-reporting)).
 
-So `requirements.txt` holds `pyharp` pinned to a tag, `spaces` (see
+So `requirements.txt` holds `pyharp` pinned to a commit, `spaces` (see
 [Hardware Portability](#hardware-portability)), and the model's own dependencies, kept to what the
 app imports (see [Keeping a Space Lightweight](#keeping-a-space-lightweight)). It does not hold
 `gradio`.
@@ -572,9 +593,15 @@ Three things make this portable:
 Select ZeroGPU (`zero-a10g`) for a model that needs a GPU, since it costs nothing, and `cpu-basic`
 for one that does not.
 
-Set `duration` to a realistic ceiling for one request. Shorter durations improve queue priority for
-everyone using the Space. It is independent of `timeout_s` (see
-[Worker Processes](#worker-processes)), and the shorter of the two bounds a job.
+Set `duration` to a realistic ceiling for one request. It is independent of `timeout_s` (see [Worker
+Processes](#worker-processes)), and the shorter of the two bounds a job. **ZeroGPU charges the
+duration a call requests, not the time it uses.** Measured across 15 calls in one allowance window,
+the requested durations summed to 2115 s against 2116 s of allowance consumed, while the GPU did
+roughly 143 s of work. So `duration` is the price of every call, including one that fails in
+seconds, and a generous ceiling is paid again by each user on each request. One Space declared 120 s
+for a request that took 15 s, which spends 105 s of somebody's daily allowance on nothing. Time a
+real request and set the ceiling just above it. Shorter durations also improve queue priority for
+everyone using the Space.
 
 ZeroGPU is available only to Gradio Spaces, so a Docker Space has to pay for GPU hardware instead.
 It requires PyTorch 2.8.0 or newer, which rules it out for anything pinned below that, and it does
@@ -589,6 +616,34 @@ minutes of GPU time per day across all ZeroGPU Spaces before requests start fail
 Some models cannot share an environment with current Gradio. The usual cause is a transitive pin
 that cannot be satisfied alongside it, such as a package relying on the `numpy.float` alias removed
 in `numpy==1.24`.
+
+### Pin Gradio Before Splitting the Environment
+
+A model pinned to `transformers` 4.x is the common case, and it looks irreconcilable, since
+`transformers` below 5.0 caps `huggingface-hub` below 1.0 while Gradio 6 wants it above. Gradio's
+floor moved over the 6.x series, so which Gradio is pinned is what decides whether the two can
+coexist:
+
+| Gradio | Requires |
+| --- | --- |
+| 6.13 to 6.17 | `huggingface-hub>=0.33.5` |
+| 6.18 to 6.20 | `huggingface-hub>=1.2.0` |
+| 6.21 and later | `huggingface-hub>=1.16.0` |
+
+PyHARP requires Gradio 6.13 or newer for the error payload, so 6.13 through 6.17 is the window
+where a `transformers` 4.x model and PyHARP resolve together, landing on `huggingface-hub` 0.36.
+Pin `sdk_version` there and check the resolution before concluding that an environment has to be
+split:
+
+```bash
+pip install --dry-run --ignore-installed -r requirements.txt \
+    "gradio==6.17.3" "git+https://github.com/TEAMuP-dev/pyharp.git@v0.4.1"
+```
+
+A Space pinned inside that window should say why in its README, since it departs from the version
+the rest of the fleet runs.
+
+### Split the Environment
 
 Keep the two apart rather than patching the model's source. A **frontend** environment runs Gradio
 and PyHARP, a **backend** environment runs the model under its own interpreter and pins, and the
@@ -609,6 +664,63 @@ Two things are easy to get wrong:
 - **Write only the result to stdout.** The frontend parses it as JSON, so logging and progress have
   to go to stderr.
 
+## Calling Another Space
+
+A Space can forward inference to a second Space rather than running the model itself. It is the
+last resort among the options here, because it makes a request depend on a deployment outside this
+one, and it is warranted only where the model cannot be installed alongside Gradio and PyHARP at
+all. Three reasons have held up:
+
+- **A pin that conflicts with the platform rather than with Gradio.** Audiocraft pins
+  `torch==2.1.0` and ZeroGPU requires 2.8.0 or newer, so no choice of Gradio reconciles them.
+- **A vendoring surface too large to carry.** SoulX-Singer's inference path reaches 56 modules and
+  34 distributions, two of them CUDA-only, which would leave the Space impossible to exercise on
+  CPU.
+- **No installable distribution.** ACE-Step's package on PyPI cannot be built, since its
+  `setup.py` reads a `requirements.txt` that the sdist omits.
+
+Model size alone is not a reason: weights are fetched at build time either way (see
+[Model Weights](#model-weights)). Neither is a `transformers` 4.x pin on its own, which the Gradio
+window above usually settles.
+
+### Host the Backend Here
+
+Point the frontend at a Space under `teamup-tech`, duplicated from the authors' where necessary,
+rather than at the authors' own. A third-party Space can change its API, fall asleep, or be taken
+down, and none of that is apparent until a request fails. Hosting the backend in the org also puts
+its hardware and its allowance where they can be seen.
+
+Keep that backend public. A private Space is reachable over its API, but only with a token that can
+read it, which no user has. The frontend would then have to call with the org's own token, and
+every user's request would draw on that one account rather than their own.
+
+### Whose Allowance Is Spent
+
+Allowance is charged to whoever authenticates the request, so for a proxy it follows the identity
+the frontend presents to the backend:
+
+| The frontend calls with | Whose allowance is spent |
+| --- | --- |
+| No token | The anonymous pool, two minutes a day for everyone together |
+| The org's token | One account, shared by every user of the Space at once |
+| The token HARP supplies | The user's own, which is the right default |
+
+Forward the user's token and fall back to anonymous. Embedding the org's token turns its forty
+minutes into a fleet-wide bottleneck, and the resulting failure reads as the model being broken.
+
+### What the Frontend Owes HARP
+
+- **Declare the `zerogpu` tag.** The frontend itself runs on `cpu-basic`, so its hardware says
+  nothing about the allowance a request draws on, and the tag is what puts the ZeroGPU badge in
+  HARP (see [Tags](#tags)).
+- **Say in the description that the work happens elsewhere**, and whose allowance pays for it.
+- **Check the backend's API signature at startup.** Without that, an upstream change surfaces as a
+  puzzle once per request instead of as a build failure.
+- **Set `quota_error_exhausts_validation_token: false`** for the Space in
+  `model_validation/config.yml`. A quota error raised by the backend belongs to the downstream
+  token, and the harness otherwise reads it as the validation token being spent and skips every
+  remaining ZeroGPU model.
+
 ## Keeping a Space Lightweight
 
 Bring in only what inference needs. Research repositories carry training loops, evaluation
@@ -617,6 +729,22 @@ None of it belongs in a Space.
 
 - Vendor the inference path rather than the whole repository, or install the upstream package from
   a pinned Git revision if it is packaged properly.
+- **Work out that path, rather than guessing it.** Walk the imports from the entry point and keep
+  the closure. Follow relative imports as well as absolute ones: a package that reaches its
+  submodules with `from .module import name` looks far smaller than it is, and SoulX-Singer's
+  inference path grows from 14 modules to 56 once they are counted.
+- **Take the data the code opens, not only the code.** Weights are the obvious part, and the
+  easily missed part is everything else a model reads at runtime: an ONNX graph for a text front
+  end, a phoneme table, a vocabulary pickle. Filtering a checkout by source extension drops all of
+  it, and the Space then builds cleanly and fails on its first request. Diff the file list against
+  the upstream repository and account for each name left over:
+
+  ```python
+  upstream = set(api.list_repo_files(source, repo_type="space"))
+  ours = set(api.list_repo_files(destination, repo_type="space"))
+  print(sorted(upstream - ours))
+  ```
+
 - Keep `requirements.txt` to what is imported. Every entry adds build time, paid again on every
   rebuild, so a heavy dependency tree can leave a Space taking minutes to come back after a
   restart.

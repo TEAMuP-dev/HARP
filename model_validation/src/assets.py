@@ -188,7 +188,7 @@ def check_synthesized_inputs(config: dict) -> None:
         config (dict): Parsed configuration.
 
     Raises:
-        ValueError: If a setting is unrecognized or cannot be honoured.
+        ValueError: If a setting is unrecognized or cannot be honored.
     """
 
     exts = {}
