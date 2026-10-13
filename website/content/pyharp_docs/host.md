@@ -1,5 +1,5 @@
 # Hosting PyHARP Apps in the Cloud (HuggingFace Spaces)
-Automatically generated Gradio endpoints are only available for a maximum of 72 hours. If you'd like to keep an endpoint active and share it with other users, you can use [HuggingFace Spaces](https://huggingface.co/docs/hub/spaces-overview) (similar hosting services are also available) to host your PyHARP app indefinitely.
+The share links Gradio generates expire after a week. To keep an endpoint active and share it with other users, host your PyHARP app on [HuggingFace Spaces](https://huggingface.co/docs/hub/spaces-overview) (similar hosting services are also available). Our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md) describe the conventions the Spaces we host follow, from licensing and tags to hardware.
 
 ### Gradio Endpoints
 This is the most convenient solution for hosting a PyHARP app. If you are a Hugging Face PRO subscriber, you can use [ZeroGPU](https://huggingface.co/docs/hub/spaces-zerogpu) to dynamically allocate GPU resources according to user requests without any additional charges. Non-PRO users can select from CPU environments or paid GPU options.
@@ -20,15 +20,16 @@ git push -u origin main
 6. Configure the following repository files:
    - `README.md`
   
-     Set __sdk_version__ to __5.28.0__, the recommended version of `gradio`. HARP may not work with the very latest or earlier versions.
+     Set __sdk_version__ to __6.24.0__, the recommended version of `gradio`. HARP requires at least `6.13.0`, since earlier versions do not forward the reason a job failed.
 
    - `requirements.txt`
 
-     Place all of the required **pip** packages in this file. It should also include the latest version of `pyharp`:
+     Place all of the required **pip** packages in this file. It should also include `pyharp`, pinned to the commit of a release rather than to a tag or branch, which can move:
      ```
-     git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0
+     # pyharp v0.4.1
+     git+https://github.com/TEAMuP-dev/pyharp.git@9a31acb35563c0bcf5a93f968d8285c7c3180aba
      ```
-     Note that you do not have to include the `gradio` package in this file.
+     Do not include `gradio` in this file, since `sdk_version` sets it.
 
    - `packages.txt`
      
@@ -59,10 +60,11 @@ git push -u origin main
 
    - `requirements.txt`
 
-     Place all of the required **pip** packages in this file. It should also include the recommended version of `gradio` and the latest version of `pyharp`:
+     Place all of the required **pip** packages in this file. It should also include the recommended version of `gradio`, and `pyharp` pinned to the commit of a release:
      ```
-     gradio==5.28.0
-     git+https://github.com/TEAMuP-dev/pyharp.git@v0.3.0
+     gradio==6.24.0
+     # pyharp v0.4.1
+     git+https://github.com/TEAMuP-dev/pyharp.git@9a31acb35563c0bcf5a93f968d8285c7c3180aba
      ```
 
    - `packages.txt`
@@ -113,9 +115,9 @@ Here are a few tips and best practices when dealing with HuggingFace Spaces:
 - Spaces operate based off of the files in the `main` branch
 - An [access token](https://huggingface.co/docs/hub/security-tokens) may be required to push commits to HuggingFace Spaces
 - A `.gitignore` file should be added to maintain repository orderliness (_e.g._, to ignore `src/_outputs`)
-- Pin versions for `numpy` (_e.g._, `<2`), `torch` (_e.g._, `==2.2.2`), and `torchaudio` (_e.g._, `==2.2.2`) to avoid unexpected build issues caused by the latest versions of these packages
+- Pin versions for packages such as `numpy`, `torch`, and `torchaudio` to avoid unexpected build issues caused by their latest versions. ZeroGPU requires `torch>=2.8.0`
 
-For more information, please refer to the offical document from Hugging Face about [Spaces](https://huggingface.co/docs/hub/spaces).
+For more information, please refer to the official documentation from Hugging Face about [Spaces](https://huggingface.co/docs/hub/spaces).
 
 ## Accessing Within HARP
 PyHARP apps deployed to HuggingFace will begin running at `https://huggingface.co/spaces/<USERNAME>/<SPACE_NAME>`. The shorthand `<USERNAME>/<SPACE_NAME>` can also be used within HARP to reference the endpoint. The two deployment methods above produce identical UIs and functionality.

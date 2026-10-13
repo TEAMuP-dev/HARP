@@ -35,6 +35,8 @@ public:
     double getTotalLengthInSecs() override { return totalLengthInSecs; }
     float getPixelsPerSecond() override { return static_cast<float>(pianoRoll.getResolution()); }
 
+    void setPlaybackPosition(double t) override;
+
 private:
     void visibleRangeCallback() override {}
     void changeListenerCallback(ChangeBroadcaster*) override { repositionLabels(); }
@@ -65,8 +67,12 @@ private:
         return dynamic_cast<MidiLabel*>(l.get()) != nullptr;
     }
 
-    int medianMidi;
-    float stdDevMidi;
+    static constexpr int defaultMedianMidi = 60;
+    static constexpr float defaultStdDevMidi = 12.0f;
+
+    // Where the notes lie, which the piano roll is centered on
+    int medianMidi = defaultMedianMidi;
+    float stdDevMidi = defaultStdDevMidi;
 
     double totalLengthInSecs = 0.0;
 

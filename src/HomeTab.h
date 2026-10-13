@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "gui/HoverHandler.h"
+#include "gui/RoundIconButton.h"
 
 #include "utils/Interface.h"
 #include "utils/Messages.h"
@@ -42,6 +43,30 @@ public:
           onOpenRequested(std::move(onOpen))
     {
         setMouseCursor(MouseCursor::PointingHandCursor);
+
+        // Only a custom path can be removed, since every other entry comes from the catalog
+        if (entry.isCustom)
+        {
+            removeButton =
+                std::make_unique<CloseButton>("Click to remove " + entry.path + " from the list.");
+            removeButton->onClick = [this]
+            {
+                // Deferred, since removing the path deletes this card along with its button
+                MessageManager::callAsync(
+                    [safeThis = SafePointer<ModelCard>(this)]
+                    {
+                        if (safeThis == nullptr || ! safeThis->onRemoveRequested)
+                            return;
+
+                        // Copied, since the card they belong to is deleted during the call
+                        const auto removeRequested = safeThis->onRemoveRequested;
+                        const CatalogEntry entryToRemove = safeThis->entry;
+
+                        removeRequested(entryToRemove);
+                    });
+            };
+            addAndMakeVisible(*removeButton);
+        }
     }
 
     const CatalogEntry& getEntry() const { return entry; }
@@ -51,32 +76,21 @@ public:
         return lowercaseQuery.isEmpty() || searchableText.contains(lowercaseQuery);
     }
 
-    // Removing a custom path is offered from the context menu
+    // Called when the remove button of a custom path is clicked
     std::function<void(const CatalogEntry&)> onRemoveRequested;
 
-    // Opens the model on a click, or offers to remove a custom path on a right-click
+    // Opens the model on a left click, so that a right click does nothing unexpected
     using Button::clicked;
     void clicked(const ModifierKeys& modifiers) override
     {
-        if (! modifiers.isPopupMenu())
-        {
-            if (onOpenRequested)
-                onOpenRequested(entry);
+        if (! modifiers.isPopupMenu() && onOpenRequested)
+            onOpenRequested(entry);
+    }
 
-            return;
-        }
-
-        if (entry.isCustom && onRemoveRequested)
-        {
-            PopupMenu menu;
-            menu.addItem("Remove from list",
-                         [safeThis = SafePointer<ModelCard>(this)]
-                         {
-                             if (safeThis != nullptr)
-                                 safeThis->onRemoveRequested(safeThis->entry);
-                         });
-            menu.showMenuAsync(PopupMenu::Options().withTargetComponent(this));
-        }
+    void resized() override
+    {
+        if (removeButton != nullptr)
+            removeButton->setBounds(getNameRow().removeFromRight(removeButtonSize));
     }
 
     // Everything the card has no room for is shown in the instructions box while hovering
@@ -92,8 +106,7 @@ public:
         if (const String tags = ModelStyle::describeTags(entry.tags); tags.isNotEmpty())
             lines.add(tags);
 
-        lines.add("Click to open " + entry.path + " in a new tab."
-                  + (entry.isCustom ? " Right-click to remove it from the list." : ""));
+        lines.add("Click to open " + entry.path + " in a new tab.");
 
         instructionsMessage->setMessage(lines.joinIntoString("\n"));
     }
@@ -110,11 +123,15 @@ public:
 
         drawCard(g, getLocalBounds().toFloat().reduced(1.0f), isHighlighted, isDown);
 
-        auto area = getLocalBounds().reduced(12, 9);
+        auto area = getContentArea();
 
-        /* Name, with badges on the right */
+        /* Name, with badges on the right, left of the remove button if there is one */
 
-        auto nameRow = area.removeFromTop(20);
+        auto nameRow = area.removeFromTop(nameRowHeight);
+
+        if (removeButton != nullptr)
+            nameRow.removeFromRight(removeButtonSize + chipGap);
+
         const int badgesLeft = drawBadges(g, badges, nameRow);
 
         g.setColour(Colours::white);
@@ -126,13 +143,23 @@ public:
 
         area.removeFromTop(2);
 
+        const auto descriptionArea = area.removeFromTop(30);
+        const Font descriptionFont = font(13.0f);
+
+        if (descriptionArea.getWidth() != descriptionWidth)
+        {
+            descriptionLines = getTruncatedLines(entry.description.isNotEmpty()
+                                                     ? entry.description
+                                                     : String("No description provided."),
+                                                 descriptionFont,
+                                                 descriptionArea.getWidth(),
+                                                 descriptionMaxLines);
+            descriptionWidth = descriptionArea.getWidth();
+        }
+
         g.setColour(Colours::whitesmoke.withAlpha(0.85f));
-        g.setFont(font(13.0f));
-        drawTruncatedText(g,
-                          entry.description.isNotEmpty() ? entry.description
-                                                         : String("No description provided."),
-                          area.removeFromTop(30),
-                          2);
+        g.setFont(descriptionFont);
+        drawTruncatedLines(g, descriptionLines, descriptionArea, descriptionMaxLines);
 
         /* Tags, as many as fit (all of them are described while hovering) */
 
@@ -152,12 +179,26 @@ public:
     static constexpr int minimumWidth = 300;
 
 private:
+    static constexpr int nameRowHeight = 20;
+    static constexpr int removeButtonSize = 18;
+    static constexpr int descriptionMaxLines = 2;
+
+    Rectangle<int> getContentArea() const { return getLocalBounds().reduced(12, 9); }
+    Rectangle<int> getNameRow() const { return getContentArea().removeFromTop(nameRowHeight); }
+
     const CatalogEntry entry;
     const std::vector<ModelStyle::Badge> badges;
     const StringArray tagLabels;
     const String searchableText;
 
+    // The description as last broken into lines, and the width it was broken at
+    StringArray descriptionLines;
+    int descriptionWidth = -1;
+
     std::function<void(const CatalogEntry&)> onOpenRequested;
+
+    // Shown only on a custom path
+    std::unique_ptr<CloseButton> removeButton;
 
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
@@ -188,7 +229,7 @@ public:
             for (const auto& entry : entries)
             {
                 const bool belongs = id == otherSectionId ? ! entry.tags.isCategorized()
-                                                              : entry.tags.isInCategory(id);
+                                                          : entry.tags.isInCategory(id);
 
                 if (! belongs)
                     continue;

@@ -30,6 +30,7 @@ using namespace juce;
 class MainComponent : public Component,
                       public MenuBarModel,
                       public ApplicationCommandTarget,
+                      public DragAndDropContainer,
                       private ChangeListener,
                       private TutorialHost
 {
@@ -61,11 +62,13 @@ public:
 
     // File
     void importNewFile(File mediaFile, bool fromDAW = false);
-    void openSettingsWindow();
+    // Opens on a provider's API key when a failure points at one
+    void openSettingsWindow(std::optional<Provider> focusProvider = {});
 
     // View
     void viewStatusAreaCallback();
     void viewMediaClipboardCallback();
+    void viewPreviewPaneCallback();
     void restoreViewDefaults();
 
     // Help
@@ -78,6 +81,8 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
+    int getRequiredMainPanelWidth() const { return requiredMainPanelWidth; }
+    int getVisibleClipboardWidth();
 
 private:
     /* File Menu */
@@ -95,7 +100,6 @@ private:
     /* Callbacks */
 
     // Miscellaneous
-    //void focusCallback();
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
     /* Tutorial */
@@ -107,8 +111,8 @@ private:
     /* Interface */
 
     const int statusAreaHeight = 100;
-    const float mediaClipboardFlex = 0.4f;
-    const float mediaClipboardScale = 1.4f;
+    // Width chosen for the media clipboard by dragging its edge
+    int clipboardWidth = 0;
 
     // Minimum size to ensure all controls remain visible and functional:
     // - Tutorial window is 500x420, needs padding
@@ -123,6 +127,10 @@ private:
     int requiredWindowWidth;
     int requiredWindowHeight;
 
+    // Width the main panel needs for the current tab's controls, plus padding
+    int measureRequiredMainPanelWidth();
+    int requiredMainPanelWidth = minimumMainPanelWidth;
+
     bool showStatusArea;
     bool showMediaClipboard;
 
@@ -135,7 +143,6 @@ private:
 
     std::unique_ptr<TutorialWindow> tutorialWindow;
 
-    SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

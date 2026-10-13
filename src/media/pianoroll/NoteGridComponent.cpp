@@ -6,45 +6,42 @@ NoteGridComponent::NoteGridComponent()
     lengthInSeconds = 0.0;
 }
 
-NoteGridComponent::~NoteGridComponent()
-{
-    //resetNotes();
-}
+NoteGridComponent::~NoteGridComponent() = default;
 
 void NoteGridComponent::paint(Graphics& g)
 {
     // Paint key background
     KeyboardComponent::paint(g);
 
-    // Paint all notes
-    for (auto n : midiNotes)
-    {
-        const float noteWidth = static_cast<float>(n->duration * pixelsPerSecond);
-        const float noteHeight = getKeyHeight();
+    const float noteHeight = getKeyHeight();
 
-        const float noteXPos = static_cast<float>(n->startTime * pixelsPerSecond);
-        const float noteYPos = static_cast<float>(getHeight()) - ((n->noteNumber) * noteHeight);
+    // A drum hit has no duration to speak of, so it is drawn as a cross of a fixed width
+    const float drumWidth = 0.01f * static_cast<float>(getParentWidth());
+
+    // Paint all notes
+    for (const auto& n : midiNotes)
+    {
+        const float noteWidth = static_cast<float>(n.duration * pixelsPerSecond);
+
+        const float noteXPos = static_cast<float>(n.startTime * pixelsPerSecond);
+        const float noteYPos = static_cast<float>(getHeight()) - ((n.noteNumber) * noteHeight);
 
         Rectangle<float> bounds(noteXPos, noteYPos, jmax(3.0f, noteWidth), noteHeight - 1.0f);
 
-        float maxDrumWidth = 0.01f * getParentComponent()->getWidth();
-
-        float hue = static_cast<float>(n->instrument) / 127.0f;
+        float hue = static_cast<float>(n.instrument) / 127.0f;
 
         Colour color = Colour::fromHSV(hue, 1.0f, 1.0f, 1.0f).brighter();
 
-        // Note fill
-        
-        if (n->isDrum)
+        if (n.isDrum)
         {
             g.setColour(color);
 
             const float thickness = jmax(2.0f, noteHeight * 0.18f);
             const float pad = jmax(1.0f, thickness * 0.5f);
 
-            const float x1 = noteXPos - maxDrumWidth/2;
+            const float x1 = noteXPos - drumWidth / 2.0f;
             const float y1 = bounds.getY() + pad;
-            const float x2 = noteXPos + maxDrumWidth/2;
+            const float x2 = noteXPos + drumWidth / 2.0f;
             const float y2 = bounds.getBottom() - pad;
 
             g.drawLine(x1, y1, x2, y2, thickness);
@@ -63,7 +60,7 @@ void NoteGridComponent::paint(Graphics& g)
 
                 g.setColour(color.brighter());
                 g.fillRect(bounds.translated(2, verticalOffset)
-                               .withWidth(maxVelocityWidth * n->velocity / 127.0f)
+                               .withWidth(maxVelocityWidth * n.velocity / 127.0f)
                                .withHeight(velocityHeight)
                                .toNearestInt());
             }
@@ -92,20 +89,13 @@ void NoteGridComponent::updateSize()
 
 void NoteGridComponent::insertNote(MidiNote n)
 {
-    MidiNote* note = new MidiNote(n);
-    midiNotes.add(note);
+    midiNotes.push_back(n);
 
     repaint();
 }
 
 void NoteGridComponent::resetNotes()
 {
-    for (int i = 0; i < midiNotes.size(); i++)
-    {
-        MidiNote* note = midiNotes.getReference(i);
-        delete note;
-    }
-
     midiNotes.clear();
 
     repaint();

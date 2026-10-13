@@ -13,6 +13,8 @@
 #include "HomeTab.h"
 #include "ModelTab.h"
 
+#include "gui/RoundIconButton.h"
+
 #include "media/MediaDisplayComponent.h"
 
 #include "utils/Interface.h"
@@ -227,17 +229,14 @@ public:
     {
         getTabbedButtonBar().setLookAndFeel(nullptr);
 
-        // App shutdown: a tab that is still open (never closed) may have an
-        // in-flight request. Letting modelTabs auto-destruct would delete such
-        // a tab and destroy its ThreadPool while a worker is blocked in a
-        // network syscall, force-killing it (see ModelTab::hasPendingRequests).
-        // Waiting for the request instead would stall the quit for as long as
-        // its timeout, so abandon it - which aborts the connection, so that the
-        // OS networking task resolves now rather than minutes from now, once
-        // too much of the app has gone away to deliver the result safely - and
-        // release ownership without deleting, leaving the threads and memory
-        // for the exiting process to reclaim. Idle tabs are left in the array
-        // and destroyed normally.
+        /* App shutdown: a tab that is still open (never closed) may have an in-flight
+           request. Letting modelTabs auto-destruct would delete such a tab and destroy its
+           ThreadPool while a worker is blocked in a network call, force-killing it (see
+           ModelTab::hasPendingRequests). Waiting for the request instead would stall the
+           quit for as long as its timeout. So the tab is abandoned, which aborts the
+           connection while enough of the app remains to deliver the result safely, and
+           released without being deleted, leaving the threads and memory for the exiting
+           process to reclaim. Idle tabs are left in the array and destroyed normally. */
         for (int i = modelTabs.size(); --i >= 0;)
         {
             if (ModelTab* tab = modelTabs.getUnchecked(i); tab->hasPendingRequests())
@@ -247,6 +246,10 @@ public:
             }
         }
     }
+
+    /* Set by MainComponent and handed to every tab this container opens, so an error
+       popup about a missing API key can open the settings that hold it. */
+    std::function<void(Provider)> onOpenAPIKeySettings;
 
     /**
      * Opens a model in a new tab and shows it. The tab fills in once the model has loaded,
@@ -262,6 +265,14 @@ public:
         }
 
         auto* tab = new ModelTab();
+
+        // Forwarded rather than copied, so a callback set after this tab opened
+        // still reaches it
+        tab->onOpenAPIKeySettings = [this](Provider provider)
+        {
+            if (onOpenAPIKeySettings)
+                onOpenAPIKeySettings(provider);
+        };
 
         // Owned from creation, so that a tab is never left unowned while a
         // request is in flight (see closeTab and the destructor)
@@ -300,7 +311,7 @@ public:
 
         // Remove the tab from the UI immediately so it looks closed to the user.
         // Because the page was added with deleteComponentWhenNotNeeded = false,
-        // removeTab() does not destroy it; it is owned via pages.
+        // removeTab() does not destroy it. It is owned via pages.
         removeTab(index);
 
         // Deleting the page only detaches the tab from it
@@ -314,9 +325,9 @@ public:
         {
             // A network request is still in flight. Destroying the tab
             // (and its ThreadPool) now would force-kill a worker thread
-            // blocked in a network syscall. Abandoning it aborts the
-            // connection so the worker returns within moments; hand
-            // ownership to the reaper, which deletes it once it does.
+            // blocked in a network call. Abandoning it aborts the connection
+            // so that the worker returns within moments, and the reaper
+            // deletes the tab once it has.
             tabToClose->abandon();
 
             modelTabs.removeObject(tabToClose, false);
@@ -356,50 +367,9 @@ public:
     }
 
 private:
-    // Close button shown on each model tab, which explains itself in the instructions box
-    struct CloseTabButton : public Button
-    {
-        CloseTabButton() : Button("Close") {}
-
-        void paintButton(Graphics& g, bool isHighlighted, bool isDown) override
-        {
-            // Square whatever this is given, so that the circle and cross are never stretched
-            const float side = (float) jmin(getWidth(), getHeight());
-            const auto bounds =
-                getLocalBounds().toFloat().withSizeKeepingCentre(side, side).reduced(1.0f);
-
-            if (isHighlighted || isDown)
-            {
-                g.setColour(Colours::white.withAlpha(isDown ? 0.2f : 0.12f));
-                g.fillEllipse(bounds);
-            }
-
-            // A cross drawn from two strokes, which sits centred where a glyph might not
-            const auto cross = bounds.reduced(bounds.getWidth() * 0.32f);
-
-            g.setColour(isHighlighted ? Colours::white : Colours::lightgrey);
-            g.drawLine({ cross.getTopLeft(), cross.getBottomRight() }, 1.5f);
-            g.drawLine({ cross.getBottomLeft(), cross.getTopRight() }, 1.5f);
-        }
-
-        void mouseEnter(const MouseEvent& e) override
-        {
-            Button::mouseEnter(e);
-            instructionsMessage->setMessage("Click to close this model tab.");
-        }
-
-        void mouseExit(const MouseEvent& e) override
-        {
-            Button::mouseExit(e);
-            instructionsMessage->clearMessage();
-        }
-
-        SharedResourcePointer<InstructionsMessage> instructionsMessage;
-    };
-
     void addCloseButton(ModelTab& tab, int tabIndex)
     {
-        auto* closeButton = new CloseTabButton();
+        auto* closeButton = new CloseButton("Click to close this model tab.");
         closeButton->setSize(18, 18);
         closeButton->onClick = [this, safeTab = SafePointer<ModelTab>(&tab)]
         {

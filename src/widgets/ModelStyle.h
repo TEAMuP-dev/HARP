@@ -11,6 +11,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../gui/Palette.h"
+
 #include "../utils/Interface.h"
 #include "../utils/Messages.h"
 #include "../utils/ModelCatalog.h"
@@ -20,25 +22,6 @@ using namespace juce;
 
 namespace ModelStyle
 {
-inline const Colour accent { 0xff2dd4bf };
-inline const Colour accentDark { 0xff0f766e };
-inline const Colour chipBackground { 0xff183238 };
-inline const Colour chipText { 0xff9eeadf };
-inline const Colour problem { 0xfff87171 };
-inline const Colour information { 0xff7dd3fc };
-inline const Colour zeroGPU { 0xffa78bfa };
-inline const Colour secondaryText { 0xffa3a3a3 };
-
-inline Font font(float height, bool bold = false)
-{
-    return Font(FontOptions(height, bold ? Font::bold : Font::plain));
-}
-
-inline int getTextWidth(const Font& f, const String& text)
-{
-    return GlyphArrangement::getStringWidthInt(f, text);
-}
-
 /* Cards */
 
 inline constexpr float cornerSize = 6.0f;
@@ -50,41 +33,55 @@ inline void
                     .brighter(isDown ? 0.14f : (isHighlighted ? 0.1f : 0.06f)));
     g.fillRoundedRectangle(bounds, cornerSize);
 
-    g.setColour(isHighlighted ? accent.withAlpha(0.6f) : Colours::white.withAlpha(0.12f));
+    g.setColour(isHighlighted ? accent.withAlpha(0.6f) : outline);
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 }
 
-/* Draws text over at most maxLines lines, which divide the area evenly, in the current font and
-   colour, and ends the last line with an ellipsis if the text does not fit. Line breaks in the
-   text are treated as spaces. (drawFittedText shrinks the font instead, and ignores the limit
-   altogether for text with line breaks.) */
-inline void drawTruncatedText(Graphics& g, const String& text, Rectangle<int> area, int maxLines)
+/* The lines text breaks into at a width, at most maxLines of them, the last of which takes
+   the rest of the text. Line breaks in the text are treated as spaces. Laying text out is
+   slow, so a caller that draws the same text repeatedly keeps the result. */
+inline StringArray getTruncatedLines(const String& text, const Font& f, int width, int maxLines)
 {
     auto words = StringArray::fromTokens(text, " \t\r\n", "");
     words.removeEmptyStrings();
     const String flattened = words.joinIntoString(" ");
 
     AttributedString attributed;
-    attributed.append(flattened, g.getCurrentFont());
+    attributed.append(flattened, f);
 
-    // Laid out only to find where the lines break
     TextLayout layout;
-    layout.createLayout(attributed, (float) area.getWidth());
+    layout.createLayout(attributed, (float) width);
+
+    StringArray lines;
 
     const int numLines = jmin(maxLines, layout.getNumLines());
-    const int lineHeight = area.getHeight() / jmax(1, maxLines);
 
     for (int i = 0; i < numLines; ++i)
     {
         const auto range = layout.getLine(i).stringRange;
-        const bool isLastLine = i == numLines - 1;
 
-        // The last line takes the rest of the text, cut short if it is too long
-        const String line = isLastLine ? flattened.substring(range.getStart())
-                                       : flattened.substring(range.getStart(), range.getEnd());
+        lines.add((i == numLines - 1 ? flattened.substring(range.getStart())
+                                     : flattened.substring(range.getStart(), range.getEnd()))
+                      .trim());
+    }
 
-        g.drawText(
-            line.trim(), area.removeFromTop(lineHeight), Justification::centredLeft, isLastLine);
+    return lines;
+}
+
+/* Draws lines from getTruncatedLines, which divide the area evenly, in the current font and
+   colour, and ends the last line with an ellipsis if it does not fit. (drawFittedText shrinks
+   the font instead, and ignores the limit altogether for text with line breaks.) */
+inline void
+    drawTruncatedLines(Graphics& g, const StringArray& lines, Rectangle<int> area, int maxLines)
+{
+    const int lineHeight = area.getHeight() / jmax(1, maxLines);
+
+    for (int i = 0; i < lines.size(); ++i)
+    {
+        g.drawText(lines[i],
+                   area.removeFromTop(lineHeight),
+                   Justification::centredLeft,
+                   i == lines.size() - 1);
     }
 }
 
@@ -146,11 +143,17 @@ inline String describeTags(const ModelTags& tags)
 {
     StringArray lines;
 
+    // Each one listed separately here, where there is room for a model that takes
+    // or returns several things
     if (! tags.inputs.empty())
         lines.add("Inputs: " + ModelTags::describe(tags.inputs));
 
     if (! tags.outputs.empty())
         lines.add("Outputs: " + ModelTags::describe(tags.outputs));
+
+    // Spelled out as well as badged, since a bare identifier does not say it is a license
+    if (const String terms = tags.describeLicense(); terms.isNotEmpty())
+        lines.add("License: " + terms);
 
     if (const StringArray labels = tags.getDisplayLabels(); ! labels.isEmpty())
         lines.add("Tags: " + labels.joinIntoString(", "));
@@ -183,6 +186,12 @@ inline std::vector<Badge> getBadges(const CatalogEntry& entry, bool includeAvail
 
     if (entry.provider != "Hugging Face")
         badges.push_back({ entry.provider, Colours::lightgrey });
+
+    /* Last, so that it is drawn leftmost and reads straight after the name. The
+       availability note and the hardware stay at the right edge, where a reader
+       who is scanning a column of cards expects to find them. */
+    if (const String terms = entry.tags.describeLicense(); terms.isNotEmpty())
+        badges.push_back({ terms, license });
 
     return badges;
 }
@@ -228,16 +237,23 @@ inline int drawBadges(Graphics& g, const std::vector<Badge>& badges, Rectangle<i
 
 inline constexpr int sectionHeaderHeight = 26;
 
-// Draws a heading followed by a rule to the end of the area
+// Draws a heading followed by a rule to the end of the area, or only the rule where the
+// heading does not fit, since a heading cut short is harder to read than none at all
 inline void drawSectionHeader(Graphics& g, const String& title, Rectangle<int> area)
 {
     const Font titleFont = font(15.0f, true);
+    const int titleWidth = getTextWidth(titleFont, title);
 
-    g.setColour(Colours::white);
-    g.setFont(titleFont);
-    g.drawText(title, area, Justification::centredLeft, false);
+    int lineX = area.getX();
 
-    const int lineX = area.getX() + getTextWidth(titleFont, title) + 10;
+    if (titleWidth <= area.getWidth())
+    {
+        g.setColour(Colours::white);
+        g.setFont(titleFont);
+        g.drawText(title, area, Justification::centredLeft, false);
+
+        lineX += titleWidth + 10;
+    }
 
     g.setColour(accent.withAlpha(0.5f));
     g.fillRect(lineX, area.getCentreY(), jmax(0, area.getRight() - lineX), 1);

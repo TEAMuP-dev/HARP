@@ -222,4 +222,4 @@ Your terminal should display something like this:
 This share link expires in 1 week. For free permanent hosting and GPU upgrades, run `gradio deploy` from the terminal in the working directory to deploy to Hugging Face Spaces (https://huggingface.co/spaces)
 ```
 
-Copy the public URL and open up HARP. Paste the URL as a `custom path...`, click `Load`, and voila -- you should now be able to run state-of-the-art speech separation in your DAW!
+Copy the public URL and open up HARP. Click `Custom Path...` on the Home tab, paste the URL, and click `Load`. You can now run state-of-the-art speech separation in your DAW.

@@ -2,21 +2,15 @@
 
 enum CommandIDs
 {
-    // invalid = 0x0000,
-
     // File
     open = 0x0001,
-    save = 0x0002,
     saveAs = 0x0003,
     settings = 0x0004,
-
-    // Edit
-    undo = 0x1000,
-    redo = 0x1001,
 
     // View
     viewStatusArea = 0x2000,
     viewMediaClipboard = 0x2001,
+    viewPreviewPane = 0x2002,
 
     // Help
     about = 0x3000,
@@ -28,7 +22,6 @@ StringArray MainComponent::getMenuBarNames()
     StringArray menuBarNames;
 
     menuBarNames.add("File");
-    //menuBarNames.add("Edit");
     menuBarNames.add("View");
     menuBarNames.add("Help");
 
@@ -55,22 +48,17 @@ PopupMenu MainComponent::getMenuForIndex([[maybe_unused]] int menuIndex, const S
     if (menuName == "File")
     {
         menu.addCommandItem(&commandManager, CommandIDs::open);
-        //menu.addCommandItem(&commandManager, CommandIDs::save);
         menu.addCommandItem(&commandManager, CommandIDs::saveAs);
 
         menu.addSeparator();
 
         menu.addCommandItem(&commandManager, CommandIDs::settings);
     }
-    else if (menuName == "Edit")
-    {
-        //menu.addCommandItem(&commandManager, CommandIDs::undo);
-        //menu.addCommandItem(&commandManager, CommandIDs::redo);
-    }
     else if (menuName == "View")
     {
         menu.addCommandItem(&commandManager, CommandIDs::viewStatusArea);
         menu.addCommandItem(&commandManager, CommandIDs::viewMediaClipboard);
+        menu.addCommandItem(&commandManager, CommandIDs::viewPreviewPane);
     }
     else if (menuName == "Help")
     {
@@ -125,17 +113,13 @@ void MainComponent::deinitializeMenuBar()
  */
 void MainComponent::getAllCommands(Array<CommandID>& commands)
 {
-    const CommandID fileIDs[] = {
-        CommandIDs::open, CommandIDs::save, CommandIDs::saveAs, CommandIDs::settings
-    };
+    const CommandID fileIDs[] = { CommandIDs::open, CommandIDs::saveAs, CommandIDs::settings };
 
     commands.addArray(fileIDs, numElementsInArray(fileIDs));
 
-    const CommandID editIDs[] = { CommandIDs::undo, CommandIDs::redo };
-
-    commands.addArray(editIDs, numElementsInArray(editIDs));
-
-    const CommandID viewIDs[] = { CommandIDs::viewStatusArea, CommandIDs::viewMediaClipboard };
+    const CommandID viewIDs[] = { CommandIDs::viewStatusArea,
+                                  CommandIDs::viewMediaClipboard,
+                                  CommandIDs::viewPreviewPane };
 
     commands.addArray(viewIDs, numElementsInArray(viewIDs));
 
@@ -160,15 +144,8 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
             break;
 
-        case CommandIDs::save:
-            result.setInfo("Save", "Saves currently selected media clipboard track", "File", 0);
-            result.addDefaultKeypress('s', ModifierKeys::commandModifier);
-
-            break;
-
         case CommandIDs::saveAs:
             result.setInfo("Save As", "Saves currently selected track with a new name", "File", 0);
-            // TODO = is logical (|) correct here?
             result.addDefaultKeypress('s',
                                       ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
 
@@ -176,21 +153,6 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
 
         case CommandIDs::settings:
             result.setInfo("Settings", "Open settings window", "File", 0);
-
-            break;
-
-        /* --Edit-- */
-        case CommandIDs::undo:
-            result.setInfo("Undo", "Reverses most recent action", "Edit", 0);
-            result.addDefaultKeypress('z', ModifierKeys::commandModifier);
-
-            break;
-
-        case CommandIDs::redo:
-            result.setInfo("Redo", "Repeats next future action", "Edit", 0);
-            // TODO = is logical (|) correct here?
-            result.addDefaultKeypress('z',
-                                      ModifierKeys::shiftModifier | ModifierKeys::commandModifier);
 
             break;
 
@@ -204,6 +166,14 @@ void MainComponent::getCommandInfo(CommandID commandID, ApplicationCommandInfo& 
         case CommandIDs::viewMediaClipboard:
             result.setInfo("Media Clipboard", "Toggles display of media clipboard", "View", 0);
             result.setTicked(showMediaClipboard);
+
+            break;
+
+        case CommandIDs::viewPreviewPane:
+            result.setInfo("Preview Pane", "Toggles display of preview pane", "View", 0);
+            result.setTicked(mediaClipboardWidget.isPreviewPaneVisible());
+            // The pane is part of the media clipboard, so has nowhere to show without it
+            result.setActive(showMediaClipboard);
 
             break;
 
@@ -229,13 +199,12 @@ bool MainComponent::perform(const InvocationInfo& info)
         /* --File-- */
         case CommandIDs::open:
             DBG_AND_LOG("MainComponent::perform: \"open\" command invoked.");
+
+            // The file is added to the media clipboard, which has to be showing to see it
+            if (! showMediaClipboard)
+                viewMediaClipboardCallback();
+
             mediaClipboardWidget.addFileCallback();
-
-            break;
-
-        case CommandIDs::save:
-            DBG_AND_LOG("MainComponent::perform: \"save\" command invoked.");
-            // TODO - saveCallback();
 
             break;
 
@@ -251,19 +220,6 @@ bool MainComponent::perform(const InvocationInfo& info)
 
             break;
 
-        /* --Edit-- */
-        case CommandIDs::undo:
-            DBG_AND_LOG("MainComponent::perform: \"undo\" command invoked.");
-            // TODO - undoCallback();
-
-            break;
-
-        case CommandIDs::redo:
-            DBG_AND_LOG("MainComponent::perform: \"redo\" command invoked.");
-            // TODO - redoCallback();
-
-            break;
-
         /* --View-- */
         case CommandIDs::viewMediaClipboard:
             DBG_AND_LOG("MainComponent::perform: \"viewMediaClipboard\" command invoked.");
@@ -274,6 +230,12 @@ bool MainComponent::perform(const InvocationInfo& info)
         case CommandIDs::viewStatusArea:
             DBG_AND_LOG("MainComponent::perform: \"viewStatusArea\" command invoked.");
             viewStatusAreaCallback();
+
+            break;
+
+        case CommandIDs::viewPreviewPane:
+            DBG_AND_LOG("MainComponent::perform: \"viewPreviewPane\" command invoked.");
+            viewPreviewPaneCallback();
 
             break;
 

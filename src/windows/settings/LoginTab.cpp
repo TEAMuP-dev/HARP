@@ -1,13 +1,12 @@
 #include "LoginTab.h"
 
-ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
+ProviderPage::ProviderPage(Provider p) : provider(p)
 {
-    // Load appropriate client
-    client = multiplexClients(provider);
+    client = createClient(provider);
+    client->setRequestRegistry(&requestRegistry);
 
-    String titleText = "Update or remove your API key for " + displayName + ".";
-
-    titleLabel.setText(titleText, dontSendNotification);
+    titleLabel.setText("Update or remove your API key for " + getDisplayName() + ".",
+                       dontSendNotification);
     titleLabel.setJustificationType(Justification::centred);
 
     getTokenLink.setButtonText("Click here to register a new API key.");
@@ -17,47 +16,13 @@ ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
     addAndMakeVisible(titleLabel);
     addAndMakeVisible(getTokenLink);
 
-    String emptyText = "Enter API key here";
-
-    tokenEditor.setTextToShowWhenEmpty(emptyText, Colours::grey);
+    tokenEditor.setTextToShowWhenEmpty("Enter API key here", Colours::grey);
     tokenEditor.setReturnKeyStartsNewLine(false);
     tokenEditor.setSelectAllWhenFocused(true);
 
     // Keep the key obscured by default so it is not revealed by a screen share
     tokenEditor.setPasswordCharacter(passwordCharacter);
-    tokenEditor.onTextChange = [this]()
-    {
-        String currentText = tokenEditor.getText().trim();
-
-        if (currentText.isNotEmpty())
-        {
-            if (sharedTokens->savedTokens.contains(provider))
-            {
-                String savedToken = sharedTokens->savedTokens[provider];
-
-                if (currentText == savedToken)
-                {
-                    updateButton.setEnabled(false);
-                    removeButton.setEnabled(true);
-                }
-                else
-                {
-                    updateButton.setEnabled(true);
-                    removeButton.setEnabled(false);
-                }
-            }
-            else
-            {
-                updateButton.setEnabled(true);
-                removeButton.setEnabled(false);
-            }
-        }
-        else
-        {
-            updateButton.setEnabled(false);
-            removeButton.setEnabled(false);
-        }
-    };
+    tokenEditor.onTextChange = [this] { updateButtons(); };
     tokenEditor.onReturnKey = [this] { updateButton.triggerClick(); };
 
     addAndMakeVisible(tokenEditor);
@@ -74,14 +39,23 @@ ProviderPage::ProviderPage(Provider p, String n) : provider(p), displayName(n)
     updateButton.onClick = [this] { updateTokenCallback(); };
     removeButton.onClick = [this] { removeTokenCallback(); };
 
-    resetState();
-
     addAndMakeVisible(updateButton);
     addAndMakeVisible(removeButton);
 
     statusLabel.setJustificationType(Justification::centred);
 
     addAndMakeVisible(statusLabel);
+
+    updateButtons();
+}
+
+ProviderPage::~ProviderPage()
+{
+    /* A check in flight would leave its worker blocked in a network call, and destroying
+       the pool under it would force-kill the thread. Abort the request so the worker
+       returns at once, then wait for it. */
+    requestRegistry.abortActiveRequests();
+    checkPool.removeAllJobs(true, 5000);
 }
 
 void ProviderPage::resized()
@@ -117,75 +91,126 @@ void ProviderPage::resized()
 
 void ProviderPage::resetState()
 {
-    if (sharedTokens->savedTokens.contains(provider))
+    const String savedKey = sharedTokens->getKey(provider);
+
+    tokenEditor.setText(savedKey, dontSendNotification);
+    updateButtons();
+
+    if (savedKey.isEmpty())
     {
-        String savedToken = sharedTokens->savedTokens[provider];
+        // Supersedes any check still in flight
+        ++latestCheckID;
 
-        OpResult result = client->validateToken(savedToken);
-
-        if (result.failed())
-        {
-            // TODO - could be due to connection failure or invalid response as well
-            statusLabel.setText(std::move(tokenInvalidMessage), dontSendNotification);
-        }
-        else
-        {
-            statusLabel.setText(std::move(tokenLoadedMessage), dontSendNotification);
-        }
-
-        tokenEditor.setText(savedToken);
-        removeButton.setEnabled(true);
+        statusLabel.setText("No key has been added for this provider.", dontSendNotification);
     }
     else
     {
-        statusLabel.setText(std::move(tokenMissingMessage), dontSendNotification);
-        updateButton.setEnabled(false);
-        removeButton.setEnabled(false);
+        checkKey(savedKey, false);
     }
+}
+
+void ProviderPage::updateButtons()
+{
+    const String enteredKey = tokenEditor.getText().trim();
+    const String savedKey = sharedTokens->getKey(provider);
+
+    // A new key can be saved, and the saved one removed while it is the one shown
+    updateButton.setEnabled(enteredKey.isNotEmpty() && enteredKey != savedKey);
+    removeButton.setEnabled(savedKey.isNotEmpty() && enteredKey == savedKey);
 }
 
 void ProviderPage::updateTokenCallback()
 {
-    String enteredToken = tokenEditor.getText().trim();
+    const String enteredKey = tokenEditor.getText().trim();
 
-    if (enteredToken.isNotEmpty())
+    if (enteredKey.isNotEmpty())
     {
-        OpResult result = client->validateToken(enteredToken);
-
-        if (result.failed())
-        {
-            // TODO - could be due to connection failure or invalid response as well
-            statusLabel.setText(std::move(tokenInvalidMessage), dontSendNotification);
-        }
-        else
-        {
-            sharedTokens->updateKey(provider, enteredToken);
-
-            statusLabel.setText(std::move(tokenLoadedMessage), dontSendNotification);
-            removeButton.setEnabled(true);
-        }
-
         updateButton.setEnabled(false);
-    }
-    else
-    {
-        statusLabel.setText(std::move(tokenMissingMessage), dontSendNotification);
+
+        checkKey(enteredKey, true);
     }
 }
 
 void ProviderPage::removeTokenCallback()
 {
-    if (sharedTokens->savedTokens.contains(provider))
+    sharedTokens->removeKey(provider);
+
+    tokenEditor.clear();
+
+    // Supersedes any check still in flight
+    ++latestCheckID;
+
+    statusLabel.setText("No key has been added for this provider.", dontSendNotification);
+
+    updateButtons();
+}
+
+void ProviderPage::checkKey(const String& key, bool saveIfValid)
+{
+    const int checkID = ++latestCheckID;
+
+    statusLabel.setText("Checking the key...", dontSendNotification);
+
+    SafePointer<ProviderPage> safeThis(this);
+
+    checkPool.addJob(
+        [this, safeThis, key, saveIfValid, checkID]
+        {
+            OpResult result = client->validateToken(key);
+
+            MessageManager::callAsync(
+                [safeThis, result, key, saveIfValid, checkID]
+                {
+                    if (safeThis != nullptr)
+                        safeThis->showCheckResult(result, key, saveIfValid, checkID);
+                });
+        });
+}
+
+void ProviderPage::showCheckResult(const OpResult& result,
+                                   const String& key,
+                                   bool saveIfValid,
+                                   int checkID)
+{
+    if (checkID != latestCheckID)
     {
-        sharedTokens->removeKey(provider);
-
-        tokenEditor.clear();
-
-        statusLabel.setText(std::move(tokenMissingMessage), dontSendNotification);
-
-        updateButton.setEnabled(false);
-        removeButton.setEnabled(false);
+        return;
     }
+
+    if (result.failed())
+    {
+        statusLabel.setText(describeCheckFailure(result.getError()), dontSendNotification);
+    }
+    else if (saveIfValid)
+    {
+        sharedTokens->updateKey(provider, key);
+
+        statusLabel.setText("This key is valid, and has been saved.", dontSendNotification);
+    }
+    else
+    {
+        statusLabel.setText("This key is valid.", dontSendNotification);
+    }
+
+    updateButtons();
+}
+
+String ProviderPage::describeCheckFailure(const Error& error) const
+{
+    // An unreachable provider says nothing about the key itself
+    if (const auto* e = std::get_if<HttpError>(&error);
+        e != nullptr && e->type == HttpError::Type::ConnectionFailed)
+    {
+        return "Could not reach " + getDisplayName() + " to check this key.";
+    }
+
+    if (const auto* e = std::get_if<ClientError>(&error);
+        e != nullptr && e->type == ClientError::Type::InsufficientPermissions)
+    {
+        return "This key does not have sufficient permissions.";
+    }
+
+    return "This key is invalid.";
 }
 
 void PageSwitcher::resized()
@@ -196,28 +221,42 @@ void PageSwitcher::resized()
     }
 }
 
-void PageSwitcher::showPage(int idx)
+int PageSwitcher::getIndexForProvider(Provider provider) const
 {
     for (int i = 0; i < (int) entries.size(); ++i)
     {
+        if (entries[(size_t) i].page->getProvider() == provider)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void PageSwitcher::showPage(int idx)
+{
+    for (int i = 0; i < getNumPages(); ++i)
+    {
+        auto& page = *entries[(size_t) i].page;
+
+        page.setVisible(i == idx);
+
         if (i == idx)
         {
-            entries[i].page->setVisible(true);
-            entries[i].page->resetState();
-        }
-        else
-        {
-            entries[i].page->setVisible(false);
+            page.resetState();
         }
     }
 }
 
 void PageSwitcher::addPage(std::unique_ptr<ProviderPage> page)
 {
-    addAndMakeVisible(page.get());
-    page->setVisible(entries.empty());
+    // Shown, and so checked, once its row is selected
+    addChildComponent(page.get());
 
-    entries.push_back({ std::move(page->getDisplayName()), std::move(page) });
+    const String displayName = page->getDisplayName();
+
+    entries.push_back({ displayName, std::move(page) });
 }
 
 LoginTab::LoginTab()
@@ -227,12 +266,37 @@ LoginTab::LoginTab()
     sidebar.setOutlineThickness(0);
     addAndMakeVisible(sidebar);
 
-    loginPages.addPage(std::make_unique<ProviderPage>(Provider::HuggingFace, "Hugging Face"));
-    loginPages.addPage(std::make_unique<ProviderPage>(Provider::Stability, "Stability AI"));
+    loginPages.addPage(std::make_unique<ProviderPage>(Provider::HuggingFace));
+    loginPages.addPage(std::make_unique<ProviderPage>(Provider::Stability));
     addAndMakeVisible(loginPages);
 
     sidebar.updateContent();
     sidebar.selectRow(0);
+}
+
+void LoginTab::showProvider(Provider provider)
+{
+    const int idx = loginPages.getIndexForProvider(provider);
+
+    if (idx < 0)
+    {
+        DBG_AND_LOG("LoginTab::showProvider: No page serves the requested provider.");
+
+        return;
+    }
+
+    /* Selecting the row rather than the page directly, so the sidebar highlight and
+       the visible page cannot disagree. */
+    sidebar.selectRow(idx);
+}
+
+void LoginTab::selectedRowsChanged(int row)
+{
+    // Clicking below the last row deselects every row, which leaves the page showing
+    if (row >= 0)
+    {
+        loginPages.showPage(row);
+    }
 }
 
 void LoginTab::resized()

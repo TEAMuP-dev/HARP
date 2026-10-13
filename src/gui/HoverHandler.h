@@ -10,6 +10,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+using namespace juce;
+
 class HoverHandler : public MouseListener
 {
 public:

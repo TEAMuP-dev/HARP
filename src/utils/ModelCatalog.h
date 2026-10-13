@@ -66,7 +66,10 @@ struct CatalogEntry
     bool isCustom = false; // Added by the user rather than found
     LoadStatus loadStatus = LoadStatus::None;
 
-    bool isZeroGPU() const { return hardware.startsWithIgnoreCase("zero-"); }
+    /* Either the Space runs on ZeroGPU, or it says its work does: a frontend that
+       forwards to the authors' own Space is hosted on CPU, so only the declaration
+       tells a user their request needs GPU allowance and queues for it. */
+    bool isZeroGPU() const { return hardware.startsWithIgnoreCase("zero-") || tags.zeroGPU; }
 
     /* The Hub's report on a Space, before anything is asked of it, is only an expectation.
        Once a load has been attempted, its outcome is what counts. */
@@ -112,6 +115,9 @@ class ModelCatalog : public ChangeBroadcaster
 public:
     // Hugging Face organization whose Spaces are listed
     static constexpr const char* hubOrganization = "teamup-tech";
+
+    // Settings key under which the custom paths are saved
+    static constexpr const char* customPathsKey = "models.customPaths";
 
     enum class FetchState
     {
@@ -190,7 +196,6 @@ public:
     String getFetchError() const { return fetchError; }
     // When the listing being shown was obtained, or a null time if there is none
     Time getListingTime() const { return listingTime; }
-    int getNumHubEntries() const { return (int) (hubEntries.size() - hiddenEntries.size()); }
 
     // Spaces left out because they cannot currently be loaded, with the reason for each
     struct HiddenEntry
@@ -200,11 +205,6 @@ public:
     };
 
     const std::vector<HiddenEntry>& getHiddenEntries() const { return hiddenEntries; }
-
-    static String getHubOrganizationURL()
-    {
-        return "https://huggingface.co/" + String(hubOrganization);
-    }
 
     /* A loaded model's own card is more authoritative than what its listing says about it,
        so it is shown in the listing's place, now and after a restart (see rebuildEntries). */
@@ -460,6 +460,16 @@ private:
                         tags.add(tag.toString());
                 }
 
+                /* A Space declares its license in its own frontmatter field rather than as a
+                   tag, so it is read from there and tagged, which is how the license reaches
+                   the Home tab. A model card listing "license:<id>" among its tags is read
+                   the same way, wherever it is hosted (see ModelTags.h). */
+                if (const String license = cardData["license"].toString().trim();
+                    license.isNotEmpty())
+                {
+                    tags.add("license:" + license);
+                }
+
                 CatalogEntry entry;
                 entry.path = path;
                 entry.name = cardData["title"].toString().trim();
@@ -504,14 +514,15 @@ private:
         {
             auto status = loadStatuses.find(entry.path.toLowerCase());
 
-            const bool failedToLoad = status != loadStatuses.end()
-                                      && status->second == CatalogEntry::LoadStatus::Failed;
+            const bool failedToLoad =
+                status != loadStatuses.end() && status->second == CatalogEntry::LoadStatus::Failed;
 
             if (failedToLoad)
                 hiddenEntries.push_back({ entry.name, "failed to load" });
             else if (entry.isReportedBroken())
                 hiddenEntries.push_back(
-                    { entry.name, "the Space reports " + entry.stage.replace("_", " ").toLowerCase() });
+                    { entry.name,
+                      "the Space reports " + entry.stage.replace("_", " ").toLowerCase() });
             else
                 entries.push_back(entry);
         }
@@ -561,7 +572,16 @@ private:
                     for (const auto& tag : card.tags)
                         tags.add(tag);
 
+                    /* A Space declares its license in its own metadata rather than in
+                       its card, so replacing the tags outright would drop the license
+                       the moment the model loaded. It is carried over unless the card
+                       names one itself. */
+                    const String license = entry.tags.license;
+
                     entry.tags = ModelTags::parse(tags);
+
+                    if (entry.tags.license.isEmpty())
+                        entry.tags.license = license;
                 }
             }
         }
@@ -662,8 +682,6 @@ private:
     {
         Settings::setValue(customPathsKey, customPaths.joinIntoString("\n"), true);
     }
-
-    static constexpr const char* customPathsKey = "models.customPaths";
 
     std::vector<CatalogEntry> builtInEntries;
     std::vector<CatalogEntry> hubEntries;

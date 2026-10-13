@@ -1,5 +1,5 @@
 name: Runtime error report
-description: Report a runtime/model/space error from HARP
+description: Report an error that HARP showed while loading or running a model
 title: "HARP runtime error report"
 labels: ["bug"]
 body:
@@ -8,7 +8,8 @@ body:
       value: |
         HARP fills in the error, endpoint, and environment fields for you when
         this form is opened from its error popup. Please add what you were doing
-        and how to reproduce it.
+        and how to reproduce it. If you can, attach the log file, which the
+        popup's Open Logs button reveals.
 
   - type: textarea
     id: summary
@@ -22,7 +23,7 @@ body:
     id: endpoint
     attributes:
       label: Endpoint
-      description: The model/space endpoint involved, if any.
+      description: The model or Space involved, if any.
 
   - type: textarea
     id: notes
@@ -34,7 +35,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: HARP version, local time, and log file location.
+      description: HARP version, operating system, and local time.
       render: markdown
 
   - type: textarea

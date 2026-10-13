@@ -1,6 +1,6 @@
 /**
  * @file GeneralSettingsTab.h
- * @brief Placeholder tab for general settings.
+ * @brief Tab with general settings and maintenance actions.
  * @author saumya-pailwan, cwitkowitz, lindseydeng, huiranyu
  */
 
@@ -17,7 +17,7 @@ using namespace juce;
 class GeneralSettingsTab : public Component
 {
 public:
-    GeneralSettingsTab(std::function<void()> onRestoreDefaults = {});
+    explicit GeneralSettingsTab(std::function<void()> onRestore = {});
     ~GeneralSettingsTab() override = default;
 
     void resized() override;
@@ -29,8 +29,6 @@ private:
     void handleRestoreDefaults();
 
     std::function<void()> onRestoreDefaults;
-
-    SharedResourcePointer<SharedAPIKeys> sharedTokens;
 
     TextButton openLogFolderButton;
     TextButton clearLogsButton;

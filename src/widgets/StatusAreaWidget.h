@@ -13,20 +13,15 @@
 using namespace juce;
 
 /**
- * Shows the latest message, at a smaller size if that is what it takes to fit the box (down to
- * a minimum), and cut short with an ellipsis if it does not fit even then.
+ * Shows the latest instructions, at a smaller size if that is what it takes to fit the box
+ * (down to a minimum), and cut short with an ellipsis if they do not fit even then.
  */
-template <typename MessageType>
-class MessageBox : public Component, ChangeListener
+class InstructionsBox : public Component, ChangeListener
 {
 public:
-    MessageBox(float fontSize = 15.0f, Justification justification = Justification::centred)
-        : maximumFontHeight(fontSize), textJustification(justification)
-    {
-        sharedMessage->addChangeListener(this);
-    }
+    InstructionsBox() { sharedMessage->addChangeListener(this); }
 
-    ~MessageBox() override { sharedMessage->removeChangeListener(this); }
+    ~InstructionsBox() override { sharedMessage->removeChangeListener(this); }
 
     void paint(Graphics& g) override
     {
@@ -124,15 +119,15 @@ private:
         layoutArea = area;
     }
 
+    static constexpr float maximumFontHeight = 15.0f;
     static constexpr float minimumFontHeight = 12.0f;
     static constexpr int textInsetX = 6;
     static constexpr int textInsetY = 4;
 
-    const float maximumFontHeight;
-    const Justification textJustification;
+    const Justification textJustification { Justification::centred };
     const Colour textColour { 0xffe0e0e0 };
 
-    SharedResourcePointer<MessageType> sharedMessage;
+    SharedResourcePointer<InstructionsMessage> sharedMessage;
     String message;
 
     TextLayout layout;
@@ -144,8 +139,6 @@ private:
     Rectangle<float> lastLineArea;
 };
 
-using InstructionsBox = MessageBox<InstructionsMessage>;
-
 class StatusHistoryBox : public Component, ChangeListener
 {
 public:
@@ -156,8 +149,7 @@ public:
         historyEditor.setScrollbarsShown(true);
         historyEditor.setCaretVisible(false);
         historyEditor.setPopupMenuEnabled(false);
-        // Transparent background so the parent's paint() fill shows through,
-        // giving the same appearance as the InstructionsBox (which uses a plain Label).
+        // Transparent, so that the fill from paint() shows through as in the InstructionsBox
         historyEditor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
         historyEditor.setColour(TextEditor::textColourId, Colour(0xE0, 0xE0, 0xE0));
         historyEditor.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
@@ -185,10 +177,10 @@ public:
 
     void changeListenerCallback(ChangeBroadcaster* /*source*/) override
     {
-        /* Rebuild the full text on every change: the history is capped at
+        /* Rebuild the full text on every change. The history is capped at
            StatusMessage::maxHistoryEntries short lines, so this is cheap, and
            it avoids incremental-append bookkeeping that can drop or duplicate
-           entries when messages arrive from worker threads */
+           entries when messages arrive from worker threads. */
         historyEditor.setText(sharedMessage->getHistoryText(), false);
         historyEditor.moveCaretToEnd();
     }
@@ -206,8 +198,6 @@ public:
         addAndMakeVisible(instructionsBox);
         addAndMakeVisible(statusHistoryBox);
     }
-
-    ~StatusAreaWidget() override {}
 
     void resized() override
     {

@@ -6,9 +6,6 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "ControlComponent.h"
 #include "MultiButton.h"
 
@@ -17,9 +14,7 @@ using namespace juce;
 class FileChooserWithLabel : public ControlComponent, public FileDragAndDropTarget
 {
 public:
-    ~FileChooserWithLabel() { actionButton.setLookAndFeel(nullptr); }
-
-    FileChooserWithLabel(const String& labelText = {})
+    explicit FileChooserWithLabel(const String& labelText = {})
     {
         label.setText(labelText, dontSendNotification);
         label.setJustificationType(Justification::centred);
@@ -28,6 +23,8 @@ public:
         initializeButton();
         addAndMakeVisible(actionButton);
     }
+
+    ~FileChooserWithLabel() override { actionButton.setLookAndFeel(nullptr); }
 
     void resized() override
     {
@@ -66,7 +63,7 @@ public:
             g.setColour(Colour::fromRGB(90, 105, 105));
             g.fillRect(bannerRect);
             g.setColour(Colours::white);
-            g.setFont(Font(12.0f));
+            g.setFont(ModelStyle::font(12.0f));
             g.drawText("OPTIONAL", bannerRect, Justification::centred, false);
         }
 
@@ -86,7 +83,7 @@ public:
         auto textArea = bodyInt.withTrimmedRight(jmin(bodyInt.getHeight(), bodyInt.getWidth()))
                             .withTrimmedLeft(jmin(4, bodyInt.getWidth()));
 
-        g.setFont(Font(13.0f));
+        g.setFont(ModelStyle::font(13.0f));
         g.setColour(currentPath.isEmpty() ? textCol.withAlpha(0.4f) : textCol.withAlpha(0.85f));
         g.drawText(currentPath.isEmpty() ? getPlaceholderText() : File(currentPath).getFileName(),
                    textArea,
@@ -115,7 +112,8 @@ public:
         repaint();
     }
 
-    void setFileTypes(const std::vector<std::string>& types) { fileTypes = types; }
+    // Extensions with a leading dot (e.g., ".json"), where none means any file
+    void setFileTypes(const StringArray& extensions) { fileTypes = extensions; }
 
     void setRequired(bool req)
     {
@@ -176,18 +174,10 @@ private:
 
     String getPlaceholderText() const
     {
-        if (fileTypes.empty())
+        if (fileTypes.isEmpty())
             return "No file selected";
 
-        StringArray exts;
-
-        for (const auto& ext : fileTypes)
-        {
-            String e(ext);
-            exts.add(e.startsWithChar('.') ? e : "." + e);
-        }
-
-        return "No file selected (" + exts.joinIntoString(", ") + ")";
+        return "No file selected (" + fileTypes.joinIntoString(", ") + ")";
     }
 
     void clearFile() { setAndNotify({}); }
@@ -216,35 +206,15 @@ private:
 
     String buildWildcardPattern() const
     {
-        if (fileTypes.empty())
-            return "*";
-
-        StringArray patterns;
-
-        for (const auto& ext : fileTypes)
-        {
-            String e(ext);
-
-            if (! e.startsWithChar('.'))
-                e = "." + e;
-
-            patterns.add("*" + e);
-        }
-
-        return patterns.joinIntoString(";");
+        return fileTypes.isEmpty() ? "*" : "*" + fileTypes.joinIntoString(";*");
     }
-
-    struct NoBorderLookAndFeel : public LookAndFeel_V4
-    {
-        void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
-    };
 
     static constexpr int minFilePickerWidth = 260;
     static constexpr int minFilePickerHeight = 50;
     static constexpr int labelHeight = 20;
     static constexpr int bannerHeight = 14;
 
-    NoBorderLookAndFeel noBorderLAF;
+    BorderlessButtonLookAndFeel noBorderLAF;
     Label label;
     MultiButton actionButton;
     MultiButton::Mode chooseFileModeInfo;
@@ -254,6 +224,6 @@ private:
 
     String currentPath;
     bool required = true;
-    std::vector<std::string> fileTypes;
+    StringArray fileTypes;
     std::unique_ptr<FileChooser> fileChooser;
 };

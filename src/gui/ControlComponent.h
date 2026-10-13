@@ -8,6 +8,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "Palette.h"
+
 using namespace juce;
 
 /**
@@ -48,9 +50,8 @@ protected:
      * @param label The label to measure
      * @return The width in pixels required to display the label text
      */
-    int getLabelWidth(const Label& label) const
+    static int getLabelWidth(const Label& label)
     {
-        Font font = label.getFont();
-        return font.getStringWidth(label.getText());
+        return ModelStyle::getTextWidth(label.getFont(), label.getText());
     }
 };

@@ -224,8 +224,6 @@ struct TrackComponentInfo : public ModelComponentInfo
 {
     bool required = true;
 
-    std::string path { "" }; // Used when uploading files
-
     TrackComponentInfo() = default;
     virtual ~TrackComponentInfo() = default; // Make child-tree polymorphic
 
@@ -250,16 +248,28 @@ struct FileComponentInfo : public ModelComponentInfo, public FileChooserWithLabe
     bool required = true;
 
     std::string path { "" };
-    std::vector<std::string> fileTypes;
+
+    // Extensions with a leading dot (e.g., ".json"), where none means any file
+    StringArray fileTypes;
 
     FileComponentInfo(DynamicObject* input) : ModelComponentInfo(input)
     {
         readBool(input, "required", required);
         readString(input, "path", path);
 
-        /* An empty list is not an error here: a file chooser with no declared types
+        /* An empty list is not an error here. A file chooser with no declared types
            accepts any file, which is what an unrestricted gr.File means. */
-        readStringList(input, "file_types", fileTypes);
+        std::vector<std::string> declaredTypes;
+
+        readStringList(input, "file_types", declaredTypes);
+
+        for (const auto& type : declaredTypes)
+        {
+            const String extension = String(type).trim();
+
+            if (extension.isNotEmpty())
+                fileTypes.add(extension.startsWithChar('.') ? extension : "." + extension);
+        }
     }
 
     void fileChooserChanged(FileChooserWithLabel* fileChooser) override

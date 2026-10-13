@@ -30,12 +30,20 @@ public:
     // Disable assignment operator
     HARPLogger& operator=(const HARPLogger&) = delete;
 
+    /* Opens the log, unless it is already open. Every window asks for it, and worker
+       threads may be writing to it at the time, so it is replaced only under the lock.
+
+       macOS: ~/Library/Logs/HARP/main.log
+       Windows: C:\Users\<username>\AppData\Roaming\HARP\main.log
+       Linux: ~/.config/HARP/main.log */
     void initializeLogger()
     {
-        // MacOS: ~/Library/Logs/HARP/main.log
-        // Windows: C:\Users\<username>\AppData\Roaming\HARP\main.log
-        // Linux: ~/.config/HARP/main.log
-        logger.reset(FileLogger::createDefaultAppLogger("HARP", "main.log", ""));
+        const ScopedLock lock(loggerLock);
+
+        if (logger == nullptr)
+        {
+            logger.reset(FileLogger::createDefaultAppLogger("HARP", "main.log", ""));
+        }
     }
 
     void debugAndLog(const String& message) const
