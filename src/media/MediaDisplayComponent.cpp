@@ -228,8 +228,7 @@ MediaDisplayComponent::MediaDisplayComponent(String name, bool req, bool fromDAW
 {
     formatManager.registerBasicFormats();
 
-    deviceManager.initialise(0, 2, nullptr, true, {}, nullptr);
-    deviceManager.addAudioCallback(&sourcePlayer);
+    audioDevice->manager.addAudioCallback(&sourcePlayer);
 
     sourcePlayer.setSource(&transportSource);
 
@@ -305,10 +304,10 @@ void MediaDisplayComponent::initializeButtons()
                             [this] { start(); }, MultiButton::DrawingMode::IconOnly,
                             Colours::limegreen,  fontaudio::Play };
     // Mode when there is nothing to play
-    playButtonInactiveInfo =
-        MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                            [] {},              MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey, fontaudio::Play };
+    playButtonInactiveInfo = MultiButton::Mode {
+        "Play-Inactive",    "Nothing to play.", [] {}, MultiButton::DrawingMode::IconOnly,
+        Colours::lightgrey, fontaudio::Play
+    };
     // Mode during playback, which keeps the playback position for resuming
     pauseButtonInfo = MultiButton::Mode { "Pause",
                                           "Click to pause playback.",
@@ -323,17 +322,14 @@ void MediaDisplayComponent::initializeButtons()
 
     // Mode while playing or paused
     stopButtonActiveInfo =
-        MultiButton::Mode { "Stop-Active",
-                            "Click to stop playback and return to the start.",
-                            [this] { stop(); },
-                            MultiButton::DrawingMode::IconOnly,
-                            Colours::orangered,
-                            fontaudio::Stop };
+        MultiButton::Mode { "Stop-Active",      "Click to stop playback and return to the start.",
+                            [this] { stop(); }, MultiButton::DrawingMode::IconOnly,
+                            Colours::orangered, fontaudio::Stop };
     // Mode when there is nothing to stop
-    stopButtonInactiveInfo =
-        MultiButton::Mode { "Stop-Inactive",    "Nothing to stop.",
-                            [] {},              MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey, fontaudio::Stop };
+    stopButtonInactiveInfo = MultiButton::Mode {
+        "Stop-Inactive",    "Nothing to stop.", [] {}, MultiButton::DrawingMode::IconOnly,
+        Colours::lightgrey, fontaudio::Stop
+    };
     stopButton.addMode(stopButtonActiveInfo);
     stopButton.addMode(stopButtonInactiveInfo);
     headerComponent.addAndMakeVisible(stopButton);
@@ -362,10 +358,10 @@ void MediaDisplayComponent::initializeButtons()
                                                    Colours::lightblue,
                                                    fontawesome::Save };
     // Mode when there is nothing to save
-    saveFileButtonInactiveInfo =
-        MultiButton::Mode { "Save-Inactive",    "Nothing to save.",
-                            [] {},              MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey, fontawesome::Save };
+    saveFileButtonInactiveInfo = MultiButton::Mode {
+        "Save-Inactive",    "Nothing to save.", [] {}, MultiButton::DrawingMode::IconOnly,
+        Colours::lightgrey, fontawesome::Save
+    };
     saveFileButton.addMode(saveFileButtonActiveInfo);
     saveFileButton.addMode(saveFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(saveFileButton);
@@ -378,10 +374,10 @@ void MediaDisplayComponent::initializeButtons()
                                                    Colours::lightblue,
                                                    fontawesome::Copy };
     // Mode when there is nothing to copy
-    copyFileButtonInactiveInfo =
-        MultiButton::Mode { "Copy-Inactive",    "Nothing to copy.",
-                            [] {},              MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey, fontawesome::Copy };
+    copyFileButtonInactiveInfo = MultiButton::Mode {
+        "Copy-Inactive",    "Nothing to copy.", [] {}, MultiButton::DrawingMode::IconOnly,
+        Colours::lightgrey, fontawesome::Copy
+    };
     copyFileButton.addMode(copyFileButtonActiveInfo);
     copyFileButton.addMode(copyFileButtonInactiveInfo);
     headerComponent.addAndMakeVisible(copyFileButton);
@@ -391,14 +387,12 @@ void MediaDisplayComponent::initializeButtons()
 
 MediaDisplayComponent::~MediaDisplayComponent()
 {
-    deviceManager.removeAudioCallback(&sourcePlayer);
+    audioDevice->manager.removeAudioCallback(&sourcePlayer);
 
     sourcePlayer.setSource(nullptr);
 
     headerComponent.removeMouseListener(this);
     horizontalScrollBar.removeListener(this);
-
-    //clearLabels(); // Seems to cause problems when re-loading model
 }
 
 StringArray MediaDisplayComponent::getSupportedExtensions()
@@ -636,11 +630,13 @@ void MediaDisplayComponent::resized()
 
         // Defer label repositioning until all layout passes are complete
         MessageManager::callAsync(
-            [this]()
+            [safeThis = SafePointer<MediaDisplayComponent>(this)]
             {
-                isLabelRepositioningScheduled = false;
+                if (safeThis == nullptr)
+                    return;
 
-                repositionLabels();
+                safeThis->isLabelRepositioningScheduled = false;
+                safeThis->repositionLabels();
             });
     }
 }
@@ -686,7 +682,6 @@ void MediaDisplayComponent::repositionLabels()
 
             Rectangle<float> labelBounds(xPos, yPos, labelWidth, static_cast<float>(labelHeight));
             l->setBounds(labelBounds.toNearestInt());
-            //l->toFront(true);
 
             float cursorRadius = cursorWidth / 2.0f;
 
@@ -704,15 +699,6 @@ void MediaDisplayComponent::repositionLabels()
             l->setDurationFillBounds(
                 Rectangle<float>(leftLabelMarkerPos + cursorRadius, 0, durationWidth, mediaHeight)
                     .toNearestInt());
-
-            if (l->getIndex() == currentTempFileIdx)
-            {
-                l->setVisible(true);
-            }
-            else
-            {
-                l->setVisible(false);
-            }
         }
     };
 
@@ -755,13 +741,7 @@ void MediaDisplayComponent::resetDisplay()
     resetButtonState();
 }
 
-void MediaDisplayComponent::resetPaths()
-{
-    originalFilePath = URL();
-
-    tempFilePaths.clear();
-    currentTempFileIdx = -1;
-}
+void MediaDisplayComponent::resetPaths() { originalFilePath = URL(); }
 
 void MediaDisplayComponent::resetTransport()
 {
@@ -853,144 +833,11 @@ int MediaDisplayComponent::getMinimumHeight() const
     return jmax(minimumUsefulHeight, headerHeight);
 }
 
-void MediaDisplayComponent::setOriginalFilePath(URL filePath)
-{
-    originalFilePath = filePath;
-
-    //addNewTempFile();
-}
-
-/*void MediaDisplayComponent::addNewTempFile()
-{
-    // Prune any future files in chain before adding new temp file
-    clearFutureTempFiles();
-
-    int numTempFiles = tempFilePaths.size();
-
-    // Obtain original file used to initialize display
-    File originalFile = originalFilePath.getLocalFile();
-
-    File targetFile; // File to copy to new temp file
-
-    if (! numTempFiles)
-    {
-        // Copy original file if no temp files
-        targetFile = originalFile;
-    }
-    else
-    {
-        // Otherwise copy most recent temp file
-        targetFile = getTempFilePath().getLocalFile();
-    }
-
-    String tempDirectory =
-        File::getSpecialLocation(File::SpecialLocationType::tempDirectory).getFullPathName();
-
-    String targetFileName = originalFile.getFileNameWithoutExtension();
-    String targetFileExtension = originalFile.getFileExtension();
-
-    URL tempFilePath = URL(File(tempDirectory + "/HARP/" + targetFileName + "_"
-                                + String(numTempFiles) + targetFileExtension));
-
-    File tempFile = tempFilePath.getLocalFile();
-
-    tempFile.getParentDirectory().createDirectory();
-
-    if (! targetFile.copyFileTo(tempFile))
-    {
-        DBG_AND_LOG("MediaDisplayComponent::addNewTempFile: Failed to copy file "
-            << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
-    }
-    else
-    {
-        DBG_AND_LOG("MediaDisplayComponent::addNewTempFile: Copied file "
-            << targetFile.getFullPathName() << " to " << tempFile.getFullPathName() << ".");
-    }
-
-    tempFilePaths.add(tempFilePath);
-    currentTempFileIdx++;
-}
-
-bool MediaDisplayComponent::iteratePreviousTempFile()
-{
-    if (currentTempFileIdx > 0)
-    {
-        currentTempFileIdx--;
-
-        updateDisplay(getTempFilePath());
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-bool MediaDisplayComponent::iterateNextTempFile()
-{
-    if (currentTempFileIdx + 1 < tempFilePaths.size())
-    {
-        currentTempFileIdx++;
-
-        updateDisplay(getTempFilePath());
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void MediaDisplayComponent::clearFutureTempFiles()
-{
-    int n = tempFilePaths.size() - (currentTempFileIdx + 1);
-
-    tempFilePaths.removeLast(n);
-
-    clearLabels(currentTempFileIdx + 1);
-}
-
-void MediaDisplayComponent::overwriteOriginalFile()
-{
-    File targetFile = originalFilePath.getLocalFile();
-    File tempFile = getTempFilePath().getLocalFile();
-
-    String parentDirectory = targetFile.getParentDirectory().getFullPathName();
-    String targetFileName = targetFile.getFileNameWithoutExtension();
-    String targetFileExtension = targetFile.getFileExtension();
-
-    File backupFile =
-        File(parentDirectory + "/" + targetFileName + "_BACKUP" + targetFileExtension);
-
-    if (targetFile.copyFileTo(backupFile))
-    {
-        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Created backup of file "
-            << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
-    }
-    else
-    {
-        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Failed to create backup of file "
-            << targetFile.getFullPathName() << " at " << backupFile.getFullPathName() << ".");
-    }
-
-    if (tempFile.copyFileTo(targetFile))
-    {
-        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Overwriting file "
-            << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
-    }
-    else
-    {
-        DBG_AND_LOG("MediaDisplayComponent::overwriteOriginalFile: Failed to overwrite file "
-            << targetFile.getFullPathName() << " with " << tempFile.getFullPathName() << ".");
-    }
-}*/
+void MediaDisplayComponent::setOriginalFilePath(URL filePath) { originalFilePath = filePath; }
 
 bool MediaDisplayComponent::isDuplicateFile(const URL& filePath)
 {
-    return getOriginalFilePath()
-           == filePath; //|| (isFileLoaded() && getTempFilePath() == filePath);
+    return getOriginalFilePath() == filePath;
 }
 
 void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, int /*y*/)
@@ -1009,7 +856,7 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
         return;
     }
 
-    if (! getInstanceExtensions().contains(mediaFile.getFileExtension()))
+    if (! getInstanceExtensions().contains(mediaFile.getFileExtension(), true))
     {
         AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,
                                          "Invalid File",
@@ -1047,14 +894,6 @@ void MediaDisplayComponent::saveFileCallback()
 {
     if (saveFileButton.getModeName() == saveFileButtonActiveInfo.displayLabel)
     {
-        //overwriteOriginalFile();
-        //saveFileButton.setMode(saveButtonInactiveInfo.displayLabel);
-
-        /*if (statusBox != nullptr)
-        {
-            statusBox->setStatusMessage("File saved successfully");
-        }*/
-
         if (isFileLoaded())
         {
             StringArray validExtensions = StringArray(getInstanceExtensions());
@@ -1077,10 +916,8 @@ void MediaDisplayComponent::saveFileCallback()
                         }
 
                         if (validExtensions.isEmpty()
-                            || validExtensions.contains(chosenFile.getFileExtension()))
+                            || validExtensions.contains(chosenFile.getFileExtension(), true))
                         {
-                            //URL tempFilePath = mediaDisplay->getTempFilePath();
-
                             if (URL(chosenFile) != getOriginalFilePath())
                             {
                                 // Remove DAW linking
@@ -1088,15 +925,10 @@ void MediaDisplayComponent::saveFileCallback()
                             }
 
                             // Attempt to save file contained within media display to chosen location
-                            //bool saveSuccessful = tempFilePath.getLocalFile().copyFileTo(newFile);
                             if (getOriginalFilePath().getLocalFile().copyFileTo(chosenFile))
                             {
-                                //loadMediaDisplay(newFile);
-
                                 // Update path associated with media display
                                 setOriginalFilePath(URL(chosenFile));
-
-                                //saveFileButton.setMode(saveButtonInactiveInfo.label);
 
                                 if (statusMessage != nullptr)
                                 {
@@ -1122,10 +954,6 @@ void MediaDisplayComponent::saveFileCallback()
                                     + validExtensions.joinIntoString(", ") + ".",
                                 "OK");
                         }
-                    }
-                    else
-                    {
-                        //DBG_AND_LOG("MediaDisplayComponent::saveFileCallback: Save operation canceled.");
                     }
                 });
         }
@@ -1664,25 +1492,11 @@ void MediaDisplayComponent::startFileDrag(const MouseEvent& e)
     }
 }
 
-int MediaDisplayComponent::getNumOverheadLabels()
-{
-    int nOverheadLabels = 0;
-
-    for (auto l : overheadLabels)
-    {
-        if (l->getIndex() == currentTempFileIdx)
-        {
-            nOverheadLabels++;
-        }
-    }
-
-    return nOverheadLabels;
-}
+int MediaDisplayComponent::getNumOverheadLabels() { return overheadLabels.size(); }
 
 void MediaDisplayComponent::addOverheadLabel(OverheadLabelComponent* l)
 {
-    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    l->setIndex(currentTempFileIdx);
+    l->setFont(Font(FontOptions((float) jmax(minFontSize, labelHeight - 2 * textSpacing))));
     overheadLabels.add(l);
 
     Component* mediaComponentPtr = getMediaComponent();
@@ -1704,8 +1518,7 @@ void MediaDisplayComponent::removeOverheadLabel(OverheadLabelComponent* l)
 
 void MediaDisplayComponent::addLabelOverlay(LabelOverlayComponent* l)
 {
-    l->setFont(Font(jmax(minFontSize, labelHeight - 2 * textSpacing)));
-    l->setIndex(currentTempFileIdx);
+    l->setFont(Font(FontOptions((float) jmax(minFontSize, labelHeight - 2 * textSpacing))));
     labelOverlays.add(l);
 
     Component* mediaComponentPtr = getMediaComponent();
@@ -1734,102 +1547,49 @@ void MediaDisplayComponent::addLabels(const LabelList& labels)
             continue;
         }
 
-        std::unique_ptr<OutputLabelComponent> lc =
-            std::make_unique<OutputLabelComponent>((double) l->t, l->label);
+        const double duration = l->duration.has_value() ? (double) *l->duration : 0.0;
+        const String description = l->description.value_or(String());
+        const Colour colour = l->color.has_value() ? Colour(static_cast<uint32>(*l->color))
+                                                   : Colours::purple.withAlpha(0.8f);
+        const String link = l->link.value_or(String());
 
-        if ((l->description).has_value())
+        // A label that has a height in the media is drawn over it, and any other above it
+        std::optional<float> relativeY;
+
+        if (auto* audioLabel = dynamic_cast<AudioLabel*>(l.get());
+            audioLabel != nullptr && audioLabel->amplitude.has_value())
         {
-            lc->setDescription((l->description).value());
+            relativeY = LabelOverlayComponent::amplitudeToRelativeY(*audioLabel->amplitude);
+        }
+        else if (auto* midiLabel = dynamic_cast<MidiLabel*>(l.get());
+                 midiLabel != nullptr && midiLabel->pitch.has_value())
+        {
+            relativeY = LabelOverlayComponent::pitchToRelativeY(*midiLabel->pitch);
         }
 
-        if ((l->duration).has_value())
+        if (relativeY.has_value())
         {
-            lc->setDuration(static_cast<double>((l->duration).value()));
-        }
-
-        if ((l->color).has_value())
-        {
-            lc->setColor(Colour(static_cast<uint32_t>((l->color).value())));
-        }
-
-        if ((l->link).has_value())
-        {
-            lc->setLink((l->link).value());
-        }
-
-        float y = 0.0f;
-
-        bool isOverlay = false;
-
-        if (auto audioLabel = dynamic_cast<AudioLabel*>(l.get()))
-        {
-            if ((audioLabel->amplitude).has_value())
-            {
-                isOverlay = true;
-
-                float amp = (audioLabel->amplitude).value();
-
-                y = LabelOverlayComponent::amplitudeToRelativeY(amp);
-            }
-        }
-
-        if (auto midiLabel = dynamic_cast<MidiLabel*>(l.get()))
-        {
-            if ((midiLabel->pitch).has_value())
-            {
-                isOverlay = true;
-
-                float p = (midiLabel->pitch).value();
-
-                y = LabelOverlayComponent::pitchToRelativeY(p);
-            }
-        }
-
-        if (isOverlay)
-        {
-            auto* lo = new LabelOverlayComponent(*static_cast<LabelOverlayComponent*>(lc.get()));
-            lo->setRelativeY(y);
-
-            addLabelOverlay(lo);
+            addLabelOverlay(new LabelOverlayComponent(
+                (double) l->t, l->label, *relativeY, duration, description, colour, link));
         }
         else
         {
-            auto* ol = new OverheadLabelComponent(*static_cast<OverheadLabelComponent*>(lc.get()));
-            addOverheadLabel(ol);
+            addOverheadLabel(new OverheadLabelComponent(
+                (double) l->t, l->label, duration, description, colour, link));
         }
     }
 }
 
-void MediaDisplayComponent::clearLabels(int processingIdxCutoff)
+void MediaDisplayComponent::clearLabels()
 {
-    for (int i = labelOverlays.size() - 1; i >= 0; --i)
+    while (! labelOverlays.isEmpty())
     {
-        LabelOverlayComponent* l = labelOverlays[i];
-
-        if (l->getIndex() >= processingIdxCutoff)
-        {
-            removeLabelOverlay(l);
-        }
+        removeLabelOverlay(labelOverlays.getLast());
     }
 
-    if (! processingIdxCutoff)
+    while (! overheadLabels.isEmpty())
     {
-        labelOverlays.clear();
-    }
-
-    for (int i = overheadLabels.size() - 1; i >= 0; --i)
-    {
-        OverheadLabelComponent* l = overheadLabels[i];
-
-        if (l->getIndex() >= processingIdxCutoff)
-        {
-            removeOverheadLabel(l);
-        }
-    }
-
-    if (! processingIdxCutoff)
-    {
-        overheadLabels.clear();
+        removeOverheadLabel(overheadLabels.getLast());
     }
 
     resized(); // Remove overhead label panel

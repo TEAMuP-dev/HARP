@@ -11,10 +11,12 @@ FileDisplayComponent::FileDisplayComponent(String name, bool req, bool fromDAW, 
                                              MultiButton::DrawingMode::IconOnly,
                                              Colours::lightblue,
                                              fontawesome::Save };
-    downloadInactiveMode =
-        MultiButton::Mode { "Download-Inactive", "No output file available.",
-                            [this] {},           MultiButton::DrawingMode::IconOnly,
-                            Colours::lightgrey,  fontawesome::Save };
+    downloadInactiveMode = MultiButton::Mode { "Download-Inactive",
+                                               "No output file available.",
+                                               [] {},
+                                               MultiButton::DrawingMode::IconOnly,
+                                               Colours::lightgrey,
+                                               fontawesome::Save };
     downloadButton.addMode(downloadActiveMode);
     downloadButton.addMode(downloadInactiveMode);
     downloadButton.setMode(downloadInactiveMode.displayLabel);
@@ -32,22 +34,8 @@ StringArray FileDisplayComponent::getSupportedExtensions()
 
 StringArray FileDisplayComponent::getInstanceExtensions()
 {
-    return instanceFileTypes; // Empty = accept all; populated from model metadata when provided
-}
-
-void FileDisplayComponent::setInstanceFileTypes(const std::vector<std::string>& types)
-{
-    instanceFileTypes.clear();
-
-    for (const auto& t : types)
-    {
-        String ext(t);
-
-        if (! ext.startsWithChar('.'))
-            ext = "." + ext;
-
-        instanceFileTypes.add(ext);
-    }
+    // Empty to accept any file, unless the model declares the types it returns
+    return instanceFileTypes;
 }
 
 double FileDisplayComponent::getTotalLengthInSecs() { return 0.0; }
@@ -71,7 +59,7 @@ void FileDisplayComponent::paint(Graphics& g)
     auto textCol = findColour(ComboBox::textColourId);
 
     // Draw label area
-    g.setFont(Font(14.0f));
+    g.setFont(ModelStyle::font(14.0f));
     g.setColour(textCol);
     g.drawText(
         getTrackName(), getLocalBounds().removeFromTop(labelHeight), Justification::centred, true);
@@ -87,7 +75,7 @@ void FileDisplayComponent::paint(Graphics& g)
     auto textArea = bodyInt.withTrimmedRight(jmin(bodyInt.getHeight(), bodyInt.getWidth()))
                         .withTrimmedLeft(jmin(4, bodyInt.getWidth()));
 
-    g.setFont(Font(13.0f));
+    g.setFont(ModelStyle::font(13.0f));
     g.setColour(isFileLoaded() ? textCol.withAlpha(0.85f) : textCol.withAlpha(0.4f));
     g.drawText(isFileLoaded() ? getOriginalFilePath().getFileName() : "No output file",
                textArea,

@@ -295,8 +295,8 @@ private:
     {
         if (content->currentStep == selectModelStep && ! isModelLoadedInCurrentTab())
         {
-            // A load is already running; the step advances by itself once the model arrives
-            // (see changeListenerCallback)
+            // A load is already running, and the step advances by itself once the model
+            // arrives (see changeListenerCallback)
             if (isModelLoadingInCurrentTab())
                 return;
 

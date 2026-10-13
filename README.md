@@ -64,9 +64,9 @@ for installing HARP and configuring it as an external sample editor in a particu
 
 # Usage
 
-As a Standalone, open a file, open a model, process, and save the result. Within a DAW, select
-the region to process, open it in HARP, and either return the result with the _Send-to-DAW_ icon or
-write it to disk with the _Save_ icon.
+As a standalone application, open a file, open a model, process, and save the result. Within a DAW,
+select the region to process, open it in HARP, and either return the result with the _Send-to-DAW_
+icon or write it to disk with the _Save_ icon.
 
 <!-- website/content/usage/warnings.md -->
 ## Warning
@@ -88,7 +88,7 @@ as a region of its own.
   or choose `Custom Path...` and supply the URL of any HARP-compatible Gradio endpoint. A custom
   path keeps a card on the `Home` tab until it is removed with the X button on that card.
 - Select a model to open it in a tab of its own. Several models can be open at once.
-- Load audio or MIDI with `Open File`, or by dragging a file onto the track.
+- Load audio or MIDI with the folder icon of an input track, or by dragging a file onto the track.
 - Set the controls, then select `Process`. Results are rendered in place as they arrive.
 - Save the result with the `Save` icon, or return it to the DAW with `Send-to-DAW`.
 
@@ -132,7 +132,7 @@ its own when a file is added with `File > Open`.
 
 Our website lists [every model we host](https://harp3.netlify.app/content/usage/models.html).
 
-Each model is deployed under its original license, which HARP displays on a chip of its own beside
+Each model is deployed under its original license, which HARP displays on a badge of its own beside
 the model, so that the terms are apparent before the output is used. Authors who would rather their
 model were not featured, or whose license we have stated incorrectly, are asked to
 [open an issue](https://github.com/TEAMuP-dev/HARP/issues) so that we can correct or remove it
@@ -157,7 +157,7 @@ guidelines for [developing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DE
 [code signing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/SIGNING.md).
 
 <!-- website/content/contributing/version_compat.md -->
-HARP and pyharp are released in mutually compatible pairs: HARP 4.0 with pyharp 0.4.1, HARP 3.1.0
+HARP and pyharp are released in mutually compatible pairs: HARP 4.0.0 with pyharp 0.4.1, HARP 3.1.0
 with pyharp 0.3.0, and HARP 2.2.0 with pyharp 0.2.1. The root `VERSION` file sets the application
 version through CMake.
 

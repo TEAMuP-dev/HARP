@@ -11,8 +11,16 @@ MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, 
     pianoRoll.addMouseListener(this, true);
     contentComponent.addAndMakeVisible(pianoRoll);
 
-    mediaInstructions =
-        "MIDI pianoroll.\nClick and drag to start playback from any point in the pianoroll\nVertical or Horizontal scroll to move.\nCmd+scroll to zoom in both axis.";
+#if JUCE_MAC
+    const String pitchModifier = "Cmd";
+#else
+    const String pitchModifier = "Ctrl";
+#endif
+
+    mediaInstructions = "MIDI piano roll.\nClick anywhere to play from that point.\n"
+                        "Scroll to zoom in time, or hold Shift while scrolling to pan.\nHold "
+                        + pitchModifier + " while scrolling to zoom in pitch, or " + pitchModifier
+                        + "+Shift to move through pitch.";
 }
 
 MidiDisplayComponent::~MidiDisplayComponent()
@@ -48,20 +56,18 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     MidiFile midiFile;
 
-    if (! midiFile.readFrom(*fileStream))
+    if (fileStream == nullptr || ! midiFile.readFrom(*fileStream))
     {
+        // Left empty, as a file without notes is
         DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Error reading MIDI from file "
                     << file.getFullPathName() << ".");
-        // TODO - better error handing
-        //jassertfalse;
-        //return;
+
+        return;
     }
 
     midiFile.convertTimestampTicksToSeconds();
 
     totalLengthInSecs = midiFile.getLastTimestamp();
-
-    //DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Total duration of MIDI file " << totalLengthInSecs << " seconds.");
 
     pianoRoll.resizeNoteGrid(totalLengthInSecs);
 
@@ -69,14 +75,14 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
 
     for (int trackIdx = 0; trackIdx < midiFile.getNumTracks(); ++trackIdx)
     {
-        const MidiMessageSequence* constTrack = midiFile.getTrack(trackIdx);
-
-        if (constTrack != nullptr)
+        if (const MidiMessageSequence* track = midiFile.getTrack(trackIdx))
         {
-            allTracks.addSequence(*constTrack, 0.0);
-            allTracks.updateMatchedPairs();
+            allTracks.addSequence(*track, 0.0);
         }
     }
+
+    // Pairs each note-on with the note-off that ends it
+    allTracks.updateMatchedPairs();
 
     // Keep track of note MIDI numbers
     std::vector<int> midiNumbers;
@@ -90,77 +96,56 @@ void MidiDisplayComponent::loadMediaFile(const URL& filePath)
         const auto midiEvent = allTracks.getEventPointer(eventIdx);
         const auto& midiMessage = midiEvent->message;
 
-        double startTime = midiEvent->message.getTimeStamp();
-
-        //DBG_AND_LOG("MidiDisplayComponent::loadMediaFile: Event " << eventIdx << " at " << startTime << ": " << midiMessage.getDescription());
-
-        int channel = midiMessage.getChannel();
-
-        // Handle drums channel
-        bool isDrum = (channel == 10);
-
+        // Only channel messages are used, which number their channels from 1 to 16
+        const auto channelIdx = (size_t) (midiMessage.getChannel() - 1);
 
         if (midiMessage.isProgramChange())
         {
             // Update instrument number for current channel
-            instrumentNumbers[channel - 1] = midiMessage.getProgramChangeNumber();
+            instrumentNumbers[channelIdx] = midiMessage.getProgramChangeNumber();
         }
 
         if (midiMessage.isNoteOn())
         {
-            int noteChannel = midiMessage.getChannel();
-            int noteNumber = midiMessage.getNoteNumber();
-            int velocity = midiMessage.getVelocity();
-            int instrument = instrumentNumbers[channel - 1];
+            const int noteNumber = midiMessage.getNoteNumber();
+            const double startTime = midiMessage.getTimeStamp();
 
             midiNumbers.push_back(noteNumber);
 
-            double duration = 0;
+            // A note never released lasts no time at all
+            const double duration =
+                midiEvent->noteOffObject != nullptr
+                    ? midiEvent->noteOffObject->message.getTimeStamp() - startTime
+                    : 0.0;
 
-            for (int offIdx = eventIdx + 1; offIdx < allTracks.getNumEvents(); ++offIdx)
-            {
-                const auto offEvent = allTracks.getEventPointer(offIdx);
-
-                // Find matching note offset event
-                if (offEvent->message.isNoteOff() && offEvent->message.getNoteNumber() == noteNumber
-                    && offEvent->message.getChannel() == noteChannel)
-                {
-                    duration =
-                        (offEvent->message.getTimeStamp() - midiEvent->message.getTimeStamp());
-                    break;
-                }
-            }
-
-            // Create component for each for each note and add to pianoroll
-            MidiNote n = MidiNote(static_cast<unsigned char>(noteNumber),
-                                  startTime,
-                                  duration,
-                                  static_cast<unsigned char>(velocity),
-                                  static_cast<unsigned char>(instrument),
-                                  isDrum);
-            pianoRoll.insertNote(n);
+            // Create component for each note and add to pianoroll
+            pianoRoll.insertNote(MidiNote(static_cast<unsigned char>(noteNumber),
+                                          startTime,
+                                          duration,
+                                          static_cast<unsigned char>(midiMessage.getVelocity()),
+                                          static_cast<unsigned char>(instrumentNumbers[channelIdx]),
+                                          midiMessage.getChannel() == 10)); // Drums
         }
     }
 
-    // Compute median and standard deviation of MIDI numbers
-    std::sort(midiNumbers.begin(), midiNumbers.end());
-
-    int numNotes = midiNumbers.size();
-
-    medianMidi = midiNumbers[numNotes / 2];
-
-    if (! numNotes % 2)
+    if (! midiNumbers.empty())
     {
-        medianMidi += midiNumbers[numNotes / 2 - 1];
-        medianMidi /= 2;
+        // Compute median and standard deviation of MIDI numbers
+        std::sort(midiNumbers.begin(), midiNumbers.end());
+
+        const size_t numNotes = midiNumbers.size();
+
+        medianMidi = numNotes % 2 == 0
+                         ? (midiNumbers[numNotes / 2 - 1] + midiNumbers[numNotes / 2]) / 2
+                         : midiNumbers[numNotes / 2];
+
+        const float mean = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f)
+                           / static_cast<float>(numNotes);
+        const float squareSum =
+            std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
+
+        stdDevMidi = std::sqrt(jmax(0.0f, squareSum / static_cast<float>(numNotes) - mean * mean));
     }
-
-    float sum = std::accumulate(midiNumbers.begin(), midiNumbers.end(), 0.0f);
-    float mean = sum / static_cast<float>(numNotes);
-    float sq_sum =
-        std::inner_product(midiNumbers.begin(), midiNumbers.end(), midiNumbers.begin(), 0.0f);
-
-    stdDevMidi = std::sqrt(sq_sum / static_cast<float>(numNotes) - mean * mean);
 
     synthAudioSource.useSequence(allTracks);
     transportSource.setSource(&synthAudioSource);
@@ -174,6 +159,10 @@ void MidiDisplayComponent::resetMedia()
     pianoRoll.resizeNoteGrid(0.0);
 
     totalLengthInSecs = 0.0;
+
+    // Centered on middle C until notes say otherwise
+    medianMidi = defaultMedianMidi;
+    stdDevMidi = defaultStdDevMidi;
 }
 
 void MidiDisplayComponent::postLoadActions(const URL& /*filePath*/)

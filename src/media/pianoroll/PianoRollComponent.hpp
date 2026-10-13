@@ -51,7 +51,6 @@ public:
     int getControlsWidth();
     float getKeyHeight();
 
-    //Range<double> getVisibleMediaRange() { return visibleMediaRange; }
     Range<double> getVisibleKeyRange() { return visibleKeyRange; }
 
     void resizeNoteGrid(double lengthInSecs);

@@ -55,7 +55,7 @@ You are not expected to catch everything. You are expected to look at everything
 
 ### 3. Test the Branch
 
-This is the most important part of the review
+This is the most important part of the review.
 
 Check out the branch and build it:
 

@@ -20,42 +20,66 @@
 
 using namespace juce;
 
-// TODO - hard-coded client strings for error-reporting
-//        can be deterministic based off of these enums
-struct SharedAPIKeys
+/* The API key saved for each provider. Read by worker threads making requests while the
+   settings tab may be changing it, so every access is locked. */
+class SharedAPIKeys
 {
-    void initializeAPIKeys()
+public:
+    // Prefix of the settings keys under which the API keys are saved
+    static constexpr const char* settingsPrefix = "apikeys";
+
+    SharedAPIKeys()
     {
         for (auto provider : { Provider::HuggingFace, Provider::Stability })
         {
-            String savedToken = Settings::getString(providerToSettingsKey(provider));
+            const String savedKey = Settings::getString(getSettingsKey(provider));
 
-            if (savedToken.isNotEmpty())
+            if (savedKey.isNotEmpty())
             {
-                savedTokens[provider] = savedToken;
+                keys[provider] = savedKey;
             }
         }
     }
 
-    String providerToSettingsKey(Provider p) { return settingsPrefix + "." + enumToString(p); }
-
-    void updateKey(Provider provider, String newAPIKey)
+    // The saved key, or an empty string if there is none
+    String getKey(Provider provider) const
     {
-        savedTokens[provider] = newAPIKey;
+        const ScopedLock lock(keysLock);
 
-        Settings::setValue(providerToSettingsKey(provider), newAPIKey, true);
+        auto it = keys.find(provider);
+
+        return it != keys.end() ? it->second : String();
+    }
+
+    void updateKey(Provider provider, const String& newKey)
+    {
+        {
+            const ScopedLock lock(keysLock);
+            keys[provider] = newKey;
+        }
+
+        Settings::setValue(getSettingsKey(provider), newKey, true);
     }
 
     void removeKey(Provider provider)
     {
-        savedTokens.erase(provider);
+        {
+            const ScopedLock lock(keysLock);
+            keys.erase(provider);
+        }
 
-        Settings::removeValue(providerToSettingsKey(provider), true);
+        Settings::removeValue(getSettingsKey(provider), true);
     }
 
-    String settingsPrefix = "apikeys";
+private:
+    static String getSettingsKey(Provider provider)
+    {
+        return String(settingsPrefix) + "." + enumToString(provider);
+    }
 
-    std::unordered_map<Provider, String> savedTokens = {};
+    CriticalSection keysLock;
+
+    std::unordered_map<Provider, String> keys;
 };
 
 inline OpResult parseJSONString(const String& stringJSON, var& outData)
@@ -254,12 +278,12 @@ private:
    Equivalent to URL::createInputStream(), except that the stream is
    registered with requestRegistry for its whole lifetime so that it can be
    aborted locally (see RequestRegistry). Registering before connecting is
-   what makes the connect phase abortable too - that phase blocks for up to
-   the connection timeout, which is two minutes for process requests.
+   what makes the connect phase abortable too, since that phase blocks for up
+   to the connection timeout.
 
    Returns nullptr if the connection could not be established, including
-   when the request was aborted. Without a registry (e.g. for the short-lived
-   client used for token validation) this behaves exactly as before.
+   when the request was aborted. Without a registry this is the same as
+   URL::createInputStream().
 */
 inline std::unique_ptr<InputStream> createRegisteredStream(RequestRegistry* requestRegistry,
                                                            const URL& endpoint,
@@ -270,16 +294,17 @@ inline std::unique_ptr<InputStream> createRegisteredStream(RequestRegistry* requ
         return endpoint.createInputStream(options);
     }
 
-    if (requestRegistry->hasBeenAborted())
-    {
-        // Requests were aborted, so do not open another connection
-        return nullptr;
-    }
-
     auto stream = std::make_unique<RegisteredWebInputStream>(
         *requestRegistry,
         endpoint,
         options.getParameterHandling() == URL::ParameterHandling::inPostData);
+
+    // Checked once registered, so that an abort cannot slip in between the check and the
+    // registration and leave this connection running
+    if (requestRegistry->hasBeenAborted())
+    {
+        return nullptr;
+    }
 
     const String extraHeaders = options.getExtraHeaders();
 
@@ -372,8 +397,9 @@ public:
     {
         String tokenValidationPath = tokenValidationURL.toString(true);
 
-        DBG_AND_LOG("Client::queryToken: Attempting to query client at \""
-                    << tokenValidationPath << "\" with token \"" << tokenToQuery << "\".");
+        // Neither the key nor the response (which describes the account) belongs in the log
+        DBG_AND_LOG("Client::queryToken: Validating an API key at \"" << tokenValidationPath
+                                                                      << "\".");
 
         if (! tokenValidationURL.isWellFormed())
         {
@@ -398,8 +424,7 @@ public:
 
         response = stream->readEntireStreamAsString();
 
-        DBG_AND_LOG("Client::queryToken: Received status code \""
-                    << String(statusCode) << "\" with response \"" << response << "\".");
+        DBG_AND_LOG("Client::queryToken: Received status code \"" << String(statusCode) << "\".");
 
         if (statusCode != 200)
         {
@@ -519,12 +544,19 @@ public:
     URL tokenRegistrationURL;
 
 protected:
-    String getCommonHeaders() const
+    /* The headers of a request. A client whose endpoints are not all run by its provider
+       leaves out the API key for those, which would otherwise be handed to whoever runs
+       them. */
+    String getCommonHeaders(bool includeAPIKey = true) const
     {
-        return getAuthorizationHeader() + acceptHeader + getClientHeader();
+        return (includeAPIKey ? getAuthorizationHeader() : String()) + acceptHeader
+               + getClientHeader();
     }
 
-    String getJSONHeaders() const { return getCommonHeaders() + contentTypeJSONHeader; }
+    String getJSONHeaders(bool includeAPIKey = true) const
+    {
+        return getCommonHeaders(includeAPIKey) + contentTypeJSONHeader;
+    }
 
     SharedResourcePointer<StatusMessage> statusMessage;
 
@@ -548,14 +580,7 @@ protected:
 private:
     String getAuthorizationHeader() const
     {
-        String accessToken;
-
-        if (sharedTokens->savedTokens.contains(provider))
-        {
-            accessToken = sharedTokens->savedTokens[provider];
-        }
-
-        return getAuthorizationHeader(accessToken);
+        return getAuthorizationHeader(sharedTokens->getKey(provider));
     }
 
     /* Identifies this client to a PyHARP endpoint, so that a cancel it sends stops the
@@ -581,7 +606,7 @@ private:
 
     SharedResourcePointer<SharedAPIKeys> sharedTokens;
 
-    // Owned by the Model this client belongs to; null for clients that are not
-    // tied to a model, in which case requests are simply not abortable.
+    /* Owned by whatever the requests belong to, such as a Model. Without one, requests
+       cannot be aborted. */
     RequestRegistry* requestRegistry = nullptr;
 };

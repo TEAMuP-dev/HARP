@@ -100,7 +100,6 @@ private:
     /* Callbacks */
 
     // Miscellaneous
-    //void focusCallback();
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
     /* Tutorial */
@@ -144,7 +143,6 @@ private:
 
     std::unique_ptr<TutorialWindow> tutorialWindow;
 
-    SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

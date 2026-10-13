@@ -15,12 +15,10 @@ using namespace juce;
 class GradioClient : public Client
 {
 public:
-    enum GradioEvents
-    {
-        Complete,
-        Heartbeat,
-        Error
-    };
+    // Events of the simple API that the response handling depends on
+    static constexpr const char* completeEvent = "complete";
+    static constexpr const char* heartbeatEvent = "heartbeat";
+    static constexpr const char* errorEvent = "error";
 
     GradioClient()
     {
@@ -134,7 +132,7 @@ public:
                             << modelPath << "\" was not recognized by the provider (status code \""
                             << String(e->statusCode) << "\").");
 
-                return fail(ClientError { ClientError::Type::ModelNotFound, modelPath, "Gradio" });
+                return fail(ClientError { ClientError::Type::ModelNotFound, modelPath });
             }
 
             /* Anything else is a problem reaching the provider rather than a verdict
@@ -257,7 +255,7 @@ public:
         }
         else
         {
-            DBG_AND_LOG("GradioClient::inferEndpointURL: Path \""
+            DBG_AND_LOG("GradioClient::inferEndpointPath: Path \""
                         << modelPath << "\" does not match valid specification for Gradio.");
         }
 
@@ -293,7 +291,7 @@ public:
         return documentationPath;
     }
 
-    virtual OpResult validateToken(const String& tokenToValidate) override
+    OpResult validateToken(const String& tokenToValidate) override
     {
         String responseJSON;
 
@@ -313,55 +311,40 @@ public:
             return result;
         }
 
-        auto* tokenJSON = responseDict->getProperty("auth")
-                              .getDynamicObject()
-                              ->getProperty("accessToken")
-                              .getDynamicObject();
+        const var tokenInfo = responseDict->getProperty("auth")["accessToken"];
 
-        String role = tokenJSON->getProperty("role").toString();
-
-        if (! (role == "write" || role == "read"))
+        if (! tokenInfo.isObject())
         {
-            bool hasAllPermissions = false;
+            return OpResult::fail(JsonError { JsonError::Type::MissingKey, {}, "accessToken" });
+        }
 
-            auto* scopedArray = tokenJSON->getProperty("fineGrained")
-                                    .getDynamicObject()
-                                    ->getProperty("scoped")
-                                    .getArray();
+        const String role = tokenInfo["role"].toString();
 
-            for (const auto& scopeEntry : *scopedArray)
+        // A classic read or write key grants everything HARP needs
+        if (role == "write" || role == "read")
+        {
+            return OpResult::ok();
+        }
+
+        // A fine-grained key has to grant it within one of its scopes
+
+        if (const auto* scopes = tokenInfo["fineGrained"]["scoped"].getArray())
+        {
+            for (const auto& scope : *scopes)
             {
-                if (! scopeEntry.isObject())
-                    continue;
+                const auto* permissions = scope["permissions"].getArray();
 
-                var permissionsVar = scopeEntry.getDynamicObject()->getProperty("permissions");
-
-                if (! permissionsVar.isArray())
-                    continue;
-
-                auto* permissionsArray = permissionsVar.getArray();
-                bool hasAll = permissionsArray->contains("repo.content.read")
-                              && permissionsArray->contains("repo.write")
-                              && permissionsArray->contains("inference.serverless.write")
-                              && permissionsArray->contains("inference.endpoints.infer.write");
-
-                if (hasAll)
+                if (permissions != nullptr && permissions->contains("repo.content.read")
+                    && permissions->contains("repo.write")
+                    && permissions->contains("inference.serverless.write")
+                    && permissions->contains("inference.endpoints.infer.write"))
                 {
-                    hasAllPermissions = true;
-                    break;
+                    return OpResult::ok();
                 }
-            }
-
-            if (! hasAllPermissions)
-            {
-                return fail(ClientError { ClientError::Type::InsufficientPermissions,
-                                          "",
-                                          "Hugging Face",
-                                          tokenToValidate });
             }
         }
 
-        return OpResult::ok();
+        return fail(ClientError { ClientError::Type::InsufficientPermissions });
     }
 
     OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
@@ -416,7 +399,7 @@ public:
         String responseJSON;
 
         OpResult result = makePOSTRequest(endpoint,
-                                          getCommonHeaders(),
+                                          getCommonHeaders(acceptsAPIKey(endpoint)),
                                           requestBody,
                                           responseJSON,
                                           inferDocumentationPath(modelPath),
@@ -453,7 +436,7 @@ public:
     {
         ignoreUnused(label);
 
-        if (isFile and ! payloadElement.isVoid())
+        if (isFile && ! payloadElement.isVoid())
         {
             DynamicObject::Ptr wrappedPayloadElement = payloadElement.getDynamicObject();
 
@@ -553,8 +536,9 @@ public:
                 }
                 else
                 {
-                    // Unknown output type
-                    jassertfalse;
+                    // Possibly from a newer pyharp, so it is left out rather than failing
+                    DBG_AND_LOG("GradioClient::process: Ignoring output of unknown type \""
+                                << outputType << "\".");
                 }
             }
             else
@@ -572,14 +556,7 @@ public:
     {
         String response;
 
-        OpResult result = makeRequest(modelPath, "cancel", emptyJSONBody, response);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
-        return OpResult::ok();
+        return makeRequest(modelPath, "cancel", emptyJSONBody, response);
     }
 
 private:
@@ -599,6 +576,17 @@ private:
         */
 
         return modelPath.startsWith("https://") && modelPath.endsWith(".gradio.live");
+    }
+
+    /* Whether an endpoint may be sent the Hugging Face API key. Hugging Face and this
+       machine are trusted with it, and anything else (e.g., a gradio.live link or another
+       computer on the network) is run by someone who has no use for it. */
+    static bool acceptsAPIKey(const URL& endpoint)
+    {
+        const String host = endpoint.getDomain().toLowerCase();
+
+        return host == "huggingface.co" || host.endsWith(".hf.space") || host == "localhost"
+               || host == "127.0.0.1";
     }
 
     static bool isValidHuggingFacePath(String modelPath)
@@ -627,7 +615,7 @@ private:
 
         /* The owner and the name are joined by a "-", so at least one is needed for
            this to name a Space at all. Where that "-" falls, and which of the others
-           were underscores, cannot be told from the address; resolveCanonicalPath
+           were underscores, cannot be told from the address. resolveCanonicalPath
            asks the running app which Space it is rather than guessing. */
         return subdomain.isNotEmpty() && subdomain.containsChar('-');
     }
@@ -729,7 +717,7 @@ private:
         StringPairArray responseHeaders;
 
         auto options = URL::InputStreamOptions(URL::ParameterHandling::inAddress)
-                           .withExtraHeaders(getCommonHeaders())
+                           .withExtraHeaders(getCommonHeaders(acceptsAPIKey(host)))
                            .withConnectionTimeoutMs(10000)
                            .withResponseHeaders(&responseHeaders)
                            .withNumRedirectsToFollow(5);
@@ -764,7 +752,7 @@ private:
         if (! isValidHuggingFacePath(modelPath))
             return false;
 
-        // The hardware type is a static property of the space, so cache it to
+        // The hardware type is a static property of the Space, so it is cached to
         // avoid repeated blocking lookups from error-handling paths
         {
             const ScopedLock lock(zeroGPUCacheLock);
@@ -777,8 +765,8 @@ private:
 
         DynamicObject::Ptr runtime;
 
-        // Failed lookups are not cached so a transient network error
-        // does not permanently misclassify the space
+        // Failed lookups are not cached, so that a transient network error
+        // does not permanently misclassify the Space
         if (! querySpaceRuntime(modelPath, runtime))
             return false;
 
@@ -924,7 +912,7 @@ private:
                                   const String errorPath = "",
                                   const int timeoutMs = -1)
     {
-        String requestHeaders = getCommonHeaders();
+        String requestHeaders = getCommonHeaders(acceptsAPIKey(endpoint));
 
         DBG_AND_LOG(
             "GradioClient::makeGETRequestStream: Attempting to make GET request for endpoint \""
@@ -968,7 +956,7 @@ private:
         return OpResult::ok();
     }
 
-    String extractPayload(String response)
+    static String extractPayload(const String& response)
     {
         String payload = response.trim();
 
@@ -980,12 +968,10 @@ private:
         return payload;
     }
 
-    // Compares a parsed SSE event type (the text after "event:") to a known event.
-    // Matching on the parsed type rather than the raw line keeps this tolerant of
-    // the SSE spec's optional space after the colon.
-    static bool isEventType(const String& eventType, GradioEvents event)
+    // Compares an event type (the text after "event:") to a known event, ignoring case
+    static bool isEventType(const String& eventType, const char* event)
     {
-        return eventType.equalsIgnoreCase(enumToString(event));
+        return eventType.equalsIgnoreCase(event);
     }
 
     /* What a Gradio error payload carries.
@@ -1084,34 +1070,6 @@ private:
         return firstLine;
     }
 
-    /* The message type named inside the payload itself, which is how the queue API
-       labels its events. The endpoint used here labels them with a preceding
-       "event:" line instead, so this only applies when that line is missing. */
-    static String extractMessageTypeFromPayload(const String& payload)
-    {
-        if (isPayloadAbsent(payload))
-        {
-            return "";
-        }
-
-        var parsedPayload = JSON::parse(payload.trim());
-
-        if (auto* payloadDict = parsedPayload.getDynamicObject())
-        {
-            if (payloadDict->hasProperty("msg"))
-            {
-                String value = payloadDict->getProperty("msg").toString().trim();
-
-                if (value.isNotEmpty() && ! value.equalsIgnoreCase("null"))
-                {
-                    return value;
-                }
-            }
-        }
-
-        return "";
-    }
-
     static String extractFirstNonEmptyField(const DynamicObject* object,
                                             std::initializer_list<const char*> keys)
     {
@@ -1141,113 +1099,23 @@ private:
         return "";
     }
 
-    // Formats a "log" SSE event payload (e.g. {"log": "...", "level": "info"})
-    // into a user-visible status string like "[info] Starting inference...".
-    // Returns an empty string if the payload is not a valid log event.
-    static String formatLogEventPayload(const String& payload)
+    /* Reports an event that is still in progress in the status area.
+
+       The simple API (/gradio_api/call) delivers only "complete", "generating",
+       "heartbeat", and "error" events, and drops the messages gr.Info and gr.Warning
+       send (verified against Gradio 5.28 through 6.24). Those are delivered only on the
+       queue API (/gradio_api/queue/join and /gradio_api/queue/data). */
+    void reportEvent(const String& eventType)
     {
-        if (isPayloadAbsent(payload))
+        if (eventType.isEmpty() || isEventType(eventType, heartbeatEvent)
+            || isEventType(eventType, completeEvent) || isEventType(eventType, errorEvent))
         {
-            return "";
-        }
-
-        var parsed = JSON::parse(payload.trim());
-        auto* dict = parsed.getDynamicObject();
-
-        if (dict == nullptr)
-        {
-            return "";
-        }
-
-        String message = extractFirstNonEmptyField(dict, { "log", "message", "detail" });
-
-        if (message.isEmpty())
-        {
-            return "";
-        }
-
-        String level =
-            extractFirstNonEmptyField(dict, { "level", "type", "severity" }).toLowerCase();
-
-        if (level.isEmpty())
-        {
-            level = "info";
-        }
-
-        return "[" + level + "] " + message;
-    }
-
-    static String formatProcessMessage(const String& messageType, const String& dataPayload = "")
-    {
-        if (messageType.isEmpty())
-        {
-            return "";
-        }
-
-        /* Gradio "log" event, emitted when the server calls gr.Info() or gr.Warning().
-
-           NOTE: Gradio does not forward these on the "simple" /gradio_api/call
-           endpoint that this client uses. Its translation layer drops every message
-           except process_completed, process_generating, heartbeat and
-           unexpected_error (verified against Gradio 5.28 through 6.24). They are
-           only delivered on the full queue API (/gradio_api/queue/join plus
-           /gradio_api/queue/data), so this branch is currently unreachable and is
-           kept for if/when this client moves to that API. */
-        if (messageType.equalsIgnoreCase("log"))
-        {
-            return formatLogEventPayload(dataPayload);
-        }
-
-        // Spelled out because the generic form below would read "[process] starts"
-        if (messageType.equalsIgnoreCase("process_starts"))
-        {
-            return "[process] started";
-        }
-
-        if (messageType.startsWithIgnoreCase("process_"))
-        {
-            String detail =
-                messageType.fromFirstOccurrenceOf("process_", false, false).replace("_", " ");
-            return "[process] " + detail;
-        }
-
-        if (messageType.equalsIgnoreCase("heartbeat") || messageType.equalsIgnoreCase("complete")
-            || messageType.equalsIgnoreCase("error"))
-        {
-            return "";
-        }
-
-        return "[status] " + messageType.replace("_", " ");
-    }
-
-    // currentSseEventType: the value from the preceding "event: <type>" line, e.g. "log",
-    //                       "process_starts", "heartbeat". Empty if no event: line preceded this.
-    void appendProcessMessageFromDataLine(const String& dataLine,
-                                          const String& currentSseEventType = "")
-    {
-        if (statusMessage == nullptr)
             return;
+        }
 
-        // Heartbeats arrive continuously and never carry a user-facing message
-        if (isEventType(currentSseEventType, GradioEvents::Heartbeat))
-            return;
+        const String statusText = "[status] " + eventType.replace("_", " ");
 
-        String payload = extractPayload(dataLine);
-
-        // Prefer the SSE event type from the preceding "event:" line (modern Gradio API).
-        // Fall back to extracting a "msg" field from the JSON payload (old queue API).
-        String messageType = currentSseEventType.isNotEmpty()
-                                 ? currentSseEventType
-                                 : extractMessageTypeFromPayload(payload);
-
-        // For "log" events, pass the full data payload so the message text can be extracted
-        String statusText = formatProcessMessage(messageType, payload);
-
-        if (statusText.isEmpty())
-            return;
-
-        DBG_AND_LOG("GradioClient::appendProcessMessageFromDataLine: \""
-                    << statusText << "\" (event type \"" << messageType << "\").");
+        DBG_AND_LOG("GradioClient::reportEvent: \"" << statusText << "\".");
 
         statusMessage->setMessage(statusText);
     }
@@ -1268,17 +1136,15 @@ private:
             return result;
         }
 
-        // Tracks whether any result-bearing data: lines have arrived. Heartbeat
-        // and log data lines are excluded, since they say nothing about whether
-        // the job itself has produced output.
+        // Tracks whether any result-bearing data: lines have arrived. Heartbeats are
+        // excluded, since they say nothing about whether the job has produced output.
         bool seenResultData = false;
         bool checkedFirstLine = false;
 
         // Set when a "complete" event delivers the response the caller is waiting for
         bool receivedCompleteEvent = false;
 
-        // Track the most recent SSE "event: <type>" line so we can pass it to
-        // appendProcessMessageFromDataLine when the next "data:" line arrives.
+        // The type from the most recent "event:" line, which labels the "data:" lines after it
         String currentSseEventType;
 
         while (! stream->isExhausted())
@@ -1312,7 +1178,7 @@ private:
             {
                 currentSseEventType = eventLine.fromFirstOccurrenceOf(":", false, false).trim();
 
-                if (isEventType(currentSseEventType, GradioEvents::Complete))
+                if (isEventType(currentSseEventType, completeEvent))
                 {
                     response = extractPayload(stream->readNextLine());
 
@@ -1323,7 +1189,7 @@ private:
 
                     break;
                 }
-                else if (isEventType(currentSseEventType, GradioEvents::Error))
+                else if (isEventType(currentSseEventType, errorEvent))
                 {
                     String errorDataLine = stream->readNextLine();
 
@@ -1386,14 +1252,12 @@ private:
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
             {
-                if (! isEventType(currentSseEventType, GradioEvents::Heartbeat)
-                    && ! currentSseEventType.equalsIgnoreCase("log"))
+                if (! isEventType(currentSseEventType, heartbeatEvent))
                 {
                     seenResultData = true;
                 }
 
-                // Pass the current SSE event type so "log" events are not dropped.
-                appendProcessMessageFromDataLine(eventLine, currentSseEventType);
+                reportEvent(currentSseEventType);
             }
         }
 
@@ -1417,7 +1281,7 @@ private:
         return OpResult::ok();
     }
 
-    OpResult downloadFile(String downloadPath, File& fileToDownload) //override
+    OpResult downloadFile(String downloadPath, File& fileToDownload)
     {
         // Obtain local temporary directory for downloaded file
         File tempDir = File::getSpecialLocation(File::tempDirectory);
@@ -1432,14 +1296,7 @@ private:
         // Create file at a unique path
         fileToDownload = tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
 
-        OpResult result = makeGETRequest(endpoint, fileToDownload, downloadPath);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
-        return OpResult::ok();
+        return makeGETRequest(endpoint, fileToDownload, downloadPath);
     }
 
     // File download version
@@ -1483,13 +1340,13 @@ private:
                          String& response,
                          const int timeoutMs = controlsTimeoutMs)
     {
-        URL endpoint = URL(inferEndpointPath(modelPath))
-                           .getChildURL("gradio_api")
-                           .getChildURL("call")
-                           .getChildURL(requestType);
+        const URL callEndpoint = URL(inferEndpointPath(modelPath))
+                                     .getChildURL("gradio_api")
+                                     .getChildURL("call")
+                                     .getChildURL(requestType);
 
-        OpResult result = makePOSTRequest(endpoint,
-                                          getJSONHeaders(),
+        OpResult result = makePOSTRequest(callEndpoint,
+                                          getJSONHeaders(acceptsAPIKey(callEndpoint)),
                                           body,
                                           response,
                                           inferDocumentationPath(modelPath),
@@ -1520,22 +1377,20 @@ private:
                                               eventKey.toString() });
         }
 
-        String eventID = responseDict->getProperty(eventKey);
+        const String eventID = responseDict->getProperty(eventKey);
 
-        DBG_AND_LOG("GradioClient::queryControls: Process created with ID \"" << eventID << "\".");
-
-        endpoint = URL(inferEndpointPath(modelPath))
-                       .getChildURL("gradio_api")
-                       .getChildURL("call")
-                       .getChildURL(requestType)
-                       .getChildURL(eventID);
+        DBG_AND_LOG("GradioClient::makeRequest: Created " << requestType << " event \"" << eventID
+                                                          << "\".");
 
         response.clear();
 
-        /* Note: it's very important to give Gradio enough time to yield a response
-           (10 seconds was too little for ZeroGPU spaces and led to stream == nullptr) */
-        return makeGETRequest(
-            endpoint, response, inferDocumentationPath(modelPath), timeoutMs, modelPath);
+        /* Gradio needs enough time to yield a response (10 seconds was too little for
+           ZeroGPU Spaces and left the stream empty) */
+        return makeGETRequest(callEndpoint.getChildURL(eventID),
+                              response,
+                              inferDocumentationPath(modelPath),
+                              timeoutMs,
+                              modelPath);
     }
 
     OpResult extractLabels(DynamicObject::Ptr& output, LabelList& labels)
@@ -1554,6 +1409,14 @@ private:
         for (int i = 0; i < labelObjects->size(); i++)
         {
             DynamicObject* labelObject = labelObjects->getReference(i).getDynamicObject();
+
+            if (labelObject == nullptr)
+            {
+                DBG_AND_LOG(
+                    "GradioClient::extractLabels: Ignoring label that is not a dictionary.");
+
+                continue;
+            }
 
             String labelType = labelObject->getProperty("label_type").toString();
 
@@ -1626,8 +1489,11 @@ private:
             }
             else
             {
-                // Unsupported label type received
-                jassertfalse;
+                // Possibly from a newer pyharp, so it is left out rather than failing
+                DBG_AND_LOG("GradioClient::extractLabels: Ignoring label of unknown type \""
+                            << labelType << "\".");
+
+                continue;
             }
 
             labelLogMessage += "\" with time \"";
@@ -1689,7 +1555,7 @@ private:
 
             if (labelObject->hasProperty("color"))
             {
-                // Make sure color was provided as a int
+                // Make sure color was provided as an int
                 if ((labelObject->getProperty("color").isInt64()
                      || labelObject->getProperty("color").isInt()))
                 {

@@ -67,8 +67,12 @@ private:
         return dynamic_cast<MidiLabel*>(l.get()) != nullptr;
     }
 
-    int medianMidi;
-    float stdDevMidi;
+    static constexpr int defaultMedianMidi = 60;
+    static constexpr float defaultStdDevMidi = 12.0f;
+
+    // Where the notes lie, which the piano roll is centered on
+    int medianMidi = defaultMedianMidi;
+    float stdDevMidi = defaultStdDevMidi;
 
     double totalLengthInSecs = 0.0;
 

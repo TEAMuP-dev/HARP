@@ -161,6 +161,7 @@ public:
                                                            : "by " + String(metadata.author));
 
         description.setText(String(metadata.description));
+        measuredDescriptionWidth = -1;
 
         StringArray tags;
 
@@ -196,22 +197,31 @@ private:
         return getLocalBounds().reduced(horizontalPadding, verticalPadding);
     }
 
-    // Tall enough for the description, up to a limit beyond which it scrolls
+    /* Tall enough for the description, up to a limit beyond which it scrolls. Laying the
+       text out is slow, and every resize asks for this, so the last result is kept. */
     int getDescriptionHeightForWidth(int width) const
     {
         if (description.isEmpty() || width <= 0)
             return 0;
 
-        AttributedString text;
-        text.append(description.getText(), descriptionFont);
+        if (width != measuredDescriptionWidth)
+        {
+            AttributedString text;
+            text.append(description.getText(), descriptionFont);
 
-        TextLayout layout;
-        // Leave room for the scrollbar, which appears once the text is too long
-        layout.createLayout(text, (float) (width - getLookAndFeel().getDefaultScrollbarWidth()));
+            TextLayout layout;
+            // Leave room for the scrollbar, which appears once the text is too long
+            layout.createLayout(text,
+                                (float) (width - getLookAndFeel().getDefaultScrollbarWidth()));
 
-        const int lines = jlimit(1, maxDescriptionLines, layout.getNumLines());
+            const int lines = jlimit(1, maxDescriptionLines, layout.getNumLines());
 
-        return (int) std::ceil((float) lines * descriptionFont.getHeight()) + 2;
+            measuredDescriptionHeight =
+                (int) std::ceil((float) lines * descriptionFont.getHeight()) + 2;
+            measuredDescriptionWidth = width;
+        }
+
+        return measuredDescriptionHeight;
     }
 
     static constexpr int horizontalPadding = 12;
@@ -221,6 +231,10 @@ private:
     static constexpr int maxDescriptionLines = 4;
 
     const Font descriptionFont = ModelStyle::font(13.0f);
+
+    // The width the description height was last measured for, and that height
+    mutable int measuredDescriptionWidth = -1;
+    mutable int measuredDescriptionHeight = 0;
 
     ModelAuthorLabel modelAuthorLabel;
     TextEditor description;

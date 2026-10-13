@@ -50,8 +50,6 @@ MainComponent::MainComponent()
     requiredWindowHeight = minimumWindowHeight;
     setSize(requiredWindowWidth, requiredWindowHeight);
 
-    sharedTokens->initializeAPIKeys();
-
     statusMessage->setMessage("Welcome to HARP!");
 }
 
@@ -70,7 +68,7 @@ void MainComponent::resized()
 {
     Rectangle<int> fullArea = getLocalBounds();
 
-#if not JUCE_MAC
+#if ! JUCE_MAC
     menuBar->setBounds(
         fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
@@ -121,8 +119,8 @@ int MainComponent::measureRequiredMainPanelWidth()
 int MainComponent::getVisibleClipboardWidth()
 {
     /* clipboardWidth is the width the user chose. In a narrow window the clipboard
-       gives up space, down to its own minimum, so the main panel keeps the width it
-       needs; it gets that space back when the window widens again. */
+       gives up space, down to its own minimum, so that the main panel keeps the width
+       it needs. The clipboard gets that space back when the window widens again. */
     const int availableWidth = getWidth() - getRequiredMainPanelWidth();
 
     return jmax(mediaClipboardWidget.getMinimumWidth(), jmin(clipboardWidth, availableWidth));
@@ -141,7 +139,7 @@ void MainComponent::updateWindowConstraints()
             showMediaClipboard ? mediaClipboardWidget.getMinimumWidth() : 0;
 
         /* Each tab scrolls vertically, so the window does not have to be tall enough
-           for every control; it only has to stay usably large. Width is still
+           for every control. It only has to stay usably large. Width is still
            content-driven, since there is no horizontal scrolling. */
         const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
                                             + (showStatusArea ? statusAreaHeight : 0);
@@ -186,8 +184,8 @@ void MainComponent::updateWindowConstraints()
         }
     }
 
-    /* Whatever prompted this - a model loading, a panel being toggled - changed how
-       much there is to show, and so how much the current tab has to scroll. The
+    /* Whatever prompted this (e.g., a model loading or a panel being toggled) changed
+       how much there is to show, and so how much the current tab has to scroll. The
        window itself may not have changed size, in which case nothing else would
        recompute the scrollable area and the scrollbar would not appear until the
        next resize. */
@@ -454,51 +452,6 @@ void MainComponent::showPanel(Panel panel)
 }
 
 /* --Miscellaneous-- */
-
-// TODO - The following is an old callback from V2. It may be helpful in the future.
-
-/*
-void MainComponent::focusCallback()
-{
-    if (mediaDisplay->isFileLoaded())
-    {
-        Time lastModTime =
-            mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
-        if (lastModTime > lastLoadTime)
-        {
-            // Create an AlertWindow
-            auto* reloadCheckWindow = new AlertWindow(
-                "File has been modified",
-                "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
-                AlertWindow::QuestionIcon);
-
-            reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
-            reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
-
-            // Show the window and handle the result asynchronously
-            reloadCheckWindow->enterModalState(
-                true,
-                new CustomPathAlertCallback(
-                    [this, reloadCheckWindow](int result)
-                    {
-                        if (result == 1)
-                        { // Yes was clicked
-                            DBG_AND_LOG("Reloading file");
-                            loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
-                        }
-                        else
-                        { // No was clicked or the window was closed
-                            DBG_AND_LOG("Not reloading file");
-                            lastLoadTime =
-                                Time::getCurrentTime(); //Reset time so we stop asking
-                        }
-                        delete reloadCheckWindow;
-                    }),
-                true);
-        }
-    }
-}
-*/
 
 void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 {

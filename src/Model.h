@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -24,16 +25,16 @@
 
 using namespace juce;
 
+// Shown in the status history as the model moves through loading and processing
 enum class ModelStatus
 {
     EMPTY, // No model has been successfully added since initialization
 
     QUERYING_CONTROLS, // Controls information for a model is being requested
-    PREPARING_REQUEST, // Files and metadata is being prepared for processing
+    PREPARING_REQUEST, // Files and metadata are being prepared for processing
     PROCESSING, // Awaiting result of processing request
     CANCELING, // Awaiting result of cancellation request
 
-    FAILURE, // Synonymous with EMPTY or READY but indicates error occurred
     READY // Model is loaded and ready for processing
 };
 
@@ -49,36 +50,10 @@ struct ModelMetadata
 
     ModelMetadata(DynamicObject* card)
     {
-        // TODO - check that the following properties are of the correct type
-
-        if (card->hasProperty("name"))
-        {
-            name = card->getProperty("name").toString().toStdString();
-        }
-        if (card->hasProperty("author"))
-        {
-            author = card->getProperty("author").toString().toStdString();
-        }
-        if (card->hasProperty("description"))
-        {
-            description = card->getProperty("description").toString().toStdString();
-        }
-        if (card->hasProperty("tags"))
-        {
-            Array<var>* newTags = card->getProperty("tags").getArray();
-
-            if (newTags == nullptr)
-            {
-                DBG_AND_LOG("ModelMetadata::ModelMetadata: Failed to parse tags.");
-            }
-            else
-            {
-                for (int i = 0; i < newTags->size(); i++)
-                {
-                    tags.push_back(newTags->getReference(i).toString().toStdString());
-                }
-            }
-        }
+        readString(card, "name", name);
+        readString(card, "author", author);
+        readString(card, "description", description);
+        readStringList(card, "tags", tags);
     }
 
     // The card as JSON, in the form the constructor reads
@@ -108,46 +83,32 @@ public:
     bool isEmpty() { return loadedPath.isEmpty() || client == nullptr; }
     bool isLoaded() { return ! isEmpty(); }
 
+    /* A model whose requests were aborted is being discarded, so nothing it reports
+       reaches the status area afterwards (see abortActiveRequests) */
     void setStatus(ModelStatus newStatus, const String& pathContext = "")
     {
-        status = newStatus;
+        if (requestRegistry.hasBeenAborted())
+            return;
 
-        if (statusMessage != nullptr)
-        {
-            String msg = enumToString(status);
-
-            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
-            if (shortPath.isNotEmpty())
-                msg += " | " + shortPath;
-
-            statusMessage->setMessage(msg);
-        }
+        statusMessage->setMessage(enumToString(newStatus) + describePath(pathContext));
     }
 
     void setFailure(const OpResult& result, const String& pathContext = "")
     {
-        status = ModelStatus::FAILURE;
-
         /* Record the classification alongside the raw traffic already logged by the
            client, so that a log attached to a report shows which branch was taken */
         DBG_AND_LOG("Model::setFailure: " + toLogString(result.getError())
                     + (pathContext.isNotEmpty() ? " for \"" + pathContext + "\"" : String()));
 
-        if (statusMessage != nullptr)
-        {
-            String errMsg = toUserMessage(result.getError());
-            // Keep only the first line so the status bar stays readable
-            String shortMsg = errMsg.upToFirstOccurrenceOf("\n", false, false).trim();
-            if (shortMsg.isEmpty())
-                shortMsg = errMsg.trim();
+        if (requestRegistry.hasBeenAborted())
+            return;
 
-            String shortPath = pathContext.fromLastOccurrenceOf("/", false, false).trim();
-            String msg = "[error] " + shortMsg;
-            if (shortPath.isNotEmpty())
-                msg += " | " + shortPath;
+        const String errorMessage = toUserMessage(result.getError()).trim();
 
-            statusMessage->setMessage(msg);
-        }
+        // Only the first line, so that the status history stays readable
+        statusMessage->setMessage("[error] "
+                                  + errorMessage.upToFirstOccurrenceOf("\n", false, false).trim()
+                                  + describePath(pathContext));
     }
 
     String getLoadedPath() { return loadedPath; }
@@ -179,14 +140,14 @@ public:
 
     OpResult load(String pathToLoad)
     {
-        // Create new client for querying
-        std::unique_ptr<Client> tempClient;
-
         // Initialize appropriate client for selected path
-        OpResult result = multiplexClients(pathToLoad, tempClient);
+        std::unique_ptr<Client> tempClient = createClientForPath(pathToLoad);
 
-        if (result.failed())
+        if (tempClient == nullptr)
         {
+            const OpResult result =
+                OpResult::fail(ClientError { ClientError::Type::UnknownClient, pathToLoad });
+
             setFailure(result, pathToLoad);
 
             return result;
@@ -202,7 +163,7 @@ public:
            and linked to as one. */
         String canonicalPath;
 
-        result = tempClient->resolveCanonicalPath(pathToLoad, canonicalPath);
+        OpResult result = tempClient->resolveCanonicalPath(pathToLoad, canonicalPath);
 
         if (result.failed())
         {
@@ -221,42 +182,20 @@ public:
         // Obtain JSON string corresponding to controls + track layout
         result = tempClient->queryControls(pathToLoad, controls);
 
-        if (result.failed())
-        {
-            setFailure(result, pathToLoad);
-
-            return result;
-        }
-
         ModelMetadata newMetadata;
-
-        // Attempt to extract metadata from JSON
-        result = extractMetadata(controls, newMetadata);
-
-        if (result.failed())
-        {
-            setFailure(result, pathToLoad);
-
-            return result;
-        }
-
         ModelComponentInfoList newInputs;
         ModelComponentInfoList newControls;
-
-        // Attempt to extract inputs and controls from JSON
-        result = extractInputs(controls, newInputs, newControls);
-
-        if (result.failed())
-        {
-            setFailure(result, pathToLoad);
-
-            return result;
-        }
-
         ModelComponentInfoList newOutputs;
+        std::vector<Uuid> newInputOrder;
 
-        // Attempt to extract outputs from JSON
-        result = extractOutputs(controls, newOutputs);
+        if (result.wasOk())
+            result = extractMetadata(controls, newMetadata);
+
+        if (result.wasOk())
+            result = extractInputs(controls, newInputs, newControls, newInputOrder);
+
+        if (result.wasOk())
+            result = extractOutputs(controls, newOutputs);
 
         if (result.failed())
         {
@@ -272,9 +211,8 @@ public:
         controlComponents = newControls;
         inputTrackComponents = newInputs;
         outputTrackComponents = newOutputs;
+        orderedInputComponentIDs = std::move(newInputOrder);
 
-        // Register extracted component IDs
-        orderedInputComponentIDs = std::move(tempComponentIDs);
         // Replace existing client
         client = std::move(tempClient);
         // Keep track of successfully loaded path
@@ -286,73 +224,66 @@ public:
         return OpResult::ok();
     }
 
-    OpResult
-        process(std::map<Uuid, File> inputFiles, std::vector<File>& outputFiles, LabelList& labels)
+    OpResult process(const std::map<Uuid, File>& inputFiles,
+                     std::vector<File>& outputFiles,
+                     LabelList& labels)
     {
-        /* Upload files to server if necessary and obtain remote paths */
+        /* A canceled process runs on until the server stops it, which it reports as a
+           failure. The cancel has already been reported by then, so whatever this process
+           reports afterwards is left out of the status area and only logged. */
+        const uint64_t cancelsAtStart = numCancels.load();
 
-        OpResult result = OpResult::ok();
-
-        setStatus(ModelStatus::PREPARING_REQUEST, loadedPath);
-
-        for (auto& fileEntry : inputFiles)
+        auto reportStatus = [&](ModelStatus newStatus)
         {
-            String remoteFilePath;
+            if (numCancels.load() == cancelsAtStart)
+                setStatus(newStatus, loadedPath);
+        };
 
-            Uuid trackID = fileEntry.first;
-            File fileToUpload = fileEntry.second;
-
-            result = client->uploadFile(loadedPath, fileToUpload, remoteFilePath);
-
-            if (result.failed())
-            {
+        auto reportFailure = [&](const OpResult& result)
+        {
+            if (numCancels.load() == cancelsAtStart)
                 setFailure(result, loadedPath);
-
-                return result;
-            }
-
-            auto componentInfo = getComponentInfo(trackID);
-
-            if (componentInfo == nullptr)
-            {
-                // No components match track ID
-                jassertfalse;
-            }
-            else if (auto trackComponentInfo =
-                         dynamic_cast<TrackComponentInfo*>(componentInfo.get()))
-            {
-                trackComponentInfo->path = remoteFilePath.toStdString();
-            }
             else
-            {
-                // Component is not a valid input track
-                jassertfalse;
-            }
-        }
+                DBG_AND_LOG("Model::process: Canceled process ended with "
+                            + toLogString(result.getError()) + ".");
+        };
 
-        std::map<Uuid, std::string> fileControlRemotePaths;
+        reportStatus(ModelStatus::PREPARING_REQUEST);
+
+        /* Upload files to the server if necessary and obtain their remote paths. These are
+           kept here rather than in the components, which a request still running after a
+           cancel shares with the next one. */
+        std::map<Uuid, String> remotePaths;
+
+        auto upload = [&](const Uuid& componentID, const File& file)
+        {
+            String remotePath;
+
+            OpResult result = client->uploadFile(loadedPath, file, remotePath);
+
+            if (result.wasOk())
+                remotePaths[componentID] = remotePath;
+            else
+                reportFailure(result);
+
+            return result;
+        };
+
+        for (const auto& [trackID, file] : inputFiles)
+        {
+            if (OpResult result = upload(trackID, file); result.failed())
+                return result;
+        }
 
         for (const auto& controlComponent : controlComponents)
         {
-            if (auto* fileComponentInfo = dynamic_cast<FileComponentInfo*>(controlComponent.get()))
-            {
-                if (fileComponentInfo->path.empty())
-                    continue;
+            auto* fileInfo = dynamic_cast<FileComponentInfo*>(controlComponent.get());
 
-                String remoteFilePath;
+            if (fileInfo == nullptr || fileInfo->path.empty())
+                continue;
 
-                result =
-                    client->uploadFile(loadedPath, File(fileComponentInfo->path), remoteFilePath);
-
-                if (result.failed())
-                {
-                    setFailure(result, loadedPath);
-
-                    return result;
-                }
-
-                fileControlRemotePaths[fileComponentInfo->id] = remoteFilePath.toStdString();
-            }
+            if (OpResult result = upload(fileInfo->id, File(fileInfo->path)); result.failed())
+                return result;
         }
 
         /* Extract control values for JSON payload in order */
@@ -363,27 +294,29 @@ public:
         {
             auto componentInfo = getComponentInfo(componentID);
 
+            // The order is recorded from the same response as the components
+            jassert(componentInfo != nullptr);
+
+            if (componentInfo == nullptr)
+                continue;
+
             var controlValue;
-            bool wasFile = false;
+            bool isFile = false;
 
-            String label = componentInfo->label;
-
-            if (auto trackComponentInfo = dynamic_cast<TrackComponentInfo*>(componentInfo.get()))
+            if (dynamic_cast<TrackComponentInfo*>(componentInfo.get()) != nullptr
+                || dynamic_cast<FileComponentInfo*>(componentInfo.get()) != nullptr)
             {
-                if (trackComponentInfo->path.empty())
-                {
-                    controlValue = var(); // Empty
-                }
-                else
+                isFile = true;
+
+                // An optional input left empty is sent as nothing at all
+                if (auto it = remotePaths.find(componentID); it != remotePaths.end())
                 {
                     DynamicObject::Ptr fileObj = new DynamicObject();
 
-                    fileObj->setProperty("path", var(trackComponentInfo->path));
+                    fileObj->setProperty("path", it->second);
 
-                    controlValue = var(fileObj);
+                    controlValue = var(fileObj.get());
                 }
-
-                wasFile = true;
             }
             else if (auto textBoxComponentInfo =
                          dynamic_cast<TextBoxComponentInfo*>(componentInfo.get()))
@@ -423,54 +356,30 @@ public:
 
                 controlValue = var(selectedValues);
             }
-            else if (auto fileComponentInfo = dynamic_cast<FileComponentInfo*>(componentInfo.get()))
-            {
-                auto it = fileControlRemotePaths.find(fileComponentInfo->id);
 
-                if (it == fileControlRemotePaths.end() || it->second.empty())
-                {
-                    controlValue = var();
-                }
-                else
-                {
-                    DynamicObject::Ptr fileObj = new DynamicObject();
-
-                    fileObj->setProperty("path", var(it->second));
-
-                    controlValue = var(fileObj);
-                }
-
-                wasFile = true;
-            }
-            else
-            {
-                // Unsupported control was added
-                jassertfalse;
-            }
-
-            controlValue = client->wrapPayloadElement(controlValue, wasFile, label);
-            controlValues.add(controlValue);
+            controlValues.add(
+                client->wrapPayloadElement(controlValue, isFile, String(componentInfo->label)));
         }
 
         DynamicObject::Ptr dataObject = new DynamicObject();
         dataObject->setProperty("data", controlValues);
 
-        String payloadJSON = JSON::toString(var(dataObject), true);
+        String payloadJSON = JSON::toString(var(dataObject.get()), true);
 
         DBG_AND_LOG("Model::process: Payload \"" + payloadJSON + "\" prepared for processing.");
 
-        setStatus(ModelStatus::PROCESSING, loadedPath);
+        reportStatus(ModelStatus::PROCESSING);
 
-        result = client->process(loadedPath, payloadJSON, outputFiles, labels);
+        OpResult result = client->process(loadedPath, payloadJSON, outputFiles, labels);
 
         if (result.failed())
         {
-            setFailure(result, loadedPath);
+            reportFailure(result);
 
             return result;
         }
 
-        setStatus(ModelStatus::READY, loadedPath);
+        reportStatus(ModelStatus::READY);
 
         return result;
     }
@@ -478,12 +387,16 @@ public:
     // Aborts any request this model currently has in flight, locally. Unlike
     // cancel(), this needs neither the server nor a reachable network, and it
     // unblocks the worker thread that is waiting on the connection. Once aborted
-    // the model will not open any further connections, so this is only for
-    // models that are being discarded (see ModelTab::abandon).
+    // the model will not open any further connections or report to the status
+    // area, so this is only for models that are being discarded (see
+    // ModelTab::abandon).
     void abortActiveRequests() { requestRegistry.abortActiveRequests(); }
 
     OpResult cancel()
     {
+        // Counted first, so that the process being canceled reports nothing further
+        ++numCancels;
+
         setStatus(ModelStatus::CANCELING, loadedPath);
 
         OpResult result = client->cancel(loadedPath);
@@ -501,6 +414,14 @@ public:
     }
 
 private:
+    // The last part of a path, appended to a status message
+    static String describePath(const String& path)
+    {
+        const String shortPath = path.fromLastOccurrenceOf("/", false, false).trim();
+
+        return shortPath.isNotEmpty() ? " | " + shortPath : String();
+    }
+
     OpResult extractMetadata(DynamicObject::Ptr& controls, ModelMetadata& newMetadata)
     {
         static const Identifier metadataKey { "card" };
@@ -514,278 +435,189 @@ private:
             return result;
         }
 
-        newMetadata = ModelMetadata(metadataDict);
+        newMetadata = ModelMetadata(metadataDict.get());
 
         return OpResult::ok();
     }
 
-    OpResult extractInputs(DynamicObject::Ptr& controls,
-                           ModelComponentInfoList& newInputs,
-                           ModelComponentInfoList& newControls)
+    /* The component a "type" in a /controls response declares, or nullptr for a type
+       HARP does not support */
+    static std::shared_ptr<ModelComponentInfo> createComponentInfo(const String& type,
+                                                                   DynamicObject* spec)
     {
-        static const Identifier inputsKey { "inputs" };
+        if (type == "audio_track")
+            return std::make_shared<AudioTrackComponentInfo>(spec);
 
-        Array<var>* inputComponents;
+        if (type == "midi_track")
+            return std::make_shared<MidiTrackComponentInfo>(spec);
 
-        OpResult result = getRequiredArrayProperty(controls, inputsKey, inputComponents);
+        if (type == "generic_file")
+            return std::make_shared<FileComponentInfo>(spec);
+
+        if (type == "text_box")
+            return std::make_shared<TextBoxComponentInfo>(spec);
+
+        if (type == "number_box")
+            return std::make_shared<NumberBoxComponentInfo>(spec);
+
+        if (type == "toggle")
+            return std::make_shared<ToggleComponentInfo>(spec);
+
+        if (type == "slider")
+            return std::make_shared<SliderComponentInfo>(spec);
+
+        if (type == "dropdown")
+        {
+            /* A dropdown declared with multiselect=True carries a list of values rather
+               than a single one, and needs its own control */
+            bool isMultiSelect = false;
+
+            readBool(spec, "multiselect", isMultiSelect);
+
+            if (isMultiSelect)
+                return std::make_shared<MultiSelectComponentInfo>(spec);
+
+            return std::make_shared<ComboBoxComponentInfo>(spec);
+        }
+
+        return nullptr;
+    }
+
+    /* Calls handleComponent with the type and specification of each component listed
+       under a key of a /controls response, stopping at the first failure */
+    static OpResult readComponents(
+        DynamicObject::Ptr& controls,
+        const Identifier& key,
+        const std::function<OpResult(const String&, DynamicObject*)>& handleComponent)
+    {
+        static const Identifier typeKey { "type" };
+
+        Array<var>* components;
+
+        OpResult result = getRequiredArrayProperty(controls, key, components);
 
         if (result.failed())
         {
             return result;
         }
 
-        for (int i = 0; i < inputComponents->size(); i++)
+        for (const auto& componentVar : *components)
         {
-            var controlsVar = inputComponents->getReference(i);
+            auto* spec = componentVar.getDynamicObject();
 
-            if (! controlsVar.isObject())
+            if (spec == nullptr)
             {
                 return OpResult::fail(
-                    JsonError { JsonError::Type::NotADictionary, controlsVar.toString() });
+                    JsonError { JsonError::Type::NotADictionary, componentVar.toString() });
             }
 
-            DynamicObject* controlsDict = controlsVar.getDynamicObject();
-
-            static const Identifier typeKey { "type" };
-
-            // TODO - could abstract some of the following for extractInputs & extractOutputs
-            if (controlsDict->hasProperty(typeKey))
+            if (! spec->hasProperty(typeKey))
             {
-                String type = controlsDict->getProperty("type").toString().toStdString();
+                return OpResult::fail(JsonError { JsonError::Type::MissingKey,
+                                                  JSON::toString(componentVar, true),
+                                                  typeKey.toString() });
+            }
 
-                if (type == "audio_track")
-                {
-                    std::shared_ptr<ModelComponentInfo> audioTrack =
-                        std::make_shared<AudioTrackComponentInfo>(controlsDict);
+            result = handleComponent(spec->getProperty(typeKey).toString(), spec);
 
-                    newInputs.push_back(audioTrack);
-                    tempComponentIDs.push_back(audioTrack->id);
+            if (result.failed())
+            {
+                return result;
+            }
+        }
 
-                    DBG_AND_LOG("Model::extractInputs: Audio track input \"" + audioTrack->label
-                                + "\" extracted.");
-                }
-                else if (type == "midi_track")
-                {
-                    std::shared_ptr<ModelComponentInfo> midiTrack =
-                        std::make_shared<MidiTrackComponentInfo>(controlsDict);
+        return OpResult::ok();
+    }
 
-                    newInputs.push_back(midiTrack);
-                    tempComponentIDs.push_back(midiTrack->id);
+    // Tracks are inputs, and anything else is a control, which are all sent in this order
+    static OpResult extractInputs(DynamicObject::Ptr& controls,
+                                  ModelComponentInfoList& newInputs,
+                                  ModelComponentInfoList& newControls,
+                                  std::vector<Uuid>& newInputOrder)
+    {
+        return readComponents(
+            controls,
+            "inputs",
+            [&](const String& type, DynamicObject* spec)
+            {
+                auto info = createComponentInfo(type, spec);
 
-                    DBG_AND_LOG("Model::extractInputs: MIDI track input \"" + midiTrack->label
-                                + "\" extracted.");
-                }
-                else if (type == "generic_file")
-                {
-                    std::shared_ptr<ModelComponentInfo> fileChooser =
-                        std::make_shared<FileComponentInfo>(controlsDict);
-
-                    newControls.push_back(fileChooser);
-                    tempComponentIDs.push_back(fileChooser->id);
-
-                    DBG_AND_LOG("Model::extractInputs: File chooser control \"" + fileChooser->label
-                                + "\" extracted.");
-                }
-                else if (type == "text_box")
-                {
-                    std::shared_ptr<ModelComponentInfo> textControl =
-                        std::make_shared<TextBoxComponentInfo>(controlsDict);
-
-                    newControls.push_back(textControl);
-                    tempComponentIDs.push_back(textControl->id);
-
-                    DBG_AND_LOG("Model::extractInputs: Text control \"" + textControl->label
-                                + "\" extracted.");
-                }
-                else if (type == "number_box")
-                {
-                    std::shared_ptr<ModelComponentInfo> numberControl =
-                        std::make_shared<NumberBoxComponentInfo>(controlsDict);
-
-                    newControls.push_back(numberControl);
-                    tempComponentIDs.push_back(numberControl->id);
-
-                    DBG_AND_LOG("Model::extractInputs: Number box control \"" + numberControl->label
-                                + "\" extracted.");
-                }
-                else if (type == "toggle")
-                {
-                    std::shared_ptr<ModelComponentInfo> toggleControl =
-                        std::make_shared<ToggleComponentInfo>(controlsDict);
-
-                    newControls.push_back(toggleControl);
-                    tempComponentIDs.push_back(toggleControl->id);
-
-                    DBG_AND_LOG("Model::extractInputs: Toggle control \"" + toggleControl->label
-                                + "\" extracted.");
-                }
-                else if (type == "slider")
-                {
-                    std::shared_ptr<ModelComponentInfo> sliderControl =
-                        std::make_shared<SliderComponentInfo>(controlsDict);
-
-                    newControls.push_back(sliderControl);
-                    tempComponentIDs.push_back(sliderControl->id);
-
-                    DBG_AND_LOG("Model::extractInputs: Slider control \"" + sliderControl->label
-                                + "\" extracted.");
-                }
-                else if (type == "dropdown")
-                {
-                    /* A dropdown declared with multiselect=True carries a list of
-                       values rather than a single one, and needs its own control */
-                    bool isMultiSelect = false;
-
-                    readBool(controlsDict, "multiselect", isMultiSelect);
-
-                    std::shared_ptr<ModelComponentInfo> dropdownControl =
-                        isMultiSelect
-                            ? std::static_pointer_cast<ModelComponentInfo>(
-                                  std::make_shared<MultiSelectComponentInfo>(controlsDict))
-                            : std::static_pointer_cast<ModelComponentInfo>(
-                                  std::make_shared<ComboBoxComponentInfo>(controlsDict));
-
-                    newControls.push_back(dropdownControl);
-                    tempComponentIDs.push_back(dropdownControl->id);
-
-                    DBG_AND_LOG("Model::extractInputs: "
-                                + String(isMultiSelect ? "Multiselect dropdown" : "Dropdown")
-                                + " control \"" + dropdownControl->label + "\" extracted.");
-                }
-                else
+                if (info == nullptr)
                 {
                     return OpResult::fail(
                         ControlError { ControlError::Type::UnsupportedControl, type });
                 }
-            }
-            else
-            {
-                return OpResult::fail(JsonError { JsonError::Type::MissingKey,
-                                                  JSON::toString(var(controlsDict), true),
-                                                  typeKey.toString() });
-            }
-        }
 
-        return OpResult::ok();
+                const bool isTrack = dynamic_cast<TrackComponentInfo*>(info.get()) != nullptr;
+
+                (isTrack ? newInputs : newControls).push_back(info);
+                newInputOrder.push_back(info->id);
+
+                DBG_AND_LOG("Model::extractInputs: " << (isTrack ? "Track" : "Control") << " \""
+                                                     << String(info->label) << "\" of type \""
+                                                     << type << "\" extracted.");
+
+                return OpResult::ok();
+            });
     }
 
-    OpResult extractOutputs(DynamicObject::Ptr& controls, ModelComponentInfoList& newOutputs)
+    static OpResult extractOutputs(DynamicObject::Ptr& controls, ModelComponentInfoList& newOutputs)
     {
-        static const Identifier outputsKey { "outputs" };
-
-        Array<var>* outputComponents;
-
-        OpResult result = getRequiredArrayProperty(controls, outputsKey, outputComponents);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
-        for (int i = 0; i < outputComponents->size(); i++)
-        {
-            var controlsVar = outputComponents->getReference(i);
-
-            if (! controlsVar.isObject())
+        return readComponents(
+            controls,
+            "outputs",
+            [&](const String& type, DynamicObject* spec)
             {
-                return OpResult::fail(
-                    JsonError { JsonError::Type::NotADictionary, controlsVar.toString() });
-            }
-
-            DynamicObject* controlsDict = controlsVar.getDynamicObject();
-
-            static const Identifier typeKey { "type" };
-
-            if (controlsDict->hasProperty("type"))
-            {
-                String type = controlsDict->getProperty("type").toString().toStdString();
-
-                if (type == "audio_track")
+                // Labels arrive with the other outputs and are drawn on their tracks
+                if (type == "json")
                 {
-                    std::shared_ptr<ModelComponentInfo> audioTrack =
-                        std::make_shared<AudioTrackComponentInfo>(controlsDict);
-
-                    newOutputs.push_back(audioTrack);
-
-                    DBG_AND_LOG("Model::extractOutputs: Audio track output \"" + audioTrack->label
-                                + "\" extracted.");
-                }
-                else if (type == "midi_track")
-                {
-                    std::shared_ptr<ModelComponentInfo> midiTrack =
-                        std::make_shared<MidiTrackComponentInfo>(controlsDict);
-
-                    newOutputs.push_back(midiTrack);
-
-                    DBG_AND_LOG("Model::extractOutputs: MIDI track output \"" + midiTrack->label
-                                + "\" extracted.");
-                }
-                else if (type == "generic_file")
-                {
-                    std::shared_ptr<ModelComponentInfo> fileOutput =
-                        std::make_shared<FileComponentInfo>(controlsDict);
-
-                    newOutputs.push_back(fileOutput);
-
-                    DBG_AND_LOG("Model::extractOutputs: File output \"" + fileOutput->label
-                                + "\" extracted.");
-                }
-                else if (type == "json")
-                {
-                    // Labels are handled separately
-
                     DBG_AND_LOG("Model::extractOutputs: JSON (labels) output detected.");
+
+                    return OpResult::ok();
                 }
-                else
+
+                const bool isOutputType =
+                    type == "audio_track" || type == "midi_track" || type == "generic_file";
+
+                auto info = isOutputType ? createComponentInfo(type, spec) : nullptr;
+
+                if (info == nullptr)
                 {
                     return OpResult::fail(
                         ControlError { ControlError::Type::UnsupportedControl, type });
                 }
-            }
-            else
-            {
-                return OpResult::fail(JsonError { JsonError::Type::MissingKey,
-                                                  JSON::toString(var(controlsDict), true),
-                                                  typeKey.toString() });
-            }
-        }
 
-        return OpResult::ok();
+                newOutputs.push_back(info);
+
+                DBG_AND_LOG("Model::extractOutputs: Output \""
+                            << String(info->label) << "\" of type \"" << type << "\" extracted.");
+
+                return OpResult::ok();
+            });
     }
 
     std::shared_ptr<ModelComponentInfo> getComponentInfo(const Uuid& id) const
     {
-        for (const auto& controlComponent : controlComponents)
+        for (const auto* list :
+             { &controlComponents, &inputTrackComponents, &outputTrackComponents })
         {
-            if (id == controlComponent->id)
+            for (const auto& component : *list)
             {
-                return controlComponent;
-            }
-        }
-
-        for (const auto& inputTrackComponent : inputTrackComponents)
-        {
-            if (id == inputTrackComponent->id)
-            {
-                return inputTrackComponent;
-            }
-        }
-
-        for (const auto& outputTrackComponent : outputTrackComponents)
-        {
-            if (id == outputTrackComponent->id)
-            {
-                return outputTrackComponent;
+                if (component->id == id)
+                {
+                    return component;
+                }
             }
         }
 
         return nullptr;
     }
 
-    ModelStatus status;
-
     // Declared before the client so that it is destroyed after it
     RequestRegistry requestRegistry;
+
+    // Advanced by every cancel, so that a process can tell it has been canceled
+    std::atomic<uint64_t> numCancels { 0 };
 
     std::unique_ptr<Client> client;
 
@@ -794,7 +626,6 @@ private:
 
     ModelMetadata metadata;
 
-    std::vector<Uuid> tempComponentIDs;
     std::vector<Uuid> orderedInputComponentIDs;
 
     ModelComponentInfoList controlComponents;

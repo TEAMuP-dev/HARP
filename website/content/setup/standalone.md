@@ -2,11 +2,11 @@
 
 After following the installation instructions for your operating system version, you can open HARP as a standalone application to start processing audio, MIDI, and metadata.
 
-- **MacOS:** Launch HARP (`HARP.app`) from your `Applications` folder.
+- **macOS:** Launch HARP (`HARP.app`) from your `Applications` folder.
 - **Windows:** Launch HARP (`HARP.exe`) from your chosen installation directory.
 - **Linux:** Launch HARP (`HARP`) from your chosen installation directory.
 
-Upon launching, you should see an "empty" HARP window that looks like this:
+Upon launching, HARP opens on its Home tab, which lists the available models. The first time, a short tutorial walks through the interface:
 
   <!-- TODO - Update screenshot -->
   <p align="center">

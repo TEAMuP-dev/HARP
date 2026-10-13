@@ -229,17 +229,14 @@ public:
     {
         getTabbedButtonBar().setLookAndFeel(nullptr);
 
-        // App shutdown: a tab that is still open (never closed) may have an
-        // in-flight request. Letting modelTabs auto-destruct would delete such
-        // a tab and destroy its ThreadPool while a worker is blocked in a
-        // network syscall, force-killing it (see ModelTab::hasPendingRequests).
-        // Waiting for the request instead would stall the quit for as long as
-        // its timeout, so abandon it - which aborts the connection, so that the
-        // OS networking task resolves now rather than minutes from now, once
-        // too much of the app has gone away to deliver the result safely - and
-        // release ownership without deleting, leaving the threads and memory
-        // for the exiting process to reclaim. Idle tabs are left in the array
-        // and destroyed normally.
+        /* App shutdown: a tab that is still open (never closed) may have an in-flight
+           request. Letting modelTabs auto-destruct would delete such a tab and destroy its
+           ThreadPool while a worker is blocked in a network call, force-killing it (see
+           ModelTab::hasPendingRequests). Waiting for the request instead would stall the
+           quit for as long as its timeout. So the tab is abandoned, which aborts the
+           connection while enough of the app remains to deliver the result safely, and
+           released without being deleted, leaving the threads and memory for the exiting
+           process to reclaim. Idle tabs are left in the array and destroyed normally. */
         for (int i = modelTabs.size(); --i >= 0;)
         {
             if (ModelTab* tab = modelTabs.getUnchecked(i); tab->hasPendingRequests())
@@ -250,14 +247,14 @@ public:
         }
     }
 
-    /**
-     * Opens a model in a new tab and shows it. The tab fills in once the model has loaded,
-     * and closes by itself if loading fails, once the error has been dismissed.
-     */
     /* Set by MainComponent and handed to every tab this container opens, so an error
        popup about a missing API key can open the settings that hold it. */
     std::function<void(Provider)> onOpenAPIKeySettings;
 
+    /**
+     * Opens a model in a new tab and shows it. The tab fills in once the model has loaded,
+     * and closes by itself if loading fails, once the error has been dismissed.
+     */
     ModelTab* openModelTab(const String& modelPath, String tabName = {})
     {
         if (tabName.isEmpty())
@@ -314,7 +311,7 @@ public:
 
         // Remove the tab from the UI immediately so it looks closed to the user.
         // Because the page was added with deleteComponentWhenNotNeeded = false,
-        // removeTab() does not destroy it; it is owned via pages.
+        // removeTab() does not destroy it. It is owned via pages.
         removeTab(index);
 
         // Deleting the page only detaches the tab from it
@@ -328,9 +325,9 @@ public:
         {
             // A network request is still in flight. Destroying the tab
             // (and its ThreadPool) now would force-kill a worker thread
-            // blocked in a network syscall. Abandoning it aborts the
-            // connection so the worker returns within moments; hand
-            // ownership to the reaper, which deletes it once it does.
+            // blocked in a network call. Abandoning it aborts the connection
+            // so that the worker returns within moments, and the reaper
+            // deletes the tab once it has.
             tabToClose->abandon();
 
             modelTabs.removeObject(tabToClose, false);

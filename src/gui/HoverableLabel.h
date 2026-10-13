@@ -10,6 +10,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+using namespace juce;
+
 class HoverableLabel : public Label
 {
 public:
@@ -20,8 +22,6 @@ public:
 
         setHoverable(true);
     }
-
-    bool isHoverable() { return hoverable; }
 
     void setHoverable(bool h)
     {
@@ -38,7 +38,7 @@ public:
     }
 
     /**
-     * Overriden component function to test if mouse is over text.
+     * Overridden component function to test if mouse is over text.
      */
     bool hitTest(int x, int y) override
     {
@@ -111,7 +111,7 @@ private:
             textSize, getBorderSize().subtractedFrom(getLocalBounds()));
     }
 
-    bool hoverable;
+    bool hoverable = true;
 
     Colour originalTextColor;
     Colour hoverColor = Colours::blue;

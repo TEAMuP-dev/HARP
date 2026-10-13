@@ -10,7 +10,7 @@ In file `.clang-format` you can find code formatting rules for the project.
 You can use `clang-format` to format your code before committing it.
 We are following the guidelines used by JUCE.
 If you are using Visual Studio Code (VS Code), you must have the C/C++ extensions from Microsoft installed.
-In MacOS, you should also install `clang-format` with `brew`:
+On macOS, you should also install `clang-format` with `brew`:
 ```bash
 brew install clang-format
 ```
@@ -35,7 +35,7 @@ If you want to format files that haven't been formatted before, it's better to g
 When working with collections of objects created with `new`, such as UI components or other heap-allocated data, avoid storing raw pointers (`T*`) directly in standard containers like `juce::Array<T*>` or `std::vector<T*>`.
 This requires manual `delete` calls, and can easily lead to memory leaks or crashes if handled imperfectly (_e.g._, in destructors, during removal, with exceptions, etc.).
 
-**Problem Example (from `NoteGridComponent`):**
+**Problem Example:**
 
 ```cpp
 // DON'T DO THIS: Requires manual deletion
@@ -164,7 +164,7 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - Prefer clear separation of concerns: independent components, widgets, and services should live in their own units.
 - Avoid unnecessary crosstalk between UI, model logic, and infrastructure layers.
 - If a change touches many unrelated areas, it’s usually a sign to introduce an abstraction (_e.g._ `SharedResourcePointer`, service objects).
-- Avoid hard-coded conditionals that branch on specific models, modes (_e.g._, Gradio vs. Stability), or UI states—favor extensibility.
+- Avoid hard-coded conditionals that branch on specific models, modes (_e.g._, Gradio vs. Stability), or UI states. Favor extensibility.
 - Good design should feel “boring”: things fall neatly into place with minimal glue code.
 
 ### Efficiency
@@ -172,10 +172,11 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - Prefer event-driven updates over polling.
 - Be mindful of blocking calls on the message thread. Long-running work belongs off the UI thread.
 - Cache derived values where appropriate, but keep lifetimes explicit.
+- Keep text measurement out of `paint()` and `resized()`. JUCE 8 shapes the text on every measurement, which is slow enough to notice in a Debug build. Use `ModelStyle::getTextWidth`, which measures each string once.
 
 ### Error Handling
 - Use `OpResult` for anything with meaningful modes of failure (I/O, network, model execution, parsing, etc.).
-- Errors should be propagated, not swallowed—callers decide how to surface them.
+- Errors should be propagated, not swallowed. Callers decide how to surface them.
 - `jassertfalse` is acceptable for truly unreachable states (logic errors, violated invariants).
 
 ### Logging & Debugging
@@ -196,19 +197,19 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - Buttons should do one thing and emit a clear intent (no hidden side effects).
 - `MultiButton` should be used when states are mutually exclusive and obvious.
 - FontAwesome and FontAudio can be used to create buttons with icons rather than text.
-- Avoid encoding business logic inside button callbacks—delegate to controllers/services.
+- Avoid encoding business logic inside button callbacks. Delegate to controllers or services.
 
 ### Sizing Components
 - Prefer FlexBox layouts over hard-coded sizes and manual positioning.
 - Components should size themselves based on content where possible.
-- Avoid “magic numbers” for spacing—centralize or derive them.
+- Avoid “magic numbers” for spacing. Centralize or derive them.
 - Resizing should be stable and predictable across window sizes.
 
 ### External Code
 - Use submodules for external dependencies that work out-of-the-box.
 - Organize external code with clear boundaries (_i.e._ `external/`) and treat it as read-only.
 - Do not modify third-party code unless absolutely necessary. Wrap it instead.
-- Only include what is needed in build targets—avoid leaking dependencies globally.
+- Only include what is needed in build targets, and avoid leaking dependencies globally.
 
 ## Known JUCE Behaviors
 

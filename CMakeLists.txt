@@ -61,6 +61,7 @@ target_sources(${PROJECT_NAME}
 
         src/gui/MultiButton.cpp
         src/gui/RoundIconButton.h
+        src/gui/ResizeEdge.h
         src/gui/Palette.h
         src/gui/HoverableLabel.h
         src/gui/TextBoxWithLabel.h

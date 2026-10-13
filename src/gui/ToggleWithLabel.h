@@ -27,7 +27,8 @@ public:
 
     int getMinimumRequiredWidth() const override
     {
-        const int textWidth = Font().getStringWidth(toggleButton.getButtonText());
+        const int textWidth =
+            ModelStyle::getTextWidth(Font(FontOptions()), toggleButton.getButtonText());
         return jmax(minToggleWidth, textWidth + defaultPadding + checkboxWidthPadding);
     }
 

@@ -37,15 +37,11 @@ public:
 
     void postLoadActions(const URL& filePath) override;
 
-    void setInstanceFileTypes(const std::vector<std::string>& types);
+    // Extensions with a leading dot (e.g., ".json"), where none means any file
+    void setInstanceFileTypes(const StringArray& extensions) { instanceFileTypes = extensions; }
 
 private:
-    struct NoBorderLookAndFeel : public LookAndFeel_V4
-    {
-        void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
-    };
-
-    NoBorderLookAndFeel noBorderLAF;
+    BorderlessButtonLookAndFeel noBorderLAF;
 
     MultiButton downloadButton;
     MultiButton::Mode downloadActiveMode;

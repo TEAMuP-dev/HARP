@@ -9,6 +9,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "../gui/MultiButton.h"
+#include "../gui/ResizeEdge.h"
 #include "../gui/RoundIconButton.h"
 
 #include "../media/AudioDisplayComponent.h"
@@ -18,48 +19,6 @@
 #include "ModelStyle.h"
 
 using namespace juce;
-
-// Strip along the top of the preview pane that is dragged to change the pane's height
-class PreviewPaneResizeEdge : public Component
-{
-public:
-    PreviewPaneResizeEdge() { setMouseCursor(MouseCursor::UpDownResizeCursor); }
-
-    // Called once when a drag begins
-    std::function<void()> onDragStart;
-    // Called throughout a drag with how far down the mouse is from where the drag began
-    std::function<void(int)> onDrag;
-
-    void mouseDown(const MouseEvent&) override
-    {
-        if (onDragStart)
-        {
-            onDragStart();
-        }
-    }
-
-    void mouseDrag(const MouseEvent& e) override
-    {
-        if (onDrag)
-        {
-            onDrag(e.getScreenY() - e.getMouseDownScreenY());
-        }
-    }
-
-    void mouseUp(const MouseEvent&) override { repaint(); }
-    void mouseEnter(const MouseEvent&) override { repaint(); }
-    void mouseExit(const MouseEvent&) override { repaint(); }
-
-    // Lit in the accent colour while hovered, as a card's outline is
-    void paint(Graphics& g) override
-    {
-        if (isMouseOverOrDragging())
-        {
-            g.setColour(ModelStyle::accent.withAlpha(0.6f));
-            g.fillRect(getLocalBounds().removeFromTop(2));
-        }
-    }
-};
 
 class PreviewPaneWidget : public Component
 {
@@ -121,7 +80,7 @@ public:
         const String extension = filePath.getLocalFile().getFileExtension();
 
         // Each display is created the first time it is needed, then kept and reused
-        if (AudioDisplayComponent::getSupportedExtensions().contains(extension))
+        if (AudioDisplayComponent::getSupportedExtensions().contains(extension, true))
         {
             if (audioDisplay == nullptr)
             {
@@ -133,7 +92,7 @@ public:
 
             currentDisplay = audioDisplay.get();
         }
-        else if (MidiDisplayComponent::getSupportedExtensions().contains(extension))
+        else if (MidiDisplayComponent::getSupportedExtensions().contains(extension, true))
         {
             if (midiDisplay == nullptr)
             {
@@ -256,10 +215,10 @@ private:
                                                    Colours::limegreen,
                                                    fontaudio::Play };
         // Mode when no track is shown (play disabled)
-        playButtonInactiveInfo =
-            MultiButton::Mode { "Play-Inactive",    "Nothing to play.",
-                                [] {},              MultiButton::DrawingMode::IconOnly,
-                                Colours::lightgrey, fontaudio::Play };
+        playButtonInactiveInfo = MultiButton::Mode {
+            "Play-Inactive",    "Nothing to play.", [] {}, MultiButton::DrawingMode::IconOnly,
+            Colours::lightgrey, fontaudio::Play
+        };
         // Mode during playback (pause enabled)
         pauseButtonInfo = MultiButton::Mode { "Pause",
                                               "Click to pause playback.",
@@ -281,10 +240,10 @@ private:
                                 Colours::orangered,
                                 fontaudio::Stop };
         // Mode when there is nothing to stop (stop disabled)
-        stopButtonInactiveInfo =
-            MultiButton::Mode { "Stop-Inactive",    "Nothing to stop.",
-                                [] {},              MultiButton::DrawingMode::IconOnly,
-                                Colours::lightgrey, fontaudio::Stop };
+        stopButtonInactiveInfo = MultiButton::Mode {
+            "Stop-Inactive",    "Nothing to stop.", [] {}, MultiButton::DrawingMode::IconOnly,
+            Colours::lightgrey, fontaudio::Stop
+        };
         stopButton.addMode(stopButtonActiveInfo);
         stopButton.addMode(stopButtonInactiveInfo);
         addAndMakeVisible(stopButton);
@@ -385,7 +344,7 @@ private:
     // Whichever of the two displays is showing a track, or nullptr when the pane is empty
     MediaDisplayComponent* currentDisplay = nullptr;
 
-    PreviewPaneResizeEdge resizeEdge;
+    ResizeEdge resizeEdge { ResizeEdge::Side::Top };
     int heightAtDragStart = defaultHeight;
 
     bool minimized = false;

@@ -13,7 +13,7 @@ using namespace juce;
 struct OutputLabel
 {
     // Required fields
-    float t;
+    float t = 0.0f;
     String label;
 
     // Optional fields

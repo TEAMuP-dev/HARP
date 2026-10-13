@@ -6,9 +6,10 @@
 
 #pragma once
 
+#include <array>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../gui/HoverableLabel.h"
 #include "../widgets/StatusAreaWidget.h"
 
 #include "../gui/ComboBoxWithLabel.h"
@@ -28,8 +29,7 @@ using namespace juce;
 class ControlAreaWidget : public Component
 {
 public:
-    ControlAreaWidget() { resetState(); }
-    ~ControlAreaWidget() { resetState(); }
+    ~ControlAreaWidget() override { resetState(); }
 
     void resized() override
     {
@@ -46,11 +46,6 @@ public:
 
         for (const auto& row : rows)
         {
-            if (row.empty())
-            {
-                continue;
-            }
-
             int totalComponentWidth = 0;
 
             for (const auto& entry : row)
@@ -81,32 +76,16 @@ public:
         }
     }
 
-    int getNumControls() const
-    {
-        return sliderComponents.size() + toggleComponents.size() + dropdownComponents.size()
-               + textComponents.size() + numberComponents.size() + multiSelectComponents.size()
-               + fileChooserComponents.size();
-    }
+    int getNumControls() const { return (int) controls.size(); }
 
     int getMinimumRequiredWidth() const
     {
         int requiredWidth = 0;
 
-        auto checkGroup = [&](const auto& group)
+        for (const auto& c : controls)
         {
-            for (const auto& c : group)
-            {
-                requiredWidth = jmax(requiredWidth, c->getMinimumRequiredWidth());
-            }
-        };
-
-        checkGroup(sliderComponents);
-        checkGroup(toggleComponents);
-        checkGroup(dropdownComponents);
-        checkGroup(textComponents);
-        checkGroup(numberComponents);
-        checkGroup(multiSelectComponents);
-        checkGroup(fileChooserComponents);
+            requiredWidth = jmax(requiredWidth, c->getMinimumRequiredWidth());
+        }
 
         return requiredWidth + 2 * (marginSize + minEdgeGap);
     }
@@ -120,16 +99,11 @@ public:
             return 0;
         }
 
-        int totalHeight = 2 * marginSize;
+        int totalHeight = 2 * marginSize + minRowGap * (int) (rows.size() - 1);
 
-        for (size_t i = 0; i < rows.size(); ++i)
+        for (const auto& row : rows)
         {
-            totalHeight += getRowHeight(rows[i]);
-
-            if (i + 1 < rows.size())
-            {
-                totalHeight += minRowGap;
-            }
+            totalHeight += getRowHeight(row);
         }
 
         return totalHeight;
@@ -137,48 +111,12 @@ public:
 
     void resetState()
     {
-        for (auto& c : textComponents)
+        for (auto& c : controls)
         {
             removeChildComponent(c.get());
         }
-        textComponents.clear();
 
-        for (auto& c : numberComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        numberComponents.clear();
-
-        for (auto& c : toggleComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        toggleComponents.clear();
-
-        for (auto& c : sliderComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        sliderComponents.clear();
-
-        for (auto& c : dropdownComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        dropdownComponents.clear();
-
-        for (auto& c : multiSelectComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        multiSelectComponents.clear();
-
-        for (auto& c : fileChooserComponents)
-        {
-            removeChildComponent(c.get());
-        }
-        fileChooserComponents.clear();
-
+        controls.clear();
         handlers.clear();
     }
 
@@ -186,40 +124,53 @@ public:
     {
         resetState();
 
+        /* Controls are laid out grouped by kind, in this order, rather than in the order
+           the model declares them */
+        std::array<std::vector<std::unique_ptr<ControlComponent>>, 7> groups;
+
         for (const auto& info : controlsInfo)
         {
-            if (auto* textInfo = dynamic_cast<TextBoxComponentInfo*>(info.get()))
+            if (auto* sliderInfo = dynamic_cast<SliderComponentInfo*>(info.get()))
             {
-                addTextBox(textInfo);
-            }
-            else if (auto* numberInfo = dynamic_cast<NumberBoxComponentInfo*>(info.get()))
-            {
-                addNumberBox(numberInfo);
+                groups[0].push_back(createSlider(sliderInfo));
             }
             else if (auto* toggleInfo = dynamic_cast<ToggleComponentInfo*>(info.get()))
             {
-                addToggle(toggleInfo);
-            }
-            else if (auto* sliderInfo = dynamic_cast<SliderComponentInfo*>(info.get()))
-            {
-                addSlider(sliderInfo);
+                groups[1].push_back(createToggle(toggleInfo));
             }
             else if (auto* dropdownInfo = dynamic_cast<ComboBoxComponentInfo*>(info.get()))
             {
-                addDropdown(dropdownInfo);
+                groups[2].push_back(createDropdown(dropdownInfo));
+            }
+            else if (auto* textInfo = dynamic_cast<TextBoxComponentInfo*>(info.get()))
+            {
+                groups[3].push_back(createTextBox(textInfo));
+            }
+            else if (auto* numberInfo = dynamic_cast<NumberBoxComponentInfo*>(info.get()))
+            {
+                groups[4].push_back(createNumberBox(numberInfo));
             }
             else if (auto* multiSelectInfo = dynamic_cast<MultiSelectComponentInfo*>(info.get()))
             {
-                addMultiSelect(multiSelectInfo);
+                groups[5].push_back(createMultiSelect(multiSelectInfo));
             }
             else if (auto* fileChooserInfo = dynamic_cast<FileComponentInfo*>(info.get()))
             {
-                addFileChooser(fileChooserInfo);
+                groups[6].push_back(createFileChooser(fileChooserInfo));
             }
             else
             {
-                // Unsupported control detected
+                // Model::extractInputs creates no other kind of control
                 jassertfalse;
+            }
+        }
+
+        for (auto& group : groups)
+        {
+            for (auto& control : group)
+            {
+                addAndMakeVisible(*control);
+                controls.push_back(std::move(control));
             }
         }
 
@@ -227,10 +178,9 @@ public:
     }
 
 private:
-    void addTextBox(TextBoxComponentInfo* info)
+    std::unique_ptr<ControlComponent> createTextBox(TextBoxComponentInfo* info)
     {
-        std::unique_ptr<TextBoxWithLabel> textComponent =
-            std::make_unique<TextBoxWithLabel>(info->label);
+        auto textComponent = std::make_unique<TextBoxWithLabel>(info->label);
 
         auto& textBox = textComponent->getTextBox();
 
@@ -239,15 +189,12 @@ private:
         addHandler(&textBox, info);
         textBox.addListener(info);
 
-        addAndMakeVisible(*textComponent);
-
-        textComponents.push_back(std::move(textComponent));
+        return textComponent;
     }
 
-    void addNumberBox(NumberBoxComponentInfo* info)
+    std::unique_ptr<ControlComponent> createNumberBox(NumberBoxComponentInfo* info)
     {
-        std::unique_ptr<NumberBoxWithLabel> numberComponent =
-            std::make_unique<NumberBoxWithLabel>(info->label);
+        auto numberComponent = std::make_unique<NumberBoxWithLabel>(info->label);
 
         auto& numberBox = numberComponent->getNumberBox();
 
@@ -257,15 +204,12 @@ private:
         addHandler(&numberBox, info);
         numberBox.addListener(info);
 
-        addAndMakeVisible(*numberComponent);
-
-        numberComponents.push_back(std::move(numberComponent));
+        return numberComponent;
     }
 
-    void addToggle(ToggleComponentInfo* info)
+    std::unique_ptr<ControlComponent> createToggle(ToggleComponentInfo* info)
     {
-        std::unique_ptr<ToggleWithLabel> toggleComponent =
-            std::make_unique<ToggleWithLabel>(info->label);
+        auto toggleComponent = std::make_unique<ToggleWithLabel>(info->label);
 
         auto& toggle = toggleComponent->getToggleButton();
 
@@ -274,14 +218,12 @@ private:
         addHandler(&toggle, info);
         toggle.addListener(info);
 
-        addAndMakeVisible(*toggleComponent);
-
-        toggleComponents.push_back(std::move(toggleComponent));
+        return toggleComponent;
     }
 
-    void addSlider(SliderComponentInfo* info)
+    std::unique_ptr<ControlComponent> createSlider(SliderComponentInfo* info)
     {
-        std::unique_ptr<SliderWithLabel> sliderComponent =
+        auto sliderComponent =
             std::make_unique<SliderWithLabel>(info->label, Slider::RotaryHorizontalVerticalDrag);
 
         auto& slider = sliderComponent->getSlider();
@@ -293,15 +235,12 @@ private:
         addHandler(&slider, info);
         slider.addListener(info);
 
-        addAndMakeVisible(*sliderComponent);
-
-        sliderComponents.push_back(std::move(sliderComponent));
+        return sliderComponent;
     }
 
-    void addDropdown(ComboBoxComponentInfo* info)
+    std::unique_ptr<ControlComponent> createDropdown(ComboBoxComponentInfo* info)
     {
-        std::unique_ptr<ComboBoxWithLabel> dropdownComponent =
-            std::make_unique<ComboBoxWithLabel>(info->label);
+        auto dropdownComponent = std::make_unique<ComboBoxWithLabel>(info->label);
 
         auto& dropdown = dropdownComponent->getComboBox();
         auto font = dropdown.getLookAndFeel().getComboBoxFont(dropdown);
@@ -310,68 +249,50 @@ private:
         for (const auto& option : info->options)
         {
             dropdown.addItem(option, dropdown.getNumItems() + 1);
-            widestOptionText = jmax(widestOptionText, font.getStringWidth(option));
+            widestOptionText = jmax(widestOptionText, ModelStyle::getTextWidth(font, option));
         }
 
-        if (! info->value.empty())
+        const auto selected = std::find(info->options.begin(), info->options.end(), info->value);
+
+        if (selected != info->options.end())
         {
-            // Set initial selection if "value" was provided
-            dropdown.setSelectedItemIndex(
-                std::distance(info->options.begin(),
-                              std::find(info->options.begin(), info->options.end(), info->value)),
-                dontSendNotification);
+            dropdown.setSelectedItemIndex((int) (selected - info->options.begin()),
+                                          dontSendNotification);
         }
         else
         {
-            // Fallback to first item
-            dropdown.setSelectedItemIndex(0, dontSendNotification);
+            // A value outside the choices (e.g., a custom one) is shown as it will be sent
+            dropdown.setText(info->value, dontSendNotification);
         }
+
         dropdown.setTextWhenNoChoicesAvailable("Empty");
         dropdownComponent->setMinimumContentWidth(widestOptionText);
 
         addHandler(&dropdown, info);
         dropdown.addListener(info);
 
-        addAndMakeVisible(*dropdownComponent);
-
-        dropdownComponents.push_back(std::move(dropdownComponent));
+        return dropdownComponent;
     }
 
-    void addMultiSelect(MultiSelectComponentInfo* info)
+    std::unique_ptr<ControlComponent> createMultiSelect(MultiSelectComponentInfo* info)
     {
-        std::unique_ptr<MultiSelectWithLabel> multiSelectComponent =
-            std::make_unique<MultiSelectWithLabel>(info->label);
+        auto multiSelectComponent = std::make_unique<MultiSelectWithLabel>(info->label);
 
-        std::vector<String> options;
-
-        for (const auto& option : info->options)
-        {
-            options.push_back(String(option));
-        }
+        std::vector<String> options(info->options.begin(), info->options.end());
+        std::vector<String> selected(info->values.begin(), info->values.end());
 
         multiSelectComponent->setOptions(options);
-
-        std::vector<String> selected;
-
-        for (const auto& value : info->values)
-        {
-            selected.push_back(String(value));
-        }
-
         multiSelectComponent->setSelection(selected);
         multiSelectComponent->addListener(info);
 
         addHandler(&multiSelectComponent->getSelectionButton(), info);
 
-        addAndMakeVisible(*multiSelectComponent);
-
-        multiSelectComponents.push_back(std::move(multiSelectComponent));
+        return multiSelectComponent;
     }
 
-    void addFileChooser(FileComponentInfo* info)
+    std::unique_ptr<ControlComponent> createFileChooser(FileComponentInfo* info)
     {
-        std::unique_ptr<FileChooserWithLabel> fileChooserComponent =
-            std::make_unique<FileChooserWithLabel>(info->label);
+        auto fileChooserComponent = std::make_unique<FileChooserWithLabel>(info->label);
 
         if (! info->path.empty())
             fileChooserComponent->setPath(info->path);
@@ -383,36 +304,23 @@ private:
 
         addHandler(fileChooserComponent.get(), info);
 
-        addAndMakeVisible(*fileChooserComponent);
-
-        fileChooserComponents.push_back(std::move(fileChooserComponent));
+        return fileChooserComponent;
     }
 
+    // Shows a control's description in the instructions box while hovering over it
     void addHandler(Component* comp, ModelComponentInfo* info)
     {
-        std::unique_ptr<HoverHandler> handler = std::make_unique<HoverHandler>(*comp);
+        auto handler = std::make_unique<HoverHandler>(*comp);
 
-        handler->onMouseEnter = [this, info]() { setInstructions(info->info); };
-        handler->onMouseExit = [this]() { clearInstructions(); };
+        handler->onMouseEnter = [this, info]
+        {
+            if (! info->info.empty())
+                instructionsMessage->setMessage(info->info);
+        };
+        handler->onMouseExit = [this] { instructionsMessage->clearMessage(); };
         handler->attach();
 
         handlers.push_back(std::move(handler));
-    }
-
-    void setInstructions(const String& text)
-    {
-        if (text.isNotEmpty() && instructionsMessage != nullptr)
-        {
-            instructionsMessage->setMessage(text);
-        }
-    }
-
-    void clearInstructions()
-    {
-        if (instructionsMessage != nullptr)
-        {
-            instructionsMessage->clearMessage();
-        }
     }
 
     struct RowEntry
@@ -423,64 +331,39 @@ private:
         int height = 0;
     };
 
-    std::vector<std::vector<RowEntry>> buildRowsForWidth(int width) const
+    /* Fills each row with as many controls as fit, in order, along with the gaps that
+       resized() leaves between them and at either end */
+    std::vector<std::vector<RowEntry>> buildRowsForWidth(int availableWidth) const
     {
         std::vector<std::vector<RowEntry>> rows;
 
-        if (width <= 0)
+        if (availableWidth <= 0)
         {
             return rows;
         }
 
-        addGroupToRows(rows, sliderComponents, width);
-        addGroupToRows(rows, toggleComponents, width);
-        addGroupToRows(rows, dropdownComponents, width);
-        addGroupToRows(rows, textComponents, width);
-        addGroupToRows(rows, numberComponents, width);
-        addGroupToRows(rows, multiSelectComponents, width);
-        addGroupToRows(rows, fileChooserComponents, width);
+        int rowWidth = 0;
 
-        return rows;
-    }
-
-    void addGroupToRows(std::vector<std::vector<RowEntry>>& rows,
-                        const auto& components,
-                        int availableWidth) const
-    {
-        for (const auto& c : components)
+        for (const auto& c : controls)
         {
-            int itemWidth = jmax(c->getMinimumRequiredWidth(), c->getPreferredWidth());
+            const int itemWidth =
+                jmin(jmax(c->getMinimumRequiredWidth(), c->getPreferredWidth()), availableWidth);
 
-            itemWidth = jmin(itemWidth, availableWidth);
-
-            if (rows.empty())
+            if (rows.empty()
+                || 2 * minEdgeGap + rowWidth + minInterItemGap + itemWidth > availableWidth)
             {
                 rows.emplace_back();
+                rowWidth = itemWidth;
             }
-
-            auto& row = rows.back();
-
-            int currentWidth = 0;
-
-            for (const auto& entry : row)
+            else
             {
-                currentWidth += entry.width;
-            }
-
-            if (! row.empty())
-            {
-                currentWidth += minInterItemGap * (int) row.size();
-            }
-
-            int candidateWidth = currentWidth + (row.empty() ? 0 : minInterItemGap) + itemWidth;
-
-            if (! row.empty() && candidateWidth > availableWidth)
-            {
-                rows.emplace_back();
+                rowWidth += minInterItemGap + itemWidth;
             }
 
             rows.back().push_back({ c.get(), itemWidth, c->getPreferredHeight() });
         }
+
+        return rows;
     }
 
     static int getRowHeight(const std::vector<RowEntry>& row)
@@ -495,19 +378,14 @@ private:
         return height;
     }
 
-    static constexpr float marginSize = 4;
+    static constexpr int marginSize = 4;
 
     static constexpr int minInterItemGap = 6;
     static constexpr int minEdgeGap = 4;
     static constexpr int minRowGap = 6;
 
-    std::vector<std::unique_ptr<TextBoxWithLabel>> textComponents;
-    std::vector<std::unique_ptr<NumberBoxWithLabel>> numberComponents;
-    std::vector<std::unique_ptr<ToggleWithLabel>> toggleComponents;
-    std::vector<std::unique_ptr<SliderWithLabel>> sliderComponents;
-    std::vector<std::unique_ptr<ComboBoxWithLabel>> dropdownComponents;
-    std::vector<std::unique_ptr<MultiSelectWithLabel>> multiSelectComponents;
-    std::vector<std::unique_ptr<FileChooserWithLabel>> fileChooserComponents;
+    // In the order they are laid out (see updateControls)
+    std::vector<std::unique_ptr<ControlComponent>> controls;
 
     std::vector<std::unique_ptr<HoverHandler>> handlers;
 

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <map>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -38,37 +37,51 @@ inline void
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 }
 
-/* Draws text over at most maxLines lines, which divide the area evenly, in the current font and
-   colour, and ends the last line with an ellipsis if the text does not fit. Line breaks in the
-   text are treated as spaces. (drawFittedText shrinks the font instead, and ignores the limit
-   altogether for text with line breaks.) */
-inline void drawTruncatedText(Graphics& g, const String& text, Rectangle<int> area, int maxLines)
+/* The lines text breaks into at a width, at most maxLines of them, the last of which takes
+   the rest of the text. Line breaks in the text are treated as spaces. Laying text out is
+   slow, so a caller that draws the same text repeatedly keeps the result. */
+inline StringArray getTruncatedLines(const String& text, const Font& f, int width, int maxLines)
 {
     auto words = StringArray::fromTokens(text, " \t\r\n", "");
     words.removeEmptyStrings();
     const String flattened = words.joinIntoString(" ");
 
     AttributedString attributed;
-    attributed.append(flattened, g.getCurrentFont());
+    attributed.append(flattened, f);
 
-    // Laid out only to find where the lines break
     TextLayout layout;
-    layout.createLayout(attributed, (float) area.getWidth());
+    layout.createLayout(attributed, (float) width);
+
+    StringArray lines;
 
     const int numLines = jmin(maxLines, layout.getNumLines());
-    const int lineHeight = area.getHeight() / jmax(1, maxLines);
 
     for (int i = 0; i < numLines; ++i)
     {
         const auto range = layout.getLine(i).stringRange;
-        const bool isLastLine = i == numLines - 1;
 
-        // The last line takes the rest of the text, cut short if it is too long
-        const String line = isLastLine ? flattened.substring(range.getStart())
-                                       : flattened.substring(range.getStart(), range.getEnd());
+        lines.add((i == numLines - 1 ? flattened.substring(range.getStart())
+                                     : flattened.substring(range.getStart(), range.getEnd()))
+                      .trim());
+    }
 
-        g.drawText(
-            line.trim(), area.removeFromTop(lineHeight), Justification::centredLeft, isLastLine);
+    return lines;
+}
+
+/* Draws lines from getTruncatedLines, which divide the area evenly, in the current font and
+   colour, and ends the last line with an ellipsis if it does not fit. (drawFittedText shrinks
+   the font instead, and ignores the limit altogether for text with line breaks.) */
+inline void
+    drawTruncatedLines(Graphics& g, const StringArray& lines, Rectangle<int> area, int maxLines)
+{
+    const int lineHeight = area.getHeight() / jmax(1, maxLines);
+
+    for (int i = 0; i < lines.size(); ++i)
+    {
+        g.drawText(lines[i],
+                   area.removeFromTop(lineHeight),
+                   Justification::centredLeft,
+                   i == lines.size() - 1);
     }
 }
 
@@ -138,9 +151,9 @@ inline String describeTags(const ModelTags& tags)
     if (! tags.outputs.empty())
         lines.add("Outputs: " + ModelTags::describe(tags.outputs));
 
-    // Spelled out as well as chipped, since a bare identifier does not say it is a license
-    if (const String license = tags.describeLicense(); license.isNotEmpty())
-        lines.add("License: " + license);
+    // Spelled out as well as badged, since a bare identifier does not say it is a license
+    if (const String terms = tags.describeLicense(); terms.isNotEmpty())
+        lines.add("License: " + terms);
 
     if (const StringArray labels = tags.getDisplayLabels(); ! labels.isEmpty())
         lines.add("Tags: " + labels.joinIntoString(", "));
@@ -229,24 +242,17 @@ inline constexpr int sectionHeaderHeight = 26;
 inline void drawSectionHeader(Graphics& g, const String& title, Rectangle<int> area)
 {
     const Font titleFont = font(15.0f, true);
-
-    // Measured once for each title, since shaping text on every repaint is slow
-    static std::map<String, int> titleWidths;
-
-    auto it = titleWidths.find(title);
-
-    if (it == titleWidths.end())
-        it = titleWidths.emplace(title, getTextWidth(titleFont, title)).first;
+    const int titleWidth = getTextWidth(titleFont, title);
 
     int lineX = area.getX();
 
-    if (it->second <= area.getWidth())
+    if (titleWidth <= area.getWidth())
     {
         g.setColour(Colours::white);
         g.setFont(titleFont);
         g.drawText(title, area, Justification::centredLeft, false);
 
-        lineX += it->second + 10;
+        lineX += titleWidth + 10;
     }
 
     g.setColour(accent.withAlpha(0.5f));

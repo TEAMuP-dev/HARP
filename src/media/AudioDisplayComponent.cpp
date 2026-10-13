@@ -13,8 +13,8 @@ AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW
     thumbnailComponent.addMouseListener(this, true);
     contentComponent.addAndMakeVisible(thumbnailComponent);
 
-    mediaInstructions =
-        "Audio waveform.\nClick and drag to start playback from any point in the waveform\nVertical scroll to zoom in/out.\nHorizontal scroll to move the waveform.";
+    mediaInstructions = "Audio waveform.\nClick anywhere to play from that point.\n"
+                        "Scroll to zoom in time, or hold Shift while scrolling to pan.";
 }
 
 AudioDisplayComponent::~AudioDisplayComponent()
@@ -50,27 +50,15 @@ void AudioDisplayComponent::resized()
 
 void AudioDisplayComponent::loadMediaFile(const URL& filePath)
 {
-    const auto source = std::make_unique<URLInputSource>(filePath);
-
     File audioFile = filePath.getLocalFile();
 
-    if (source == nullptr)
-    {
-        DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: File " << audioFile.getFullPathName()
-                                                                  << " does not exist.");
-        // TODO - better error handing
-        jassertfalse;
-        return;
-    }
+    auto stream = rawToUniquePtr(URLInputSource(filePath).createInputStream());
 
-    auto stream = rawToUniquePtr(source->createInputStream());
-
+    // Left empty if the file cannot be read, as a file of silence would be
     if (stream == nullptr)
     {
         DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: Failed to load file "
                     << audioFile.getFullPathName() << ".");
-        // TODO - better error handing
-        jassertfalse;
         return;
     }
 
@@ -80,8 +68,6 @@ void AudioDisplayComponent::loadMediaFile(const URL& filePath)
     {
         DBG_AND_LOG("AudioDisplayComponent::loadMediaFile: Failed to read file "
                     << audioFile.getFullPathName() << ".");
-        // TODO - better error handing
-        jassertfalse;
         return;
     }
 
@@ -104,9 +90,6 @@ void AudioDisplayComponent::resetMedia()
 
 void AudioDisplayComponent::postLoadActions(const URL& filePath)
 {
-    if (auto inputSource = std::make_unique<URLInputSource>(filePath))
-    {
-        thumbnailCache.clear();
-        thumbnail.setSource(inputSource.release());
-    }
+    thumbnailCache.clear();
+    thumbnail.setSource(new URLInputSource(filePath));
 }

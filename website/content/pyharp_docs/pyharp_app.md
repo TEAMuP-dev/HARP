@@ -32,7 +32,7 @@ Your terminal should display something like this:
 This share link expires in 1 week. For free permanent hosting and GPU upgrades, run `gradio deploy` from the terminal in the working directory to deploy to Hugging Face Spaces (https://huggingface.co/spaces)
 ```
 
-Copy the public URL -- in this example, `https://8661b0cf18d5cf17ec.gradio.live` -- and open up HARP. As shown below, we can link HARP to our application by selecting `custom path...` from the model drop-down menu and pasting our URL.
+Copy the public URL (in this example, `https://8661b0cf18d5cf17ec.gradio.live`) and open up HARP. As shown below, we can link HARP to our application by clicking `Custom Path...` on the Home tab and pasting our URL.
 
 <div style="max-width:720px;margin:1.5rem auto;">
   <video controls preload="metadata" width="100%">

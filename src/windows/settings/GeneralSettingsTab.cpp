@@ -1,7 +1,9 @@
 #include "GeneralSettingsTab.h"
 
-GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestoreDefaults)
-    : onRestoreDefaults(std::move(onRestoreDefaults))
+#include "../../utils/ModelCatalog.h"
+
+GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestore)
+    : onRestoreDefaults(std::move(onRestore))
 {
     // Set up button to open log folder
     openLogFolderButton.setButtonText("Open Log Folder");
@@ -51,10 +53,6 @@ void GeneralSettingsTab::handleOpenSettings()
     {
         settings->getFile().startAsProcess();
     }
-    else
-    {
-        // TODO - handler error case
-    }
 }
 
 void GeneralSettingsTab::handleClearLogs()
@@ -82,26 +80,16 @@ void GeneralSettingsTab::handleRestoreDefaults()
 
     if (auto* settings = Settings::getUserSettings())
     {
-        const StringArray allKeys = settings->getAllProperties().getAllKeys();
+        /* The API keys and the custom models are the user's own data rather than
+           preferences, so they are kept. The catalog also holds the custom models in
+           memory, and would write them back the next time one is added or removed. */
+        const String apiKeyPrefix = String(SharedAPIKeys::settingsPrefix) + ".";
 
-        // Preserve any API token keys so the user's credentials
-        // are not wiped by a settings restore
-        const String tokenKeyPrefix = sharedTokens->settingsPrefix + ".";
-
-        StringPairArray tokenValues;
-        for (const auto& key : allKeys)
+        for (const auto& key : settings->getAllProperties().getAllKeys())
         {
-            if (key.startsWith(tokenKeyPrefix))
-                tokenValues.set(key, settings->getValue(key));
+            if (! key.startsWith(apiKeyPrefix) && key != ModelCatalog::customPathsKey)
+                settings->removeValue(key);
         }
-
-        for (const auto& key : allKeys)
-            settings->removeValue(key);
-
-        // Restore saved tokens
-        const StringArray tokenKeys = tokenValues.getAllKeys();
-        for (const auto& key : tokenKeys)
-            settings->setValue(key, tokenValues[key]);
 
         saved = settings->saveIfNeeded();
     }
@@ -122,6 +110,7 @@ void GeneralSettingsTab::handleRestoreDefaults()
     AlertWindow::showMessageBoxAsync(
         AlertWindow::InfoIcon,
         "Settings Restored",
-        "All settings (except API tokens) have been restored to their defaults.",
+        "All settings have been restored to their defaults. API keys and custom models are "
+        "kept.",
         "Ok");
 }

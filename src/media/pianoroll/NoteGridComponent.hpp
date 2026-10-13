@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "KeyboardComponent.hpp"
@@ -15,19 +17,14 @@ using namespace juce;
 struct MidiNote
 {
 public:
-    MidiNote(unsigned char n, double s, double d, unsigned char v, unsigned char i = 0, bool drum = false)
+    MidiNote(unsigned char n,
+             double s,
+             double d,
+             unsigned char v,
+             unsigned char i = 0,
+             bool drum = false)
         : noteNumber(n), startTime(s), duration(d), velocity(v), instrument(i), isDrum(drum)
     {
-    }
-
-    MidiNote(const MidiNote& other)
-    {
-        noteNumber = other.noteNumber;
-        startTime = other.startTime;
-        duration = other.duration;
-        velocity = other.velocity;
-        instrument = other.instrument;
-        isDrum = other.isDrum;
     }
 
     unsigned char noteNumber;
@@ -51,7 +48,6 @@ public:
     double getPixelsPerSecond() { return pixelsPerSecond; }
 
     void setLength(double len);
-    double getLengthInSeconds() { return lengthInSeconds; }
 
     bool isKeyboardComponent() override { return false; }
 
@@ -61,7 +57,7 @@ public:
     void resetNotes();
 
 private:
-    Array<MidiNote*> midiNotes;
+    std::vector<MidiNote> midiNotes;
 
     double pixelsPerSecond;
     double lengthInSeconds;

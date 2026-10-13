@@ -1,6 +1,6 @@
-# Install HARP on Mac OS
+# Install HARP on macOS
 
-To install HARP on Mac OS 11 or later (`arm` or `x86`):
+To install HARP on macOS 11 or later (Apple silicon or Intel):
 
 * Download the DMG file from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 

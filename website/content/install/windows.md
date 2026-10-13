@@ -2,7 +2,7 @@
 
 To install HARP on Windows:
 
-* Download the ZIP file for your operating system version from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
+* Download the ZIP file (`HARP-<version>-Windows-x64.zip`) from the [releases](https://github.com/TEAMuP-dev/HARP/releases) page.
 
 * Extract the contents of the ZIP file.
 

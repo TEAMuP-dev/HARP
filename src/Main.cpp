@@ -67,16 +67,9 @@ public:
         clearLastFocusedWindow();
         Desktop::getInstance().addFocusChangeListener(this);
 
-        String windowTitle = getApplicationName();
-
-        if (windowCounter > 1)
-        {
-            windowTitle += " (" + String(windowCounter) + ")";
-        }
-
         windowCounter++;
 
-        mainWindow.reset(new HARPWindow(windowTitle));
+        mainWindow = std::make_unique<HARPWindow>(getApplicationName());
 
         bool showWelcome = Settings::getBoolValue("view.showWelcomePopup", true);
 
@@ -245,10 +238,9 @@ public:
         void publishMinimumSizeToWindowManager()
         {
 #if JUCE_LINUX
-            auto* constrainer = getConstrainer();
             auto* peer = getPeer();
 
-            if (constrainer == nullptr || peer == nullptr)
+            if (peer == nullptr)
             {
                 return;
             }
@@ -338,8 +330,8 @@ public:
                 xlib.getWMNormalHints(xlib.display, windowHandle, hints, &supplied);
 
                 hints->flags |= minSizeFlag;
-                hints->minWidth = constrainer->getMinimumWidth();
-                hints->minHeight = constrainer->getMinimumHeight();
+                hints->minWidth = constrainer.getMinimumWidth();
+                hints->minHeight = constrainer.getMinimumHeight();
 
                 xlib.setWMNormalHints(xlib.display, windowHandle, hints);
                 xlib.freeMemory(hints);
@@ -400,7 +392,7 @@ public:
                 }
                 else
                 {
-                    // No other windows - terminate application
+                    // No other windows, so terminate the application
                     JUCEApplication::getInstance()->systemRequestedQuit();
                 }
             }
@@ -409,20 +401,6 @@ public:
                 app->removeAdditionalWindow(this);
             }
         }
-
-        /*void activeWindowStatusChanged() override
-        {
-            if (isActiveWindow())
-            {
-                if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent()))
-                {
-                    // Check if loaded file(s) are still up to date when window refocused
-                    mainComp->focusCallback();
-                }
-            }
-
-            DocumentWindow::activeWindowStatusChanged();
-        }*/
 
     private:
         String getPrefix() { return "window." + windowIdentifier + "."; }
@@ -478,13 +456,13 @@ public:
                 }
                 else
                 {
-                    // No display found for saved position - center on main display
+                    // No display found for saved position, so center on main display
                     centreWithSize(width, height);
                 }
             }
             else
             {
-                // No saved position - center on screen
+                // No saved position, so center on screen
                 centreWithSize(getWidth(), getHeight());
             }
         }
@@ -509,8 +487,6 @@ public:
             mainWindow = std::move(additionalWindows.getReference(0));
             // Remove from additional windows
             additionalWindows.remove(0);
-
-            //windowCounter--; // TODO - leads to duplicate window numbers
         }
     }
 
@@ -522,8 +498,6 @@ public:
             {
                 // Remove referenced window
                 additionalWindows.remove(i);
-
-                //windowCounter--; // TODO - leads to duplicate window numbers
 
                 break;
             }
@@ -626,27 +600,25 @@ private:
                       is avoided because it's unclear how to add a checkbox to it and
                       MessageBoxOptions doesn't have withCustomComponent() method.
                     */
-                    std::unique_ptr<AlertWindow> alertWindow = std::make_unique<AlertWindow>(
+                    auto alertWindow = std::make_unique<AlertWindow>(
                         options.getTitle(), options.getMessage(), options.getIconType());
 
                     alertWindow->addButton(options.getButtonText(0), 1); // New window
                     alertWindow->addButton(options.getButtonText(1), 2); // Current window
                     alertWindow->addButton(options.getButtonText(2), 0); // Cancel
 
-                    // Checkbox is a raw pointer because it couldn't be passed to lambda as a unique_ptr
+                    // AlertWindow does not own its custom components, so the callback does
                     auto rememberCheckbox = std::make_unique<ToggleButton>("Remember my choice");
                     rememberCheckbox->setSize(200, 24);
                     rememberCheckbox->setName("");
 
-                    // AlertWindow doesn't take ownership of custom components so checkbox needs to be deleted manually
                     alertWindow->addCustomComponent(rememberCheckbox.get());
 
-                    // Open window asynchronously
-                    alertWindow->enterModalState(
+                    // Deleted by the modal manager once it is dismissed
+                    alertWindow.release()->enterModalState(
                         true,
                         ModalCallbackFunction::create(
                             [this,
-                             alertWindow = alertWindow.release(),
                              inputMediaFile,
                              rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
                             {
@@ -658,8 +630,8 @@ private:
 
                                     bool rememberChoice = rememberCheckboxPtr->getToggleState();
 
-                                    // Save preference if requested but d on't save Cancel choice
-                                    if (rememberChoice && choice <= 1)
+                                    // Save the preference if requested
+                                    if (rememberChoice)
                                     {
                                         Settings::setValue("newInstancePreference", choice, true);
                                     }
@@ -731,7 +703,7 @@ private:
     std::unique_ptr<HARPWindow> mainWindow;
     Array<std::unique_ptr<HARPWindow>> additionalWindows;
 
-    HARPWindow* lastFocusedWindow;
+    HARPWindow* lastFocusedWindow = nullptr;
 
     ApplicationProperties applicationProperties;
 

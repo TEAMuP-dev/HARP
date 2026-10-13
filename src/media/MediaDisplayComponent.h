@@ -29,6 +29,16 @@ enum class DisplayMode
     Preview // Media area only (for preview pane)
 };
 
+/* One audio output shared by every track. A device opened for each track would leave a device
+   and an audio thread running for every track of every tab and of the media clipboard, and
+   some systems allow only one client per device. The manager mixes all of its callbacks. */
+struct SharedAudioDevice
+{
+    SharedAudioDevice() { manager.initialise(0, 2, nullptr, true, {}, nullptr); }
+
+    AudioDeviceManager manager;
+};
+
 class OptionalBannerComponent : public Component
 {
 public:
@@ -49,8 +59,9 @@ private:
 class ColorablePanel : public Component
 {
 public:
-    ColorablePanel(Colour color = Colours::darkgrey)
-        : defaultColor(color), backgroundColor(color) {}
+    ColorablePanel(Colour color = Colours::darkgrey) : defaultColor(color), backgroundColor(color)
+    {
+    }
 
     void paint(Graphics& g) override { g.fillAll(backgroundColor); }
 
@@ -121,19 +132,10 @@ public:
 
     URL getOriginalFilePath() { return originalFilePath; }
 
-    //void addNewTempFile(); // Create working temp file to modify instead of current or original
-    //bool iteratePreviousTempFile();
-    //bool iterateNextTempFile();
-
-    //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
     bool isFileLoaded() const { return ! originalFilePath.isEmpty(); }
 
     /** Whether a wheel event over this track is used to zoom or scrub its media. */
     virtual bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
-    //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
-
-    //void clearFutureTempFiles(); // Prune temp files after currently selected index
-    //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
@@ -151,7 +153,7 @@ public:
         }
     }
 
-    bool isDuplicateFile(const URL& fileParth);
+    bool isDuplicateFile(const URL& filePath);
 
     void saveFileCallback();
     void copyFileCallback();
@@ -189,7 +191,7 @@ public:
     void removeLabelOverlay(LabelOverlayComponent* l);
 
     void addLabels(const LabelList& labels);
-    void clearLabels(int processingIdxCutoff = 0);
+    void clearLabels();
 
 protected:
     void resetTransport();
@@ -233,7 +235,7 @@ protected:
     std::unique_ptr<TimeAxisStrip> timeAxisStrip;
 
     AudioFormatManager formatManager;
-    AudioDeviceManager deviceManager;
+    SharedResourcePointer<SharedAudioDevice> audioDevice;
 
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
@@ -373,8 +375,6 @@ private:
     bool paused = false;
 
     URL originalFilePath;
-    int currentTempFileIdx;
-    Array<URL> tempFilePaths;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;

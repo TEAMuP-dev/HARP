@@ -2,9 +2,9 @@
  * @file MultiButton.h
  * @brief Flexible button component that supports multiple modes, hover instructions, and icons.
  * @author cwitkowitz, xribene
- * 
- * The MultiButton class extends the JUCE TextButton to provide a button that can switch between 
- * multiple modes. Each mode can have its own label, callback function, color, icon, and hover 
+ *
+ * The MultiButton class extends the JUCE TextButton to provide a button that can switch between
+ * multiple modes. Each mode can have its own label, callback function, color, icon, and hover
  * message. The button can display text or an icon, depending on the specified drawing mode.
  *
  * ### Example: Creating a Play/Stop Button
@@ -30,7 +30,7 @@
  *     };
  *     playStopButton.addMode(playButtonInfo);
  *     playStopButton.addMode(stopButtonInfo);
- *     playStopButton.setMode(playButtonInfo.label);
+ *     playStopButton.setMode(playButtonInfo.displayLabel);
  *     addAndMakeVisible(playStopButton);
  * }
  * ```
@@ -150,4 +150,10 @@ private:
     String currentModeKey;
 
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
+};
+
+// Draws a button without its background, for an icon that stands on its own
+struct BorderlessButtonLookAndFeel : public LookAndFeel_V4
+{
+    void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
 };

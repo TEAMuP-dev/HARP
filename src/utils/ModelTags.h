@@ -61,9 +61,8 @@ inline const std::vector<Category>& getCategories()
                 {
                     for (const auto& subcategoryData : *subcategoryList)
                     {
-                        category.subcategories.push_back(
-                            { subcategoryData["id"].toString(),
-                              subcategoryData["name"].toString() });
+                        category.subcategories.push_back({ subcategoryData["id"].toString(),
+                                                           subcategoryData["name"].toString() });
                     }
                 }
 
@@ -226,10 +225,7 @@ struct ModelTags
 
     bool isCategorized() const { return ! categories.isEmpty(); }
 
-    bool isInCategory(const String& categoryId) const
-    {
-        return categories.contains(categoryId);
-    }
+    bool isInCategory(const String& categoryId) const { return categories.contains(categoryId); }
 
     /* The license as a user reads it, e.g. "CC-BY-NC-4.0". SPDX ids are conventionally
        written in upper case, apart from "other", which names terms only the model's
@@ -310,8 +306,8 @@ struct ModelTags
         }
 
         /* The license is deliberately absent here. It is not a description of the
-           model but a condition on using its output, so it gets a chip of its own
-           (see ModelStyle::drawTagRow) rather than sitting among the tags, where it
+           model but a condition on using its output, so it gets a badge of its own
+           (see ModelStyle::getBadges) rather than sitting among the tags, where it
            reads as one more property and is lost in a crowded row. */
 
         if (const String flow = describeFlow(); flow.isNotEmpty())

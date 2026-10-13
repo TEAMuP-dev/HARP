@@ -120,7 +120,7 @@ private:
 
             const int available = selectionButton.getWidth() - textPadding;
 
-            if (available <= 0 || font.getStringWidth(allSelected) <= available)
+            if (available <= 0 || ModelStyle::getTextWidth(font, allSelected) <= available)
             {
                 selectionButton.setButtonText(allSelected);
             }

@@ -87,7 +87,7 @@ public:
 
     bool isModelLoaded() { return model->isLoaded(); }
 
-    // True while a model load or process request is still queued or running on
+    // True while a load, process, or cancel request is still queued or running on
     // one of this tab's thread pools. Used to defer destruction of the tab: if
     // its ThreadPool is destroyed while a worker is blocked in a network call,
     // JUCE force-kills the worker thread, which can corrupt the shared
@@ -99,10 +99,10 @@ public:
 
     // Called once this tab has left the UI but cannot be destroyed yet because a
     // request is still in flight. Aborts the connection locally so that the
-    // request settles within moments instead of whenever the server or the
-    // request timeout gets around to it - which may be long after the app has
-    // started shutting down, at which point delivering the result crashes. Any
-    // result that does still arrive is dropped, since the user closed this tab.
+    // request settles within moments, rather than once the server answers or the
+    // request times out. That may be long after the app has started shutting down,
+    // when delivering the result crashes. Any result that does still arrive is
+    // dropped, since the user closed this tab.
     void abandon()
     {
         abandoned = true;
@@ -417,7 +417,7 @@ private:
         /* Measure the wrapped message so the popup is tall enough to show all
            of it, using the same font and insets as CentredAlertLookAndFeel */
         AttributedString attrStr;
-        attrStr.append(centredAlertLF.messageText, Font(popupMessageFontHeight));
+        attrStr.append(centredAlertLF.messageText, Font(FontOptions(popupMessageFontHeight)));
 
         TextLayout layout;
         layout.createLayout(attrStr, (float) (popupWidth - 2 * (popupEdgeGap + popupIconWidth)));
@@ -462,10 +462,12 @@ private:
             endpointPath = gradioError->endpointPath;
         }
 
+        /* The log file's location is left out, since its path names the user's account and
+           the issue is public */
         String environment;
         environment << "- HARP version: " << JUCE_APPLICATION_VERSION_STRING << "\n";
-        environment << "- Time (local): " << Time::getCurrentTime().toString(true, true) << "\n";
-        environment << "- Log file: " << HARPLogger::getInstance()->getLogFile().getFullPathName();
+        environment << "- Operating system: " << SystemStats::getOperatingSystemName() << "\n";
+        environment << "- Time (local): " << Time::getCurrentTime().toString(true, true);
 
         /* Only values are supplied here. The report's structure lives solely in
            the issue form, whose field ids these query parameters correspond to.
@@ -565,10 +567,6 @@ private:
             {
                 loadedInputFiles[inputTrack->getTrackID()] =
                     inputTrack->getOriginalFilePath().getLocalFile();
-            }
-            else
-            {
-                // Optional track skipped
             }
         }
 
@@ -677,14 +675,36 @@ private:
         // Invalidate any in-flight jobs
         ++currentProcessID;
 
-        OpResult result = model->cancel();
+        SafePointer<ModelTab> safeThis(this);
+
+        // Asking the server to stop is a request of its own, which must not block the interface
+        processingThreadPool.addJob(
+            [this, safeThis]
+            {
+                OpResult result = model->cancel();
+
+                MessageManager::callAsync(
+                    [safeThis, result]
+                    {
+                        if (safeThis != nullptr)
+                            safeThis->finishCanceling(result);
+                    });
+            });
+    }
+
+    void finishCanceling(const OpResult& result)
+    {
+        if (abandoned)
+        {
+            // Tab was closed while the cancellation was in flight
+            return;
+        }
 
         if (result.failed())
         {
             openErrorPopup(result.getError());
         }
 
-        // Re-enable processing immediately
         processCancelButton.setMode(processButtonInfo.displayLabel);
         processCancelButton.setEnabled(true);
 
@@ -760,7 +780,7 @@ private:
                 }
 
                 GlyphArrangement ga;
-                ga.addFittedText({ (float) iconRect.getHeight() * 0.9f, Font::bold },
+                ga.addFittedText(Font(FontOptions((float) iconRect.getHeight() * 0.9f, Font::bold)),
                                  String::charToString((juce_wchar) (uint8) character),
                                  (float) iconRect.getX(),
                                  (float) iconRect.getY(),
@@ -791,7 +811,7 @@ private:
                     (float) (alert.getWidth() - edgeGap - iconSpaceUsed - rightPadding),
                     (float) (bottomOfText - (edgeGap + titleH)));
 
-                Font msgFont(popupMessageFontHeight);
+                const Font msgFont(FontOptions { popupMessageFontHeight });
 
                 AttributedString attrStr;
                 attrStr.setJustification(Justification::topLeft);

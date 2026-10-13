@@ -28,8 +28,6 @@ struct ClientError
     Type type;
 
     String path {};
-    String client {};
-    String token {};
 
     // Absent when no client had been chosen yet, and so no key applies
     std::optional<Provider> provider {};
@@ -37,95 +35,40 @@ struct ClientError
 
 inline String toUserMessage(const ClientError& e)
 {
-    String userMessage = "Something went wrong while setting up the model.";
+    const String quotedPath = e.path.isNotEmpty() ? " \"" + e.path + "\"" : String();
+    const String providerName = e.provider.has_value() ? getProviderName(*e.provider) : String();
 
     switch (e.type)
     {
         case ClientError::Type::UnknownClient:
 
-            userMessage = "Path ";
-
-            if (e.path.isNotEmpty())
-            {
-                userMessage += "\"" + e.path + "\" ";
-            }
-
-            userMessage += "does not match valid specification for any supported clients.";
-
-            return userMessage;
+            return "No supported provider recognizes the path" + quotedPath + ".";
 
         case ClientError::Type::InvalidModelPath:
 
-            userMessage = "Path ";
-
-            if (e.path.isNotEmpty())
-            {
-                userMessage += "\"" + e.path + "\" ";
-            }
-
-            userMessage += "does not match valid specification for client";
-
-            if (e.client.isNotEmpty())
-            {
-                userMessage += " \"" + e.client + "\"";
-            }
-
-            userMessage += ".";
-
-            return userMessage;
+            return "The path" + quotedPath + " does not name a model offered by "
+                   + (providerName.isNotEmpty() ? providerName : String("this provider")) + ".";
 
         case ClientError::Type::ModelNotFound:
-
-            userMessage = "No model was found at ";
-
-            if (e.path.isNotEmpty())
-            {
-                userMessage += "\"" + e.path + "\"";
-            }
-            else
-            {
-                userMessage += "the given path";
-            }
 
             /* Underscores and hyphens are interchangeable in the address used to
                reach a model but not in its name, so a misspelling of one for the
                other is the likeliest reason to land here. */
-            userMessage += ". Please check the spelling, including any underscores"
-                           " and capitalization. If the model is private, make sure"
-                           " you have added a valid API key in settings.";
-
-            return userMessage;
+            return "No model was found at"
+                   + (quotedPath.isNotEmpty() ? quotedPath : String(" the given path"))
+                   + ". Please check the spelling, including any underscores and"
+                     " capitalization. If the model is private, make sure you have added a"
+                     " valid API key in settings.";
 
         case ClientError::Type::InsufficientPermissions:
 
-            if (e.token.isEmpty())
-            {
-                userMessage = "Authorization for client";
-
-                if (e.client.isNotEmpty())
-                {
-                    userMessage += " \"" + e.client + "\"";
-                }
-
-                userMessage +=
-                    " failed. Please make sure you have added a valid API key in settings.";
-            }
-            else
-            {
-                userMessage = "Token \"" + e.token + "\" for client";
-
-                if (e.client.isNotEmpty())
-                {
-                    userMessage += " \"" + e.client + "\"";
-                }
-
-                userMessage += " does not have sufficient permissions.";
-            }
-
-            return userMessage;
+            return "Authorization"
+                   + (providerName.isNotEmpty() ? " with " + providerName : String())
+                   + " failed. Please make sure you have added a valid API key with sufficient"
+                     " permissions in settings.";
     }
 
-    return userMessage;
+    return "Something went wrong while setting up the model.";
 }
 
 struct HttpError
@@ -153,9 +96,9 @@ struct HttpError
     int statusCode = 0;
 
     // Optional diagnostic text extracted from the response body
-    String detail = {};
+    String detail {};
 
-    std::optional<Provider> provider;
+    std::optional<Provider> provider {};
 };
 
 inline String toUserMessage(const HttpError& e)
@@ -243,9 +186,9 @@ inline String toUserMessage(const HttpError& e)
 
             if (e.statusCode == 402)
             {
-                userMessage = "This request could not be completed because the service "
-                              "reported payment/quota limits. Please check your account "
-                              "usage/billing and try again.";
+                userMessage = "The service declined the request because the account has reached "
+                              "its usage or billing limit. Please check the account, then try "
+                              "again.";
 
                 if (e.detail.isNotEmpty())
                 {
@@ -578,7 +521,7 @@ inline String toUserMessage(const FileError& e)
                 userMessage += " at path \"" + e.path + "\"";
             }
 
-            userMessage += "does not exist.";
+            userMessage += " does not exist.";
 
             return userMessage;
 
@@ -658,8 +601,8 @@ inline String toLogString(const Error& error)
 {
     if (const auto* e = std::get_if<ClientError>(&error))
     {
-        return "ClientError(" + enumToString(e->type) + ", path=\"" + e->path + "\", client=\""
-               + e->client + "\")";
+        return "ClientError(" + enumToString(e->type) + ", path=\"" + e->path + "\", provider=\""
+               + (e->provider.has_value() ? enumToString(*e->provider) : String()) + "\")";
     }
 
     if (const auto* e = std::get_if<HttpError>(&error))
@@ -773,25 +716,22 @@ public:
     /**
      * Create a result indicating success.
      */
-    static OpResult ok() noexcept { return OpResult(Result::ok(), std::nullopt); }
+    static OpResult ok() noexcept { return OpResult(std::nullopt); }
 
     /**
      * Create a result indicating failure with a specific error.
      */
-    static OpResult fail(Error error)
-    {
-        return OpResult(Result::fail(toUserMessage(error)), std::move(error));
-    }
+    static OpResult fail(Error error) { return OpResult(std::move(error)); }
 
     /**
      * Check if this result indicates success.
      */
-    bool wasOk() const noexcept { return result.wasOk(); }
+    bool wasOk() const noexcept { return ! error.has_value(); }
 
     /**
      * Check if this result indicates failure.
      */
-    bool failed() const noexcept { return result.failed(); }
+    bool failed() const noexcept { return error.has_value(); }
 
     /**
      * Obtain the error associated with this result if one exists.
@@ -805,9 +745,7 @@ public:
     explicit operator bool() const noexcept { return wasOk(); }
 
 private:
-    OpResult(Result r, std::optional<Error> e) : result(std::move(r)), error(std::move(e)) {}
-
-    Result result;
+    explicit OpResult(std::optional<Error> e) : error(std::move(e)) {}
 
     std::optional<Error> error;
 };

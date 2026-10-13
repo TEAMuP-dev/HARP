@@ -143,13 +143,23 @@ public:
 
         area.removeFromTop(2);
 
+        const auto descriptionArea = area.removeFromTop(30);
+        const Font descriptionFont = font(13.0f);
+
+        if (descriptionArea.getWidth() != descriptionWidth)
+        {
+            descriptionLines = getTruncatedLines(entry.description.isNotEmpty()
+                                                     ? entry.description
+                                                     : String("No description provided."),
+                                                 descriptionFont,
+                                                 descriptionArea.getWidth(),
+                                                 descriptionMaxLines);
+            descriptionWidth = descriptionArea.getWidth();
+        }
+
         g.setColour(Colours::whitesmoke.withAlpha(0.85f));
-        g.setFont(font(13.0f));
-        drawTruncatedText(g,
-                          entry.description.isNotEmpty() ? entry.description
-                                                         : String("No description provided."),
-                          area.removeFromTop(30),
-                          2);
+        g.setFont(descriptionFont);
+        drawTruncatedLines(g, descriptionLines, descriptionArea, descriptionMaxLines);
 
         /* Tags, as many as fit (all of them are described while hovering) */
 
@@ -171,6 +181,7 @@ public:
 private:
     static constexpr int nameRowHeight = 20;
     static constexpr int removeButtonSize = 18;
+    static constexpr int descriptionMaxLines = 2;
 
     Rectangle<int> getContentArea() const { return getLocalBounds().reduced(12, 9); }
     Rectangle<int> getNameRow() const { return getContentArea().removeFromTop(nameRowHeight); }
@@ -179,6 +190,10 @@ private:
     const std::vector<ModelStyle::Badge> badges;
     const StringArray tagLabels;
     const String searchableText;
+
+    // The description as last broken into lines, and the width it was broken at
+    StringArray descriptionLines;
+    int descriptionWidth = -1;
 
     std::function<void(const CatalogEntry&)> onOpenRequested;
 
@@ -214,7 +229,7 @@ public:
             for (const auto& entry : entries)
             {
                 const bool belongs = id == otherSectionId ? ! entry.tags.isCategorized()
-                                                              : entry.tags.isInCategory(id);
+                                                          : entry.tags.isInCategory(id);
 
                 if (! belongs)
                     continue;

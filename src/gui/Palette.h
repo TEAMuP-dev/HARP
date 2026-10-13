@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <map>
+#include <utility>
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 using namespace juce;
@@ -35,8 +38,22 @@ inline Font font(float height, bool bold = false)
     return Font(FontOptions(height, bold ? Font::bold : Font::plain));
 }
 
+/* Measures text once for each font and string. JUCE shapes the text on every measurement,
+   which is slow enough to show in paint() and resized(), where most of these are taken.
+   Only the message thread measures text, so the cache needs no lock. */
 inline int getTextWidth(const Font& f, const String& text)
 {
-    return GlyphArrangement::getStringWidthInt(f, text);
+    static std::map<std::pair<String, String>, int> widths;
+
+    const auto key = std::make_pair(f.toString(), text);
+
+    auto it = widths.find(key);
+
+    if (it == widths.end())
+    {
+        it = widths.emplace(key, GlyphArrangement::getStringWidthInt(f, text)).first;
+    }
+
+    return it->second;
 }
 } // namespace ModelStyle
