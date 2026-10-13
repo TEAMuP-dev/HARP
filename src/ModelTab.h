@@ -515,11 +515,15 @@ private:
 
             catalog->recordLoadSuccess(model->getLoadedPath(), model->getMetadata());
 
-            modelInfoWidget.updateLabels(model->getMetadata());
+            const auto* entry = catalog->findEntry(model->getLoadedPath());
+
+            // A Space's license is known to the catalog rather than to the card
+            modelInfoWidget.updateLabels(model->getMetadata(),
+                                         entry != nullptr ? entry->tags.license : String());
             modelInfoWidget.addOpenablePath(model->getOpenablePath());
 
             // Once loaded, only how the model is deployed is worth noting
-            if (const auto* entry = catalog->findEntry(model->getLoadedPath()))
+            if (entry != nullptr)
                 modelInfoWidget.setBadges(ModelStyle::getBadges(*entry, false));
 
             controlAreaWidget.updateControls(model->getControls());

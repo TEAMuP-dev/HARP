@@ -144,6 +144,12 @@ struct ModelTags
     std::vector<DataType> outputs;
     int sampleRate = 0; // Hz, or 0 if not declared
     String channels; // e.g. "mono", "stereo", "6"
+    String license; // SPDX id as declared, e.g. "cc-by-nc-4.0", or empty
+    /* Declared by a Space whose work runs on ZeroGPU even though the Space itself does
+       not: a thin frontend that forwards to the authors' own Space is hosted on CPU, so
+       its hardware says nothing about the allowance a request actually draws on. Shown
+       as the ZeroGPU badge rather than as a tag of its own. */
+    bool zeroGPU = false;
     StringArray custom; // Everything else, as given
 
     static ModelTags parse(const StringArray& tags)
@@ -188,6 +194,14 @@ struct ModelTags
             {
                 parsed.channels = value.toLowerCase();
             }
+            else if (hasValue && key == "license")
+            {
+                parsed.license = value.toLowerCase();
+            }
+            else if (tag.equalsIgnoreCase("zerogpu"))
+            {
+                parsed.zeroGPU = true;
+            }
             else
             {
                 parsed.custom.addIfNotAlreadyThere(tag);
@@ -217,6 +231,17 @@ struct ModelTags
         return categories.contains(categoryId);
     }
 
+    /* The license as a user reads it, e.g. "CC-BY-NC-4.0". SPDX ids are conventionally
+       written in upper case, apart from "other", which names terms only the model's
+       description can explain. */
+    String describeLicense() const
+    {
+        if (license.isEmpty())
+            return {};
+
+        return license == "other" ? "Custom license" : license.toUpperCase();
+    }
+
     // e.g. "Audio, File (JSON, TXT)", or empty when none are declared
     static String describe(const std::vector<DataType>& dataTypes)
     {
@@ -226,6 +251,30 @@ struct ModelTags
             descriptions.add(dataType.describe());
 
         return descriptions.joinIntoString(", ");
+    }
+
+    /* What the model takes in and gives back, as one label, e.g. "Audio \xe2\x86\x92 MIDI"
+       or "MIDI \xe2\x86\x92 File (TXT)". The formats come along, since what kind of file a
+       model returns is as much a part of the answer as that it returns one. */
+    String describeFlow() const
+    {
+        const auto modalities = [](const std::vector<DataType>& dataTypes)
+        {
+            StringArray names;
+
+            for (const auto& dataType : dataTypes)
+                names.addIfNotAlreadyThere(dataType.describe());
+
+            return names.joinIntoString(" + ");
+        };
+
+        const String takes = modalities(inputs);
+        const String gives = modalities(outputs);
+
+        if (takes.isEmpty() && gives.isEmpty())
+            return {};
+
+        return takes + String::fromUTF8(" \xe2\x86\x92 ") + gives;
     }
 
     // Short labels for the most distinguishing tags, most important first
@@ -259,6 +308,14 @@ struct ModelTags
             if (! hasSubcategory)
                 labels.add(category.displayName);
         }
+
+        /* The license is deliberately absent here. It is not a description of the
+           model but a condition on using its output, so it gets a chip of its own
+           (see ModelStyle::drawTagRow) rather than sitting among the tags, where it
+           reads as one more property and is lost in a crowded row. */
+
+        if (const String flow = describeFlow(); flow.isNotEmpty())
+            labels.add(flow);
 
         if (sampleRate > 0)
             labels.add(sampleRate % 1000 == 0 ? String(sampleRate / 1000) + " kHz"

@@ -152,7 +152,9 @@ public:
         return height;
     }
 
-    void updateLabels(const ModelMetadata& metadata)
+    /* licenseFallback is the license the catalog knows, which a Space declares in its own
+       metadata rather than in its card, so it reaches the panel only by being passed. */
+    void updateLabels(const ModelMetadata& metadata, const String& licenseFallback = {})
     {
         modelAuthorLabel.setModelName(String(metadata.name));
         modelAuthorLabel.setAuthor(metadata.author.empty() ? String()
@@ -165,7 +167,13 @@ public:
         for (const auto& tag : metadata.tags)
             tags.add(tag);
 
-        tagRow.setTags(ModelTags::parse(tags));
+        ModelTags parsed = ModelTags::parse(tags);
+
+        // The card's own license wins, where it declares one
+        if (parsed.license.isEmpty())
+            parsed.license = licenseFallback;
+
+        tagRow.setTags(parsed);
         tagRow.setVisible(! tagRow.isEmpty());
 
         resized();

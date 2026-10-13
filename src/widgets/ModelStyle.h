@@ -27,6 +27,10 @@ inline const Colour chipText { 0xff9eeadf };
 inline const Colour problem { 0xfff87171 };
 inline const Colour information { 0xff7dd3fc };
 inline const Colour zeroGPU { 0xffa78bfa };
+/* A license sits with the badges rather than the tags because it answers the
+   same kind of question they do: not what the model is, but what using it
+   entails. Amber reads as something to note without reading as an error. */
+inline const Colour license { 0xffe9c894 };
 inline const Colour secondaryText { 0xffa3a3a3 };
 
 inline Font font(float height, bool bold = false)
@@ -146,11 +150,17 @@ inline String describeTags(const ModelTags& tags)
 {
     StringArray lines;
 
+    // Each one listed separately here, where there is room for a model that takes
+    // or returns several things
     if (! tags.inputs.empty())
         lines.add("Inputs: " + ModelTags::describe(tags.inputs));
 
     if (! tags.outputs.empty())
         lines.add("Outputs: " + ModelTags::describe(tags.outputs));
+
+    // Spelled out as well as chipped, since a bare identifier does not say it is a license
+    if (const String license = tags.describeLicense(); license.isNotEmpty())
+        lines.add("License: " + license);
 
     if (const StringArray labels = tags.getDisplayLabels(); ! labels.isEmpty())
         lines.add("Tags: " + labels.joinIntoString(", "));
@@ -183,6 +193,12 @@ inline std::vector<Badge> getBadges(const CatalogEntry& entry, bool includeAvail
 
     if (entry.provider != "Hugging Face")
         badges.push_back({ entry.provider, Colours::lightgrey });
+
+    /* Last, so that it is drawn leftmost and reads straight after the name. The
+       availability note and the hardware stay at the right edge, where a reader
+       who is scanning a column of cards expects to find them. */
+    if (const String terms = entry.tags.describeLicense(); terms.isNotEmpty())
+        badges.push_back({ terms, license });
 
     return badges;
 }

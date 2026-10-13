@@ -66,7 +66,13 @@ struct CatalogEntry
     bool isCustom = false; // Added by the user rather than found
     LoadStatus loadStatus = LoadStatus::None;
 
-    bool isZeroGPU() const { return hardware.startsWithIgnoreCase("zero-"); }
+    /* Either the Space runs on ZeroGPU, or it says its work does: a frontend that
+       forwards to the authors' own Space is hosted on CPU, so only the declaration
+       tells a user their request needs GPU allowance and queues for it. */
+    bool isZeroGPU() const
+    {
+        return hardware.startsWithIgnoreCase("zero-") || tags.zeroGPU;
+    }
 
     /* The Hub's report on a Space, before anything is asked of it, is only an expectation.
        Once a load has been attempted, its outcome is what counts. */
@@ -460,6 +466,16 @@ private:
                         tags.add(tag.toString());
                 }
 
+                /* A Space declares its license in its own frontmatter field rather than as a
+                   tag, so it is read from there and tagged, which is how the license reaches
+                   the Home tab. A model card listing "license:<id>" among its tags is read
+                   the same way, wherever it is hosted (see ModelTags.h). */
+                if (const String license = cardData["license"].toString().trim();
+                    license.isNotEmpty())
+                {
+                    tags.add("license:" + license);
+                }
+
                 CatalogEntry entry;
                 entry.path = path;
                 entry.name = cardData["title"].toString().trim();
@@ -561,7 +577,16 @@ private:
                     for (const auto& tag : card.tags)
                         tags.add(tag);
 
+                    /* A Space declares its license in its own metadata rather than in
+                       its card, so replacing the tags outright would drop the license
+                       the moment the model loaded. It is carried over unless the card
+                       names one itself. */
+                    const String license = entry.tags.license;
+
                     entry.tags = ModelTags::parse(tags);
+
+                    if (entry.tags.license.isEmpty())
+                        entry.tags.license = license;
                 }
             }
         }
