@@ -34,6 +34,10 @@ class CaseResult:
                               # which reserves ZeroGPU allowance. A retried
                               # call reserves another time and counts again
     error: str = ""
+    observed: dict = dataclasses.field(default_factory=dict)
+                              # Output label -> measured properties, for
+                              # properties no rule asserts (see
+                              # cases.measure_outputs)
 
 
 @dataclasses.dataclass
