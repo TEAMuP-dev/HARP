@@ -60,7 +60,8 @@ target_sources(${PROJECT_NAME}
         src/widgets/PreviewPaneWidget.h
 
         src/gui/MultiButton.cpp
-        src/gui/CloseButton.h
+        src/gui/RoundIconButton.h
+        src/gui/Palette.h
         src/gui/HoverableLabel.h
         src/gui/TextBoxWithLabel.h
         src/gui/NumberBoxWithLabel.h
