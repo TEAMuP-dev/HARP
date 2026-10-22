@@ -160,7 +160,9 @@ Field by field:
 - **`sdk_version`** is pinned to `6.24.0`. This is the version the Space actually deploys with, and
   it must be set even though `gradio` does not appear in `requirements.txt`. Gradio `4.x` and
   earlier are incompatible with HARP, and versions before `6.13.0` cannot forward error messages at
-  all.
+  all. Where a dependency rules `6.24.0` out, hold the newest release it allows and say why in the
+  README body. Nine Spaces hold `6.17.3`, the newest whose `huggingface-hub` floor admits the
+  transformers 4.x their models need.
 - **`sdk`** is `gradio`, or `docker` for the layout under
   [Dependency Conflicts](#dependency-conflicts).
 - **`app_file`** is `app.py`, and **`pinned`** is `false`.
@@ -191,31 +193,37 @@ anyone browsing.
 
 ## Versions and Compatibility
 
-HARP and PyHARP are released as compatible pairs. **Pin `pyharp` to a commit** in
-`requirements.txt`, never to a branch or a tag:
+HARP and PyHARP are released as compatible pairs. **Pin `pyharp` to a release tag** in
+`requirements.txt`, never to a branch:
 
 ```
-# pyharp v0.4.1
-git+https://github.com/TEAMuP-dev/pyharp.git@<COMMIT>
+git+https://github.com/TEAMuP-dev/pyharp.git@<TAG>
 ```
 
 A branch such as `develop` moves under the Space, so a rebuild can change how it behaves with
-nothing in the repository having changed. A tag can move as well, whenever a release is corrected,
-and that case is harder to see. pip caches the wheel it built for a URL, so a Space pinned to a tag
-goes on installing whatever that tag named when the Space was last built, through later rebuilds and
-factory reboots alike. Nothing in the installed metadata disagrees, since the version string is
-whichever one the old commit declared. A corrected `v0.4.1` tag left 45 ZeroGPU Spaces on v0.4.0,
-whose daemonic worker fails every `/process` call, while every pin still read `@v0.4.1`. A commit
-cannot move, so the pin and the install cannot drift. Name the release in a comment above it, which
-keeps the file readable without making the tag load-bearing. Gradio is pinned separately, by
-`sdk_version` in the [Space README](#space-readme), and the two have to agree. The latest PyHARP
-requires `gradio>=6.13.0,<7`, below which Gradio discards the payload carrying the reason a job
-failed (see [Error Reporting](#error-reporting)).
+nothing in the repository having changed. **A released tag never moves**: a fix ships as a new patch
+release instead. pip caches the wheel it built for a URL, so a Space pinned to a tag that is later
+moved goes on installing whatever the tag named when the Space was last built, through rebuilds and
+factory reboots alike, and nothing in the installed metadata disagrees. A moved `v0.4.1` once left
+45 ZeroGPU Spaces on v0.4.0, whose daemonic worker fails every `/process` call, while every pin
+still read `@v0.4.1`.
 
-So `requirements.txt` holds `pyharp` pinned to a commit, `spaces` (see
+Should a tag ever move, repin the Spaces built against it to the commit it now names. That is a new
+URL, which forces a fresh install, and naming the release in a comment above it keeps the file
+readable. The fleet pinned v0.4.1 this way for exactly that reason, until v0.4.2 replaced it.
+
+Gradio is pinned separately, by `sdk_version` in the [Space README](#space-readme), and the two have
+to agree. The latest PyHARP requires `gradio>=6.13.0,<7`, below which Gradio discards the payload
+carrying the reason a job failed (see [Error Reporting](#error-reporting)).
+
+So `requirements.txt` holds `pyharp` pinned to a release, `spaces` (see
 [Hardware Portability](#hardware-portability)), and the model's own dependencies, kept to what the
 app imports (see [Keeping a Space Lightweight](#keeping-a-space-lightweight)). It does not hold
 `gradio`.
+
+**Pin the package that implements the model** to an exact version, since `app.py` calls its API and
+a rebuild otherwise installs whatever is newest. `muscriptor` 0.4.0 renamed the method MuScriptor
+calls, the Space installed it on a rebuild for an unrelated change, and every request failed.
 
 HARP keeps any tag it cannot place and shows it as a custom tag, so [tags](#tags) degrade rather
 than break. A Space deployed with a PyHARP older than the taxonomy still appears and still shows
@@ -263,8 +271,34 @@ behind `if __name__ == "__main__":`, with `process_fn` defined above it. PyHARP'
 [Worker Processes](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#worker-processes)
 section covers what this asks of `process_fn`. What it changes for a deployment:
 
-- **Module scope runs in two processes**, the app and the worker, so a model loaded there is held
-  twice. See [Model Weights](#model-weights).
+- **Load the model in the worker alone.** Module scope runs in both processes, but only the worker
+  runs `process_fn`, so the app has no use for the model. Loading it there as well holds it twice,
+  and where both processes download the same file at once, one can read it before the other has
+  finished writing it: PiCoGen's worker failed with "failed finding central directory" on a
+  checkpoint the app was still downloading. Load when the module is imported as anything other than
+  `__main__`, which the worker's import is:
+
+  ```python
+  if __name__ != "__main__":
+      model = load_model()
+  ```
+
+  The app still binds its port at once, since it skips the load, and the worker, which starts with
+  the Space (see below), finishes loading before `process_fn` can reserve a GPU. On ZeroGPU, place
+  the model on CUDA here, on the worker's main thread: AnyAccomp's `.to("cuda")` failed from a
+  loader thread with "Low-level CUDA init reached".
+
+  Many Spaces written before PyHARP 0.4.2 load in both processes, at module scope or in a background
+  thread that the worker joins. Loading at module scope is safe, if wasteful, because the app
+  finishes it before it starts the worker. A thread is safe only while everything it downloads goes
+  through the Hub's cache, which locks each file. Anything else, such as a URL fetched to a fixed
+  path, is still being written by the app's thread when the worker's own thread starts.
+- **The worker starts as the Space comes up.** Since PyHARP 0.4.2, `build_endpoint` starts it at
+  once (`warm_start`), so its import and every model it loads are done before the first request in
+  most cases. A request that arrives while the worker is still loading waits for it, and on ZeroGPU
+  a wait of more than about two minutes outlasts the request's token: a worker that spent 2 min 15 s
+  loading reached the GPU with the token gone, and the request failed with "Expired ZeroGPU proxy
+  token".
 - **`build_endpoint` takes `timeout_s`**, defaulting to 900 seconds. Raise it for a model that
   legitimately runs longer.
 - **A Space that shells out should use `subprocess.run`.** The worker leads its own process group,
@@ -305,6 +339,24 @@ comparing against the paper will look for it.
 State the units, and what the extremes do. A range given without either leaves a producer guessing
 at both.
 
+**Label each output with what it holds.** HARP tells results apart by their file names, which
+matters most in its media clipboard, where results from many runs and models sit side by side. A
+name like `tmp3kx9q.wav` or `output.wav` is soon lost among them. PyHARP renames every file
+`process_fn` returns as `<model>_<output>`, from the model card's name and the output's label (see
+[Output File Names](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#output-file-names)).
+The label is the part a Space chooses, so make it say what the result is: "Vocals", "Accompaniment",
+or "Restored Audio", never "Output Audio" or "Result". Return each result as a file rather than as
+an array, and a `gr.Audio` result in the `format` it declares, since Gradio names any audio it has
+to write itself `audio.wav`.
+
+**Return labels as a `LabelList`, over a track.** HARP reads every `gr.JSON` output as a PyHARP
+`LabelList` and fails the whole request on anything else, so a plain dictionary of results shows
+the user an error after the model has done its work. It also draws labels only over an audio, MIDI
+or file output the model returns. An analysis model therefore returns its input as an audio output
+alongside the labels, as Beat-This and S-KEY do, and a whole-clip result such as a tag, a score or
+a loudness reading becomes a label spanning the clip. Six Spaces once returned plain dictionaries,
+and every request to them failed in HARP.
+
 PyHARP's README covers the rest of the interface:
 [Gradio Endpoint](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#gradio-endpoint)
 lists the components HARP supports as controls and documents marking an input optional with
@@ -322,11 +374,14 @@ options below are in rough order of preference.
 
 Whichever is used, resolve the weights **at module scope rather than inside `process_fn`**, so that
 no job pays to fetch them, a failure to fetch surfaces when the Space boots, and a replacement
-[worker](#worker-processes) is warm before the next request.
+[worker](#worker-processes) is warm before the next request. On ZeroGPU a fetch inside `process_fn`
+also runs inside the GPU reservation, which a large download can outlast, and it can fail outright:
+FST-AI-Music-Detection's first call after a restart could not resolve the host serving its weights.
 
-Module scope runs in both the app and the worker, so the model is held twice: host memory in either
-case, and device memory as well on a dedicated GPU, where `.to(device)` also runs in both. Size the
-hardware for two copies.
+Load the weights in the worker alone, as [Worker Processes](#worker-processes) describes. A Space
+that loads them at module scope in both the app and the worker holds the model twice: host memory
+in either case, and device memory as well on a dedicated GPU, where `.to(device)` also runs in both.
+Size such a Space's hardware for two copies.
 
 ### Upstream Hub Repository
 
@@ -364,6 +419,20 @@ This is the least code, and it keeps the weights consistent with the code that e
 tradeoff is that the version is whatever the package pins, so pin the package itself in
 `requirements.txt`. Such downloads usually happen on first use, so construct the model at module
 scope to keep that cost out of the first request.
+
+A library that downloads from outside the Hub also ties the Space to that server. beat_this fetches
+its checkpoint from a university cloud, which has failed both with a 503 and, inside a GPU call,
+for want of name resolution. The fleet reads the same file from a
+[mirror](#mirrored-model-repository) instead, linked where the library looks before it downloads:
+
+```python
+checkpoint = Path(torch.hub.get_dir()) / "checkpoints" / "beat_this-final0.ckpt"
+
+if not checkpoint.exists():
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.symlink_to(hf_hub_download("teamup-tech/Beat-This-weights", "final0.ckpt",
+                                          revision="<COMMIT_SHA>"))
+```
 
 ### Mirrored Model Repository
 
@@ -586,30 +655,108 @@ Three things make this portable:
   ZeroGPU, where a real GPU exists only inside the decorated function, but Hugging Face enables a
   CUDA emulation mode outside it precisely so that module-level placement works. Lazy-loading or
   calling `.to("cuda")` inside the decorated function is explicitly discouraged and is measurably
-  slower, since CUDA transfers are optimized for placement during startup.
+  slower, since CUDA transfers are optimized for placement during startup. ZeroGPU runs each call
+  in a fresh fork, so a model built inside the function is built again on every call. The one
+  exception found so far is a model holding a sparse tensor, which the emulation cannot register
+  ("Cannot access storage of SparseTensorImpl"), so Vevo2 builds its pipeline inside the call.
 - **Select the device rather than hardcoding it.** `torch.cuda.is_available()` is what keeps the
   same line working on a CPU Space, where `.to("cuda")` would fail outright.
 
-Select ZeroGPU (`zero-a10g`) for a model that needs a GPU, since it costs nothing, and `cpu-basic`
-for one that does not.
+### Choosing the Hardware
 
-Set `duration` to a realistic ceiling for one request. It is independent of `timeout_s` (see [Worker
-Processes](#worker-processes)), and the shorter of the two bounds a job. **ZeroGPU charges the
-duration a call requests, not the time it uses.** Measured across 15 calls in one allowance window,
-the requested durations summed to 2115 s against 2116 s of allowance consumed, while the GPU did
-roughly 143 s of work. So `duration` is the price of every call, including one that fails in
-seconds, and a generous ceiling is paid again by each user on each request. One Space declared 120 s
-for a request that took 15 s, which spends 105 s of somebody's daily allowance on nothing. Time a
-real request and set the ceiling just above it. Shorter durations also improve queue priority for
-everyone using the Space.
+**Put a model on ZeroGPU only when the GPU changes what using it is like.** ZeroGPU is free for the
+organization but not for its users: every call spends the caller's daily allowance, can be refused
+when that runs short, and pays a cold start whenever a worker is spawned. A call to a `cpu-basic`
+Space costs the user nothing. An organization can also run at most **50 Spaces on ZeroGPU**, and a
+request for a 51st is refused, so a slot spent on a model that does not need one is a slot a heavy
+model cannot have.
 
-ZeroGPU is available only to Gradio Spaces, so a Docker Space has to pay for GPU hardware instead.
-It requires PyTorch 2.8.0 or newer, which rules it out for anything pinned below that, and it does
-not support `torch.compile`, so use ahead-of-time compilation instead.
+Decide by measurement. Time a warm request with 10 seconds of input on `cpu-basic`, which the
+validation harness reports per case (the first case on a fresh worker also pays for loading the
+model, so read the one after it):
 
-Quota is charged against whoever is signed in: two minutes per day unauthenticated, five minutes
-for a free account, forty for PRO. A user with no API key configured in HARP therefore gets two
-minutes of GPU time per day across all ZeroGPU Spaces before requests start failing on quota.
+- **Faster than real time, under about 10 s for 10 s of input: keep it on CPU.** Analysis models
+  that make one pass over the audio (key, tempo, emotion, tagging, detection), small effect models,
+  and light speech synthesis such as Kokoro measured 1 to 7 s.
+- **Slower than real time: ZeroGPU,** since a clip of a minute or more would otherwise take minutes.
+  Diffusion and autoregressive generators, source separators, and large transcription models
+  measured 11 to 300 s.
+- **TensorFlow and other non-PyTorch models stay on CPU,** since ZeroGPU accelerates PyTorch only,
+  however slow they are.
+- **When slots run short, rank by the CPU time the GPU saves,** heaviest first, and give back the
+  slot of any Space made private or withdrawn.
+
+On ZeroGPU, `spaces` has to be imported before anything that initializes CUDA, PyHARP included,
+since importing it loads torch. Otherwise the Space fails at startup with "CUDA has been initialized
+before importing the `spaces` package", which is why the example above imports it first.
+
+ZeroGPU requires PyTorch 2.8.0 or newer, and an exact `torch` pin must be a release it accepts,
+which at the time of writing are 2.8.0, 2.9.1, 2.10.0, 2.11.0, 2.12.1, and 2.13.0. Any other exact
+pin, 2.9.0 included, stops the Space with a configuration error before it starts, while a lower
+bound or no pin passes. It does not support `torch.compile`, so use ahead-of-time compilation
+instead.
+
+ZeroGPU is available only to Gradio Spaces, so a Docker Space has to pay for GPU hardware instead,
+or move to the Gradio SDK as BS-RoFormer did.
+
+### Protecting the Caller's Allowance
+
+Every ZeroGPU call spends the caller's daily allowance: two minutes unauthenticated, five for a free
+account, forty for PRO, shared across every ZeroGPU Space. A user with no API key configured in
+HARP gets the two minutes. A mistaken setting or an input the model cannot use must not spend it.
+
+**Check inputs and settings before the GPU is reserved.** Put `@spaces.GPU` on a function that does
+only the GPU work, and have an undecorated `process_fn` check everything first and then call it. A
+request refused there costs nothing, waits in no GPU queue, and reaches a user with little allowance
+left as the real problem rather than as a quota error. Reading a file needs no GPU, so checks of an
+input's length, channels, or contents belong there too, as does waiting for a model that is still
+loading. Read the file with `soundfile` there rather than `torchaudio`, whose ffmpeg decoding fails
+outside the decorated function under ZeroGPU's emulation ("Creating a new Tensor subclass
+ChunkTensor"):
+
+```python
+@spaces.GPU(duration=60)
+def separate(audio_path: str, model_name: str) -> str:
+    ...
+
+def process_fn(audio_path: str, model_name: str) -> str:
+    if sf.info(audio_path).duration > MAX_SECONDS:
+        raise gr.Error(f"Trim the input to {MAX_SECONDS} seconds or less.")
+
+    return separate(audio_path, model_name)
+```
+
+**Refuse settings that cannot give a useful result,** not only invalid ones. The Anticipatory Music
+Transformer refuses a melody instrument that stops before the history ends, which would otherwise
+run, and rewrite the real melody as accompaniment.
+
+**Bound what one request can cost.** Cap the input length and any setting that scales the work, such
+as steps or the length of what is generated, so that no combination outruns `duration`.
+
+**Keep `duration` close to a measured request.** It is independent of `timeout_s` (see [Worker
+Processes](#worker-processes)), and the shorter of the two bounds a job. ZeroGPU admits a call only
+when the caller's remaining allowance covers **one and a half times `duration`**. A call that
+completes is billed roughly the time it used, but one that fails after its reservation is made can
+cost the whole reservation, which is why a failing Space drains allowance far faster than a working
+one. Time a real request, set the ceiling a little above it, and keep it at 120 s or less where the
+work allows:
+
+- **Never above 200 s.** Admission at 200 s already takes 300 s, a free account's entire day, so a
+  longer duration can never be admitted for one.
+- **Compute it per request where cost scales with the input or a setting.** `@spaces.GPU` takes a
+  function of the same arguments as the function it decorates, so a short clip reserves, and puts at
+  risk, only what it needs:
+
+  ```python
+  def gpu_seconds(audio_path: str, *_) -> float:
+      return min(120, 10 + 0.5 * sf.info(audio_path).duration)
+
+  @spaces.GPU(duration=gpu_seconds)
+  def separate(audio_path: str, model_name: str) -> str:
+      ...
+  ```
+
+Shorter durations also improve queue priority for everyone using the Space.
 
 ## Dependency Conflicts
 
@@ -637,7 +784,7 @@ split:
 
 ```bash
 pip install --dry-run --ignore-installed -r requirements.txt \
-    "gradio==6.17.3" "git+https://github.com/TEAMuP-dev/pyharp.git@v0.4.1"
+    "gradio==6.17.3" "git+https://github.com/TEAMuP-dev/pyharp.git@v0.4.2"
 ```
 
 A Space pinned inside that window should say why in its README, since it departs from the version
@@ -666,60 +813,77 @@ Two things are easy to get wrong:
 
 ## Calling Another Space
 
-A Space can forward inference to a second Space rather than running the model itself. It is the
-last resort among the options here, because it makes a request depend on a deployment outside this
-one, and it is warranted only where the model cannot be installed alongside Gradio and PyHARP at
-all. Three reasons have held up:
+A Space can forward inference to another Space rather than running the model itself. The fleet runs
+one, SoulX-Singer, and no other should be built for a model that can be installed here. Every other
+proxy the fleet once ran turned out to be avoidable once these were checked:
 
-- **A pin that conflicts with the platform rather than with Gradio.** Audiocraft pins
-  `torch==2.1.0` and ZeroGPU requires 2.8.0 or newer, so no choice of Gradio reconciles them.
-- **A vendoring surface too large to carry.** SoulX-Singer's inference path reaches 56 modules and
-  34 distributions, two of them CUDA-only, which would leave the Space impossible to exercise on
-  CPU.
-- **No installable distribution.** ACE-Step's package on PyPI cannot be built, since its
-  `setup.py` reads a `requirements.txt` that the sdist omits.
+- **Check what the authors' own Space installs.** A Space that already runs on ZeroGPU has solved
+  the platform's constraints, often by vendoring a fork. MelodyFlow's carries a copy of audiocraft
+  moved from `torch==2.1.0` to 2.8.0, which dissolves the conflict with ZeroGPU that the published
+  package has. ACE-Step's carries its source rather than the PyPI package, whose sdist cannot be
+  built.
+- **Vendor that Space's code rather than calling it.** Copy what the inference path imports, along
+  with the data files it opens (see [Keeping a Space Lightweight](#keeping-a-space-lightweight)),
+  keep the authors' license file beside it, and call the function their interface calls.
+- **Dry-run the combined environment** with the recipe under [Pin Gradio Before Splitting the
+  Environment](#pin-gradio-before-splitting-the-environment) before concluding that it cannot
+  resolve. Model size is not a reason either, since weights are fetched at build time whatever the
+  deployment.
 
-Model size alone is not a reason: weights are fetched at build time either way (see
-[Model Weights](#model-weights)). Neither is a `transformers` 4.x pin on its own, which the Gradio
-window above usually settles.
+Calling another Space is the right deployment only where the model cannot be hosted here at all:
 
-### Host the Backend Here
+- **Its code or weights cannot be redistributed,** and their owners serve the model themselves, so
+  calling that deployment is the only lawful route to it.
+- **It needs hardware ZeroGPU cannot provide,** such as more GPU memory or a longer job than ZeroGPU
+  allows, and its owners run that hardware.
+- **Running it here has been tried and failed, while its owners run it.** SoulX-Singer is the case.
+  A reproduction gave poor output, and the authors' code, vendored once its dependencies resolved,
+  loaded but hung in ZeroGPU's setup inside PyHARP's worker on every call. The authors' Space ran
+  the same request in 13 s, so SoulX-Singer forwards to it.
 
-Point the frontend at a Space under `teamup-tech`, duplicated from the authors' where necessary,
-rather than at the authors' own. A third-party Space can change its API, fall asleep, or be taken
-down, and none of that is apparent until a request fails. Hosting the backend in the org also puts
-its hardware and its allowance where they can be seen.
+In each case the backend belongs to its owners, who can change its API, let it sleep, or take it
+down without notice. A backend is never hosted under `teamup-tech`, both because a model that could
+be hosted here should be vendored instead and because HARP's Home tab lists every public Space in
+the organization, so a backend there would appear as a model that fails to load.
 
-Keep that backend public. A private Space is reachable over its API, but only with a token that can
-read it, which no user has. The frontend would then have to call with the org's own token, and
-every user's request would draw on that one account rather than their own.
+### What a Frontend Owes HARP
 
-### Whose Allowance Is Spent
+SoulX-Singer's `app.py` does each of these, so start a new frontend from a copy of it.
 
-Allowance is charged to whoever authenticates the request, so for a proxy it follows the identity
-the frontend presents to the backend:
 
-| The frontend calls with | Whose allowance is spent |
-| --- | --- |
-| No token | The anonymous pool, two minutes a day for everyone together |
-| The org's token | One account, shared by every user of the Space at once |
-| The token HARP supplies | The user's own, which is the right default |
+- **Forward the caller's `x-ip-token` header.** The Hub adds it to every request a Space receives,
+  identifying whoever made it, and ZeroGPU bills the allowance of whoever it identifies. Passed on
+  to the backend, it bills each user their own allowance, as a direct call would, and the frontend
+  never handles a credential. PyHARP restores the request inside its worker, so `process_fn` can
+  read the header from there:
 
-Forward the user's token and fall back to anonymous. Embedding the org's token turns its forty
-minutes into a fleet-wide bottleneck, and the resulting failure reads as the model being broken.
+  ```python
+  from gradio.context import LocalContext
+  from gradio_client import Client
 
-### What the Frontend Owes HARP
+  def process_fn(audio_path):
+      request = LocalContext.request.get(None)
+      ip_token = request.headers.get("x-ip-token", "") if request else ""
+      client = Client("https://owner-backend.hf.space", headers={"x-ip-token": ip_token})
+      ...
+  ```
 
-- **Declare the `zerogpu` tag.** The frontend itself runs on `cpu-basic`, so its hardware says
-  nothing about the allowance a request draws on, and the tag is what puts the ZeroGPU badge in
-  HARP (see [Tags](#tags)).
-- **Say in the description that the work happens elsewhere**, and whose allowance pays for it.
-- **Check the backend's API signature at startup.** Without that, an upstream change surfaces as a
-  puzzle once per request instead of as a build failure.
-- **Set `quota_error_exhausts_validation_token: false`** for the Space in
-  `model_validation/config.yml`. A quota error raised by the backend belongs to the downstream
-  token, and the harness otherwise reads it as the validation token being spent and skips every
-  remaining ZeroGPU model.
+  Without it, every call reaches the backend from the frontend's server, and all users share one
+  anonymous allowance. Embedding a token of the organization's instead bills every user to that one
+  account. Either way, once that single allowance runs out, the model looks broken to everyone.
+  Forwarding also leaves a quota error from the backend attributable to the caller, which is what
+  the validation harness assumes of every Space. See [Calling Spaces from Another
+  Space](https://huggingface.co/docs/hub/spaces-api-endpoints#calling-spaces-from-another-space).
+- **Reach the backend by its URL,** `https://<owner>-<name>.hf.space`, as above, not by its
+  repository id. Given an id, `gradio_client` looks the host up through the Hub's API without a
+  token, which the Hub rate-limits from the address a Space shares with others, and every request
+  to SoulX-Singer failed with "Too many requests to the API" until it connected by URL.
+- **Declare the `zerogpu` tag** when the backend runs on ZeroGPU. The frontend itself runs on
+  `cpu-basic`, so its hardware says nothing about the allowance a request draws on, and the tag is
+  what puts the ZeroGPU badge in HARP (see [Tags](#tags)).
+- **Say in the description where the work happens** and whose allowance pays for it.
+- **Check the backend's API signature at startup,** so that an upstream change surfaces as a build
+  failure rather than as a puzzle on every request.
 
 ## Keeping a Space Lightweight
 

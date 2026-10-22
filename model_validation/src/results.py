@@ -50,11 +50,15 @@ class ModelResult:
                                       # error set is recorded as a failure
     stage: str = ""                   # HF runtime stage, or "LOCAL"
     hardware: str = ""                # HF hardware (e.g. "zero-a10g", "cpu-basic")
+    zerogpu: bool = False             # spends ZeroGPU allowance, on its own hardware
+                                      # or a backend's (see quota.spends_zerogpu)
     controls_ok: bool = False
     cases: list = dataclasses.field(default_factory=list)
     duration: float = 0.0
     error: str = ""
     model_name: str = ""              # from the model card
+    log_tail: list = dataclasses.field(default_factory=list)
+                                      # the end of a failed space's run log
 
 
 def status_emoji(result: ModelResult) -> str:
@@ -177,5 +181,8 @@ def render_markdown(results: list, payload: dict) -> str:
                 if c.error:
                     lines += [f"- **{c.name}** {case_emoji(c.ok)}", "",
                               "```", c.error, "```", ""]
+            if r.log_tail:
+                lines += ["<details><summary>End of the space's log</summary>", "",
+                          "```", *r.log_tail, "```", "", "</details>", ""]
 
     return "\n".join(lines) + "\n"

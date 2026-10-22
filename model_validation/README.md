@@ -24,7 +24,9 @@ Key behaviors:
   `--no-restart-failed` to disable the restart. This is also what allows a
   run to work with a read-only token.
 - **ZeroGPU time is tracked** across the run and reported after each ZeroGPU
-  model. Pass `--skip-zerogpu` to skip these models and avoid spending allowance.
+  model, which includes a frontend on other hardware that declares the
+  `zerogpu` tag for the backend to which it forwards. Pass `--skip-zerogpu` to skip
+  these models and avoid spending allowance.
 - A daily GitHub Action
   ([model_validation.yml](../.github/workflows/model_validation.yml)) runs
   both tiers. See [CI Behavior](#ci-behavior) for what it reports and for when
@@ -47,7 +49,7 @@ downward, so a module can be read knowing nothing about the groups above it:
 | **Support** | [src/assets.py](src/assets.py) | Synthesizes the WAV/MIDI/text/JSON test inputs |
 | | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
 | | [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
-| | [src/quota.py](src/quota.py) | ZeroGPU hardware detection and usage tracking |
+| | [src/quota.py](src/quota.py) | ZeroGPU detection (hardware or a declared backend) and usage tracking |
 | | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
 | | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
 
@@ -270,9 +272,10 @@ on a retry.
 
 Every model automatically gets one **`default`** test case, even with no
 configuration at all. Its inputs are synthesized from the model's `/controls`
-spec. Audio tracks get a sine-sweep clip, MIDI tracks get a short MIDI file,
-and sliders, toggles, dropdowns, number boxes, and text boxes get the default
-value each one declares. A control that declares no default falls back to
+spec. Audio tracks get a clip cut from a recording, MIDI tracks get a MIDI file
+(both from [test_data/](test_data/), see below), and sliders, toggles,
+dropdowns, number boxes, and text boxes get the default value each one
+declares. A control that declares no default falls back to
 something valid for its type, such as its minimum or its first dropdown
 choice, so every model can be exercised without configuration.
 
@@ -282,25 +285,46 @@ inputs, or inspecting outputs more deeply.
 
 ### Synthesized input properties
 
-The generated inputs default to a 2-second mono 44.1 kHz WAV and a two-note
-MIDI file. A `synthesized_inputs` block departs from those defaults. It can be
-set at the top level of [config.yml](config.yml), per model under its
-`overrides` entry, or per test case, with each level overriding the one before
-it. Every property is optional, so a block sets only what it changes.
+Without configuration, the generated inputs are a 2-second mono 44.1 kHz sine
+sweep and a two-note MIDI file. A `synthesized_inputs` block departs from those
+defaults. It can be set at the top level of [config.yml](config.yml), per model
+under its `overrides` entry, or per test case, with each level overriding the
+one before it. Every property is optional, so a block sets only what it
+changes.
+
+A `source` replaces the sweep or the synthesized notes with real material. An
+audio source is the recording from which the clip is cut: it is resampled to
+`sample_rate`, averaged or copied to `num_channels`, and cut to `duration` or
+repeated to reach it, so the clip has the configured properties and the
+recording's content. A MIDI source is a file passed as it is. A sweep can only
+show that a model returns something, while real material shows whether it did
+its job: a separator has sources to separate, a transcriber notes to find, and
+the output checks can tell whether it found them.
+
+The shipped [config.yml](config.yml) sets these at the top level, so every
+model gets eight seconds of a band (drums, bass, piano and a lead) under a
+speaking voice, at 48 kHz in stereo, and a monophonic melody for MIDI. Models
+built for speech take English speech in mono at 44.1 kHz instead, so both
+shapes of input are exercised across the fleet, and the 48 kHz stereo input
+makes a sample rate or channel count a model fails to preserve visible in the
+report. The assets are described at the top of config.yml, and were made for
+this suite.
 
 ```yaml
 # config.yml, at the top level, so it applies to every model
 synthesized_inputs:
   audio:
+    source: test_data/test_piano_20s.wav  # default: none, a sine sweep
     sample_rate: 48000   # default 44100
     num_channels: 2      # default 1
     duration: 5.0        # default 2.0
     ext: .flac           # default .wav
   midi:
-    num_notes: 8         # default 2
-    note_duration: 0.25  # default 0.5
-    instrument: 24       # default 0
-    channel: 0           # default 0
+    source: test_data/test_melody_16s.mid  # default: none, synthesized notes
+    num_notes: 8         # default 2, ignored with a source
+    note_duration: 0.25  # default 0.5, ignored with a source
+    instrument: 24       # default 0, ignored with a source
+    channel: 0           # default 0, ignored with a source
 ```
 
 The MIDI `instrument` is the General MIDI program number, written as a program
@@ -547,16 +571,17 @@ label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
 
-Four validators ship with the harness:
+Five validators ship with the harness:
 
 | Validator | Checks | Skips when |
 |---|---|---|
 | `audio_decodes` | Every audio output decodes and carries frames | The model returns no audio |
+| `labels_reach_harp` | Every JSON output is a pyharp `LabelList`, which HARP requires, and has an audio, MIDI or file output to appear over | The model has no JSON output |
 | `labels_within_audio` | Every label falls inside the audio output's timespan (`tolerance`) | The model has no audio output or no `LabelList` |
 | `merit_scores` | MERIT's three cosine similarities are finite and within [-1, 1] | Never (model-specific) |
 | `muq_ranking` | MuQ returns `count` candidates, numbered and sorted by similarity | Never (model-specific) |
 
-The first two are model-agnostic and run as
+The first three are model-agnostic and run as
 [common test cases](#step-4-reuse-a-case-across-models). The last two name
 MERIT's and MuQ's own outputs, so they are referenced from those models'
 entries. Run the local regression checks for all of them, plus the `expect`
@@ -615,19 +640,21 @@ common_test_cases:
         min_rms_db: -60     # applies only to models that have audio outputs
 ```
 
-Two common cases ship in [config.yml](config.yml), so that a model with no
+Four common cases ship in [config.yml](config.yml), so that a model with no
 entry of its own is still asserted against rather than only run.
 `audio-decodes` decodes every audio output, which is what catches a
-header-only WAV from a model that wrote no samples and reported success, and
-`labels-within-audio` keeps labels inside the track they annotate.
+header-only WAV from a model that wrote no samples and reported success,
+`labels-within-audio` keeps labels inside the track they annotate,
+`labels-reach-harp` fails a JSON output HARP would reject, and
+`outputs-carry-signal` fails digital silence and MIDI with no notes.
 
-A fleet-wide "audio is not silent" rule is deliberately **not** among them.
-The synthesized input is a sine sweep, so a separation model's stems are
-legitimately near-silent for every source the sweep does not contain, and the
-rule would read as a fault in those models. Level is asserted per model
-instead, where producing signal is part of the contract. The same test
-applies to anything proposed as a common case: a rule that holds for most
-models reads as a failure on the rest.
+The silence floor is set at -80 dBFS on purpose, well below any real level. A
+separation model's stem for a source its input does not contain is
+legitimately quiet (measured down to -68 dBFS), and a higher fleet-wide floor
+would read as a fault in those models. A real level is asserted per model
+instead, where producing signal is part of the contract. The same test applies
+to anything proposed as a common case: a rule that holds for most models reads
+as a failure on the rest.
 
 Keep common cases model-agnostic by targeting outputs with `"*"` rather than a
 specific label, which will not exist on most models. Because a `"*"` rule is
@@ -679,7 +706,12 @@ write one entry holding everything that applies to the model.
   Actions tab, with options to validate specific spaces, skip inference, or
   disable the default restart of crashed spaces.
 - **Reports:** a markdown summary on each run, plus JSON and markdown
-  artifacts.
+  artifacts. A failed Space's entry carries the end of its run log, where the
+  traceback behind the failure usually is.
+- **Duration:** about 15 minutes for the whole fleet. Measured on
+  2026-10-22, ZeroGPU work was 52 `/process` calls and 11 minutes, run one at a
+  time, with the CPU models alongside it. The ZeroGPU calls are what a change
+  to the cases mostly moves.
 - **Harness tests:** the examples job first runs the unit tests under
   `tests/`, which also check config.yml, so a configuration mistake turns the
   run red before any model runs.

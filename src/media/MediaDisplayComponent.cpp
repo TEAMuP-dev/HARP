@@ -1407,7 +1407,13 @@ void MediaDisplayComponent::mouseUp(const MouseEvent& e)
     {
         if (e.eventComponent == getMediaComponent() && isFileLoaded() && isMouseOver(true))
         {
-            start(); // Only start playback if still within media area
+            /* A click or drag only moves the cursor, as in most DAWs. A playing track carries
+               on from there, and any other is left paused there, which keeps the cursor in
+               view and is where the play button resumes from. */
+            if (! isPlaying())
+            {
+                pause();
+            }
         }
         else
         {

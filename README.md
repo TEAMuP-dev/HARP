@@ -8,7 +8,7 @@
 
 <!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main) -->
 <!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp3/deploys) -->
-<!-- TODO: arXiv badge, once the HARP 3.0 paper has a preprint to point at.
+<!-- TODO: arXiv badge, once the HARP 3.0 paper has a preprint to point at. -->
 <!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
 
 HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with
@@ -157,7 +157,7 @@ guidelines for [developing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DE
 [code signing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/SIGNING.md).
 
 <!-- website/content/contributing/version_compat.md -->
-HARP and pyharp are released in mutually compatible pairs: HARP 4.0.0 with pyharp 0.4.1, HARP 3.1.0
+HARP and pyharp are released in mutually compatible pairs: HARP 4.0.0 with pyharp 0.4.2, HARP 3.1.0
 with pyharp 0.3.0, and HARP 2.2.0 with pyharp 0.2.1. The root `VERSION` file sets the application
 version through CMake.
 

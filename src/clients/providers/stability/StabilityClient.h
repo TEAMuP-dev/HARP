@@ -278,11 +278,7 @@ public:
         const String extension =
             getValue(offsetIdx + 3).isNotEmpty() ? "." + getValue(offsetIdx + 3) : ".wav";
 
-        // Obtain local temporary directory for downloaded file
-        File tempDir = File::getSpecialLocation(File::tempDirectory);
-
-        // Create file at a unique path
-        File outputFile = tempDir.getChildFile("stable-audio_" + Uuid().toString() + extension);
+        File outputFile = createResultFile("stable-audio-2", extension);
 
         result = makePOSTRequest(URL(inferEndpointPath(modelPath)),
                                  request,

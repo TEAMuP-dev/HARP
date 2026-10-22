@@ -18,8 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import soundfile
 from expectations import check_expectations
+from assets import check_synthesized_inputs
 from harness import merge_common_cases
-from utils import load_config
+from utils import check_config_keys, load_config
 from validators import VALIDATORS, ValidatorNotApplicable
 
 
@@ -230,6 +231,14 @@ class ConfigFileTest(unittest.TestCase):
     def test_config_loads(self):
         self.assertIn("overrides", load_config(self.PATH))
 
+    def test_config_settings_are_valid(self):
+        # The checks a run makes before validating anything, so that a
+        # misspelled setting or a source file left out of test_data/ fails here
+        # rather than costing a run
+        config = load_config(self.PATH)
+        check_config_keys(config)
+        check_synthesized_inputs(config, self.PATH.parent)
+
     def test_a_model_written_twice_is_rejected(self):
         # yaml keeps the last of several entries sharing a key, so a model
         # written twice would otherwise run without the first entry's
@@ -291,3 +300,44 @@ class MergeCommonCasesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReportTest(unittest.TestCase):
+    """What the human-readable report shows for a failure."""
+
+    def test_a_failure_carries_the_end_of_its_log(self):
+        from results import ModelResult, render_markdown
+        result = ModelResult(target="teamup-tech/a", error="AppError: boom",
+                             log_tail=["Traceback (most recent call last):",
+                                       "ValueError: the checkpoint is corrupt"])
+        report = render_markdown([result], {"passed": 0, "validated": 1, "skipped": 0,
+                                            "timestamp": "now", "command": ""})
+        self.assertIn("ValueError: the checkpoint is corrupt", report)
+
+
+class LabelsReachHarpTest(unittest.TestCase):
+    """HARP reads a JSON output as a LabelList and draws it over a file output."""
+
+    CONTROLS = {"outputs": [{"type": "audio_track", "label": "Audio"},
+                            {"type": "json", "label": "Labels"}]}
+
+    def check(self, value, controls=None):
+        VALIDATORS["labels_reach_harp"]({"Labels": value}, controls or self.CONTROLS, {})
+
+    def test_accepts_a_label_list(self):
+        self.check({"meta": {"_type": "pyharp.LabelList"}, "labels": []})
+
+    def test_rejects_a_plain_dictionary(self):
+        # What six Spaces returned, which HARP fails the request on
+        with self.assertRaises(AssertionError) as caught:
+            self.check({"chords": [{"chord": "C"}]})
+        self.assertIn("not a pyharp LabelList", str(caught.exception))
+
+    def test_rejects_labels_with_nothing_to_appear_over(self):
+        with self.assertRaises(AssertionError):
+            self.check({"meta": {"_type": "pyharp.LabelList"}, "labels": []},
+                       {"outputs": [{"type": "json", "label": "Labels"}]})
+
+    def test_skips_a_model_without_a_json_output(self):
+        with self.assertRaises(ValidatorNotApplicable):
+            VALIDATORS["labels_reach_harp"]({}, {"outputs": [{"type": "audio_track"}]}, {})

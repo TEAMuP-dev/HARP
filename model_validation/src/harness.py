@@ -22,7 +22,6 @@ from gradio_client import Client
 from assets import Assets, merge_specs
 from cases import (synthesize_default_args, apply_case, validate_outputs,
                    inspect_outputs, measure_outputs)
-from quota import is_zerogpu
 from results import ModelResult, CaseResult, PASS, FAIL, SKIP
 from utils import run_with_timeout, describe_exception
 
@@ -400,7 +399,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     # ZeroGPU models default to a lower process timeout, since their jobs are
     # short once running. A per-model process_timeout override still wins.
     default_process_timeout = (opts.zerogpu_process_timeout
-                               if is_zerogpu(result.hardware)
+                               if result.zerogpu
                                else opts.process_timeout)
     process_timeout = overrides.get("process_timeout", default_process_timeout)
     connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)

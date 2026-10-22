@@ -71,6 +71,11 @@ struct CatalogEntry
        tells a user their request needs GPU allowance and queues for it. */
     bool isZeroGPU() const { return hardware.startsWithIgnoreCase("zero-") || tags.zeroGPU; }
 
+    /* Whether using the model is limited by an account: a ZeroGPU model spends the caller's
+       daily GPU allowance, which a Hugging Face token raises, and a Stability AI model needs
+       a Stability AI key and spends that account's credits. */
+    bool isMetered() const { return isZeroGPU() || provider == "Stability AI"; }
+
     /* The Hub's report on a Space, before anything is asked of it, is only an expectation.
        Once a load has been attempted, its outcome is what counts. */
     AvailabilityNote getAvailabilityNote() const
@@ -150,7 +155,7 @@ public:
         fetchPool.removeAllJobs(true, 5000);
     }
 
-    // All entries, built-in models first, then the organization's, then custom paths
+    // All entries, in alphabetical order whatever their provider
     const std::vector<CatalogEntry>& getEntries() const { return entries; }
 
     const CatalogEntry* findEntry(const String& path) const
@@ -479,7 +484,11 @@ private:
                 entry.description = cardData["short_description"].toString().trim();
                 entry.provider = "Hugging Face";
                 entry.tags = ModelTags::parse(tags);
-                entry.hardware = space["runtime"]["hardware"]["current"].toString();
+                /* A sleeping Space runs on no hardware at the moment, so what it asks for is
+                   what tells whether it will run on ZeroGPU once woken */
+                const auto& hardware = space["runtime"]["hardware"];
+                entry.hardware = hardware["current"].isString() ? hardware["current"].toString()
+                                                                : hardware["requested"].toString();
                 entry.revision = space["runtime"]["sha"].toString();
 
                 // A cached stage is stale, and would misreport whether the Space is awake
@@ -552,9 +561,10 @@ private:
 
             auto loaded = loadedCards.find(key);
 
-            /* A Space's card is only as current as the revision it came from. Other models
-               have no revision to check, so theirs is shown until they load again. */
-            if (loaded != loadedCards.end()
+            /* A Space's card is only as current as the revision it came from. Custom paths
+               have no revision to check, so theirs is shown until they load again. A built-in
+               model's card ships with HARP, so a saved one could only be older. */
+            if (loaded != loadedCards.end() && ! isBuiltIn(entry.path)
                 && (entry.revision.isEmpty() || loaded->second.revision == entry.revision))
             {
                 const ModelMetadata& card = loaded->second.card;
@@ -585,6 +595,12 @@ private:
                 }
             }
         }
+
+        // Sorted once names are final, since a loaded card can rename a custom path
+        std::stable_sort(entries.begin(),
+                         entries.end(),
+                         [](const CatalogEntry& a, const CatalogEntry& b)
+                         { return a.name.compareNatural(b.name) < 0; });
     }
 
     // A file beside the settings file

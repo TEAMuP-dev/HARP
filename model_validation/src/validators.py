@@ -271,6 +271,50 @@ def audio_decodes(outputs, controls, params):
         raise ValidatorNotApplicable("no audio output to decode")
 
 
+# The output types HARP draws labels over. A label output on its own has
+# nowhere to appear.
+FILE_OUTPUT_TYPES = {"audio_track", "midi_track", "generic_file"}
+
+
+@validator("labels_reach_harp")
+def labels_reach_harp(outputs, controls, params):
+    """
+    Assert every JSON output is a label list HARP can show.
+
+    HARP reads a JSON output as a pyharp LabelList and fails the whole request
+    on anything else, since it needs the `meta` key to tell the output apart,
+    and it draws labels only over an audio, MIDI or file output the model also
+    returns. A model returning a plain dictionary passes every other check here
+    and shows an error in HARP after every request, which is what six Spaces
+    once did.
+
+    Raises:
+        AssertionError: If a JSON output is not a LabelList, or the model
+            returns labels with no output to draw them over.
+        ValidatorNotApplicable: If the model has no JSON output.
+    """
+
+    specs = controls.get("outputs", [])
+    json_labels = [spec.get("label") for spec in specs if spec.get("type") == "json"]
+
+    if not json_labels:
+        raise ValidatorNotApplicable("no JSON output")
+
+    assert any(spec.get("type") in FILE_OUTPUT_TYPES for spec in specs), \
+        (f"labels {json_labels} have no audio, MIDI or file output to appear "
+         f"over, and HARP shows labels nowhere else")
+
+    for label in json_labels:
+        value = outputs.get(label)
+        meta = value.get("meta") if isinstance(value, dict) else None
+        kind = meta.get("_type") if isinstance(meta, dict) else None
+        assert kind == "pyharp.LabelList", \
+            (f"'{label}' is not a pyharp LabelList, which HARP rejects, failing the "
+             f"request: {json.dumps(value)[:200]}")
+        assert isinstance(value.get("labels"), list), \
+            f"'{label}' is a LabelList without a list of labels"
+
+
 @validator("labels_within_audio")
 def labels_within_audio(outputs, controls, params):
     """

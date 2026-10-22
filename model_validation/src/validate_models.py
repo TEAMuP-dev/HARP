@@ -39,7 +39,7 @@ from pathlib import Path
 from assets import Assets, check_synthesized_inputs
 from examples import test_local_example
 from spaces import test_space
-from quota import ZeroGPUTracker, is_zerogpu
+from quota import ZeroGPUTracker
 from results import FAIL, status_emoji, write_reports
 from utils import (get_token, check_token, scrub, load_config, check_config_keys,
                    check_model_names, qualify, qualify_keys, Exclusions,
@@ -282,7 +282,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
             # (including retries, which reserve again) and the wall time of the
             # cases that made them. A queued or input-skipped case never ran
             info = r.hardware or "?"
-            if is_zerogpu(r.hardware):
+            if r.zerogpu:
                 ran = [c for c in r.cases if c.gpu_calls]
                 tracker.add(sum(c.gpu_calls for c in ran),
                             sum(c.duration for c in ran))
@@ -314,7 +314,7 @@ def main() -> int:
         # once, names the key as it was written, and costs no model runs
         check_config_keys(config)
         check_model_names(config, opts.exclude, opts.spaces)
-        check_synthesized_inputs(config)
+        check_synthesized_inputs(config, opts.config.parent)
 
         # Only one tier runs, so a bare model name resolves against that tier
         owner = "examples" if examples_tier else opts.org
@@ -333,7 +333,7 @@ def main() -> int:
     run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
     opts.output_dir = opts.output_dir / run_stamp
     assets = Assets(opts.output_dir / "assets",
-                    config.get("synthesized_inputs"))
+                    config.get("synthesized_inputs"), opts.config.parent)
 
     if examples_tier:
         token = ""

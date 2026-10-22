@@ -560,6 +560,28 @@ protected:
 
     SharedResourcePointer<StatusMessage> statusMessage;
 
+    /* A new file in the temporary directory for a result, named after it and stamped with
+       the time it arrived, e.g. "open-unmix_vocals_10-20-2026_14-35-12.wav". HARP shows a
+       result under its file name, so a time keeps the results of successive runs apart in a
+       form a user can read. Results named alike in the same second are numbered. */
+    static File createResultFile(const String& baseName, const String& extension)
+    {
+        const String stamped =
+            baseName + "_" + Time::getCurrentTime().formatted("%m-%d-%Y_%H-%M-%S");
+        const File directory = File::getSpecialLocation(File::tempDirectory);
+
+        // Numbered " (2)", " (3)", and so on
+        File file = directory.getChildFile(stamped + extension);
+
+        for (int number = 2; file.exists(); ++number)
+            file = directory.getChildFile(stamped + " (" + String(number) + ")" + extension);
+
+        // Claimed at once, so that a concurrent download cannot be given the same name
+        file.create();
+
+        return file;
+    }
+
     /* Records which provider an error came from on its way out, the client being the
        only layer that knows. Overloaded rather than templated so that error types
        carrying no provider cannot be passed here by mistake. */
