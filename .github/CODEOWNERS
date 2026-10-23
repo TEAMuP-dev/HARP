@@ -1,0 +1,21 @@
+# CODEOWNERS
+#
+# Code owners are automatically requested for review when a pull request
+# modifies a file they own. Ownership is read from the CODEOWNERS file on
+# the pull request's *target* branch.
+#
+# Reference:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Syntax: <path pattern>  <owner> [<owner> ...]
+# Owners may be @users, @org/teams, or email addresses.
+# The last matching pattern wins.
+#
+# Example — request a review from @<user> on every pull request targeting
+# a branch that contains this file:
+#
+#   *  @<user>
+#
+# Note: this only *requests* a review; it does not block merging. To make
+# owner approval mandatory, edit the branch ruleset (or branch protection
+# rule) for the target branch and enable "Require review from Code Owners".
