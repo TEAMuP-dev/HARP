@@ -9,10 +9,11 @@ interactions the HARP client performs, driven headlessly.
 
 Two tiers share the same test harness:
 
-| Tier | Command | What it validates | What a failure means |
-|---|---|---|---|
-| **Examples** | `--local-examples` | The apps under `pyharp/examples/`, launched locally | pyharp or gradio itself is broken |
-| **Spaces** | (default) | Every Hugging Face Space under `--org` | That specific deployment is broken (build error, HF platform change, dependency drift, ...) |
+- **Examples** (`--local-examples`) launches the apps under `pyharp/examples/`
+  locally. A failure means pyharp or gradio itself is broken.
+- **Spaces** (the default) validates every Hugging Face Space under `--org`. A
+  failure means that deployment is broken, by a build error, a platform change
+  or dependency drift, for example.
 
 Key behaviors:
 
@@ -31,31 +32,6 @@ Key behaviors:
   ([model_validation.yml](../.github/workflows/model_validation.yml)) runs
   both tiers. See [CI Behavior](#ci-behavior) for what it reports and for when
   a run turns red.
-
-## Code Layout
-
-The modules under `src/` fall into five groups. Dependencies only ever run
-downward, so a module can be read knowing nothing about the groups above it:
-
-| Group | File | Purpose |
-|---|---|---|
-| **Entry point** | [src/validate_models.py](src/validate_models.py) | Command line, per-tier orchestration, console output |
-| **Tier drivers** | [src/spaces.py](src/spaces.py) | Gets a Space ready: runtime stage, restart, wake, ZeroGPU safeguards |
-| | [src/examples.py](src/examples.py) | Launches a local pyharp app and captures its log |
-| **Harness** | [src/harness.py](src/harness.py) | Drives /controls + /process against whatever the drivers hand it |
-| **Checking** | [src/cases.py](src/cases.py) | Input synthesis, test-case overlay, output validation and inspection |
-| | [src/expectations.py](src/expectations.py) | The declarative `expect` rule vocabulary and its checks |
-| | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
-| **Support** | [src/assets.py](src/assets.py) | Synthesizes the WAV/MIDI/text/JSON test inputs |
-| | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
-| | [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
-| | [src/quota.py](src/quota.py) | ZeroGPU detection (hardware or a declared backend) and usage tracking |
-| | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
-| | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
-
-Alongside the code, [config.yml](config.yml) holds the validation
-configuration and [test_data/](test_data/) holds any real input files the
-test cases reference. Everything a run produces goes under `reports/`.
 
 ## Token Setup
 
@@ -286,30 +262,24 @@ inputs, or inspecting outputs more deeply.
 ### Synthesized input properties
 
 Without configuration, the generated inputs are a 2-second mono 44.1 kHz sine
-sweep and a two-note MIDI file. A `synthesized_inputs` block departs from those
-defaults. It can be set at the top level of [config.yml](config.yml), per model
-under its `overrides` entry, or per test case, with each level overriding the
-one before it. Every property is optional, so a block sets only what it
-changes.
+sweep and a two-note MIDI file. A `synthesized_inputs` block changes them, at
+the top level of [config.yml](config.yml), per model under `overrides`, or per
+test case. Each level overrides the one before it, and a block sets only the
+properties it names.
 
-A `source` replaces the sweep or the synthesized notes with real material. An
-audio source is the recording from which the clip is cut: it is resampled to
-`sample_rate`, averaged or copied to `num_channels`, and cut to `duration` or
-repeated to reach it, so the clip has the configured properties and the
-recording's content. A MIDI source is a file passed as it is. A sweep can only
-show that a model returns something, while real material shows whether it did
-its job: a separator has sources to separate, a transcriber notes to find, and
-the output checks can tell whether it found them.
+A `source` replaces the sweep or the notes with real material. An audio source
+is resampled to `sample_rate`, averaged or copied to `num_channels`, and cut or
+repeated to `duration`. A MIDI source is passed as it is. A sweep only shows
+that a model returns something. Real material shows whether it did its job,
+since a separator then has sources to separate and a transcriber notes to find.
 
-The shipped [config.yml](config.yml) sets these at the top level, so every
-model gets eight seconds of a band (drums, bass, piano and a lead) under a
-speaking voice, at 48 kHz in stereo, and a monophonic melody for MIDI. Models
-built for speech take English speech in mono at 44.1 kHz instead, so both
-shapes of input are exercised across the fleet. Every model that returns its
-input, processed or not, asserts the input's sample rate and channel count, and
-the 48 kHz stereo input is what makes a model that writes at its own rate or in
-mono fail that assertion. The assets are described at the top of config.yml,
-and were made for this suite.
+The shipped config gives every model eight seconds of a band (drums, bass,
+piano and a lead) under a speaking voice, at 48 kHz in stereo, and a monophonic
+melody for MIDI. Speech models take English speech in mono at 44.1 kHz instead,
+so both shapes of input are exercised. A model that returns its input,
+processed or not, asserts the input's sample rate and channel count. Few models
+run at 48 kHz stereo, so one that writes at its own rate or in mono fails. The
+assets, made for this suite, are described at the top of config.yml.
 
 ```yaml
 # config.yml, at the top level, so it applies to every model
@@ -526,7 +496,7 @@ measurement, since a single stray click cannot make an otherwise-silent file
 pass. `min_rms_db: -60` is the usual check for silence.
 
 `max_rms_db` is the converse, for an output that should be near-silent. A
-separator's stem for a source its input does not contain is the use: it shows
+separator's stem for a source its input does not contain is one use-case: it shows
 that the model separated rather than copying its input into every stem.
 Assert one only on a source the input truly lacks, measured, since a model can
 also route part of a source to a neighboring stem. An output given a
@@ -579,11 +549,10 @@ test case's own fields. A case may run several:
 
 A validator is a function taking three arguments:
 
-| Argument | What it holds |
-|---|---|
-| `outputs` | Each output label mapped to its value. File outputs are local filesystem paths, and JSON outputs are the decoded object. |
-| `controls` | The full `/controls` payload (card, inputs, outputs). |
-| `params` | The settings nested under this validator's name in the test case. |
+- `outputs`: each output label mapped to its value. A file output is a local
+  path, and a JSON output is the decoded object.
+- `controls`: the full `/controls` payload (card, inputs, outputs).
+- `params`: the settings nested under this validator's name in the test case.
 
 To report a problem, a validator raises `AssertionError`. The message should
 name the output at fault and say what was wrong with it. To opt out on a model
@@ -598,13 +567,17 @@ has no audio output or no label output.
 
 Five validators ship with the harness:
 
-| Validator | Checks | Skips when |
-|---|---|---|
-| `audio_decodes` | Every audio output decodes and carries frames | The model returns no audio |
-| `labels_reach_harp` | Every JSON output is a pyharp `LabelList`, which HARP requires, and has an audio, MIDI or file output to appear over | The model has no JSON output |
-| `labels_within_audio` | Every label falls inside the audio output's timespan (`tolerance`) | The model has no audio output or no `LabelList` |
-| `merit_scores` | MERIT's three cosine similarities are finite and within [-1, 1] | Never (model-specific) |
-| `muq_ranking` | MuQ returns `count` candidates, numbered and sorted by similarity | Never (model-specific) |
+- `audio_decodes`: every audio output decodes and carries frames. Skips a model
+  that returns no audio.
+- `labels_reach_harp`: every JSON output is a pyharp `LabelList`, which HARP
+  requires, and the model has an audio, MIDI or file output on which the labels
+  can appear. Skips a model with no JSON output.
+- `labels_within_audio`: every label falls inside the audio output's timespan,
+  within `tolerance`. Skips a model with no audio output or no `LabelList`.
+- `merit_scores`: MERIT's three cosine similarities are finite and within
+  [-1, 1]. Never skips.
+- `muq_ranking`: MuQ returns `count` candidates, numbered and sorted by
+  similarity. Never skips.
 
 The first three are model-agnostic and run as
 [common test cases](#step-4-reuse-a-case-across-models). The last two name
@@ -722,9 +695,7 @@ case while the file appears to say otherwise.
 A model written twice is reported the same way. YAML keeps the last of
 several entries sharing a key and discards the rest in silence, so a model
 configured in two places would run with only the settings written under the
-second entry. Two branches that each configured the same model produce
-exactly that on merge, which is why it is rejected rather than resolved:
-write one entry holding everything that applies to the model.
+second entry.
 
 ## CI Behavior
 
@@ -734,14 +705,12 @@ write one entry holding everything that applies to the model.
 - **Reports:** a markdown summary on each run, plus JSON and markdown
   artifacts. A failed Space's entry carries the end of its run log, where the
   traceback behind the failure usually is.
-- **Duration:** about 25 minutes for the whole fleet. Measured on
-  2026-10-23, ZeroGPU work was 70 `/process` calls and 19 minutes, run one at a
-  time, with the CPU models alongside it, and the 13 cases added since
-  then take about 5 minutes more. The ZeroGPU calls are what a change to the
-  cases mostly moves. A successful call is billed for its GPU time, which is
-  less than those minutes, against the 40 minutes a day of a PRO or team
-  account. The token CI uses therefore needs that tier, and little other
-  ZeroGPU use on the same day.
+- **Duration:** approximately 25 minutes for the whole fleet, most of it the
+  ZeroGPU calls, which run one at a time while the CPU models run alongside
+  them. Those calls are also what a change to the cases mostly moves. A
+  successful call is billed for its GPU time, which is less than its wall
+  time, against the daily allowance of a PRO or team account. The token CI uses
+  therefore needs that tier, and little other ZeroGPU use on the same day.
 - **Harness tests:** the examples job first runs the unit tests under
   `tests/`, which also check config.yml, so a configuration mistake turns the
   run red before any model runs.
