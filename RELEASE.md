@@ -49,4 +49,4 @@
    are available for arm64 as well as x64.
 
  ### Requirements
- - Supports models deployed with [`pyharp` **v0.4.1**](https://github.com/TEAMuP-dev/pyharp/releases/tag/v0.4.1) and `gradio` **v6.13** or newer.
+ - Supports models deployed with [`pyharp` **v0.4.2**](https://github.com/TEAMuP-dev/pyharp/releases/tag/v0.4.2) and `gradio` **v6.13** or newer.

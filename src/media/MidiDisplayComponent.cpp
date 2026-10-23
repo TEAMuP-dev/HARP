@@ -17,7 +17,7 @@ MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, 
     const String pitchModifier = "Ctrl";
 #endif
 
-    mediaInstructions = "MIDI piano roll.\nClick anywhere to play from that point.\n"
+    mediaInstructions = "MIDI piano roll.\nClick or drag to move the playback position.\n"
                         "Scroll to zoom in time, or hold Shift while scrolling to pan.\nHold "
                         + pitchModifier + " while scrolling to zoom in pitch, or " + pitchModifier
                         + "+Shift to move through pitch.";

@@ -268,10 +268,11 @@ public:
 
     /**
      * Shows the cards in a section (or all sections, for an empty id) that match a
-     * search, and returns how many distinct models are shown. The grid has to be laid out
-     * again afterwards.
+     * search, leaving out metered models if asked (see CatalogEntry::isMetered), and
+     * returns how many distinct models are shown. The grid has to be laid out again
+     * afterwards.
      */
-    int applyFilter(const String& sectionId, const String& searchText)
+    int applyFilter(const String& sectionId, const String& searchText, bool hideMetered)
     {
         const String query = searchText.trim().toLowerCase();
 
@@ -283,7 +284,8 @@ public:
 
             for (auto* card : section->cards)
             {
-                const bool shown = sectionShown && card->matchesSearch(query);
+                const bool shown = sectionShown && card->matchesSearch(query)
+                                   && ! (hideMetered && card->getEntry().isMetered());
                 card->setVisible(shown);
 
                 if (shown)
@@ -573,6 +575,9 @@ private:
 class HomeTab : public Component, private ChangeListener
 {
 public:
+    // Settings key under which the choice to hide metered models is saved
+    static constexpr const char* hideMeteredKey = "models.hideMetered";
+
     HomeTab()
     {
         titleLabel.setText("Models", dontSendNotification);
@@ -609,6 +614,20 @@ public:
                         "Type to show only the models whose name, description, tags, or path "
                         "contain the text.");
         addAndMakeVisible(searchEditor);
+
+        meteredToggle.setToggleState(Settings::getBoolValue(hideMeteredKey),
+                                     dontSendNotification);
+        meteredToggle.onClick = [this]
+        {
+            Settings::setValue(hideMeteredKey, meteredToggle.getToggleState());
+            applyFilter();
+        };
+        addInstructions(meteredToggle,
+                        "Click to hide the models that need an API key. Stability AI models need "
+                        "a Stability AI key and spend its credits. ZeroGPU models also run "
+                        "without a key, but only within a small daily allowance that a Hugging "
+                        "Face key raises.");
+        addAndMakeVisible(meteredToggle);
 
         categoryFilterBar.onSelectionChanged = [this] { applyFilter(); };
         addAndMakeVisible(categoryFilterBar);
@@ -661,7 +680,15 @@ public:
         header.performLayout(area.removeFromTop(28));
 
         area.removeFromTop(8);
-        searchEditor.setBounds(area.removeFromTop(28));
+
+        FlexBox searchRow;
+        searchRow.alignItems = FlexBox::AlignItems::center;
+        searchRow.items.add(FlexItem(searchEditor).withFlex(1).withHeight(28));
+        searchRow.items.add(FlexItem(meteredToggle)
+                                .withWidth((float) getMeteredToggleWidth())
+                                .withHeight(28)
+                                .withMargin({ 0, 0, 0, 10 }));
+        searchRow.performLayout(area.removeFromTop(28));
 
         area.removeFromTop(8);
         categoryFilterBar.setBounds(
@@ -750,14 +777,26 @@ private:
 
     void updateVisibleModels()
     {
-        const int numShown =
-            modelGrid.applyFilter(categoryFilterBar.getSelectedId(), searchEditor.getText());
+        const bool hideMetered = meteredToggle.getToggleState();
+        const int numShown = modelGrid.applyFilter(
+            categoryFilterBar.getSelectedId(), searchEditor.getText(), hideMetered);
 
-        noResultsLabel.setText(searchEditor.isEmpty()
-                                   ? "No models in this category yet."
-                                   : "No models match \"" + searchEditor.getText().trim() + "\".",
-                               dontSendNotification);
+        String noResults = "No models in this category yet.";
+
+        if (! searchEditor.isEmpty())
+            noResults = "No models match \"" + searchEditor.getText().trim() + "\".";
+        else if (hideMetered)
+            noResults = "Every model in this category needs an API key.";
+
+        noResultsLabel.setText(noResults, dontSendNotification);
         noResultsLabel.setVisible(numShown == 0);
+    }
+
+    // Room for the toggle's label, which JUCE draws at no more than 15 points, and its tick box
+    int getMeteredToggleWidth() const
+    {
+        return ModelStyle::getTextWidth(ModelStyle::font(15.0f), meteredToggle.getButtonText())
+               + 34;
     }
 
     void layOutGrid()
@@ -798,6 +837,7 @@ private:
     TextButton refreshButton { "Refresh" };
     TextButton customPathButton { "Custom Path..." };
     TextEditor searchEditor;
+    ToggleButton meteredToggle { "Hide models that need an API key" };
     CategoryFilterBar categoryFilterBar;
     Viewport viewport;
     ModelGrid modelGrid;

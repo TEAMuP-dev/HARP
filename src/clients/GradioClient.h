@@ -1283,9 +1283,6 @@ private:
 
     OpResult downloadFile(String downloadPath, File& fileToDownload)
     {
-        // Obtain local temporary directory for downloaded file
-        File tempDir = File::getSpecialLocation(File::tempDirectory);
-
         URL endpoint = URL(downloadPath);
         String fileName = endpoint.getFileName();
         String baseName =
@@ -1293,8 +1290,7 @@ private:
 
         String extension = File::createFileWithoutCheckingPath(fileName).getFileExtension();
 
-        // Create file at a unique path
-        fileToDownload = tempDir.getChildFile(baseName + "_" + Uuid().toString() + extension);
+        fileToDownload = createResultFile(baseName, extension);
 
         return makeGETRequest(endpoint, fileToDownload, downloadPath);
     }

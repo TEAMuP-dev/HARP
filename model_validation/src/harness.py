@@ -20,9 +20,9 @@ from pathlib import Path
 from gradio_client import Client
 
 from assets import Assets, merge_specs
-from cases import synthesize_default_args, apply_case, validate_outputs, inspect_outputs
-from quota import is_zerogpu
-from results import ModelResult, CaseResult, PASS, FAIL
+from cases import (synthesize_default_args, apply_case, validate_outputs,
+                   inspect_outputs, measure_outputs)
+from results import ModelResult, CaseResult, PASS, FAIL, SKIP
 from utils import run_with_timeout, describe_exception
 
 
@@ -55,7 +55,7 @@ LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
 
 # The following are substrings marking an infrastructure fault rather than a
 # fault in the model. These come from the connection or the GPU host. The same
-# call typically succeeds on a retry, revealing the model's real behaviour.
+# call typically succeeds on a retry, revealing the model's real behavior.
 # Retried a bounded number of times, since unlike a warm-up they have no
 # expected duration to wait out.
 #
@@ -185,7 +185,7 @@ def wait_out_queue(job, queue_deadline: float, api_name: str) -> None:
     Args:
         job: A gradio_client Job handle.
         queue_deadline (float): time.time() by which the job must leave the
-            queue, or it is cancelled.
+            queue, or it is canceled.
         api_name (str): Endpoint name, for the timeout message.
 
     Raises:
@@ -274,7 +274,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
             try:
                 return job.result(timeout=process_timeout)
             except concurrent.futures.TimeoutError:
-                # Cancelling ends the client's event stream for a job we have
+                # Canceling ends the client's event stream for a job we have
                 # stopped waiting on, so its worker thread does not linger for
                 # the rest of the run. The upstream function itself keeps
                 # running, as gradio can only call off a job still in the queue.
@@ -290,6 +290,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
             case_result.ok = False
             case_result.error = f"/process output invalid: {error}"
         else:
+            case_result.observed = measure_outputs(output, controls)
             inspect_outputs(output, controls, case)
             case_result.ok = True
     except Exception as exc:  # noqa: BLE001 - any exception fails the case
@@ -300,6 +301,80 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
         case_result.gpu_calls = state["gpu_calls"]
 
     return case_result
+
+
+# A common case that sends nothing of its own is a set of checks rather than a
+# scenario, so what it asserts is folded into the cases the model already runs.
+INPUT_KEYS = ("controls", "files", "synthesized_inputs")
+
+
+def merge_common_cases(common_cases: list, own_cases: list) -> list:
+    """
+    Combine the common cases with a model's own, sharing /process calls.
+
+    Every case costs one /process call, and on ZeroGPU each call reserves
+    allowance from a daily budget that the fleet exhausts well before it is
+    through. A common case that declares no inputs of its own asks the same
+    question of the same outputs as the model's own cases, so running it
+    separately buys no coverage and triples the cost: its `expect` rules and
+    `validators` are merged into each own case instead.
+
+    A common case that does declare inputs is a scenario in its own right and
+    still runs separately, with its name namespaced for the report. It inherits
+    whatever the model's first own case sends and does not override, so a model
+    that needs particular inputs keeps them.
+
+    A model's own settings win on a conflict, since they were written for that
+    model specifically.
+
+    Args:
+        common_cases (list): `common_test_cases` from the configuration.
+        own_cases (list): The model's own cases, or a lone default.
+
+    Returns:
+        cases (list): Cases to run, scenarios first.
+    """
+
+    shared_expect, shared_validators, scenarios = {}, {}, []
+
+    # What the model sends by default, which a common scenario varies rather
+    # than replaces: a model that has to be given particular files (Matchering
+    # needs two different recordings) still needs them in every scenario
+    base = own_cases[0] if own_cases else {}
+
+    for case in common_cases:
+        if any(case.get(key) for key in INPUT_KEYS):
+            scenario = dict(case, name=f"common:{case.get('name', 'unnamed')}")
+            for key in INPUT_KEYS:
+                if key not in case and base.get(key):
+                    scenario[key] = base[key]
+            scenarios.append(scenario)
+            continue
+        # Merged per output, so that two common cases targeting the same
+        # output (e.g. "*") both keep their rules
+        for label, rules in (case.get("expect") or {}).items():
+            shared_expect.setdefault(label, {}).update(rules or {})
+        shared_validators.update(case.get("validators") or {})
+
+    merged = []
+    for case in own_cases:
+        case = dict(case)
+        # The model's own rules are applied over the shared ones, per output
+        # for `expect` so that a shared rule on one output survives a model
+        # rule on another
+        expect = {label: dict(rules or {})
+                  for label, rules in shared_expect.items()}
+        for label, rules in (case.get("expect") or {}).items():
+            expect.setdefault(label, {}).update(rules or {})
+        if expect:
+            case["expect"] = expect
+        validators = dict(shared_validators)
+        validators.update(case.get("validators") or {})
+        if validators:
+            case["validators"] = validators
+        merged.append(case)
+
+    return scenarios + merged
 
 
 def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
@@ -324,7 +399,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     # ZeroGPU models default to a lower process timeout, since their jobs are
     # short once running. A per-model process_timeout override still wins.
     default_process_timeout = (opts.zerogpu_process_timeout
-                               if is_zerogpu(result.hardware)
+                               if result.zerogpu
                                else opts.process_timeout)
     process_timeout = overrides.get("process_timeout", default_process_timeout)
     connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)
@@ -355,16 +430,13 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
         return result
 
     # --- /process test cases -------------------------------------------------
-    # Common cases (generic, applied to every model) run alongside this
-    # model's own cases. Their names are namespaced so both are legible in
-    # the report. A model can opt out with `skip_common_cases`.
+    # Common cases (generic, applied to every model) are merged into this
+    # model's own cases, or run beside them when they send inputs of their own
+    # (see merge_common_cases). A model can opt out with `skip_common_cases`.
     own_cases = overrides.get("test_cases") or [{"name": "default"}]
-    if overrides.get("skip_common_cases"):
-        common_cases = []
-    else:
-        common_cases = [dict(c, name=f"common:{c.get('name', 'unnamed')}")
-                        for c in (opts.common_test_cases or [])]
-    cases = common_cases + own_cases
+    common_cases = ([] if overrides.get("skip_common_cases")
+                    else list(opts.common_test_cases or []))
+    cases = merge_common_cases(common_cases, own_cases)
 
     for case in cases:
         result.cases.append(run_case(
@@ -375,6 +447,15 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
         result.error = "; ".join(
             f"[{c.name}] {c.error}" for c in result.cases if c.ok is False)
         result.status = FAIL
+    elif not any(c.ok for c in result.cases):
+        # Every case was skipped, so /process was never called. Passing here
+        # would vouch for the model on the strength of /controls alone, which
+        # is the thing these cases exist to go beyond. It reports as a skip
+        # rather than a failure because the gap is in the configuration, not
+        # the deployment: a model whose inputs cannot be synthesized needs a
+        # `files` entry naming real ones.
+        result.error = "; ".join(f"[{c.name}] {c.error}" for c in result.cases)
+        result.status = SKIP
     else:
         result.status = PASS
 

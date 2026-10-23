@@ -36,11 +36,20 @@ public:
                 onResize(heightAtDragStart - distanceDown);
             }
         };
+        resizeEdge.onDragEnd = [this]
+        {
+            if (onResizeFinished)
+            {
+                onResizeFinished();
+            }
+        };
         addAndMakeVisible(resizeEdge);
     }
 
     // Called with the height the pane is asking for while its top edge is dragged
     std::function<void(int)> onResize;
+    // Called once a drag of its top edge ends
+    std::function<void()> onResizeFinished;
     // Called after the pane has been minimized to its title bar, or is restored
     std::function<void()> onMinimizeChanged;
     // Called when the close button is clicked

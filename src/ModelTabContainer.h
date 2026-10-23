@@ -13,12 +13,17 @@
 #include "HomeTab.h"
 #include "ModelTab.h"
 
+#include "clients/Client.h"
+
 #include "gui/RoundIconButton.h"
 
 #include "media/MediaDisplayComponent.h"
 
+#include "utils/Enums.h"
 #include "utils/Interface.h"
 #include "utils/ModelCatalog.h"
+#include "utils/Providers.h"
+#include "utils/Settings.h"
 
 #include "windows/tutorial/TutorialTargets.h"
 
@@ -216,7 +221,7 @@ public:
                                        tabBackgroundColour.darker(0.35f));
 
         homeTab.onModelOpenRequested = [this](const String& modelPath, const String& modelName)
-        { openModelTab(modelPath, modelName); };
+        { openFromHome(modelPath, modelName); };
 
         addTab("Home", tabBackgroundColour, &homeTab, false);
         setCurrentTabIndex(0);
@@ -367,6 +372,80 @@ public:
     }
 
 private:
+    /* Opens a model chosen on the Home tab. One that needs an API key HARP does not have
+       is opened only after a notice saying what it needs, shown the first time a model
+       from that provider is chosen. Stability AI models cannot run without a key, and
+       ZeroGPU models run without one on a small daily allowance, so neither is hidden
+       from the catalog, which would leave half of it out of view. */
+    void openFromHome(const String& modelPath, const String& modelName)
+    {
+        const auto* entry = catalog->findEntry(modelPath);
+
+        if (entry == nullptr || ! entry->isMetered())
+        {
+            openModelTab(modelPath, modelName);
+            return;
+        }
+
+        const Provider provider = entry->isZeroGPU() ? Provider::HuggingFace : Provider::Stability;
+        const String noticeKey = String(keyNoticeKeyPrefix) + enumToString(provider);
+
+        if (apiKeys->getKey(provider).isNotEmpty() || Settings::getBoolValue(noticeKey))
+        {
+            openModelTab(modelPath, modelName);
+            return;
+        }
+
+        const String name = entry->name;
+        auto options = MessageBoxOptions()
+                           .withButton("Add API Key")
+                           .withButton("Open")
+                           .withButton("Cancel")
+                           .withAssociatedComponent(this);
+
+        if (provider == Provider::Stability)
+        {
+            options = options.withIconType(MessageBoxIconType::WarningIcon)
+                          .withTitle("Stability AI API Key Needed")
+                          .withMessage(name
+                                       + " runs on Stability AI's servers, which need a Stability "
+                                         "AI API key and spend that account's credits on every "
+                                         "request.\n\nThe model can be opened without a key, but "
+                                         "processing fails until one is added in Settings.");
+        }
+        else
+        {
+            options = options.withIconType(MessageBoxIconType::InfoIcon)
+                          .withTitle("ZeroGPU Model")
+                          .withMessage(name
+                                       + " runs on Hugging Face ZeroGPU. Without an API key, its "
+                                         "requests draw on a small anonymous daily GPU allowance, "
+                                         "which the longest ones may not fit at all.\n\nA free "
+                                         "Hugging Face API key raises the allowance, and can be "
+                                         "added in Settings at any time.");
+        }
+
+        // Button results are 1, 2 and 0 in the order the buttons were added
+        auto onChoice = [safeThis = SafePointer<ModelTabContainer>(this),
+                         modelPath,
+                         modelName,
+                         noticeKey,
+                         provider](int result)
+        {
+            if (safeThis == nullptr || result == 0)
+                return;
+
+            // Dismissing the notice is not acknowledging it, so only these record it
+            Settings::setValue(noticeKey, true, true);
+            safeThis->openModelTab(modelPath, modelName);
+
+            if (result == 1 && safeThis->onOpenAPIKeySettings)
+                safeThis->onOpenAPIKeySettings(provider);
+        };
+
+        AlertWindow::showAsync(options, std::move(onChoice));
+    }
+
     void addCloseButton(ModelTab& tab, int tabIndex)
     {
         auto* closeButton = new CloseButton("Click to close this model tab.");
@@ -502,4 +581,8 @@ private:
     DeferredTabReaper tabReaper;
 
     SharedResourcePointer<ModelCatalog> catalog;
+    SharedResourcePointer<SharedAPIKeys> apiKeys;
+
+    // Prefix of the settings keys recording, per provider, that its notice was acknowledged
+    static constexpr const char* keyNoticeKeyPrefix = "models.keyNoticeSeen.";
 };

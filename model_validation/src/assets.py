@@ -1,10 +1,13 @@
 """
 Synthesized test inputs for HARP model validation.
 
-Every input file is generated from scratch, audio with soundfile and MIDI
-with the standard library, so validation needs no binary fixtures checked into
-the repository. Real-world inputs for specific models belong in test_data/ and
-are referenced from a test case's `files` entry in config.yml.
+Every input file is generated, audio with soundfile and MIDI with the
+standard library. Audio is a sine sweep and MIDI a run of ascending notes
+unless a `source` names a recording or a MIDI file in test_data/ to build the
+input from instead, which gives a model content it can act on: a separator
+something to separate, a transcriber notes to find. Inputs for one specific
+model can also be passed as they are, from a test case's `files` entry in
+config.yml.
 
 Input properties (sample rate, channels, length, format, ...) are configurable
 via `synthesized_inputs`, whose schema is documented in config.yml. Each
@@ -38,6 +41,7 @@ AUDIO_DEFAULTS = {
     "num_channels": 1,      # 1 = mono, 2 = stereo, ...
     "duration": 2.0,        # seconds
     "ext": ".wav",          # container/format to write
+    "source": None,         # recording to build the clip from, or a sine sweep
 }
 MIDI_DEFAULTS = {
     "num_notes": 2,         # ascending notes from middle C
@@ -45,6 +49,7 @@ MIDI_DEFAULTS = {
     "instrument": 0,        # General MIDI program number (0 = grand piano)
     "channel": 0,           # MIDI channel (see MIDI_DRUM_CHANNEL)
     "ext": ".mid",
+    "source": None,         # MIDI file to pass as it is, or synthesized notes
 }
 
 # Channels are numbered 0 to 15 throughout validation, as they are on the
@@ -171,7 +176,40 @@ def check_midi_number(prop: str, value, where: str) -> None:
             f"not {description}. Give a whole number from {low} to {high}")
 
 
-def check_synthesized_inputs(config: dict) -> None:
+def check_source(kind: str, source, where: str, base_dir: Path) -> None:
+    """
+    Reject a `source` that cannot be read as the kind of input it is set for.
+
+    Args:
+        kind (str): "audio" or "midi".
+        source: The configured path, relative to config.yml.
+        where (str): Where it was written, for reporting.
+        base_dir (Path): Directory containing config.yml.
+
+    Raises:
+        ValueError: If the file is missing or is not audio or MIDI.
+    """
+
+    path = (base_dir / str(source)).resolve()
+
+    if not path.is_file():
+        raise ValueError(f"synthesized_inputs {kind} source '{source}' (set in "
+                         f"{where}) is not a file. Give a path relative to "
+                         f"config.yml")
+
+    if kind == "midi" and path.suffix.lower() not in MIDI_EXTS:
+        raise ValueError(f"synthesized_inputs midi source '{source}' (set in "
+                         f"{where}) is not a MIDI file")
+
+    if kind == "audio":
+        try:
+            soundfile.info(str(path))
+        except Exception as exc:  # noqa: BLE001 - any read failure is fatal
+            raise ValueError(f"synthesized_inputs audio source '{source}' (set "
+                             f"in {where}) cannot be read: {exc}") from exc
+
+
+def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
     """
     Reject `synthesized_inputs` settings that nothing would act on.
 
@@ -186,9 +224,11 @@ def check_synthesized_inputs(config: dict) -> None:
 
     Args:
         config (dict): Parsed configuration.
+        base_dir (Path): Directory containing config.yml, against which a
+            `source` path is resolved.
 
     Raises:
-        ValueError: If a setting is unrecognized or cannot be honoured.
+        ValueError: If a setting is unrecognized or cannot be honored.
     """
 
     exts = {}
@@ -217,6 +257,9 @@ def check_synthesized_inputs(config: dict) -> None:
                     if (props or {}).get(prop) is not None:
                         check_midi_number(prop, props[prop], where)
 
+            if (props or {}).get("source"):
+                check_source(kind, props["source"], where, base_dir)
+
     unwritable = {ext: where for ext, where in exts.items()
                   if not can_write_audio(ext)}
 
@@ -242,11 +285,15 @@ class Assets:
         workdir (Path): Directory the generated files are written to.
         defaults (dict | None): Global `synthesized_inputs` block from
             config.yml, overriding the built-in property defaults.
+        base_dir (Path | None): Directory containing config.yml, against which
+            a `source` path is resolved. The working directory if None.
     """
 
-    def __init__(self, workdir: Path, defaults: dict | None = None):
+    def __init__(self, workdir: Path, defaults: dict | None = None,
+                 base_dir: Path | None = None):
         self.workdir = workdir
         self.defaults = defaults or {}
+        self.base_dir = base_dir or Path.cwd()
         self._cache = {}
         self._key_locks = {}
         self._lock = threading.Lock()
@@ -350,6 +397,15 @@ class Assets:
         duration = float(props["duration"])
         ext = (ext or props["ext"]).lower()
 
+        if props["source"]:
+            source = (self.base_dir / str(props["source"])).resolve()
+            path = (self.workdir / f"{source.stem}_{sample_rate}hz"
+                                   f"_{num_channels}ch_{duration:g}s{ext}")
+            return self.cached(
+                ("audio", str(source), sample_rate, num_channels, duration, ext),
+                lambda: write_audio_from(path, source, duration, sample_rate,
+                                         num_channels))
+
         path = (self.workdir / f"test_input_{sample_rate}hz_{num_channels}ch"
                                f"_{duration:g}s{ext}")
 
@@ -370,11 +426,20 @@ class Assets:
         """
 
         props = self.resolve("midi", overrides)
+        ext = (ext or props["ext"]).lower()
+
+        # A source is passed as it is, so the properties that describe the
+        # synthesized notes do not apply to it
+        if props["source"]:
+            source = (self.base_dir / str(props["source"])).resolve()
+            path = self.workdir / f"{source.stem}{ext}"
+            return self.cached(("midi", str(source), ext),
+                               lambda: write_bytes(path, source.read_bytes()))
+
         num_notes = int(props["num_notes"])
         note_duration = float(props["note_duration"])
         instrument = int(props["instrument"])
         channel = int(props["channel"])
-        ext = (ext or props["ext"]).lower()
 
         path = (self.workdir /
                 f"test_input_{num_notes}n_{note_duration:g}s"
@@ -478,6 +543,51 @@ def write_audio(path: Path, duration: float, sample_rate: int,
     mono = 0.5 * numpy.sin(2 * numpy.pi * freq * t)
     soundfile.write(str(path), numpy.tile(mono[:, None], (1, num_channels)),
                     sample_rate)
+
+    return path
+
+
+def write_audio_from(path: Path, source: Path, duration: float,
+                     sample_rate: int, num_channels: int) -> Path:
+    """
+    Write a clip of a recording with the requested properties.
+
+    The recording is resampled by linear interpolation, which is enough for a
+    test input though not for listening, and is repeated from its start where
+    it is shorter than the clip. A stereo recording keeps its two channels when
+    stereo is asked for, and is averaged to one otherwise; a mono recording is
+    copied to every channel.
+
+    Args:
+        path (Path): Destination path, whose extension selects the format.
+        source (Path): The recording, in any format soundfile reads.
+        duration (float): Length of the clip in seconds.
+        sample_rate (int): Sample rate in Hz.
+        num_channels (int): Number of channels to write.
+
+    Returns:
+        path (Path): The written file, for chaining.
+    """
+
+    data, rate = soundfile.read(str(source), dtype="float32", always_2d=True)
+
+    if data.shape[1] != num_channels:
+        if data.shape[1] > num_channels > 1:
+            data = data[:, :num_channels]
+        else:
+            data = numpy.tile(data.mean(axis=1, keepdims=True), (1, num_channels))
+
+    if rate != sample_rate:
+        positions = numpy.arange(int(round(len(data) * sample_rate / rate))) \
+            * (rate / sample_rate)
+        data = numpy.stack([numpy.interp(positions, numpy.arange(len(data)),
+                                         data[:, channel])
+                            for channel in range(data.shape[1])], axis=1)
+
+    n = max(1, int(duration * sample_rate))
+    if len(data) < n:
+        data = numpy.tile(data, (-(-n // len(data)), 1))
+    soundfile.write(str(path), data[:n], sample_rate)
 
     return path
 

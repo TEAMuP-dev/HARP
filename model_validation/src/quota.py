@@ -11,7 +11,8 @@ import threading
 
 __all__ = [
     'ZeroGPUTracker',
-    'is_zerogpu'
+    'is_zerogpu',
+    'spends_zerogpu'
 ]
 
 
@@ -30,6 +31,25 @@ def is_zerogpu(hardware: str) -> bool:
     """
 
     return bool(hardware) and hardware.lower().startswith("zero")
+
+
+def spends_zerogpu(hardware: str, tags) -> bool:
+    """
+    Whether calling a space consumes ZeroGPU quota.
+
+    A space on ZeroGPU hardware does. So does a frontend on other hardware that
+    forwards to a ZeroGPU backend, which declares this with the "zerogpu" tag,
+    since each call it forwards still spends the caller's allowance.
+
+    Args:
+        hardware (str): HF hardware id, possibly empty.
+        tags (list | None): The tags in the space's README.
+
+    Returns:
+        zerogpu (bool): True when a call draws on ZeroGPU allowance.
+    """
+
+    return is_zerogpu(hardware) or "zerogpu" in (tags or [])
 
 
 class ZeroGPUTracker:

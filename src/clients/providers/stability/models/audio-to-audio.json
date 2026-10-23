@@ -1,7 +1,7 @@
 {
   "card": {
     "name": "Stable Audio 2.0 (Audio to Audio)",
-    "description": "Enter text prompt to modify an audio file.",
+    "description": "Transforms an audio file to follow a text prompt with Stability AI's Stable Audio 2.0. Requires a Stability AI API key, added under Settings > API Keys, and each request spends credits from that account.",
     "author": "Stability AI",
     "tags": [
       "category:generation",
@@ -32,7 +32,7 @@
       "type": "slider"
     },
     {
-      "label": "steps",
+      "label": "Steps",
       "info": "Number of diffusion steps. Higher values improve quality but take longer to process.",
       "minimum": 30,
       "maximum": 100,
@@ -41,8 +41,8 @@
       "type": "slider"
     },
     {
-      "label": "cfg",
-      "info": "Classifier-free guidance. Higher values make the output follow the prompt more strictly.",
+      "label": "Guidance Scale",
+      "info": "Classifier-free guidance (cfg_scale). Higher values make the output follow the prompt more strictly.",
       "minimum": 1,
       "maximum": 25,
       "step": 1,
@@ -74,7 +74,7 @@
   ],
   "outputs": [
     {
-      "label": "Output Audio",
+      "label": "Transformed Audio",
       "required": true,
       "type": "audio_track"
     }

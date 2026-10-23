@@ -21,7 +21,6 @@ MainComponent::MainComponent()
     statusAreaWidget.setComponentID(TutorialTargets::statusArea);
     mediaClipboardWidget.setComponentID(TutorialTargets::clipboard);
 
-    clipboardWidth = mediaClipboardWidget.getDefaultWidth();
     mediaClipboardWidget.onResize = [this](int newWidth)
     {
         // Leave the main panel at least the width its controls need
@@ -43,6 +42,18 @@ MainComponent::MainComponent()
             "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
         commandManager.commandStatusChanged();
     };
+
+    // Sizes the clipboard and its preview pane were last given
+    clipboardWidth = jmax(
+        mediaClipboardWidget.getMinimumWidth(),
+        Settings::getIntValue("view.mediaClipboardWidth", mediaClipboardWidget.getDefaultWidth()));
+    mediaClipboardWidget.setPreviewPaneHeight(
+        Settings::getIntValue("view.previewPaneHeight", PreviewPaneWidget::defaultHeight));
+    mediaClipboardWidget.setPreviewPaneMinimized(
+        Settings::getBoolValue("view.previewPaneMinimized", false));
+    // Attached after the sizes are restored, which would otherwise save them straight back
+    mediaClipboardWidget.onLayoutChanged = [this] { saveClipboardLayout(); };
+
     dragOverlay.setVisible(false);
     dragOverlay.toFront(false);
 
@@ -241,7 +252,8 @@ void MainComponent::openSettingsWindow(std::optional<Provider> focusProvider)
 void MainComponent::restoreViewDefaults()
 {
     // Defaults must match the fallbacks used when reading the settings
-    // in the constructor: status area shown, media clipboard hidden, preview pane shown
+    // in the constructor: status area shown, media clipboard hidden, preview pane shown,
+    // and the clipboard and preview pane at their default sizes
     if (! showStatusArea)
         viewStatusAreaCallback();
 
@@ -251,11 +263,38 @@ void MainComponent::restoreViewDefaults()
     if (! mediaClipboardWidget.isPreviewPaneVisible())
         viewPreviewPaneCallback();
 
+    // Sizes as well, after hiding the clipboard, which shrinks the window by its current width
+    clipboardWidth = mediaClipboardWidget.getDefaultWidth();
+    mediaClipboardWidget.setPreviewPaneHeight(PreviewPaneWidget::defaultHeight);
+    mediaClipboardWidget.setPreviewPaneMinimized(false);
+
+    /* The window takes the geometry of a first launch, which HARPWindow gives it when no
+       position is saved: as small as the default view allows, and centred. Its position
+       is saved again when it closes, so leaving it where it was would undo the reset. */
+    if (auto* window = findParentComponentOfClass<DocumentWindow>())
+    {
+        updateWindowConstraints();
+
+        if (window->isFullScreen())
+            window->setFullScreen(false);
+
+        window->centreWithSize(requiredWindowWidth, requiredWindowHeight);
+    }
+
     // showWelcomePopup default (true) is already restored by clearing settings;
     // it will show on the next launch automatically.
 }
 
 /* --View-- */
+
+void MainComponent::saveClipboardLayout()
+{
+    Settings::setValue("view.mediaClipboardWidth", clipboardWidth);
+    Settings::setValue("view.previewPaneHeight", mediaClipboardWidget.getPreviewPaneHeight());
+    Settings::setValue("view.previewPaneMinimized",
+                       mediaClipboardWidget.isPreviewPaneMinimized() ? "1" : "0",
+                       true);
+}
 
 void MainComponent::viewStatusAreaCallback()
 {
@@ -360,7 +399,7 @@ void MainComponent::viewMediaClipboardCallback()
 
         if (showMediaClipboard)
         {
-            clipboardWidth = mediaClipboardWidget.getDefaultWidth();
+            // Opened at the width it was last given
             windowBounds.setWidth(
                 jmin(currentDisplayWidth, windowBounds.getWidth() + clipboardWidth));
         }

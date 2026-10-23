@@ -13,7 +13,7 @@ AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW
     thumbnailComponent.addMouseListener(this, true);
     contentComponent.addAndMakeVisible(thumbnailComponent);
 
-    mediaInstructions = "Audio waveform.\nClick anywhere to play from that point.\n"
+    mediaInstructions = "Audio waveform.\nClick or drag to move the playback position.\n"
                         "Scroll to zoom in time, or hold Shift while scrolling to pan.";
 }
 

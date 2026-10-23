@@ -49,7 +49,12 @@ public:
                 jlimit(PreviewPaneWidget::minimumHeight, getMaximumPreviewPaneHeight(), newHeight);
             resized();
         };
-        previewPaneWidget.onMinimizeChanged = [this] { resized(); };
+        previewPaneWidget.onResizeFinished = [this] { notifyLayoutChanged(); };
+        previewPaneWidget.onMinimizeChanged = [this]
+        {
+            resized();
+            notifyLayoutChanged();
+        };
         previewPaneWidget.onClose = [this] { setPreviewPaneVisible(false); };
         addAndMakeVisible(previewPaneWidget);
 
@@ -62,6 +67,7 @@ public:
                 onResize(jmax(minimumWidth, widthAtDragStart - distanceRight));
             }
         };
+        resizeEdge.onDragEnd = [this] { notifyLayoutChanged(); };
         addAndMakeVisible(resizeEdge);
     }
 
@@ -164,6 +170,27 @@ public:
 
     int getDefaultWidth() const { return defaultWidth; }
     int getMinimumWidth() const { return minimumWidth; }
+
+    /* Called once a drag of the clipboard's edge or the preview pane's edge ends, or the pane
+       is minimized or restored, which is when the owner keeps the sizes in the settings. The
+       width belongs to the owner, which lays the clipboard out beside the main panel. */
+    std::function<void()> onLayoutChanged;
+
+    // The height the preview pane takes when shown in full, wherever the clipboard is tall enough
+    int getPreviewPaneHeight() const { return previewPaneHeight; }
+
+    void setPreviewPaneHeight(int newHeight)
+    {
+        previewPaneHeight = jmax(PreviewPaneWidget::minimumHeight, newHeight);
+        resized();
+    }
+
+    bool isPreviewPaneMinimized() const { return previewPaneWidget.isMinimized(); }
+
+    void setPreviewPaneMinimized(bool shouldBeMinimized)
+    {
+        previewPaneWidget.setMinimized(shouldBeMinimized);
+    }
 
     // Called whenever preview pane is shown or hidden
     std::function<void()> onPreviewPaneVisibilityChanged;
@@ -638,6 +665,14 @@ private:
         currentlySelectedDisplay = mediaDisplay;
     }
 
+    void notifyLayoutChanged()
+    {
+        if (onLayoutChanged)
+        {
+            onLayoutChanged();
+        }
+    }
+
     // The tallest the preview pane can be while leaving room for the header and a track
     int getMaximumPreviewPaneHeight() const
     {
@@ -659,7 +694,8 @@ private:
     // Room for one track in the list, with the margins the track area gives it
     static constexpr int minimumTrackListHeight = thumbnailHeight + 8;
     const int resizeEdgeWidth = 6;
-    const int defaultWidth = 250;
+    // Wide enough for the header to show its rule beside the title, as a model tab's sections do
+    const int defaultWidth = 300;
     const int minimumWidth = 150;
 
     // Bar of buttons above the track list
