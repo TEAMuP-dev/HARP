@@ -85,7 +85,12 @@ void GeneralSettingsTab::handleRestoreDefaults()
            memory, and would write them back the next time one is added or removed. */
         const String apiKeyPrefix = String(SharedAPIKeys::settingsPrefix) + ".";
 
-        for (const auto& key : settings->getAllProperties().getAllKeys())
+        /* Copied first, since getAllKeys() is the live list. Removing from it while
+           iterating would shift each next key into the slot just visited, which skips
+           every other key and leaves those settings in place. */
+        const StringArray keys = settings->getAllProperties().getAllKeys();
+
+        for (const auto& key : keys)
         {
             if (! key.startsWith(apiKeyPrefix) && key != ModelCatalog::customPathsKey)
                 settings->removeValue(key);

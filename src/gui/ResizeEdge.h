@@ -37,6 +37,8 @@ public:
     std::function<void()> onDragStart;
     // Called throughout a drag with how far right (or down) the mouse is from where it began
     std::function<void(int)> onDrag;
+    // Called once when a drag ends, which is when a size worth keeping is known
+    std::function<void()> onDragEnd;
 
     void mouseDown(const MouseEvent&) override
     {
@@ -55,7 +57,16 @@ public:
         }
     }
 
-    void mouseUp(const MouseEvent&) override { repaint(); }
+    void mouseUp(const MouseEvent& e) override
+    {
+        repaint();
+
+        if (e.mouseWasDraggedSinceMouseDown() && onDragEnd)
+        {
+            onDragEnd();
+        }
+    }
+
     void mouseEnter(const MouseEvent&) override { repaint(); }
     void mouseExit(const MouseEvent&) override { repaint(); }
 

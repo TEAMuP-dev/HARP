@@ -68,6 +68,7 @@ public:
     // View
     void viewStatusAreaCallback();
     void viewMediaClipboardCallback();
+    void saveClipboardLayout();
     void viewPreviewPaneCallback();
     void restoreViewDefaults();
 
@@ -111,7 +112,7 @@ private:
     /* Interface */
 
     const int statusAreaHeight = 100;
-    // Width chosen for the media clipboard by dragging its edge
+    // Width chosen for the media clipboard by dragging its edge, which the settings keep
     int clipboardWidth = 0;
 
     // Minimum size to ensure all controls remain visible and functional:
