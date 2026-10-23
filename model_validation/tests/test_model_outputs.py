@@ -17,7 +17,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import soundfile
-from expectations import check_expectations
+from expectations import check_expectations, resolve_expect_targets
 from assets import check_synthesized_inputs
 from harness import merge_common_cases
 from utils import check_config_keys, load_config
@@ -264,6 +264,20 @@ class ConfigFileTest(unittest.TestCase):
                 with self.subTest(case=case.get("name"), validator=name):
                     self.assertIn(name, VALIDATORS)
 
+    def test_models_are_in_order(self):
+        # One model's settings are found by name, which only works while the
+        # entries stay sorted
+        names = list(load_config(self.PATH).get("overrides") or {})
+        self.assertEqual(names, sorted(names))
+
+    def test_case_names_are_unique_per_model(self):
+        # The report tells a model's cases apart by name alone, so two cases
+        # sharing one could not be told apart
+        for model, entry in (load_config(self.PATH).get("overrides") or {}).items():
+            names = [case.get("name") for case in (entry or {}).get("test_cases") or []]
+            with self.subTest(model=model):
+                self.assertEqual(len(names), len(set(names)))
+
 
 class MergeCommonCasesTest(unittest.TestCase):
     """How the common cases are folded into a model's own."""
@@ -341,3 +355,55 @@ class LabelsReachHarpTest(unittest.TestCase):
     def test_skips_a_model_without_a_json_output(self):
         with self.assertRaises(ValidatorNotApplicable):
             VALIDATORS["labels_reach_harp"]({}, {"outputs": [{"type": "audio_track"}]}, {})
+
+
+class RmsBoundsTest(unittest.TestCase):
+    """The level rules on either side of an audio output."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.path = str(Path(self.temp.name) / "quiet.wav")
+        # A sine at amplitude 0.01, about -43 dBFS RMS
+        import numpy
+        t = numpy.arange(44100) / 44100
+        soundfile.write(self.path, 0.01 * numpy.sin(2 * numpy.pi * 440 * t), 44100)
+
+    def test_max_rms_db_accepts_a_quiet_output(self):
+        check_expectations("Stem", "audio_track", self.path, {"max_rms_db": -40})
+
+    def test_max_rms_db_rejects_a_louder_output(self):
+        with self.assertRaises(AssertionError) as caught:
+            check_expectations("Stem", "audio_track", self.path, {"max_rms_db": -50})
+        self.assertIn("more signal than expected", str(caught.exception))
+
+
+class ExpectTargetsTest(unittest.TestCase):
+    """How rules under "*" and under an output's label combine."""
+
+    OUT_TYPES = {"Vocals": "audio_track", "Guitar": "audio_track", "Score": "midi_track"}
+
+    def resolve(self, expect):
+        return dict(resolve_expect_targets(expect, self.OUT_TYPES))
+
+    def test_a_named_rule_replaces_the_same_rule_under_the_wildcard(self):
+        # A separator's stem for a source the input lacks lifts the common
+        # floor on that stem alone, and the other stems keep it
+        targets = self.resolve({"*": {"min_rms_db": -80},
+                                "Guitar": {"min_rms_db": -float("inf"), "max_rms_db": -60}})
+        self.assertEqual(targets["Guitar"], {"min_rms_db": -float("inf"), "max_rms_db": -60})
+        self.assertEqual(targets["Vocals"], {"min_rms_db": -80})
+
+    def test_the_named_rule_wins_whichever_key_comes_first(self):
+        targets = self.resolve({"Guitar": {"min_rms_db": -90}, "*": {"min_rms_db": -80}})
+        self.assertEqual(targets["Guitar"], {"min_rms_db": -90})
+
+    def test_other_wildcard_rules_still_reach_a_named_output(self):
+        targets = self.resolve({"*": {"min_rms_db": -80, "min_duration": 7.8},
+                                "Guitar": {"min_rms_db": -90}})
+        self.assertEqual(targets["Guitar"], {"min_rms_db": -90, "min_duration": 7.8})
+
+    def test_a_wildcard_rule_reaches_only_the_types_it_covers(self):
+        targets = self.resolve({"*": {"min_rms_db": -80, "min_notes": 1}})
+        self.assertEqual(targets["Score"], {"min_notes": 1})
+        self.assertEqual(targets["Vocals"], {"min_rms_db": -80})

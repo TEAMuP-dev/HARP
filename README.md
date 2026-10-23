@@ -116,7 +116,8 @@ its own when a file is added with `File > Open`.
   bar. `View > Preview Pane` shows it again, as does double-clicking a track's waveform or piano roll.
 - Double-click a track's name to rename it.
 - Drag a track up or down to reorder the list, or onto a model's track to use it as input.
-- Drag the left edge of the clipboard to change its width.
+- Drag the left edge of the clipboard to change its width. HARP keeps the clipboard's width and the
+  preview pane's height and state for the next session.
 - When a DAW opened HARP with a file, the send icon overwrites that file with the selected track,
   which brings the result back into the DAW project.
 

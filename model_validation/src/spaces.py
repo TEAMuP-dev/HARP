@@ -33,8 +33,11 @@ __all__ = [
 # wakes on the first request
 SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
 # Stages that resolve on their own if we wait. SLEEPING is not one of them,
-# since a sleeping space only starts once something asks it to (see wake_space)
-TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING"}
+# since a sleeping space only starts once something asks it to (see wake_space).
+# RUNNING_APP_STARTING is a new revision starting while the old one serves, so
+# waiting it out validates the revision just deployed
+TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING",
+                    "RUNNING_APP_STARTING"}
 # Stages a restart can recover from. DELETING is excluded, as there is
 # nothing left to restart
 RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",

@@ -46,6 +46,7 @@ EXPECT_RULES = {
     "sample_rate": AUDIO,
     "bit_depth": AUDIO,
     "min_rms_db": AUDIO,
+    "max_rms_db": AUDIO,
     "min_notes": MIDI,
     "note_instruments": MIDI,
     "note_channels": MIDI,
@@ -68,7 +69,7 @@ TEXT_RULES = {"min_length", "excludes"}
 DURATION_RULES = {"min_duration", "max_duration"}
 DECODED_RULES = {
     "audio_track": {"num_channels", "sample_rate", "bit_depth",
-                    "min_rms_db"} | DURATION_RULES,
+                    "min_rms_db", "max_rms_db"} | DURATION_RULES,
     "midi_track": {"min_notes"} | set(NOTE_VALUE_RULES) | DURATION_RULES,
 }
 
@@ -131,18 +132,23 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
     explicit label, by contrast, must exist and must accept the rule -
     otherwise it is a configuration error, not a model failure.
 
+    A rule given under an output's label replaces the same rule under "*"
+    for that output alone, since it is the more specific statement. This is
+    what lets a model lift the common silence floor on one stem while every
+    other output keeps it.
+
     Args:
         expect (dict): The case's `expect` block.
         out_types (dict): Output label -> component type from /controls.
 
     Returns:
-        targets (list): (label, rules) pairs to check.
+        targets (list): (label, rules) pairs to check, one per output.
 
     Raises:
         ValueError: If a label, rule name, or rule/output pairing is invalid.
     """
 
-    targets = []
+    targets, named = {}, {}
 
     for key, rules in (expect or {}).items():
         rules = rules or {}
@@ -155,13 +161,11 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
         if key == ALL_OUTPUTS:
             # Fan each rule out to the outputs whose type it covers. A rule
             # matching nothing is dropped (lenient, so generic cases apply)
-            per_label = {}
             for rule, value in rules.items():
                 applicable = EXPECT_RULES[rule]
                 for label, otype in out_types.items():
                     if otype in applicable:
-                        per_label.setdefault(label, {})[rule] = value
-            targets.extend(per_label.items())
+                        targets.setdefault(label, {})[rule] = value
             continue
 
         if key not in out_types:
@@ -176,9 +180,14 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
                     f"of type '{out_types[key]}'. It applies to "
                     f"{sorted(applicable)} outputs")
 
-        targets.append((key, rules))
+        named[key] = rules
 
-    return targets
+    # Applied after every "*" key, so that the order of the keys in the
+    # configuration does not decide which rule wins
+    for label, rules in named.items():
+        targets.setdefault(label, {}).update(rules)
+
+    return list(targets.items())
 
 
 def check_note_values(label: str, rule: str, found: list, allowed) -> None:
@@ -301,6 +310,11 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
             assert props["rms_db"] >= rules["min_rms_db"], \
                 (f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
                  f"< {rules['min_rms_db']} dBFS)")
+
+        if "max_rms_db" in rules:
+            assert props["rms_db"] <= rules["max_rms_db"], \
+                (f"output '{label}' carries more signal than expected (RMS "
+                 f"{props['rms_db']:.1f} dBFS > {rules['max_rms_db']} dBFS)")
 
     if props is not None and otype == "midi_track":
         if "min_notes" in rules:

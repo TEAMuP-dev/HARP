@@ -305,10 +305,11 @@ The shipped [config.yml](config.yml) sets these at the top level, so every
 model gets eight seconds of a band (drums, bass, piano and a lead) under a
 speaking voice, at 48 kHz in stereo, and a monophonic melody for MIDI. Models
 built for speech take English speech in mono at 44.1 kHz instead, so both
-shapes of input are exercised across the fleet, and the 48 kHz stereo input
-makes a sample rate or channel count a model fails to preserve visible in the
-report. The assets are described at the top of config.yml, and were made for
-this suite.
+shapes of input are exercised across the fleet. Every model that returns its
+input, processed or not, asserts the input's sample rate and channel count, and
+the 48 kHz stereo input is what makes a model that writes at its own rate or in
+mono fail that assertion. The assets are described at the top of config.yml,
+and were made for this suite.
 
 ```yaml
 # config.yml, at the top level, so it applies to every model
@@ -416,6 +417,17 @@ overrides:
 Note: once `test_cases` is present, **only** the listed cases run. Include
 `- name: default` to keep the default synthesized case.
 
+An input the model marks as optional is left empty rather than synthesized,
+since that is what a request without it sends. A case that needs one, such as
+a reference voice or a melody to follow, names it in `files`.
+
+A model with several modes gets a case for each mode that runs different code
+or loads different weights, since one mode can break while the others work. A
+mode that changes only a number on the same path is covered by the default
+case. Every case is a `/process` call, so on ZeroGPU each extra case is
+weighed against the time and allowance a run spends (see
+[CI Behavior](#ci-behavior)).
+
 ### Step 3: check the outputs (optional)
 
 Every case already gets structural checks for free. `/process` must not error,
@@ -440,7 +452,7 @@ with no rules is still subject to the default structural checks:
         controls:
           "Pitch Shift (semitones)": 24
         expect:
-          "Output Audio":
+          "Shifted Audio":
             ext: .wav            # extension: a string, or a list of accepted ones
             min_bytes: 10000     # minimum file size
             num_channels: 1      # exact channel count (1 = mono, 2 = stereo)
@@ -463,6 +475,7 @@ The following is the full vocabulary along with which output types each rule cov
 | `sample_rate` | audio output | Exact sample rate in Hz |
 | `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...), and errors on compressed formats such as MP3 or OGG |
 | `min_rms_db` | audio output | RMS level is at least this many dBFS |
+| `max_rms_db` | audio output | RMS level is at most this many dBFS |
 | `min_duration` / `max_duration` | audio or MIDI output | Length in seconds is within bounds |
 | `min_notes` | MIDI output | At least this many note-on events |
 | `note_instruments` | MIDI output | Notes use only these General MIDI program numbers (one, or a list of accepted) |
@@ -479,16 +492,20 @@ because a MIDI file has no single instrument or channel of its own, only notes
 that each use one.
 
 **Targeting outputs.** A model with several outputs gets one block per output
-label, each checked independently. Use `"*"` instead of a label to apply rules
-to every output a rule covers. With mixed outputs, `"*"` sends `min_bytes` to
-all file outputs, `min_rms_db` only to the audio ones, and `min_notes` only to
-the MIDI ones:
+label. Use `"*"` instead of a label to apply rules to every output a rule
+covers. With mixed outputs, `"*"` sends `min_bytes` to all file outputs,
+`min_rms_db` only to the audio ones, and `min_notes` only to the MIDI ones:
 
 ```yaml
         expect:
           "*":
             min_bytes: 1000      # every file output must be non-trivial
 ```
+
+A rule under an output's own label replaces the same rule under `"*"` for that
+output, whichever key comes first. `"*"` can therefore set a rule for every
+output while a label makes the exception for one, and the other rules under
+`"*"` still reach it.
 
 **Mistakes on a named output are surfaced as configuration mistakes, not as
 model faults.** An unrecognized rule name, an unknown output label, or a rule
@@ -507,6 +524,14 @@ Digital silence is `-inf`, quiet noise floors sit near `-60`, and typical
 program material is above `-40`. RMS is also more robust than a peak
 measurement, since a single stray click cannot make an otherwise-silent file
 pass. `min_rms_db: -60` is the usual check for silence.
+
+`max_rms_db` is the converse, for an output that should be near-silent. A
+separator's stem for a source its input does not contain is the use: it shows
+that the model separated rather than copying its input into every stem.
+Assert one only on a source the input truly lacks, measured, since a model can
+also route part of a source to a neighboring stem. An output given a
+`max_rms_db` usually needs `min_rms_db: -.inf` as well, to lift the common
+silence floor.
 
 **On `min_labels`:** `min_labels: 0` is meaningful, and is the right rule when
 a model may legitimately return no labels. It asserts that a well-formed
@@ -648,13 +673,14 @@ header-only WAV from a model that wrote no samples and reported success,
 `labels-reach-harp` fails a JSON output HARP would reject, and
 `outputs-carry-signal` fails digital silence and MIDI with no notes.
 
-The silence floor is set at -80 dBFS on purpose, well below any real level. A
-separation model's stem for a source its input does not contain is
-legitimately quiet (measured down to -68 dBFS), and a higher fleet-wide floor
-would read as a fault in those models. A real level is asserted per model
-instead, where producing signal is part of the contract. The same test applies
-to anything proposed as a common case: a rule that holds for most models reads
-as a failure on the rest.
+The silence floor is set at -80 dBFS on purpose, well below any real level, to
+catch digital silence without judging loudness. A real level is asserted per
+model instead, where producing signal is part of the contract. A separator's
+stem for a source its input does not contain is legitimately quiet, at times
+below even this floor, so such a stem lifts the floor by name and asserts its
+silence with `max_rms_db` (see above). The same test applies to anything
+proposed as a common case: a rule that holds for most models reads as a
+failure on the rest.
 
 Keep common cases model-agnostic by targeting outputs with `"*"` rather than a
 specific label, which will not exist on most models. Because a `"*"` rule is
@@ -708,10 +734,14 @@ write one entry holding everything that applies to the model.
 - **Reports:** a markdown summary on each run, plus JSON and markdown
   artifacts. A failed Space's entry carries the end of its run log, where the
   traceback behind the failure usually is.
-- **Duration:** about 15 minutes for the whole fleet. Measured on
-  2026-10-22, ZeroGPU work was 52 `/process` calls and 11 minutes, run one at a
-  time, with the CPU models alongside it. The ZeroGPU calls are what a change
-  to the cases mostly moves.
+- **Duration:** about 25 minutes for the whole fleet. Measured on
+  2026-10-23, ZeroGPU work was 70 `/process` calls and 19 minutes, run one at a
+  time, with the CPU models alongside it, and the 13 cases added since
+  then take about 5 minutes more. The ZeroGPU calls are what a change to the
+  cases mostly moves. A successful call is billed for its GPU time, which is
+  less than those minutes, against the 40 minutes a day of a PRO or team
+  account. The token CI uses therefore needs that tier, and little other
+  ZeroGPU use on the same day.
 - **Harness tests:** the examples job first runs the unit tests under
   `tests/`, which also check config.yml, so a configuration mistake turns the
   run red before any model runs.
