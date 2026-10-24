@@ -55,7 +55,7 @@ class TutorialWindow : public DocumentWindow, private ChangeListener
 {
 public:
     // Loaded on the user's behalf when they continue past model selection without one
-    static constexpr const char* fallbackModelPath = "teamup-tech/demucs-source-separation";
+    static constexpr const char* fallbackModelPath = "teamup-tech/Demucs";
 
     explicit TutorialWindow(TutorialHost& tutorialHost)
         : DocumentWindow("Welcome to HARP",
