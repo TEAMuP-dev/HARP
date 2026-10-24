@@ -9,10 +9,11 @@ interactions the HARP client performs, driven headlessly.
 
 Two tiers share the same test harness:
 
-| Tier | Command | What it validates | What a failure means |
-|---|---|---|---|
-| **Examples** | `--local-examples` | The apps under `pyharp/examples/`, launched locally | pyharp or gradio itself is broken |
-| **Spaces** | (default) | Every Hugging Face Space under `--org` | That specific deployment is broken (build error, HF platform change, dependency drift, ...) |
+- **Examples** (`--local-examples`) launches the apps under `pyharp/examples/`
+  locally. A failure means pyharp or gradio itself is broken.
+- **Spaces** (the default) validates every Hugging Face Space under `--org`. A
+  failure means that deployment is broken, by a build error, a platform change
+  or dependency drift, for example.
 
 Key behaviors:
 
@@ -24,36 +25,13 @@ Key behaviors:
   `--no-restart-failed` to disable the restart. This is also what allows a
   run to work with a read-only token.
 - **ZeroGPU time is tracked** across the run and reported after each ZeroGPU
-  model. Pass `--skip-zerogpu` to skip these models and avoid spending allowance.
+  model, which includes a frontend on other hardware that declares the
+  `zerogpu` tag for the backend to which it forwards. Pass `--skip-zerogpu` to skip
+  these models and avoid spending allowance.
 - A daily GitHub Action
   ([model_validation.yml](../.github/workflows/model_validation.yml)) runs
   both tiers. See [CI Behavior](#ci-behavior) for what it reports and for when
   a run turns red.
-
-## Code Layout
-
-The modules under `src/` fall into five groups. Dependencies only ever run
-downward, so a module can be read knowing nothing about the groups above it:
-
-| Group | File | Purpose |
-|---|---|---|
-| **Entry point** | [src/validate_models.py](src/validate_models.py) | Command line, per-tier orchestration, console output |
-| **Tier drivers** | [src/spaces.py](src/spaces.py) | Gets a Space ready: runtime stage, restart, wake, ZeroGPU safeguards |
-| | [src/examples.py](src/examples.py) | Launches a local pyharp app and captures its log |
-| **Harness** | [src/harness.py](src/harness.py) | Drives /controls + /process against whatever the drivers hand it |
-| **Checking** | [src/cases.py](src/cases.py) | Input synthesis, test-case overlay, output validation and inspection |
-| | [src/expectations.py](src/expectations.py) | The declarative `expect` rule vocabulary and its checks |
-| | [src/validators.py](src/validators.py) | Registry of custom output validators (to be extended) |
-| **Support** | [src/assets.py](src/assets.py) | Synthesizes the WAV/MIDI/text/JSON test inputs |
-| | [src/audio.py](src/audio.py) | Audio decoding (any libsndfile format) for output checks |
-| | [src/midi.py](src/midi.py) | MIDI parsing (via mido) for output checks |
-| | [src/quota.py](src/quota.py) | ZeroGPU hardware detection and usage tracking |
-| | [src/results.py](src/results.py) | Result records and JSON/markdown report generation |
-| | [src/utils.py](src/utils.py) | Token handling, error rendering, config, name qualification, timeouts |
-
-Alongside the code, [config.yml](config.yml) holds the validation
-configuration and [test_data/](test_data/) holds any real input files the
-test cases reference. Everything a run produces goes under `reports/`.
 
 ## Token Setup
 
@@ -256,7 +234,7 @@ An infrastructure fault is retried `TRANSIENT_RETRY_LIMIT` times at a short
 interval instead. Currently covered are a read timeout, a GPU host ECC error,
 and a server disconnect. None of these has an expected duration to wait out,
 which is why they are bounded by a retry count rather than by a deadline, and
-the retry usually surfaces the model's real behaviour.
+the retry usually surfaces the model's real behavior.
 
 This list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), and it
 is deliberately narrow. A retried `/process` call reserves ZeroGPU allowance
@@ -270,9 +248,10 @@ on a retry.
 
 Every model automatically gets one **`default`** test case, even with no
 configuration at all. Its inputs are synthesized from the model's `/controls`
-spec. Audio tracks get a sine-sweep clip, MIDI tracks get a short MIDI file,
-and sliders, toggles, dropdowns, number boxes, and text boxes get the default
-value each one declares. A control that declares no default falls back to
+spec. Audio tracks get a clip cut from a recording, MIDI tracks get a MIDI file
+(both from [test_data/](test_data/), see below), and sliders, toggles,
+dropdowns, number boxes, and text boxes get the default value each one
+declares. A control that declares no default falls back to
 something valid for its type, such as its minimum or its first dropdown
 choice, so every model can be exercised without configuration.
 
@@ -282,25 +261,41 @@ inputs, or inspecting outputs more deeply.
 
 ### Synthesized input properties
 
-The generated inputs default to a 2-second mono 44.1 kHz WAV and a two-note
-MIDI file. A `synthesized_inputs` block departs from those defaults. It can be
-set at the top level of [config.yml](config.yml), per model under its
-`overrides` entry, or per test case, with each level overriding the one before
-it. Every property is optional, so a block sets only what it changes.
+Without configuration, the generated inputs are a 2-second mono 44.1 kHz sine
+sweep and a two-note MIDI file. A `synthesized_inputs` block changes them, at
+the top level of [config.yml](config.yml), per model under `overrides`, or per
+test case. Each level overrides the one before it, and a block sets only the
+properties it names.
+
+A `source` replaces the sweep or the notes with real material. An audio source
+is resampled to `sample_rate`, averaged or copied to `num_channels`, and cut or
+repeated to `duration`. A MIDI source is passed as it is. A sweep only shows
+that a model returns something. Real material shows whether it did its job,
+since a separator then has sources to separate and a transcriber notes to find.
+
+The shipped config gives every model eight seconds of a band (drums, bass,
+piano and a lead) under a speaking voice, at 48 kHz in stereo, and a monophonic
+melody for MIDI. Speech models take English speech in mono at 44.1 kHz instead,
+so both shapes of input are exercised. A model that returns its input,
+processed or not, asserts the input's sample rate and channel count. Few models
+run at 48 kHz stereo, so one that writes at its own rate or in mono fails. The
+assets, made for this suite, are described at the top of config.yml.
 
 ```yaml
 # config.yml, at the top level, so it applies to every model
 synthesized_inputs:
   audio:
+    source: test_data/test_piano_20s.wav  # default: none, a sine sweep
     sample_rate: 48000   # default 44100
     num_channels: 2      # default 1
     duration: 5.0        # default 2.0
     ext: .flac           # default .wav
   midi:
-    num_notes: 8         # default 2
-    note_duration: 0.25  # default 0.5
-    instrument: 24       # default 0
-    channel: 0           # default 0
+    source: test_data/test_melody_16s.mid  # default: none, synthesized notes
+    num_notes: 8         # default 2, ignored with a source
+    note_duration: 0.25  # default 0.5, ignored with a source
+    instrument: 24       # default 0, ignored with a source
+    channel: 0           # default 0, ignored with a source
 ```
 
 The MIDI `instrument` is the General MIDI program number, written as a program
@@ -344,7 +339,9 @@ file input it is a preference instead, since the component's declared
 component accepting only other formats is given one it accepts, and one whose
 accepted types cannot be synthesized at all, such as a bespoke binary format,
 has its case skipped with a message naming the input. When a specific input
-needs a specific file, name it in a test case's `files` entry.
+needs a specific file, name it in a test case's `files` entry. A model whose
+every case is skipped reports `SKIP` rather than `PASS`, since `/process` was
+never called.
 
 A file for each distinct set of properties is generated once and reused for
 the rest of the run.
@@ -390,6 +387,17 @@ overrides:
 Note: once `test_cases` is present, **only** the listed cases run. Include
 `- name: default` to keep the default synthesized case.
 
+An input the model marks as optional is left empty rather than synthesized,
+since that is what a request without it sends. A case that needs one, such as
+a reference voice or a melody to follow, names it in `files`.
+
+A model with several modes gets a case for each mode that runs different code
+or loads different weights, since one mode can break while the others work. A
+mode that changes only a number on the same path is covered by the default
+case. Every case is a `/process` call, so on ZeroGPU each extra case is
+weighed against the time and allowance a run spends (see
+[CI Behavior](#ci-behavior)).
+
 ### Step 3: check the outputs (optional)
 
 Every case already gets structural checks for free. `/process` must not error,
@@ -414,7 +422,7 @@ with no rules is still subject to the default structural checks:
         controls:
           "Pitch Shift (semitones)": 24
         expect:
-          "Output Audio":
+          "Shifted Audio":
             ext: .wav            # extension: a string, or a list of accepted ones
             min_bytes: 10000     # minimum file size
             num_channels: 1      # exact channel count (1 = mono, 2 = stereo)
@@ -437,11 +445,14 @@ The following is the full vocabulary along with which output types each rule cov
 | `sample_rate` | audio output | Exact sample rate in Hz |
 | `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...), and errors on compressed formats such as MP3 or OGG |
 | `min_rms_db` | audio output | RMS level is at least this many dBFS |
+| `max_rms_db` | audio output | RMS level is at most this many dBFS |
 | `min_duration` / `max_duration` | audio or MIDI output | Length in seconds is within bounds |
 | `min_notes` | MIDI output | At least this many note-on events |
 | `note_instruments` | MIDI output | Notes use only these General MIDI program numbers (one, or a list of accepted) |
 | `note_channels` | MIDI output | Notes use only these channels (one, or a list of accepted) |
 | `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
+| `min_length` | text file output | At least this many characters in the file, ignoring surrounding whitespace |
+| `excludes` | text file output | The text does not contain any of these (one string, or a list), matched case-insensitively |
 
 `note_instruments` and `note_channels` assert coverage rather than presence.
 Every instrument or channel the notes carry has to be one the rule lists, and
@@ -451,16 +462,20 @@ because a MIDI file has no single instrument or channel of its own, only notes
 that each use one.
 
 **Targeting outputs.** A model with several outputs gets one block per output
-label, each checked independently. Use `"*"` instead of a label to apply rules
-to every output a rule covers. With mixed outputs, `"*"` sends `min_bytes` to
-all file outputs, `min_rms_db` only to the audio ones, and `min_notes` only to
-the MIDI ones:
+label. Use `"*"` instead of a label to apply rules to every output a rule
+covers. With mixed outputs, `"*"` sends `min_bytes` to all file outputs,
+`min_rms_db` only to the audio ones, and `min_notes` only to the MIDI ones:
 
 ```yaml
         expect:
           "*":
             min_bytes: 1000      # every file output must be non-trivial
 ```
+
+A rule under an output's own label replaces the same rule under `"*"` for that
+output, whichever key comes first. `"*"` can therefore set a rule for every
+output while a label makes the exception for one, and the other rules under
+`"*"` still reach it.
 
 **Mistakes on a named output are surfaced as configuration mistakes, not as
 model faults.** An unrecognized rule name, an unknown output label, or a rule
@@ -480,11 +495,30 @@ program material is above `-40`. RMS is also more robust than a peak
 measurement, since a single stray click cannot make an otherwise-silent file
 pass. `min_rms_db: -60` is the usual check for silence.
 
+`max_rms_db` is the converse, for an output that should be near-silent. A
+separator's stem for a source its input does not contain is one use-case: it shows
+that the model separated rather than copying its input into every stem.
+Assert one only on a source the input truly lacks, measured, since a model can
+also route part of a source to a neighboring stem. An output given a
+`max_rms_db` usually needs `min_rms_db: -.inf` as well, to lift the common
+silence floor.
+
 **On `min_labels`:** `min_labels: 0` is meaningful, and is the right rule when
 a model may legitimately return no labels. It asserts that a well-formed
 `LabelList` came back while permitting it to be empty. Omitting the rule
 entirely is weaker, because a missing or `None` label output also passes.
 Labels are optional in pyharp.
+
+**On text outputs:** a model returning text writes it to a
+`gr.File(file_types=[".txt"])`, which pyharp reports as a generic file, since
+it renders a `gr.Textbox` as an input control and refuses it as an output. The
+structural checks require that file to exist and be non-empty, which a file
+holding only whitespace satisfies, so `min_length: 1` is what asserts the
+model actually said something. `excludes` covers the deployment that reports
+its own failures as text instead of raising `gr.Error`, so that the result
+arrives as a success and only its content distinguishes it from one. Neither
+rule matches a pattern: a check on what the text *says* belongs in a
+validator.
 
 **On audio formats:** audio outputs are decoded with
 [soundfile](https://python-soundfile.readthedocs.io/), a listed dependency, so
@@ -515,11 +549,10 @@ test case's own fields. A case may run several:
 
 A validator is a function taking three arguments:
 
-| Argument | What it holds |
-|---|---|
-| `outputs` | Each output label mapped to its value. File outputs are local filesystem paths, and JSON outputs are the decoded object. |
-| `controls` | The full `/controls` payload (card, inputs, outputs). |
-| `params` | The settings nested under this validator's name in the test case. |
+- `outputs`: each output label mapped to its value. A file output is a local
+  path, and a JSON output is the decoded object.
+- `controls`: the full `/controls` payload (card, inputs, outputs).
+- `params`: the settings nested under this validator's name in the test case.
 
 To report a problem, a validator raises `AssertionError`. The message should
 name the output at fault and say what was wrong with it. To opt out on a model
@@ -531,6 +564,32 @@ The shipped `labels_within_audio` does both. It asserts that every returned
 label falls inside the audio output's timespan, a relationship between two
 outputs that no single-output rule can express, and it opts out when the model
 has no audio output or no label output.
+
+Five validators ship with the harness:
+
+- `audio_decodes`: every audio output decodes and carries frames. Skips a model
+  that returns no audio.
+- `labels_reach_harp`: every JSON output is a pyharp `LabelList`, which HARP
+  requires, and the model has an audio, MIDI or file output on which the labels
+  can appear. Skips a model with no JSON output.
+- `labels_within_audio`: every label falls inside the audio output's timespan,
+  within `tolerance`. Skips a model with no audio output or no `LabelList`.
+- `merit_scores`: MERIT's three cosine similarities are finite and within
+  [-1, 1]. Never skips.
+- `muq_ranking`: MuQ returns `count` candidates, numbered and sorted by
+  similarity. Never skips.
+
+The first three are model-agnostic and run as
+[common test cases](#step-4-reuse-a-case-across-models). The last two name
+MERIT's and MuQ's own outputs, so they are referenced from those models'
+entries. Run the local regression checks for all of them, plus the `expect`
+rules and config.yml itself, with:
+
+```bash
+python -m unittest discover -s model_validation/tests -v
+```
+
+These need no token and no network.
 
 Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
 under the name test cases will reference:
@@ -556,8 +615,16 @@ putting it in a one-off validator.
 A case under a model's `test_cases` only applies to that model. For a check
 that should hold for *every* model, such as "no file output is empty" or
 "audio is never silent", add a `common_test_cases` entry at the top level of
-config.yml instead. Common cases run on every model in addition to any model-specific tests,
-and their names are shown in the report prefixed with `common:`.
+config.yml instead.
+
+Every case costs a `/process` call, which on ZeroGPU reserves allowance, so a
+common case that only checks outputs does not run on its own. Its `expect`
+rules and `validators` are merged into each of the model's own cases, and the
+model's own settings win where the two conflict. A common case that sends
+inputs of its own (`controls`, `files`, or `synthesized_inputs`) is a
+different scenario, so it runs separately, named with a `common:` prefix in
+the report. It takes whatever inputs the model's first case sends and it does
+not set, so a model that needs particular files still gets them.
 
 ```yaml
 common_test_cases:
@@ -570,6 +637,23 @@ common_test_cases:
       "*":
         min_rms_db: -60     # applies only to models that have audio outputs
 ```
+
+Four common cases ship in [config.yml](config.yml), so that a model with no
+entry of its own is still asserted against rather than only run.
+`audio-decodes` decodes every audio output, which is what catches a
+header-only WAV from a model that wrote no samples and reported success,
+`labels-within-audio` keeps labels inside the track they annotate,
+`labels-reach-harp` fails a JSON output HARP would reject, and
+`outputs-carry-signal` fails digital silence and MIDI with no notes.
+
+The silence floor is set at -80 dBFS on purpose, well below any real level, to
+catch digital silence without judging loudness. A real level is asserted per
+model instead, where producing signal is part of the contract. A separator's
+stem for a source its input does not contain is legitimately quiet, at times
+below even this floor, so such a stem lifts the floor by name and asserts its
+silence with `max_rms_db` (see above). The same test applies to anything
+proposed as a common case: a rule that holds for most models reads as a
+failure on the rest.
 
 Keep common cases model-agnostic by targeting outputs with `"*"` rather than a
 specific label, which will not exist on most models. Because a `"*"` rule is
@@ -608,13 +692,28 @@ A key outside these sets is reported as a configuration error, so a slip such as
 caught before any model runs, instead of leaving the model on its default
 case while the file appears to say otherwise.
 
+A model written twice is reported the same way. YAML keeps the last of
+several entries sharing a key and discards the rest in silence, so a model
+configured in two places would run with only the settings written under the
+second entry.
+
 ## CI Behavior
 
 - **Schedule:** daily at 06:30 UTC. It can also be run manually from the
   Actions tab, with options to validate specific spaces, skip inference, or
   disable the default restart of crashed spaces.
 - **Reports:** a markdown summary on each run, plus JSON and markdown
-  artifacts.
+  artifacts. A failed Space's entry carries the end of its run log, where the
+  traceback behind the failure usually is.
+- **Duration:** approximately 25 minutes for the whole fleet, most of it the
+  ZeroGPU calls, which run one at a time while the CPU models run alongside
+  them. Those calls are also what a change to the cases mostly moves. A
+  successful call is billed for its GPU time, which is less than its wall
+  time, against the daily allowance of a PRO or team account. The token CI uses
+  therefore needs that tier, and little other ZeroGPU use on the same day.
+- **Harness tests:** the examples job first runs the unit tests under
+  `tests/`, which also check config.yml, so a configuration mistake turns the
+  run red before any model runs.
 - **Failure signal:** model failures keep the run green, because deployments
   are not yet stable enough for daily failure emails to be useful. They show
   up as warning annotations and in the run summary and report instead. No

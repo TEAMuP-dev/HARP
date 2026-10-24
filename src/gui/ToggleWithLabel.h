@@ -1,7 +1,7 @@
 /**
  * @file ToggleWithLabel.h
  * @brief Custom toggle button component with label.
- * @author gemini
+ * @author saumya-pailwan
  */
 
 #pragma once
@@ -21,9 +21,14 @@ public:
 
     void resized() override { toggleButton.setBounds(getLocalBounds()); }
 
+    int getPreferredWidth() const override { return preferredToggleWidth; }
+
+    int getPreferredHeight() const override { return preferredToggleHeight; }
+
     int getMinimumRequiredWidth() const override
     {
-        const int textWidth = Font().getStringWidth(toggleButton.getButtonText());
+        const int textWidth =
+            ModelStyle::getTextWidth(Font(FontOptions()), toggleButton.getButtonText());
         return jmax(minToggleWidth, textWidth + defaultPadding + checkboxWidthPadding);
     }
 
@@ -37,6 +42,9 @@ public:
     bool getToggleState() const { return toggleButton.getToggleState(); }
 
 private:
+    static constexpr int preferredToggleWidth = 112;
+    static constexpr int preferredToggleHeight = 34;
+
     static constexpr int minToggleWidth = 60;
     static constexpr int checkboxWidthPadding = 30;
 

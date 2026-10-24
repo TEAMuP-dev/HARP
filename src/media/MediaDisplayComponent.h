@@ -1,7 +1,7 @@
 /**
  * @file MediaDisplayComponent.h
  * @brief Parent class for shared functionality of media displays.
- * @author cwitkowitz, xribene, nathanpruyne
+ * @author cwitkowitz, 2cylu2, xribene, nathanpruyne, JEYuhas
  */
 
 #pragma once
@@ -10,6 +10,7 @@
 #include <juce_core/juce_core.h>
 
 #include "../gui/MultiButton.h"
+#include "../gui/Palette.h"
 #include "OutputLabelComponent.h"
 
 #include "../utils/Labels.h"
@@ -17,19 +18,50 @@
 
 using namespace juce;
 
+class MediaDisplayComponent;
+
 enum class DisplayMode
 {
     Input,
     Output,
     Hybrid, // All functionality
-    Thumbnail // Reduced functionality
+    Thumbnail, // Reduced functionality
+    Preview // Media area only (for preview pane)
+};
+
+/* One audio output shared by every track. A device opened for each track would leave a device
+   and an audio thread running for every track of every tab and of the media clipboard, and
+   some systems allow only one client per device. The manager mixes all of its callbacks. */
+struct SharedAudioDevice
+{
+    SharedAudioDevice() { manager.initialise(0, 2, nullptr, true, {}, nullptr); }
+
+    AudioDeviceManager manager;
+};
+
+class OptionalBannerComponent : public Component
+{
+public:
+    void paint(Graphics& g) override;
+};
+
+class TimeAxisStrip : public Component
+{
+public:
+    explicit TimeAxisStrip(MediaDisplayComponent* ownerIn) : owner(ownerIn) {}
+
+    void paint(Graphics& g) override;
+
+private:
+    MediaDisplayComponent* owner = nullptr;
 };
 
 class ColorablePanel : public Component
 {
 public:
-    ColorablePanel(Colour color = Colours::darkgrey)
-        : defaultColor(color), backgroundColor(color) {};
+    ColorablePanel(Colour color = Colours::darkgrey) : defaultColor(color), backgroundColor(color)
+    {
+    }
 
     void paint(Graphics& g) override { g.fillAll(backgroundColor); }
 
@@ -49,8 +81,8 @@ private:
 class MediaDisplayComponent : public Component,
                               public ChangeListener,
                               public ChangeBroadcaster,
+                              public DragAndDropTarget,
                               public FileDragAndDropTarget,
-                              public DragAndDropContainer,
                               private Timer,
                               private ScrollBar::Listener
 {
@@ -66,8 +98,12 @@ public:
     virtual StringArray getInstanceExtensions() = 0;
 
     void paint(Graphics& g) override;
+    void paintOverChildren(Graphics& g) override;
     virtual void resized() override;
     void repositionLabels();
+
+    // Returns a fixed height in pixels this display should occupy, or 0 to use flex sizing.
+    virtual int getFixedHeight() const { return 0; }
 
     void setTrackID(Uuid id) { trackID = id; }
     Uuid getTrackID() { return trackID; }
@@ -78,10 +114,11 @@ public:
     bool isRequired() const { return required; }
     bool isLinkedToDAW() const { return linkedToDAW; }
 
-    bool isInputTrack() { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
-    bool isOutputTrack() { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
-    bool isHybridTrack() { return displayMode == DisplayMode::Hybrid; }
-    bool isThumbnailTrack() { return displayMode == DisplayMode::Thumbnail; }
+    bool isInputTrack() const { return (displayMode == DisplayMode::Input) || isHybridTrack(); }
+    bool isOutputTrack() const { return (displayMode == DisplayMode::Output) || isHybridTrack(); }
+    bool isHybridTrack() const { return displayMode == DisplayMode::Hybrid; }
+    bool isThumbnailTrack() const { return displayMode == DisplayMode::Thumbnail; }
+    bool isPreviewTrack() const { return displayMode == DisplayMode::Preview; }
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
@@ -95,26 +132,36 @@ public:
 
     URL getOriginalFilePath() { return originalFilePath; }
 
-    //void addNewTempFile(); // Create working temp file to modify instead of current or original
-    //bool iteratePreviousTempFile();
-    //bool iterateNextTempFile();
+    bool isFileLoaded() const { return ! originalFilePath.isEmpty(); }
 
-    //bool isFileLoaded() { return ! tempFilePaths.isEmpty(); }
-    bool isFileLoaded() { return ! originalFilePath.isEmpty(); }
-    //URL getTempFilePath() { return tempFilePaths.getReference(currentTempFileIdx); }
-
-    //void clearFutureTempFiles(); // Prune temp files after currently selected index
-    //void overwriteOriginalFile(); // Necessary for seamless sample editing integration
+    /** Whether a wheel event over this track is used to zoom or scrub its media. */
+    virtual bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
 
     bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
 
-    bool isDuplicateFile(const URL& fileParth);
+    bool isInterestedInDragSource(const DragAndDropTarget::SourceDetails& details) override
+    {
+        return isInputTrack() && details.description.isString();
+    }
+
+    void itemDropped(const DragAndDropTarget::SourceDetails& details) override
+    {
+        String filePath = details.description.toString();
+        if (filePath.isNotEmpty())
+        {
+            filesDropped(StringArray(filePath), 0, 0);
+        }
+    }
+
+    bool isDuplicateFile(const URL& filePath);
 
     void saveFileCallback();
+    void copyFileCallback();
 
     virtual double getTotalLengthInSecs() = 0;
     virtual double getTimeAtOrigin() { return visibleRange.getStart(); }
     virtual float getPixelsPerSecond();
+    const Range<double>& getVisibleRange() const { return visibleRange; }
 
     virtual void setPlaybackPosition(double t) { transportSource.setPosition(t); }
     virtual double getPlaybackPosition() { return transportSource.getCurrentPosition(); }
@@ -125,11 +172,15 @@ public:
 
     void start();
     void stop();
+    void pause();
 
     virtual bool isPlaying() { return transportSource.isPlaying(); }
+    virtual bool isPaused() const { return paused; }
 
-    Rectangle<int> getChooseFileButtonBounds();
-    Rectangle<int> getPlayButtonBounds();
+    // Called whenever playback starts, pauses, or stops
+    std::function<void()> onPlaybackStateChanged;
+    // Called when the media of a thumbnail is double-clicked
+    std::function<void()> onMediaDoubleClick;
 
     int getNumOverheadLabels();
 
@@ -140,7 +191,7 @@ public:
     void removeLabelOverlay(LabelOverlayComponent* l);
 
     void addLabels(const LabelList& labels);
-    void clearLabels(int processingIdxCutoff = 0);
+    void clearLabels();
 
 protected:
     void resetTransport();
@@ -149,9 +200,31 @@ protected:
 
     virtual void mouseWheelMove(const MouseEvent&, const MouseWheelDetails& wheel) override;
 
-    const int controlSpacing = 1;
-    const int scrollBarSize = 8;
+    static constexpr int controlSpacing = 1;
+    static constexpr int scrollBarSize = 8;
+    static constexpr int timeAxisHeight = 20;
+    static constexpr int labelHeight = 20;
 
+    /* A track stacks fixed chrome above and below its media: a strip for overhead
+       labels, the time axis, and the horizontal scrollbar. A track shorter than
+       these plus a usable content area cannot show the media at all, and leaves
+       the content area with a negative height to paint into. */
+    static constexpr int overheadPanelHeight = labelHeight + 2 * controlSpacing;
+    static constexpr int horizontalScrollBarHeight = scrollBarSize + 2 * controlSpacing;
+    static constexpr int minimumContentHeight = 40;
+
+public:
+    /** Height consumed by the strips a track always stacks around its media. */
+    static constexpr int fixedChromeHeight =
+        overheadPanelHeight + timeAxisHeight + horizontalScrollBarHeight;
+
+    /** Shortest a track can be and still show anything of its media. */
+    static constexpr int minimumUsefulHeight = fixedChromeHeight + minimumContentHeight;
+
+    /** Shortest this track can be and still show its media and every button in its header. */
+    int getMinimumHeight() const;
+
+protected:
     // Media (audio or MIDI) content area
     Component contentComponent;
 
@@ -159,8 +232,10 @@ protected:
 
     Range<double> visibleRange;
 
+    std::unique_ptr<TimeAxisStrip> timeAxisStrip;
+
     AudioFormatManager formatManager;
-    AudioDeviceManager deviceManager;
+    SharedResourcePointer<SharedAudioDevice> audioDevice;
 
     AudioSourcePlayer sourcePlayer;
     AudioTransportSource transportSource;
@@ -176,6 +251,16 @@ private:
     void resetPaths();
     void resetScrollBar();
     void resetButtonState();
+    void updatePlaybackButtons();
+
+    // Only a header beside the media, as on input and output tracks, has buttons
+    bool hasHeaderButtons() const { return ! isThumbnailTrack() && ! isPreviewTrack(); }
+    int getNumHeaderButtons() const;
+
+    // Header buttons are stacked in a column, each with a margin above and below
+    static constexpr int headerButtonSize = 25;
+    static constexpr int headerButtonMargin = 2;
+    static constexpr int headerMargin = 4;
 
     void setOriginalFilePath(URL filePath);
 
@@ -186,6 +271,9 @@ private:
     void chooseFileCallback();
 
     virtual Component* getMediaComponent() { return this; }
+
+    /** Whether this track has a timeline for a playback cursor to move along. */
+    virtual bool hasPlaybackCursor() const { return ! isThumbnailTrack(); }
 
     virtual float getMediaHeight() { return static_cast<float>(getMediaComponent()->getHeight()); }
     virtual float getMediaWidth() { return static_cast<float>(getMediaComponent()->getWidth()); }
@@ -218,16 +306,21 @@ private:
     void mouseUp(const MouseEvent& e) override;
     void mouseDoubleClick(const MouseEvent& e) override;
 
+    // Moves the playback position to the mouse, where the track allows it
+    void seekToMouse(const MouseEvent& e);
+    // Drags the track's file to another track, the media clipboard, or another application
+    void startFileDrag(const MouseEvent& e);
+
     virtual bool shouldRenderLabel(const std::unique_ptr<OutputLabel>& /*l*/) const { return true; }
 
     const int textSpacing = 2;
     const int minFontSize = 10;
-    const int labelHeight = 20;
 
     Colour defaultColor = Colours::darkgrey;
     Colour graphicsColor = Colours::lightblue;
     Colour cursorColor = Colours::white.withAlpha(0.85f);
-    Colour selectionColor = Colours::darkblue.brighter();
+    // The accent used for whatever is selected or highlighted on the Home tab and model tabs
+    Colour selectionColor = ModelStyle::accentDark;
     Colour linkedToDAWColor = Colours::purple.withAlpha(0.5f);
     Colour overheadPanelColor = Colours::darkgrey.darker();
 
@@ -240,16 +333,25 @@ private:
 
     // Header sub-components
     Label trackNameLabel;
-    MultiButton playStopButton;
+    MultiButton playPauseButton;
     MultiButton::Mode playButtonActiveInfo;
     MultiButton::Mode playButtonInactiveInfo;
-    MultiButton::Mode stopButtonInfo;
+    MultiButton::Mode pauseButtonInfo;
+    MultiButton stopButton;
+    MultiButton::Mode stopButtonActiveInfo;
+    MultiButton::Mode stopButtonInactiveInfo;
     MultiButton chooseFileButton;
     MultiButton::Mode chooseFileButtonActiveInfo;
     MultiButton::Mode chooseFileButtonInactiveInfo;
     MultiButton saveFileButton;
     MultiButton::Mode saveFileButtonActiveInfo;
     MultiButton::Mode saveFileButtonInactiveInfo;
+    MultiButton copyFileButton;
+    MultiButton::Mode copyFileButtonActiveInfo;
+    MultiButton::Mode copyFileButtonInactiveInfo;
+
+    // Banner shown on left edge of optional input tracks
+    OptionalBannerComponent optionalBanner;
 
     // Panel displaying overhead labels
     ColorablePanel overheadPanel { overheadPanelColor };
@@ -270,10 +372,9 @@ private:
     const DisplayMode displayMode;
 
     bool isSelected = false;
+    bool paused = false;
 
     URL originalFilePath;
-    int currentTempFileIdx;
-    Array<URL> tempFilePaths;
 
     std::unique_ptr<FileChooser> chooseFileBrowser;
     std::unique_ptr<FileChooser> saveFileBrowser;

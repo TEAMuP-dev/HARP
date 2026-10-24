@@ -1,13 +1,15 @@
 /**
  * @file Logging.h
  * @brief Handles logging to terminal and file.
- * @author xribene
+ * @author cwitkowitz, saumya-pailwan, xribene
  */
 
 #pragma once
 
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
+
+#include "Errors.h"
 
 using namespace juce;
 
@@ -28,17 +30,27 @@ public:
     // Disable assignment operator
     HARPLogger& operator=(const HARPLogger&) = delete;
 
+    /* Opens the log, unless it is already open. Every window asks for it, and worker
+       threads may be writing to it at the time, so it is replaced only under the lock.
+
+       macOS: ~/Library/Logs/HARP/main.log
+       Windows: C:\Users\<username>\AppData\Roaming\HARP\main.log
+       Linux: ~/.config/HARP/main.log */
     void initializeLogger()
     {
-        // MacOS: ~/Library/Logs/HARP/main.log
-        // Windows: C:\Users\<username>\AppData\Roaming\HARP\main.log
-        // Linux: ~/.config/HARP/main.log
-        logger.reset(FileLogger::createDefaultAppLogger("HARP", "main.log", ""));
+        const ScopedLock lock(loggerLock);
+
+        if (logger == nullptr)
+        {
+            logger.reset(FileLogger::createDefaultAppLogger("HARP", "main.log", ""));
+        }
     }
 
     void debugAndLog(const String& message) const
     {
         DBG(message); // Write to console
+
+        const ScopedLock lock(loggerLock);
 
         if (logger)
         {
@@ -46,10 +58,44 @@ public:
         }
     }
 
-    File getLogFile() const { return logger->getLogFile(); }
+    File getLogFile() const
+    {
+        const ScopedLock lock(loggerLock);
+        return logger != nullptr ? logger->getLogFile() : File();
+    }
+
+    OpResult clearLog()
+    {
+        const ScopedLock lock(loggerLock);
+
+        if (logger == nullptr)
+        {
+            return OpResult::fail(FileError { FileError::Type::WriteFailed, "" });
+        }
+
+        File logFile = logger->getLogFile();
+        logger.reset(); // release file handle before truncating
+        bool truncated = logFile.replaceWithText("");
+        initializeLogger(); // reopen
+
+        File launchLog =
+            FileLogger::getSystemLogFileFolder().getChildFile("HARP").getChildFile("launch.log");
+        if (launchLog.existsAsFile())
+            truncated = launchLog.replaceWithText("") && truncated;
+
+        if (! truncated)
+        {
+            return OpResult::fail(
+                FileError { FileError::Type::WriteFailed, logFile.getFullPathName() });
+        }
+
+        return OpResult::ok();
+    }
 
 private:
     HARPLogger() = default; // Prevents instantiation from outside
+
+    mutable CriticalSection loggerLock;
 
     std::unique_ptr<FileLogger> logger { nullptr };
 };

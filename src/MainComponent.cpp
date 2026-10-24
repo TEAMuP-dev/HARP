@@ -1,7 +1,5 @@
 #include "MainComponent.h"
 
-#include "windows/WelcomeWindow.h"
-
 JUCE_IMPLEMENT_SINGLETON(HARPLogger)
 
 MainComponent::MainComponent()
@@ -10,20 +8,58 @@ MainComponent::MainComponent()
 
     initializeMenuBar();
 
-    mainModelTab.addChangeListener(this);
+    modelTabs.addChangeListener(this);
 
-    addAndMakeVisible(mainModelTab);
+    /* Every model tab needs this, and tabs are opened as models are, so the container
+       carries it and hands it to each tab it creates. */
+    modelTabs.onOpenAPIKeySettings = [this](Provider provider) { openSettingsWindow(provider); };
+
+    addAndMakeVisible(modelTabs);
     addAndMakeVisible(statusAreaWidget);
     addAndMakeVisible(mediaClipboardWidget);
 
+    statusAreaWidget.setComponentID(TutorialTargets::statusArea);
+    mediaClipboardWidget.setComponentID(TutorialTargets::clipboard);
+
+    mediaClipboardWidget.onResize = [this](int newWidth)
+    {
+        // Leave the main panel at least the width its controls need
+        const int maximumClipboardWidth = getWidth() - getRequiredMainPanelWidth();
+
+        clipboardWidth =
+            jmax(mediaClipboardWidget.getMinimumWidth(), jmin(newWidth, maximumClipboardWidth));
+        resized();
+    };
+    addAndMakeVisible(dragOverlay);
+
     showStatusArea = Settings::getBoolValue("view.showStatusArea", true);
     showMediaClipboard = Settings::getBoolValue("view.showMediaClipboard", false);
+    mediaClipboardWidget.setPreviewPaneVisible(
+        Settings::getBoolValue("view.showPreviewPane", true));
+    mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
+    {
+        Settings::setValue(
+            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+        commandManager.commandStatusChanged();
+    };
+
+    // Sizes the clipboard and its preview pane were last given
+    clipboardWidth = jmax(
+        mediaClipboardWidget.getMinimumWidth(),
+        Settings::getIntValue("view.mediaClipboardWidth", mediaClipboardWidget.getDefaultWidth()));
+    mediaClipboardWidget.setPreviewPaneHeight(
+        Settings::getIntValue("view.previewPaneHeight", PreviewPaneWidget::defaultHeight));
+    mediaClipboardWidget.setPreviewPaneMinimized(
+        Settings::getBoolValue("view.previewPaneMinimized", false));
+    // Attached after the sizes are restored, which would otherwise save them straight back
+    mediaClipboardWidget.onLayoutChanged = [this] { saveClipboardLayout(); };
+
+    dragOverlay.setVisible(false);
+    dragOverlay.toFront(false);
 
     requiredWindowWidth = minimumWindowWidth;
     requiredWindowHeight = minimumWindowHeight;
     setSize(requiredWindowWidth, requiredWindowHeight);
-
-    sharedTokens->initializeAPIKeys();
 
     statusMessage->setMessage("Welcome to HARP!");
 }
@@ -31,7 +67,7 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     deinitializeMenuBar();
-    mainModelTab.removeChangeListener(this);
+    modelTabs.removeChangeListener(this);
 }
 
 void MainComponent::paint(Graphics& g)
@@ -39,55 +75,11 @@ void MainComponent::paint(Graphics& g)
     g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
 }
 
-void MainComponent::paintOverChildren(Graphics& g)
-{
-    if (isTutorialActive)
-    {
-        auto area = getLocalBounds();
-        g.setColour(Colours::black.withAlpha(0.6f));
-
-        if (tutorialHighlightRect.isEmpty() && tutorialExtraHighlights.empty())
-        {
-            // Full dim if no highlight
-            g.fillAll();
-        }
-        else
-        {
-            // Dim with cutout
-            Path backgroundPath;
-            backgroundPath.addRectangle(area.toFloat());
-
-            Path highlightPath;
-            if (! tutorialHighlightRect.isEmpty())
-                highlightPath.addRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f);
-
-            // Add extra highlights to the cutout path
-            for (auto& rect : tutorialExtraHighlights)
-            {
-                highlightPath.addRoundedRectangle(rect.toFloat(), 5.0f);
-            }
-
-            backgroundPath.setUsingNonZeroWinding(false);
-            backgroundPath.addPath(highlightPath);
-
-            g.fillPath(backgroundPath);
-
-            g.setColour(Colours::white);
-            g.drawRoundedRectangle(tutorialHighlightRect.toFloat(), 5.0f, 2.0f);
-
-            for (auto& rect : tutorialExtraHighlights)
-            {
-                g.drawRoundedRectangle(rect.toFloat(), 5.0f, 2.0f);
-            }
-        }
-    }
-}
-
 void MainComponent::resized()
 {
     Rectangle<int> fullArea = getLocalBounds();
 
-#if not JUCE_MAC
+#if ! JUCE_MAC
     menuBar->setBounds(
         fullArea.removeFromTop(LookAndFeel::getDefaultLookAndFeel().getDefaultMenuBarHeight()));
 #endif
@@ -98,7 +90,7 @@ void MainComponent::resized()
     FlexBox mainPanel;
     mainPanel.flexDirection = FlexBox::Direction::column;
 
-    mainPanel.items.add(FlexItem(mainModelTab).withFlex(1.0));
+    mainPanel.items.add(FlexItem(modelTabs).withFlex(1.0));
 
     if (showStatusArea)
     {
@@ -113,7 +105,7 @@ void MainComponent::resized()
 
     if (showMediaClipboard)
     {
-        fullWindow.items.add(FlexItem(mediaClipboardWidget).withFlex(mediaClipboardFlex));
+        fullWindow.items.add(FlexItem(mediaClipboardWidget).withWidth(getVisibleClipboardWidth()));
     }
     else
     {
@@ -122,33 +114,50 @@ void MainComponent::resized()
 
     fullWindow.performLayout(fullArea);
 
-    if (welcomeWindow != nullptr)
-    {
-        welcomeWindow->refreshHighlightForCurrentStep();
-    }
+    dragOverlay.setBounds(getLocalBounds());
+}
+
+int MainComponent::measureRequiredMainPanelWidth()
+{
+    // The Home tab has no controls, so only the general minimums apply while it is showing
+    auto* tab = modelTabs.getCurrentModelTab();
+    const int requiredControlWidth = tab != nullptr ? tab->getMinimumRequiredControlWidth() : 0;
+
+    // Determine minimum width needed to display controls plus padding
+    return jmax(minimumMainPanelWidth, requiredControlWidth + minimumMainPanelHorPadding);
+}
+
+int MainComponent::getVisibleClipboardWidth()
+{
+    /* clipboardWidth is the width the user chose. In a narrow window the clipboard
+       gives up space, down to its own minimum, so that the main panel keeps the width
+       it needs. The clipboard gets that space back when the window widens again. */
+    const int availableWidth = getWidth() - getRequiredMainPanelWidth();
+
+    return jmax(mediaClipboardWidget.getMinimumWidth(), jmin(clipboardWidth, availableWidth));
 }
 
 void MainComponent::updateWindowConstraints()
 {
+    /* Measuring the control labels is slow, so it happens here, whenever the controls
+       can have changed, rather than on every resize of the window or the clipboard. */
+    requiredMainPanelWidth = measureRequiredMainPanelWidth();
+
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
     {
-        // Compute percentage of total window width given to main panel
-        const float mainPanelRatio = showMediaClipboard ? (1.0f / mediaClipboardScale) : 1.0f;
+        // The window can shrink until both panels are down to their minimum widths
+        const int requiredClipboardWidth =
+            showMediaClipboard ? mediaClipboardWidget.getMinimumWidth() : 0;
 
-        // Determine minimum width needed to display controls plus padding
-        const int requiredMainPanelWidth =
-            jmax(minimumMainPanelWidth,
-                 mainModelTab.getMinimumRequiredControlWidth() + minimumMainPanelHorPadding);
-        // Determine current width of main panel
-        const int mainPanelWidth = jmax(requiredMainPanelWidth, mainModelTab.getWidth());
-        // Determine minimum height needed to display all model contents plus status widget
-        const int requiredMainPanelHeight =
-            mainModelTab.getMinimumRequiredHeightForWidth(mainPanelWidth)
-            + (showStatusArea ? statusAreaHeight : 0);
+        /* Each tab scrolls vertically, so the window does not have to be tall enough
+           for every control. It only has to stay usably large. Width is still
+           content-driven, since there is no horizontal scrolling. */
+        const int requiredMainPanelHeight = minimumWindowHeight - minimumMainPanelVertPadding
+                                            + (showStatusArea ? statusAreaHeight : 0);
 
         // Determine effective minimum width of entire window
-        const int newRequiredWindowWidth = jmax(
-            minimumWindowWidth, (int) std::ceil((float) requiredMainPanelWidth / mainPanelRatio));
+        const int newRequiredWindowWidth =
+            jmax(minimumWindowWidth, requiredMainPanelWidth + requiredClipboardWidth);
         // Determine effective minimum height of entire window
         const int newRequiredWindowHeight =
             jmax(minimumWindowHeight, requiredMainPanelHeight + minimumMainPanelVertPadding);
@@ -185,6 +194,13 @@ void MainComponent::updateWindowConstraints()
             window->setBounds(bounds);
         }
     }
+
+    /* Whatever prompted this (e.g., a model loading or a panel being toggled) changed
+       how much there is to show, and so how much the current tab has to scroll. The
+       window itself may not have changed size, in which case nothing else would
+       recompute the scrollable area and the scrollbar would not appear until the
+       next resize. */
+    modelTabs.layOutCurrentPage();
 }
 
 /* --File-- */
@@ -202,12 +218,29 @@ void MainComponent::importNewFile(File mediaFile, bool fromDAW)
     }
 }
 
-void MainComponent::openSettingsWindow()
+void MainComponent::openSettingsWindow(std::optional<Provider> focusProvider)
 {
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
     options.dialogBackgroundColour = Colours::darkgrey;
-    options.content.setOwned(new SettingsWindow());
+    // The settings dialog is a free-standing desktop window that can outlive this
+    // component, so guard the callback with a SafePointer
+    Component::SafePointer<MainComponent> safeThis(this);
+
+    auto* settings = new SettingsWindow(
+        [safeThis]
+        {
+            if (safeThis != nullptr)
+                safeThis->restoreViewDefaults();
+        });
+
+    // Selected before the window is shown, so it opens already on the right tab
+    if (focusProvider.has_value())
+    {
+        settings->showAPIKeysFor(*focusProvider);
+    }
+
+    options.content.setOwned(settings);
 
     options.useNativeTitleBar = true;
     options.resizable = true;
@@ -216,7 +249,52 @@ void MainComponent::openSettingsWindow()
     options.launchAsync();
 }
 
+void MainComponent::restoreViewDefaults()
+{
+    // Defaults must match the fallbacks used when reading the settings
+    // in the constructor: status area shown, media clipboard hidden, preview pane shown,
+    // and the clipboard and preview pane at their default sizes
+    if (! showStatusArea)
+        viewStatusAreaCallback();
+
+    if (showMediaClipboard)
+        viewMediaClipboardCallback();
+
+    if (! mediaClipboardWidget.isPreviewPaneVisible())
+        viewPreviewPaneCallback();
+
+    // Sizes as well, after hiding the clipboard, which shrinks the window by its current width
+    clipboardWidth = mediaClipboardWidget.getDefaultWidth();
+    mediaClipboardWidget.setPreviewPaneHeight(PreviewPaneWidget::defaultHeight);
+    mediaClipboardWidget.setPreviewPaneMinimized(false);
+
+    /* The window takes the geometry of a first launch, which HARPWindow gives it when no
+       position is saved: as small as the default view allows, and centred. Its position
+       is saved again when it closes, so leaving it where it was would undo the reset. */
+    if (auto* window = findParentComponentOfClass<DocumentWindow>())
+    {
+        updateWindowConstraints();
+
+        if (window->isFullScreen())
+            window->setFullScreen(false);
+
+        window->centreWithSize(requiredWindowWidth, requiredWindowHeight);
+    }
+
+    // showWelcomePopup default (true) is already restored by clearing settings;
+    // it will show on the next launch automatically.
+}
+
 /* --View-- */
+
+void MainComponent::saveClipboardLayout()
+{
+    Settings::setValue("view.mediaClipboardWidth", clipboardWidth);
+    Settings::setValue("view.previewPaneHeight", mediaClipboardWidget.getPreviewPaneHeight());
+    Settings::setValue("view.previewPaneMinimized",
+                       mediaClipboardWidget.isPreviewPaneMinimized() ? "1" : "0",
+                       true);
+}
 
 void MainComponent::viewStatusAreaCallback()
 {
@@ -276,10 +354,23 @@ void MainComponent::viewStatusAreaCallback()
     updateWindowConstraints();
 }
 
+void MainComponent::viewPreviewPaneCallback()
+{
+    // Saving the preference and updating the menu both happen in
+    // onPreviewPaneVisibilityChanged, which also covers the pane's own close button
+    mediaClipboardWidget.setPreviewPaneVisible(! mediaClipboardWidget.isPreviewPaneVisible());
+}
+
 void MainComponent::viewMediaClipboardCallback()
 {
     // Toggle media clipboard visibility state
     showMediaClipboard = ! showMediaClipboard;
+
+    // A hidden preview pane has no controls left to stop it with
+    if (! showMediaClipboard)
+    {
+        mediaClipboardWidget.stopPlayback();
+    }
 
     // Find top-level window for resizing
     if (auto* window = findParentComponentOfClass<DocumentWindow>())
@@ -308,18 +399,16 @@ void MainComponent::viewMediaClipboardCallback()
 
         if (showMediaClipboard)
         {
-            // Scale bounds to extend window by 40% of main width
+            // Opened at the width it was last given
             windowBounds.setWidth(
-                jmin(currentDisplayWidth,
-                     static_cast<int>(mediaClipboardScale * windowBounds.getWidth())));
+                jmin(currentDisplayWidth, windowBounds.getWidth() + clipboardWidth));
         }
         else
         {
             if (! window->isFullScreen())
             {
-                // Scale bounds to reduce window to main width
                 windowBounds.setWidth(
-                    static_cast<int>(windowBounds.getWidth() / mediaClipboardScale));
+                    jmax(minimumWindowWidth, windowBounds.getWidth() - getVisibleClipboardWidth()));
             }
         }
 
@@ -354,14 +443,11 @@ void MainComponent::openAboutWindow()
     options.launchAsync();
 }
 
-void MainComponent::openWelcomeWindow(bool ensureDefaultModelLoaded)
+void MainComponent::openTutorial()
 {
-    if (ensureDefaultModelLoaded)
-        ensureTutorialModelLoaded();
-
-    if (welcomeWindow != nullptr)
+    if (tutorialWindow != nullptr)
     {
-        welcomeWindow->toFront(true);
+        tutorialWindow->toFront(true);
         return;
     }
 
@@ -372,242 +458,43 @@ void MainComponent::openWelcomeWindow(bool ensureDefaultModelLoaded)
             if (safeThis == nullptr)
                 return;
 
-            safeThis->welcomeWindow.reset(new WelcomeWindow(safeThis.getComponent()));
-            safeThis->welcomeWindow->onClose = [safeThis]()
+            TutorialHost& host = *safeThis.getComponent();
+            safeThis->tutorialWindow = std::make_unique<TutorialWindow>(host);
+            safeThis->tutorialWindow->onClose = [safeThis]()
             {
                 if (safeThis != nullptr)
-                    safeThis->welcomeWindow.reset();
+                    safeThis->tutorialWindow.reset();
             };
 
-            safeThis->welcomeWindow->setVisible(true);
-            safeThis->welcomeWindow->positionOnMainComponentDisplay();
-            safeThis->welcomeWindow->toFront(true);
+            safeThis->tutorialWindow->setVisible(true);
+            safeThis->tutorialWindow->positionOnHostDisplay();
+            safeThis->tutorialWindow->toFront(true);
         });
 }
 
-/* --Tutorial-- */
-
-void MainComponent::setTutorialActive(bool active)
+void MainComponent::showPanel(Panel panel)
 {
-    isTutorialActive = active;
-    repaint();
-}
-
-void MainComponent::setTutorialHighlight(Rectangle<int> bounds)
-{
-    tutorialHighlightRect = bounds;
-    repaint();
-}
-
-void MainComponent::setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds)
-{
-    tutorialExtraHighlights = bounds;
-    repaint();
-}
-
-void MainComponent::ensureTutorialModelLoaded()
-{
-    if (! mainModelTab.isModelLoaded())
-        mainModelTab.loadDefaultModel();
-}
-
-void MainComponent::resetTutorialAutoLoadedModel()
-{
-    if (! mainModelTab.isModelLoaded())
-        return;
-
-    if (mainModelTab.getLoadedPath() == TutorialConstants::fallbackModelPath)
+    switch (panel)
     {
-        mainModelTab.resetState();
+        case Panel::statusArea:
+            if (! showStatusArea)
+                viewStatusAreaCallback();
+
+            break;
+
+        case Panel::mediaClipboard:
+            if (! showMediaClipboard)
+                viewMediaClipboardCallback();
+
+            break;
     }
-}
-
-Rectangle<int> MainComponent::getModelSelectBounds()
-{
-    auto bounds = mainModelTab.getModelSelectBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getControlsBounds()
-{
-    auto bounds = mainModelTab.getControlsBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getInputTrackBounds()
-{
-    auto bounds = mainModelTab.getInputTrackBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getInputFolderBounds()
-{
-    auto bounds = mainModelTab.getInputFolderBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getInputPlayBounds()
-{
-    auto bounds = mainModelTab.getInputPlayBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getProcessButtonBounds()
-{
-    auto bounds = mainModelTab.getProcessButtonBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getTracksBounds()
-{
-    auto bounds = mainModelTab.getTracksBounds();
-    return getLocalArea(&mainModelTab, bounds);
-}
-
-Rectangle<int> MainComponent::getClipboardBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-        return mediaClipboardWidget.getBounds();
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardTrackAreaBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardTrackAreaBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardControlsBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardControlsBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardNameBoxBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardNameBoxBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardButtonsBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getClipboardButtonsBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardAddButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getAddFileButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardRemoveButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getRemoveButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardPlayButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getPlayButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getClipboardSendToDAWButtonBounds()
-{
-    if (showMediaClipboard && mediaClipboardWidget.isVisible())
-    {
-        auto bounds = mediaClipboardWidget.getSendToDAWButtonBounds();
-        return getLocalArea(&mediaClipboardWidget, bounds);
-    }
-    return {};
-}
-
-Rectangle<int> MainComponent::getInfoBarBounds()
-{
-    if (showStatusArea && statusAreaWidget.isVisible())
-        return statusAreaWidget.getBounds();
-    return {};
 }
 
 /* --Miscellaneous-- */
 
-// TODO - The following is an old callback from V2. It may be helpful in the future.
-
-/*
-void MainComponent::focusCallback()
-{
-    if (mediaDisplay->isFileLoaded())
-    {
-        Time lastModTime =
-            mediaDisplay->getTargetFilePath().getLocalFile().getLastModificationTime();
-        if (lastModTime > lastLoadTime)
-        {
-            // Create an AlertWindow
-            auto* reloadCheckWindow = new AlertWindow(
-                "File has been modified",
-                "The loaded file has been modified in a different editor! Would you like HARP to load the new version of the file?\nWARNING: This will clear the undo log and cause all unsaved edits to be lost!",
-                AlertWindow::QuestionIcon);
-
-            reloadCheckWindow->addButton("Yes", 1, KeyPress(KeyPress::returnKey));
-            reloadCheckWindow->addButton("No", 0, KeyPress(KeyPress::escapeKey));
-
-            // Show the window and handle the result asynchronously
-            reloadCheckWindow->enterModalState(
-                true,
-                new CustomPathAlertCallback(
-                    [this, reloadCheckWindow](int result)
-                    {
-                        if (result == 1)
-                        { // Yes was clicked
-                            DBG_AND_LOG("Reloading file");
-                            loadMediaDisplay(mediaDisplay->getTargetFilePath().getLocalFile());
-                        }
-                        else
-                        { // No was clicked or the window was closed
-                            DBG_AND_LOG("Not reloading file");
-                            lastLoadTime =
-                                Time::getCurrentTime(); //Reset time so we stop asking
-                        }
-                        delete reloadCheckWindow;
-                    }),
-                true);
-        }
-    }
-}
-*/
-
 void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 {
-    if (source == &mainModelTab)
+    if (source == &modelTabs)
     {
         updateWindowConstraints();
     }

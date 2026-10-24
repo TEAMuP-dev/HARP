@@ -1,14 +1,16 @@
 /**
  * @file Main.cpp
  * @brief Initial JUCE launch code and window management.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, xribene, hugofloresgarcia
  */
 
 #include "MainComponent.h"
 
-#include "windows/WelcomeWindow.h"
-
 #include "utils/Settings.h"
+
+#if JUCE_LINUX
+#include <dlfcn.h>
+#endif
 
 using namespace juce;
 
@@ -65,16 +67,9 @@ public:
         clearLastFocusedWindow();
         Desktop::getInstance().addFocusChangeListener(this);
 
-        String windowTitle = getApplicationName();
-
-        if (windowCounter > 1)
-        {
-            windowTitle += " (" + String(windowCounter) + ")";
-        }
-
         windowCounter++;
 
-        mainWindow.reset(new HARPWindow(windowTitle));
+        mainWindow = std::make_unique<HARPWindow>(getApplicationName());
 
         bool showWelcome = Settings::getBoolValue("view.showWelcomePopup", true);
 
@@ -83,7 +78,7 @@ public:
             if (auto* mainComp =
                     dynamic_cast<MainComponent*>(getMainWindowPtr()->getContentComponent()))
             {
-                mainComp->openWelcomeWindow();
+                mainComp->openTutorial();
             }
         }
 
@@ -220,6 +215,152 @@ public:
         }
 
         /**
+         * Hands the constrainer's minimum size to the window manager.
+         *
+         * JUCE publishes size limits from the constrainer in
+         * XWindowSystem::updateConstraints, but only reaches the branch that reads it
+         * when the peer carries ComponentPeer::windowIsResizable. ResizableWindow only
+         * sets that flag where Desktop::supportsBorderlessNonClientResize() is true,
+         * which on Linux it never is, so the other branch pins the limits to the
+         * current size instead. Either way XWindowSystem::setBounds then assigns
+         * WM_NORMAL_HINTS outright as USSize | USPosition, dropping whatever was just
+         * published, so the window advertises no limits at all and the window manager
+         * allows any size. Re-applying the minimum here, after each resize, is what
+         * the window manager actually ends up seeing.
+         *
+         * Snapping back afterwards is not a workable substitute: the window manager
+         * may refuse, leaving the window and its contents at different sizes.
+         *
+         * Xlib is reached through dlopen rather than its headers, whose Window, Time
+         * and KeyPress macros collide with JUCE's types. Does nothing on platforms
+         * where JUCE already applies the limits itself.
+         */
+        void publishMinimumSizeToWindowManager()
+        {
+#if JUCE_LINUX
+            auto* peer = getPeer();
+
+            if (peer == nullptr)
+            {
+                return;
+            }
+
+            const auto windowHandle = (unsigned long) (pointer_sized_int) peer->getNativeHandle();
+
+            if (windowHandle == 0)
+            {
+                return;
+            }
+
+            /* Mirrors Xlib's XSizeHints, whose layout is fixed by the X11 ABI */
+            struct SizeHints
+            {
+                long flags;
+                int x, y, width, height;
+                int minWidth, minHeight;
+                int maxWidth, maxHeight;
+                int widthInc, heightInc;
+                struct
+                {
+                    int x, y;
+                } minAspect, maxAspect;
+                int baseWidth, baseHeight;
+                int winGravity;
+            };
+
+            static constexpr long minSizeFlag = 1L << 4; // PMinSize
+
+            /* Opened once and held for the lifetime of the process. This runs on
+               every resize, and a connection set up and torn down per call would
+               mean a full X handshake many times a second while a resize is being
+               dragged. The connection is deliberately separate from the one JUCE
+               holds: Xlib's locking is per-display, so nothing here can race with
+               JUCE's own X calls and no ScopedXLock equivalent is needed. */
+            struct XLib
+            {
+                void* display = nullptr;
+                SizeHints* (*allocSizeHints)() = nullptr;
+                int (*getWMNormalHints)(void*, unsigned long, SizeHints*, long*) = nullptr;
+                void (*setWMNormalHints)(void*, unsigned long, SizeHints*) = nullptr;
+                int (*freeMemory)(void*) = nullptr;
+                int (*flush)(void*) = nullptr;
+
+                XLib()
+                {
+                    void* handle = dlopen("libX11.so.6", RTLD_LAZY);
+
+                    if (handle == nullptr)
+                    {
+                        return;
+                    }
+
+                    auto* openDisplay = (void* (*) (const char*) ) dlsym(handle, "XOpenDisplay");
+
+                    allocSizeHints = (decltype(allocSizeHints)) dlsym(handle, "XAllocSizeHints");
+                    getWMNormalHints =
+                        (decltype(getWMNormalHints)) dlsym(handle, "XGetWMNormalHints");
+                    setWMNormalHints =
+                        (decltype(setWMNormalHints)) dlsym(handle, "XSetWMNormalHints");
+                    freeMemory = (decltype(freeMemory)) dlsym(handle, "XFree");
+                    flush = (decltype(flush)) dlsym(handle, "XFlush");
+
+                    if (openDisplay != nullptr && allocSizeHints != nullptr
+                        && getWMNormalHints != nullptr && setWMNormalHints != nullptr
+                        && freeMemory != nullptr && flush != nullptr)
+                    {
+                        display = openDisplay(nullptr);
+                    }
+                }
+
+                bool isUsable() const { return display != nullptr; }
+            };
+
+            static const XLib xlib;
+
+            if (! xlib.isUsable())
+            {
+                return;
+            }
+
+            if (SizeHints* hints = xlib.allocSizeHints())
+            {
+                long supplied = 0;
+
+                // Preserve whatever the window already advertises
+                xlib.getWMNormalHints(xlib.display, windowHandle, hints, &supplied);
+
+                hints->flags |= minSizeFlag;
+                hints->minWidth = constrainer.getMinimumWidth();
+                hints->minHeight = constrainer.getMinimumHeight();
+
+                xlib.setWMNormalHints(xlib.display, windowHandle, hints);
+                xlib.freeMemory(hints);
+            }
+
+            xlib.flush(xlib.display);
+#endif
+        }
+
+        void resized() override
+        {
+            DocumentWindow::resized();
+
+            /* JUCE rewrites WM_NORMAL_HINTS while setting the window bounds, and
+               replaces the structure rather than merging into it, so the minimum
+               has to be applied once that has happened. */
+            Component::SafePointer<HARPWindow> safeThis(this);
+
+            MessageManager::callAsync(
+                [safeThis]
+                {
+                    if (safeThis != nullptr)
+                    {
+                        safeThis->publishMinimumSizeToWindowManager();
+                    }
+                });
+        }
+
+        /**
          * Defines the behavior when the user closes the window. Although multiple
          * windows are supported, they will all belong to the same application instance
          * and closing the main window will lead to all other windows closing.
@@ -251,7 +392,7 @@ public:
                 }
                 else
                 {
-                    // No other windows - terminate application
+                    // No other windows, so terminate the application
                     JUCEApplication::getInstance()->systemRequestedQuit();
                 }
             }
@@ -260,20 +401,6 @@ public:
                 app->removeAdditionalWindow(this);
             }
         }
-
-        /*void activeWindowStatusChanged() override
-        {
-            if (isActiveWindow())
-            {
-                if (auto* mainComp = dynamic_cast<MainComponent*>(getContentComponent()))
-                {
-                    // Check if loaded file(s) are still up to date when window refocused
-                    mainComp->focusCallback();
-                }
-            }
-
-            DocumentWindow::activeWindowStatusChanged();
-        }*/
 
     private:
         String getPrefix() { return "window." + windowIdentifier + "."; }
@@ -329,13 +456,13 @@ public:
                 }
                 else
                 {
-                    // No display found for saved position - center on main display
+                    // No display found for saved position, so center on main display
                     centreWithSize(width, height);
                 }
             }
             else
             {
-                // No saved position - center on screen
+                // No saved position, so center on screen
                 centreWithSize(getWidth(), getHeight());
             }
         }
@@ -360,8 +487,6 @@ public:
             mainWindow = std::move(additionalWindows.getReference(0));
             // Remove from additional windows
             additionalWindows.remove(0);
-
-            //windowCounter--; // TODO - leads to duplicate window numbers
         }
     }
 
@@ -373,8 +498,6 @@ public:
             {
                 // Remove referenced window
                 additionalWindows.remove(i);
-
-                //windowCounter--; // TODO - leads to duplicate window numbers
 
                 break;
             }
@@ -477,27 +600,25 @@ private:
                       is avoided because it's unclear how to add a checkbox to it and
                       MessageBoxOptions doesn't have withCustomComponent() method.
                     */
-                    std::unique_ptr<AlertWindow> alertWindow = std::make_unique<AlertWindow>(
+                    auto alertWindow = std::make_unique<AlertWindow>(
                         options.getTitle(), options.getMessage(), options.getIconType());
 
                     alertWindow->addButton(options.getButtonText(0), 1); // New window
                     alertWindow->addButton(options.getButtonText(1), 2); // Current window
                     alertWindow->addButton(options.getButtonText(2), 0); // Cancel
 
-                    // Checkbox is a raw pointer because it couldn't be passed to lambda as a unique_ptr
+                    // AlertWindow does not own its custom components, so the callback does
                     auto rememberCheckbox = std::make_unique<ToggleButton>("Remember my choice");
                     rememberCheckbox->setSize(200, 24);
                     rememberCheckbox->setName("");
 
-                    // AlertWindow doesn't take ownership of custom components so checkbox needs to be deleted manually
                     alertWindow->addCustomComponent(rememberCheckbox.get());
 
-                    // Open window asynchronously
-                    alertWindow->enterModalState(
+                    // Deleted by the modal manager once it is dismissed
+                    alertWindow.release()->enterModalState(
                         true,
                         ModalCallbackFunction::create(
                             [this,
-                             alertWindow = alertWindow.release(),
                              inputMediaFile,
                              rememberCheckboxPtr = std::move(rememberCheckbox)](int result)
                             {
@@ -509,8 +630,8 @@ private:
 
                                     bool rememberChoice = rememberCheckboxPtr->getToggleState();
 
-                                    // Save preference if requested but d on't save Cancel choice
-                                    if (rememberChoice && choice <= 1)
+                                    // Save the preference if requested
+                                    if (rememberChoice)
                                     {
                                         Settings::setValue("newInstancePreference", choice, true);
                                     }
@@ -582,7 +703,7 @@ private:
     std::unique_ptr<HARPWindow> mainWindow;
     Array<std::unique_ptr<HARPWindow>> additionalWindows;
 
-    HARPWindow* lastFocusedWindow;
+    HARPWindow* lastFocusedWindow = nullptr;
 
     ApplicationProperties applicationProperties;
 

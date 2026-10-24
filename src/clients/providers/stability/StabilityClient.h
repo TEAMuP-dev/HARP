@@ -1,7 +1,7 @@
 /**
  * @file StabilityClient.h
  * @brief Client specifics for Stability AI (multipart requests).
- * @author xribene, huiranyu, lindseydeng, cwitkowitz
+ * @author cwitkowitz, xribene, huiranyu, lindseydeng
  */
 
 #pragma once
@@ -78,6 +78,12 @@ public:
         return isValidTextToAudioPath(modelPath) || isValidAudioToAudioPath(modelPath);
     }
 
+    // Every model this provider offers, each with built-in controls
+    static StringArray getModelPaths()
+    {
+        return { "stability/text-to-audio", "stability/audio-to-audio" };
+    }
+
     String inferHostSlashModel(String modelPath) override
     {
         String hostSlashModel;
@@ -113,7 +119,7 @@ public:
         }
         else
         {
-            DBG_AND_LOG("StabilityClient::inferEndpointURL: Path \""
+            DBG_AND_LOG("StabilityClient::inferEndpointPath: Path \""
                         << modelPath << "\" does not match valid specification for Stability AI.");
         }
 
@@ -138,14 +144,14 @@ public:
         }
         else
         {
-            DBG_AND_LOG("StabilityClient::inferDocumentationURL: Path \""
+            DBG_AND_LOG("StabilityClient::inferDocumentationPath: Path \""
                         << modelPath << "\" does not match valid specification for Stability AI.");
         }
 
         return documentationPath;
     }
 
-    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls)
+    OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
         const char* jsonData;
         int jsonDataSize = 0;
@@ -168,11 +174,11 @@ public:
         }
         else
         {
-            ClientError error { ClientError::Type::InvalidModelPath, modelPath, "Stability AI" };
+            OpResult result = fail(ClientError { ClientError::Type::InvalidModelPath, modelPath });
 
-            DBG_AND_LOG("StabilityClient::queryControls: " << toUserMessage(error));
+            DBG_AND_LOG("StabilityClient::queryControls: " << toLogString(result.getError()));
 
-            return OpResult::fail(error);
+            return result;
         }
 
         String queryResponse = String::fromUTF8(jsonData, jsonDataSize);
@@ -183,14 +189,7 @@ public:
         }
 
         // Extract model metadata, inputs, controls, and outputs
-        OpResult result = stringJSONToDict(queryResponse, controls);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
-        return OpResult::ok();
+        return stringJSONToDict(queryResponse, controls);
     }
 
     var wrapPayloadElement(var payloadElement, bool isFile = false, String label = "") override
@@ -199,7 +198,7 @@ public:
 
         String controlLabel = label.isNotEmpty() ? label : "control";
 
-        // Use "input" label for audio file — required for Stability AI
+        // Stability AI requires the "input" label for the audio file
         const String payloadLabel = isFile ? "input" : controlLabel;
 
         wrappedPayloadElement->setProperty("label", payloadLabel);
@@ -211,7 +210,7 @@ public:
     OpResult process(String modelPath,
                      String& payloadJSON,
                      std::vector<File>& outputFiles,
-                     LabelList& labels)
+                     LabelList& labels) override
     {
         DynamicObject::Ptr dataDict;
 
@@ -279,11 +278,7 @@ public:
         const String extension =
             getValue(offsetIdx + 3).isNotEmpty() ? "." + getValue(offsetIdx + 3) : ".wav";
 
-        // Obtain local temporary directory for downloaded file
-        File tempDir = File::getSpecialLocation(File::tempDirectory);
-
-        // Create file at a unique path
-        File outputFile = tempDir.getChildFile("stable-audio_" + Uuid().toString() + extension);
+        File outputFile = createResultFile("stable-audio-2", extension);
 
         result = makePOSTRequest(URL(inferEndpointPath(modelPath)),
                                  request,
@@ -372,16 +367,13 @@ private:
 
         DBG_AND_LOG(
             "StabilityClient::makePOSTRequest: Attempting to make POST request for endpoint \""
-            + endpoint.toString(true) + "\" with headers \""
-            + toPrintableHeaders(headers)
-            //+ "\" and body \"" + body.toString()
-            + "\".");
+            + endpoint.toString(true) + "\" with headers \"" + toPrintableHeaders(headers) + "\".");
 
         endpoint = endpoint.withPOSTData(body);
 
         if (! endpoint.isWellFormed())
         {
-            return OpResult::fail(
+            return fail(
                 HttpError { HttpError::Type::InvalidURL, HttpError::Request::POST, errorPath });
         }
 
@@ -396,11 +388,11 @@ private:
                            .withNumRedirectsToFollow(5)
                            .withHttpRequestCmd("POST");
 
-        std::unique_ptr<InputStream> stream(endpoint.createInputStream(options));
+        std::unique_ptr<InputStream> stream(createRequestStream(endpoint, options));
 
         if (stream == nullptr)
         {
-            return OpResult::fail(HttpError {
+            return fail(HttpError {
                 HttpError::Type::ConnectionFailed, HttpError::Request::POST, errorPath });
         }
 
@@ -414,17 +406,16 @@ private:
 
             if (response.contains("authorization"))
             {
-                return OpResult::fail(
-                    ClientError { ClientError::Type::InsufficientPermissions, "", "Stability AI" });
+                return fail(ClientError { ClientError::Type::InsufficientPermissions });
             }
-            // TODO - could potentially identify other errors (e.g., copyrighted material)
-            else
-            {
-                return OpResult::fail(HttpError { HttpError::Type::BadStatusCode,
-                                                  HttpError::Request::POST,
-                                                  errorPath,
-                                                  statusCode });
-            }
+
+            return fail(HttpError { HttpError::Type::BadStatusCode,
+                                    HttpError::Request::POST,
+                                    errorPath,
+                                    statusCode,
+                                    statusCode == 402
+                                        ? "Stability AI reported insufficient usage credits."
+                                        : String() });
         }
 
         // Remove file at target path if one already exists
@@ -445,7 +436,7 @@ private:
         return OpResult::ok();
     }
 
-    String getMimeForAudioFile(const File& f)
+    static String getMimeForAudioFile(const File& f)
     {
         static const std::unordered_map<String, String> mimeLookup { { ".wav", "audio/wav" },
                                                                      { ".wave", "audio/wav" },

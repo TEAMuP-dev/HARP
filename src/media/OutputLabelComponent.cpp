@@ -23,20 +23,6 @@ OutputLabelComponent::OutputLabelComponent(double t,
     setDefaultAttributes();
 }
 
-OutputLabelComponent::OutputLabelComponent(const OutputLabelComponent& other)
-{
-    setTime(other.getTime());
-    setLabel(other.getLabel());
-    setDuration(other.getDuration());
-    setDescription(other.getDescription());
-    setColor(other.getColor());
-    setLink(other.getLink());
-
-    setDefaultAttributes();
-}
-
-OutputLabelComponent::~OutputLabelComponent() {}
-
 void OutputLabelComponent::setDefaultAttributes()
 {
     setText(getLabel(), dontSendNotification);
@@ -56,7 +42,10 @@ void OutputLabelComponent::setColor(Colour clr)
     durationFill.setColor(clr.withAlpha(0.5f));
 }
 
-float OutputLabelComponent::getTextWidth() { return getFont().getStringWidthFloat(getText()); }
+float OutputLabelComponent::getTextWidth()
+{
+    return (float) ModelStyle::getTextWidth(getFont(), getText());
+}
 
 void OutputLabelComponent::addMarkersTo(Component* c)
 {
@@ -145,11 +134,6 @@ OverheadLabelComponent::OverheadLabelComponent(double t,
 {
 }
 
-OverheadLabelComponent::OverheadLabelComponent(const OverheadLabelComponent& other)
-    : OutputLabelComponent(other)
-{
-}
-
 LabelOverlayComponent::LabelOverlayComponent(double t,
                                              String lbl,
                                              float y,
@@ -160,12 +144,6 @@ LabelOverlayComponent::LabelOverlayComponent(double t,
     : OutputLabelComponent(t, lbl, dur, dsc, clr, lnk)
 {
     setRelativeY(y);
-}
-
-LabelOverlayComponent::LabelOverlayComponent(const LabelOverlayComponent& other)
-    : OutputLabelComponent(other)
-{
-    setRelativeY(other.getRelativeY());
 }
 
 float LabelOverlayComponent::amplitudeToRelativeY(float amplitude)

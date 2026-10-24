@@ -64,6 +64,19 @@
 #       channel: 0          # MIDI channel, 0 to 15 (9 = drums)
 #       ext: .mid
 #
+# Either kind also takes a `source`, a path relative to this file. An audio
+# source is the recording from which the clip is cut: it is resampled to
+# sample_rate, averaged or copied to num_channels, and cut to duration or
+# repeated to reach it, so the clip has the properties above with the
+# recording's content. A MIDI source is a file passed as it is, and the
+# properties that describe the synthesized notes do not apply to it. A source
+# set at one level carries down to the levels below it, as every property
+# does, so set `source: null` to return a model or case to the sweep or the
+# synthesized notes.
+#
+#     audio:
+#       source: test_data/test_piano_20s.wav
+#
 # This block can also be set per model and per test case, with each level
 # overriding the one before it.
 #
@@ -80,12 +93,17 @@
 #
 #   common_test_cases:     # cases run on EVERY model, in addition to its own
 #                          # cases. Keep these model-agnostic by targeting
-#                          # outputs with "*" rather than by label. Names
-#                          # appear in the report prefixed with "common:"
+#                          # outputs with "*" rather than by label, or with a
+#                          # validator that skips the models it does not fit.
+#                          # Names appear in the report prefixed with "common:"
 #     - name: outputs-nontrivial
 #       expect:
 #         "*":
 #           min_bytes: 100
+#
+# A rule written here reaches every model, so it has to be true of every
+# model. One that is true of most reads as a failure on the rest. See the
+# note above `overrides` below for the case this rules out.
 #
 #
 # ---- Per-model settings (`overrides`) --------------------------------------
@@ -133,7 +151,8 @@
 #
 #           expect:                # output checks, keyed by output label.
 #                                  # "*" applies each rule to every output
-#                                  # the rule covers
+#                                  # the rule covers, and a rule under a
+#                                  # label replaces it for that output
 #             "Output Audio":
 #               ext: .wav          # extension: one, or a list of accepted
 #               min_bytes: 1000    # minimum file size, in bytes
@@ -141,6 +160,9 @@
 #               sample_rate: 44100 # exact sample rate, in Hz
 #               bit_depth: 16      # exact PCM bit depth (PCM formats only)
 #               min_rms_db: -60    # minimum RMS level, in dBFS
+#               max_rms_db: -60    # maximum RMS level, in dBFS, e.g. for a
+#                                  # separator's stem whose source the input
+#                                  # lacks
 #               min_duration: 1.5  # minimum length, in seconds
 #               max_duration: 10.0 # maximum length, in seconds
 #             "Output Midi":
@@ -151,6 +173,11 @@
 #               min_labels: 1      # minimum labels in a pyharp LabelList. 0
 #                                  # permits an empty list but still requires
 #                                  # a well-formed one
+#             "Output Text":     # a .txt file, i.e. gr.File(file_types=[".txt"])
+#               min_length: 1      # minimum characters in the file, ignoring
+#                                  # surrounding whitespace
+#               excludes: "Error"  # text that must not appear: one string, or
+#                                  # a list of them, matched case-insensitively
 #
 #           validators:            # only for checks `expect` cannot express,
 #                                  # such as ones spanning several outputs.
@@ -165,10 +192,11 @@
 #
 #   ext, min_bytes                                  any file output
 #   num_channels, sample_rate, bit_depth,
-#   min_rms_db                                      audio outputs
+#   min_rms_db, max_rms_db                          audio outputs
 #   min_duration, max_duration                      audio and MIDI outputs
 #   min_notes, note_instruments, note_channels      MIDI outputs
 #   min_labels                                      JSON (LabelList) outputs
+#   min_length, excludes                            text file outputs
 #
 # Applying a rule to a NAMED output whose type it does not cover fails the
 # case with a message indicating the configuration mistake, rather than reading
@@ -192,7 +220,7 @@
 #           controls:
 #             "Pitch Shift (semitones)": 12
 #           expect:
-#             "Output Audio":
+#             "Shifted Audio":
 #               ext: .wav
 #               min_rms_db: -60      # shifted audio must still carry signal
 #
@@ -212,10 +240,1638 @@
 #
 #
 
-exclude: []
+# Withdrawn because each one's upstream carries no license, so it cannot be
+# deployed (see docs/DEPLOYMENT.md). The Spaces are private, but a token that
+# can read them still discovers them, so they are named here rather than left
+# to fail a run. Remove an entry once its license is established and the Space
+# is published again.
+exclude:
+  - teamup-tech/BUDDy
+  - teamup-tech/STAGE
+  - teamup-tech/improvnet
 
 include_extra: []
 
-common_test_cases: []
+# The inputs every model is given unless its entry below says otherwise. A sine
+# sweep and two notes could only show that a model returns something. Real
+# material shows whether it did its job, since a separator then has sources to
+# separate and a transcriber notes to find, and the output checks below are
+# written against it. The assets, all made for this suite:
+#
+#   test_band_speech_16s.flac  a band (drums, bass, piano and a lead) rendered
+#                              from test_band_16s.mid by the MIDI-Synthesizer
+#                              Space, under a voice reading test_speech_10s.flac
+#   test_speech_10s.flac       English speech from the Kokoro Space: "Every
+#                              morning, the small bakery on the corner opens at
+#                              seven. The smell of fresh bread drifts down the
+#                              street, and a short line forms outside the door."
+#   test_band_16s.mid          the band, with its drums on channel 9
+#   test_drums_16s.flac        the band's drums alone (kick, snare and closed
+#                              hi-hat), rendered by the MIDI-Synthesizer Space
+#   test_melody_16s.mid        the band's lead line alone, on one track
+#
+# The audio is cut to 8 seconds and sent at 48 kHz in stereo, a format few
+# models run at, so that one returning its result at the model's own rate or in
+# mono fails the format assertions below (see &as-given). Speech models below
+# take test_speech_10s.flac as mono 44.1 kHz instead, so both shapes of input
+# are exercised across the fleet.
+synthesized_inputs:
+  audio:
+    source: test_data/test_band_speech_16s.flac
+    sample_rate: 48000
+    num_channels: 2
+    duration: 8.0
+  midi:
+    source: test_data/test_melody_16s.mid
 
-overrides: {}
+# Checks that hold for every deployment, so that a model with no entry under
+# `overrides` is still asserted against rather than only being run. Each is
+# written to apply to whatever outputs a model has, and to skip models it does
+# not fit (see "Keep common cases model-agnostic" in README.md). None sends an
+# input of its own, so all of them fold into each model's cases and cost no
+# /process call of their own.
+common_test_cases:
+
+  # A file that exists and is not empty is already required. Decoding is what
+  # catches a header-only WAV, which is what a model that wrote no samples and
+  # reported success returns.
+  - name: audio-decodes
+    validators:
+      audio_decodes: {}
+
+  # A label outside the audio it annotates draws off the end of the track in
+  # HARP, so it is wrong however well the model performed.
+  - name: labels-within-audio
+    validators:
+      labels_within_audio: {}
+
+  # HARP reads a JSON output as a pyharp LabelList and fails the whole request
+  # on anything else, and it draws labels only over an audio, MIDI or file
+  # output. A model returning a plain dictionary passes every other check here
+  # and shows an error in HARP after every request.
+  - name: labels-reach-harp
+    validators:
+      labels_reach_harp: {}
+
+  # A decodable file can still hold nothing but zeros, which is what a model
+  # that ran, wrote silence and reported success returns. The floor is set low
+  # on purpose, to catch digital silence without judging loudness. A real
+  # level is asserted per model below, where producing signal is part of the
+  # contract. A separator's stem for a source its input lacks can sit below
+  # even this floor, and the note above `overrides` covers that case.
+  #
+  # min_notes reaches MIDI outputs by the same block: the `*` key applies each
+  # rule only to the output types it covers, and drops it where none match.
+  - name: outputs-carry-signal
+    expect:
+      "*":
+        min_rms_db: -80
+        min_notes: 1
+
+# Keyed by qualified model name and ordered by it, so that one model's
+# settings are in one place. A model written twice is reported rather than
+# resolved, since the entry read would otherwise be the last one alone.
+#
+# Four blocks recur, and are written once as YAML anchors where they first
+# appear and referenced after that:
+#
+#   &as-given     an audio-to-audio model returns the audio it was given: as
+#                 long, at the same sample rate and channel count, and with
+#                 signal in it. A truncated or padded result fails, and so
+#                 does one written at the model's own rate. First used by
+#                 Apollo.
+#   &speech       a model built for speech takes the speech asset, in mono at
+#                 44.1 kHz. First used by AudioSeal.
+#   &as-given-speech  the same as &as-given, for a model that takes the speech
+#                 asset. First used by DeepFilterNet.
+#   &speaks       a model that synthesizes speech returns a phrase of it, with
+#                 signal in it. First used by Bark.
+#
+# Any other output that returns its input, processed or as it was, asserts the
+# input's sample rate and channel count in its own block. Generators are not
+# held to them, since nothing arrived for them to keep.
+#
+# Separators follow one rule, since what a stem holds depends on the input. A
+# stem is asserted to carry signal when the input holds its source and every
+# variant of the model clears that assertion comfortably. A stem whose
+# source the input lacks is near silent from a working model, at times below
+# the common floor, so it lifts that floor and asserts the silence instead
+# (`max_rms_db`). That shows the model separated its input rather than copied
+# it into every stem. Any other stem keeps the common floor alone.
+#
+# A model with several modes has a case per mode where the modes run
+# different code or load different weights, since one can break while the
+# others work. The cases are budgeted, ZeroGPU ones above all, so a mode that
+# only changes a number in the same code path is left to the default case.
+overrides:
+
+  teamup-tech/ACE-Step:
+    # Audio2Audio starts from a reference recording, which is optional and so
+    # is given here. The LoRA loads weights of its own.
+    test_cases:
+      - name: default
+        controls:
+          # The Textbox declares no default, which would otherwise be sent the
+          # harness's "test" placeholder. Empty is what the pipeline reads as
+          # "no override".
+          "OSS Steps": ""
+        expect: &ace-step
+          "Generated Music":
+            min_duration: 10.0
+            min_rms_db: -45
+
+      - name: audio2audio
+        controls:
+          "OSS Steps": ""
+          "Enable Audio2Audio": true
+        files:
+          "Reference Audio (for Audio2Audio)": test_data/test_band_speech_16s.flac
+        expect: *ace-step
+
+      - name: lora-rap
+        controls:
+          "OSS Steps": ""
+          "Lora Name or Path": "ACE-Step/ACE-Step-v1-chinese-rap-LoRA"
+        expect: *ace-step
+
+  teamup-tech/Anticipatory-Music-Transformer:
+    # prompt_1.mid is a four-part vamp under a Voice Oohs melody that runs on
+    # past it, the shape the model is built for. A working run writes
+    # accompaniment after the vamp ends, so the output holds far more notes
+    # than it was given. A run that returns its input unchanged, which is what
+    # a melody the Space failed to separate produced, does not. Each size has
+    # its own weights.
+    test_cases:
+      - name: accompany-prompt
+        controls:
+          "Melody Instrument": "53. Voice Oohs"
+        files:
+          "Input MIDI File": test_data/prompt_1.mid
+        expect: &amt
+          "With Accompaniment":
+            min_notes: 150
+            min_duration: 18.0
+
+      - name: accompany-prompt-small
+        controls:
+          "Melody Instrument": "53. Voice Oohs"
+          "Select AMT Model (Faster vs. Higher Quality)": "stanford-crfm/music-small-800k"
+        files:
+          "Input MIDI File": test_data/prompt_1.mid
+        expect: *amt
+
+      - name: accompany-prompt-large
+        controls:
+          "Melody Instrument": "53. Voice Oohs"
+          "Select AMT Model (Faster vs. Higher Quality)": "stanford-crfm/music-large-800k"
+        files:
+          "Input MIDI File": test_data/prompt_1.mid
+        expect: *amt
+
+  teamup-tech/AnyAccomp:
+    # The Space accepts 3 to 30 seconds. The band's lead line is the part
+    # accompanied.
+    synthesized_inputs:
+      audio:
+        duration: 5.0
+    test_cases:
+      - name: default
+        expect:
+          "*":
+            min_duration: 4.8
+            max_duration: 5.2
+            min_rms_db: -45
+
+  teamup-tech/Apollo:
+    # A recording longer than 30 seconds is restored in overlapping chunks,
+    # cross-faded where they meet, since the whole of a long one does not fit
+    # in GPU memory.
+    test_cases:
+      - name: default
+        expect: &as-given
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: chunked
+        synthesized_inputs:
+          audio:
+            duration: 35.0
+        expect:
+          "Restored Audio":
+            min_duration: 34.8
+            max_duration: 35.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/Audio-Inpainting-Diffusion:
+    # The default checkpoint is trained on solo piano. The input is cut or
+    # padded to the checkpoint's own segment, whatever its length, and the two
+    # checkpoints' segments differ in length.
+    synthesized_inputs:
+      audio:
+        source: test_data/test_piano_20s.wav
+    test_cases:
+      - name: default
+        expect:
+          "Inpainted Audio":
+            min_duration: 8.0
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: musicnet
+        controls:
+          "Model": "MusicNet (mixed classical instrumentation)"
+        expect:
+          "Inpainted Audio":
+            min_duration: 4.0
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/AudioSR:
+    # The multiband ensemble is a separate path, run on CPU after the GPU
+    # call, so its case takes few steps to keep that call short. It always
+    # returns 48 kHz, its purpose, which the input already is.
+    test_cases:
+      - name: default
+        expect: *as-given
+
+      - name: multiband
+        controls:
+          "Multiband Ensemble": true
+          "DDIM Steps": 10
+        expect: *as-given
+
+  teamup-tech/AudioSeal:
+    synthesized_inputs: &speech
+      audio:
+        source: test_data/test_speech_10s.flac
+        sample_rate: 44100
+        num_channels: 1
+    test_cases:
+      - name: default
+        expect:
+          "Watermarked Speech":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+      # Detection returns its input with a confidence label per segment
+      - name: detect
+        controls:
+          "Option": "Detect Watermark"
+        expect:
+          "Watermarked Speech":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+          "Watermark Confidence":
+            min_labels: 1
+
+  teamup-tech/AudioSep:
+    test_cases:
+      - name: default
+        controls:
+          "Text Query": "a woman speaking"
+        expect: *as-given
+
+  teamup-tech/Audiobox-Aesthetics:
+    # Four scores, each a label spanning the clip, over the input returned as
+    # it was given.
+    test_cases:
+      - name: default
+        expect:
+          "Scored Audio":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Aesthetic Scores":
+            min_labels: 4
+
+  teamup-tech/BABE-2:
+    # Restoration spends GPU time on every diffusion step of every segment, so
+    # the default steps on a long input are costly. A few steps on one short
+    # segment check the same path for a small fraction of that. Each singer is
+    # a checkpoint of its own, and each is given the melody rendered as a voice.
+    synthesized_inputs:
+      audio:
+        duration: 4.0
+    test_cases:
+      - name: few-steps
+        controls:
+          "Processing Steps": 10
+        expect: &babe-2
+          "Restored Audio":
+            min_duration: 3.8
+            max_duration: 4.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: singing-voice
+        controls:
+          "Processing Steps": 10
+          "Voice / Instrument": "Singing Voice — Generic"
+        synthesized_inputs:
+          audio:
+            source: test_data/test_voice_16s.wav
+        expect: *babe-2
+
+      - name: singing-voice-caruso
+        controls:
+          "Processing Steps": 10
+          "Voice / Instrument": "Singing Voice — Enrico Caruso"
+        synthesized_inputs:
+          audio:
+            source: test_data/test_voice_16s.wav
+        expect: *babe-2
+
+      - name: singing-voice-gigli
+        controls:
+          "Processing Steps": 10
+          "Voice / Instrument": "Singing Voice — Beniamino Gigli"
+        synthesized_inputs:
+          audio:
+            source: test_data/test_voice_16s.wav
+        expect: *babe-2
+
+      - name: singing-voice-melba
+        controls:
+          "Processing Steps": 10
+          "Voice / Instrument": "Singing Voice — Nellie Melba"
+        synthesized_inputs:
+          audio:
+            source: test_data/test_voice_16s.wav
+        expect: *babe-2
+
+      - name: singing-voice-patti
+        controls:
+          "Processing Steps": 10
+          "Voice / Instrument": "Singing Voice — Adelina Patti"
+        synthesized_inputs:
+          audio:
+            source: test_data/test_voice_16s.wav
+        expect: *babe-2
+
+  teamup-tech/BACHI:
+    # The Space reports "No predictions generated." and "Error: Could not
+    # extract notes from the input file." in its text output rather than
+    # raising, so both arrive as a successful result and only the content of
+    # the output distinguishes them from one. Each model type loads its own
+    # checkpoint.
+    test_cases:
+      - name: default
+        expect: &bachi
+          "Chord Predictions":
+            min_length: 1
+            excludes:
+              - "Error:"
+              - "No predictions generated."
+
+      - name: pop
+        controls:
+          "Model Type": "Pop"
+        expect: *bachi
+
+  teamup-tech/BS-RoFormer:
+    # Every stem comes back at once. The band holds every source but a guitar,
+    # so the guitar stem is asserted silent.
+    test_cases:
+      - name: default
+        expect:
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Vocals":
+            min_rms_db: -50
+          "Drums":
+            min_rms_db: -50
+          "Bass":
+            min_rms_db: -50
+          "Piano":
+            min_rms_db: -50
+          "Other":
+            min_rms_db: -50
+          "Instrumental":
+            min_rms_db: -50
+          "Guitar":
+            min_rms_db: -.inf
+            max_rms_db: -60
+
+  teamup-tech/Banquet:
+    # The mixture has to be at least 34 seconds, so the band is repeated past
+    # that, and the query is the piano the separation should find in it.
+    synthesized_inputs:
+      audio:
+        duration: 35.0
+    test_cases:
+      - name: extract-piano
+        files:
+          "Query Example": test_data/test_piano_20s.wav
+        expect:
+          "Extracted Instrument":
+            min_duration: 34.0
+            min_rms_db: -50
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/Bark:
+    test_cases:
+      - name: default
+        controls:
+          "Text Prompt": "Hello! This is a short test of the voice, read aloud."
+        expect: &speaks
+          "*":
+            min_duration: 1.5
+            min_rms_db: -45
+
+  teamup-tech/Beat-This:
+    # The band keeps a steady beat, so the clip holds comfortably more beats
+    # than are asserted.
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Beats":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Beats":
+            min_labels: 8
+
+  teamup-tech/BeatNet:
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Beats":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Beat Labels":
+            min_labels: 8
+
+  teamup-tech/BeatNet-Legacy:
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Beats":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Beats":
+            min_labels: 8
+
+  teamup-tech/CED-Tiny:
+    test_cases:
+      - name: default
+        expect:
+          "Audio Tags":
+            min_labels: 1
+
+  teamup-tech/Cacophony:
+    test_cases:
+      - name: default
+        expect:
+          "Generated Caption":
+            min_length: 10
+
+  teamup-tech/Chordino:
+    # The band plays a four-chord loop, so the clip holds several changes.
+    test_cases:
+      - name: default
+        expect:
+          "Chord Sequence":
+            min_labels: 2
+
+  teamup-tech/DDSP:
+    # Timbre transfer follows one monophonic line, and runs slowly on CPU
+    # hardware, so it takes a short excerpt of the melody rendered as a voice.
+    # Each instrument loads its own checkpoint.
+    synthesized_inputs:
+      audio:
+        source: test_data/test_voice_16s.wav
+        duration: 2.0
+    test_cases:
+      - name: default
+        expect: &ddsp
+          "Timbre-transferred audio":
+            min_duration: 1.9
+            max_duration: 2.1
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: flute
+        controls:
+          "Instrument": "Flute"
+        expect: *ddsp
+
+      - name: flute2
+        controls:
+          "Instrument": "Flute2"
+        expect: *ddsp
+
+      - name: trumpet
+        controls:
+          "Instrument": "Trumpet"
+        expect: *ddsp
+
+      - name: tenor-saxophone
+        controls:
+          "Instrument": "Tenor_Saxophone"
+        expect: *ddsp
+
+  teamup-tech/DDSP-Guitar:
+    test_cases:
+      - name: default
+        controls:
+          "Max Duration (seconds)": "5"
+        expect:
+          "Synthesized Guitar":
+            min_duration: 4.5
+            min_rms_db: -45
+
+  teamup-tech/DDSP-Piano:
+    test_cases:
+      - name: default
+        controls:
+          "Max Duration (seconds)": "5"
+        expect:
+          "Synthesized Piano":
+            min_duration: 4.5
+            min_rms_db: -45
+
+  teamup-tech/DExter:
+    # The score input is a generic file restricted to MusicXML, which the
+    # harness has no way to synthesize. Without a real file every case would
+    # be skipped, and the model would pass having never run /process. A
+    # performance plays every note of the score.
+    test_cases:
+      - name: render-score
+        files:
+          "Piano MusicXML score": test_data/test_score.musicxml
+        expect:
+          "Expressive MIDI performance":
+            min_notes: 8
+
+  teamup-tech/De-limiter:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/DeepAFx-ST:
+    # The Space accepts 1 to 30 seconds. The model runs in mono at its own
+    # rate, and the result comes back at the input's rate, copied across its
+    # channels.
+    process_timeout: 150
+    test_cases:
+      - name: default
+        expect:
+          "Styled Output":
+            ext: .wav
+            num_channels: 2
+            sample_rate: 48000
+            min_duration: 7.0
+            max_duration: 9.0
+            min_rms_db: -60
+
+  teamup-tech/DeepFilterNet:
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect: &as-given-speech
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+  teamup-tech/Demucs:
+    # The band holds all four sources, but mdx_extra leaves its bass too quiet
+    # for the level asserted on the other stems, so the bass stem keeps the
+    # floor alone. Each model has its own weights, and mdx_extra_q, which is
+    # mdx_extra quantized, needs a dependency of its own (diffq).
+    test_cases:
+      - name: default
+        expect: &demucs
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Drums":
+            min_rms_db: -50
+          "Vocals":
+            min_rms_db: -50
+          "Other":
+            min_rms_db: -50
+
+      - name: mdx-extra
+        controls:
+          "Demucs Model": "mdx_extra"
+        expect: *demucs
+
+      - name: mdx-extra-q
+        controls:
+          "Demucs Model": "mdx_extra_q"
+        expect: *demucs
+
+  teamup-tech/Denoising-UNet:
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect: *as-given-speech
+
+  teamup-tech/DiffRhythm2:
+    test_cases:
+      - name: default
+        expect:
+          "Song":
+            min_duration: 30.0
+            min_rms_db: -45
+
+  teamup-tech/FAD-MoE:
+    # It detects spoofed speech.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect:
+          "Detection Result":
+            min_length: 3
+
+  teamup-tech/FLowHigh:
+    # Raising the sample rate is its purpose, so the output is at the rate
+    # chosen, 48 kHz by default. That rate is a resampling step after the
+    # model, so one other rate covers it. Each channel is extended on its own,
+    # a path a mono input never takes.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect:
+          "Enhanced Audio":
+            sample_rate: 48000
+            num_channels: 1
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+
+      - name: out-96k
+        controls:
+          "Output Sample Rate": "96000"
+        expect:
+          "Enhanced Audio":
+            sample_rate: 96000
+            num_channels: 1
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+
+      - name: stereo
+        synthesized_inputs:
+          audio:
+            num_channels: 2
+        expect:
+          "Enhanced Audio":
+            sample_rate: 48000
+            num_channels: 2
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+
+  teamup-tech/FST-AI-Music-Detection:
+    test_cases:
+      - name: default
+        expect:
+          "Detection Result":
+            min_length: 3
+
+  teamup-tech/FxNorm-Automix:
+    # Each stem is padded with wrapped audio for context at the start, so even
+    # a short input is a long inference.
+    process_timeout: 300
+    test_cases:
+      - name: default
+        expect:
+          "Mix":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/GAME:
+    # Its input is labeled "Singing Voice", and it transcribes a monophonic
+    # sung line. test_voice_16s.wav is a monophonic melody rendered from a
+    # known MIDI, and the model recovers its notes.
+    test_cases:
+      - name: transcribe-voice
+        files:
+          "Singing Voice": test_data/test_voice_16s.wav
+        expect:
+          "Transcribed MIDI":
+            min_notes: 8
+
+  teamup-tech/HPSS:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/HTS-AT:
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Sound Tags":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Detected Sounds":
+            min_labels: 1
+
+  teamup-tech/IndexTTS-2:
+    # Both references take the speech asset. Given a sine sweep for them it
+    # returns almost nothing, which only an assertion on length catches.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        controls:
+          "Text to Synthesize": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *speaks
+
+  teamup-tech/Instruct-MusicGen:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/Kokoro:
+    # A UK voice runs the British English pipeline, the US voices the American.
+    test_cases:
+      - name: default
+        controls:
+          "Text Input": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *speaks
+
+      - name: uk-voice
+        controls:
+          "Text Input": "The weather is lovely today, so we are going for a walk in the park."
+          "Voice": "[UK-Female] Emma"
+        expect: *speaks
+
+  teamup-tech/LarsNet:
+    # It separates a drum mix into its pieces, so it takes the band's drums
+    # alone. The kit has no toms or cymbals, so the cymbals stem is asserted
+    # silent. The toms stem picks up the rest of the kit, so it keeps the floor
+    # alone.
+    synthesized_inputs:
+      audio:
+        source: test_data/test_drums_16s.flac
+    test_cases:
+      - name: default
+        expect:
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Kick":
+            min_rms_db: -50
+          "Snare":
+            min_rms_db: -50
+          "Hi-Hat":
+            min_rms_db: -50
+          "Cymbals":
+            min_rms_db: -.inf
+            max_rms_db: -60
+
+  teamup-tech/LoopGen:
+    test_cases:
+      - name: default
+        controls:
+          "Description": "an upbeat funk groove with slap bass and tight drums"
+        expect:
+          "Loop":
+            min_duration: 14.0
+            min_rms_db: -45
+
+  teamup-tech/MEGAMI:
+    # Both required tracks are synthesized, meeting the "at least 2 tracks"
+    # check, and each is longer than the minimum the model needs.
+    synthesized_inputs:
+      audio:
+        duration: 15.0
+    test_cases:
+      - name: default
+        expect:
+          "MEGAMI Mix":
+            min_duration: 14.8
+            max_duration: 15.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/MERIT:
+    # Both inputs are required to be between 5 and 10 seconds.
+    process_timeout: 150
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: default
+        expect:
+          "Similarity Results":
+            ext: .json
+        validators:
+          merit_scores: {}
+
+  teamup-tech/MIDI-DDSP:
+    test_cases:
+      - name: default
+        expect:
+          "Synthesized Audio":
+            min_duration: 8.0
+            min_rms_db: -45
+
+  teamup-tech/MIDI-GPT:
+    # The Space needs at least 4 bars, which the melody exceeds.
+    process_timeout: 150
+    test_cases:
+      - name: default
+        expect:
+          "Rewritten MIDI":
+            ext: .mid
+            min_notes: 1
+            min_duration: 8.0
+
+  teamup-tech/MIDI-Synthesizer:
+    test_cases:
+      - name: default
+        expect:
+          "Rendered Audio":
+            min_duration: 15.0
+            min_rms_db: -45
+
+  teamup-tech/MIDI-VAE:
+    # Reconstruction skips the style swap, and each style pair loads its own
+    # checkpoint.
+    test_cases:
+      - name: default
+        expect: &midi-vae
+          "Transformed MIDI":
+            min_notes: 5
+
+      - name: reconstruct
+        controls:
+          "Mode": "Reconstruct"
+        expect: *midi-vae
+
+      - name: classical-pop
+        controls:
+          "Style Pair": "Classical ↔ Pop"
+        expect: *midi-vae
+
+      - name: jazz-pop
+        controls:
+          "Style Pair": "Jazz ↔ Pop"
+        expect: *midi-vae
+
+      - name: baroque-modern
+        controls:
+          "Style Pair": "Baroque ↔ Modern"
+        expect: *midi-vae
+
+  teamup-tech/MMT:
+    # The seed is optional, which the harness leaves empty, so it is given here
+    # to have the model continue the melody rather than start from nothing.
+    test_cases:
+      - name: default
+        controls:
+          "Instruments": "piano, bass, drums"
+        files:
+          "Seed MIDI (optional)": test_data/test_melody_16s.mid
+        expect:
+          "Generated MIDI":
+            min_notes: 10
+          "Audio Preview":
+            min_rms_db: -45
+
+  teamup-tech/Magenta-RealTime:
+    test_cases:
+      - name: default
+        expect:
+          "Generated Music":
+            min_duration: 3.8
+            min_rms_db: -45
+
+  teamup-tech/Matchering:
+    # Mastering needs a target and a reference that differ, and one
+    # synthesized file would be both, which Matchering rejects outright ("The
+    # TARGET and REFERENCE files are the same"). The band is mastered to sound
+    # like the solo piano, and comes back at the full length of the file.
+    test_cases:
+      - name: default
+        files: &matchering
+          "Target Audio": test_data/test_band_speech_16s.flac
+          "Reference Audio": test_data/test_piano_20s.wav
+        expect:
+          "Mastered Audio":
+            bit_depth: 16
+            min_duration: 15.8
+            max_duration: 16.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: pcm24
+        controls:
+          "Output Bit Depth": "pcm24"
+        files: *matchering
+        expect:
+          "Mastered Audio":
+            bit_depth: 24
+            min_duration: 15.8
+            max_duration: 16.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/MegaTTS3:
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        controls:
+          "Text to Generate": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *speaks
+
+  teamup-tech/Mel-Band-RoFormer:
+    test_cases:
+      - name: default
+        expect:
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -50
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/MelodyFlow:
+    # Given a recording, which is optional, it edits that recording rather
+    # than generating from the text alone, and returns as much as it was given.
+    test_cases:
+      - name: default
+        controls:
+          "Input Text": "an upbeat electronic dance track with a catchy synth lead"
+        expect:
+          "*":
+            min_duration: 29.0
+            min_rms_db: -45
+
+      - name: edit
+        controls:
+          "Input Text": "an upbeat electronic dance track with a catchy synth lead"
+        files:
+          "File or Microphone": test_data/test_band_speech_16s.flac
+        expect:
+          "*":
+            min_duration: 15.8
+            max_duration: 16.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/MuQ-MuLan:
+    # The Space accepts 10 to 60 second clips and up to eight descriptions.
+    process_timeout: 300
+    synthesized_inputs:
+      audio:
+        duration: 12.0
+    test_cases:
+      - name: default
+        controls:
+          "Candidate Descriptions": "a pop song with drums, bass and piano under a speaking voice"
+        expect:
+          "Similarity Ranking":
+            ext: .json
+        validators:
+          muq_ranking:
+            count: 1
+
+  teamup-tech/MuScriptor:
+    # test_piano_20s.wav is piano rendered from a known MIDI by the
+    # MIDI-Synthesizer Space, so this measures the transcription rather than
+    # the input. Each size has its own weights.
+    test_cases:
+      - name: transcribe-piano
+        files: &muscriptor
+          "Input Audio": test_data/test_piano_20s.wav
+        expect: &muscriptor-notes
+          "Transcription":
+            min_notes: 20
+
+      - name: transcribe-piano-small
+        controls:
+          "Model Size": "small"
+        files: *muscriptor
+        expect: *muscriptor-notes
+
+      - name: transcribe-piano-large
+        controls:
+          "Model Size": "large"
+        files: *muscriptor
+        expect: *muscriptor-notes
+
+  teamup-tech/MuseMorphose:
+    # Same situation as DExter: REMI is a token vocabulary, not something the
+    # harness can generate. This file is the authors' own example, carried
+    # over from the Space so the case exercises the model rather than being
+    # skipped into a pass. The notes asserted are those of the example's first
+    # bar, the one transformed by default.
+    test_cases:
+      - name: transform-example
+        files:
+          "Upload REMI events (.remi)": test_data/example_511.remi
+        expect:
+          "Reference MIDI":
+            min_notes: 4
+          "Generation details":
+            min_labels: 1
+
+  teamup-tech/MusiConGen:
+    test_cases:
+      - name: default
+        controls:
+          "Duration (seconds)": 10
+        expect:
+          "Generated Music":
+            min_duration: 9.5
+            min_rms_db: -45
+
+  teamup-tech/Music2Emo:
+    test_cases:
+      - name: default
+        expect:
+          "Emotion Analysis":
+            min_length: 3
+
+  teamup-tech/MusicGen:
+    # A melody is optional, and conditioning on one is a separate path through
+    # the same model.
+    test_cases:
+      - name: default
+        controls: &musicgen
+          "Text Description": "a calm acoustic guitar melody with soft percussion"
+          "Duration (seconds)": "5"
+        expect: &musicgen-music
+          "Generated Music":
+            min_duration: 4.5
+            min_rms_db: -45
+
+      - name: melody
+        controls: *musicgen
+        files:
+          "Melody (optional)": test_data/test_band_speech_16s.flac
+        expect: *musicgen-music
+
+  teamup-tech/OmniVoice:
+    # The reference voice is optional, which the harness leaves empty, so it is
+    # given here with its transcript, to clone the voice.
+    test_cases:
+      - name: default
+        controls:
+          "Reference transcript": "Every morning, the small bakery on the corner opens at seven. The smell of fresh bread drifts down the street, and a short line forms outside the door."
+        files:
+          "Reference voice": test_data/test_speech_10s.flac
+        expect: *speaks
+
+  teamup-tech/Omnizart:
+    # Every mode needs at least 6 seconds of audio and loads its own model. The
+    # band's drums and chord changes give the drum and chord modes plenty to
+    # transcribe, and its speaking voice stands in for a sung one.
+    synthesized_inputs:
+      audio:
+        duration: 15.0
+    test_cases:
+      - name: default
+        expect: &omnizart
+          "Transcription":
+            min_notes: 10
+
+      - name: drum
+        controls:
+          "Transcription Mode": "drum"
+        expect: *omnizart
+
+      - name: vocal
+        controls:
+          "Transcription Mode": "vocal"
+        expect: *omnizart
+
+      - name: chord
+        controls:
+          "Transcription Mode": "chord"
+        expect: *omnizart
+
+  teamup-tech/Open-Unmix:
+    # The band holds all four sources, but umxhq leaves its bass too quiet to
+    # assert, so the bass stem keeps the floor alone.
+    test_cases:
+      - name: default
+        expect: &open-unmix
+          "*":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Vocals":
+            min_rms_db: -50
+          "Drums":
+            min_rms_db: -50
+          "Other":
+            min_rms_db: -50
+
+      - name: umxhq
+        controls:
+          "Model": "umxhq"
+        expect: *open-unmix
+
+  teamup-tech/PANAMA:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/Pedalboard:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/PiCoGen:
+    # The Space accepts 5 to 30 seconds.
+    synthesized_inputs:
+      audio:
+        duration: 5.0
+    test_cases:
+      - name: default
+        expect:
+          "Piano Cover":
+            min_notes: 5
+
+  teamup-tech/Piano-Transcription:
+    # An excerpt of the piano asset, whose notes are known.
+    synthesized_inputs:
+      audio:
+        source: test_data/test_piano_20s.wav
+    test_cases:
+      - name: default
+        expect:
+          "Transcription":
+            min_notes: 15
+
+  teamup-tech/Pocket-TTS:
+    test_cases:
+      - name: default
+        controls:
+          "English Text": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *speaks
+
+  teamup-tech/RemFX:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/S-KEY:
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Key":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Analysis Labels":
+            min_labels: 1
+
+  teamup-tech/SongFormer:
+    # The model requires at least 5 seconds of audio.
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: default
+        expect:
+          "Audio with Sections":
+            min_duration: 5.8
+            max_duration: 6.2
+            sample_rate: 48000
+            num_channels: 2
+          "Sections":
+            min_labels: 1
+
+  teamup-tech/SongGen:
+    # The default, mixed mode leaves the vocal stem a silent placeholder.
+    # Dual-track mode fills it, and is given the optional reference voice. A
+    # song's length is the model's choice, and varies widely for the same
+    # lyrics.
+    test_cases:
+      - name: default
+        controls:
+          "Music Description": "gentle acoustic pop with piano"
+          "Lyrics": "I walk along the quiet road, the evening light is fading slow"
+        expect:
+          "Song":
+            min_duration: 5.0
+            min_rms_db: -45
+          "Isolated Vocals":
+            min_rms_db: -.inf
+
+      - name: dual-track
+        process_timeout: 300
+        controls:
+          "Music Description": "gentle acoustic pop with piano"
+          "Lyrics": "I walk along the quiet road, the evening light is fading slow"
+          "Mode": "Dual-track (vocals + accompaniment)"
+        files:
+          "Reference Voice (optional)": test_data/test_speech_10s.flac
+        expect:
+          "*":
+            min_duration: 3.0
+            min_rms_db: -45
+
+  teamup-tech/SonicMaster:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/SoulX-Singer:
+    # A frontend: each call runs on the authors' Space, Soul-AILab/SoulX-Singer,
+    # on the caller's ZeroGPU allowance. The model transcribes the lyrics of
+    # both clips, so the synthesized assets cannot drive it. The two clips are
+    # the authors' own English examples, from example/audio/ in their Space
+    # (Apache 2.0). Score control follows the melody quantized to notes rather
+    # than its pitch curve.
+    skip_common_cases: true
+    test_cases:
+      - name: english-example
+        files: &soulx
+          "Reference voice": test_data/soulx_en_prompt.mp3
+          "Target melody": test_data/soulx_en_target.mp3
+        expect: &soulx-singing
+          "Generated singing":
+            min_rms_db: -60
+
+      - name: score-control
+        controls:
+          "Control type": "score"
+        files: *soulx
+        expect: *soulx-singing
+
+  teamup-tech/Stable-Audio-3:
+    # The Space accepts 5 to 30 seconds, and each Edit Mode is a separate path
+    # through process_fn, so each is covered.
+    process_timeout: 240
+    synthesized_inputs:
+      audio:
+        duration: 6.0
+    test_cases:
+      - name: restyle-default
+        controls:
+          "Edit Mode": "Restyle"
+          "Prompt": "a warm synthwave groove"
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_duration: 5.8
+            max_duration: 6.2
+            min_rms_db: -60
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: inpaint
+        controls:
+          "Edit Mode": "Inpaint"
+          "Prompt": "a warm synthwave groove"
+          # The declared defaults fall outside the clip, which the Space
+          # rejects, so the region is set inside it here.
+          "Edit Start (seconds)": 1.0
+          "Edit End (seconds)": 4.0
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_duration: 5.8
+            max_duration: 6.2
+            min_rms_db: -60
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: continue
+        controls:
+          "Edit Mode": "Continue"
+          "Prompt": "a warm synthwave groove"
+          "Continuation Length (seconds)": 4
+        expect:
+          "Edited Audio":
+            ext: .wav
+            bit_depth: 16
+            min_rms_db: -60
+            sample_rate: 48000
+            num_channels: 2
+            # Length is left unasserted: whether the result carries the input
+            # ahead of the continuation is the Space's choice, not the input's.
+
+  teamup-tech/SteerMusic:
+    test_cases:
+      - name: default
+        controls:
+          "Source Prompt": "a pop song with drums, bass and piano"
+          "Target Prompt": "a jazz trio with upright bass and brushed drums"
+          "Optimization Steps": 50
+        expect: *as-given
+
+  teamup-tech/StemFX:
+    test_cases:
+      - name: default
+        expect:
+          "Processed Mix":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+  teamup-tech/TRIA:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/Tacotron2:
+    # Its default text, "Mary had a little lamb", is too short to clear the
+    # floor for speech reliably, so it reads the sentence the other speech
+    # models do.
+    test_cases:
+      - name: default
+        controls:
+          "Text to synthesize": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *speaks
+
+  teamup-tech/Transkun:
+    # Its own input is labeled "Upload Solo Piano Audio". Against
+    # test_piano_20s.wav the model recovers nearly every source note.
+    test_cases:
+      - name: transcribe-piano
+        files:
+          "Upload Solo Piano Audio": test_data/test_piano_20s.wav
+        expect:
+          "Transcription":
+            min_notes: 20
+
+  teamup-tech/U-DREAM:
+    # Each preset loads its own checkpoint.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect: &u-dream
+          "Dereverberated Speech":
+            min_duration: 7.8
+            max_duration: 8.3
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+      - name: enhanced
+        controls:
+          "Preset": "Enhanced"
+        expect: *u-dream
+
+  teamup-tech/UNISON:
+    # Generate mode does not read the input audio. A prompt it can render
+    # matters, since the placeholder "test" can come back as silence. Edit and
+    # Clone Voice read the input, which is optional and so is given. An edit
+    # comes back as long as its input, though the model pads it to a fixed
+    # window. The high-detail model is a checkpoint of its own, at 16 kHz.
+    test_cases:
+      - name: default
+        controls:
+          "Prompt": "rain falling on a tin roof"
+          "Duration (s)": 5.0
+        expect:
+          "Generated Audio":
+            min_duration: 4.5
+            min_rms_db: -45
+
+      - name: edit
+        controls:
+          "Mode": "Edit"
+          "Prompt": "add heavy rain in the background"
+        files:
+          "Input Audio": test_data/test_speech_10s.flac
+        expect:
+          "Generated Audio":
+            min_duration: 9.5
+            max_duration: 9.8
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+      - name: high-detail
+        controls:
+          "Prompt": "rain falling on a tin roof"
+          "Duration (s)": 5.0
+          "Model": "High detail (16kHz)"
+        expect:
+          "Generated Audio":
+            sample_rate: 16000
+            min_duration: 4.5
+            min_rms_db: -45
+
+      - name: clone-voice
+        controls:
+          "Mode": "Clone Voice"
+          "Prompt": "Hello, this is a short test of voice cloning."
+          "Duration (s)": 8.0
+        files:
+          "Input Audio": test_data/test_speech_10s.flac
+        expect: *speaks
+
+  teamup-tech/VampNet:
+    # The fine-tuned models are separate weights, fetched when the Space
+    # starts.
+    test_cases:
+      - name: default
+        expect: &vampnet
+          "Generated Audio":
+            min_duration: 7.8
+            max_duration: 8.2
+            min_rms_db: -45
+            sample_rate: 48000
+            num_channels: 2
+
+      - name: cat10
+        controls:
+          "Model Choice": "cat10"
+        expect: *vampnet
+
+      - name: lazaro-ros-sep
+        controls:
+          "Model Choice": "lazaro-ros-sep"
+        expect: *vampnet
+
+      - name: supermetroid
+        controls:
+          "Model Choice": "supermetroid"
+        expect: *vampnet
+
+  teamup-tech/Vevo2:
+    # One case per Task, since each selects a different pipeline, with speech
+    # as the voice to convert or edit and as the reference. The reference is
+    # optional, which the harness leaves empty, so the tasks that need one are
+    # given it.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: voice-conversion
+        controls:
+          "Task": "Voice/Singing Conversion"
+        files:
+          "Reference Voice": test_data/test_speech_10s.flac
+        expect: &vevo2-voice
+          "Generated Voice":
+            min_duration: 1.5
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+      - name: tts
+        controls:
+          "Task": "Text-to-Speech / Text-to-Singing"
+          "Text / Lyrics": "The weather is lovely today, so we are going for a walk in the park."
+        expect: *vevo2-voice
+
+      - name: singing-editing
+        controls:
+          "Task": "Singing Editing"
+          "Text / Lyrics": "The weather is lovely today."
+        expect: *vevo2-voice
+
+      - name: style-conversion
+        controls:
+          "Task": "Singing Style Conversion"
+          "Text / Lyrics": "The weather is lovely today."
+        files:
+          "Reference Voice": test_data/test_speech_10s.flac
+        expect: *vevo2-voice
+
+      - name: melody-control
+        controls:
+          "Task": "Melody Control (Humming/Instrument to Singing)"
+          "Text / Lyrics": "The weather is lovely today."
+        files:
+          "Reference Voice": test_data/test_speech_10s.flac
+        expect: *vevo2-voice
+
+  teamup-tech/VoiceCraft:
+    # The speech asset's first words are "Every morning, the small bakery".
+    # The default edit region is rewritten to a new word.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        controls:
+          "Target Transcript": "Every evening, the small bakery on the corner opens at seven. The smell of fresh bread drifts down the street."
+        expect:
+          "Edited Speech":
+            min_duration: 4.0
+            min_rms_db: -45
+            sample_rate: 44100
+            num_channels: 1
+
+  teamup-tech/VoiceFixer:
+    # Mode 1 removes the highest frequencies before restoring, a step of its
+    # own. Mode 2 runs the same network as mode 0 in training mode.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect: *as-given-speech
+
+      - name: mode-1
+        controls:
+          "Processing Mode": "1"
+        expect: *as-given-speech
+
+  teamup-tech/Whisper:
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect:
+          "Transcription":
+            min_length: 40
+
+  teamup-tech/Woosh-DFlow:
+    test_cases:
+      - name: default
+        expect:
+          "Generated audio":
+            min_rms_db: -45
+
+  teamup-tech/micro-TCN:
+    test_cases:
+      - name: default
+        expect: *as-given
+
+  teamup-tech/noisereduce:
+    # Non-stationary reduction and the PyTorch backend are separate paths.
+    synthesized_inputs: *speech
+    test_cases:
+      - name: default
+        expect: *as-given-speech
+
+      - name: non-stationary
+        controls:
+          "Stationary Noise Reduction": false
+        expect: *as-given-speech
+
+      - name: pytorch
+        controls:
+          "Use PyTorch": true
+        expect: *as-given-speech
+
+  teamup-tech/pyloudnorm:
+    # The analysis comes back as labels over the input, which is returned as
+    # it was given. Loudness range is a measurement of its own.
+    test_cases:
+      - name: default
+        expect: &pyloudnorm
+          "Analyzed Audio":
+            min_duration: 7.8
+            max_duration: 8.2
+            sample_rate: 48000
+            num_channels: 2
+          "Analysis Results":
+            min_labels: 1
+
+      - name: loudness-range
+        controls:
+          "Analysis Type": "Loudness Range (LU)"
+        expect: *pyloudnorm
+
+  teamup-tech/text2midi:
+    test_cases:
+      - name: default
+        controls:
+          "Describe Your Music": "a cheerful pop song with piano, bass and drums"
+        expect:
+          "Generated MIDI":
+            min_notes: 20

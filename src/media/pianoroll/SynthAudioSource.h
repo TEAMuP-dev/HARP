@@ -1,7 +1,7 @@
 /**
  * @file SynthAudioSource.h
  * @brief Handles MIDI playback for pianoroll.
- * @author nathanpruyne
+ * @author nathanpruyne, cwitkowitz
  * 
  * Note that this file was adapted from:
  * https://juce.com/tutorials/tutorial_synth_using_midi_input/
@@ -22,6 +22,9 @@ struct SineWaveSound : public SynthesiserSound
 struct SineWaveVoice : public SynthesiserVoice
 {
     SineWaveVoice() {}
+
+    // Only the float overload is rendered, and the double one stays as JUCE defines it
+    using SynthesiserVoice::renderNextBlock;
 
     bool canPlaySound(SynthesiserSound* sound) override
     {
@@ -48,7 +51,7 @@ struct SineWaveVoice : public SynthesiserVoice
     {
         if (allowTailOff)
         {
-            if (tailOff == 0.0)
+            if (exactlyEqual(tailOff, 0.0))
             {
                 tailOff = 1.0;
             }
@@ -66,7 +69,7 @@ struct SineWaveVoice : public SynthesiserVoice
 
     void renderNextBlock(AudioSampleBuffer& outputBuffer, int startSample, int numSamples) override
     {
-        if (angleDelta != 0.0)
+        if (! exactlyEqual(angleDelta, 0.0))
         {
             if (tailOff > 0.0)
             {
@@ -127,14 +130,8 @@ class SynthAudioSource : public PositionableAudioSource
 public:
     SynthAudioSource() { synth.addSound(new SineWaveSound()); }
 
-    void setUsingSineWaveSound() { synth.clearSounds(); }
-
     void prepareToPlay(int samplesPerBlockExpected, double sr) override
     {
-        //DBG_AND_LOG("SynthAudioSource::prepareToPlay: Sample rate being set to " << sr << ".");
-        //DBG_AND_LOG("SynthAudioSource::prepareToPlay: Samples per block being set to "
-        //    << samplesPerBlockExpected << ".");
-
         synth.setCurrentPlaybackSampleRate(sr);
         sampleRate = sr;
         samplesPerBlock = samplesPerBlockExpected;
@@ -173,8 +170,6 @@ public:
                 currVoices--;
             }
         }
-
-        //DBG_AND_LOG("SynthAudioSource::useSequence Max voices set to " << maxVoices << ".");
 
         synth.clearVoices();
 

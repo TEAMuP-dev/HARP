@@ -1,12 +1,17 @@
 /**
  * @file Errors.h
  * @brief Classes and helper functions for error handling.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  */
 
 #pragma once
 
+#include <optional>
+
 #include <juce_core/juce_core.h>
+
+#include "Enums.h"
+#include "Providers.h"
 
 using namespace juce;
 
@@ -16,85 +21,54 @@ struct ClientError
     {
         UnknownClient,
         InvalidModelPath,
+        ModelNotFound,
         InsufficientPermissions
     };
 
     Type type;
 
-    String path;
-    String client;
-    String token;
+    String path {};
+
+    // Absent when no client had been chosen yet, and so no key applies
+    std::optional<Provider> provider {};
 };
 
 inline String toUserMessage(const ClientError& e)
 {
-    String userMessage = "A client error occurred.";
+    const String quotedPath = e.path.isNotEmpty() ? " \"" + e.path + "\"" : String();
+    const String providerName = e.provider.has_value() ? getProviderName(*e.provider) : String();
 
     switch (e.type)
     {
         case ClientError::Type::UnknownClient:
 
-            userMessage = "Path ";
-
-            if (e.path.isNotEmpty())
-            {
-                userMessage += "\"" + e.path + "\" ";
-            }
-
-            userMessage += "does not match valid specification for any supported clients.";
-
-            return userMessage;
+            return "No supported provider recognizes the path" + quotedPath + ".";
 
         case ClientError::Type::InvalidModelPath:
 
-            userMessage = "Path ";
+            return "The path" + quotedPath + " does not name a model offered by "
+                   + (providerName.isNotEmpty() ? providerName : String("this provider")) + ".";
 
-            if (e.path.isNotEmpty())
-            {
-                userMessage += "\"" + e.path + "\" ";
-            }
+        case ClientError::Type::ModelNotFound:
 
-            userMessage += "does not match valid specification for client";
-
-            if (e.client.isNotEmpty())
-            {
-                userMessage += " \"" + e.client + "\"";
-            }
-
-            userMessage += ".";
-
-            return userMessage;
+            /* Underscores and hyphens are interchangeable in the address used to
+               reach a model but not in its name, so a misspelling of one for the
+               other is the likeliest reason to land here. */
+            return "No model was found at"
+                   + (quotedPath.isNotEmpty() ? quotedPath : String(" the given path"))
+                   + ". Please check the spelling, including any underscores and"
+                     " capitalization. If the model is private, make sure you have added a"
+                     " valid API key in settings.";
 
         case ClientError::Type::InsufficientPermissions:
 
-            if (e.token.isEmpty())
-            {
-                userMessage = "Authorization for client";
-
-                if (e.client.isNotEmpty())
-                {
-                    userMessage += " \"" + e.client + "\"";
-                }
-
-                userMessage +=
-                    " failed. Please make sure you have added a valid API key in settings.";
-            }
-            else
-            {
-                userMessage = "Token \"" + e.token + "\" for client";
-
-                if (e.client.isNotEmpty())
-                {
-                    userMessage += " \"" + e.client + "\"";
-                }
-
-                userMessage += " does not have sufficient permissions.";
-            }
-
-            return userMessage;
+            return "Authorization"
+                   + (providerName.isNotEmpty() ? " with " + providerName : String())
+                   + " failed. Please make sure you have added a valid API key with sufficient"
+                     " permissions in settings.";
     }
 
-    return userMessage;
+    return "Something went wrong while setting up the model.";
 }
 
 struct HttpError
@@ -104,7 +78,7 @@ struct HttpError
         InvalidURL,
         ConnectionFailed,
         BadStatusCode,
-        //InvalidResponse
+        UnexpectedResponse
     };
 
     Type type;
@@ -117,100 +91,131 @@ struct HttpError
 
     Request request;
 
-    String endpointPath;
+    String endpointPath {};
 
     int statusCode = 0;
+
+    // Optional diagnostic text extracted from the response body
+    String detail {};
+
+    std::optional<Provider> provider {};
 };
 
 inline String toUserMessage(const HttpError& e)
 {
-    String userMessage = "An HTTP error occurred.";
+    String userMessage = "Something went wrong while contacting the model.";
 
     switch (e.type)
     {
         case HttpError::Type::InvalidURL:
 
-            userMessage = "Endpoint URL ";
-
             if (e.endpointPath.isNotEmpty())
             {
-                userMessage += "\"" + e.endpointPath + "\" ";
+                userMessage = "\"" + e.endpointPath + "\" is not a valid address.";
             }
-
-            userMessage += "is malformed.";
+            else
+            {
+                userMessage = "The model's address is not valid.";
+            }
 
             return userMessage;
 
         case HttpError::Type::ConnectionFailed:
 
-            userMessage = "Unable to make ";
+            userMessage = "Could not reach the model.";
 
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage += "POST";
-            }
-            else if (e.request == HttpError::Request::GET)
-            {
-                userMessage += "GET";
-            }
-            else
-            {
-            }
+            userMessage += "\n\nIt may be asleep, starting up, or temporarily unavailable."
+                           "\n\nTry again in a few seconds, or click 'Open URL' to view the "
+                           "model's page.";
 
-            userMessage += " request to endpoint";
+            return userMessage;
 
-            if (e.endpointPath.isNotEmpty())
-            {
-                userMessage += " \"" + e.endpointPath + "\"";
-            }
+        case HttpError::Type::UnexpectedResponse:
 
-            userMessage += ".";
+            userMessage = "This address did not respond like a model endpoint.";
 
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage += " If this is a valid Hugging Face space, this "
-                               "could indicate the space is sleeping or restarting. "
-                               "Please try again in a few minutes.";
-            }
+            userMessage += "\n\nA web page was returned instead of model data. Check that the "
+                           "address points at a running Gradio app, and that it does not require "
+                           "signing in through a browser.";
 
             return userMessage;
 
         case HttpError::Type::BadStatusCode:
 
-            userMessage.clear();
+            if (e.statusCode == 401 || e.statusCode == 403)
+            {
+                userMessage = "This model requires authentication.";
 
-            if (e.request == HttpError::Request::POST)
-            {
-                userMessage += "POST";
-            }
-            else if (e.request == HttpError::Request::GET)
-            {
-                userMessage += "GET";
-            }
-            else
-            {
-            }
+                if (e.detail.isNotEmpty())
+                {
+                    userMessage += "\n\nDetails: " + e.detail;
+                }
 
-            userMessage += " request to endpoint ";
+                userMessage += "\n\nIt may be private or gated. Add an API key for this "
+                               "provider under Settings, and make sure the account it belongs "
+                               "to has been granted access.";
 
-            if (e.endpointPath.isNotEmpty())
-            {
-                userMessage += "\"" + e.endpointPath + "\" ";
+                return userMessage;
             }
 
-            userMessage += "failed";
+            if (e.statusCode == 404)
+            {
+                userMessage = "No model was found at this address.";
+
+                userMessage += "\n\nCheck the path for typos. If the model is hosted on "
+                               "Hugging Face, confirm the Space still exists and is public.";
+
+                return userMessage;
+            }
+
+            if (e.statusCode == 429)
+            {
+                userMessage = "The service is rate-limiting requests from this machine.";
+
+                if (e.detail.isNotEmpty())
+                {
+                    userMessage += "\n\nDetails: " + e.detail;
+                }
+
+                userMessage += "\n\nThis happens when requests are made in quick succession, "
+                               "such as starting and canceling repeatedly. Wait a few moments "
+                               "before trying again.";
+
+                return userMessage;
+            }
+
+            if (e.statusCode == 402)
+            {
+                userMessage = "The service declined the request because the account has reached "
+                              "its usage or billing limit. Please check the account, then try "
+                              "again.";
+
+                if (e.detail.isNotEmpty())
+                {
+                    userMessage += "\n\nDetails: " + e.detail;
+                }
+
+                return userMessage;
+            }
+
+            userMessage = "The server could not complete the request";
 
             if (e.statusCode != 0)
             {
-                userMessage += " with status code " + String(e.statusCode);
+                userMessage += " (error " + String(e.statusCode) + ")";
             }
 
             userMessage += ".";
 
+            if (e.detail.isNotEmpty())
+            {
+                userMessage += "\n\nDetails: " + e.detail;
+            }
+
             if (e.statusCode == 503)
             {
-                userMessage += " If this is a valid Hugging Face space, this could indicate "
-                               "the space is paused or down due to a build or runtime error.";
+                userMessage += "\n\nThe model may be paused, or down because of a build "
+                               "or runtime error.";
             }
     }
 
@@ -221,31 +226,136 @@ struct GradioError
 {
     enum class Type
     {
-        RuntimeError
+        RuntimeError,
+        QuotaExceeded,
+        Indeterminate,
+        IncompleteResponse,
+        SpaceStarting,
+        SpaceUnavailable
     };
 
     Type type;
 
-    String endpointPath;
+    String endpointPath {};
+    String reason {};
+
+    /* Whether the endpoint is a Hugging Face Space, so that messages can name it
+       accurately instead of guessing. Set by the client, which is the only layer
+       that knows how to classify a model path. */
+    bool isSpace = false;
+
+    /** "Space" or "model", whichever this endpoint actually is. */
+    String describeTarget() const { return isSpace ? "Space" : "model"; }
 };
 
 inline String toUserMessage(const GradioError& e)
 {
-    String userMessage = "A Gradio error occurred.";
+    String userMessage = "The model reported an error.";
 
     switch (e.type)
     {
         case GradioError::Type::RuntimeError:
 
-            userMessage = "A runtime error occurred at endpoint";
+            userMessage = "The " + e.describeTarget() + " reported an error while processing.";
 
-            if (e.endpointPath.isNotEmpty())
+            if (e.reason.isNotEmpty())
             {
-                userMessage += " \"" + e.endpointPath + "\"";
+                userMessage += "\n\nDetails: " + e.reason;
+            }
+            else
+            {
+                userMessage += "\n\nNo details were reported. A Gradio app only forwards the "
+                               "text of an error when it is launched with \"show_error=True\" "
+                               "or raises a \"gr.Error\". Otherwise the cause appears only in "
+                               "the server's own logs, which are visible only to whoever runs it.";
             }
 
-            userMessage += ". If this is a Hugging Face space running on ZeroGPU, this "
-                           "can also indicate a user has exceeded their daily ZeroGPU quota.";
+            userMessage += "\n\nClick 'Open URL' to open the " + e.describeTarget() + "'s page.";
+
+            return userMessage;
+
+        case GradioError::Type::QuotaExceeded:
+
+            userMessage = "GPU quota has been exceeded for this " + e.describeTarget() + ".";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nDetails: " + e.reason;
+            }
+
+            userMessage += "\n\nQuota is counted against whoever is signed in, and without an "
+                           "API key that is an anonymous session with only a few minutes of it. "
+                           "Click 'Settings' to add a key, or to switch to an account that has "
+                           "quota left, then try again."
+                           "\n\nClick 'Open URL' to open the "
+                           + e.describeTarget() + "'s page.";
+
+            return userMessage;
+
+        case GradioError::Type::SpaceStarting:
+
+            userMessage = "The Space is still starting up.";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nIts current state is \"" + e.reason + "\".";
+            }
+
+            userMessage += "\n\nSpaces are suspended when idle and take a short while to wake. "
+                           "Try loading it again in a minute.";
+
+            return userMessage;
+
+        case GradioError::Type::SpaceUnavailable:
+
+            userMessage = "The Space is not currently available.";
+
+            if (e.reason.isNotEmpty())
+            {
+                userMessage += "\n\nIts current state is \"" + e.reason + "\".";
+            }
+
+            userMessage += "\n\nThis usually means it has been paused by its owner, or has "
+                           "stopped because of a build or runtime error. Click 'Open URL' to "
+                           "check its status on Hugging Face.";
+
+            return userMessage;
+
+        case GradioError::Type::IncompleteResponse:
+
+            userMessage =
+                "Lost contact with the " + e.describeTarget() + " before it returned a result.";
+
+            userMessage +=
+                "\n\nThe connection is dropped when nothing arrives for a prolonged period, "
+                "which most often means the model was still working. The job may well have "
+                "finished on the server afterwards, but HARP was no longer listening for it.";
+
+            userMessage +=
+                "\n\nTry again with a shorter input, or on faster hardware. A model that "
+                "routinely takes this long is better suited to a dedicated GPU than to a "
+                "free CPU instance.";
+
+            return userMessage;
+
+        case GradioError::Type::Indeterminate:
+
+            userMessage = "The Space reported an error, but gave no indication of its cause.";
+
+            userMessage +=
+                "\n\nThis Space runs on ZeroGPU, so the GPU quota may have been exhausted, "
+                "but it could equally be a runtime error in the model. Spaces using a version "
+                "of Gradio before 6.13 do not report enough for HARP to tell the two apart.";
+
+            userMessage +=
+                "\n\nIf it is quota, an API key is what raises it: quota is counted against "
+                "whoever is signed in, and without a key that is an anonymous session with "
+                "only a few minutes of it. Click 'Settings' to add one.";
+
+            userMessage +=
+                "\n\nRunning the model from the Space's own page will report a quota message "
+                "if that is the cause, and nothing further if it is not. Click 'Open URL' to "
+                "open it on Hugging Face.";
 
             return userMessage;
     }
@@ -266,8 +376,8 @@ struct JsonError
 
     Type type;
 
-    String stringJSON;
-    String key;
+    String stringJSON {};
+    String key {};
 };
 
 inline String toUserMessage(const JsonError& e)
@@ -354,7 +464,7 @@ struct ControlError
 
     Type type;
 
-    String controlType;
+    String controlType {};
 };
 
 inline String toUserMessage(const ControlError& e)
@@ -387,12 +497,13 @@ struct FileError
         DoesNotExist,
         UploadFailed,
         DownloadFailed,
+        WriteFailed,
         UnsupportedFormat
     };
 
     Type type;
 
-    String path;
+    String path {};
 };
 
 inline String toUserMessage(const FileError& e)
@@ -410,7 +521,7 @@ inline String toUserMessage(const FileError& e)
                 userMessage += " at path \"" + e.path + "\"";
             }
 
-            userMessage += "does not exist.";
+            userMessage += " does not exist.";
 
             return userMessage;
 
@@ -430,6 +541,19 @@ inline String toUserMessage(const FileError& e)
         case FileError::Type::DownloadFailed:
 
             userMessage = "Failed to download file";
+
+            if (e.path.isNotEmpty())
+            {
+                userMessage += " at path \"" + e.path + "\"";
+            }
+
+            userMessage += ".";
+
+            return userMessage;
+
+        case FileError::Type::WriteFailed:
+
+            userMessage = "Failed to write file";
 
             if (e.path.isNotEmpty())
             {
@@ -466,15 +590,108 @@ inline String toUserMessage(const Error& error)
     return std::visit([](const auto& e) { return toUserMessage(e); }, error);
 }
 
+/**
+ * A compact technical description intended for the log file.
+ *
+ * This is deliberately separate from toUserMessage: the popup explains what to do
+ * about a failure, whereas this records which branch produced it, so that a report
+ * accompanied by a log can be traced back to a specific decision.
+ */
+inline String toLogString(const Error& error)
+{
+    if (const auto* e = std::get_if<ClientError>(&error))
+    {
+        return "ClientError(" + enumToString(e->type) + ", path=\"" + e->path + "\", provider=\""
+               + (e->provider.has_value() ? enumToString(*e->provider) : String()) + "\")";
+    }
+
+    if (const auto* e = std::get_if<HttpError>(&error))
+    {
+        return "HttpError(" + enumToString(e->type) + ", " + enumToString(e->request)
+               + ", status=" + String(e->statusCode) + ", endpoint=\"" + e->endpointPath
+               + "\", detail=\"" + e->detail + "\")";
+    }
+
+    if (const auto* e = std::get_if<GradioError>(&error))
+    {
+        return "GradioError(" + enumToString(e->type) + ", isSpace=" + (e->isSpace ? "1" : "0")
+               + ", endpoint=\"" + e->endpointPath + "\", reason=\"" + e->reason + "\")";
+    }
+
+    if (const auto* e = std::get_if<JsonError>(&error))
+    {
+        return "JsonError(" + enumToString(e->type) + ", key=\"" + e->key + "\", json=\""
+               + e->stringJSON.substring(0, 400) + "\")";
+    }
+
+    if (const auto* e = std::get_if<FileError>(&error))
+    {
+        return "FileError(" + enumToString(e->type) + ", path=\"" + e->path + "\")";
+    }
+
+    if (const auto* e = std::get_if<ControlError>(&error))
+    {
+        return "ControlError(" + enumToString(e->type) + ")";
+    }
+
+    return "UnknownError";
+}
+
+/**
+ * The provider whose API key an error points at, when adding or changing one could
+ * plausibly resolve it, and nothing when no key applies.
+ *
+ * This is what puts the settings button on the popup, so it covers exactly those
+ * messages that tell the user to add a key.
+ */
+inline std::optional<Provider> getAPIKeyProvider(const Error& error)
+{
+    if (const auto* e = std::get_if<ClientError>(&error))
+    {
+        if (e->type == ClientError::Type::InsufficientPermissions
+            || e->type == ClientError::Type::ModelNotFound)
+        {
+            return e->provider;
+        }
+    }
+
+    if (const auto* e = std::get_if<HttpError>(&error))
+    {
+        // The message for these asks the user to add a key for this provider
+        if (e->type == HttpError::Type::BadStatusCode
+            && (e->statusCode == 401 || e->statusCode == 403))
+        {
+            return e->provider;
+        }
+    }
+
+    if (const auto* e = std::get_if<GradioError>(&error))
+    {
+        /* Quota is charged against whoever is signed in, and an anonymous user is
+           allowed only a couple of minutes before it runs out, so adding a key is
+           the usual remedy rather than waiting. Indeterminate is included because
+           quota is one of the two causes it cannot tell apart.
+
+           Only a Space draws on that allowance. A Gradio app served from localhost
+           has no key to add, which is what isSpace distinguishes. */
+        if (e->isSpace
+            && (e->type == GradioError::Type::QuotaExceeded
+                || e->type == GradioError::Type::Indeterminate))
+        {
+            return Provider::HuggingFace;
+        }
+    }
+
+    return std::nullopt;
+}
+
 inline std::optional<String> getOpenablePath(const Error& error)
 {
     if (const auto* e = std::get_if<HttpError>(&error))
     {
-        if (e->type == HttpError::Type::ConnectionFailed && e->endpointPath.isNotEmpty())
-        {
-            return e->endpointPath;
-        }
-        else if (e->type == HttpError::Type::BadStatusCode && e->endpointPath.isNotEmpty())
+        /* A malformed address is the one case with nothing to open, since it is the
+           address itself that is at fault. */
+        if (e->type != HttpError::Type::InvalidURL && e->endpointPath.isNotEmpty())
         {
             return e->endpointPath;
         }
@@ -482,7 +699,9 @@ inline std::optional<String> getOpenablePath(const Error& error)
 
     if (const auto* e = std::get_if<GradioError>(&error))
     {
-        if (e->type == GradioError::Type::RuntimeError && e->endpointPath.isNotEmpty())
+        /* Every one of these messages sends the user to the model's own page, since
+           that is where the underlying error is actually reported. */
+        if (e->endpointPath.isNotEmpty())
         {
             return e->endpointPath;
         }
@@ -497,25 +716,22 @@ public:
     /**
      * Create a result indicating success.
      */
-    static OpResult ok() noexcept { return OpResult(Result::ok(), std::nullopt); }
+    static OpResult ok() noexcept { return OpResult(std::nullopt); }
 
     /**
      * Create a result indicating failure with a specific error.
      */
-    static OpResult fail(Error error)
-    {
-        return OpResult(Result::fail(toUserMessage(error)), std::move(error));
-    }
+    static OpResult fail(Error error) { return OpResult(std::move(error)); }
 
     /**
      * Check if this result indicates success.
      */
-    bool wasOk() const noexcept { return result.wasOk(); }
+    bool wasOk() const noexcept { return ! error.has_value(); }
 
     /**
      * Check if this result indicates failure.
      */
-    bool failed() const noexcept { return result.failed(); }
+    bool failed() const noexcept { return error.has_value(); }
 
     /**
      * Obtain the error associated with this result if one exists.
@@ -529,9 +745,7 @@ public:
     explicit operator bool() const noexcept { return wasOk(); }
 
 private:
-    OpResult(Result r, std::optional<Error> e) : result(std::move(r)), error(std::move(e)) {}
-
-    Result result;
+    explicit OpResult(std::optional<Error> e) : error(std::move(e)) {}
 
     std::optional<Error> error;
 };

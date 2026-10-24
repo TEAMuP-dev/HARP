@@ -14,7 +14,9 @@ from pathlib import Path
 from gradio_client import handle_file
 
 from assets import Assets
+from audio import read_audio_props
 from expectations import FILE_TYPES, resolve_expect_targets, check_expectations
+from midi import read_midi_props
 from validators import VALIDATORS, ValidatorNotApplicable
 
 
@@ -22,7 +24,8 @@ __all__ = [
     'synthesize_default_args',
     'apply_case',
     'validate_outputs',
-    'inspect_outputs'
+    'inspect_outputs',
+    'measure_outputs'
 ]
 
 
@@ -243,6 +246,53 @@ def outputs_by_label(result, specs: list) -> dict:
         mapped[spec.get("label")] = value
 
     return mapped
+
+
+def measure_outputs(result, controls: dict) -> dict:
+    """
+    Record what each audio or MIDI output actually turned out to be.
+
+    The `expect` rules already decode these files, but only to compare
+    against a configured value, so what the model returned is discarded
+    whenever no rule names it. Keeping it makes a property no rule asserts
+    visible in the report: whether a model preserved the sample rate and
+    channel count it was given, above all, which is otherwise invisible until
+    someone listens.
+
+    Measurement never fails a case. A file that cannot be decoded is already
+    a failure through validate_outputs or the audio_decodes validator, so a
+    failure here is recorded and nothing more.
+
+    Args:
+        result: The raw value returned by gradio_client for /process.
+        controls (dict): The /controls payload.
+
+    Returns:
+        observed (dict): Output label -> its measured properties, or
+            {"error": "..."} for one that could not be read.
+    """
+
+    specs = controls.get("outputs", [])
+    out_map = outputs_by_label(result, specs)
+    readers = {"audio_track": read_audio_props, "midi_track": read_midi_props}
+
+    observed = {}
+
+    for spec in specs:
+        label, otype = spec.get("label"), spec.get("type")
+        reader = readers.get(otype)
+        value = out_map.get(label)
+        if reader is None or not isinstance(value, str):
+            continue
+        try:
+            props = reader(label, value)
+        except Exception as exc:  # noqa: BLE001 - recording, not asserting
+            observed[label] = {"error": f"{type(exc).__name__}: {exc}"[:200]}
+            continue
+        props["ext"] = os.path.splitext(value)[1].lower() or None
+        observed[label] = {k: v for k, v in props.items() if v is not None}
+
+    return observed
 
 
 def inspect_outputs(result, controls: dict, case: dict) -> None:

@@ -1,8 +1,6 @@
 # Available Models for HARP
 
-<!-- TODO - organize this list by task / application -->
-
-The following models are always available for use within HARP, and can be found in the drop-down menu at the top of the main panel:
+HARP's Home tab lists every model below, along with every other Space of the [TEAMuP organization](https://huggingface.co/teamup-tech) on Hugging Face, grouped by category and searchable by name, task, or tag. Among them:
 
 - **Stable Audio (text-to-audio)** \([stability/text-to-audio](https://stableaudio.com/user-guide/text-to-audio)\) can generate music, sound effects and/or soundscapes, based on a text description.
 
@@ -29,3 +27,9 @@ The following models are always available for use within HARP, and can be found 
 - **Voice Cloning** \([teamup-tech/MegaTTS3-Voice-Cloning](https://huggingface.co/spaces/teamup-tech/MegaTTS3-Voice-Cloning)\) generates speech conditioned on another speech recording following a text prompt.
 
 - **Midi Synthesis** \([teamup-tech/midi-synthesizer](https://huggingface.co/spaces/teamup-tech/midi-synthesizer)\) synthesizes MIDI into audio using the standard MuseScore SoundFont.
+
+Each model is deployed under its original license, which HARP displays on a badge of its own beside
+the model, so that the terms are apparent before the output is used. Authors who would rather their
+model were not featured, or whose license we have stated incorrectly, are asked to
+[open an issue](https://github.com/TEAMuP-dev/HARP/issues) so that we can correct or remove it
+promptly.
