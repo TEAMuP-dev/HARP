@@ -3,11 +3,11 @@ Synthesized test inputs for HARP model validation.
 
 Every input file is generated, audio with soundfile and MIDI with the
 standard library. Audio is a sine sweep and MIDI a run of ascending notes
-unless a `source` names a recording or a MIDI file in test_data/ to build the
-input from instead, which gives a model content it can act on: a separator
-something to separate, a transcriber notes to find. Inputs for one specific
-model can also be passed as they are, from a test case's `files` entry in
-config.yml.
+unless a `source` names a recording or a MIDI file in test_data/ from which to
+build the input instead, which gives a model content on which it can act: a
+separator something to separate, a transcriber notes to find. Inputs for one
+specific model can also be passed as they are, from the `files` entry of a test
+case in config.yml.
 
 Input properties (sample rate, channels, length, format, ...) are configurable
 via `synthesized_inputs`, whose schema is documented in config.yml. Each
@@ -31,7 +31,8 @@ __all__ = [
     'MIDI_DEFAULTS',
     'SYNTHESIZED_DEFAULTS',
     'merge_specs',
-    'check_synthesized_inputs'
+    'check_synthesized_inputs',
+    'input_kind'
 ]
 
 
@@ -42,6 +43,7 @@ AUDIO_DEFAULTS = {
     "duration": 2.0,        # seconds
     "ext": ".wav",          # container/format to write
     "source": None,         # recording to build the clip from, or a sine sweep
+    "content": None,        # an input to refuse instead (see CONTENTS)
 }
 MIDI_DEFAULTS = {
     "num_notes": 2,         # ascending notes from middle C
@@ -50,7 +52,18 @@ MIDI_DEFAULTS = {
     "channel": 0,           # MIDI channel (see MIDI_DRUM_CHANNEL)
     "ext": ".mid",
     "source": None,         # MIDI file to pass as it is, or synthesized notes
+    "content": None,        # an input to refuse instead (see CONTENTS)
 }
+
+# The inputs a model should refuse, which `content` selects in place of a real
+# one, for a case that expects an error: a file with the right extension that
+# holds no audio or MIDI at all, and one that is valid but holds nothing (an
+# audio file of zero frames, or MIDI without a note)
+CONTENTS = ("unreadable", "empty")
+
+# What an unreadable input holds instead of audio or MIDI
+UNREADABLE_BYTES = (b"This file is not audio or MIDI. HARP model validation sends "
+                    b"it to check that it is refused.\n") * 16
 
 # Channels are numbered 0 to 15 throughout validation, as they are on the
 # wire and in mido, rather than the 1 to 16 a DAW displays. The two namings
@@ -111,6 +124,25 @@ def merge_specs(*specs) -> dict:
     return merged
 
 
+# Extensions from which soundfile cannot tell the format, by the format each names
+FORMAT_ALIASES = {".aif": "AIFF"}
+
+
+def audio_format(path) -> str | None:
+    """
+    The format to write an audio file in, where its extension does not say.
+
+    Args:
+        path (Path | str): Destination path.
+
+    Returns:
+        format (str | None): A soundfile format name, or None to let soundfile
+            take it from the extension.
+    """
+
+    return FORMAT_ALIASES.get(Path(path).suffix.lower())
+
+
 def can_write_audio(ext: str) -> bool:
     """
     Whether this libsndfile build can write audio with the given extension.
@@ -124,8 +156,9 @@ def can_write_audio(ext: str) -> bool:
 
     with tempfile.TemporaryDirectory() as probe_dir:
         try:
-            soundfile.write(str(Path(probe_dir) / f"probe{ext}"),
-                            numpy.zeros((1, 1)), 44100)
+            probe = Path(probe_dir) / f"probe{ext}"
+            soundfile.write(str(probe), numpy.zeros((1, 1)), 44100,
+                            format=audio_format(probe))
         except Exception:  # noqa: BLE001 - the format is not writable here
             return False
 
@@ -178,7 +211,7 @@ def check_midi_number(prop: str, value, where: str) -> None:
 
 def check_source(kind: str, source, where: str, base_dir: Path) -> None:
     """
-    Reject a `source` that cannot be read as the kind of input it is set for.
+    Reject a `source` that cannot be read as the kind of input for which it is set.
 
     Args:
         kind (str): "audio" or "midi".
@@ -211,14 +244,14 @@ def check_source(kind: str, source, where: str, base_dir: Path) -> None:
 
 def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
     """
-    Reject `synthesized_inputs` settings that nothing would act on.
+    Reject `synthesized_inputs` settings on which nothing would act.
 
     Only audio and MIDI inputs are built from properties. Text and JSON inputs
     are fixed placeholder files, and any other input a model declares has to
-    come from a test case's `files` entry. An unrecognized media kind or
+    come from the `files` entry of a test case. An unrecognized media kind or
     property name would therefore be read by nothing at all, an audio format
     this installation cannot write would leave models without inputs, and an
-    out-of-range MIDI number would corrupt the file it is written into.
+    out-of-range MIDI number would corrupt the file into which it is written.
     Reporting them here turns each into one configuration error naming the
     setting, rather than a set of models with skipped or misleading cases.
 
@@ -257,6 +290,11 @@ def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
                     if (props or {}).get(prop) is not None:
                         check_midi_number(prop, props[prop], where)
 
+            content = (props or {}).get("content")
+            if content is not None and content not in CONTENTS:
+                raise ValueError(f"synthesized_inputs {kind} content {content!r} (set in "
+                                 f"{where}) is not one of {list(CONTENTS)}")
+
             if (props or {}).get("source"):
                 check_source(kind, props["source"], where, base_dir)
 
@@ -282,7 +320,7 @@ class Assets:
     stall the other workers' case setup.
 
     Args:
-        workdir (Path): Directory the generated files are written to.
+        workdir (Path): Directory to which the generated files are written.
         defaults (dict | None): Global `synthesized_inputs` block from
             config.yml, overriding the built-in property defaults.
         base_dir (Path | None): Directory containing config.yml, against which
@@ -317,10 +355,10 @@ class Assets:
         Return the file for a cache key, generating it if it is not on disk.
 
         A cached path is re-checked rather than trusted: these files live
-        under the run's report directory, so a cleanup elsewhere can remove
+        under the report directory of the run, so a cleanup elsewhere can remove
         them mid-run. Regenerating is cheap, and handing back a path to a
         deleted file would fail every remaining model with an error that
-        looks like the model's fault.
+        looks like the fault of the model.
 
         Args:
             key (tuple): Identity of the file (media kind plus properties).
@@ -397,6 +435,19 @@ class Assets:
         duration = float(props["duration"])
         ext = (ext or props["ext"]).lower()
 
+        if props["content"] == "unreadable":
+            path = self.workdir / f"test_input_unreadable{ext}"
+            return self.cached(("audio", "unreadable", ext),
+                               lambda: write_bytes(path, UNREADABLE_BYTES))
+
+        # Written as WAV whatever the configured format, since a FLAC file of
+        # no frames cannot even be opened, which would make it unreadable
+        # rather than empty
+        if props["content"] == "empty":
+            path = self.workdir / f"test_input_empty_{sample_rate}hz_{num_channels}ch.wav"
+            return self.cached(("audio", "empty", sample_rate, num_channels),
+                               lambda: write_audio(path, 0, sample_rate, num_channels))
+
         if props["source"]:
             source = (self.base_dir / str(props["source"])).resolve()
             path = (self.workdir / f"{source.stem}_{sample_rate}hz"
@@ -427,6 +478,15 @@ class Assets:
 
         props = self.resolve("midi", overrides)
         ext = (ext or props["ext"]).lower()
+
+        if props["content"] == "unreadable":
+            path = self.workdir / f"test_input_unreadable{ext}"
+            return self.cached(("midi", "unreadable", ext),
+                               lambda: write_bytes(path, UNREADABLE_BYTES))
+
+        if props["content"] == "empty":
+            path = self.workdir / f"test_input_empty{ext}"
+            return self.cached(("midi", "empty", ext), lambda: write_midi(path, 0, 0.5))
 
         # A source is passed as it is, so the properties that describe the
         # synthesized notes do not apply to it
@@ -461,7 +521,7 @@ class Assets:
         configured `ext` when the component allows it. One accepting MIDI,
         .json, or .txt gets the matching synthesized file. A component whose
         accepted types are all unsupported (e.g. a bespoke binary format) gets
-        None, and needs a real file supplied by a test case's `files` entry.
+        None, and needs a real file supplied by the `files` entry of a test case.
 
         Args:
             file_types (list): Accepted extensions from the /controls spec.
@@ -504,6 +564,34 @@ class Assets:
         return None
 
 
+def input_kind(spec: dict) -> str | None:
+    """
+    The media kind the harness synthesizes for one input.
+
+    An audio track takes synthesized audio and a MIDI track synthesized MIDI.
+    A generic file input takes whichever its accepted types allow, and one
+    accepting any file is handed audio.
+
+    Args:
+        spec (dict): The spec of the input from /controls.
+
+    Returns:
+        kind (str | None): "audio", "midi", or None for an input given
+            neither, such as a slider or a text file.
+    """
+
+    ctype = spec.get("type")
+    types = {str(t).lower() for t in (spec.get("file_types") or [])}
+
+    if ctype == "audio_track" or (ctype == "generic_file" and
+                                  (not types or "audio" in types or types & AUDIO_EXTS)):
+        return "audio"
+    if ctype == "midi_track" or (ctype == "generic_file" and types & MIDI_EXTS):
+        return "midi"
+
+    return None
+
+
 def write_bytes(path: Path, data: bytes) -> Path:
     """
     Write fixed bytes to a path.
@@ -528,7 +616,8 @@ def write_audio(path: Path, duration: float, sample_rate: int,
 
     Args:
         path (Path): Destination path, whose extension selects the format.
-        duration (float): Length of the sweep in seconds.
+        duration (float): Length of the sweep in seconds. Zero writes a file
+            holding no frames, which only some formats (WAV) can read back.
         sample_rate (int): Sample rate in Hz.
         num_channels (int): Number of (identical) channels to write.
 
@@ -536,13 +625,18 @@ def write_audio(path: Path, duration: float, sample_rate: int,
         path (Path): The written file, for chaining.
     """
 
+    if duration <= 0:
+        soundfile.write(str(path), numpy.zeros((0, num_channels)), sample_rate,
+                        format=audio_format(path))
+        return path
+
     n = max(1, int(duration * sample_rate))
     t = numpy.arange(n) / sample_rate
     # Sweep from 220 Hz up one octave over the clip
     freq = 220.0 + 220.0 * numpy.arange(n) / n
     mono = 0.5 * numpy.sin(2 * numpy.pi * freq * t)
     soundfile.write(str(path), numpy.tile(mono[:, None], (1, num_channels)),
-                    sample_rate)
+                    sample_rate, format=audio_format(path))
 
     return path
 
@@ -555,7 +649,7 @@ def write_audio_from(path: Path, source: Path, duration: float,
     The recording is resampled by linear interpolation, which is enough for a
     test input though not for listening, and is repeated from its start where
     it is shorter than the clip. A stereo recording keeps its two channels when
-    stereo is asked for, and is averaged to one otherwise; a mono recording is
+    stereo is asked for, and is averaged to one otherwise. A mono recording is
     copied to every channel.
 
     Args:
@@ -587,7 +681,7 @@ def write_audio_from(path: Path, source: Path, duration: float,
     n = max(1, int(duration * sample_rate))
     if len(data) < n:
         data = numpy.tile(data, (-(-n // len(data)), 1))
-    soundfile.write(str(path), data[:n], sample_rate)
+    soundfile.write(str(path), data[:n], sample_rate, format=audio_format(path))
 
     return path
 

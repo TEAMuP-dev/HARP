@@ -499,7 +499,7 @@ private:
 
         Label pageIndicator;
         HyperlinkButton learnMoreLink { "Learn more",
-                                        URL("https://harp3.netlify.app/content/intro.html") };
+                                        URL("https://harp.tools/content/intro.html") };
         Label copyrightLabel;
 
         TextButton showDetailsButton;

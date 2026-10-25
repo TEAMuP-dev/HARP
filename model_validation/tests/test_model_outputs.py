@@ -133,7 +133,7 @@ class ResultFileTest(ValidatorTest):
 
     def test_a_missing_output_is_a_configuration_error(self):
         # The validator names an output the model no longer has, which is the
-        # config's mistake rather than a fault in the model
+        # mistake of the config rather than a fault in the model
         for name, _ in self.CASES:
             with self.subTest(name=name), self.assertRaises(ValueError):
                 VALIDATORS[name]({"Some Other Output": "x"}, {}, {"count": 1})
@@ -241,8 +241,8 @@ class ConfigFileTest(unittest.TestCase):
 
     def test_a_model_written_twice_is_rejected(self):
         # yaml keeps the last of several entries sharing a key, so a model
-        # written twice would otherwise run without the first entry's
-        # settings. This is what two branches configuring one model produce
+        # written twice would otherwise run without the settings of the first
+        # entry. This is what two branches configuring one model produce
         # on merge, and it is invisible in the loaded configuration
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "config.yml"
@@ -265,13 +265,13 @@ class ConfigFileTest(unittest.TestCase):
                     self.assertIn(name, VALIDATORS)
 
     def test_models_are_in_order(self):
-        # One model's settings are found by name, which only works while the
+        # The settings of one model are found by name, which only works while the
         # entries stay sorted
         names = list(load_config(self.PATH).get("overrides") or {})
         self.assertEqual(names, sorted(names))
 
     def test_case_names_are_unique_per_model(self):
-        # The report tells a model's cases apart by name alone, so two cases
+        # The report tells the cases of a model apart by name alone, so two cases
         # sharing one could not be told apart
         for model, entry in (load_config(self.PATH).get("overrides") or {}).items():
             names = [case.get("name") for case in (entry or {}).get("test_cases") or []]
@@ -280,11 +280,11 @@ class ConfigFileTest(unittest.TestCase):
 
 
 class MergeCommonCasesTest(unittest.TestCase):
-    """How the common cases are folded into a model's own."""
+    """How the common cases are folded into those of a model."""
 
     def test_checks_are_merged_rather_than_run(self):
         # A common case without inputs costs a /process call of its own for
-        # nothing, so its rules ride along with the model's own case
+        # nothing, so its rules ride along with the case of the model
         cases = merge_common_cases([{"name": "decodes", "validators": {"audio_decodes": {}}}],
                                    [{"name": "default"}])
         self.assertEqual([case["name"] for case in cases], ["default"])
@@ -328,6 +328,19 @@ class ReportTest(unittest.TestCase):
                                             "timestamp": "now", "command": ""})
         self.assertIn("ValueError: the checkpoint is corrupt", report)
 
+    def test_a_lint_run_lists_its_findings(self):
+        from lint_base import Finding
+        from results import ModelResult, render_markdown
+        result = ModelResult(target="teamup-tech/a", kind="lint", hardware="zero-a10g",
+                             cases=[Finding("spaces-exact", "spaces==0.51.3 is an exact pin",
+                                            10, "requirements.txt"),
+                                    Finding("unpinned", "not pinned to one version: numpy")])
+        report = render_markdown([result], {"passed": 0, "validated": 1, "skipped": 0,
+                                            "timestamp": "now", "command": ""})
+        self.assertIn("HARP Model Lint Report", report)
+        self.assertIn("| 1 | 1 |", report)
+        self.assertIn("requirements.txt:10: spaces==0.51.3", report)
+
 
 class LabelsReachHarpTest(unittest.TestCase):
     """HARP reads a JSON output as a LabelList and draws it over a file output."""
@@ -357,6 +370,45 @@ class LabelsReachHarpTest(unittest.TestCase):
             VALIDATORS["labels_reach_harp"]({}, {"outputs": [{"type": "audio_track"}]}, {})
 
 
+class LabelsWithinTracksTest(unittest.TestCase):
+    """Each label is held to the track over which HARP draws it."""
+
+    def setUp(self):
+        from assets import write_midi
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.audio = str(Path(self.temp.name) / "out.wav")
+        soundfile.write(self.audio, [0.25] * 44100 * 4, 44100)         # 4 s of audio
+        self.midi = str(write_midi(Path(self.temp.name) / "out.mid", 2, 0.5))  # 1 s of MIDI
+
+    def check(self, labels, outputs=("audio_track", "midi_track")):
+        specs = [{"label": "Audio", "type": "audio_track"}, {"label": "Notes", "type": "midi_track"},
+                 {"label": "Labels", "type": "json"}]
+        values = {"Audio": self.audio, "Notes": self.midi, "Labels": {"labels": labels}}
+        kept = [spec for spec in specs if spec["type"] in outputs or spec["type"] == "json"]
+        VALIDATORS["labels_within_tracks"]({spec["label"]: values[spec["label"]] for spec in kept},
+                                           {"outputs": kept}, {})
+
+    def test_each_kind_against_its_own_track(self):
+        self.check([{"label_type": "AudioLabel", "t": 3.5, "duration": 0.4, "label": "late"},
+                    {"label_type": "MidiLabel", "t": 0.5, "duration": 0.4, "label": "end"}])
+
+    def test_a_midi_label_past_the_midi_is_out_of_bounds(self):
+        # It fits the 4 s audio, which is not the track it is drawn over
+        with self.assertRaises(AssertionError) as caught:
+            self.check([{"label_type": "MidiLabel", "t": 2.0, "label": "late"}])
+        self.assertIn("MIDI output", str(caught.exception))
+
+    def test_a_midi_only_model_is_checked(self):
+        with self.assertRaises(AssertionError):
+            self.check([{"label_type": "MidiLabel", "t": 2.0, "label": "late"}], outputs=("midi_track",))
+        self.check([{"label_type": "MidiLabel", "t": 0.5, "label": "end"}], outputs=("midi_track",))
+
+    def test_a_model_with_no_track_is_skipped(self):
+        with self.assertRaises(ValidatorNotApplicable):
+            self.check([{"label_type": "AudioLabel", "t": 0.0, "label": "x"}], outputs=())
+
+
 class RmsBoundsTest(unittest.TestCase):
     """The level rules on either side of an audio output."""
 
@@ -378,8 +430,47 @@ class RmsBoundsTest(unittest.TestCase):
         self.assertIn("more signal than expected", str(caught.exception))
 
 
+class ClippingTest(unittest.TestCase):
+    """The rule against audio that ran over full scale."""
+
+    def setUp(self):
+        import numpy
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        t = numpy.arange(48000) / 48000
+        self.sine = numpy.sin(2 * numpy.pi * 220 * t)
+
+    def write(self, name, data, subtype="PCM_16"):
+        path = str(Path(self.temp.name) / name)
+        soundfile.write(path, data, 48000, subtype=subtype)
+        return path
+
+    def test_a_peak_normalized_to_full_scale_is_not_clipping(self):
+        # Every crest of a full-scale tone reaches the ceiling, if only briefly
+        path = self.write("normalized.wav", self.sine)
+        check_expectations("Mix", "audio_track", path, {"max_clipping": 0})
+
+    def test_a_low_tone_at_full_scale_is_not_clipping(self):
+        import numpy
+        t = numpy.arange(96000) / 48000
+        path = self.write("bass.wav", numpy.sin(2 * numpy.pi * 20 * t))
+        check_expectations("Mix", "audio_track", path, {"max_clipping": 0})
+
+    def test_audio_written_past_full_scale_clips(self):
+        # Twice too loud, so a third of every cycle is cut off at the ceiling
+        path = self.write("clipped.wav", (2 * self.sine).clip(-1, 1))
+        with self.assertRaises(AssertionError) as caught:
+            check_expectations("Mix", "audio_track", path, {"max_clipping": 0.001})
+        self.assertIn("clips", str(caught.exception))
+
+    def test_float_samples_over_full_scale_count(self):
+        from audio import read_audio_props
+        path = self.write("overs.wav", 1.5 * self.sine, subtype="FLOAT")
+        self.assertGreater(read_audio_props("Mix", path)["clipping"], 0.3)
+
+
 class ExpectTargetsTest(unittest.TestCase):
-    """How rules under "*" and under an output's label combine."""
+    """How rules under "*" and under the label of an output combine."""
 
     OUT_TYPES = {"Vocals": "audio_track", "Guitar": "audio_track", "Score": "midi_track"}
 
@@ -387,7 +478,7 @@ class ExpectTargetsTest(unittest.TestCase):
         return dict(resolve_expect_targets(expect, self.OUT_TYPES))
 
     def test_a_named_rule_replaces_the_same_rule_under_the_wildcard(self):
-        # A separator's stem for a source the input lacks lifts the common
+        # The stem of a separator for a source the input lacks lifts the common
         # floor on that stem alone, and the other stems keep it
         targets = self.resolve({"*": {"min_rms_db": -80},
                                 "Guitar": {"min_rms_db": -float("inf"), "max_rms_db": -60}})

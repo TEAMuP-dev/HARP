@@ -1,21 +1,14 @@
 # Development Guidelines
 
-<!-- Coding Conventions -->
-
 ## Coding Conventions
 
 ### Formatting
 
-In file `.clang-format` you can find code formatting rules for the project.
-You can use `clang-format` to format your code before committing it.
-We are following the guidelines used by JUCE.
-If you are using Visual Studio Code (VS Code), you must have the C/C++ extensions from Microsoft installed.
-On macOS, you should also install `clang-format` with `brew`:
-```bash
-brew install clang-format
-```
+`.clang-format` holds the formatting rules of the project, which follow JUCE. Format a file with
+`clang-format` before committing it. In Visual Studio Code, install the C/C++ extension from
+Microsoft, and on macOS `clang-format` itself with `brew install clang-format`, then add the
+following to `.vscode/settings.json`:
 
-Finally, add the following lines to your `.vscode/settings.json` file:
 ```json
 {
     "C_Cpp.clang_format_style": "file",
@@ -24,11 +17,11 @@ Finally, add the following lines to your `.vscode/settings.json` file:
 }
 ```
 
-In VS Code, you can format a file by pressing `CTRL+Shift+I` or by right-clicking within the file and selecting `Format Document`.
-You could also set `"editor.formatOnSave": true` in `.vscode/settings.json` if you want to format files upon saving them.
+`Ctrl+Shift+I`, or `Format Document` in the context menu of a file, then formats it, and
+`"editor.formatOnSave": true` formats every file on save.
 
-Note: if a file has never been formatted before, it may overwrite the entire `git blame` with the formatting changes.
-If you want to format files that haven't been formatted before, it's better to group all the formatting changes into a single commit and then add the hash of the commit to file `.git-blame-ignore-revs` to avoid this issue.
+Formatting a file that has never been formatted rewrites its `git blame`. Put such formatting in a
+commit of its own and add the hash of that commit to `.git-blame-ignore-revs`.
 
 ### Managing Collections of Dynamically Created Objects
 
@@ -64,7 +57,7 @@ NoteGridComponent::~NoteGridComponent() {
 }
 ```
 
-This pattern is risky. If `resetNotes` isn't called, or if a note is removed from `midiNotes` without a corresponding call to `delete`, memory leaks occur.
+This pattern is risky. If `resetNotes` is not called, or if a note is removed from `midiNotes` without a corresponding call to `delete`, memory leaks occur.
 
 **Preferred Solutions:**
 
@@ -154,17 +147,14 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 *   For JUCE projects, `juce::OwnedArray` is often the simplest and most idiomatic choice for managing collections of heap-allocated JUCE objects.
 *   `juce::Array<std::unique_ptr<T>>` (or `std::vector`) is the standard C++ approach and is excellent for ensuring RAII, especially in non-JUCE specific contexts or when integrating with other modern C++ code.
 
-<!-- Project Conventions -->
-
 ## HARP Conventions
-
-<!-- The following was generated and adapted from ChatGPT based on some loose notes. -->
 
 ### Modularity
 - Prefer clear separation of concerns: independent components, widgets, and services should live in their own units.
 - Avoid unnecessary crosstalk between UI, model logic, and infrastructure layers.
-- If a change touches many unrelated areas, it’s usually a sign to introduce an abstraction (_e.g._ `SharedResourcePointer`, service objects).
+- If a change touches many unrelated areas, it is usually a sign to introduce an abstraction (_e.g._ `SharedResourcePointer`, service objects).
 - Avoid hard-coded conditionals that branch on specific models, modes (_e.g._, Gradio vs. Stability), or UI states. Favor extensibility.
+- Support for a new service belongs in a `Client` subclass of its own, as [PROVIDERS.md](PROVIDERS.md) describes.
 - Good design should feel “boring”: things fall neatly into place with minimal glue code.
 
 ### Efficiency
@@ -190,7 +180,7 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - Be consistent about ownership and lifetime: who creates, shows, and destroys.
 - Launch behavior (modal vs non-modal) should be predictable across the app.
 - Do not rely on the button index passed to an `AlertWindow::showAsync` callback. Bind
-  each button's `onClick`, or pass explicit return values to `AlertWindow::addButton`
+  the `onClick` of each button, or pass explicit return values to `AlertWindow::addButton`
   (see [AlertWindow Button Return Values](#alertwindow-button-return-values)).
 
 ### Buttons & MultiButtons
@@ -225,12 +215,10 @@ This is still the behavior as of JUCE 8.0.12, contrary to the expectation in
 
 No HARP code depends on that mapping any more, and new code should avoid it:
 
-- `ModelTab::openErrorPopup` constructs its own `AlertWindow` and assigns each button's
-  `onClick` via `AlertWindow::getButton`, so the return values are never consulted.
+- `ModelTab::openErrorPopup` constructs its own `AlertWindow` and assigns the `onClick` of each
+  button via `AlertWindow::getButton`, so the return values are never consulted.
 - `Main.cpp` and `MediaClipboardWidget` construct their `AlertWindow` directly and pass
   explicit return values to `AlertWindow::addButton`.
 
 Prefer one of those two approaches over reading the index passed to an
 `AlertWindow::showAsync` callback.
-
----

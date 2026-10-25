@@ -2,7 +2,7 @@
 Validation driver for local pyharp example apps.
 
 Launches an example on a local port, waits for it to serve, and runs the
-endpoint tests against it. The app's output is captured so a failure can
+endpoint tests against it. The output of the app is captured so a failure can
 report the real traceback rather than the generic error the client sees.
 """
 
@@ -40,7 +40,7 @@ def wait_for_local_server(port: int, proc: subprocess.Popen, timeout: float) -> 
     Args:
         port (int): The port the app was told to bind (GRADIO_SERVER_PORT).
         proc (subprocess.Popen): The app process, watched for early exit.
-        timeout (float): Seconds to wait before giving up.
+        timeout (float): Seconds to wait before raising.
 
     Raises:
         RuntimeError: If the app process exits before serving.
@@ -64,14 +64,14 @@ def wait_for_local_server(port: int, proc: subprocess.Popen, timeout: float) -> 
 
 def read_app_traceback(log_path: Path, max_chars: int = 400) -> str:
     """
-    Extract the final exception line from a local app's captured log.
+    Extract the final exception line from the captured log of a local app.
 
     Args:
-        log_path (Path): The app's stdout/stderr log.
+        log_path (Path): The stdout and stderr log of the app.
         max_chars (int): Cap on the returned text.
 
     Returns:
-        detail (str): The last traceback's exception line, or "" if the log
+        detail (str): The exception line of the last traceback, or "" if the log
             holds no traceback (or cannot be read).
     """
 
@@ -97,16 +97,16 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
 
     The app runs in its own directory under <output-dir>/examples/, with
     stdout and stderr captured to app.log there. Keeping the app out of the
-    example's source directory matters because pyharp writes model outputs to
+    source directory of the example matters because pyharp writes model outputs to
     an `_outputs` folder under the working directory, which would otherwise
     accumulate inside the pyharp checkout.
 
     Args:
         app_dir (Path): Example directory containing app.py.
-        port (int): Local port to launch the app on.
+        port (int): Local port on which to launch the app.
         assets (Assets): Synthesized input files.
         opts (argparse.Namespace): Parsed command-line options.
-        overrides (dict): This example's entry from config.yml `overrides`
+        overrides (dict): The entry of this example in config.yml `overrides`
             (keyed "examples/<example-dir>").
 
     Returns:

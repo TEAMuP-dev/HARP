@@ -1,35 +1,98 @@
-# Available Models for HARP
+# Using Hosted Models
 
-HARP's Home tab lists every model below, along with every other Space of the [TEAMuP organization](https://huggingface.co/teamup-tech) on Hugging Face, grouped by category and searchable by name, task, or tag. Among them:
+The models on the Home tab of HARP are hosted by us, as Hugging Face Spaces of the
+[TEAMuP organization](https://huggingface.co/teamup-tech), or by Stability AI. They need nothing
+beyond HARP itself. This page runs one of them, then explains the badges on a model card, API keys,
+and what to expect from a Space that has been idle.
 
-- **Stable Audio (text-to-audio)** \([stability/text-to-audio](https://stableaudio.com/user-guide/text-to-audio)\) can generate music, sound effects and/or soundscapes, based on a text description.
+## Example: Separating Stems with Demucs
 
-- **Stable Audio (audio-to-audio)** \([stability/audio-to-audio](https://stableaudio.com/user-guide/audio-to-audio)\) enables the transfer of style or creation of variations based on text and audio conditioning.
+[Demucs](https://github.com/facebookresearch/demucs) separates a mix into drums, bass, vocals, and
+everything else. It runs on a GPU through ZeroGPU, which Hugging Face lends to each request.
 
-<!-- - **MelodyFlow** \([hugggof/melodyflow](https://huggingface.co/spaces/hugggof/melodyflow)\) performs text-guided music generation and editing. Given an audio file and a text prompt describing a desired sound, MelodyFlow transforms the given audio to impart characteristics of the desired sound. -->
+1. **Open the model.** On the `Home` tab, search for `demucs`, or select the `Separation` category,
+   and click the Demucs card. The first time you open a ZeroGPU model without a Hugging Face key,
+   HARP explains the GPU allowance on which it draws (see [API Keys](#api-keys)). Click `Open` to
+   continue.
+2. **Wait for it to load.** The status area shows `QUERYING_CONTROLS` while HARP reads the interface
+   of the model, then `READY`. A Space that has been idle takes a minute or two to wake first.
+3. **Add a song.** Drag an audio file (WAV, AIFF, FLAC, OGG, or MP3) onto the `Input Audio` track,
+   or click its folder icon to choose one.
+4. **Choose a variant.** The `Demucs Model` dropdown offers `htdemucs`, which sounds best,
+   `mdx_extra`, which is faster at a small cost in quality, and `mdx_extra_q`, a quantized
+   `mdx_extra` that is the lightest of the three and sounds noticeably worse.
+5. **Process.** Select `Process`. A typical song takes well under a minute once the Space is awake.
+6. **Use the stems.** The `Drums`, `Bass`, `Vocals`, and `Other` output tracks fill in as the
+   result arrives. Play them, save them, drag them into your DAW, or drag one into the media
+   clipboard to use as the input of another model, _e.g._, the vocals into Whisper for a
+   transcript.
 
-- **Text2Midi** \([teamup-tech/text2midi-symbolic-music-generation](https://huggingface.co/spaces/teamup-tech/text2midi-symbolic-music-generation)\) generates MIDI files from textual descriptions.
+<!-- TODO: screenshot. The Demucs tab after processing a song, with all four stems rendered in their
+     output tracks.
+![Demucs after separating a song into four stems](/images/demucs-stems.png)
+-->
 
-- **Demucs** \([teamup-tech/demucs-source-separation](https://huggingface.co/spaces/teamup-tech/demucs-source-separation)\) performs source separation on music, splitting it into "Drums", "Bass", "Vocals", and "Instrumental" stems.
+[Example 2](/content/pyharp_docs/example_demucs) walks through the code of this model.
 
-- **High Resolution Piano Transcription** \([teamup-tech/solo-piano-audio-to-midi-transcription](https://huggingface.co/spaces/teamup-tech/solo-piano-audio-to-midi-transcription)\) converts audio of solo piano playing into a corresponding MIDI file.
+## Badges
 
-- **Anticipatory Music Transformer** \([teamup-tech/anticipatory-music-transformer](https://huggingface.co/spaces/teamup-tech/anticipatory-music-transformer)\) performs harmonization on MIDI inputs, generating additional notes to provide the harmony for a given melody.
+Each model card carries badges, which are worth reading before relying on a model:
 
-<!-- - **Timbre-Trap** \([npruyne/timbre-trap](https://huggingface.co/spaces/npruyne/timbre-trap), [cwitkowitz/timbre-trap](https://huggingface.co/spaces/cwitkowitz/timbre-trap)\) performs timbre removal on music audio, reducing "textural" characteristics while preserving pitch (harmony/melody). -->
+- **License**: the terms of the code and weights of the model, _e.g._, `MIT` or `CC-BY-NC-4.0`. A
+  non-commercial license (`NC`) means the output cannot be used commercially. Where code and weights
+  are licensed differently, the more restrictive license is shown.
+- **ZeroGPU**: the model runs on a GPU lent to each request, which spends a daily allowance.
+- **Stability AI**: the model runs on the servers of Stability AI, and needs a key from them.
+- **Availability**: `Sleeping` or `Starting` for a Space that will take a while to load, and
+  `Unavailable`, `Try again`, or `Failed to load` once a load has failed.
 
-- **VampNet** \([teamup-tech/vampnet-conditional-music-generation](https://huggingface.co/spaces/teamup-tech/vampnet-conditional-music-generation)\) generates variations or "vamps" on music audio, and offers a variety of controls for determining how the vamps diverge from the original input audio.
+<!-- TODO: screenshot. A row of model cards on the Home tab, showing a license badge, a ZeroGPU
+     badge, a Sleeping badge, and the Stability AI badge.
+![Model cards with license, ZeroGPU, Sleeping, and Stability AI badges](/images/model-badges.png)
+-->
 
-- **Harmonic/Percussive Source Separation** \([teamup-tech/harmonic-percussive-separation](https://huggingface.co/spaces/teamup-tech/harmonic-percussive-separation)\) performs source separation on music by splitting it into "harmonic" and "percussive" tracks, allowing for the extraction of drum-like elements.
+<!--@include: @/../README.md#licenses-->
 
-- **Text-to-Speech** \([teamup-tech/Kokoro-TTS](https://huggingface.co/spaces/teamup-tech/Kokoro-TTS)\) generates speech in the style of a chosen voice preset given a text prompt.
+## API Keys
 
-- **Voice Cloning** \([teamup-tech/MegaTTS3-Voice-Cloning](https://huggingface.co/spaces/teamup-tech/MegaTTS3-Voice-Cloning)\) generates speech conditioned on another speech recording following a text prompt.
+<!--@include: @/../README.md#api-keys-->
 
-- **Midi Synthesis** \([teamup-tech/midi-synthesizer](https://huggingface.co/spaces/teamup-tech/midi-synthesizer)\) synthesizes MIDI into audio using the standard MuseScore SoundFont.
+The allowance for each kind of account is listed under
+[Plans and Hardware](/content/hosting/spaces#plans-and-hardware). A Hugging Face key also opens any
+private Space that its account can see. `File > Settings > API Keys` links to where each service
+issues keys, and checks a key when it is added.
 
-Each model is deployed under its original license, which HARP displays on a badge of its own beside
-the model, so that the terms are apparent before the output is used. Authors who would rather their
-model were not featured, or whose license we have stated incorrectly, are asked to
-[open an issue](https://github.com/TEAMuP-dev/HARP/issues) so that we can correct or remove it
-promptly.
+<!-- TODO: screenshot. File > Settings > API Keys, with the Hugging Face page selected and a key
+     entered (obscured).
+![The API Keys settings, with a Hugging Face key entered](/images/settings-api-keys.png)
+-->
+
+## Sleeping Spaces and Errors
+
+A Space goes to sleep when nobody has used it for a while, and opening it wakes it. HARP waits
+while it starts, which takes a minute or two, and the model then loads as usual.
+
+When a request fails, HARP says why in a popup, and offers what helps: adding an API key, opening
+the page of the model to check its status, opening the log, or reporting the problem through a
+prefilled GitHub issue. A quota error clears once the allowance recovers, or at once with a key.
+
+## Highlights
+
+The Home tab is the full list. A few models to try first:
+
+| Model | Task | Input | Output |
+| :-- | :-- | :-- | :-- |
+| [Demucs](https://huggingface.co/spaces/teamup-tech/Demucs) | Stem separation | Audio | Audio |
+| [Mel-Band RoFormer](https://huggingface.co/spaces/teamup-tech/Mel-Band-RoFormer) | Vocal and instrumental separation | Audio | Audio |
+| [S-KEY](https://huggingface.co/spaces/teamup-tech/S-KEY) | Key detection | Audio | Labels |
+| [Beat This!](https://huggingface.co/spaces/teamup-tech/Beat-This) | Beat and downbeat tracking | Audio | Labels |
+| [Transkun](https://huggingface.co/spaces/teamup-tech/Transkun) | Piano transcription | Audio | MIDI |
+| [Anticipatory Music Transformer](https://huggingface.co/spaces/teamup-tech/Anticipatory-Music-Transformer) | MIDI accompaniment | MIDI | MIDI |
+| [text2midi](https://huggingface.co/spaces/teamup-tech/text2midi) | MIDI generation | Text | MIDI |
+| [MusicGen](https://huggingface.co/spaces/teamup-tech/MusicGen) | Music generation | Text, audio | Audio |
+| [VampNet](https://huggingface.co/spaces/teamup-tech/VampNet) | Variations on a recording | Audio | Audio |
+| [DeepFilterNet](https://huggingface.co/spaces/teamup-tech/DeepFilterNet) | Speech denoising | Audio | Audio |
+| [Whisper](https://huggingface.co/spaces/teamup-tech/Whisper) | Speech transcription | Audio | Text file |
+| [MIDI Synthesizer](https://huggingface.co/spaces/teamup-tech/MIDI-Synthesizer) | MIDI rendering | MIDI | Audio |
+
+To add a model of your own, see [Deploying Models with PyHARP](/content/pyharp_docs/setup).

@@ -5,8 +5,10 @@ app, independent of where that app is running.
 Both tiers funnel into run_endpoint_tests(), which verifies that:
 
     1. the /controls and /process endpoints exist.
-    2. /controls returns a well-formed model card and component spec.
-    3. every configured /process test case produces valid outputs.
+    2. /controls returns a well-formed model card and component spec, and,
+       for a Space, one whose tags and name its README repeats.
+    3. every configured /process test case produces valid outputs, or for a
+       case expecting an error, refuses its input with a gr.Error.
 
 The drivers that get a model to that point live alongside: spaces.py for a
 remote Hugging Face Space, examples.py for a local pyharp example.
@@ -19,11 +21,16 @@ from pathlib import Path
 
 from gradio_client import Client
 
-from assets import Assets, merge_specs
+from assets import Assets, input_kind, merge_specs
 from cases import (synthesize_default_args, apply_case, validate_outputs,
-                   inspect_outputs, measure_outputs)
+                   inspect_outputs, measure_outputs, fed_kinds)
+from refusals import install as install_refusals, judge_refusal
 from results import ModelResult, CaseResult, PASS, FAIL, SKIP
 from utils import run_with_timeout, describe_exception
+
+
+# Lets a case expecting an error tell a gr.Error from any other exception
+install_refusals()
 
 
 __all__ = [
@@ -41,7 +48,7 @@ CONTROLS_TIMEOUT = 120        # fetch the /controls spec (model already loaded)
 CLIENT_CLOSE_TIMEOUT = 10     # best-effort gradio_client shutdown
 CONNECT_RETRY_INTERVAL = 15   # wait between connection attempts to a model
 LOADING_RETRY_INTERVAL = 15   # wait between retries while a model warms up
-JOB_POLL_INTERVAL = 1         # cadence for polling a /process job's status
+JOB_POLL_INTERVAL = 1         # cadence for polling the status of a /process job
 
 # gradio job status codes that mean the job is still waiting in the ZeroGPU
 # queue (not yet executing on the GPU)
@@ -55,9 +62,9 @@ LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
 
 # The following are substrings marking an infrastructure fault rather than a
 # fault in the model. These come from the connection or the GPU host. The same
-# call typically succeeds on a retry, revealing the model's real behavior.
+# call typically succeeds on a retry, revealing the real behavior of the model.
 # Retried a bounded number of times, since unlike a warm-up they have no
-# expected duration to wait out.
+# expected duration.
 #
 # The list is deliberately narrow, holding only faults observed to clear on a
 # retry. A retried /process call re-reserves ZeroGPU allowance, so a marker
@@ -84,14 +91,14 @@ QUOTA_EXHAUSTED_MARKERS = ("exceeded your gpu quota", "gpu quota exceeded",
 
 def matches_markers(exc: Exception, markers: tuple) -> bool:
     """
-    Whether an exception's type or message contains any of the markers.
+    Whether the type or message of an exception contains any of the markers.
 
     The searched text is "Type: message", mirroring how the error is written
     to the report, so a marker can be phrased against either part.
 
     Args:
         exc (Exception): The exception raised by a gradio call.
-        markers (tuple): Lower-case substrings to look for.
+        markers (tuple): Lower-case substrings to find.
 
     Returns:
         matched (bool): True if any marker is present.
@@ -118,10 +125,10 @@ def is_quota_exhausted(text: str) -> bool:
 
 def call_with_retries(fn, deadline: float):
     """
-    Call fn(), retrying the failures that are not the model's fault.
+    Call fn(), retrying the failures that are not the fault of the model.
 
     LOADING_MARKERS are retried until the deadline, the time budgeted for a
-    model to come up. TRANSIENT_MARKERS are retried a bounded number of times
+    model to start. TRANSIENT_MARKERS are retried a bounded number of times
     instead. See those constants for what each covers and why.
 
     Args:
@@ -133,7 +140,7 @@ def call_with_retries(fn, deadline: float):
 
     Raises:
         Exception: fn()'s error, once it is not retryable, the deadline has
-            passed, or the transient retries are used up.
+            passed, or the transient retries are spent.
     """
 
     transient_attempts = 0
@@ -156,7 +163,7 @@ def call_with_retries(fn, deadline: float):
 
 def job_status_code(job) -> str | None:
     """
-    Best-effort read of a gradio job's current status code name.
+    Best-effort read of the current status code name of a gradio job.
 
     Args:
         job: A gradio_client Job handle.
@@ -178,7 +185,7 @@ def wait_out_queue(job, queue_deadline: float, api_name: str) -> None:
     Block until a /process job leaves the ZeroGPU queue and begins executing.
 
     A ZeroGPU job waits in a shared queue before running. That wait is not part
-    of the model's execution and is not charged against quota, so it is bounded
+    of the execution of the model and is not charged against quota, so it is bounded
     by queue_deadline (the connect timeout) rather than by the shorter
     execution timeout the caller applies afterwards.
 
@@ -218,11 +225,29 @@ def close_client(client) -> None:
         pass
 
 
+def corrupted_kinds(assets: Assets, synth: dict) -> set:
+    """
+    The media kinds for which a case sends an input to refuse.
+
+    Args:
+        assets (Assets): Synthesized input files, which hold the defaults.
+        synth (dict): The merged `synthesized_inputs` block of the case.
+
+    Returns:
+        kinds (set): Any of "audio" and "midi" whose `content` is set.
+    """
+
+    return {kind for kind in ("audio", "midi") if assets.resolve(kind, synth).get("content")}
+
+
 def run_case(client: Client, case: dict, controls: dict, assets: Assets,
              overrides: dict, config_dir: Path, process_timeout: float,
              connect_timeout: float) -> CaseResult:
     """
     Run one /process test case and check its outputs.
+
+    A case with `expect_error` passes instead when /process refuses its input
+    with a gr.Error (see refusals.py), and fails when it returns outputs.
 
     The whole case sits inside an error boundary: any failure is recorded on
     the returned record rather than raised, so remaining cases still run.
@@ -232,10 +257,10 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
         case (dict): Test case entry from config.yml.
         controls (dict): The /controls payload.
         assets (Assets): Synthesized input files.
-        overrides (dict): This model's entry from config.yml `overrides`.
+        overrides (dict): The entry of this model in config.yml `overrides`.
         config_dir (Path): Directory containing config.yml.
         process_timeout (float): Seconds allowed for /process execution. The
-            model's setting, which a case's own `process_timeout` overrides.
+            setting of the model, which the `process_timeout` of a case overrides.
         connect_timeout (float): Seconds allowed for the queue wait and for
             retrying a model that is still loading.
 
@@ -246,6 +271,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
     case_result = CaseResult(name=case.get("name", "unnamed"))
     start = time.time()
     process_timeout = case.get("process_timeout", process_timeout)
+    expected_error = case.get("expect_error")
     # Counted inside run_process so a job that reserves GPU is recorded even
     # when it then fails or times out, and a retried call counts again
     state = {"gpu_calls": 0}
@@ -254,6 +280,15 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
         synth = merge_specs(overrides.get("synthesized_inputs"),
                             case.get("synthesized_inputs"))
         default_args, missing = synthesize_default_args(controls, assets, synth)
+
+        # An input to refuse replaces every input of its kind, so the files a
+        # common case inherits from the cases of the model must not restore them
+        corrupted = corrupted_kinds(assets, synth)
+        if corrupted:
+            kinds = {spec.get("label"): input_kind(spec) for spec in controls.get("inputs", [])}
+            case = dict(case, files={label: path for label, path
+                                     in (case.get("files") or {}).items()
+                                     if kinds.get(label) not in corrupted})
 
         # Inputs we could not synthesize are fine if this case supplies them
         supplied = set(case.get("controls") or {}) | set(case.get("files") or {})
@@ -274,7 +309,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
             try:
                 return job.result(timeout=process_timeout)
             except concurrent.futures.TimeoutError:
-                # Canceling ends the client's event stream for a job we have
+                # Canceling ends the event stream of the client for a job we have
                 # stopped waiting on, so its worker thread does not linger for
                 # the rest of the run. The upstream function itself keeps
                 # running, as gradio can only call off a job still in the queue.
@@ -282,6 +317,20 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
                 # Future.result() raises with no message, so say what timed out
                 raise TimeoutError(f"/process did not return within "
                                    f"{int(process_timeout)}s") from None
+
+        if expected_error:
+            try:
+                call_with_retries(run_process, time.time() + connect_timeout)
+            except Exception as exc:  # noqa: BLE001 - judged as the expected refusal
+                case_result.ok, case_result.error, reached_gpu = \
+                    judge_refusal(exc, expected_error)
+                # A refusal raised by the checks of the model reserved nothing
+                if not reached_gpu:
+                    state["gpu_calls"] = 0
+            else:
+                case_result.ok = False
+                case_result.error = "returned outputs, where it should have refused the input"
+            return case_result
 
         output = call_with_retries(run_process, time.time() + connect_timeout)
 
@@ -310,29 +359,33 @@ INPUT_KEYS = ("controls", "files", "synthesized_inputs")
 
 def merge_common_cases(common_cases: list, own_cases: list) -> list:
     """
-    Combine the common cases with a model's own, sharing /process calls.
+    Combine the common cases with those of a model, sharing /process calls.
 
     Every case costs one /process call, and on ZeroGPU each call reserves
-    allowance from a daily budget that the fleet exhausts well before it is
-    through. A common case that declares no inputs of its own asks the same
-    question of the same outputs as the model's own cases, so running it
+    allowance from a daily budget that a full run of the fleet exhausts. A
+    common case that declares no inputs of its own asks the same question of
+    the same outputs as the cases of the model, so running it
     separately buys no coverage and triples the cost: its `expect` rules and
     `validators` are merged into each own case instead.
 
     A common case that does declare inputs is a scenario in its own right and
     still runs separately, with its name namespaced for the report. It inherits
-    whatever the model's first own case sends and does not override, so a model
+    whatever the first case of the model sends and does not override, so a model
     that needs particular inputs keeps them.
 
-    A model's own settings win on a conflict, since they were written for that
+    The settings of the model win on a conflict, since they were written for that
     model specifically.
+
+    Cases expecting an error run last, whether common or belonging to the model, so
+    that a worker still loading after a restart answers a real request first
+    rather than holding up a refusal.
 
     Args:
         common_cases (list): `common_test_cases` from the configuration.
-        own_cases (list): The model's own cases, or a lone default.
+        own_cases (list): The cases of the model, or a lone default.
 
     Returns:
-        cases (list): Cases to run, scenarios first.
+        cases (list): Cases to run, scenarios first and refusals last.
     """
 
     shared_expect, shared_validators, scenarios = {}, {}, []
@@ -359,7 +412,11 @@ def merge_common_cases(common_cases: list, own_cases: list) -> list:
     merged = []
     for case in own_cases:
         case = dict(case)
-        # The model's own rules are applied over the shared ones, per output
+        # A refusal returns no outputs, so there is nothing to check in it
+        if case.get("expect_error"):
+            merged.append(case)
+            continue
+        # The rules of the model are applied over the shared ones, per output
         # for `expect` so that a shared rule on one output survives a model
         # rule on another
         expect = {label: dict(rules or {})
@@ -374,11 +431,52 @@ def merge_common_cases(common_cases: list, own_cases: list) -> list:
             case["validators"] = validators
         merged.append(case)
 
-    return scenarios + merged
+    cases = scenarios + merged
+    return ([case for case in cases if not case.get("expect_error")]
+            + [case for case in cases if case.get("expect_error")])
+
+
+def readme_problems(readme: dict | None, card: dict) -> str:
+    """
+    Where a Space's README disagrees with the model card /controls returns.
+
+    HARP lists a sleeping model on the Home tab from its README alone, and
+    shows the model card once the model is loaded, so the two have to agree.
+    docs/DEPLOYMENT.md asks for the README's tags to be the full tag list of the
+    card and its title to be the name of the card, and nothing else reconciles
+    them.
+
+    Args:
+        readme (dict | None): The README's `tags` and `title`, or None when
+            there is no README to compare (a local example).
+        card (dict): The model card from /controls.
+
+    Returns:
+        problems (str): What disagrees, or empty when the two agree.
+    """
+
+    if readme is None:
+        return ""
+
+    problems = []
+    declared, carried = set(readme.get("tags") or []), set(card.get("tags") or [])
+
+    if carried - declared:
+        problems.append(f"the README lacks the card's tags {sorted(carried - declared)}")
+    if declared - carried:
+        problems.append(f"the README declares tags the card does not carry "
+                        f"{sorted(declared - carried)}")
+
+    title, name = readme.get("title"), card.get("name")
+    if title and name and title != name:
+        problems.append(f"the README title '{title}' is not the card's name '{name}'")
+
+    return "; ".join(problems)
 
 
 def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
-                       overrides: dict, opts: argparse.Namespace) -> ModelResult:
+                       overrides: dict, opts: argparse.Namespace,
+                       readme: dict | None = None) -> ModelResult:
     """
     Verify /controls and run every configured /process test case.
 
@@ -387,10 +485,12 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
     Args:
         client (Client): Connected gradio client for the deployment.
-        result (ModelResult): Result record to fill in.
+        result (ModelResult): Result record to complete.
         assets (Assets): Synthesized input files.
-        overrides (dict): This model's entry from config.yml `overrides`.
+        overrides (dict): The entry of this model in config.yml `overrides`.
         opts (argparse.Namespace): Parsed command-line options.
+        readme (dict | None): The Space's README `tags` and `title`, checked
+            against the model card, or None for a model with no README.
 
     Returns:
         result (ModelResult): The same record, completed.
@@ -425,25 +525,57 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     result.controls_ok = True
     result.model_name = controls.get("card", {}).get("name", "")
 
+    # Free to check, so a load-only run checks it too
+    problems = readme_problems(readme, controls.get("card", {}))
+    readme_case = CaseResult(name="readme", ok=False, error=problems) if problems else None
+
     if load_only:
-        result.status = PASS
+        if readme_case:
+            result.cases.append(readme_case)
+            result.error = f"[readme] {problems}"
+        else:
+            result.status = PASS
         return result
 
     # --- /process test cases -------------------------------------------------
     # Common cases (generic, applied to every model) are merged into this
-    # model's own cases, or run beside them when they send inputs of their own
-    # (see merge_common_cases). A model can opt out with `skip_common_cases`.
+    # cases of the model, or run beside them when they send inputs of their own
+    # (see merge_common_cases). A model can opt out of all of them with
+    # `skip_common_cases: true`, or of the ones it names in a list.
     own_cases = overrides.get("test_cases") or [{"name": "default"}]
-    common_cases = ([] if overrides.get("skip_common_cases")
-                    else list(opts.common_test_cases or []))
+    skipped = overrides.get("skip_common_cases") or []
+    common_cases = ([] if skipped is True else
+                    [case for case in opts.common_test_cases or []
+                     if case.get("name") not in skipped])
     cases = merge_common_cases(common_cases, own_cases)
+
+    # A case sending an input to refuse applies only to a model that takes an
+    # input of that kind, like a "*" rule that matches no output
+    fed = fed_kinds(controls)
+    cases = [case for case in cases
+             if not (kinds := corrupted_kinds(assets, merge_specs(
+                 overrides.get("synthesized_inputs"), case.get("synthesized_inputs"))))
+             or kinds & fed]
+
+    # --cases narrows the run to the cases it names, for one run
+    wanted = getattr(opts, "cases", None)
+    if wanted:
+        cases = [case for case in cases
+                 if case.get("name") in wanted
+                 or case.get("name", "").removeprefix("common:") in wanted]
 
     for case in cases:
         result.cases.append(run_case(
             client, case, controls, assets, overrides, config_dir,
             process_timeout, connect_timeout))
 
-    if any(c.ok is False for c in result.cases):
+    if readme_case:
+        result.cases.append(readme_case)
+
+    if wanted and not result.cases:
+        result.error = f"skipped: no case named {', '.join(wanted)} applies"
+        result.status = SKIP
+    elif any(c.ok is False for c in result.cases):
         result.error = "; ".join(
             f"[{c.name}] {c.error}" for c in result.cases if c.ok is False)
         result.status = FAIL

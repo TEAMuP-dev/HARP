@@ -2,8 +2,8 @@
 Test-case handling for HARP model validation.
 
 Covers the full input/output cycle of one /process test case:
-synthesizing default inputs from a model's /controls spec, overlaying a
-configured case's control values and input files, and checking the outputs.
+synthesizing default inputs from the /controls spec of a model, overlaying the
+control values and input files of a configured case, and checking the outputs.
 The deeper output checks live alongside: expectations.py for the declarative
 per-output `expect` rules and validators.py for the custom validators.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from gradio_client import handle_file
 
-from assets import Assets
+from assets import Assets, input_kind
 from audio import read_audio_props
 from expectations import FILE_TYPES, resolve_expect_targets, check_expectations
 from midi import read_midi_props
@@ -23,10 +23,50 @@ from validators import VALIDATORS, ValidatorNotApplicable
 __all__ = [
     'synthesize_default_args',
     'apply_case',
+    'fed_kinds',
+    'generated_text',
     'validate_outputs',
     'inspect_outputs',
     'measure_outputs'
 ]
+
+
+# The text a control asking for {text_length: N} is filled from, repeated and
+# cut to N characters. It is the sentence the speech asset reads.
+TEXT_FILLER = ("Every morning, the small bakery on the corner opens at seven. The smell "
+               "of fresh bread drifts down the street, and a short line forms outside "
+               "the door. ")
+
+
+def generated_text(length: int) -> str:
+    """
+    English text of an exact length, for a case testing the text limit of a model.
+
+    Args:
+        length (int): Number of characters.
+
+    Returns:
+        text (str): TEXT_FILLER repeated and cut to that length.
+    """
+
+    return (TEXT_FILLER * (length // len(TEXT_FILLER) + 1))[:length]
+
+
+def fed_kinds(controls: dict) -> set:
+    """
+    The media kinds the harness synthesizes for the required inputs of a model.
+
+    Optional inputs are left empty, so they take neither kind.
+
+    Args:
+        controls (dict): The /controls payload.
+
+    Returns:
+        kinds (set): Any of "audio" and "midi".
+    """
+
+    return {kind for spec in controls.get("inputs", [])
+            if spec.get("required", True) and (kind := input_kind(spec))}
 
 
 def synthesize_default_args(controls: dict, assets: Assets,
@@ -36,7 +76,7 @@ def synthesize_default_args(controls: dict, assets: Assets,
 
     Args:
         controls (dict): The /controls payload (card, inputs, outputs).
-        assets (Assets): Synthesized input files to draw from.
+        assets (Assets): Synthesized input files from which to draw.
         synth (dict | None): Merged `synthesized_inputs` block controlling the
             properties of the generated inputs (see config.yml).
 
@@ -55,8 +95,8 @@ def synthesize_default_args(controls: dict, assets: Assets,
         required = spec.get("required", True)
 
         if ctype in FILE_TYPES:
-            # Optional file inputs are left unsupplied, exercising the model's
-            # own handling of their absence
+            # Optional file inputs are left unsupplied, exercising how the model
+            # handles their absence
             if not required:
                 args.append(None)
                 continue
@@ -112,7 +152,8 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
         args (list): Default arguments from synthesize_default_args().
         controls (dict): The /controls payload, used to match labels.
         case (dict): Test case entry from config.yml. May contain:
-            controls: {<input label>: <value>}, overriding scalar values.
+            controls: {<input label>: <value>}, overriding scalar values. A
+                value of {text_length: N} sends N characters of English text.
             files: {<input label>: <path>}, overriding track/file inputs
                 (paths relative to config.yml).
         config_dir (Path): Directory containing config.yml, the base for
@@ -140,6 +181,8 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
         return labels.index(label)
 
     for label, value in (case.get("controls") or {}).items():
+        if isinstance(value, dict) and "text_length" in value:
+            value = generated_text(value["text_length"])
         args[index_of(label)] = value
 
     for label, rel_path in (case.get("files") or {}).items():
@@ -290,6 +333,9 @@ def measure_outputs(result, controls: dict) -> dict:
             observed[label] = {"error": f"{type(exc).__name__}: {exc}"[:200]}
             continue
         props["ext"] = os.path.splitext(value)[1].lower() or None
+        if "clipping" in props:
+            props["clipping"] = round(props["clipping"], 6)
+            props["peak_db"] = round(props["peak_db"], 2)
         observed[label] = {k: v for k, v in props.items() if v is not None}
 
     return observed
@@ -297,7 +343,7 @@ def measure_outputs(result, controls: dict) -> dict:
 
 def inspect_outputs(result, controls: dict, case: dict) -> None:
     """
-    Apply a test case's deeper output checks.
+    Apply the deeper output checks of a test case.
 
     These are its `expect` rules, which are declarative and per output (see
     expectations.py), and its `validators`, which are custom Python for
@@ -331,5 +377,5 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
             VALIDATORS[name](out_map, controls, params or {})
         except ValidatorNotApplicable:
             # The model lacks the outputs this validator needs, so skip it. A
-            # common case's validator must not fail models it does not fit.
+            # validator of a common case must not fail models it does not fit.
             continue

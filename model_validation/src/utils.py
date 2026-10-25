@@ -21,6 +21,7 @@ __all__ = [
     'load_config',
     'config_levels',
     'check_config_keys',
+    'check_config_values',
     'check_model_names',
     'qualify',
     'qualify_keys',
@@ -36,9 +37,10 @@ __all__ = [
 CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases",
                "synthesized_inputs", "overrides"}
 MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
-              "skip_common_cases", "synthesized_inputs", "test_cases"}
+              "skip_common_cases", "synthesized_inputs", "test_cases",
+              "lint_exceptions"}
 CASE_KEYS = {"name", "process_timeout", "controls", "files",
-             "synthesized_inputs", "expect", "validators"}
+             "synthesized_inputs", "expect", "validators", "expect_error"}
 
 # The settings each kind of configuration level accepts (see config_levels)
 LEVEL_KEYS = {"config": CONFIG_KEYS, "model": MODEL_KEYS, "case": CASE_KEYS}
@@ -49,12 +51,12 @@ def qualify(model: str, owner: str) -> str:
     Expand a bare model name using the owner of the tier being validated.
 
     Used for the names that can refer to either tier, which are `--exclude`
-    and the config's `exclude`, `include_extra`, and `overrides` keys. Only
-    one tier runs per invocation, so a bare name is unambiguous. It means
-    the organization's space on a spaces run and the like-named example on
-    an examples run. A name that already carries an owner is returned
+    and the `exclude`, `include_extra`, and `overrides` keys of the config.
+    Only one tier runs per invocation, so a bare name is unambiguous. It means
+    the space of the organization on a spaces run and the like-named example
+    on an examples run. A name that already carries an owner is returned
     unchanged, pinning it to one tier. (`--spaces` names only spaces and
-    `--local-examples` only examples, so neither takes the other's form.)
+    `--local-examples` only examples, so neither takes the form of the other.)
 
     Args:
         model (str): A space id, bare model name, or example key.
@@ -70,7 +72,7 @@ def qualify(model: str, owner: str) -> str:
 
 def next_in_chain(exc: BaseException) -> BaseException | None:
     """
-    The next exception to report from an exception's chain.
+    The next exception to report from the chain of an exception.
 
     An explicit `raise ... from <cause>` wins, and `raise ... from None`
     suppresses the implicit context, so a deliberately replaced error is not
@@ -150,7 +152,7 @@ def get_token(required: bool) -> str:
 
 def has_write_access(info: dict, org: str) -> bool | None:
     """
-    Whether a token can write to an organization's spaces.
+    Whether a token can write to the spaces of an organization.
 
     Args:
         info (dict): The `whoami` payload describing the token.
@@ -160,7 +162,7 @@ def has_write_access(info: dict, org: str) -> bool | None:
         allowed (bool | None): True or False when the token says plainly, and
             None when it does not. A fine-grained token lists its permissions
             per entity and the shapes vary, so one that says nothing about
-            this organization is reported as unknown rather than guessed at.
+            this organization is reported as unknown rather than guessed.
     """
 
     access = (info.get("auth") or {}).get("accessToken") or {}
@@ -172,8 +174,8 @@ def has_write_access(info: dict, org: str) -> bool | None:
         return False
 
     # A fine-grained token lists permissions per entity, so the entry for this
-    # organization is the one that decides. Its own account's entry says
-    # nothing about the organization's spaces, unless the two are the same.
+    # organization is the one that decides. The entry of its own account says
+    # nothing about the spaces of the organization, unless the two are the same.
     for entry in (access.get("fineGrained") or {}).get("scoped") or []:
         if ((entry.get("entity") or {}).get("name")) == org:
             # Restarting a space is a repo write. Other write permissions a
@@ -191,7 +193,7 @@ def check_token(token: str, org: str, need_write: bool) -> bool:
     One `whoami` call answers both questions. A rejected token is fatal, since
     every request the run makes would fail the same way. Lacking write access
     is not fatal, since only the restart of a crashed space needs it, so that
-    is reported as a warning naming the flag that turns restarts off.
+    is reported as a warning naming the flag that disables restarts.
 
     Args:
         token (str): The Hugging Face access token.
@@ -253,7 +255,7 @@ def run_with_timeout(fn, timeout: float, what: str):
 
     Args:
         fn (callable): Zero-argument function to execute.
-        timeout (float): Seconds to wait before giving up.
+        timeout (float): Seconds to wait before raising.
         what (str): Short description used in the timeout message.
 
     Returns:
@@ -374,9 +376,9 @@ def config_levels(config: dict):
     """
     Walk every level of the configuration that accepts settings.
 
-    The levels are the top of the file, each common test case, each model's
-    `overrides` entry, and each of that model's test cases. This is the one
-    statement of the configuration's shape: every check that inspects all
+    The levels are the top of the file, each common test case, the `overrides`
+    entry of each model, and each test case of that model. This is the one
+    statement of the shape of the configuration: every check that inspects all
     levels iterates this walk, so a new level is added here and reaches
     them all.
 
@@ -384,7 +386,7 @@ def config_levels(config: dict):
         config (dict): Parsed configuration.
 
     Yields:
-        where (str): Where the level's settings were written, for reporting.
+        where (str): Where the settings of the level were written, for reporting.
         level (str): The kind of level, a key of LEVEL_KEYS.
         mapping (dict | None): The settings written at that level.
     """
@@ -420,6 +422,59 @@ def check_config_keys(config: dict) -> None:
 
     for where, level, mapping in config_levels(config):
         check_keys(mapping, LEVEL_KEYS[level], where)
+
+
+def check_config_values(config: dict) -> None:
+    """
+    Reject settings whose key is valid but on whose value nothing can act.
+
+    These are the forms read by more than one module: a case expecting an
+    error, a model opting out of some common cases, and a control value that
+    asks for generated text.
+
+    Args:
+        config (dict): Parsed configuration.
+
+    Raises:
+        ValueError: If a value has the wrong form, or names nothing.
+    """
+
+    common = {(case or {}).get("name") for case in config.get("common_test_cases") or []}
+
+    for where, level, mapping in config_levels(config):
+        mapping = mapping or {}
+
+        if level == "case" and "expect_error" in mapping:
+            expected = mapping["expect_error"]
+            if not (expected is True or (isinstance(expected, str) and expected.strip())):
+                raise ValueError(f"expect_error in {where} must be true, or text the "
+                                 f"error message has to contain")
+            clashing = [key for key in ("expect", "validators") if mapping.get(key)]
+            if clashing:
+                raise ValueError(f"{where} expects an error, so there are no outputs for "
+                                 f"its {' and '.join(clashing)} to check")
+
+        if level == "case":
+            for label, value in (mapping.get("controls") or {}).items():
+                if isinstance(value, dict) and not (
+                        set(value) == {"text_length"}
+                        and isinstance(value["text_length"], int)
+                        and not isinstance(value["text_length"], bool)
+                        and value["text_length"] > 0):
+                    raise ValueError(f"control '{label}' in {where} is a mapping, which is "
+                                     f"read only as {{text_length: <characters>}}")
+
+        if level == "model":
+            skipped = mapping.get("skip_common_cases", False)
+            if isinstance(skipped, list):
+                unknown = sorted(set(skipped) - common)
+                if unknown:
+                    raise ValueError(f"skip_common_cases in {where} names {unknown}, which "
+                                     f"are not common test cases (available: "
+                                     f"{sorted(name for name in common if name)})")
+            elif not isinstance(skipped, bool):
+                raise ValueError(f"skip_common_cases in {where} must be true, or a list "
+                                 f"of the common test cases to skip")
 
 
 def check_model_names(config: dict, *cli_names) -> None:
@@ -462,10 +517,10 @@ def check_model_names(config: dict, *cli_names) -> None:
 
 def qualify_keys(overrides: dict, owner: str) -> dict:
     """
-    Re-key the config's `overrides` block by qualified model name.
+    Re-key the `overrides` block of the config by qualified model name.
 
     Args:
-        overrides (dict): The config's `overrides` block.
+        overrides (dict): The `overrides` block of the config.
         owner (str): Owner to assume for bare names (see qualify).
 
     Returns:
@@ -473,7 +528,7 @@ def qualify_keys(overrides: dict, owner: str) -> dict:
 
     Raises:
         ValueError: If two keys resolve to the same model, which would
-            otherwise silently discard one model's settings.
+            otherwise silently discard the settings of one model.
     """
 
     qualified = {}
@@ -491,10 +546,10 @@ def qualify_keys(overrides: dict, owner: str) -> dict:
 @dataclasses.dataclass(frozen=True)
 class Exclusions:
     """
-    The models to leave out, kept apart by which selections they apply to.
+    The models to exclude, kept apart by the selections to which they apply.
 
     A config `exclude` entry is a standing decision about a model, so it
-    applies to whatever discovery turns up. Naming a model on the command line
+    applies to whatever discovery finds. Naming a model on the command line
     is a more specific instruction and overrides it, since asking for a model
     by name is unambiguous about wanting it. An `--exclude` on that same
     command line is equally specific, so it still applies.
@@ -513,7 +568,7 @@ class Exclusions:
                 rather than found by discovery.
 
         Returns:
-            excluded (bool): True when the model should be left out.
+            excluded (bool): True when the model is excluded.
         """
 
         return model in self.cli or (not named and model in self.config)
@@ -547,7 +602,7 @@ def discover_spaces(api, org: str, config: dict, exclusions: Exclusions) -> list
         org (str): Organization whose spaces are discovered.
         config (dict): Parsed configuration (`include_extra` adds spaces
             outside the organization).
-        exclusions (Exclusions): Models to leave out. These spaces are found
+        exclusions (Exclusions): Models to exclude. These spaces are found
             rather than named, so every exclusion applies.
 
     Returns:

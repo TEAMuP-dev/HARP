@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-# Stages a space can be talked to from: RUNNING serves immediately, SLEEPING
+# Stages in which a space answers requests: RUNNING serves immediately, SLEEPING
 # wakes on the first request
 SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
 # Stages that resolve on their own if we wait. SLEEPING is not one of them,
@@ -38,7 +38,7 @@ SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
 # waiting it out validates the revision just deployed
 TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING",
                     "RUNNING_APP_STARTING"}
-# Stages a restart can recover from. DELETING is excluded, as there is
+# Stages from which a restart can recover. DELETING is excluded, as there is
 # nothing left to restart
 RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",
                       "STOPPED", "PAUSED"}
@@ -49,12 +49,12 @@ TOKEN_KWARG = ("token"
                if "token" in inspect.signature(Client.__init__).parameters
                else "hf_token")
 
-RUNTIME_POLL_INTERVAL = 10   # cadence for polling a space's runtime stage
+RUNTIME_POLL_INTERVAL = 10   # cadence for polling the runtime stage of a space
 WAKE_MIN_TIMEOUT = 60        # never give a wake request less than this
 WAKE_ATTEMPTS = 3            # asks before giving up on a space that stays asleep
 CONNECT_RESERVE = 60         # budget held back from the wake, to connect with
 
-# How much of a failed space's run log the report carries, and for how long it
+# How much of the run log of a failed space the report carries, and for how long it
 # is read. The log is a live stream that never ends, so it is read for a fixed
 # time: Hugging Face replays the recent history first, then waits for more.
 LOG_TAIL_LINES = 25
@@ -70,12 +70,12 @@ LOG_NOISE = ("Invalid file descriptor", "BaseEventLoop.__del__", "Exception igno
 def wait_for_runtime(api, space_id: str, deadline: float,
                      unsettled: set = TRANSIENT_STAGES):
     """
-    Poll a space's runtime until its stage settles or the deadline passes.
+    Poll the runtime of a space until its stage settles or the deadline passes.
 
     Args:
         api (HfApi): Authenticated Hugging Face API client.
         space_id (str): The space to poll.
-        deadline (float): time.time() value to stop polling at.
+        deadline (float): time.time() value at which to stop polling.
         unsettled (set): Stages still considered to be in progress. SLEEPING
             belongs here only once the space has been asked to start, since
             otherwise it would never resolve.
@@ -95,7 +95,7 @@ def wait_for_runtime(api, space_id: str, deadline: float,
 
 def resolve_host(api, space_id: str) -> tuple:
     """
-    Look up the URL a space serves from.
+    Look up the URL from which a space serves.
 
     Kept apart from the wake request itself so a caller retrying the wake can
     reuse a host it already resolved, since the host does not change within
@@ -103,14 +103,14 @@ def resolve_host(api, space_id: str) -> tuple:
 
     Args:
         api (HfApi): Authenticated Hugging Face API client.
-        space_id (str): The space to look up.
+        space_id (str): The space whose host to find.
 
     Returns:
-        host (str | None): The space's host URL, or None when the lookup
+        host (str | None): The host URL of the space, or None when the lookup
             failed.
         problem (str): Why the lookup failed, or empty. A failed lookup means
             no wake request can go out at all, which is the difference between
-            a space that would not start and one that was never asked to.
+            a space that would not start and one that was never asked.
     """
 
     try:
@@ -119,23 +119,35 @@ def resolve_host(api, space_id: str) -> tuple:
         return None, f"could not look up its host: {describe_exception(exc)}"
 
 
-def declared_tags(api, space_id: str) -> list:
+def space_metadata(api, space_id: str) -> tuple:
     """
-    The tags in a space's README.
+    Look up the host of a space and the tags and title in its README at once.
+
+    One request serves both the wake, which needs the host, and the README
+    check, so a run makes one fewer call to the Hub per space, which matters
+    late in a run, when the Hub starts to rate-limit it.
 
     Args:
         api (HfApi): Authenticated Hugging Face API client.
-        space_id (str): The space to look up.
+        space_id (str): The space whose host and README to read.
 
     Returns:
-        tags (list): The declared tags, or an empty list when the lookup fails.
+        host (str | None): The host URL of the space, or None when the lookup
+            failed, in which case the wake resolves it again.
+        readme (dict | None): Its `tags` (a list) and `title`, or None when
+            the lookup failed, so that nothing is compared against a README
+            that was never read.
     """
 
     try:
-        card = api.space_info(space_id).card_data
-        return list(getattr(card, "tags", None) or [])
-    except Exception:  # noqa: BLE001 - no tags is the safe reading
-        return []
+        info = api.space_info(space_id)
+    except Exception:  # noqa: BLE001 - nothing to compare is the safe reading
+        return None, None
+
+    card = info.card_data
+
+    return info.host, {"tags": list(getattr(card, "tags", None) or []),
+                       "title": getattr(card, "title", None)}
 
 
 def wake_space(host: str, timeout: float) -> tuple:
@@ -144,13 +156,13 @@ def wake_space(host: str, timeout: float) -> tuple:
 
     Hugging Face holds a request to a sleeping space open while the app comes
     up, answering it once the app serves, so one request both triggers the
-    start and waits it out. The timeout therefore has to cover a cold start of
+    start and waits for it. The timeout therefore has to cover a cold start of
     a minute or more. gradio_client cannot be used for this, since it fetches
     the config with httpx's 5 second default and abandons the request long
     before the space can answer.
 
     Args:
-        host (str): The space's host URL (see resolve_host).
+        host (str): The host URL of the space (see resolve_host).
         timeout (float): Seconds to hold the request open.
 
     Returns:
@@ -174,7 +186,7 @@ def wake_space(host: str, timeout: float) -> tuple:
         return False, f"the wake request failed: {describe_exception(exc)}"
 
 
-def start_space(api, space_id: str, deadline: float) -> tuple:
+def start_space(api, space_id: str, deadline: float, host: str | None = None) -> tuple:
     """
     Get a sleeping space started.
 
@@ -186,15 +198,16 @@ def start_space(api, space_id: str, deadline: float) -> tuple:
     Args:
         api (HfApi): Authenticated Hugging Face API client.
         space_id (str): The space to start.
-        deadline (float): time.time() value to stop asking at.
+        deadline (float): time.time() value at which to stop asking.
+        host (str | None): The host URL of the space, when already known, or
+            None to resolve it here.
 
     Returns:
-        stage (str): Where the space ended up.
+        stage (str): The stage the space reached.
         problem (str): The last reason an ask could not be made, or empty.
     """
 
     problem = ""
-    host = None
 
     for attempt in range(WAKE_ATTEMPTS):
         remaining = deadline - time.time()
@@ -226,7 +239,7 @@ def start_space(api, space_id: str, deadline: float) -> tuple:
 
 def current_stage(api, space_id: str, fallback: str) -> str:
     """
-    Read a space's stage for reporting, falling back to what we last saw.
+    Read the stage of a space for reporting, falling back to what we last saw.
 
     Args:
         api (HfApi): Authenticated Hugging Face API client.
@@ -245,9 +258,9 @@ def current_stage(api, space_id: str, fallback: str) -> str:
 
 def recent_log_lines(space_id: str, token: str) -> list:
     """
-    Read the end of a space's run log, for the report on a failure.
+    Read the end of the run log of a space, for the report on a failure.
 
-    A failure's cause is usually a traceback in the space's own log rather
+    The cause of a failure is usually a traceback in the log of the space itself rather
     than anything the API returns, so the report carries the lines logged
     since the app last started, without the shutdown noise.
 
@@ -299,7 +312,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         token (str): Hugging Face access token.
         assets (Assets): Synthesized input files.
         opts (argparse.Namespace): Parsed command-line options.
-        overrides (dict): This space's entry from config.yml `overrides`.
+        overrides (dict): The entry of this space in config.yml `overrides`.
         quota_exhausted (threading.Event | None): Shared flag. When set,
             ZeroGPU models are skipped, and this model sets it if its own run
             reveals the allowance is exhausted.
@@ -331,10 +344,11 @@ def test_space(space_id: str, token: str, assets: Assets,
         deadline = time.time() + connect_timeout
         runtime = follow_runtime(deadline)
         stage = runtime.stage
-        # requested_hardware reflects the space's configuration even while
+        # requested_hardware reflects the configuration of the space even while
         # it is sleeping or stopped (hardware itself is only set when live)
         result.hardware = runtime.requested_hardware or runtime.hardware or ""
-        tags = declared_tags(api, space_id)
+        host, readme = space_metadata(api, space_id)
+        tags = (readme or {}).get("tags") or []
         zerogpu = result.zerogpu = spends_zerogpu(result.hardware, tags)
         # Hardware is occasionally unreported for a sleeping or starting space.
         # Throttle those as if they were ZeroGPU: being wrong only costs run
@@ -376,7 +390,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         wake_problem = ""
         if stage == "SLEEPING":
             stage, wake_problem = start_space(api, space_id,
-                                              deadline - CONNECT_RESERVE)
+                                              deadline - CONNECT_RESERVE, host)
             result.stage = stage
         if stage == "SLEEPING" and wake_problem:
             # A space stuck this way does not answer requests, so fall back to
@@ -452,7 +466,7 @@ def test_space(space_id: str, token: str, assets: Assets,
                 result.error = "skipped: ZeroGPU allowance already exhausted this run"
                 return result
 
-            run_endpoint_tests(client, result, assets, overrides, opts)
+            run_endpoint_tests(client, result, assets, overrides, opts, readme)
 
         # If a ZeroGPU model failed because the allowance is gone, trip the
         # guard so the remaining ZeroGPU models are skipped

@@ -16,7 +16,7 @@ parameters nested beneath the name:
         test_cases:
           - name: labels-line-up
             validators:
-              labels_within_audio:
+              labels_within_tracks:
                 tolerance: 0.1
 
 Each validator receives:
@@ -24,8 +24,8 @@ Each validator receives:
         a local filesystem path downloaded by gradio_client. A JSON output
         (e.g. a pyharp LabelList) is the decoded object (dict/list) or None.
     controls (dict): the full /controls payload (card, inputs, outputs).
-    params (dict): the parameters nested under this validator's name, keeping
-        its settings separate from the test case's own fields.
+    params (dict): the parameters nested under the name of this validator,
+        keeping its settings separate from the fields of the test case.
 
 Validators signal failure by raising AssertionError. The message should name
 the output at fault and say what was wrong with it.
@@ -35,7 +35,9 @@ import json
 import math
 from pathlib import Path
 
+from assets import input_kind
 from audio import read_audio_props
+from midi import read_midi_props
 
 
 __all__ = [
@@ -78,10 +80,10 @@ def validator(name):
 
 def json_file(outputs, label):
     """
-    Read a model's JSON file output.
+    Read the JSON file output of a model.
 
     Every failure here is reported as an AssertionError naming the output,
-    since a malformed result is the model's fault and has to read as one. A
+    since a malformed result is the fault of the model and has to read as one. A
     missing label is the exception: the model no longer has the output this
     validator was written for, which is a configuration mistake.
 
@@ -122,14 +124,14 @@ def json_file(outputs, label):
 
 def entry(mapping, key, label):
     """
-    Read a required key out of a model's decoded result.
+    Read a required key out of the decoded result of a model.
 
     A model that stops returning a field is reporting a different result than
     the one it is validated against, so the absence is asserted rather than
     left to raise a KeyError that names only the key.
 
     Args:
-        mapping (dict): The decoded object to read from.
+        mapping (dict): The decoded object from which to read.
         key (str): The key the result must carry.
         label (str): What the mapping describes, for the error message.
 
@@ -170,7 +172,7 @@ def merit_scores(outputs, controls, params):
     """
     Check the three similarity scores in MERIT's result file.
 
-    Each is a cosine similarity, so the range is the model's own contract
+    Each is a cosine similarity, so the range is the contract of the model itself
     rather than a threshold on how similar the two inputs happen to be.
 
     Raises:
@@ -271,7 +273,59 @@ def audio_decodes(outputs, controls, params):
         raise ValidatorNotApplicable("no audio output to decode")
 
 
-# The output types HARP draws labels over. A label output on its own has
+@validator("declared_format")
+def declared_format(outputs, controls, params):
+    """
+    Assert a model that takes no audio declares the format of the audio it returns.
+
+    docs/DEPLOYMENT.md asks a model to declare SampleRate and Channels whenever
+    it is fixed to one, since nothing can infer them and a user choosing a
+    model for a session reads them. A model given no audio has nothing to
+    follow, so the format of what it returns is its own, and is both what the
+    card has to declare and what checks the declaration. A model that is given
+    audio may return the format of the input instead, as the format assertions
+    require, which says nothing about the format of the model itself.
+
+    Raises:
+        AssertionError: If the card declares no sample rate or channel count,
+            or declares ones the audio does not have.
+        ValidatorNotApplicable: If the model takes audio or returns none.
+    """
+
+    if any(input_kind(spec) == "audio" for spec in controls.get("inputs", [])):
+        raise ValidatorNotApplicable("the model takes audio, so returns its format")
+
+    audio_labels = [spec.get("label") for spec in controls.get("outputs", [])
+                    if spec.get("type") == "audio_track"
+                    and isinstance(outputs.get(spec.get("label")), str)]
+    if not audio_labels:
+        raise ValidatorNotApplicable("no audio output")
+
+    tags = (controls.get("card") or {}).get("tags") or []
+    declared = {key: value for key, _, value in (tag.partition(":") for tag in tags)
+                if key in ("sample-rate", "channels")}
+    channel_names = {1: "mono", 2: "stereo"}
+
+    for label in audio_labels:
+        props = read_audio_props(label, outputs[label])
+        rate = str(props["sample_rate"])
+        channels = channel_names.get(props["num_channels"], str(props["num_channels"]))
+
+        assert "sample-rate" in declared, \
+            (f"'{label}' is {rate} Hz audio, made from no audio input, but the card "
+             f"declares no sample rate. Add SampleRate({rate}) to its tags")
+        assert declared["sample-rate"] == rate, \
+            (f"'{label}' is {rate} Hz audio, but the card declares "
+             f"sample-rate:{declared['sample-rate']}")
+        assert "channels" in declared, \
+            (f"'{label}' is {channels} audio, made from no audio input, but the card "
+             f"declares no channel count. Add Channels({props['num_channels']}) to its tags")
+        assert declared["channels"] == channels, \
+            (f"'{label}' is {channels} audio, but the card declares "
+             f"channels:{declared['channels']}")
+
+
+# The output types over which HARP draws labels. A label output on its own has
 # nowhere to appear.
 FILE_OUTPUT_TYPES = {"audio_track", "midi_track", "generic_file"}
 
@@ -290,7 +344,7 @@ def labels_reach_harp(outputs, controls, params):
 
     Raises:
         AssertionError: If a JSON output is not a LabelList, or the model
-            returns labels with no output to draw them over.
+            returns labels with no output over which to draw them.
         ValidatorNotApplicable: If the model has no JSON output.
     """
 
@@ -315,40 +369,44 @@ def labels_reach_harp(outputs, controls, params):
             f"'{label}' is a LabelList without a list of labels"
 
 
-@validator("labels_within_audio")
-def labels_within_audio(outputs, controls, params):
+@validator("labels_within_tracks")
+def labels_within_tracks(outputs, controls, params):
     """
-    Assert every returned label falls inside the audio output's timespan.
+    Assert every returned label falls inside the track over which HARP draws it.
 
-    This check warrants a validator rather than an `expect` rule because it
-    relates two different outputs to each other, which no per-output property
-    comparison can express.
+    HARP draws an AudioLabel over an audio output and a MidiLabel over a MIDI
+    output, so each is held to the length of a track of its kind, and a label
+    of any other kind to whichever track the model returns. This check warrants
+    a validator rather than an `expect` rule because it relates two different
+    outputs to each other, which no per-output property comparison can express.
 
     Params:
-        tolerance (float): seconds a label may exceed the audio duration
-            before it is treated as out of bounds (default 0.05).
+        tolerance (float): seconds a label may exceed the track before it is
+            treated as out of bounds (default 0.05).
 
     Raises:
-        AssertionError: If a label lies outside the audio output.
-        ValidatorNotApplicable: If the model has no audio output or no
-            LabelList output for the comparison.
+        AssertionError: If a label lies outside its track.
+        ValidatorNotApplicable: If the model has no audio or MIDI output, or no
+            LabelList output, for the comparison.
     """
 
     tolerance = params.get("tolerance", 0.05)
+    readers = {"audio_track": read_audio_props, "midi_track": read_midi_props}
+    kinds = {"AudioLabel": "audio_track", "MidiLabel": "midi_track"}
+    names = {"audio_track": "audio", "midi_track": "MIDI"}
 
-    # Identify the audio output from the component spec rather than by file
-    # extension, since models may return any format soundfile can decode
-    audio_labels = [spec.get("label") for spec in controls.get("outputs", [])
-                    if spec.get("type") == "audio_track"]
-
-    duration = None
-    for label in audio_labels:
-        value = outputs.get(label)
-        if isinstance(value, str):
-            duration = read_audio_props(label, value)["duration"]
-            break
-    if duration is None:
-        raise ValidatorNotApplicable("no audio output to compare labels against")
+    # The length of the first readable output of each kind, found from the
+    # component spec rather than by file extension, since a model may return
+    # any format soundfile can decode
+    durations = {}
+    for spec in controls.get("outputs", []):
+        otype, value = spec.get("type"), outputs.get(spec.get("label"))
+        if otype in readers and otype not in durations and isinstance(value, str):
+            duration = readers[otype](spec.get("label"), value)["duration"]
+            if duration is not None:
+                durations[otype] = duration
+    if not durations:
+        raise ValidatorNotApplicable("no audio or MIDI output to compare labels against")
 
     checked = False
     for label, value in outputs.items():
@@ -356,14 +414,17 @@ def labels_within_audio(outputs, controls, params):
             continue
         checked = True
         for entry in value["labels"]:
-            start = entry.get("t", 0.0)
-            end = start + entry.get("duration", 0.0)
+            track = kinds.get(entry.get("label_type"))
+            track = track if track in durations else next(iter(durations))
+            duration, kind = durations[track], names[track]
+            start = entry.get("t") or 0.0
+            end = start + (entry.get("duration") or 0.0)
             assert -tolerance <= start <= duration + tolerance, \
                 (f"'{label}': label \"{entry.get('label')}\" starts at {start:.2f}s, "
-                 f"outside the {duration:.2f}s audio output")
+                 f"outside the {duration:.2f}s {kind} output")
             assert end <= duration + tolerance, \
                 (f"'{label}': label \"{entry.get('label')}\" ends at {end:.2f}s, "
-                 f"past the {duration:.2f}s audio output")
+                 f"past the {duration:.2f}s {kind} output")
 
     if not checked:
         raise ValidatorNotApplicable("no pyharp LabelList output to check")

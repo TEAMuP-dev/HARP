@@ -59,7 +59,7 @@ macOS requires two separate things of a downloaded app, and the credentials cove
 Uploading to the notary service requires signing in to Apple as a member of the developer team that
 signed the app. The certificate alone is not enough. Apple Accounts require two-factor
 authentication, which an automated build cannot complete, so Apple issues an _app-specific
-password_ for this purpose in place of the account's real password.
+password_ for this purpose in place of the real password of the account.
 
 | Secret | Contents | Used For |
 |---|---|---|
@@ -84,8 +84,8 @@ The membership belongs to that person, and Apple transfers one only in exception
 when they leave the project, a successor has to enroll separately and replace the credentials (see
 [Renewing and Handing Off](#renewing-and-handing-off)).
 
-**Organization memberships outlive any one person's involvement.** The certificate carries the
-organization's name, and the team can have several members with different
+**Organization memberships outlive the involvement of any one person.** The certificate carries the
+name of the organization, and the team can have several members with different
 [roles](https://developer.apple.com/help/account/manage-your-team/roles/). The requirements are
 stricter (see [Apple's enrollment page](https://developer.apple.com/programs/enroll/)):
 
@@ -109,7 +109,7 @@ existing certificates carry over before relying on them.
 
 A university, or another institution hosting a project, may already have an organization
 membership. Its Account Holder would have to create the certificate, and since a Developer ID
-certificate can sign anything in the institution's name, they may be reluctant to hand out its
+certificate can sign anything in the name of the institution, they may be reluctant to hand out its
 `.p12` file.
 
 ### Setting Up
@@ -122,7 +122,7 @@ on the same Mac, since the private key is created there and never leaves it unti
    agreement is outstanding.
 2. Open Keychain Access (with Spotlight, since recent versions of macOS no longer list it in the
    Utilities folder) and choose Keychain Access → Certificate Assistant → Request a Certificate From
-   a Certificate Authority. Enter the account's email address and select "Saved to disk".
+   a Certificate Authority. Enter the email address of the account and select "Saved to disk".
 3. As the Account Holder, open the
    [new certificate page](https://developer.apple.com/account/resources/certificates/add), choose
    **Developer ID Application** with the G2 Sub-CA, and upload the request. Download the certificate
@@ -204,7 +204,7 @@ Either way:
   that made the request, so downloading the certificate again does not restore it. Import a `.p12`
   file exported from that Mac, if one exists. Otherwise, delete the certificate from the keychain
   and make a new request and certificate. The old certificate is unusable without its key, so leave
-  it to expire rather than revoking it. It still counts toward the team's limit of five, and
+  it to expire rather than revoking it. It still counts toward the limit of five per team, and
   [Developer Program Support](https://developer.apple.com/contact/) can help if that limit is
   reached.
 - **No Developer ID Application option:** the membership is not active yet, or the signed-in user
@@ -268,8 +268,8 @@ subscription, since free, trial, and sponsored subscriptions are not supported.
 government-issued ID with Microsoft Authenticator, and the certificate names them. The Azure billing
 account has to be of type Individual, with a legal name and address that match the ID.
 
-**Organization validation outlives any one person's involvement.** The certificate carries the
-organization's legal name, and other people can be given access to the Azure resources. The
+**Organization validation outlives the involvement of any one person.** The certificate carries the
+legal name of the organization, and other people can be given access to the Azure resources. The
 requirements are stricter (see
 [Microsoft's quickstart](https://learn.microsoft.com/azure/artifact-signing/quickstart)):
 
@@ -289,8 +289,8 @@ requirements are stricter (see
   protected folder, so a DAW that launches HARP by its path would have to use the app execution
   alias the Store creates instead.
 - **SignPath Foundation** signs open-source projects for free, with a certificate issued to SignPath
-  Foundation, a manual approval for every release, and a code signing policy on the project's home
-  page. Its [terms](https://signpath.org/terms) exclude projects with any component under commercial
+  Foundation, a manual approval for every release, and a code signing policy on the home page of the
+  project. Its [terms](https://signpath.org/terms) exclude projects with any component under commercial
   dual licensing, which includes JUCE (AGPLv3 or commercial).
 
 ### Setting Up
@@ -298,7 +298,7 @@ requirements are stricter (see
 These steps are the same for a first setup and a handoff to a different individual or organization.
 
 1. Create an [Azure](https://portal.azure.com) account with a pay-as-you-go subscription. For an
-   individual certificate, check that the billing account's legal name and address match a
+   individual certificate, check that the legal name and address of the billing account match a
    government-issued ID.
 2. Under Subscriptions → (the subscription) → Settings → Resource providers, select
    `Microsoft.CodeSigning` and choose **Register**.
@@ -316,8 +316,8 @@ These steps are the same for a first setup and a handoff to a different individu
 7. Create credentials for the workflow under Microsoft Entra ID → App registrations → **New
    registration**. Note the Application (client) ID and Directory (tenant) ID, then create a client
    secret under Certificates & secrets and copy its value, which is shown only once.
-8. In the signing account's Access control (IAM), assign the **Artifact Signing Certificate Profile
-   Signer** role to the app registration.
+8. Under Access control (IAM) of the signing account, assign the **Artifact Signing Certificate
+   Profile Signer** role to the app registration.
 9. Set the three secrets and three variables listed under [Artifact Signing](#artifact-signing).
 10. Push a commit, download the Windows package from the workflow run, and check `HARP.exe` in
     PowerShell:
@@ -377,7 +377,7 @@ Either way:
   IDs, and whether the client secret has expired.
 - **Signing fails with `403`:** the app registration does not have the Artifact Signing Certificate
   Profile Signer role, the account or profile name is wrong, the endpoint does not match the
-  account's region, or the identity validation or certificate profile is not active.
+  region of the account, or the identity validation or certificate profile is not active.
 - **SmartScreen still warns about a signed release:** SmartScreen judges each file by its own
   download history, so the warning stops once a release has been downloaded enough. A file that
   keeps triggering it can be submitted to [Microsoft Security Intelligence](https://www.microsoft.com/wdsi)

@@ -74,7 +74,7 @@ Then test it properly.
 
 - **Verify the change works.** Reproduce the original bug and confirm it is fixed, or
   exercise the new feature the way a user would.
-- **Try to break it, creatively.** Click things in the wrong order. Cancel partway through.
+- **Try to break it, creatively.** Click things in the wrong order. Cancel halfway through a job.
   Load an empty file, a very large file, a file of the wrong type. Resize the window to
   extremes. Interrupt the network during a request. Use input the author probably did not
   consider.
@@ -84,7 +84,7 @@ Then test it properly.
 - **Watch the log.** Errors and warnings in the console or in the app log file
   can sometimes expose problems the interface hides.
 - **Test on more than one operating system if you can.** Problems regularly show up on
-  macOS or Windows that never appear on Linux, and the other way around. If you only have
+  macOS or Windows that never appear on Linux, and the reverse. If you only have
   one platform available, state which one you tested on in your review so the gap is visible
   to the next reviewer.
 
@@ -118,9 +118,9 @@ Practical points:
 
 - Be specific. Reference the line, give the steps to reproduce, and suggest an alternative
   where you have one.
-- Separate blocking issues from optional ones. Differentiate optional remarks.
+- Separate blocking issues from optional remarks.
 - Re-check the branch after the author pushes fixes, including a retest if the fix touches
-  behavior you tested before.
+  behavior you already tested.
 
 ---
 
@@ -140,7 +140,7 @@ Practical points:
     - Do not ask anyone to review code you have not reviewed comprehensively yourself.
 - **Format your code and confirm CI passes** before requesting review.
 - **Open it as a draft** if you want early feedback on unfinished work, and say what kind of
-  feedback you are looking for.
+  feedback you want.
 
 ---
 

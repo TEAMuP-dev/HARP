@@ -1,5 +1,5 @@
 """
-Checks for following a space's runtime stage before it is validated.
+Checks for following the runtime stage of a space before it is validated.
 
 These run locally with no network and no Hugging Face token:
 
@@ -40,6 +40,40 @@ class WaitForRuntimeTest(unittest.TestCase):
         # A sleeping space only starts once something asks it to, so waiting
         # on it would spend the whole connect budget
         self.assertEqual(self.follow("SLEEPING", "RUNNING"), "SLEEPING")
+
+
+class SpaceMetadataTest(unittest.TestCase):
+    """One lookup serves both the wake and the README check."""
+
+    def test_the_host_and_readme_come_from_one_request(self):
+        calls = []
+
+        def space_info(space_id):
+            calls.append(space_id)
+            return SimpleNamespace(host="https://a.hf.space",
+                                   card_data=SimpleNamespace(tags=["input:audio"], title="A"))
+
+        host, readme = spaces.space_metadata(SimpleNamespace(space_info=space_info), "teamup-tech/a")
+        self.assertEqual(host, "https://a.hf.space")
+        self.assertEqual(readme, {"tags": ["input:audio"], "title": "A"})
+        self.assertEqual(calls, ["teamup-tech/a"])
+
+    def test_a_failed_lookup_compares_nothing(self):
+        def space_info(_):
+            raise RuntimeError("429")
+
+        self.assertEqual(spaces.space_metadata(SimpleNamespace(space_info=space_info), "x"),
+                         (None, None))
+
+    def test_a_wake_given_the_host_looks_it_up_no_further(self):
+        api = SimpleNamespace(space_info=mock.Mock(side_effect=AssertionError("looked up")),
+                              get_space_runtime=lambda _: SimpleNamespace(stage="RUNNING"))
+        with mock.patch.object(spaces, "wake_space", return_value=(True, "")) as wake:
+            stage, problem = spaces.start_space(api, "teamup-tech/a", time.time() + 60,
+                                                host="https://a.hf.space")
+        self.assertEqual((stage, problem), ("RUNNING", ""))
+        wake.assert_called_once()
+        self.assertEqual(wake.call_args.args[0], "https://a.hf.space")
 
 
 if __name__ == "__main__":

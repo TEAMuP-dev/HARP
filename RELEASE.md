@@ -7,13 +7,14 @@
  - **Home Tab and Model Catalog**:
    - Every Space of the [TEAMuP organization](https://huggingface.co/teamup-tech) is listed on the
      Home tab, grouped by category and searchable by name, task, tag, or path.
-   - Cards show each model's description, tags, license, and deployment (e.g., ZeroGPU, sleeping).
+   - Cards show the description, tags, license, and deployment (e.g., ZeroGPU, sleeping) of each
+     model.
      Spaces that cannot currently load are hidden, with the reason given on hover.
    - The listing is cached, so the Home tab populates at once and still works offline.
    - Custom paths (Spaces, Gradio URLs, or local addresses) are kept as cards until removed.
  - **Model Tabs**:
    - Each model opens in a tab of its own, and several can be open at once.
-   - A loaded model's card is shown at the top of its tab, with a link to its page.
+   - The card of a loaded model is shown at the top of its tab, with a link to its page.
  - **Media Clipboard**:
    - Holds files independently of any model, so the output of one model can be the input of
      another. Tracks can be added, removed, renamed, reordered, and resized.
@@ -30,7 +31,7 @@
  - **Error Reporting**:
    - Errors say what went wrong and what to do about it, distinguishing, e.g., a sleeping Space
      from a broken one, and GPU quota from a runtime error (on Gradio 6.13 or newer).
-   - Error popups can open the model's page, the log, the API key settings, or a prefilled GitHub
+   - Error popups can open the page of the model, the log, the API key settings, or a prefilled GitHub
      issue.
    - API keys are kept out of logs, and are only sent to Hugging Face and the local machine.
  - **Tutorial**:

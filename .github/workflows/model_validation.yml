@@ -1,10 +1,13 @@
-# Daily validation of HARP model deployments, in two tiers:
+# Daily validation of HARP model deployments, in three tiers:
 #   1. examples: the pyharp examples, run locally inside the runner with no
 #      Hugging Face infrastructure involved. A failure here means pyharp or
 #      gradio itself is broken, which is worth fixing before debugging
 #      individual Spaces.
 #   2. spaces: every Hugging Face Space under teamup-tech, validated end to
 #      end (/controls and /process) through gradio_client.
+#   3. lint: every Space's files, read from the Hub and checked against
+#      docs/DEPLOYMENT.md without running anything, so it spends no ZeroGPU
+#      allowance and wakes nothing.
 #
 # Results are published to the run summary and uploaded as artifacts.
 #
@@ -13,8 +16,8 @@
 # annotations instead. Only infrastructure errors (e.g., a bad token, a
 # discovery failure, or a configuration mistake) turn the run red, since those
 # mean validation itself has stopped working. To be notified of model failures
-# later, remove the exit-code handling in the two Validate steps so that exit
-# code 1 propagates.
+# later, remove the exit-code handling in the Validate and Lint steps so that
+# exit code 1 propagates.
 #
 # Requires the repository secret HF_TOKEN, a Hugging Face token with read
 # access to the teamup-tech Spaces (and write access to restart crashed ones).
@@ -72,7 +75,7 @@ jobs:
           pip install -e ./pyharp
           pip install -r model_validation/requirements.txt
 
-      # The harness's own checks, including config.yml, which need no token or network
+      # The checks of the harness itself, including config.yml, which need no token or network
       - name: Test the harness
         run: python -m unittest discover -s model_validation/tests -v
 
@@ -97,8 +100,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: report-examples
-          # Each example's app.log holds the app's own traceback, which is what
-          # a failure report points at, so upload those alongside the report
+          # The app.log of each example holds the traceback of the app itself, to
+          # which a failure report points, so upload those alongside the report
           path: |
             reports/examples/*/report.*
             reports/examples/*/examples/*/app.log
@@ -136,7 +139,7 @@ jobs:
           if [ "$INPUT_LOAD_ONLY" = "true" ]; then
             ARGS+=(--load-only)
           fi
-          # restart is the script default; scheduled runs leave INPUT empty
+          # restart is the script default, and scheduled runs leave INPUT empty
           if [ "$INPUT_RESTART_FAILED" = "false" ]; then
             ARGS+=(--no-restart-failed)
           fi
@@ -159,4 +162,52 @@ jobs:
         with:
           name: report-spaces
           path: reports/spaces/*/report.*
+          if-no-files-found: ignore
+
+  lint:
+    name: Lint (Space files)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r model_validation/requirements.txt
+
+      - name: Lint spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          INPUT_SPACES: ${{ inputs.spaces }}
+        run: |
+          ARGS=(--lint --output-dir reports/lint)
+          if [ -n "$INPUT_SPACES" ]; then
+            read -r -a SPACE_IDS <<< "$INPUT_SPACES"
+            ARGS+=(--spaces "${SPACE_IDS[@]}")
+          fi
+          set +e
+          python model_validation/src/validate_models.py "${ARGS[@]}"
+          CODE=$?
+          if [ "$CODE" -eq 1 ]; then
+            echo "::warning title=Lint findings::Some spaces depart from docs/DEPLOYMENT.md - see the run summary and report artifact."
+            exit 0
+          fi
+          exit "$CODE"
+
+      - name: Publish summary
+        if: always()
+        run: cat reports/lint/*/report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: report-lint
+          path: reports/lint/*/report.*
           if-no-files-found: ignore

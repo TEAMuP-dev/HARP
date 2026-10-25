@@ -1,10 +1,10 @@
 """
 The declarative `expect` rules for HARP model validation.
 
-A test case's `expect` block names per-output assertions, anything
+The `expect` block of a test case names per-output assertions, anything
 expressible as "read a property of one output and compare it". This module
-defines that vocabulary (EXPECT_RULES), resolves a block against a model's
-outputs, and applies the rules. Checks spanning several outputs are custom
+defines that vocabulary (EXPECT_RULES), resolves a block against the outputs
+of a model, and applies the rules. Checks spanning several outputs are custom
 validators (validators.py) instead. config.yml documents what each rule
 asserts.
 """
@@ -33,7 +33,7 @@ AUDIO, MIDI, JSON = {"audio_track"}, {"midi_track"}, {"json"}
 # file these rules receive.
 TEXT = {"generic_file"}
 
-# The `expect` vocabulary: rule name -> output types it applies to. Applying
+# The `expect` vocabulary: rule name -> output types to which it applies. Applying
 # a rule to an output type it does not cover fails the case with a message
 # naming the configuration mistake, rather than reading as a fault in the
 # model.
@@ -47,6 +47,7 @@ EXPECT_RULES = {
     "bit_depth": AUDIO,
     "min_rms_db": AUDIO,
     "max_rms_db": AUDIO,
+    "max_clipping": AUDIO,
     "min_notes": MIDI,
     "note_instruments": MIDI,
     "note_channels": MIDI,
@@ -65,11 +66,11 @@ NOTE_VALUE_RULES = {"note_instruments": "instruments",
 TEXT_RULES = {"min_length", "excludes"}
 
 # Rule groups, by what they need decoded. Duration rules are shared: they read
-# from whichever of audio/MIDI props matches the output's type.
+# from whichever of audio/MIDI props matches the type of the output.
 DURATION_RULES = {"min_duration", "max_duration"}
 DECODED_RULES = {
     "audio_track": {"num_channels", "sample_rate", "bit_depth",
-                    "min_rms_db", "max_rms_db"} | DURATION_RULES,
+                    "min_rms_db", "max_rms_db", "max_clipping"} | DURATION_RULES,
     "midi_track": {"min_notes"} | set(NOTE_VALUE_RULES) | DURATION_RULES,
 }
 
@@ -100,14 +101,14 @@ def require_file(label: str, value) -> str:
 
 def read_text(label: str, path: str) -> str:
     """
-    Read a text output's contents.
+    Read the contents of a text output.
 
     Args:
         label (str): Output label, for the error message.
         path (str): Path to the text file.
 
     Returns:
-        text (str): The file's contents.
+        text (str): The contents of the file.
 
     Raises:
         AssertionError: If the file cannot be read as text.
@@ -132,13 +133,13 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
     explicit label, by contrast, must exist and must accept the rule -
     otherwise it is a configuration error, not a model failure.
 
-    A rule given under an output's label replaces the same rule under "*"
+    A rule given under the label of an output replaces the same rule under "*"
     for that output alone, since it is the more specific statement. This is
     what lets a model lift the common silence floor on one stem while every
     other output keeps it.
 
     Args:
-        expect (dict): The case's `expect` block.
+        expect (dict): The `expect` block of the case.
         out_types (dict): Output label -> component type from /controls.
 
     Returns:
@@ -197,10 +198,10 @@ def check_note_values(label: str, rule: str, found: list, allowed) -> None:
     The check is one of coverage rather than presence: every value the notes
     carry has to be one the rule lists, and a rule can list values the file
     does not use. A file with no notes therefore satisfies it, since
-    requiring notes is what `min_notes` is for.
+    requiring notes is the purpose of `min_notes`.
 
     Args:
-        label (str): Output label the rule applies to.
+        label (str): Output label to which the rule applies.
         rule (str): The rule name, a key of NOTE_VALUE_RULES.
         found (list): The values the notes actually use.
         allowed: The permitted value, or a list of them.
@@ -225,7 +226,7 @@ def check_duration(label: str, duration, rules: dict) -> None:
     Args:
         label (str): Output label, for error messages.
         duration (float | None): Length in seconds, or None if undetermined.
-        rules (dict): The output's rules (only duration keys are read).
+        rules (dict): The rules of the output (only duration keys are read).
 
     Raises:
         AssertionError: If a duration bound is not met, or duration is
@@ -251,15 +252,15 @@ def check_duration(label: str, duration, rules: dict) -> None:
 
 def check_expectations(label: str, otype: str, value, rules: dict) -> None:
     """
-    Apply one output's declarative `expect` rules.
+    Apply the declarative `expect` rules of one output.
 
     Rule names and their applicability to this output are validated upstream
     by resolve_expect_targets(). Audio/MIDI files are decoded in a single
     pass, and only when a rule that needs the decoded properties is present.
 
     Args:
-        label (str): Output label the rules apply to.
-        otype (str): The output's component type from /controls.
+        label (str): Output label to which the rules apply.
+        otype (str): The component type of the output from /controls.
         value: The mapped output value (file path or decoded JSON).
         rules (dict): Rule name -> expected value.
 
@@ -315,6 +316,12 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
             assert props["rms_db"] <= rules["max_rms_db"], \
                 (f"output '{label}' carries more signal than expected (RMS "
                  f"{props['rms_db']:.1f} dBFS > {rules['max_rms_db']} dBFS)")
+
+        if "max_clipping" in rules:
+            assert props["clipping"] <= rules["max_clipping"], \
+                (f"output '{label}' clips: {props['clipping']:.3%} of its samples sit "
+                 f"in flat tops at full scale, more than the "
+                 f"{rules['max_clipping']:.3%} allowed")
 
     if props is not None and otype == "midi_track":
         if "min_notes" in rules:

@@ -61,6 +61,14 @@ class SourceTest(unittest.TestCase):
         self.assertEqual(data.shape[1], 1)
         self.assertAlmostEqual(float(data[100, 0]), 0.375, places=3)
 
+    def test_an_aif_input_is_written_as_aiff(self):
+        # soundfile cannot tell the format from .aif, the extension Logic Pro uses
+        path = self.assets.audio({"audio": {"source": "stereo.wav", "duration": 1.0,
+                                            "sample_rate": 22050, "num_channels": 2,
+                                            "ext": ".aif"}})
+        self.assertEqual(path.suffix, ".aif")
+        self.assertEqual(soundfile.info(str(path)).format, "AIFF")
+
     def test_a_midi_source_is_passed_as_it_is(self):
         midi = self.dir / "song.mid"
         midi.write_bytes(b"MThd\x00\x00\x00\x06\x00\x00\x00\x01\x01\xe0")
