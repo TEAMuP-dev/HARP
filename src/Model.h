@@ -16,6 +16,7 @@
 
 #include "widgets/StatusAreaWidget.h"
 
+#include "utils/AudioFiles.h"
 #include "utils/Clients.h"
 #include "utils/Controls.h"
 #include "utils/Enums.h"
@@ -259,7 +260,9 @@ public:
         {
             String remotePath;
 
-            OpResult result = client->uploadFile(loadedPath, file, remotePath);
+            // An audio format only this platform decodes goes up as WAV, which any endpoint reads
+            OpResult result =
+                client->uploadFile(loadedPath, AudioFiles::forUpload(file), remotePath);
 
             if (result.wasOk())
                 remotePaths[componentID] = remotePath;

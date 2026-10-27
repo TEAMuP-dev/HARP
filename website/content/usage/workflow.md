@@ -21,8 +21,8 @@ The window has five regions:
 
 ## Finding and Running Models
 
-<!-- TODO: screenshot. The Home tab with a search term entered, showing the category chips, the
-     search box, the "Hide models that need an API key" toggle, and several model cards.
+<!-- TODO: screenshot. The Home tab with a search term entered, showing the category and domain
+     chips, the search box, the "Hide models that need an API key" toggle, and several model cards.
 ![The Home tab, listing models by category](/images/home-tab.png)
 -->
 

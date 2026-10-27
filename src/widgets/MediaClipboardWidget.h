@@ -16,6 +16,7 @@
 #include "../gui/MultiButton.h"
 #include "../gui/ResizeEdge.h"
 
+#include "../utils/AudioFiles.h"
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
 
@@ -353,7 +354,7 @@ public:
                                             selectedFile.getFileNameWithoutExtension()
                                             + "_converted" + originalFile.getFileExtension());
 
-                                        if (convertAudioFile(selectedFile, tempFile))
+                                        if (AudioFiles::convert(selectedFile, tempFile))
                                         {
                                             if (tempFile.copyFileTo(originalFile))
                                             {
@@ -543,85 +544,6 @@ private:
             // Handle track area resizing after removing a track
             resized();
         }
-    }
-
-    bool convertAudioFile(const File& source, const File& target)
-    {
-        AudioFormatManager formatManager;
-        formatManager.registerBasicFormats();
-
-        std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(source));
-
-        if (! reader)
-        {
-            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Could not read source file \""
-                        << source.getFullPathName() << "\".");
-
-            return false;
-        }
-
-        String ext = target.getFileExtension().toLowerCase();
-        AudioFormat* format = nullptr;
-
-        if (ext == ".wav")
-            format = formatManager.findFormatForFileExtension("wav");
-        else if (ext == ".aiff" || ext == ".aif")
-            format = formatManager.findFormatForFileExtension("aiff");
-        else if (ext == ".flac")
-            format = formatManager.findFormatForFileExtension("flac");
-        else
-        {
-            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Unsupported target format \""
-                        << ext << "\".");
-
-            return false;
-        }
-
-        target.deleteFile();
-
-        std::unique_ptr<OutputStream> outputStream = target.createOutputStream();
-
-        if (! outputStream)
-        {
-            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Could not create output file \""
-                        << target.getFullPathName() << "\".");
-
-            return false;
-        }
-
-        // Takes ownership of the stream only if it succeeds
-        std::unique_ptr<AudioFormatWriter> writer =
-            format->createWriterFor(outputStream,
-                                    AudioFormatWriterOptions {}
-                                        .withSampleRate(reader->sampleRate)
-                                        .withNumChannels((int) reader->numChannels)
-                                        .withBitsPerSample(16));
-
-        if (! writer)
-        {
-            DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Could not create writer for \""
-                        << target.getFullPathName() << "\".");
-
-            return false;
-        }
-
-        const int blockSize = 4096;
-        AudioBuffer<float> buffer((int) reader->numChannels, blockSize);
-        int64 totalFrames = (int64) reader->lengthInSamples;
-        int64 position = 0;
-
-        while (position < totalFrames)
-        {
-            int64 framesToRead = jmin((int64) blockSize, totalFrames - position);
-            reader->read(&buffer, 0, (int) framesToRead, position, true, true);
-            writer->writeFromAudioSampleBuffer(buffer, 0, (int) framesToRead);
-            position += framesToRead;
-        }
-
-        DBG_AND_LOG("MediaClipboardWidget::convertAudioFile: Converted and saved \""
-                    << source.getFullPathName() << "\" to \"" << target.getFullPathName() << "\".");
-
-        return true;
     }
 
     void resetState()

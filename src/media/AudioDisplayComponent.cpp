@@ -1,5 +1,7 @@
 #include "AudioDisplayComponent.h"
 
+#include "../utils/AudioFiles.h"
+
 AudioDisplayComponent::AudioDisplayComponent() : AudioDisplayComponent("Audio Track") {}
 
 AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -27,15 +29,9 @@ AudioDisplayComponent::~AudioDisplayComponent()
 
 StringArray AudioDisplayComponent::getSupportedExtensions()
 {
-    StringArray extensions;
-
-    extensions.add(".wav");
-    extensions.add(".bwf");
-    extensions.add(".aiff");
-    extensions.add(".aif");
-    extensions.add(".flac");
-    extensions.add(".ogg");
-    extensions.add(".mp3");
+    // The formats every platform reads, then the ones the decoders of this platform add
+    StringArray extensions = AudioFiles::portableExtensions();
+    extensions.addArray(AudioFiles::platformExtensions());
 
     return extensions;
 }

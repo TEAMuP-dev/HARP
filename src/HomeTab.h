@@ -266,13 +266,33 @@ public:
         return paths.size();
     }
 
+    // Number of models in a domain, or of all models for an empty id
+    int countEntriesInDomain(const String& domainId) const
+    {
+        StringArray paths;
+
+        for (const auto& section : sections)
+        {
+            for (auto* card : section->cards)
+            {
+                if (domainId.isEmpty() || card->getEntry().tags.isInDomain(domainId))
+                    paths.addIfNotAlreadyThere(card->getEntry().path);
+            }
+        }
+
+        return paths.size();
+    }
+
     /**
-     * Shows the cards in a section (or all sections, for an empty id) that match a
-     * search, leaving out metered models if asked (see CatalogEntry::isMetered), and
-     * returns how many distinct models are shown. The grid has to be laid out again
-     * afterwards.
+     * Shows the cards in a section (or all sections, for an empty id) and a domain (or
+     * all of them, likewise) that match a search, leaving out metered models if asked
+     * (see CatalogEntry::isMetered), and returns how many distinct models are shown. The
+     * grid has to be laid out again afterwards.
      */
-    int applyFilter(const String& sectionId, const String& searchText, bool hideMetered)
+    int applyFilter(const String& sectionId,
+                    const String& domainId,
+                    const String& searchText,
+                    bool hideMetered)
     {
         const String query = searchText.trim().toLowerCase();
 
@@ -284,8 +304,10 @@ public:
 
             for (auto* card : section->cards)
             {
-                const bool shown = sectionShown && card->matchesSearch(query)
-                                   && ! (hideMetered && card->getEntry().isMetered());
+                const bool shown =
+                    sectionShown && card->matchesSearch(query)
+                    && (domainId.isEmpty() || card->getEntry().tags.isInDomain(domainId))
+                    && ! (hideMetered && card->getEntry().isMetered());
                 card->setVisible(shown);
 
                 if (shown)
@@ -374,27 +396,33 @@ private:
 };
 
 /**
- * Chips for choosing which section of the catalog to show, wrapped onto as many rows as
- * the width requires.
+ * Chips for choosing one entry of a list, or all of them, wrapped onto as many rows as the
+ * width requires. The catalog is filtered by one bar of categories and one of domains.
  */
-class CategoryFilterBar : public Component
+class ChipFilterBar : public Component
 {
 public:
+    struct Entry
+    {
+        String id;
+        String name;
+    };
+
     std::function<void()> onSelectionChanged;
 
-    CategoryFilterBar()
+    // The hover text of each chip comes from its id (empty for "All") and name
+    ChipFilterBar(const std::vector<Entry>& entries,
+                  std::function<String(const String&, const String&)> describe)
     {
-        addChip({}, "All");
+        addChip({}, "All", describe({}, "All"));
 
-        for (const auto& category : Taxonomy::getCategories())
-            addChip(category.id, category.displayName);
-
-        addChip(ModelGrid::otherSectionId, "Other");
+        for (const auto& entry : entries)
+            addChip(entry.id, entry.name, describe(entry.id, entry.name));
 
         chips.getFirst()->setToggleState(true, dontSendNotification);
     }
 
-    // Id of the selected section, or empty for all of them
+    // Id of the selected entry, or empty for all of them
     String getSelectedId() const
     {
         for (auto* chip : chips)
@@ -406,10 +434,21 @@ public:
         return {};
     }
 
-    void setCounts(const ModelGrid& grid)
+    String getSelectedName() const
     {
         for (auto* chip : chips)
-            chip->count = grid.countEntries(chip->id);
+        {
+            if (chip->getToggleState())
+                return chip->getName();
+        }
+
+        return {};
+    }
+
+    void setCounts(const std::function<int(const String&)>& countFor)
+    {
+        for (auto* chip : chips)
+            chip->count = countFor(chip->id);
 
         resized();
         repaint();
@@ -433,7 +472,8 @@ public:
 private:
     struct Chip : public Button
     {
-        Chip(const String& chipId, const String& chipName) : Button(chipName), id(chipId)
+        Chip(const String& chipId, const String& chipName, const String& hoverText)
+            : Button(chipName), id(chipId), hover(hoverText)
         {
             setClickingTogglesState(true);
             setRadioGroupId(1);
@@ -466,14 +506,7 @@ private:
         void mouseEnter(const MouseEvent& e) override
         {
             Button::mouseEnter(e);
-
-            if (id.isEmpty())
-                instructionsMessage->setMessage("Click to show every model.");
-            else if (id == ModelGrid::otherSectionId)
-                instructionsMessage->setMessage(
-                    "Click to show the models that declare no category.");
-            else
-                instructionsMessage->setMessage("Click to show only the " + getName() + " models.");
+            instructionsMessage->setMessage(hover);
         }
 
         void mouseExit(const MouseEvent& e) override
@@ -483,6 +516,7 @@ private:
         }
 
         const String id;
+        const String hover;
         int count = 0;
 
         const Font chipFont = ModelStyle::font(12.0f, true);
@@ -491,9 +525,9 @@ private:
         SharedResourcePointer<InstructionsMessage> instructionsMessage;
     };
 
-    void addChip(const String& id, const String& name)
+    void addChip(const String& id, const String& name, const String& hoverText)
     {
-        auto* chip = chips.add(new Chip(id, name));
+        auto* chip = chips.add(new Chip(id, name, hoverText));
         chip->onClick = [this]
         {
             if (onSelectionChanged)
@@ -632,6 +666,11 @@ public:
         categoryFilterBar.onSelectionChanged = [this] { applyFilter(); };
         addAndMakeVisible(categoryFilterBar);
 
+        // Shown only for a taxonomy that defines domains
+        domainFilterBar.onSelectionChanged = [this] { applyFilter(); };
+        addChildComponent(domainFilterBar);
+        domainFilterBar.setVisible(! Taxonomy::getDomains().empty());
+
         modelGrid.onOpenRequested = [this](const CatalogEntry& entry)
         { requestOpen(entry.path, entry.name); };
         modelGrid.onRemoveRequested = [this](const CatalogEntry& entry)
@@ -694,6 +733,10 @@ public:
         categoryFilterBar.setBounds(
             area.removeFromTop(categoryFilterBar.getHeightForWidth(area.getWidth())));
 
+        if (domainFilterBar.isVisible())
+            domainFilterBar.setBounds(
+                area.removeFromTop(domainFilterBar.getHeightForWidth(area.getWidth())));
+
         viewport.setBounds(area);
         noResultsLabel.setBounds(area.withTrimmedTop(24));
 
@@ -706,7 +749,10 @@ private:
     void updateFromCatalog()
     {
         modelGrid.setEntries(catalog->getEntries());
-        categoryFilterBar.setCounts(modelGrid);
+        categoryFilterBar.setCounts([this](const String& id)
+                                    { return modelGrid.countEntries(id); });
+        domainFilterBar.setCounts([this](const String& id)
+                                  { return modelGrid.countEntriesInDomain(id); });
 
         updateStatusIndicator();
         refreshButton.setEnabled(catalog->getFetchState() != ModelCatalog::FetchState::Fetching);
@@ -778,8 +824,9 @@ private:
     void updateVisibleModels()
     {
         const bool hideMetered = meteredToggle.getToggleState();
+        const String domainId = domainFilterBar.getSelectedId();
         const int numShown = modelGrid.applyFilter(
-            categoryFilterBar.getSelectedId(), searchEditor.getText(), hideMetered);
+            categoryFilterBar.getSelectedId(), domainId, searchEditor.getText(), hideMetered);
 
         String noResults = "No models in this category yet.";
 
@@ -787,6 +834,9 @@ private:
             noResults = "No models match \"" + searchEditor.getText().trim() + "\".";
         else if (hideMetered)
             noResults = "Every model in this category needs an API key.";
+        else if (domainId.isNotEmpty())
+            noResults = "No models for " + domainFilterBar.getSelectedName().toLowerCase()
+                        + " in this category yet.";
 
         noResultsLabel.setText(noResults, dontSendNotification);
         noResultsLabel.setVisible(numShown == 0);
@@ -838,7 +888,51 @@ private:
     TextButton customPathButton { "Custom Path..." };
     TextEditor searchEditor;
     ToggleButton meteredToggle { "Hide models that need an API key" };
-    CategoryFilterBar categoryFilterBar;
+
+    static std::vector<ChipFilterBar::Entry> categoryEntries()
+    {
+        std::vector<ChipFilterBar::Entry> entries;
+
+        for (const auto& category : Taxonomy::getCategories())
+            entries.push_back({ category.id, category.displayName });
+
+        entries.push_back({ ModelGrid::otherSectionId, "Other" });
+
+        return entries;
+    }
+
+    static std::vector<ChipFilterBar::Entry> domainEntries()
+    {
+        std::vector<ChipFilterBar::Entry> entries;
+
+        for (const auto& domain : Taxonomy::getDomains())
+            entries.push_back({ domain.id, domain.displayName });
+
+        return entries;
+    }
+
+    ChipFilterBar categoryFilterBar { categoryEntries(),
+                                      [](const String& id, const String& name)
+                                      {
+                                          if (id.isEmpty())
+                                              return String("Click to show every model.");
+
+                                          if (id == ModelGrid::otherSectionId)
+                                              return String("Click to show the models that "
+                                                            "declare no category.");
+
+                                          return "Click to show only the " + name + " models.";
+                                      } };
+    ChipFilterBar domainFilterBar { domainEntries(),
+                                    [](const String& id, const String& name)
+                                    {
+                                        if (id.isEmpty())
+                                            return String("Click to show the models for every "
+                                                          "kind of audio.");
+
+                                        return "Click to show only the models for "
+                                               + name.toLowerCase() + ".";
+                                    } };
     Viewport viewport;
     ModelGrid modelGrid;
     Label noResultsLabel;

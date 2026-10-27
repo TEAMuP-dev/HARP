@@ -99,6 +99,7 @@ target_sources(${PROJECT_NAME}
         src/utils/Controls.h
         src/utils/Labels.h
         src/utils/Clients.h
+        src/utils/AudioFiles.h
         src/utils/Errors.h
         src/utils/Enums.h
 

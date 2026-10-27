@@ -39,6 +39,13 @@ struct Category
     std::vector<Subcategory> subcategories;
 };
 
+// The kind of audio a model is for, independent of its category
+struct Domain
+{
+    String id;
+    String displayName;
+};
+
 // In display order, as defined by pyharp's taxonomy.json (embedded when HARP is built)
 inline const std::vector<Category>& getCategories()
 {
@@ -85,6 +92,39 @@ inline const Category* findCategory(const String& id)
     {
         if (category.id == id)
             return &category;
+    }
+
+    return nullptr;
+}
+
+// In display order, as defined by pyharp's taxonomy.json, or empty for a taxonomy without them
+inline const std::vector<Domain>& getDomains()
+{
+    static const std::vector<Domain> domains = []
+    {
+        std::vector<Domain> parsed;
+
+        const var taxonomy = JSON::parse(
+            String::fromUTF8(TaxonomyData::taxonomy_json, TaxonomyData::taxonomy_jsonSize));
+
+        if (auto* domainList = taxonomy["domains"].getArray())
+        {
+            for (const auto& domainData : *domainList)
+                parsed.push_back({ domainData["id"].toString(), domainData["name"].toString() });
+        }
+
+        return parsed;
+    }();
+
+    return domains;
+}
+
+inline const Domain* findDomain(const String& id)
+{
+    for (const auto& domain : getDomains())
+    {
+        if (domain.id == id)
+            return &domain;
     }
 
     return nullptr;
@@ -139,6 +179,7 @@ struct ModelTags
 
     StringArray categories; // Category ids, in taxonomy order
     StringArray subcategories; // Subcategory ids, in taxonomy order
+    StringArray domains; // Domain ids, in taxonomy order
     std::vector<DataType> inputs;
     std::vector<DataType> outputs;
     int sampleRate = 0; // Hz, or 0 if not declared
@@ -157,6 +198,7 @@ struct ModelTags
 
         StringArray categoriesFound;
         StringArray subcategoriesFound;
+        StringArray domainsFound;
 
         for (auto tag : tags)
         {
@@ -180,6 +222,10 @@ struct ModelTags
                 // A subcategory implies its category
                 categoriesFound.addIfNotAlreadyThere(
                     Taxonomy::findCategoryOfSubcategory(value)->id);
+            }
+            else if (hasValue && key == "domain" && Taxonomy::findDomain(value) != nullptr)
+            {
+                domainsFound.addIfNotAlreadyThere(value);
             }
             else if (hasValue && (key == "input" || key == "output"))
             {
@@ -220,12 +266,20 @@ struct ModelTags
             }
         }
 
+        for (const auto& domain : Taxonomy::getDomains())
+        {
+            if (domainsFound.contains(domain.id))
+                parsed.domains.add(domain.id);
+        }
+
         return parsed;
     }
 
     bool isCategorized() const { return ! categories.isEmpty(); }
 
     bool isInCategory(const String& categoryId) const { return categories.contains(categoryId); }
+
+    bool isInDomain(const String& domainId) const { return domains.contains(domainId); }
 
     /* The license as a user reads it, e.g. "CC-BY-NC-4.0". SPDX ids are conventionally
        written in upper case, apart from "other", which names terms only the model's
@@ -334,6 +388,9 @@ struct ModelTags
 
         for (const auto& id : categories)
             words.add(Taxonomy::findCategory(id)->displayName);
+
+        for (const auto& id : domains)
+            words.add(Taxonomy::findDomain(id)->displayName);
 
         words.addArray(getDisplayLabels());
         words.add(describe(inputs));

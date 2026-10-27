@@ -29,9 +29,10 @@ Requests and contributions are welcome as [issues](https://github.com/TEAMuP-dev
 
 ## Media and Controls
 
-- **Audio tracks** accept WAV, AIFF, FLAC, OGG, and MP3 files, and **MIDI tracks** accept `.mid`
-  and `.midi` files. Other files travel through a generic file input or output, which HARP shows
-  but does not play.
+- **Audio tracks** accept WAV, AIFF, FLAC, OGG, and MP3 files, and on macOS also M4A, MP4, AAC, and
+  CAF, which HARP converts to WAV before uploading. **MIDI tracks** accept `.mid` and `.midi`
+  files. Other files travel through a generic file input or output, which HARP shows but does not
+  play.
 - **Controls** are limited to sliders, number boxes, dropdowns, multiselect dropdowns, toggles, text
   boxes, and file pickers. Other Gradio components, such as images or radio buttons, have no
   counterpart in HARP.

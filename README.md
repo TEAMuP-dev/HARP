@@ -100,10 +100,11 @@ then copying the excerpt into a file of its own, _e.g._, by bouncing it in place
 <!-- #region workflow -->
 - Open HARP, either standalone or from a DAW.
 - On the `Home` tab, browse or search the models hosted by
-  [TEAMuP on Hugging Face](https://huggingface.co/teamup-tech), which are grouped by function,
-  or choose `Custom Path...` and supply the address of any HARP-compatible Gradio app, such as a
-  Space (`owner/name`), a `gradio.live` link, or a local address (`http://localhost:7860`). A custom
-  path keeps a card on the `Home` tab until it is removed with the X button on that card.
+  [TEAMuP on Hugging Face](https://huggingface.co/teamup-tech), which are grouped by function and
+  can be narrowed to music, speech, or general audio, or choose `Custom Path...` and supply the
+  address of any HARP-compatible Gradio app, such as a Space (`owner/name`), a `gradio.live` link,
+  or a local address (`http://localhost:7860`). A custom path keeps a card on the `Home` tab until
+  it is removed with the X button on that card.
 - Select a model to open it in a tab of its own. Several models can be open at once.
 - Load audio or MIDI with the folder icon of an input track, or by dragging a file onto the track.
   An input marked `OPTIONAL` can be left empty.

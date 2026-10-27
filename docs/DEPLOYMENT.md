@@ -118,6 +118,9 @@ and lists the taxonomy. The conventions:
 - **Place the model in the taxonomy with `Category` and `Subcategory`**, listing the most specific
   entry that applies. A `Subcategory` implies its `Category`, so listing both is unnecessary.
 - **Tag every task the model performs**, so that a user searching for either finds it.
+- **Name the kind of audio with `Domain`**, as `MUSIC`, `SPEECH`, or `GENERAL_AUDIO`, and more than
+  one where the model serves several. The Home tab filters by it, so a model without one is hidden
+  whenever a domain is selected.
 - **Declare `SampleRate` and `Channels`** whenever the model is fixed to one. Nothing can infer
   them, and they tell a user whether the model suits their session.
 - **The `input:` and `output:` tags are inferred** from the Gradio components. Providing one by
@@ -605,6 +608,10 @@ Logic Pro names it), `.flac`, `.ogg`, and `.mp3`, so a Space can be handed a fil
 lossy encode already. Processing moves the artifacts of that encoder out from under the maskers that
 hid them, and writing the result back as `.mp3` or `.ogg` then adds a second round of loss over a first
 that has become audible. Return a lossless format instead.
+
+On macOS, HARP also opens `.m4a`, `.mp4`, `.aac`, and `.caf`, but uploads them as WAV, so a Space
+never receives one. Most Spaces read their input with soundfile, which decodes neither AAC nor the
+MP4 container.
 
 **Keep WAV and FLAC only.** Gradio converts a `gr.Audio` output that browsers cannot play, AIFF
 among them, to 16-bit WAV on its way out, and soundfile cannot write a file named `.aif` at all, so
