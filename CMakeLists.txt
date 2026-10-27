@@ -24,7 +24,7 @@ juce_add_gui_app(${PROJECT_NAME}
     COMPANY_NAME "${COMPANY_NAME}"
     COMPANY_COPYRIGHT "${COPYRIGHT}"
     BUNDLE_ID "com.TEAMuP.HARP"
-    ICON_BIG "${CMAKE_SOURCE_DIR}/resources/icons/harp_logo_1.png"
+    ICON_BIG "${CMAKE_SOURCE_DIR}/resources/icons/harp_logo.png"
     DOCUMENT_EXTENSIONS wav mp3 aiff)
 
 # Creates JuceHeader.h, which includes all linked JUCE modules

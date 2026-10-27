@@ -23,12 +23,20 @@ tracks.
 3. **Use the result.** Output audio, MIDI, files, and labels appear in output tracks, from which
    they can be played, saved, dragged into a DAW, or used as the input of another model.
 
-<img src="/content/images/new_harp_diagram.png"
-     alt="Model code runs in a Gradio app wrapped with PyHARP, optionally hosted on Hugging Face, and used in the DAW through HARP"
-     style="display:block;margin:1.5rem auto;max-width:480px;width:100%;">
-
-<!-- TODO: screenshot. The last panel of the diagram above shows the HARP interface from before 3.0.
-     Replace that panel with a current model tab, or the diagram as a whole. -->
+<!-- The horizontal layout suits the content column, and the vertical one keeps the text legible on
+     a phone. Both are draw.io SVGs (see docs/WEBSITE.md). -->
+<figure style="margin:1.5rem auto;max-width:600px;text-align:center;">
+  <picture>
+    <source media="(max-width: 539px)" srcset="/images/harp-teaser-vertical.svg">
+    <img src="/images/harp-teaser.svg"
+         alt="Two regions. Producers launch HARP, on its own or from a DAW, and access deployed models. Developers write inference code, deploy it with PyHARP, and optionally host it remotely, or wrap an existing third-party API, and each of these routes leads into HARP."
+         style="width:100%;border-radius:8px;">
+  </picture>
+  <figcaption style="font-size:0.9em;color:var(--vp-c-text-2);">
+    Developers deploy models with PyHARP or wrap existing third-party APIs, and producers use any
+    deployed model in HARP, on its own or from a DAW.
+  </figcaption>
+</figure>
 
 A model only has to consume and produce files, so HARP works with any Python code and any
 framework, from a few lines of signal processing to a large generative model on a GPU.

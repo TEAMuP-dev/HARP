@@ -1,4 +1,4 @@
-# Current Limitations
+# Limitations
 
 Some limits of HARP follow from processing remotely, and others are features we have yet to build.
 Requests and contributions are welcome as [issues](https://github.com/TEAMuP-dev/HARP/issues).

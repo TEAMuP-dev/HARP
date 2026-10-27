@@ -1,6 +1,7 @@
 // https://vitepress.dev/guide/custom-theme
 import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
+import DownloadButtons from './Components/DownloadButtons.vue'
 import Team from './Components/Team.vue'
 import './vars.css'
 import './style.css'
@@ -15,6 +16,7 @@ export default {
   },
   enhanceApp({ app, router, siteData }) {
     // https://vitepress.dev/guide/extending-default-theme#enhanceapp
+    app.component('DownloadButtons', DownloadButtons)
     app.component('Team', Team)
   }
 }

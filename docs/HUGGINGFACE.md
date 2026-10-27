@@ -103,7 +103,7 @@ stay behind the rest of the fleet, which runs 6.24.0, and a future PyHARP that n
 could not reach them until their code moves off `transformers` 4.x.
 
 **Response.** They hold `sdk_version: 6.17.3`, the newest release in the window, as
-[Pin Gradio Before Splitting the Environment](DEPLOYMENT.md#pin-gradio-before-splitting-the-environment)
+[Pin Gradio First](DEPLOYMENT.md#pin-gradio-first)
 describes.
 
 **Sources.** The requirements each release of [gradio](https://pypi.org/project/gradio/#history) and

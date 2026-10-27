@@ -201,6 +201,10 @@ struct ModelTags
             {
                 parsed.zeroGPU = true;
             }
+            else if (hasValue && key == "domain")
+            {
+                // The kind of audio a model is for, e.g. "domain:speech", is not shown as a tag
+            }
             else
             {
                 parsed.custom.addIfNotAlreadyThere(tag);

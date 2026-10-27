@@ -23,7 +23,7 @@ following to `.vscode/settings.json`:
 Formatting a file that has never been formatted rewrites its `git blame`. Put such formatting in a
 commit of its own and add the hash of that commit to `.git-blame-ignore-revs`.
 
-### Managing Collections of Dynamically Created Objects
+### Owning Collections
 
 When working with collections of objects created with `new`, such as UI components or other heap-allocated data, avoid storing raw pointers (`T*`) directly in standard containers like `juce::Array<T*>` or `std::vector<T*>`.
 This requires manual `delete` calls, and can easily lead to memory leaks or crashes if handled imperfectly (_e.g._, in destructors, during removal, with exceptions, etc.).

@@ -33,12 +33,29 @@ public:
 
     static bool matchesPathSpec(String modelPath)
     {
+        modelPath = withoutTrailingSlashes(modelPath);
+
         return isValidLocalPath(modelPath) || isValidGradioPath(modelPath)
                || isValidHuggingFacePath(modelPath);
     }
 
+    /* A pasted address often ends in a "/", which none of the forms below carries. The
+       validators compare against the end of the path, so it is dropped before anything
+       looks at the path, and the canonical path never has one. */
+    static String withoutTrailingSlashes(String modelPath)
+    {
+        modelPath = modelPath.trim();
+
+        while (modelPath.endsWithChar('/'))
+            modelPath = modelPath.dropLastCharacters(1);
+
+        return modelPath;
+    }
+
     String canonicalizePath(String modelPath) override
     {
+        modelPath = withoutTrailingSlashes(modelPath);
+
         /* "user/name" is the form Hugging Face itself uses, and the only one both
            the page URL and the API subdomain can be derived from. A page URL carries
            that form verbatim, so it can be reduced here without asking anyone.

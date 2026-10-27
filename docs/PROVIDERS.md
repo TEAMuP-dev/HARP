@@ -7,11 +7,12 @@ serves any Gradio app, wherever it is hosted, and
 calls Stability AI's REST API. A service with an API of its own needs a client of its own. This
 guide describes what one involves, with `StabilityClient` as the reference.
 
-Consider the alternative first. A [PyHARP](https://github.com/TEAMuP-dev/pyharp) app can call any
-API from its processing function, and HARP needs no change to use it (see
-[Using Third-Party APIs](https://harp.tools/content/hosting/third_party.html)). A client of
-its own is worth adding when each user should bring their own key to the service, so that their
-requests are billed to them, and when many users already hold an account with it.
+A client of its own is for a model that is closed-source but offered through an API, as the Stable
+Audio models are. Such a model cannot be deployed as a [PyHARP](https://github.com/TEAMuP-dev/pyharp)
+app, so HARP calls the API itself, with a key each user adds, so that their requests are billed to
+them. Where one host can hold the key instead, a PyHARP app can call the API from its processing
+function, and HARP needs no change to use it (see
+[Using Third-Party APIs](https://harp.tools/content/hosting/third_party.html)).
 
 ## Table of Contents
 
@@ -20,7 +21,7 @@ requests are billed to them, and when many users already hold an account with it
 - [Describe the Models](#describe-the-models)
 - [Write the Client](#write-the-client)
 - [Register the Client](#register-the-client)
-- [Generalize What Names Stability AI](#generalize-what-names-stability-ai)
+- [Generalize the Stability AI Branches](#generalize-the-stability-ai-branches)
 - [Test It](#test-it)
 
 ## How HARP Uses a Client
@@ -36,6 +37,11 @@ path of the model, and calls it in this order:
    in the order of the inputs. `process` then sends the request, and returns the output files and
    labels.
 4. On `Cancel`, `cancel` asks the provider to stop the job.
+
+![The stages of HARP and its calls to a client: validating an API token from the settings, loading a model from the Home tab, staging controls and inputs, processing, canceling, and retrieving outputs, each answered by a success or failure response](https://harp.tools/images/harp-api.svg)
+
+_Black lines are actions the user takes, and gray lines are automatic actions. Dashed lines are
+optional. Green and red lines are success and failure responses from the client._
 
 These calls run on the worker threads of the model tab, never on the message thread, so a client may
 block on the network. The exception is `getBuiltInModelCards`, which calls `queryControls` for each
@@ -172,7 +178,7 @@ Then give users somewhere to put their key. Add the provider to the list of prov
 constructor in
 [`src/windows/settings/LoginTab.cpp`](https://github.com/TEAMuP-dev/HARP/blob/main/src/windows/settings/LoginTab.cpp).
 
-## Generalize What Names Stability AI
+## Generalize the Stability AI Branches
 
 Stability AI is the only provider besides Hugging Face so far, and a few places name it directly
 rather than asking the client. A second provider has to generalize each of them, rather than add a

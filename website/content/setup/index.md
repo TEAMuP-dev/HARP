@@ -4,20 +4,12 @@ HARP runs as a [standalone](/content/setup/standalone) editor, or beside a DAW. 
 in one of two ways:
 
 - **As an external sample editor.** The DAW opens a region in HARP, and takes the result back once
-  HARP overwrites the file behind it.
-- **By exchanging files.** Audio moves between the two by export and import, or by drag and drop.
-
-| Setup | Works through |
-| :-- | :-- |
-| [Standalone](/content/setup/standalone) | No DAW |
-| [REAPER](/content/setup/reaper) | External editor |
-| [Logic Pro](/content/setup/logic) | External editor |
-| [Pro Tools](/content/setup/protools) | Exchanging files |
-| [Ableton Live](/content/setup/ableton) | External editor |
-| [Cubase](/content/setup/cubase) | Exchanging files |
-| [Audacity](/content/setup/audacity) | Exchanging files |
-| [FL Studio](/content/setup/flstudio) | External editor |
-| [Adobe Audition](/content/setup/audition) | Exchanging files |
+  HARP overwrites the file behind it. [REAPER](/content/setup/reaper),
+  [Logic Pro](/content/setup/logic), [Ableton Live](/content/setup/ableton), and
+  [FL Studio](/content/setup/flstudio) work this way.
+- **By exchanging files.** Audio moves between the two by export and import, or by drag and drop,
+  as it does with [Pro Tools](/content/setup/protools), [Cubase](/content/setup/cubase),
+  [Audacity](/content/setup/audacity), and [Adobe Audition](/content/setup/audition).
 
 ## The Round Trip
 

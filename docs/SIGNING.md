@@ -61,12 +61,12 @@ signed the app. The certificate alone is not enough. Apple Accounts require two-
 authentication, which an automated build cannot complete, so Apple issues an _app-specific
 password_ for this purpose in place of the real password of the account.
 
-| Secret | Contents | Used For |
-|---|---|---|
-| `MACOS_CERTIFICATE` | The Developer ID Application certificate and private key, as a base64-encoded `.p12` file. | Signing |
-| `MACOS_CERTIFICATE_PASSWORD` | The password used to export the `.p12` file. | Signing |
-| `APPLE_ID` | The email address of an Apple Account on the developer team. | Notarization |
-| `APPLE_APP_PASSWORD` | An app-specific password for that Apple Account. | Notarization |
+Four secrets of the repository carry these:
+
+- `MACOS_CERTIFICATE`, the Developer ID Application certificate and private key as a base64-encoded
+  `.p12` file, and `MACOS_CERTIFICATE_PASSWORD`, the password used to export it, for signing.
+- `APPLE_ID`, the email address of an Apple Account on the developer team, and
+  `APPLE_APP_PASSWORD`, an app-specific password for that Apple Account, for notarization.
 
 The signing identity and the team ID are both read from the certificate, so they need no secrets of
 their own.
@@ -235,14 +235,11 @@ Requesting a signature requires signing in to Azure. As with notarization, an au
 sign in as a person, so the workflow signs in as an _app registration_, an identity for software
 created in Microsoft Entra ID, using a _client secret_ in place of a password.
 
-| Name | Contents | Stored As |
-|---|---|---|
-| `AZURE_TENANT_ID` | The directory (tenant) ID of the app registration. | Secret |
-| `AZURE_CLIENT_ID` | The application (client) ID of the app registration. | Secret |
-| `AZURE_CLIENT_SECRET` | A client secret of the app registration. | Secret |
-| `AZURE_SIGNING_ENDPOINT` | The endpoint of the signing account's region. | Variable |
-| `AZURE_SIGNING_ACCOUNT` | The name of the Artifact Signing account. | Variable |
-| `AZURE_CERTIFICATE_PROFILE` | The name of the certificate profile. | Variable |
+The workflow reads six values. Three are secrets: `AZURE_TENANT_ID`, the directory (tenant) ID of
+the app registration, `AZURE_CLIENT_ID`, its application (client) ID, and `AZURE_CLIENT_SECRET`, a
+client secret of the registration. Three are variables: `AZURE_SIGNING_ENDPOINT`, the endpoint of
+the region of the signing account, `AZURE_SIGNING_ACCOUNT`, the name of the Artifact Signing
+account, and `AZURE_CERTIFICATE_PROFILE`, the name of the certificate profile.
 
 The last three only name Azure resources, so they are stored as repository variables, on the
 Variables tab next to Secrets. Unlike secrets, variables can be read back.
@@ -252,12 +249,17 @@ Variables tab next to Secrets. Unlike secrets, variables can be read back.
 Windows accepts certificates from many providers, which differ in cost, in whose name is shown as the
 publisher, and in how well they suit an automated build.
 
-| Option | Cost | Publisher Shown | Limitations |
-|---|---|---|---|
-| [Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/) | About US$10 per month | The validated organization or individual | Organizations in certain countries, and individuals in the US and Canada. |
-| [Microsoft Store](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/) | Free for individuals | The developer | Signs only the copies installed from the Store. |
-| [SignPath Foundation](https://signpath.org) | Free for open-source projects | SignPath Foundation | Excludes HARP (see below). |
-| Certificate authority | Annual fee | The validated organization or individual | The private key has to be kept on a hardware token or cloud HSM, which is hard to use from a workflow. |
+- **[Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/)** costs about
+  US$10 per month, and shows the validated organization or individual as the publisher. It is open
+  to organizations in certain countries, and to individuals in the US and Canada.
+- **[Microsoft Store](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/)**
+  is free for individuals, and shows the developer, but signs only the copies installed from the
+  Store.
+- **[SignPath Foundation](https://signpath.org)** is free for open-source projects, and shows
+  SignPath Foundation as the publisher, but excludes HARP (see below).
+- **A certificate authority** charges an annual fee, and shows the validated organization or
+  individual. The private key has to be kept on a hardware token or cloud HSM, which is hard to use
+  from a workflow.
 
 The workflow uses Artifact Signing, which is the cheapest option that signs the packages it
 publishes. Like an Apple Developer Program membership, it can be set up for an individual or an

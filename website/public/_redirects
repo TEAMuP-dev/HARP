@@ -1,11 +1,10 @@
-# The site moved from harp3.netlify.app, which released versions of HARP and PyHARP link, so this
-# rule forwards every page there to the same path here. It comes first, and the ! applies it
-# even where a file exists at the path.
-https://harp3.netlify.app/*                 https://harp.tools/:splat                        301!
+# The project answers at its Netlify address as well, so this rule forwards every page there to
+# the same path on the domain. It comes first, and the ! applies it even where a file exists at
+# the path.
+https://teamup-harp.netlify.app/*           https://harp.tools/:splat                        301!
 
-# Netlify redirects for pages that moved when the guide was reorganized. Released versions of
-# HARP and PyHARP link some of these URLs, so keep every entry, and add one for any page that
-# moves again. Each page is reachable with and without its .html extension.
+# Pages that moved when the guide was reorganized, so that older links still land. Add an entry
+# for any page that moves again. Each page is reachable with and without its .html extension.
 
 /content/supported_os.html                  /content/install/                                301
 /content/supported_os                       /content/install/                                301

@@ -24,7 +24,9 @@ void NoteGridComponent::paint(Graphics& g)
         const float noteWidth = static_cast<float>(n.duration * pixelsPerSecond);
 
         const float noteXPos = static_cast<float>(n.startTime * pixelsPerSecond);
-        const float noteYPos = static_cast<float>(getHeight()) - ((n.noteNumber) * noteHeight);
+        /* The keyboard draws note 127 in the top row and note 0 in the bottom one, so the
+           row of a note starts a row above where its number of rows from the bottom ends */
+        const float noteYPos = static_cast<float>(getHeight()) - ((n.noteNumber + 1) * noteHeight);
 
         Rectangle<float> bounds(noteXPos, noteYPos, jmax(3.0f, noteWidth), noteHeight - 1.0f);
 

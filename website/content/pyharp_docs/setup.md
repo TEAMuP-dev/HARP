@@ -27,17 +27,14 @@ PyHARP provides the pieces of such an app:
 
 Each Gradio component becomes part of the model tab in HARP:
 
-| Gradio component | In HARP | Position |
-| :-- | :-- | :-- |
-| `gr.Audio(type="filepath")` | Audio track | Input or output |
-| `gr.File(type="filepath", file_types=[".mid", ".midi"])` | MIDI track | Input or output |
-| `gr.File(type="filepath")` with other file types | File picker, or output file | Input or output |
-| `gr.Slider` | Slider | Input |
-| `gr.Number` | Number box | Input |
-| `gr.Dropdown` | Dropdown, or a multiselect with `multiselect=True` | Input |
-| `gr.Checkbox` | Toggle | Input |
-| `gr.Textbox` | Text box | Input |
-| `gr.JSON`, returning a `LabelList` | Labels over an output track | Output |
+- `gr.Audio(type="filepath")` is an audio track, and
+  `gr.File(type="filepath", file_types=[".mid", ".midi"])` a MIDI track, as an input or an output.
+- `gr.File(type="filepath")` with other file types is a file picker as an input, and a file as an
+  output.
+- `gr.Slider`, `gr.Number`, `gr.Dropdown` (a multiselect with `multiselect=True`), `gr.Checkbox`,
+  and `gr.Textbox` are a slider, a number box, a dropdown, a toggle, and a text box, as inputs
+  alone.
+- `gr.JSON`, returning a `LabelList`, draws labels over an output track.
 
 The [README](https://github.com/TEAMuP-dev/pyharp#readme) of PyHARP documents the library in full,
 and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
@@ -73,12 +70,15 @@ Gradio 5.x loads, but cannot tell HARP why a job failed.
 PyHARP ships with four examples, minimal templates for each combination of input and output media,
 and a tester of every component:
 
-| Example | In | Out | Illustrates |
-| --- | --- | --- | --- |
-| [`pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/pitch_shifter) | Audio | Audio | One track in, one control, and one track out. |
-| [`midi_pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_pitch_shifter) | MIDI | MIDI | The same shape, on MIDI tracks. |
-| [`midi_synthesizer`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_synthesizer) | MIDI | Audio | Input and output tracks of different media types. |
-| [`ui_tester`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester) | Any | Audio, MIDI, file | Every control, track, and label type, with no real processing. |
+- [`pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/pitch_shifter) is
+  audio in and audio out: one track in, one control, and one track out.
+- [`midi_pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_pitch_shifter)
+  is the same shape, on MIDI tracks.
+- [`midi_synthesizer`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_synthesizer)
+  takes MIDI and returns audio, so its tracks differ in media type.
+- [`ui_tester`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester) takes anything
+  and returns audio, MIDI, and a file: every control, track, and label type, with no real
+  processing.
 
 To run the MIDI synthesizer, which renders a MIDI file to audio with a soundfont, clone PyHARP and
 install it in editable mode, which covers everything the examples import:

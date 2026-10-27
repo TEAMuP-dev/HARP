@@ -7,13 +7,13 @@
 
 <!-- TODO: screenshot. A DAW session with HARP open beside it, mid-process on a region the DAW
      opened in it, so that the relationship between the two is clear at a glance. The figure this
-     replaces predates HARP 3.0 and shows an interface that no longer exists.
+     replaces shows an interface that no longer exists.
 ![HARP processing a region opened from a DAW session](website/public/images/hero.png)
 -->
 
 <!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main) -->
-<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/harp3/deploys) -->
-<!-- TODO: arXiv badge, once the HARP 3.0 paper has a preprint to link. -->
+<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/teamup-harp/deploys) -->
+<!-- TODO: arXiv badge, once the HARP paper has a preprint to link. -->
 <!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
 
 <!-- #region overview -->
@@ -47,15 +47,15 @@ the interface and step-by-step tutorials on deploying a model of your own.
 <!-- website/content/install/index.md -->
 # Installation
 
-Download a package from the [latest release](https://github.com/TEAMuP-dev/HARP/releases). Every
-push is built for each platform below.
+Download a package for your platform from [harp.tools](https://harp.tools/content/install/), or
+from the [latest release](https://github.com/TEAMuP-dev/HARP/releases) on GitHub. Every push is
+built for each platform below.
 
 <!-- #region install-requirements -->
-| Platform | Package | Requires |
-| :-- | :-- | :-- |
-| macOS | Universal binary, signed and notarized | macOS 11 or newer, on Apple silicon or Intel |
-| Windows | x64 executable | Windows 10 or 11 |
-| Linux | x64 and arm64 archives | glibc 2.35 or newer |
+- **macOS**: a universal binary, signed and notarized, for macOS 11 or newer on Apple silicon or
+  Intel.
+- **Windows**: an x64 executable, for Windows 10 or 11.
+- **Linux**: x64 and arm64 archives, for glibc 2.35 or newer.
 
 The Linux packages are built on the oldest supported Ubuntu, which sets that glibc requirement. They
 run on Ubuntu 22.04, Debian 12, Fedora 36, RHEL 10, openSUSE Leap 16, and Arch, or anything newer.
@@ -207,19 +207,8 @@ guide to [adding an API provider](https://github.com/TEAMuP-dev/HARP/blob/main/d
 describes.
 
 <!-- #region version-compatibility -->
-HARP and pyharp are released in mutually compatible pairs, listed below. The root `VERSION` file
+HARP 4.0.0 pairs with pyharp 0.4.2, and the two are released together. The root `VERSION` file
 sets the application version through CMake.
-
-| HARP | pyharp |
-| :-: | :-: |
-| 4.0.0 | 0.4.2 |
-| 3.1.0 | 0.3.0 |
-| 3.0.0 | 0.3.0 |
-| 2.2.0 | 0.2.1 |
-| 2.1.x | 0.2.0 |
-| 2.0.0 | 0.2.0 |
-| 1.3.0 | 0.1.1 |
-| 1.2.0 | 0.1.0 |
 <!-- #endregion version-compatibility -->
 
 ## Building HARP

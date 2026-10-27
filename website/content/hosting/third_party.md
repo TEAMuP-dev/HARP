@@ -1,16 +1,17 @@
 # Using Third-Party APIs
 
-Some models are available only through an API that someone else runs, such as a commercial service
-or another Hugging Face Space. HARP reaches them in three ways, which differ in whose key pays for
-each request, and in whether HARP itself has to change.
+Some models are closed-source and offered only through an API, such as a commercial service, and
+others run on a Hugging Face Space that cannot be reproduced elsewhere. HARP reaches them in three
+ways, which differ in whose key pays for each request, and in whether HARP itself has to change:
 
-| Route | Key | Who pays | Changes to HARP |
-| :-- | :-- | :-- | :-- |
-| [A PyHARP app that calls the API](#wrapping-an-api-in-a-pyharp-app) | A secret of the host of the app | The host of the app | None |
-| [A PyHARP app that calls another Space](#calling-another-space) | Forwarded from each user | Each user | None |
-| [A provider built into HARP](#adding-a-provider-to-harp) | Added by each user to HARP | Each user | A new client class |
+- **[A PyHARP app that calls the API](#wrapping-an-api)**, with a key that belongs to the host of
+  the app, who pays for every request. HARP needs no change.
+- **[A PyHARP app that calls another Space](#calling-another-space)**, forwarding the allowance of
+  each user, who pays for their own requests. HARP needs no change.
+- **[A provider built into HARP](#adding-a-provider)**, with a key each user adds to HARP, who pays
+  for their own requests. This takes a new client class in HARP.
 
-## Wrapping an API in a PyHARP App
+## Wrapping an API
 
 A PyHARP app can do anything in `process_fn`, including sending the input to a web API and
 returning what comes back. HARP sees an ordinary model, with the controls and tracks the app
@@ -92,7 +93,7 @@ the other Space can change its API, or take it down, without notice.
 [Calling Another Space](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#calling-another-space)
 covers the cases where it is the right choice, and what such an app owes HARP.
 
-## Adding a Provider to HARP
+## Adding a Provider
 
 HARP can also call a service directly, without an app in between, as it does for the Stable Audio
 models of Stability AI. Each user adds their own key under `File > Settings > API Keys`, HARP sends
@@ -101,6 +102,7 @@ described in a file that ships with HARP, so the model appears on the Home tab o
 being hosted anywhere.
 
 This route takes a change to HARP itself: a client class that translates requests from HARP into
-the API of the service, released with a new version of HARP. It suits a service with which many
-users already have an account. [Adding an API Provider](/content/contributing/add_provider)
-describes the steps.
+the API of the service, released with a new version of HARP. It is the route for a model that is
+closed-source but offered through an API, since nothing else can reach it, and it suits a service
+with which many users already have an account.
+[Adding an API Provider](/content/contributing/add_provider) describes the steps.

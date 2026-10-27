@@ -38,7 +38,7 @@ Key behaviors:
 - **Models are asked to refuse what they cannot use.** A model taking audio or
   MIDI is also sent an unreadable file, and one taking audio an empty one, and
   passes only if it refuses each with a `gr.Error` before reserving the GPU.
-  See [Cases Expecting an Error](#cases-expecting-an-error).
+  See [Expecting an Error](#expecting-an-error).
 - **A Space's README is compared with its model card**, which costs nothing and
   so runs with `--load-only` too. See [README and Model Card](#readme-and-model-card).
 - A daily GitHub Action
@@ -342,7 +342,7 @@ Three mechanisms limit the ZeroGPU allowance a run can consume:
   alongside. The cap is held only around the endpoint tests, so slow restarts
   and connections still overlap.
 
-## When a Space Will Not Start
+## Spaces That Will Not Start
 
 A sleeping space wakes automatically when something requests it.
 However, sometimes this does not work and the host answers at once with a `503`
@@ -411,7 +411,7 @@ Configuration is only needed to go beyond that: pinning specific control
 values, feeding real audio, adjusting the properties of the synthesized
 inputs, or inspecting outputs more deeply.
 
-### Synthesized input properties
+### Synthesized Input Properties
 
 Without configuration, the generated inputs are a 2-second mono 44.1 kHz sine
 sweep and a two-note MIDI file. A `synthesized_inputs` block changes them, at
@@ -458,7 +458,7 @@ synthesized_inputs:
 ```
 
 `content` replaces the input with one a model cannot use, for a case that
-[expects an error](#cases-expecting-an-error). `unreadable` is a file with the
+[expects an error](#expecting-an-error). `unreadable` is a file with the
 right extension that holds no audio or MIDI at all, and `empty` is a valid file
 holding nothing: an audio file of no frames, written as WAV whatever `ext`
 says, since a FLAC file of no frames cannot be opened, or MIDI without a note.
@@ -511,7 +511,7 @@ never called.
 A file for each distinct set of properties is generated once and reused for
 the rest of the run.
 
-### Step 1: find the control labels of the model
+### 1. Find the Control Labels
 
 Test cases reference inputs and outputs by their **label**, the display name
 each gradio component was given in the `app.py` of the model. There are three ways
@@ -523,7 +523,7 @@ to find them:
 - Reference a wrong label on purpose and run the validator. The error message
   lists every available label.
 
-### Step 2: add the case to config.yml
+### 2. Add the Case
 
 Cases live under `overrides:`, keyed by the qualified name of the model, which
 is its space id or `examples/<example-dir>`. Each case needs a `name` and takes
@@ -533,7 +533,7 @@ several optional fields.
 `files` substitutes input files by label, with paths taken relative to
 config.yml (real inputs belong under `test_data/`).
 `process_timeout` can be overridden at either the model or case level.
-See above for information about `synthesized_inputs` and Step 3 for information about `expect` and `validators`.
+See above for information about `synthesized_inputs` and [Check the Outputs](#3-check-the-outputs) for information about `expect` and `validators`.
 
 ```yaml
 overrides:
@@ -563,7 +563,7 @@ case. Every case is a `/process` call, so on ZeroGPU each extra case is
 weighed against the time and allowance a run spends (see
 [CI Behavior](#ci-behavior)).
 
-### Step 3: check the outputs (optional)
+### 3. Check the Outputs
 
 Every case already gets structural checks for free. `/process` must not error,
 file outputs must exist and be non-empty, and a JSON output (_e.g._ an optional
@@ -577,7 +577,7 @@ Beyond that, there are two mechanisms to validate output:
 - **`validators`** run custom Python for checks that cannot be expressed as a
   property of one output, typically relationships spanning several outputs.
 
-#### `expect`: declarative per-output rules
+#### Declarative Rules
 
 Keyed by output label, then by rule. Every rule is optional, and an output
 with no rules is still subject to the default structural checks:
@@ -600,25 +600,21 @@ with no rules is still subject to the default structural checks:
             min_labels: 1        # minimum labels in a pyharp LabelList
 ```
 
-The following is the full vocabulary along with which output types each rule covers:
+The full vocabulary, by the outputs each rule applies to:
 
-| Rule | Applies to | Asserts |
-|---|---|---|
-| `ext` | any file output | Extension matches (string, or list of accepted extensions) |
-| `min_bytes` | any file output | File is at least this many bytes |
-| `num_channels` | audio output | Exact channel count |
-| `sample_rate` | audio output | Exact sample rate in Hz |
-| `bit_depth` | audio output | Exact PCM bit depth (16, 24, ...), and errors on compressed formats such as MP3 or OGG |
-| `min_rms_db` | audio output | RMS level is at least this many dBFS |
-| `max_rms_db` | audio output | RMS level is at most this many dBFS |
-| `max_clipping` | audio output | At most this fraction of the samples sit in flat tops at full scale (0.001 is 0.1%) |
-| `min_duration` / `max_duration` | audio or MIDI output | Length in seconds is within bounds |
-| `min_notes` | MIDI output | At least this many note-on events |
-| `note_instruments` | MIDI output | Notes use only these General MIDI program numbers (one, or a list of accepted) |
-| `note_channels` | MIDI output | Notes use only these channels (one, or a list of accepted) |
-| `min_labels` | JSON (`LabelList`) output | At least this many labels returned |
-| `min_length` | text file output | At least this many characters in the file, ignoring surrounding whitespace |
-| `excludes` | text file output | The text does not contain any of these (one string, or a list), matched case-insensitively |
+- **Any file output**: `ext` requires the extension (one, or a list of accepted ones), and
+  `min_bytes` a least size in bytes.
+- **Audio outputs**: `num_channels` and `sample_rate` require exact values. `bit_depth` requires an
+  exact PCM bit depth (16, 24, ...), and errors on compressed formats such as MP3 or OGG.
+  `min_rms_db` and `max_rms_db` bound the RMS level in dBFS. `max_clipping` caps the fraction of
+  samples sitting in flat tops at full scale (0.001 is 0.1%). `min_duration` and `max_duration`
+  bound the length in seconds, for MIDI outputs as well.
+- **MIDI outputs**: `min_notes` requires at least that many note-on events. `note_instruments`
+  lists the General MIDI program numbers the notes may use, and `note_channels` the channels (one
+  value, or a list, for either).
+- **Label outputs** (a JSON `LabelList`): `min_labels` requires at least that many labels.
+- **Text file outputs**: `min_length` requires at least that many characters, ignoring surrounding
+  whitespace, and `excludes` forbids text (one string, or a list), matched case-insensitively.
 
 `note_instruments` and `note_channels` assert coverage rather than presence.
 Every instrument or channel the notes carry has to be one the rule lists, and
@@ -651,7 +647,7 @@ is valid. The run still exits `1`, since the case did not pass, but it is the
 config that needs the fix. A rule under `"*"` is more forgiving. When it
 matches no compatible output it is skipped instead of raising an error. This
 is what allows a generic case (see
-[common test cases](#step-4-reuse-a-case-across-models)) to target output types a
+[common test cases](#4-reuse-a-case)) to target output types a
 given model does not have.
 
 **On `min_rms_db`:** level is measured as RMS in dBFS, where 0 dBFS is full
@@ -711,7 +707,7 @@ errors on compressed formats, which have no fixed bit depth.
 `min_duration` and `max_duration` are shared with audio and read the MIDI's
 own length in seconds. `min_notes` counts note-on events.
 
-#### `validators`: custom Python
+#### Custom Validators
 
 Registered in [validators.py](src/validators.py) and referenced by name, with
 the parameters of each validator nested beneath it so they stay separate from
@@ -763,7 +759,7 @@ Six validators ship with the harness:
   similarity. Never skips.
 
 The first four are model-agnostic and run as
-[common test cases](#step-4-reuse-a-case-across-models). The last two name
+[common test cases](#4-reuse-a-case). The last two name
 MERIT's and MuQ's own outputs, so they are referenced from those models'
 entries. The local regression checks cover all of them, plus the `expect`
 rules and config.yml itself:
@@ -793,7 +789,7 @@ generally useful property of a single output, consider adding it to the
 `expect` vocabulary (`EXPECT_RULES` in [expectations.py](src/expectations.py)) instead of
 putting it in a one-off validator.
 
-### Step 4: reuse a case across models
+### 4. Reuse a Case
 
 A case under the `test_cases` of a model only applies to that model. For a check
 that should hold for *every* model, such as "no file output is empty" or
@@ -831,7 +827,7 @@ header-only WAV from a model that wrote no samples and reported success,
 `audio-unclipped` fails audio that clipped, and `declared-format` fails a model
 that is given no audio and returns audio its card does not describe. The other
 three are refusals, described under
-[Cases Expecting an Error](#cases-expecting-an-error).
+[Expecting an Error](#expecting-an-error).
 
 `declared-format` exists because a model given no audio makes its own, at a
 rate and channel count the model fixes, which
@@ -858,7 +854,7 @@ A model can opt out of common cases entirely with `skip_common_cases: true` in
 its `overrides` entry, or out of the ones it names with a list, such as
 `skip_common_cases: [refuses-empty-audio]`, beside a comment saying why.
 
-### Cases expecting an error
+### Expecting an Error
 
 A case with `expect_error` sends an input the model cannot use, and passes
 only if the model refuses it the way [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)
@@ -929,7 +925,7 @@ python model_validation/src/validate_models.py \
   --cases refuses-unreadable-audio refuses-empty-audio refuses-unreadable-midi
 ```
 
-### Step 5: run a single model to iterate
+### 5. Iterate on One Model
 
 ```bash
 python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifter --verbose
@@ -938,7 +934,7 @@ python model_validation/src/validate_models.py --spaces teamup-tech/pitch_shifte
 The console shows the pass or fail of each case, and `report.json` has the
 per-case timings and error details.
 
-### Reference: full config.yml schema
+### Full Schema
 
 [config.yml](config.yml) documents every setting in one place, with each one
 shown alongside its default. The top level takes `exclude`, `include_extra`,

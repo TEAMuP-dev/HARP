@@ -108,7 +108,7 @@ export default defineConfig({
       {
         text: 'Reference',
         items: [
-          { text: 'Current Limitations', link: '/content/limitations' },
+          { text: 'Limitations', link: '/content/limitations' },
         ]
       },
     ],

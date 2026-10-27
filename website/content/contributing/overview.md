@@ -32,7 +32,7 @@ Reports of bugs and requests for features are welcome as
 - [Website](https://github.com/TEAMuP-dev/HARP/blob/main/docs/WEBSITE.md): building and editing
   this site, and administering its hosting and domain.
 
-## How the Code Is Organized
+## Code Organization
 
 HARP is a [JUCE](https://juce.com) application in C++20, under
 [`src/`](https://github.com/TEAMuP-dev/HARP/tree/main/src). A request passes through these parts:
@@ -72,6 +72,9 @@ under the debugger.
 
 <!--@include: @/../README.md#distribution-->
 
-To release a version, update `VERSION` and `RELEASE.md`, add the pair of HARP and PyHARP to the
-version table of the root `README.md`, which [Setting Up PyHARP](/content/pyharp_docs/setup#versions)
-includes, and push a tag such as `v4.0.0`.
+To release a version, update `VERSION` and `RELEASE.md`, name the PyHARP it pairs with in the root
+`README.md`, which [Setting Up PyHARP](/content/pyharp_docs/setup#versions) includes, and push a tag
+such as `v4.0.0`. The [install page](/content/install/) builds its download links from `VERSION`,
+so they lead to the packages of the new release once the workflow publishes them. The demo files it
+links are an asset of the 4.0.0 release. To change them, attach a new `HARP-demo-files.zip` to the
+latest release, and point the install page at that release.

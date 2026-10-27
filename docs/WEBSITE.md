@@ -58,6 +58,10 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
   place of a missing region.
 - **The two examples** under `website/content/pyharp_docs/` quote the code of the S-KEY and Demucs
   Spaces at pinned revisions. Update the revision and the quoted lines together.
+- **The install page** links the packages that the release workflow attaches to the GitHub release
+  named by the root `VERSION`. `website/content/install/release.data.mjs` builds the links when the
+  site is built, and the `DownloadButtons` component of the theme shows them, with the platform of
+  the visitor highlighted. The site holds no copy of the packages.
 
 ### Screenshots
 
@@ -66,6 +70,11 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
   and the README of PyHARP as `https://harp.tools/images/<name>.png`, so that one file serves all
   three.
 - **Images used by one page alone** can sit in `website/content/images/` instead.
+- **Figures**, such as the teaser on the introduction page, are draw.io exports kept under
+  `website/public/images/` with the diagram embedded, so that they open in draw.io for editing.
+  Export them with a white background and `color-scheme: light`, since draw.io writes its colors
+  as `light-dark()` pairs, which turn black text white in a dark theme. The HARP mark in the
+  teaser embeds `resources/icons/harp_logo.png`, scaled to 200 px.
 
 ### Moving a Page
 
@@ -88,23 +97,23 @@ Released versions of HARP and PyHARP link to some pages, such as `/content/intro
 
 ## Deploying
 
-Netlify builds the project `harp3` from `website/`, its base directory, with the command and the
+Netlify builds the project `teamup-harp` from `website/`, its base directory, with the command and the
 publish directory in [`netlify.toml`](../website/netlify.toml):
 
 - **`main`** deploys to production, at [harp.tools](https://harp.tools/).
 - **Every pull request against `main`** gets a deploy preview at
-  `deploy-preview-<number>--harp3.netlify.app`, linked from the checks of the pull request.
-- **Every branch named `website/*`** gets a branch deploy at `<branch>--harp3.netlify.app`, with the
+  `deploy-preview-<number>--teamup-harp.netlify.app`, linked from the checks of the pull request.
+- **Every branch named `website/*`** gets a branch deploy at `<branch>--teamup-harp.netlify.app`, with the
   slash of the name replaced by a hyphen. The pattern is set as **Branch deploys**, under
   **Project configuration → Build & deploy → Continuous deployment → Branches and deploy contexts**.
 
 A build that fails leaves the last successful deploy in place. `Deploys`, in the project on Netlify, lists
 every build with its log, and publishing an earlier deploy from there rolls the site back.
 
-**The site was first served at `harp3.netlify.app`**, which released versions of HARP and PyHARP
-still link. Netlify keeps that address for the project, and the first rule in
-`website/public/_redirects` forwards every page there to the same path on harp.tools. The rule names
-the production address alone, so deploy previews and branch deploys are unaffected. Keep it.
+**The project answers at `teamup-harp.netlify.app` as well**, as every Netlify project does at its
+own address. The first rule in `website/public/_redirects` forwards every page there to the same path
+on harp.tools, so that the site is served from one address. The rule names the production address
+alone, so deploy previews and branch deploys are unaffected.
 
 ## Administration
 
@@ -113,7 +122,7 @@ account that holds the registration of the domain.
 
 ### Netlify
 
-The project `harp3` belongs to a Netlify team with one member, its Owner, who alone controls the
+The project `teamup-harp` belongs to a Netlify team with one member, its Owner, who alone controls the
 deployment, since a second member would take the team off the free plan. Changes to the site go
 through pull requests to the repository, so contributors need no Netlify account. Netlify builds
 from `TEAMuP-dev/HARP` through its GitHub app, shown under
@@ -172,9 +181,6 @@ registration at the price of the new registrar.
 off the free plan. The dashboard moves a project, and the DNS zone of its domain, only to a team on
 which the person moving it is also a member. Either way, one team has to hold two members for a
 moment, so the handoff will most likely mean paying for one month of a team plan.
-
-Whatever the route, the project `harp3` itself must move, rather than be recreated, since released
-apps link its address, `harp3.netlify.app`.
 
 ### Changing the Domain
 

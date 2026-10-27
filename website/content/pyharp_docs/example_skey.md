@@ -35,7 +35,7 @@ The Space holds:
 
 Copying the code that inference needs, rather than a whole research repository, keeps a Space small
 and quick to start, as
-[Keeping a Space Lightweight](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#keeping-a-space-lightweight)
+[Lightweight Spaces](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#lightweight-spaces)
 describes.
 
 ## 2. Describe the Model

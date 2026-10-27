@@ -5,7 +5,7 @@ The models on the Home tab of HARP are hosted by us, as Hugging Face Spaces of t
 beyond HARP itself. This page runs one of them, then explains the badges on a model card, API keys,
 and what to expect from a Space that has been idle.
 
-## Example: Separating Stems with Demucs
+## Separating Stems with Demucs
 
 [Demucs](https://github.com/facebookresearch/demucs) separates a mix into drums, bass, vocals, and
 everything else. It runs on a GPU through ZeroGPU, which Hugging Face lends to each request.
@@ -80,19 +80,24 @@ prefilled GitHub issue. A quota error clears once the allowance recovers, or at 
 
 The Home tab is the full list. A few models to try first:
 
-| Model | Task | Input | Output |
-| :-- | :-- | :-- | :-- |
-| [Demucs](https://huggingface.co/spaces/teamup-tech/Demucs) | Stem separation | Audio | Audio |
-| [Mel-Band RoFormer](https://huggingface.co/spaces/teamup-tech/Mel-Band-RoFormer) | Vocal and instrumental separation | Audio | Audio |
-| [S-KEY](https://huggingface.co/spaces/teamup-tech/S-KEY) | Key detection | Audio | Labels |
-| [Beat This!](https://huggingface.co/spaces/teamup-tech/Beat-This) | Beat and downbeat tracking | Audio | Labels |
-| [Transkun](https://huggingface.co/spaces/teamup-tech/Transkun) | Piano transcription | Audio | MIDI |
-| [Anticipatory Music Transformer](https://huggingface.co/spaces/teamup-tech/Anticipatory-Music-Transformer) | MIDI accompaniment | MIDI | MIDI |
-| [text2midi](https://huggingface.co/spaces/teamup-tech/text2midi) | MIDI generation | Text | MIDI |
-| [MusicGen](https://huggingface.co/spaces/teamup-tech/MusicGen) | Music generation | Text, audio | Audio |
-| [VampNet](https://huggingface.co/spaces/teamup-tech/VampNet) | Variations on a recording | Audio | Audio |
-| [DeepFilterNet](https://huggingface.co/spaces/teamup-tech/DeepFilterNet) | Speech denoising | Audio | Audio |
-| [Whisper](https://huggingface.co/spaces/teamup-tech/Whisper) | Speech transcription | Audio | Text file |
-| [MIDI Synthesizer](https://huggingface.co/spaces/teamup-tech/MIDI-Synthesizer) | MIDI rendering | MIDI | Audio |
+- [Demucs](https://huggingface.co/spaces/teamup-tech/Demucs) separates a mix into stems.
+- [Mel-Band RoFormer](https://huggingface.co/spaces/teamup-tech/Mel-Band-RoFormer) separates the
+  vocals from the instrumental.
+- [S-KEY](https://huggingface.co/spaces/teamup-tech/S-KEY) detects the key, as a label over the
+  audio.
+- [Beat This!](https://huggingface.co/spaces/teamup-tech/Beat-This) tracks beats and downbeats, as
+  labels.
+- [Transkun](https://huggingface.co/spaces/teamup-tech/Transkun) transcribes piano audio to MIDI.
+- [Anticipatory Music Transformer](https://huggingface.co/spaces/teamup-tech/Anticipatory-Music-Transformer)
+  writes an accompaniment to a MIDI file.
+- [text2midi](https://huggingface.co/spaces/teamup-tech/text2midi) generates MIDI from a text
+  prompt.
+- [MusicGen](https://huggingface.co/spaces/teamup-tech/MusicGen) generates music from text, with an
+  optional audio prompt.
+- [VampNet](https://huggingface.co/spaces/teamup-tech/VampNet) makes variations on a recording.
+- [DeepFilterNet](https://huggingface.co/spaces/teamup-tech/DeepFilterNet) denoises speech.
+- [Whisper](https://huggingface.co/spaces/teamup-tech/Whisper) transcribes speech to a text file.
+- [MIDI Synthesizer](https://huggingface.co/spaces/teamup-tech/MIDI-Synthesizer) renders MIDI to
+  audio.
 
 To add a model of your own, see [Deploying Models with PyHARP](/content/pyharp_docs/setup).

@@ -224,6 +224,18 @@ public:
         return OpResult::ok();
     }
 
+    /* The page of a Gradio app sends a whole number as one, as JavaScript writes it, and
+       a model may count or index with it, so a slider or number box at a whole value is sent
+       the same way here. JUCE would otherwise write "32.0", which Python reads as a float
+       and which fails wherever an int is required. */
+    static var numericValue(double value)
+    {
+        if (exactlyEqual(std::floor(value), value) && std::abs(value) < 1.0e9)
+            return var(static_cast<int>(value));
+
+        return var(value);
+    }
+
     OpResult process(const std::map<Uuid, File>& inputFiles,
                      std::vector<File>& outputFiles,
                      LabelList& labels)
@@ -326,7 +338,7 @@ public:
             else if (auto numberBoxComponentInfo =
                          dynamic_cast<NumberBoxComponentInfo*>(componentInfo.get()))
             {
-                controlValue = var(numberBoxComponentInfo->value);
+                controlValue = numericValue(numberBoxComponentInfo->value);
             }
             else if (auto toggleComponentInfo =
                          dynamic_cast<ToggleComponentInfo*>(componentInfo.get()))
@@ -336,7 +348,7 @@ public:
             else if (auto sliderComponentInfo =
                          dynamic_cast<SliderComponentInfo*>(componentInfo.get()))
             {
-                controlValue = var(sliderComponentInfo->value);
+                controlValue = numericValue(sliderComponentInfo->value);
             }
             else if (auto comboBoxComponentInfo =
                          dynamic_cast<ComboBoxComponentInfo*>(componentInfo.get()))

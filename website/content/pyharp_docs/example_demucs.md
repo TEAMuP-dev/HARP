@@ -26,7 +26,7 @@ The Space holds `app.py`, `requirements.txt`, and `README.md`. The requirements 
 package, and a release of PyTorch that ZeroGPU supports. Demucs also runs on a CPU, more slowly, so
 the app works without a GPU.
 
-## 2. Build the Models as the App Starts
+## 2. Build the Models at Startup
 
 ```python
 DEMUX_MODELS = ["htdemucs", "mdx_extra", "mdx_extra_q"]
@@ -119,7 +119,7 @@ def process_fn(audio_file_path, model_name):
 long to finish within the 15 minutes PyHARP allows a job. A refused request spends none of the
 allowance of the caller.
 
-## 5. Return the Format of the Input
+## 5. Keep the Input Format
 
 ```python
     signal = AudioSignal(audio_file_path)
@@ -171,7 +171,7 @@ drops back into the session unchanged.
 [Preserving the Input Format](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#preserving-the-input-format)
 explains why a lossy or AIFF input comes back as WAV.
 
-## 6. Offer a Choice and Several Outputs
+## 6. Add a Choice and More Outputs
 
 ```python
 # Gradio App

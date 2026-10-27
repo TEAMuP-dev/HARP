@@ -27,7 +27,7 @@ Changes](HUGGINGFACE.md) logs several changes that broke our Spaces.
 - [Hardware Portability](#hardware-portability)
 - [Dependency Conflicts](#dependency-conflicts)
 - [Calling Another Space](#calling-another-space)
-- [Keeping a Space Lightweight](#keeping-a-space-lightweight)
+- [Lightweight Spaces](#lightweight-spaces)
 
 ## Licensing
 
@@ -63,16 +63,25 @@ The categories below are a practical guide (not legal advice) for deciding wheth
 be deployed through PyHARP. Where a license is unusual, restrictive, or ambiguous, confirm
 what it permits before deploying.
 
-| Category | Examples | Deploying |
-|---|---|---|
-| Permissive | `mit`, `apache-2.0`, `bsd-3-clause`, `isc`, `cc0-1.0`, `unlicense` | No concerns. |
-| Weak copyleft | `lgpl-3.0`, `mpl-2.0`, `epl-2.0` | Fine. Obligations attach to modifications of the licensed code, not to a Space that calls it. |
-| Strong copyleft | `gpl-3.0`, `agpl-3.0` | Fine to host. `agpl-3.0` treats network use as distribution, so the Space's source must be offered, which a public Space repository already satisfies. |
-| Use-restricted | `openrail`, `openrail++`, `creativeml-openrail-m` | Fine, but the behavioral restrictions pass through to users. |
-| Non-commercial | `cc-by-nc-4.0`, `fair-noncommercial-research-license` | Deployable as a demonstration, but users cannot use the output commercially. State this in the description. |
-| No derivatives | `cc-by-nd-4.0` | Confirm what is permitted before deploying. Redistribution is allowed only unmodified, so the weights cannot be converted or repackaged and then hosted. |
-| Community and gated | `llama3.x`, `gemma` | Acceptable, but do not mirror the weights. Download from the gated upstream repository so the terms are accepted by whoever runs it. |
-| Unstated | no license at all | **Do not deploy.** See above. |
+- **Permissive** licenses (`mit`, `apache-2.0`, `bsd-3-clause`, `isc`, `cc0-1.0`, `unlicense`)
+  raise no concerns.
+- **Weak copyleft** licenses (`lgpl-3.0`, `mpl-2.0`, `epl-2.0`) are fine. Their obligations attach
+  to modifications of the licensed code, not to a Space that calls it.
+- **Strong copyleft** licenses (`gpl-3.0`, `agpl-3.0`) are fine to host. `agpl-3.0` treats network
+  use as distribution, so the source of the Space must be offered, which a public Space repository
+  already satisfies.
+- **Use-restricted** licenses (`openrail`, `openrail++`, `creativeml-openrail-m`) are fine, but
+  their behavioral restrictions pass through to users.
+- **Non-commercial** licenses (`cc-by-nc-4.0`, `fair-noncommercial-research-license`) allow a
+  deployment as a demonstration, but users cannot use the output commercially. State this in the
+  description.
+- **No-derivatives** licenses (`cc-by-nd-4.0`) call for confirming what is permitted before
+  deploying. Redistribution is allowed only unmodified, so the weights cannot be converted or
+  repackaged and then hosted.
+- **Community and gated** licenses (`llama3.x`, `gemma`) are acceptable, but do not mirror the
+  weights. Download from the gated upstream repository, so that the terms are accepted by whoever
+  runs it.
+- **No license at all** means **do not deploy** (see above).
 
 ## Model Card
 
@@ -169,8 +178,7 @@ Field by field:
   it must be set even though `gradio` does not appear in `requirements.txt`. Gradio `4.x` and
   earlier are incompatible with HARP, and versions before `6.13.0` cannot forward error messages at
   all. Where a dependency rules `6.24.0` out, hold the newest release it allows and say why in the
-  README body (see [Pin Gradio Before Splitting the
-  Environment](#pin-gradio-before-splitting-the-environment)).
+  README body (see [Pin Gradio First](#pin-gradio-first)).
 - **`sdk`** is `gradio`, or `docker` for the layout under
   [Dependency Conflicts](#dependency-conflicts).
 - **`app_file`** is `app.py`, and **`pinned`** is `false`.
@@ -224,7 +232,7 @@ carrying the reason a job failed (see [Error Reporting](#error-reporting)).
 
 So `requirements.txt` holds `pyharp` pinned to a release, `spaces` (see
 [Hardware Portability](#hardware-portability)), and the dependencies of the model, kept to what the
-app imports (see [Keeping a Space Lightweight](#keeping-a-space-lightweight)). It does not hold
+app imports (see [Lightweight Spaces](#lightweight-spaces)). It does not hold
 `gradio`.
 
 **Pin the package that implements the model** to an exact version, since `app.py` calls its API and
@@ -304,13 +312,13 @@ section covers what this asks of `process_fn`. What it changes for a deployment:
   the Space (see below), finishes loading before `process_fn` can reserve a GPU. On ZeroGPU, place
   the model on CUDA here, on the main thread of the worker.
 
-  Many Spaces written before PyHARP 0.4.2 load in both processes, at module scope or in a background
-  thread that the worker joins. Loading at module scope is safe, if wasteful, because the app
+  Loading in both processes, at module scope or in a background thread that the worker joins, is a
+  common shortcut. Loading at module scope is safe, if wasteful, because the app
   finishes it before it starts the worker. A thread is safe only while everything it downloads goes
   through the Hub's cache, which locks each file. Anything else, such as a URL fetched to a fixed
   path, is still being written by the thread of the app when the thread of the worker starts.
-- **The worker starts as the Space comes up.** Since PyHARP 0.4.2, `build_endpoint` starts it at
-  once (`warm_start`), so its import and every model it loads are done before the first request in
+- **The worker starts as the Space comes up.** `build_endpoint` starts it at once (`warm_start`),
+  so its import and every model it loads are done before the first request in
   most cases. A request that arrives while the worker is still loading waits for it, and on ZeroGPU
   a wait of more than about two minutes outlasts the token of the request, which then fails with
   "Expired ZeroGPU proxy token".
@@ -740,13 +748,15 @@ refused when that runs short, and pays a cold start whenever a worker is spawned
 <!-- #region hugging-face-plans -->
 Hugging Face sets what each account can host and spend. At the time of writing:
 
-| Account | Can host | Daily ZeroGPU allowance |
-| :-- | :-- | :-- |
-| None | Nothing | 2 minutes |
-| Free | Up to 2 Gradio Spaces, on ZeroGPU only, once the account is 30 days old and its email is verified | 5 minutes |
-| PRO | Gradio and Docker Spaces on any hardware, with up to 10 on ZeroGPU | 40 minutes, extensible with credits |
-| Team organization | Gradio and Docker Spaces on any hardware, with up to 50 on ZeroGPU | 40 minutes per member, extensible with credits |
-| Enterprise organization | Gradio and Docker Spaces on any hardware, with up to 50 on ZeroGPU | 60 minutes per member, extensible with credits |
+- **No account**: nothing can be hosted, and the daily ZeroGPU allowance is 2 minutes.
+- **Free**: up to 2 Gradio Spaces, on ZeroGPU alone, once the account is 30 days old and its email
+  is verified. The allowance is 5 minutes.
+- **PRO**: Gradio and Docker Spaces on any hardware, with up to 10 on ZeroGPU. The allowance is 40
+  minutes, extensible with credits.
+- **Team organization**: the same hardware, with up to 50 Spaces on ZeroGPU. The allowance is 40
+  minutes per member, extensible with credits.
+- **Enterprise organization**: the same, with an allowance of 60 minutes per member, extensible
+  with credits.
 
 A free account cannot create a Docker Space, or a Space on `cpu-basic` or upgraded hardware, so
 whatever it hosts runs on ZeroGPU, where every call to a decorated function spends the allowance of
@@ -867,18 +877,13 @@ Some models cannot share an environment with current Gradio. The usual cause is 
 that cannot be satisfied alongside it, such as a package relying on the `numpy.float` alias removed
 in `numpy==1.24`.
 
-### Pin Gradio Before Splitting the Environment
+### Pin Gradio First
 
 A model pinned to `transformers` 4.x is the common case, and it looks irreconcilable, since
 `transformers` below 5.0 caps `huggingface-hub` below 1.0 while Gradio 6 wants it above. Gradio's
 floor moved over the 6.x series, so which Gradio is pinned is what decides whether the two can
-coexist:
-
-| Gradio | Requires |
-| --- | --- |
-| 6.13 to 6.17 | `huggingface-hub>=0.33.5` |
-| 6.18 to 6.20 | `huggingface-hub>=1.2.0` |
-| 6.21 and later | `huggingface-hub>=1.16.0` |
+coexist. Gradio 6.13 through 6.17 require `huggingface-hub` 0.33.5 or newer, 6.18 through 6.20
+require 1.2.0 or newer, and 6.21 and later require 1.16.0 or newer.
 
 PyHARP requires Gradio 6.13 or newer for the error payload, so 6.13 through 6.17 is the window
 where a `transformers` 4.x model and PyHARP resolve together, landing on `huggingface-hub` 0.36.
@@ -924,11 +929,11 @@ building one, check whether the model can be installed after all:
   the constraints of the platform, often by vendoring a fork of a package whose release conflicts
   with ZeroGPU, or the source of a package whose sdist cannot be built.
 - **Vendor that Space's code rather than calling it.** Copy what the inference path imports, along
-  with the data files it opens (see [Keeping a Space Lightweight](#keeping-a-space-lightweight)),
+  with the data files it opens (see [Lightweight Spaces](#lightweight-spaces)),
   keep the authors' license file beside it, and call the function their interface calls.
-- **Dry-run the combined environment** with the recipe under [Pin Gradio Before Splitting the
-  Environment](#pin-gradio-before-splitting-the-environment) before concluding that it cannot
-  resolve. Model size is not a reason either, since weights are fetched at build time whatever the
+- **Dry-run the combined environment** with the recipe under [Pin Gradio First](#pin-gradio-first)
+  before concluding that it cannot resolve. Model size is not a reason either, since weights are
+  fetched at build time whatever the
   deployment.
 
 Calling another Space is the right deployment only where the model cannot be hosted here at all:
@@ -945,7 +950,7 @@ down without notice. A backend is never hosted under `teamup-tech`, both because
 be hosted here should be vendored instead and because HARP's Home tab lists every public Space in
 the organization, so a backend there would appear as a model that fails to load.
 
-### What a Frontend Owes HARP
+### Frontend Obligations
 
 SoulX-Singer's `app.py` does each of these, so start a new frontend from a copy of it.
 
@@ -982,7 +987,7 @@ SoulX-Singer's `app.py` does each of these, so start a new frontend from a copy 
 - **Check the API signature of the backend at startup,** so that an upstream change surfaces as a build
   failure rather than as a puzzle on every request.
 
-## Keeping a Space Lightweight
+## Lightweight Spaces
 
 Bring in only what inference needs. Research repositories carry training loops, evaluation
 harnesses, dataset preparation, notebooks, and configuration for experiments that were never run.

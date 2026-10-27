@@ -719,19 +719,15 @@ overrides:
         expect: *babe-2
 
   teamup-tech/BACHI:
-    # The Space reports "No predictions generated." and "Error: Could not
-    # extract notes from the input file." in its text output rather than
-    # raising, so both arrive as a successful result and only the content of
-    # the output distinguishes them from one. Each model type loads its own
-    # checkpoint.
+    # The score comes back as MIDI with a chord label over each segment. Each
+    # model type loads its own checkpoint.
     test_cases:
       - name: default
         expect: &bachi
-          "Chord Predictions":
-            min_length: 1
-            excludes:
-              - "Error:"
-              - "No predictions generated."
+          "Score as MIDI":
+            min_notes: 1
+          "Chord Labels":
+            min_labels: 1
 
       - name: pop
         controls:

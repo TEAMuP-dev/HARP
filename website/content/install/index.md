@@ -1,13 +1,19 @@
+<script setup>
+import { data as release } from './release.data.mjs'
+</script>
+
 # Installing HARP
 
-Download the package for your platform from the
-[latest release](https://github.com/TEAMuP-dev/HARP/releases) on GitHub.
+Download the package for your platform, then follow the steps for it below. Earlier versions are on
+[GitHub](https://github.com/TEAMuP-dev/HARP/releases).
+
+<DownloadButtons :release="release" />
 
 <!--@include: @/../README.md#install-requirements-->
 
 ## macOS
 
-1. Download `HARP-<version>-macOS.dmg`.
+1. Download <a :href="release.macOS.url">{{ release.macOS.name }}</a>.
 2. Open the disk image, and drag `HARP.app` onto the `Applications` folder beside it:
 
    <img src="/content/images/macos-install.png" alt="The HARP disk image, with HARP.app and a link to the Applications folder" style="display:block;margin:1rem auto;max-width:480px;width:100%;">
@@ -21,7 +27,7 @@ that copy loses it once the disk image is ejected.
 
 ## Windows
 
-1. Download `HARP-<version>-Windows-x64.zip`.
+1. Download <a :href="release.windows.url">{{ release.windows.name }}</a>.
 2. Extract `HARP.exe`, and move it to a permanent location, _e.g._, `C:\Program Files\HARP\`.
 3. Open `HARP.exe`. The first time it runs, Windows shows "Windows protected your PC", since the
    executable is not code signed. Select **More info**, then **Run anyway**.
@@ -33,12 +39,13 @@ that copy loses it once the disk image is ejected.
 
 ## Linux
 
-1. Download the archive for your architecture, `HARP-<version>-Linux-x64.tar.gz` or
-   `HARP-<version>-Linux-arm64.tar.gz`.
+1. Download the archive for your architecture,
+   <a :href="release.linuxX64.url">{{ release.linuxX64.name }}</a> or
+   <a :href="release.linuxArm64.url">{{ release.linuxArm64.name }}</a>.
 2. Extract the `HARP` executable, and move it to a directory on your `PATH`:
 
    ```bash
-   tar -xzf HARP-<version>-Linux-x64.tar.gz
+   tar -xzf HARP-*-Linux-x64.tar.gz
    mkdir -p ~/.local/bin
    mv HARP ~/.local/bin/
    ```
@@ -55,7 +62,9 @@ shows it again.
 ![HARP on first launch, with the welcome tutorial open over the Home tab](/images/first-launch-tutorial.png)
 -->
 
-Next, [set up HARP](/content/setup/) on its own or with your DAW.
+The <a :href="release.demoFiles.url">demo files</a> are short clips, MIDI files, and a score for
+trying the models, with a note on which models suit each. Next, [set up HARP](/content/setup/) on
+its own or with your DAW.
 
 ## Updating
 
