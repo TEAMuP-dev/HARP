@@ -99,7 +99,7 @@ python model_validation/src/validate_models.py --no-restart-failed
 # a model refusing as it should. A common case can drop its "common:" prefix
 python model_validation/src/validate_models.py --cases refuses-unreadable-audio refuses-empty-audio
 
-# Lint tier: check each space's files against docs/DEPLOYMENT.md, running nothing
+# Lint tier: check the files of each Space against docs/DEPLOYMENT.md, running nothing
 python model_validation/src/validate_models.py --lint
 python model_validation/src/validate_models.py --lint --spaces Demucs
 

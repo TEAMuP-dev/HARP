@@ -615,8 +615,7 @@ public:
                         "contain the text.");
         addAndMakeVisible(searchEditor);
 
-        meteredToggle.setToggleState(Settings::getBoolValue(hideMeteredKey),
-                                     dontSendNotification);
+        meteredToggle.setToggleState(Settings::getBoolValue(hideMeteredKey), dontSendNotification);
         meteredToggle.onClick = [this]
         {
             Settings::setValue(hideMeteredKey, meteredToggle.getToggleState());

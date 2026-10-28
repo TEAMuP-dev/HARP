@@ -131,11 +131,14 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      # 7z stores the path it is given, so the executable is zipped from the working directory to
+      # sit at the root of the archive rather than under Builds/HARP_artefacts/Release/
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           mkdir -p dist
-          7z a "dist/$PACKAGE.zip" "$ARTEFACTS/HARP.exe"
+          cp "$ARTEFACTS/HARP.exe" .
+          7z a "dist/$PACKAGE.zip" HARP.exe
 
       # A tarball keeps the executable permission, which zip archives made here would lose
       - name: Package (Linux)
