@@ -10,6 +10,10 @@ void KeyboardComponent::paint(Graphics& g)
 {
     const float keyHeight = getKeyHeight();
 
+    /* Shrinks the text on short keys. Whole-pixel heights keep the rendered glyphs
+       cached, where a height that follows every resize would re-render them each time. */
+    const float labelFontHeight = std::floor(jmin(14.0f, keyHeight - 1.0f));
+
     float cumHeight = 0; // Cumulative height
 
     for (int i = 127; i >= 0; i--)
@@ -39,6 +43,7 @@ void KeyboardComponent::paint(Graphics& g)
             String noteName = String(i) + " (" + pitchNames[pitch] + String(octave) + ")";
 
             g.setColour(Colours::white);
+            g.setFont(labelFontHeight);
             g.drawText(noteName,
                        5,
                        static_cast<int>(cumHeight),

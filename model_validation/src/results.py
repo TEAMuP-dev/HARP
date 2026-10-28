@@ -34,6 +34,10 @@ class CaseResult:
                               # which reserves ZeroGPU allowance. A retried
                               # call reserves another time and counts again
     error: str = ""
+    observed: dict = dataclasses.field(default_factory=dict)
+                              # Output label -> measured properties, for
+                              # properties no rule asserts (see
+                              # cases.measure_outputs)
 
 
 @dataclasses.dataclass
@@ -41,16 +45,22 @@ class ModelResult:
     """Outcome of validating one model deployment."""
 
     target: str                       # space id or "examples/<example>"
-    kind: str = "space"               # "space" | "local"
+    kind: str = "space"               # "space" | "local" | "lint"
     status: str = FAIL                # default, so any early return with an
                                       # error set is recorded as a failure
     stage: str = ""                   # HF runtime stage, or "LOCAL"
     hardware: str = ""                # HF hardware (e.g. "zero-a10g", "cpu-basic")
+    zerogpu: bool = False             # spends ZeroGPU allowance, on its own hardware
+                                      # or that of a backend (see quota.spends_zerogpu)
     controls_ok: bool = False
     cases: list = dataclasses.field(default_factory=list)
+                                      # CaseResult per test case, or for the
+                                      # lint, lint.Finding per finding
     duration: float = 0.0
     error: str = ""
     model_name: str = ""              # from the model card
+    log_tail: list = dataclasses.field(default_factory=list)
+                                      # the end of the run log of a failed space
 
 
 def status_emoji(result: ModelResult) -> str:
@@ -69,7 +79,7 @@ def status_emoji(result: ModelResult) -> str:
 
 def case_emoji(ok: bool | None) -> str:
     """
-    Symbol for one test case's outcome.
+    Symbol for the outcome of one test case.
 
     Args:
         ok (bool | None): True passed, False failed, None skipped.
@@ -139,6 +149,9 @@ def render_markdown(results: list, payload: dict) -> str:
     # Failures first, then alphabetical, so problems are visible at a glance
     ranked = sorted(results, key=lambda r: (r.status != FAIL, r.target))
 
+    if ranked and all(r.kind == "lint" for r in ranked):
+        return render_lint_markdown(ranked, payload)
+
     headline = f"**{payload['passed']}/{payload['validated']} models passed**"
     if payload["skipped"]:
         headline += f", {payload['skipped']} skipped"
@@ -173,5 +186,54 @@ def render_markdown(results: list, payload: dict) -> str:
                 if c.error:
                     lines += [f"- **{c.name}** {case_emoji(c.ok)}", "",
                               "```", c.error, "```", ""]
+            if r.log_tail:
+                lines += ["<details><summary>End of the space's log</summary>", "",
+                          "```", *r.log_tail, "```", "", "</details>", ""]
+
+    return "\n".join(lines) + "\n"
+
+
+def render_lint_markdown(ranked: list, payload: dict) -> str:
+    """
+    Render the human-readable report of a lint run.
+
+    The cases of a lint result are its findings, each an error, which fails the
+    Space, or a warning, which is only reported.
+
+    Args:
+        ranked (list): ModelResult objects of kind "lint", failures first.
+        payload (dict): The report.json payload (headline counts, command).
+
+    Returns:
+        markdown (str): The rendered report.
+    """
+
+    def count(r, severity):
+        return sum(getattr(finding, "severity", "") == severity for finding in r.cases)
+
+    lines = ["# HARP Model Lint Report", ""]
+    lines += [f"**{payload['passed']}/{payload['validated']} spaces passed** "
+              f"({payload['timestamp']})", ""]
+    if payload["command"]:
+        lines += [f"Command: `{payload['command']}`", ""]
+    lines += ["| Space | Status | Hardware | Errors | Warnings |",
+              "|---|---|---|---|---|"]
+
+    for r in ranked:
+        lines.append(f"| [{r.target}](https://huggingface.co/spaces/{r.target}) "
+                     f"| {status_emoji(r)} {r.status} | {r.hardware or '-'} "
+                     f"| {count(r, 'error')} | {count(r, 'warning')} |")
+
+    problems = [r for r in ranked if r.cases or r.error]
+    if problems:
+        lines += ["", "## Details", ""]
+        for r in problems:
+            lines += [f"### {r.target} ({r.status})", ""]
+            if not r.cases:
+                lines += ["```", r.error, "```"]
+            for finding in r.cases:
+                symbol = "❌" if finding.severity == "error" else "⚠️"
+                lines.append(f"- {symbol} `{finding.rule}` {finding.describe()}")
+            lines.append("")
 
     return "\n".join(lines) + "\n"

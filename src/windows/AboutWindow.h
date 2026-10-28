@@ -1,7 +1,7 @@
 /**
  * @file AboutWindow.h
  * @brief Window containing basic information and links.
- * @author hugofloresgarcia
+ * @author cwitkowitz, hugofloresgarcia
  */
 
 #pragma once
@@ -24,15 +24,14 @@ public:
         addAndMakeVisible(aboutText);
 
         modelGlossaryButton.setButtonText("Model Glossary");
-        modelGlossaryButton.setURL(
-            URL("https://harp3.netlify.app/content/usage/models.html"));
+        modelGlossaryButton.setURL(URL("https://harp.tools/content/usage/models.html"));
         modelGlossaryButton.setSize(380, 24);
         modelGlossaryButton.setTopLeftPosition(10, 110);
         modelGlossaryButton.setColour(HyperlinkButton::textColourId, Colours::blue);
         addAndMakeVisible(modelGlossaryButton);
 
         visitWebpageButton.setButtonText("Visit HARP Webpage");
-        visitWebpageButton.setURL(URL("https://harp3.netlify.app/"));
+        visitWebpageButton.setURL(URL("https://harp.tools/"));
         visitWebpageButton.setSize(380, 24);
         visitWebpageButton.setTopLeftPosition(10, 140);
         visitWebpageButton.setColour(HyperlinkButton::textColourId, Colours::blue);

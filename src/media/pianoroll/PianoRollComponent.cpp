@@ -34,10 +34,7 @@ PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, boo
     resizeNoteGrid(0.0);
 }
 
-PianoRollComponent::~PianoRollComponent()
-{
-    //resetNotes();
-}
+PianoRollComponent::~PianoRollComponent() = default;
 
 void PianoRollComponent::resized()
 {
@@ -181,8 +178,11 @@ void PianoRollComponent::scrollBarMoved(ScrollBar* scrollBarThatHasMoved,
 
 void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
 {
-    // Make sure vertical range is less than maximum keys visible
-    float halfRange = jmin(2.0f * stdDevMidi, static_cast<float>(maxKeysVisible / 2.0f));
+    // Keep the vertical range within the number of keys the roll can show, which notes that
+    // all share one pitch would otherwise shrink to nothing
+    const float halfRange = jlimit(static_cast<float>(minKeysVisible) / 2.0f,
+                                   static_cast<float>(maxKeysVisible) / 2.0f,
+                                   2.0f * stdDevMidi);
 
     double zoomAmount = keysVisibleToZoom(2.0f * halfRange);
 

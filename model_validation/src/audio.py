@@ -1,9 +1,9 @@
 """
 Audio decoding for HARP model validation.
 
-Models return audio in whatever format their process function writes -
+Models return audio in whatever format their process function writes.
 pyharp's save_audio() defaults to WAV, but a model passing its own output
-path can produce FLAC, OGG, MP3, AIFF, and so on. All formats are decoded
+path can produce FLAC, OGG, MP3, AIFF, and more. All formats are decoded
 through soundfile (libsndfile), which also frees the checks from caring
 about bit depth: samples always arrive as floats in [-1, 1], so a level
 threshold means the same thing for 16-bit, 24-bit, and float sources.
@@ -12,13 +12,57 @@ threshold means the same thing for 16-bit, 24-bit, and float sources.
 import math
 import os
 
+import numpy
 import soundfile
 
 
 __all__ = [
     'read_audio_props',
-    'supported_formats'
+    'supported_formats',
+    'clipped_fraction',
+    'FULL_SCALE'
 ]
+
+
+# The level of a sample at full scale: the largest positive value 16 bits can
+# hold, so a 16-bit file cut off at its ceiling reaches it, and so does a float
+# file whose samples run over 1.0 and will clip wherever it is converted. A
+# finer format only reaches it at its own ceiling.
+FULL_SCALE = 32767 / 32768
+
+# How long a run of samples at full scale has to last to count as clipping. A
+# tone normalized exactly to full scale reaches it at the top of every cycle:
+# at 20 Hz in 16 bits for about 0.1 ms, half of this, and for less the higher
+# the tone. A waveform cut off at the ceiling stays flat for longer the
+# further it overshot.
+MIN_CLIP_SECONDS = 0.0002
+
+
+def clipped_fraction(data, sample_rate: int) -> float:
+    """
+    The fraction of samples that sit in a flat top at full scale.
+
+    Args:
+        data (numpy.ndarray): Samples as floats, shaped (frames, channels).
+        sample_rate (int): Sample rate in Hz.
+
+    Returns:
+        fraction (float): Samples in runs at full scale lasting at least
+            MIN_CLIP_SECONDS, over all samples.
+    """
+
+    min_run = max(2, math.ceil(MIN_CLIP_SECONDS * sample_rate))
+    clipped = 0
+
+    for channel in data.T:
+        at_ceiling = (numpy.abs(channel) >= FULL_SCALE).astype(numpy.int8)
+        if not at_ceiling.any():
+            continue
+        edges = numpy.diff(numpy.concatenate(([0], at_ceiling, [0])))
+        lengths = numpy.flatnonzero(edges == -1) - numpy.flatnonzero(edges == 1)
+        clipped += int(lengths[lengths >= min_run].sum())
+
+    return clipped / data.size
 
 
 def supported_formats() -> list:
@@ -66,7 +110,9 @@ def read_audio_props(label: str, path: str) -> dict:
 
     Returns:
         props (dict): num_channels, sample_rate, duration (seconds), rms_db
-            (RMS level in dBFS, or -inf for digital silence), subtype
+            (RMS level in dBFS, or -inf for digital silence), peak_db (the
+            largest sample, in dBFS), clipping (the fraction of samples in
+            flat tops at full scale, see clipped_fraction), subtype
             (libsndfile encoding name), and bit_depth (int, or None for
             compressed encodings).
 
@@ -93,12 +139,15 @@ def read_audio_props(label: str, path: str) -> dict:
     assert frames, f"output '{label}' contains no audio frames"
 
     rms = math.sqrt(float((data * data).sum()) / data.size)
+    peak = float(abs(data).max())
 
     return {
         "num_channels": channels,
         "sample_rate": sample_rate,
         "duration": frames / sample_rate,
         "rms_db": 20 * math.log10(rms) if rms > 0 else float("-inf"),
+        "peak_db": 20 * math.log10(peak) if peak > 0 else float("-inf"),
+        "clipping": clipped_fraction(data, sample_rate),
         "subtype": subtype,
         "bit_depth": bit_depth_from_subtype(subtype),
     }

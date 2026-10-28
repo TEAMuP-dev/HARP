@@ -1,7 +1,7 @@
 /**
  * @file Labels.h
  * @brief Defines data structures for various types of labels.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once
@@ -13,7 +13,7 @@ using namespace juce;
 struct OutputLabel
 {
     // Required fields
-    float t;
+    float t = 0.0f;
     String label;
 
     // Optional fields

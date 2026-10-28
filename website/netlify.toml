@@ -2,5 +2,7 @@
   command = "pnpm run build"
   publish = ".vitepress/dist"
 
+# pnpm comes from the "packageManager" field of package.json, which Netlify installs through Corepack.
+# Redirects for pages that have moved are in public/_redirects.
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "24"

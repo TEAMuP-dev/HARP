@@ -2,8 +2,9 @@
 ZeroGPU usage tracking for HARP model validation.
 
 ZeroGPU allowances are consumed per account, so a long validation run draws on
-the day's quota. Hugging Face publishes no reliable API for the remaining
-allowance, so this module reports the work attributable to the run itself.
+the quota of the day. Hugging Face reports the remaining allowance only to a
+token with billing permissions, so this module reports the work attributable to
+the run itself.
 """
 
 import threading
@@ -11,13 +12,14 @@ import threading
 
 __all__ = [
     'ZeroGPUTracker',
-    'is_zerogpu'
+    'is_zerogpu',
+    'spends_zerogpu'
 ]
 
 
 def is_zerogpu(hardware: str) -> bool:
     """
-    Whether a space's hardware consumes ZeroGPU quota.
+    Whether the hardware of a space consumes ZeroGPU quota.
 
     ZeroGPU hardware ids start with "zero", such as "zero-a10g". Anything
     else (cpu-basic, t4-small, ...) does not draw on the shared allowance.
@@ -32,13 +34,32 @@ def is_zerogpu(hardware: str) -> bool:
     return bool(hardware) and hardware.lower().startswith("zero")
 
 
+def spends_zerogpu(hardware: str, tags) -> bool:
+    """
+    Whether calling a space consumes ZeroGPU quota.
+
+    A space on ZeroGPU hardware does. So does a frontend on other hardware that
+    forwards to a ZeroGPU backend, which declares this with the "zerogpu" tag,
+    since each call it forwards still spends the allowance of the caller.
+
+    Args:
+        hardware (str): HF hardware id, possibly empty.
+        tags (list | None): The tags in the README of the space.
+
+    Returns:
+        zerogpu (bool): True when a call draws on ZeroGPU allowance.
+    """
+
+    return is_zerogpu(hardware) or "zerogpu" in (tags or [])
+
+
 class ZeroGPUTracker:
     """
     Tracks ZeroGPU work done during a run.
 
     ZeroGPU bills dynamically. Each call reserves its declared
     `@spaces.GPU(duration=...)` time up front, then refunds the unused portion
-    once the function returns, so an account's usage rises during a run and
+    once the function returns, so the usage of an account rises during a run and
     settles lower afterwards. What was actually billed cannot be read from the
     gradio client, so two figures are tracked instead.
 

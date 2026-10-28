@@ -17,46 +17,80 @@
 
 using namespace juce;
 
-inline std::unique_ptr<Client> multiplexClients(Provider provider)
+inline std::unique_ptr<Client> createClient(Provider provider)
 {
     if (provider == Provider::Stability)
     {
-        DBG_AND_LOG("utils::multiplexClients: Initializing Stability client.");
-
         return std::make_unique<StabilityClient>();
     }
-    else
-    {
-        DBG_AND_LOG("utils::multiplexClients: Initializing Gradio client.");
 
-        return std::make_unique<GradioClient>();
-    }
+    return std::make_unique<GradioClient>();
 }
 
-inline OpResult multiplexClients(String modelPath, std::unique_ptr<Client>& client)
+/**
+ * The client of the provider that recognizes a model path, or nullptr if none does.
+ *
+ * Gradio is checked last, as the catch-all for paths that match no other provider.
+ */
+inline std::unique_ptr<Client> createClientForPath(const String& modelPath)
 {
     if (StabilityClient::matchesPathSpec(modelPath))
     {
-        DBG_AND_LOG(
-            "utils::multiplexClients: Stability AI path detected. Initializing Stability client.");
-
-        client = std::make_unique<StabilityClient>();
+        return createClient(Provider::Stability);
     }
-    // Check Gradio last to serve as a catch-all if no third-party provider path specifications match
-    else if (GradioClient::matchesPathSpec(modelPath))
+
+    if (GradioClient::matchesPathSpec(modelPath))
     {
-        DBG_AND_LOG("utils::multiplexClients: Gradio path detected. Initializing Gradio client.");
-
-        client = std::make_unique<GradioClient>();
+        return createClient(Provider::HuggingFace);
     }
-    else
+
+    return nullptr;
+}
+
+/**
+ * Whether any provider recognizes a model path, so that one no client could load can be
+ * rejected before anything is attempted with it.
+ */
+inline bool isSupportedModelPath(const String& modelPath)
+{
+    return createClientForPath(modelPath) != nullptr;
+}
+
+/**
+ * Reduces a model path to the single form its provider recognizes it by.
+ *
+ * Returns the path unchanged when no provider claims it, so that an unrecognized path
+ * still fails to load with a message about the path itself.
+ */
+inline String canonicalizeModelPath(const String& modelPath)
+{
+    auto client = createClientForPath(modelPath);
+
+    return client != nullptr ? client->canonicalizePath(modelPath) : modelPath;
+}
+
+/**
+ * The model cards of models whose controls ship with HARP, keyed by model path, so that
+ * they can be listed without querying anything.
+ */
+inline std::vector<std::pair<String, DynamicObject::Ptr>> getBuiltInModelCards()
+{
+    static const Identifier cardKey { "card" };
+
+    std::vector<std::pair<String, DynamicObject::Ptr>> cards;
+
+    StabilityClient stabilityClient;
+
+    for (const auto& modelPath : StabilityClient::getModelPaths())
     {
-        ClientError error { ClientError::Type::UnknownClient, modelPath, {} };
+        DynamicObject::Ptr controls;
 
-        DBG_AND_LOG("utils::multiplexClients: " << toUserMessage(error));
-
-        return OpResult::fail(error);
+        if (stabilityClient.queryControls(modelPath, controls).wasOk() && controls != nullptr)
+        {
+            if (auto* card = controls->getProperty(cardKey).getDynamicObject())
+                cards.emplace_back(modelPath, card);
+        }
     }
 
-    return OpResult::ok();
+    return cards;
 }

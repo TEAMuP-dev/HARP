@@ -1,25 +1,63 @@
-# Basic HARP Workflow
+# Walkthrough
 
-HARP supports a simple workflow: pick an existing model for processing or provide a URL to your own, load the model and it's corresponding interface, tweak controls to your liking, and process.
+This page tours the interface of HARP. The welcome tutorial, under `Help > Welcome Tutorial`, covers
+the same ground inside the app.
 
-To get started:
+<!-- TODO: screenshot. The whole window with a model tab open and the media clipboard showing,
+     annotated with the five regions named below.
+![The HARP window, with its main regions labeled](/images/window-overview.png)
+-->
 
-- Open HARP as a standalone application or within your DAW
-- Select an existing model using the drop-down menu at the top of the screen, or select `custom path...` and provide a URL to any HARP-compatible Gradio endpoint 
-- Load the selected model (and its corresponding interface) using the `Load` button.
-- Import audio or MIDI data to process with the model either via the `Open File` button or by dragging and dropping a file into HARP
-- Adjust controls to taste in the interface
-- Click `Process` to run the model; outputs will automatically be rendered in HARP
-- To save your outputs, click the `Save` button or select `Save As` from the `File` menu
+The window has five regions:
 
-In the example below, we use the [Demucs](https://github.com/facebookresearch/demucs) source-separation model to extract the vocals from a music recording.
+- **The menu bar.** `File` adds files to the media clipboard (`Open`), saves the selected one
+  (`Save As`), and opens `Settings`. `View` shows or hides the status area, the media clipboard, and
+  the preview pane. `Help` opens `About HARP` and the `Welcome Tutorial`.
+- **The tab bar.** The `Home` tab lists the models, and each model you open gets a tab of its own.
+- **The open tab**, which fills most of the window.
+- **The media clipboard**, on the right, which holds files independently of any model.
+- **The status area**, at the bottom. Its left half is a history of what each model has done, and
+  its right half explains whatever is under the mouse.
 
-<!-- TODO - Update video -->
-<div style="max-width:720px;margin:1.5rem auto;">
-  <video controls preload="metadata" width="100%">
-    <source src="/content/images/logic_demucs_harp_demo.mp4" type="video/mp4" autoplay muted loop playsinline preload="metadata">
-    Your browser doesn’t support the video tag.
-  </video>
-</div>
+## Finding and Running Models
 
-Note that HARP is a __destructive__ editor -- if you use it to edit regions in your DAW, saving will automatically overwrite input regions. You may therefore wish to create a duplicate or "bounced" region to pass to HARP as input.
+<!-- TODO: screenshot. The Home tab with a search term entered, showing the category chips, the
+     search box, the "Hide models that need an API key" toggle, and several model cards.
+![The Home tab, listing models by category](/images/home-tab.png)
+-->
+
+<!--@include: @/../README.md#workflow-->
+
+A model tab shows the model card at the top, then the controls, then the input and output tracks.
+Hover over a control to see what it does. [Using Hosted Models](/content/usage/models) explains the
+badges on each card and the API keys some models need.
+
+<!-- TODO: screenshot. A model tab after processing, such as Demucs, showing the model card, its
+     controls, an input track, its output tracks, and the Process button.
+![A model tab after processing, with its controls, input track, and output tracks](/images/model-tab.png)
+-->
+
+## Tracks
+
+<!--@include: @/../README.md#tracks-->
+
+<!-- TODO: screenshot. An output track with labels drawn over it, such as from S-KEY, with the mouse
+     over a label and its description shown in the status area.
+![Labels drawn over an output track](/images/output-labels.png)
+-->
+
+## Media Clipboard
+
+<!--@include: @/../README.md#media-clipboard-->
+
+<!-- TODO: screenshot. The media clipboard with two tracks in it, one being dragged onto an input
+     track of a model, and the preview pane beneath the list. Use the same image as the README.
+![Dragging a track from the media clipboard onto an input track of a model](/images/media-clipboard.png)
+-->
+
+## Settings
+
+`File > Settings` has two tabs. `API Keys` holds a key for each service HARP can reach. `General`
+opens the log folder and the settings file, clears the logs, and restores the default settings,
+keeping API keys and custom models. The log records each request HARP makes, never an API key, and
+is the first thing to attach to a [bug report](https://github.com/TEAMuP-dev/HARP/issues).

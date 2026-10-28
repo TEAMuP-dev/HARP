@@ -2,7 +2,7 @@
 """
 HARP model validation - command-line entry point.
 
-Parses the options, runs one of the two tiers, and writes the reports:
+Parses the options, runs one of the three tiers, and writes the reports:
 
 1. Spaces (default): every Space under an organization, validated concurrently
    by spaces.py. Requires a Hugging Face token, read only from the HF_TOKEN
@@ -12,14 +12,19 @@ Parses the options, runs one of the two tiers, and writes the reports:
    validated one at a time by examples.py. Needs no token, and exercises
    pyharp itself with no Hugging Face infrastructure in the loop.
 
-Either way the checks are the same, and come from harness.py. Which models to
-validate and what to assert about their outputs is configured in config.yml.
-README.md is the guide to writing that.
+3. Lint (--lint): every Space's files, read from the Hub and checked against
+   docs/DEPLOYMENT.md by lint.py, without running anything. Needs the token to
+   read them, and uv to resolve their requirements.
+
+The first two run the same checks, from harness.py. Which models to validate
+and what to assert about their outputs is configured in config.yml. README.md
+is the guide to writing that.
 
 Usage:
     HF_TOKEN=... python model_validation/src/validate_models.py
     HF_TOKEN=... python model_validation/src/validate_models.py --spaces pitch_shifter
     HF_TOKEN=... python model_validation/src/validate_models.py --skip-zerogpu
+    HF_TOKEN=... python model_validation/src/validate_models.py --lint
     python model_validation/src/validate_models.py --local-examples pitch_shifter
 
 Exit codes:
@@ -38,12 +43,13 @@ from pathlib import Path
 
 from assets import Assets, check_synthesized_inputs
 from examples import test_local_example
+from lint import ERROR, check_lint_exceptions, find_uv, lint_space
 from spaces import test_space
-from quota import ZeroGPUTracker, is_zerogpu
+from quota import ZeroGPUTracker
 from results import FAIL, status_emoji, write_reports
 from utils import (get_token, check_token, scrub, load_config, check_config_keys,
-                   check_model_names, qualify, qualify_keys, Exclusions,
-                   get_excluded, discover_spaces)
+                   check_config_values, check_model_names, qualify, qualify_keys,
+                   Exclusions, get_excluded, discover_spaces)
 
 
 DEFAULT_ORG = "teamup-tech"
@@ -56,7 +62,7 @@ DEFAULT_OUTPUT_DIR = MODEL_VALIDATION_DIR / "reports"
 
 LOCAL_PORT_BASE = 7861
 
-# Cap on the error text shown on a model's console line (see result_line)
+# Cap on the error text shown on the console line of a model (see result_line)
 CONSOLE_ERROR_CHARS = 200
 
 
@@ -88,10 +94,19 @@ def parse_args() -> argparse.Namespace:
                              "'examples/pitch_shifter'), or give a path to an example "
                              "kept elsewhere. With none given, every app under "
                              "pyharp/examples/ is validated")
+    parser.add_argument("--lint", action="store_true",
+                        help="Check each Space's files against docs/DEPLOYMENT.md "
+                             "instead of running it. Spends no ZeroGPU allowance and "
+                             "wakes nothing. Selects Spaces like a spaces run")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG,
                         help="Optional YAML config (excludes, per-model overrides/cases)")
     parser.add_argument("--load-only", action="store_true",
                         help="Only verify availability and /controls, do not run inference")
+    parser.add_argument("--cases", nargs="+", default=None, metavar="NAME",
+                        help="Run only the test cases with these names, a common case "
+                             "named with or without its 'common:' prefix, e.g. to run "
+                             "the refusals alone, which spend no ZeroGPU allowance on a "
+                             "model refusing as it should")
     parser.add_argument("--skip-zerogpu", action="store_true",
                         help="Skip models on ZeroGPU hardware, to avoid spending "
                              "the shared ZeroGPU allowance")
@@ -128,7 +143,7 @@ def parse_args() -> argparse.Namespace:
 
 def result_line(result, extra: str = "", token: str = "") -> str:
     """
-    Format one model's console line.
+    Format the console line of one model.
 
     The error is collapsed onto one line and truncated so a run of many models
     stays scannable. The full text follows in the end-of-run summary and in
@@ -173,18 +188,42 @@ def resolve_example_dir(name: str) -> Path:
     return path if path.exists() else DEFAULT_EXAMPLES_DIR / path.name
 
 
+def report_unused_overrides(overrides: dict, selected: list, exclusions: Exclusions) -> None:
+    """
+    Warn about `overrides` entries that name no model the run found.
+
+    A Space renamed or taken down leaves its entry applying to nothing, and
+    every setting under it, test cases included, then goes unused in silence.
+    Only a run that discovered its models can tell, since one given `--spaces`
+    or `--local-examples` leaves the rest out on purpose.
+
+    Args:
+        overrides (dict): The `overrides` block, keyed by qualified name.
+        selected (list): The qualified names of the models the run covers.
+        exclusions (Exclusions): Models left out, whose entries are expected
+            to apply to nothing.
+    """
+
+    unused = sorted(model for model in overrides
+                    if model not in selected and not exclusions.excludes(model))
+
+    if unused:
+        print(f"WARNING: config.yml configures {', '.join(unused)}, which the run did not "
+              f"find, so those settings apply to nothing", file=sys.stderr)
+
+
 def validate_examples(opts: argparse.Namespace, config: dict,
                       exclusions: Exclusions, assets: Assets) -> list:
     """
     Run the examples tier: launch and validate each local pyharp example.
 
     Examples run sequentially so concurrent model loads cannot exhaust the
-    machine's memory.
+    memory of the machine.
 
     Args:
         opts (argparse.Namespace): Parsed command-line options.
         config (dict): Parsed configuration.
-        exclusions (Exclusions): Models to leave out.
+        exclusions (Exclusions): Models to exclude.
         assets (Assets): Synthesized input files.
 
     Returns:
@@ -217,6 +256,9 @@ def validate_examples(opts: argparse.Namespace, config: dict,
     if not app_dirs:
         print("ERROR: no local examples found", file=sys.stderr)
         return None
+    if not named:
+        report_unused_overrides(overrides, [f"examples/{d.name}" for d in app_dirs],
+                                exclusions)
 
     print(f"Validating {len(app_dirs)} pyharp examples\n")
 
@@ -230,6 +272,81 @@ def validate_examples(opts: argparse.Namespace, config: dict,
     return results
 
 
+def select_spaces(api, opts: argparse.Namespace, config: dict,
+                  exclusions: Exclusions) -> list:
+    """
+    The Spaces a spaces or lint run covers: those named, or else those found.
+
+    Args:
+        api (HfApi): Authenticated Hugging Face API client.
+        opts (argparse.Namespace): Parsed command-line options.
+        config (dict): Parsed configuration.
+        exclusions (Exclusions): Models to exclude.
+
+    Returns:
+        space_ids (list): Qualified space ids, possibly empty.
+    """
+
+    if opts.spaces:
+        # Spaces named here are exempt from a config exclusion
+        return [s for s in (qualify(s, opts.org) for s in opts.spaces)
+                if not exclusions.excludes(s, named=True)]
+
+    space_ids = discover_spaces(api, opts.org, config, exclusions)
+    report_unused_overrides(config.get("overrides", {}), space_ids, exclusions)
+
+    return space_ids
+
+
+def validate_lint(opts: argparse.Namespace, config: dict,
+                  exclusions: Exclusions, token: str) -> list:
+    """
+    Run the lint tier: check each Space's files against docs/DEPLOYMENT.md.
+
+    Args:
+        opts (argparse.Namespace): Parsed command-line options.
+        config (dict): Parsed configuration.
+        exclusions (Exclusions): Models to exclude.
+        token (str): Hugging Face access token.
+
+    Returns:
+        results (list): ModelResult objects, or None when the run cannot
+            proceed.
+    """
+
+    from huggingface_hub import HfApi
+
+    uv = find_uv()
+    if uv is None:
+        print("ERROR: the lint resolves each Space's requirements with uv, which is not "
+              "installed. Run pip install -r model_validation/requirements.txt",
+              file=sys.stderr)
+        return None
+
+    overrides = config.get("overrides", {})
+    api = HfApi(token=token)
+    space_ids = select_spaces(api, opts, config, exclusions)
+
+    if not space_ids:
+        print(f"ERROR: no spaces found for org '{opts.org}'", file=sys.stderr)
+        return None
+
+    print(f"Linting {len(space_ids)} spaces with {opts.workers} workers\n")
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
+        futures = [pool.submit(lint_space, api, sid, overrides.get(sid, {}), uv)
+                   for sid in space_ids]
+        for future in concurrent.futures.as_completed(futures):
+            r = future.result()
+            results.append(r)
+            warnings = sum(finding.severity != ERROR for finding in r.cases)
+            note = f" | {warnings} warning{'s' if warnings != 1 else ''}" if warnings else ""
+            print(result_line(r, f" [{r.hardware or '?'}{note}]", token))
+
+    return results
+
+
 def validate_spaces(opts: argparse.Namespace, config: dict,
                     exclusions: Exclusions, assets: Assets, token: str) -> list:
     """
@@ -238,7 +355,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
     Args:
         opts (argparse.Namespace): Parsed command-line options.
         config (dict): Parsed configuration.
-        exclusions (Exclusions): Models to leave out.
+        exclusions (Exclusions): Models to exclude.
         assets (Assets): Synthesized input files.
         token (str): Hugging Face access token.
 
@@ -250,13 +367,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
 
     overrides = config.get("overrides", {})
     api = HfApi(token=token)
-
-    if opts.spaces:
-        # Spaces named here are exempt from a config exclusion
-        space_ids = [s for s in (qualify(s, opts.org) for s in opts.spaces)
-                     if not exclusions.excludes(s, named=True)]
-    else:
-        space_ids = discover_spaces(api, opts.org, config, exclusions)
+    space_ids = select_spaces(api, opts, config, exclusions)
 
     if not space_ids:
         print(f"ERROR: no spaces found for org '{opts.org}'", file=sys.stderr)
@@ -282,7 +393,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
             # (including retries, which reserve again) and the wall time of the
             # cases that made them. A queued or input-skipped case never ran
             info = r.hardware or "?"
-            if is_zerogpu(r.hardware):
+            if r.zerogpu:
                 ran = [c for c in r.cases if c.gpu_calls]
                 tracker.add(sum(c.gpu_calls for c in ran),
                             sum(c.duration for c in ran))
@@ -301,19 +412,26 @@ def main() -> int:
     """
 
     opts = parse_args()
-    # Resolved so a case's `files:` paths stay relative to the config file
+    # Resolved so the `files:` paths of a case stay relative to the config file
     # itself, whatever directory the run was launched from
     opts.config = opts.config.resolve()
-    config = load_config(opts.config)
 
     examples_tier = opts.local_examples is not None
+    if examples_tier and opts.lint:
+        print("ERROR: --lint checks Spaces, so it does not combine with --local-examples",
+              file=sys.stderr)
+        return 2
 
     try:
+        config = load_config(opts.config)
+
         # Checked before anything reads a setting, so a mistake is reported
         # once, names the key as it was written, and costs no model runs
         check_config_keys(config)
+        check_config_values(config)
+        check_lint_exceptions(config)
         check_model_names(config, opts.exclude, opts.spaces)
-        check_synthesized_inputs(config)
+        check_synthesized_inputs(config, opts.config.parent)
 
         # Only one tier runs, so a bare model name resolves against that tier
         owner = "examples" if examples_tier else opts.org
@@ -332,17 +450,19 @@ def main() -> int:
     run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
     opts.output_dir = opts.output_dir / run_stamp
     assets = Assets(opts.output_dir / "assets",
-                    config.get("synthesized_inputs"))
+                    config.get("synthesized_inputs"), opts.config.parent)
 
     if examples_tier:
         token = ""
         results = validate_examples(opts, config, exclusions, assets)
     else:
         token = get_token(required=True)
-        # Checked once here rather than discovered one failing space at a time
-        if not check_token(token, opts.org, opts.restart_failed):
+        # Checked once here rather than discovered one failing space at a time.
+        # The lint only reads, so it never needs to restart anything.
+        if not check_token(token, opts.org, opts.restart_failed and not opts.lint):
             return 2
-        results = validate_spaces(opts, config, exclusions, assets, token)
+        results = (validate_lint(opts, config, exclusions, token) if opts.lint
+                   else validate_spaces(opts, config, exclusions, assets, token))
 
     if results is None:
         return 2
@@ -351,7 +471,8 @@ def main() -> int:
     # argv holds no secrets, as the token comes from HF_TOKEN.
     report = write_reports(results, opts.output_dir, " ".join(sys.argv))
 
-    summary = f"\n{report['passed']}/{report['validated']} models passed"
+    noun = "spaces" if opts.lint else "models"
+    summary = f"\n{report['passed']}/{report['validated']} {noun} passed"
     if report["skipped"]:
         summary += f", {report['skipped']} skipped"
     print(f"{summary}. Reports written to {opts.output_dir}/")

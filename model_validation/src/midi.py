@@ -61,11 +61,11 @@ def read_midi_props(label: str, path: str) -> dict:
 
 def note_voices(midi) -> tuple:
     """
-    Collect the instruments and channels the notes are played with.
+    Collect the instruments and channels with which the notes are played.
 
-    A note's instrument is the program last set on its channel. Program
+    The instrument of a note is the program last set on its channel. Program
     changes apply only to their own channel, so each channel is tracked
-    separately. A file may spread one channel's events over several tracks
+    separately. A file may spread the events of one channel over several tracks
     that play together, so the tracks are merged into a single time-ordered
     stream before scanning. Notes preceding any program change on their
     channel report the General MIDI default of 0.

@@ -1,7 +1,7 @@
 /**
  * @file HoverHandler.h
  * @brief Attach custom event handling functionality to an arbitrary component.
- * @author xribene
+ * @author cwitkowitz, xribene
  */
 
 #pragma once
@@ -9,6 +9,8 @@
 #include <functional>
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
+using namespace juce;
 
 class HoverHandler : public MouseListener
 {

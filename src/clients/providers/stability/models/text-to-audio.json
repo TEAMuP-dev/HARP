@@ -1,64 +1,76 @@
 {
-    "card": {
-        "name": "Stable Audio 2.0 (Text to Audio)",
-        "description": "Enter text prompts to generate 44.1khz audio.",
-        "author": "Stability AI",
-        "tags": [
-            "text-to-audio",
-            "stability"
-        ]
-    },
-    "inputs": [
-        {
-            "label": "Duration (s)",
-            "minimum": 1,
-            "maximum": 190,
-            "step": 1,
-            "value": 10,
-            "type": "slider"
-        },
-        {
-            "label": "steps",
-            "minimum": 30,
-            "maximum": 100,
-            "step": 1,
-            "value": 50,
-            "type": "slider"
-        },
-        {
-            "label": "cfg",
-            "minimum": 1,
-            "maximum": 25,
-            "step": 1,
-            "value": 7,
-            "type": "slider"
-        },
-        {
-            "label": "Output Format",
-            "choices": [
-                [
-                    "wav",
-                    "wav"
-                ],
-                [
-                    "mp3",
-                    "mp3"
-                ]
-            ],
-            "value": "wav",
-            "type": "dropdown"
-        },
-        {
-            "label": "Text Prompt",
-            "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
-            "type": "text_box"
-        }
-    ],
-    "outputs": [
-        {
-            "label": "Output Audio",
-            "required": true,
-            "type": "audio_track"
-        }
+  "card": {
+    "name": "Stable Audio 2.0 (Text to Audio)",
+    "description": "Generates 44.1 kHz stereo audio from a text prompt with Stability AI's Stable Audio 2.0. Requires a Stability AI API key, added under Settings > API Keys, and each request spends credits from that account.",
+    "author": "Stability AI",
+    "tags": [
+      "category:generation",
+      "subcategory:holistic",
+      "input:text",
+      "output:audio/wav|mp3",
+      "sample-rate:44100",
+      "channels:stereo",
+      "license:other",
+      "stable-audio",
+      "stability"
     ]
+  },
+  "inputs": [
+    {
+      "label": "Duration (s)",
+      "info": "Length of the generated audio, in seconds.",
+      "minimum": 1,
+      "maximum": 190,
+      "step": 1,
+      "value": 10,
+      "type": "slider"
+    },
+    {
+      "label": "Steps",
+      "info": "Number of diffusion steps. Higher values improve quality but take longer to process.",
+      "minimum": 30,
+      "maximum": 100,
+      "step": 1,
+      "value": 50,
+      "type": "slider"
+    },
+    {
+      "label": "Guidance Scale",
+      "info": "Classifier-free guidance (cfg_scale). Higher values make the output follow the prompt more strictly.",
+      "minimum": 1,
+      "maximum": 25,
+      "step": 1,
+      "value": 7,
+      "type": "slider"
+    },
+    {
+      "label": "Output Format",
+      "info": "File format of the generated audio.",
+      "choices": [
+        [
+          "wav",
+          "wav"
+        ],
+        [
+          "mp3",
+          "mp3"
+        ]
+      ],
+      "value": "wav",
+      "type": "dropdown"
+    },
+    {
+      "label": "Text Prompt",
+      "info": "Description of the audio to generate.",
+      "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
+      "type": "text_box"
+    }
+  ],
+  "outputs": [
+    {
+      "label": "Generated Audio",
+      "required": true,
+      "type": "audio_track"
+    }
+  ]
 }

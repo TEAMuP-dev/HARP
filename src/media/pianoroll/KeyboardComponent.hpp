@@ -1,7 +1,7 @@
 /**
  * @file KeyboardComponent.hpp
  * @brief Reusable component with rows of piano keys.
- * @author xribene, cwitkowitz
+ * @author cwitkowitz, xribene
  */
 
 #pragma once
@@ -13,14 +13,14 @@ using namespace juce;
 class KeyboardComponent : public Component
 {
 public:
-    KeyboardComponent() {};
+    KeyboardComponent() {}
 
-    ~KeyboardComponent() {};
+    ~KeyboardComponent() override {}
 
     static const char* pitchNames[];
     static const Array<int> blackPitches;
 
-    void paint(Graphics& g);
+    void paint(Graphics& g) override;
 
     virtual bool isKeyboardComponent() { return true; }
 

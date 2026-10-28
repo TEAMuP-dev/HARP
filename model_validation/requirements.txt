@@ -4,3 +4,5 @@ PyYAML>=6.0
 numpy            # synthesize audio inputs
 soundfile>=0.12  # read/write audio (any libsndfile format) for inputs and expect rules
 mido>=1.3        # parse MIDI outputs for expect rules
+packaging>=23    # parse each Space's requirements for the lint tier
+uv>=0.5          # resolve each Space's requirements for the lint tier, as its build would

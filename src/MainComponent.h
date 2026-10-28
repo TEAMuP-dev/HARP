@@ -1,7 +1,7 @@
 /**
  * @file MainComponent.h
  * @brief Top-level component containing all HARP GUI elements and state.
- * @author hugofloresgarcia, xribene, cwitkowitz
+ * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia
  */
 
 #pragma once
@@ -9,11 +9,14 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "ModelTab.h"
+#include "ModelTabContainer.h"
 
 #include "clients/Client.h"
 
 #include "widgets/MediaClipboardWidget.h"
 #include "widgets/StatusAreaWidget.h"
+
+#include "windows/tutorial/TutorialWindow.h"
 
 #include "windows/AboutWindow.h"
 #include "windows/settings/SettingsWindow.h"
@@ -21,18 +24,15 @@
 #include "utils/Interface.h"
 #include "utils/Logging.h"
 #include "utils/Settings.h"
-#include "utils/Tutorial.h"
 
 using namespace juce;
-
-// Forward declaration (include in .cpp)
-class WelcomeWindow;
 
 class MainComponent : public Component,
                       public MenuBarModel,
                       public ApplicationCommandTarget,
-                      private ChangeListener
-
+                      public DragAndDropContainer,
+                      private ChangeListener,
+                      private TutorialHost
 {
 public:
     MainComponent();
@@ -62,52 +62,28 @@ public:
 
     // File
     void importNewFile(File mediaFile, bool fromDAW = false);
-    void openSettingsWindow();
+    // Opens on a provider's API key when a failure points at one
+    void openSettingsWindow(std::optional<Provider> focusProvider = {});
 
     // View
     void viewStatusAreaCallback();
     void viewMediaClipboardCallback();
+    void saveClipboardLayout();
+    void viewPreviewPaneCallback();
+    void restoreViewDefaults();
 
     // Help
     void openAboutWindow();
-    void openWelcomeWindow(bool ensureDefaultModelLoaded = false);
-
-    /* Tutorial */
-
-    ModelTab* getModelTab() { return &mainModelTab; }
-
-    void setTutorialActive(bool active);
-    void setTutorialHighlight(Rectangle<int> bounds);
-    void setTutorialExtraHighlights(std::vector<Rectangle<int>> bounds);
-    void ensureTutorialModelLoaded();
-    void resetTutorialAutoLoadedModel();
-
-    // Bounds accessors for tutorial steps (public for WelcomeWindow)
-    Rectangle<int> getModelSelectBounds();
-    Rectangle<int> getControlsBounds();
-    Rectangle<int> getInputTrackBounds();
-    Rectangle<int> getInputFolderBounds();
-    Rectangle<int> getInputPlayBounds();
-    Rectangle<int> getProcessButtonBounds();
-    Rectangle<int> getTracksBounds();
-    Rectangle<int> getClipboardBounds();
-    Rectangle<int> getClipboardTrackAreaBounds();
-    Rectangle<int> getClipboardControlsBounds();
-    Rectangle<int> getClipboardNameBoxBounds();
-    Rectangle<int> getClipboardButtonsBounds();
-    Rectangle<int> getClipboardAddButtonBounds();
-    Rectangle<int> getClipboardRemoveButtonBounds();
-    Rectangle<int> getClipboardPlayButtonBounds();
-    Rectangle<int> getClipboardSendToDAWButtonBounds();
-    Rectangle<int> getInfoBarBounds();
+    void openTutorial();
 
     /* Component */
 
     void paint(Graphics& g) override;
-    void paintOverChildren(Graphics& g) override;
     void resized() override;
 
     void updateWindowConstraints();
+    int getRequiredMainPanelWidth() const { return requiredMainPanelWidth; }
+    int getVisibleClipboardWidth();
 
 private:
     /* File Menu */
@@ -125,17 +101,22 @@ private:
     /* Callbacks */
 
     // Miscellaneous
-    //void focusCallback();
-    void changeListenerCallback(ChangeBroadcaster* source);
+    void changeListenerCallback(ChangeBroadcaster* source) override;
+
+    /* Tutorial */
+
+    Component& getTutorialArea() override { return *this; }
+    ModelTabContainer& getModelTabs() override { return modelTabs; }
+    void showPanel(Panel panel) override;
 
     /* Interface */
 
     const int statusAreaHeight = 100;
-    const float mediaClipboardFlex = 0.4f;
-    const float mediaClipboardScale = 1.4f;
+    // Width chosen for the media clipboard by dragging its edge, which the settings keep
+    int clipboardWidth = 0;
 
     // Minimum size to ensure all controls remain visible and functional:
-    // - WelcomeWindow popup is 480x500, needs padding
+    // - Tutorial window is 500x420, needs padding
     // - Dropdown labels need adequate width
     // - Control Area needs space for sliders/toggles/textboxes
     const int minimumWindowWidth = 700;
@@ -147,19 +128,22 @@ private:
     int requiredWindowWidth;
     int requiredWindowHeight;
 
+    // Width the main panel needs for the current tab's controls, plus padding
+    int measureRequiredMainPanelWidth();
+    int requiredMainPanelWidth = minimumMainPanelWidth;
+
     bool showStatusArea;
     bool showMediaClipboard;
 
-    ModelTab mainModelTab;
+    // Home tab plus one tab per opened model, each of which scrolls on its own
+    ModelTabContainer modelTabs;
+
     StatusAreaWidget statusAreaWidget;
-    MediaClipboardWidget mediaClipboardWidget;
+    DragOverlayComponent dragOverlay;
+    MediaClipboardWidget mediaClipboardWidget { &dragOverlay };
 
-    bool isTutorialActive = false;
-    Rectangle<int> tutorialHighlightRect;
-    std::vector<Rectangle<int>> tutorialExtraHighlights;
-    std::unique_ptr<WelcomeWindow> welcomeWindow;
+    std::unique_ptr<TutorialWindow> tutorialWindow;
 
-    SharedResourcePointer<SharedAPIKeys> sharedTokens;
     SharedResourcePointer<StatusMessage> statusMessage;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

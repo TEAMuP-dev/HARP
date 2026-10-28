@@ -1,21 +1,32 @@
-# Set Up HARP in Logic Pro X
+# Logic Pro
 
-We recommend following Apple's [official instructions](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac) on how to link external sample editors such as HARP into Logic Pro X. Simply provide the path to the HARP executable (`HARP.app`) that you placed in your `Applications` folder during installation.
+Logic Pro opens regions in HARP as an external sample editor.
+
+## Link HARP
+
+1. Choose `Logic Pro > Settings > Audio`, and open the `File Editor` tab.
+2. Beside `External Sample Editor`, select `HARP.app` in your `Applications` folder.
+
+The guide of Apple on [using an external sample editor](https://support.apple.com/guide/logicpro/use-an-external-sample-editor-lgcp2158eb9a/mac)
+covers the setting in more detail, and the video below walks through it.
 
 <div style="max-width:720px;margin:1.5rem auto;">
   <video controls preload="metadata" width="100%">
-    <source src="/content/images/logic_external_editor_video.mp4" type="video/mp4" autoplay muted loop playsinline preload="metadata">
-    Your browser doesn’t support the video tag.
+    <source src="/content/images/logic_external_editor_video.mp4" type="video/mp4">
+    Your browser does not support the video tag.
   </video>
 </div>
 
+## Open Audio in HARP
 
-### Open Audio with HARP in Logic Pro X
+1. Right-click the region, and choose `Bounce in Place...` (`Ctrl+B`). The bounced region plays a
+   new file of its own, which leaves the original untouched.
 
-Now that we have linked HARP to Logic as an external sample editor, we can process regions from the timeline without leaving the DAW. To get started:
+   <img src="/content/images/logic-bounce-in-place.png" alt="The region context menu of Logic Pro, with Bounce In Place selected" style="display:block;margin:1rem auto;max-width:640px;width:100%;">
 
-* (Optional) Right-click an audio region and select _Bounce in Place_. HARP will perform __destructive__ edits if you save your outputs, meaning it will overwrite input regions. By bouncing, we create a duplicate region and ensure the original is not affected.
+2. Select the bounced region, and press `Shift+W` to open it in HARP.
+3. Process the DAW-linked track and send the result back, as in
+   [The Round Trip](/content/setup/#the-round-trip). Logic Pro updates every region that plays
+   the file.
 
-* Select the (bounced) region and press _Shift+W_ to open HARP. The region should be automatically loaded into HARP and ready for processing.
-
-For more instructions on how to use HARP, see our [Workflow](/content/usage/workflow.html) documentation.
+To process part of a region, split it at the playhead (`Cmd+T`) before bouncing the excerpt.

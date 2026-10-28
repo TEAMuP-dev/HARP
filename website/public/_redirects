@@ -1,0 +1,46 @@
+# The project answers at its Netlify address as well, so this rule forwards every page there to
+# the same path on the domain. It comes first, and the ! applies it even where a file exists at
+# the path.
+https://teamup-harp.netlify.app/*           https://harp.tools/:splat                        301!
+
+# Pages that moved when the guide was reorganized, so that older links still land. Add an entry
+# for any page that moves again. Each page is reachable with and without its .html extension.
+
+/content/supported_os.html                  /content/install/                                301
+/content/supported_os                       /content/install/                                301
+/content/install/macos.html                 /content/install/#macos                          301
+/content/install/macos                      /content/install/#macos                          301
+/content/install/windows.html               /content/install/#windows                        301
+/content/install/windows                    /content/install/#windows                        301
+/content/install/linux.html                 /content/install/#linux                          301
+/content/install/linux                      /content/install/#linux                          301
+/content/setup/mixcraft.html                /content/setup/                                  301
+/content/setup/mixcraft                     /content/setup/                                  301
+/content/usage/warnings.html                /content/setup/#protecting-the-original          301
+/content/usage/warnings                     /content/setup/#protecting-the-original          301
+/content/usage/partial_track.html           /content/setup/#protecting-the-original          301
+/content/usage/partial_track                /content/setup/#protecting-the-original          301
+/content/pyharp_docs/overview.html          /content/pyharp_docs/setup                       301
+/content/pyharp_docs/overview               /content/pyharp_docs/setup                       301
+/content/pyharp_docs/install.html           /content/pyharp_docs/setup#install               301
+/content/pyharp_docs/install                /content/pyharp_docs/setup#install               301
+/content/pyharp_docs/pyharp_app.html        /content/pyharp_docs/setup#run-an-example        301
+/content/pyharp_docs/pyharp_app             /content/pyharp_docs/setup#run-an-example        301
+/content/pyharp_docs/example.html           /content/pyharp_docs/example_skey                301
+/content/pyharp_docs/example                /content/pyharp_docs/example_skey                301
+/content/pyharp_docs/host.html              /content/hosting/spaces                          301
+/content/pyharp_docs/host                   /content/hosting/spaces                          301
+/content/contributing/build_source.html     /content/contributing/overview#building          301
+/content/contributing/build_source          /content/contributing/overview#building          301
+/content/contributing/debug.html            /content/contributing/overview#debugging         301
+/content/contributing/debug                 /content/contributing/overview#debugging         301
+/content/contributing/dist.html             /content/contributing/overview#distribution      301
+/content/contributing/dist                  /content/contributing/overview#distribution      301
+/content/contributing/version_compat.html   /content/pyharp_docs/setup#versions              301
+/content/contributing/version_compat        /content/pyharp_docs/setup#versions              301
+/content/contributing/add_model.html        /content/pyharp_docs/setup                       301
+/content/contributing/add_model             /content/pyharp_docs/setup                       301
+
+# Copies of the READMEs, which the site no longer publishes
+/content/HARP/*                             https://github.com/TEAMuP-dev/HARP#readme        301
+/content/pyHARP/*                           https://github.com/TEAMuP-dev/pyharp#readme      301
