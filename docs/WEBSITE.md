@@ -154,7 +154,7 @@ registration can change hands without touching the site.
 To keep DNS at the registrar instead, set its nameservers back to its own, and add two records
 there: an `ALIAS` record for the apex pointing to `apex-loadbalancer.netlify.com` (or an `A` record
 pointing to `75.2.60.5` where `ALIAS` is unavailable), and a `CNAME` record for `www` pointing to
-`harp3.netlify.app`. Netlify issues the certificate once the records resolve.
+`teamup-harp.netlify.app`. Netlify issues the certificate once the records resolve.
 
 ### Renewing and Handing Off
 
