@@ -45,7 +45,7 @@
   loading MIDI files without notes, and when receiving unrecognized labels.
 - **Performance**: All tracks share one audio device, and text is measured once rather than on
   every repaint.
-- **Window Sizing**: Minimum window sizes are enforced on Linux, and each tab scrolls when the
+- **Window Sizing**: Minimum window sizes are now enforced on Linux, and each tab scrolls when the
   window is too small for its contents.
 - **Status Area**: Status messages are kept in a history that can be scrolled back.
 - **Tutorial**: The tutorial covers the Home tab and model tabs.

@@ -166,10 +166,13 @@ jobs:
       # For RELEASE.md
       - uses: actions/checkout@v7
 
+      # The packages were uploaded as they are, and download-artifact would otherwise extract the
+      # Windows zip, publishing the bare executable in its place
       - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
+          skip-decompress: true
 
       # If the release already exists (e.g. on a re-run), its packages are replaced instead
       - name: Publish release
