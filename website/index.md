@@ -4,8 +4,9 @@ layout: home
 
 hero:
   name: "HARP"
-  text: "<span style='font-size: 0.8em'>The power \nof Deep Learning \nin your DAW</span>"
-  tagline: Hosted, asynchronous, remote processing of audio and MIDI with machine learning
+  # The non-breaking spaces keep the end of each line together when it wraps
+  text: Machine learning in&nbsp;your&nbsp;DAW
+  tagline: Hosted, asynchronous, remote processing of&nbsp;audio&nbsp;and&nbsp;MIDI
   image:
     src: /logos/harp_logo.png
     alt: HARP logo
@@ -23,20 +24,20 @@ hero:
 features:
   - icon:
       src: /logos/reaper-logo.png
-    title: Use in your DAW
-    details: Process audio from REAPER, Logic Pro, Pro Tools, Ableton Live, and other DAWs with a model, and bring the result back.
+    title: Works with your DAW
+    details: Process audio or MIDI from REAPER, Logic Pro, Pro Tools, Ableton Live, or another DAW with a model, and send the result back.
     link: /content/setup/
     linkText: Set up your DAW
   - icon:
       src: /logos/hf-logo.svg
-    title: Choose from dozens of models
-    details: Separate stems, transcribe to MIDI, generate, restore, and analyze, with models hosted on Hugging Face and ready to run.
+    title: Dozens of hosted models
+    details: Separate stems, transcribe to MIDI, generate, restore, and analyze, with models that run on Hugging Face instead of your computer.
     link: /content/usage/models
     linkText: Browse the models
   - icon:
       src: /logos/python-logo-only.svg
-    title: Deploy your own
-    details: Wrap any Python code for audio or MIDI in a few lines with PyHARP, and run it on your machine, a server, or a Hugging Face Space.
+    title: Deploy your own model
+    details: Turn Python code for audio or MIDI into a HARP model with a few lines of PyHARP, then host it on Hugging Face, a server, or your own machine.
     link: /content/pyharp_docs/setup
     linkText: Deploy a model
 ---

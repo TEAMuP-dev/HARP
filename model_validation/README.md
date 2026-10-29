@@ -963,7 +963,7 @@ second entry.
 
 ## CI Behavior
 
-- **Schedule:** daily at 06:30 UTC. It can also be run manually from the
+- **Schedule:** daily at 04:45 UTC. It can also be run manually from the
   Actions tab, with options to validate specific spaces, skip inference, or
   disable the default restart of crashed spaces.
 - **Lint:** a third job lints every space, or the ones named, alongside the

@@ -119,6 +119,20 @@
 }
 
 /**
+ * Component: Home Features
+ *
+ * The base styles give every image `height: auto`, so a logo taller than it is wide grows past
+ * the 48 px the theme asks for and pushes the title of its card below the others. Each logo is
+ * fitted into the same square instead.
+ * -------------------------------------------------------------------------- */
+
+.VPFeature .box > .VPImage {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+/**
  * Component: Custom Block
  * -------------------------------------------------------------------------- */
 

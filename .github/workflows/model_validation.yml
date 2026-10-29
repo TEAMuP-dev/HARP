@@ -27,7 +27,7 @@ name: Model Validation
 
 on:
   schedule:
-    - cron: '30 6 * * *'   # daily, 06:30 UTC
+    - cron: '45 4 * * *'   # daily, 04:45 UTC
   workflow_dispatch:
     inputs:
       spaces:
