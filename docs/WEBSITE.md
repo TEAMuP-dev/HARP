@@ -35,8 +35,9 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 
 ## Editing the Content
 
-- **Pages** are the Markdown files under `website/content/`, and `website/index.md` is the home
-  page.
+- **Pages** are the Markdown files under `website/`, in a directory per section, and
+  `website/index.md` is the home page. A page at `website/setup/reaper.md` is served at
+  `/setup/reaper`.
 - **Navigation**, the sidebar and the top bar, is set in `website/.vitepress/config.mjs`. A new
   page needs an entry there.
 - **Shared text is included, not copied.** Pages include sections of the root `README.md` and of the
@@ -50,26 +51,24 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
   ```
 
   and a page includes it with `<!--@include: @/../README.md#build-->`, where `@` is `website/`. An
-  include without a region takes the whole file, as `content/contributing/add_provider.md` does with
+  include without a region takes the whole file, as `contributing/add_provider.md` does with
   `docs/PROVIDERS.md`. Included text appears on GitHub and on the site alike, so its links have to
   be absolute URLs.
 - **`website/scripts/check-includes.mjs`** runs before every build, and fails it if an include
   names a file or region that does not exist. VitePress would otherwise include the whole file in
   place of a missing region.
-- **The two examples** under `website/content/pyharp_docs/` quote the code of the S-KEY and Demucs
-  Spaces at pinned revisions. Update the revision and the quoted lines together.
-- **The install page** links the packages that the release workflow attaches to the GitHub release
-  named by the root `VERSION`. `website/content/install/release.data.mjs` builds the links when the
+- **The two examples** under `website/pyharp/` quote the code of the S-KEY and Demucs Spaces
+  at pinned revisions. Update the revision and the quoted lines together.
+- **The download page** links the packages that the release workflow attaches to the GitHub release
+  named by the root `VERSION`. `website/download/release.data.mjs` builds the links when the
   site is built, and the `DownloadButtons` component of the theme shows them, with the platform of
   the visitor highlighted. The site holds no copy of the packages.
 
 ### Screenshots
 
-- **Images that the README shares** with the site go in `website/public/images/`, which the site
-  serves at `/images/<name>.png`. The README refers to them as `website/public/images/<name>.png`,
-  and the README of PyHARP as `https://harp.tools/images/<name>.png`, so that one file serves all
-  three.
-- **Images used by one page alone** can sit in `website/content/images/` instead.
+- **Images** go in `website/public/images/`, which the site serves at `/images/<name>.png`. The
+  README refers to the ones it shares with the site as `website/public/images/<name>.png`, and the
+  README of PyHARP as `https://harp.tools/images/<name>.png`, so that one file serves all three.
 - **Figures**, such as the teaser on the introduction page, are draw.io exports kept under
   `website/public/images/` with the diagram embedded, so that they open in draw.io for editing.
   Export them with a white background and `color-scheme: light`, since draw.io writes its colors
@@ -78,10 +77,11 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 
 ### Moving a Page
 
-Released versions of HARP and PyHARP link to some pages, such as `/content/intro.html` and
-`/content/usage/models.html`, so a page cannot simply be renamed. Add a redirect from its old URL to
+Released versions of HARP and PyHARP link to some pages, such as `/intro.html` and
+`/usage/models.html`, so a page cannot simply be renamed. Add a redirect from its old URL to
 `website/public/_redirects` whenever a page moves or is removed, in both forms, with and without
-`.html`.
+`.html`. The pages lived under `/content/` until after HARP 4.0.0, which links them there, so the
+last rule in the file forwards every `/content/` URL to the same path without it.
 
 ## Dependencies
 

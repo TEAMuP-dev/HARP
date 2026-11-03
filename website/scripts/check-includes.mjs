@@ -16,11 +16,16 @@ const includeRE = /<!--\s*@include:\s*(.*?)\s*-->/g
 // "path", "path#region", or either followed by a line range such as "{3,10}"
 const targetRE = /^(.*?)(?:#([\w-]+))?(?:\{\d*,\d*\})?$/
 
+// Directories under the root that hold no pages
+const skipped = new Set(['.vitepress', 'node_modules', 'public', 'scripts'])
+
 function* markdownFiles(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name)
 
     if (entry.isDirectory()) {
+      if (dir === root && skipped.has(entry.name)) continue
+
       yield* markdownFiles(path)
     } else if (entry.name.endsWith('.md')) {
       yield path
@@ -33,7 +38,7 @@ const hasLine = (text, line) => text.split(/\r?\n/).some((candidate) => candidat
 
 const problems = []
 
-for (const page of [join(root, 'index.md'), ...markdownFiles(join(root, 'content'))]) {
+for (const page of markdownFiles(root)) {
   for (const [, target] of readFileSync(page, 'utf-8').matchAll(includeRE)) {
     const [, path, region] = target.match(targetRE)
     const file = path.startsWith('@')

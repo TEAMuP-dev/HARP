@@ -10,10 +10,10 @@
 
 ## How It Works
 
-HARP never runs a model itself. Most models are [Gradio](https://www.gradio.app) apps, built with
-our companion library [PyHARP](https://github.com/TEAMuP-dev/pyharp) and hosted wherever their
-hardware lives, and a few are commercial services that HARP calls directly, such as those of
-Stability AI. Each model describes its interface to HARP, which draws it as native controls and
+HARP never runs a model itself. Most models are [Gradio](https://www.gradio.app) apps built with
+our companion library [PyHARP](https://github.com/TEAMuP-dev/pyharp), and hosted on Hugging Face
+Spaces, a dedicated server, or a local machine. A few are third-party APIs that HARP calls directly,
+such as that of Stability AI. Each model describes its interface to HARP, which displays it as native controls and
 tracks.
 
 1. **Open a model.** HARP reads the model card (name, author, description, and tags) and the
@@ -43,27 +43,32 @@ framework, from a few lines of signal processing to a large generative model on 
 
 ## What You Can Do
 
-The Home tab of HARP lists the models we host, grouped by what they do:
+HARP's Home tab lists the models we host, in the categories of
+[PyHARP's taxonomy](https://github.com/TEAMuP-dev/pyharp#tags):
 
-- **Separate** a mix into stems, or extract a single instrument or voice.
-- **Generate** music, sound effects, speech, or MIDI from a text prompt, or continue and edit a
-  recording.
-- **Transcribe** audio to MIDI, find beats, chords, and keys, or tag a recording.
-- **Enhance** a recording by denoising, dereverberating, or restoring it.
-- **Transform** audio with neural effects, timbre transfer, or automatic mixing.
+- **Generation**: music, sound, or MIDI from a text prompt, and the continuation, infilling,
+  accompaniment, and editing of an existing recording or score.
+- **Synthesis**: an instrument performance rendered from MIDI, or speech and singing from text.
+- **Effects**: neural emulations of analog gear, timbre transfer, and the removal of effects.
+- **Enhancement**: denoising, dereverberation, bandwidth extension, and restoration.
+- **Production**: automatic mixing, mixing style transfer, and mastering.
+- **Separation**: a mix into stems, or a single source described in text or by example.
+- **Analysis**: key, beats, chords, and structure, transcription to MIDI, speech to text, tagging,
+  and quality scores, returned as labels over the audio, as MIDI, or as a file.
+- **Utility**: tools such as watermarking.
 
 HARP opens any HARP-compatible Gradio app by its address as well, including one running on your own
 machine.
 
 ## Using This Guide
 
-- **[Using HARP](/content/install/)**: install HARP, set it up alone or with your DAW, and learn
-  the interface and the hosted models.
-- **[Deploying Models with PyHARP](/content/pyharp_docs/setup)**: run a model of your own in
+- **[Using HARP](/download/)**: download HARP, set it up as a standalone application or with
+  your DAW, and learn the interface and the hosted models.
+- **[Deploying Models with PyHARP](/pyharp/setup)**: run a model of your own in
   HARP, through two examples taken from the models we host.
-- **[Hosting Models](/content/hosting/spaces)**: put a model on Hugging Face Spaces, or reach an
+- **[Hosting Models](/hosting/spaces)**: put a model on Hugging Face Spaces, or reach an
   existing API.
-- **[Contributing to HARP](/content/contributing/overview)**: build, debug, and extend the
+- **[Contributing to HARP](/contributing/overview)**: build, debug, and extend the
   application.
 
 ## Citing HARP

@@ -15,6 +15,6 @@ as files.
 Drag the output track from HARP into the Project window, which imports it as a new event at the
 position where it is dropped.
 
-<!-- TODO: screenshot. An output track being dragged from HARP into the Project window of Cubase.
-![Dragging a result from HARP into the Project window of Cubase](/images/cubase-drag-result.png)
+<!-- TODO: screenshot. An output track being dragged from HARP into the Cubase Project window.
+![Dragging a result from HARP into the Cubase Project window](/images/cubase-drag-result.png)
 -->

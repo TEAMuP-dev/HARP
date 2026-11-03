@@ -7,7 +7,7 @@ which leaves the steps every deployment shares in plain view: describing the mod
 processing a request, and declaring the interface.
 
 The code shown is the deployed app, at revision
-[`6a3c10c`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/6a3c10c417884132e60a12cf3625de0dfe86e5e2).
+[`6f6a4e1`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/6f6a4e1581f6178af3ea03937b04df32cd21c05b).
 
 ## 1. Get the Code
 
@@ -20,7 +20,7 @@ python3 -m venv .venv
 source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install huggingface_hub
 hf download teamup-tech/S-KEY --repo-type space --local-dir . \
-    --revision 6a3c10c417884132e60a12cf3625de0dfe86e5e2
+    --revision 6f6a4e1581f6178af3ea03937b04df32cd21c05b
 pip install -r requirements.txt
 ```
 
@@ -31,7 +31,7 @@ The Space holds:
   sets a minimum.
 - `skey/`, the inference code of the authors and its checkpoint of 765 KB, under their MIT
   license (`LICENSE`).
-- `README.md`, the configuration of the Space (see [Hosting Models](/content/hosting/spaces)).
+- `README.md`, the configuration of the Space (see [Hosting Models](/hosting/spaces)).
 
 Copying the code that inference needs, rather than a whole research repository, keeps a Space small
 and quick to start, as
@@ -62,7 +62,7 @@ model_card = ModelCard(
         "https://arxiv.org/abs/2501.12907"
     ),
     author="Yuexuan Kong, Gabriel Meseguer-Brocal, Vincent Lostanlen, et al.",
-    tags=[Subcategory.MUSIC_ANALYSIS, SampleRate(22050), Channels(1)],
+    tags=[Subcategory.MUSIC_ANALYSIS, SampleRate(22050), Channels(1), 'domain:music'],
 )
 ```
 
@@ -71,8 +71,9 @@ model_card = ModelCard(
 - **The model card** names the model, credits its authors, says what it does, links the code and
   the paper, and places it in the taxonomy. HARP shows the card at the top of the model tab, and
   lists the model under `Analysis` on the Home tab. `SampleRate` and `Channels` declare the format
-  in which the model works, which nothing can infer, and the `input:` and `output:` tags are added
-  for you, from the components in step 5.
+  in which the model works, which nothing can infer, `'domain:music'` is a custom tag naming the
+  domain of the model, and the `input:` and `output:` tags are added for you, from the components
+  in step 5.
 
 ## 3. Load the Model Once
 
@@ -100,7 +101,7 @@ def process_fn(input_audio_path):
     # Checked before the GPU is reserved, so a request the model cannot take spends none of the
     # caller's ZeroGPU allowance
     if not input_audio_path:
-        raise gr.Error("Provide the music whose key to find.")
+        raise gr.Error("Provide the music to analyze.")
     try:
         duration = sf.info(input_audio_path).duration
     except Exception as exc:
@@ -146,8 +147,8 @@ def find_key(input_audio_path):
   `process_fn` have passed, and does nothing elsewhere.
 - **The result is a label.** A `LabelList` holds one `AudioLabel`, which spans the clip (`t` and
   `duration`), sits near the top of the track (`amplitude`), and carries its text, a description
-  shown on hover, and a color. HARP draws labels over an output track, so the app returns the input
-  audio, over which the label is drawn.
+  shown on hover, and a color. HARP shows labels over an output track, so the app returns the input
+  audio as the track that carries the label.
 
 ## 5. Declare the Interface
 
@@ -182,7 +183,7 @@ if __name__ == "__main__":
 - **The components follow `process_fn`.** The inputs match its arguments in order, and the outputs
   match its return values: an audio track, and a `gr.JSON` that HARP reads as labels.
 - **`type="filepath"`** is required of every `gr.Audio`. `.harp_required(True)` marks an input that
-  HARP must fill, and `.set_info(...)` describes a component in the instructions panel of HARP.
+  HARP must fill, and `.set_info(...)` describes a component in HARP's instructions panel.
 - **`demo.queue()`** lets HARP cancel a job, and **`show_error=True`** forwards the reason a job
   failed.
 
@@ -193,15 +194,15 @@ python app.py
 ```
 
 Open `http://localhost:7860` in HARP as a custom path, as in
-[Setting Up PyHARP](/content/pyharp_docs/setup#open-it-in-harp). Drag a song of at least three
+[Setting Up PyHARP](/pyharp/setup#open-it-in-harp). Drag a song of at least three
 seconds onto `Input Audio`, and select `Process`. The key appears as a label over `Audio with Key`.
 
-<!-- TODO: screenshot. S-KEY open in HARP after processing a song, with the detected key drawn as a
+<!-- TODO: screenshot. S-KEY open in HARP after processing a song, with the detected key shown as a
      label over the output track.
-![The key of a song, drawn as a label by S-KEY in HARP](/images/skey-in-harp.png)
+![The key of a song, shown as a label by S-KEY in HARP](/images/skey-in-harp.png)
 -->
 
 To deploy a model of your own from this app, replace the `skey` package and the body of `find_key`
 with your own inference code, and change the model card and components to match.
 
-**Next:** [Example 2: Stem Separation](/content/pyharp_docs/example_demucs).
+**Next:** [Example 2: Stem Separation](/pyharp/example_demucs).

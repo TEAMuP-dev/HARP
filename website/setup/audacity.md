@@ -10,9 +10,9 @@ Audacity is an audio editor of its own, so audio moves between Audacity and HARP
 
 ## Bring the Result Back
 
-Drag the output track from HARP into the project window of Audacity, which imports it as a new
+Drag the output track from HARP into Audacity's project window, which imports it as a new
 track, as `File > Import > Audio` does.
 
-<!-- TODO: screenshot. An output track being dragged from HARP into a project of Audacity.
-![Dragging a result from HARP into a project of Audacity](/images/audacity-drag-result.png)
+<!-- TODO: screenshot. An output track being dragged from HARP into an Audacity project.
+![Dragging a result from HARP into an Audacity project](/images/audacity-drag-result.png)
 -->

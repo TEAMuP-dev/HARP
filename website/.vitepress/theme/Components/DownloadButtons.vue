@@ -6,7 +6,7 @@ import { VPButton } from 'vitepress/theme'
 import { onMounted, ref } from 'vue'
 
 const props = defineProps({
-  // What content/install/release.data.mjs loads
+  // What download/release.data.mjs loads
   release: { type: Object, required: true },
 })
 

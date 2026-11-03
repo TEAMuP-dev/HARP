@@ -1,4 +1,4 @@
-<!-- Our website (website/content/) expands each section of this README into a page of its own.
+<!-- Our website (website/) expands each section of this README into a page of its own.
      The blocks between "#region" and "#endregion" markers are included verbatim by the website
      page that names them in an "@include" comment, so edit them here, and rename a region in
      both places at once. The website build fails if an included region is missing. -->
@@ -17,21 +17,27 @@
 <!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
 
 <!-- #region overview -->
-HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio with
-machine learning. It runs as a standalone application or as a plugin-like editor within a DAW, and
-sends audio, MIDI, and metadata to [Gradio](https://www.gradio.app) endpoints for processing.
+HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio and
+MIDI with machine learning. It runs as a standalone application or as an external editor beside a
+DAW. HARP sends the file you open, with the settings you choose, to a model hosted on a server, then
+displays the result, ready to play or to send back to the DAW.
 
-Most machine learning models for audio are impractical to run alongside a session. They expect a
-GPU, a particular version of PyTorch, and weights measured in gigabytes, and they take far longer
-than a buffer period to produce a result. HARP leaves each model where it is already installed,
-whether that is a [Hugging Face Space](https://huggingface.co/spaces) or a machine on your own
-network, and returns the result to the editor. Processing is asynchronous and happens outside the
-audio thread, so a model that runs for a minute delays nothing but itself.
+DAWs process audio with plugins, which run on the local CPU, within the real-time deadline of the
+audio callback, and in a compiled format such as VST3, AU, or AAX. Many machine learning models for
+audio cannot meet these requirements. They depend on a GPU, a specific Python environment, and
+weights that can occupy several gigabytes, and their inference can take seconds or minutes. Porting
+such a model to a plugin means reimplementing and optimizing it for real-time use, which falls
+outside the scope of most research, and few models are ever made available inside a DAW.
 
-This gives users of DAWs that support external sample editors, among them
-[REAPER](https://www.reaper.fm), [Logic Pro](https://www.apple.com/logic-pro/), and
-[Ableton Live](https://www.ableton.com/en/live/), access to these models without leaving the
-session.
+HARP instead treats a model as a remote service. The model runs on hardware suited to it, whether a
+[Hugging Face Space](https://huggingface.co/spaces), a server of your own, or the infrastructure of
+a third-party API, and HARP communicates with it over HTTP, so the user needs no GPU or Python
+environment. Requests run asynchronously, in a process separate from the DAW, so inference of any
+duration blocks neither the DAW nor HARP's interface. Any DAW that supports an external sample
+editor, such as [REAPER](https://www.reaper.fm), [Logic Pro](https://www.apple.com/logic-pro/), or
+[Ableton Live](https://www.ableton.com/en/live/), can send audio to a model this way, and a
+model deployed with [PyHARP](https://github.com/TEAMuP-dev/pyharp) is available to every user of
+HARP as soon as it is online.
 <!-- #endregion overview -->
 
 ## Table of Contents
@@ -44,10 +50,10 @@ session.
 Our website has the [full documentation](https://harp.tools/), including a walkthrough of
 the interface and step-by-step tutorials on deploying a model of your own.
 
-<!-- website/content/install/index.md -->
+<!-- website/download/index.md -->
 # Installation
 
-Download a package for your platform from [harp.tools](https://harp.tools/content/install/), or
+Download a package for your platform from [harp.tools](https://harp.tools/download/), or
 from the [latest release](https://github.com/TEAMuP-dev/HARP/releases) on GitHub. Every push is
 built for each platform below.
 
@@ -63,19 +69,18 @@ At runtime HARP needs ALSA, FreeType, and X11, and loads libcurl for network req
 which a desktop installation provides. Under Wayland it runs through XWayland, which GNOME and
 KDE enable by default.
 
-Note that the Windows executable is not code signed, so Windows will warn before running it the first
-time.
+The Windows executable is not code signed, so Windows warns before running it the first time.
 <!-- #endregion install-requirements -->
 
-Our website has [instructions for each platform](https://harp.tools/content/install/), and
-for [setting up HARP](https://harp.tools/content/setup/) with REAPER, Logic Pro, Pro Tools,
+Our website has [instructions for each platform](https://harp.tools/download/), and
+for [setting up HARP](https://harp.tools/setup/) with REAPER, Logic Pro, Pro Tools,
 Ableton Live, Cubase, Audacity, FL Studio, and Adobe Audition.
 
-<!-- website/content/setup/ and website/content/usage/ -->
+<!-- website/setup/ and website/usage/ -->
 # Usage
 
 As a standalone application, open a file, open a model, process, and save the result. Within a DAW,
-open the region to process in HARP, process it, and either return the result with the
+open the clip to process in HARP, process it, and either return the result with the
 _Send-to-DAW_ icon of the media clipboard or write it to disk with the _Save_ icon.
 
 <!-- TODO: screenshot. A model tab after processing, showing the model card, its controls, an input
@@ -87,11 +92,11 @@ _Send-to-DAW_ icon of the media clipboard or write it to disk with the _Save_ ic
 ## Warning
 
 <!-- #region warning -->
-**HARP is a _destructive_ file editor.** When running it as a standalone, use _Save As_ to avoid
-overwriting the input. _Send-to-DAW_ overwrites the region from which the audio came. Working on a
+**HARP is a _destructive_ file editor.** When running it standalone, use _Save As_ to avoid
+overwriting the input. _Send-to-DAW_ overwrites the file from which the audio came. Working on a
 duplicate, a bounce, or an alternate take leaves the original intact.
 
-HARP processes the whole file a DAW passes it, so editing part of a region means splitting it first,
+HARP processes the whole file a DAW passes it, so editing part of a clip means splitting it first,
 then copying the excerpt into a file of its own, _e.g._, by bouncing it in place.
 <!-- #endregion warning -->
 
@@ -108,7 +113,7 @@ then copying the excerpt into a file of its own, _e.g._, by bouncing it in place
 - Load audio or MIDI with the folder icon of an input track, or by dragging a file onto the track.
   An input marked `OPTIONAL` can be left empty.
 - Set the controls, then select `Process`. While the model runs, the same button cancels it.
-  Results are rendered in place as they arrive.
+  Results appear in the output tracks as they arrive.
 - Save the result with the `Save` icon of its track. To return it to the DAW, drag it into the
   media clipboard, select it there, and select the _Send-to-DAW_ icon.
 <!-- #endregion workflow -->
@@ -125,7 +130,7 @@ then copying the excerpt into a file of its own, _e.g._, by bouncing it in place
 - Drag a track onto another track, into the media clipboard, or out of HARP into a DAW.
 - Save an output track with its `Save` icon, or copy it with its `Copy` icon and paste it into a DAW
   or a file browser.
-- Labels that a model returns, such as beats or a key, are drawn over its output tracks. Hover over
+- Labels that a model returns, such as beats or a key, appear over its output tracks. Hover over
   a label to read its description, and click one that has a link to open it.
 <!-- #endregion tracks -->
 
@@ -136,7 +141,7 @@ The media clipboard holds tracks independently of any one model, so a result fro
 carried into another as its input. Show or hide it with `View > Media Clipboard`. It also opens on
 its own when a file is added with `File > Open`.
 
-- Add a file with the folder icon, or drag one in from a track or from elsewhere.
+- Add a file with the folder icon, or drag one in from a track or from a file browser.
 - Select a track to play it in the preview pane beneath the list, which has its own play, pause, and
   stop icons. Drag the top edge of the pane to resize it, or minimize or close it from its title
   bar. `View > Preview Pane` shows it again, as does double-clicking the waveform or piano roll of
@@ -160,15 +165,18 @@ its own when a file is added with `File > Open`.
 Models hosted on Hugging Face run without an account. Those marked ZeroGPU draw on a small daily GPU
 allowance, which a free [Hugging Face token](https://huggingface.co/settings/tokens) raises.
 Stability AI models require a [Stability AI key](https://platform.stability.ai/account/keys), and
-each request spends credits from that account. Add either under `File > Settings > API Keys`. HARP
-sends a key only to the service that issued it, or, for a Hugging Face key, to apps running on your
-own machine.
+each request spends credits from that account. Add either under `File > Settings > API Keys`.
+
+HARP sends each key only to the service that issued it, with one exception. An app at `localhost`
+or `127.0.0.1` also receives your Hugging Face key, since HARP assumes that such an app runs on your
+own computer. HARP never sends the key to a `gradio.live` link or to another computer on your
+network.
 <!-- #endregion api-keys -->
 
-<!-- website/content/usage/models.md -->
+<!-- website/usage/models.md -->
 ## Models
 
-Our website lists [highlights among the models we host](https://harp.tools/content/usage/models.html).
+Our website lists [highlights among the models we host](https://harp.tools/usage/models.html).
 
 <!-- #region licenses -->
 Each model is deployed under its original license, which HARP displays on a badge of its own beside
@@ -178,14 +186,14 @@ model were not featured, or whose license we have stated incorrectly, are asked 
 promptly.
 <!-- #endregion licenses -->
 
-<!-- website/content/contributing/ -->
+<!-- website/contributing/ -->
 # Contributing
 
 There are two ways to contribute, depending on what you intend to build.
 
 **To deploy a model for others to use in HARP**, begin with [pyharp](https://github.com/TEAMuP-dev/pyharp),
 which wraps arbitrary Python code in a HARP-compatible Gradio app. Our website walks through
-[deploying a model](https://harp.tools/content/pyharp_docs/setup.html) from start to
+[deploying a model](https://harp.tools/pyharp/setup.html) from start to
 finish, and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
 describe the conventions our own models follow: licensing, naming and tagging, sourcing weights,
 reporting errors, preserving the input format, and choosing hardware.
@@ -223,7 +231,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug .
 cmake --build build --config Debug --parallel
 ```
 
-The binary lands in `build/HARP_artefacts/Debug/`, as `HARP.app` on macOS, `HARP.exe` on Windows,
+The build writes the binary to `build/HARP_artefacts/Debug/`, as `HARP.app` on macOS, `HARP.exe` on Windows,
 and `HARP` on Linux. It accepts media files as arguments, and can be invoked from the command line:
 
 ```bash
@@ -260,7 +268,7 @@ platform in use:
 ```
 
 An alternative configuration using `"request": "attach"` with `"processId": "${command:pickProcess}"`
-attaches to an instance of HARP that is already running. This can be used to debug HARP after launching it from a DAW.
+attaches to an instance of HARP that is already running, such as one a DAW has launched.
 <!-- #endregion debug -->
 
 ## Distribution

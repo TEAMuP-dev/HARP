@@ -1,9 +1,9 @@
 # Hosting on Hugging Face Spaces
 
-A [Space](https://huggingface.co/docs/hub/spaces-overview) runs an app on the hardware of Hugging
-Face, at a permanent address, so that it works without your machine and others can use it. HARP
-opens any public Space by its id, _e.g._, `teamup-tech/Demucs`, and every model on its Home tab is
-a Space.
+A [Space](https://huggingface.co/docs/hub/spaces-overview) runs an app on Hugging Face's hardware,
+at a permanent address, so that it runs independently of your machine and is available to others. HARP
+opens any public Space by its id, _e.g._, `teamup-tech/Demucs`, and most of the models on its Home
+tab are Spaces.
 
 ## Plans and Hardware
 
@@ -17,7 +17,7 @@ gives the full rule.
 
 ## Deploying Example 2
 
-The app from [Example 2](/content/pyharp_docs/example_demucs) is ready for ZeroGPU, so a free
+The app from [Example 2](/pyharp/example_demucs) is ready for ZeroGPU, so a free
 account can host it too.
 
 1. **Create the Space.** On [huggingface.co/new-space](https://huggingface.co/new-space), choose a
@@ -86,9 +86,10 @@ tags:
 
 - **`sdk_version`** is the version of Gradio the Space installs, which is why `requirements.txt`
   does not list Gradio. HARP needs 6.13 or newer to report why a job failed.
-- **`python_version`** is the Python the Space runs. ZeroGPU supports 3.10 and 3.12.
+- **`python_version`** is the Python the Space runs. ZeroGPU runs 3.10 or 3.12, and no other
+  version.
 - **`license`** is the license of the model, which HARP shows on its badge.
-- **`short_description`** and **`tags`** describe the model on the Home tab of HARP before it is
+- **`short_description`** and **`tags`** describe the model on HARP's Home tab before it is
   loaded. The tags are the full list of the model card, including the `input:` and `output:` tags
   that PyHARP infers. Launch the app with `build_endpoint(..., show_controls=True)` and click
   `View Controls` to copy them.
@@ -118,14 +119,14 @@ A Space runs an app with one of two SDKs:
 - **Gradio**, the default, builds the environment from `requirements.txt` with pip and
   `packages.txt` with apt, on the Python of `python_version`, with the Gradio of `sdk_version`. It is
   the only SDK that ZeroGPU supports.
-- **Docker** builds the Space from a `Dockerfile` of your own, which leaves the environment entirely
-  to you.
+- **Docker** builds the Space from a `Dockerfile` of your own, which gives full control of the
+  environment.
 
 Choose Docker only when a model cannot share an environment with Gradio 6, and first check whether
 an older release of Gradio 6 resolves the conflict, as it does for models tied to `transformers`
 4.x (see [Dependency Conflicts](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#dependency-conflicts)).
 
-Our [BeatNet](https://huggingface.co/spaces/teamup-tech/BeatNet/tree/main) Space is the example.
+Our [BeatNet](https://huggingface.co/spaces/teamup-tech/BeatNet/tree/main) Space is an example.
 BeatNet relies on madmom, whose release supports Python 3.9 and an old NumPy, while Gradio 6 needs
 Python 3.10 or newer, so the Space keeps two environments in one Docker image:
 
@@ -150,7 +151,7 @@ completed = subprocess.run(
 
 The call sets no timeout of its own, since PyHARP stops the subprocess along with the job when a
 user cancels it or the job runs past its `timeout_s`. The
-[Docker Spaces](https://github.com/TEAMuP-dev/pyharp#docker-spaces) section of the README of PyHARP
+[Docker Spaces](https://github.com/TEAMuP-dev/pyharp#docker-spaces) section of the PyHARP README
 gives a template for the layout. A Docker Space needs a paid plan and cannot use ZeroGPU, so a model
 that needs a GPU there has to pay for one.
 
@@ -159,7 +160,7 @@ that needs a GPU there has to pay for one.
 - **Every push rebuilds the Space**, reinstalling its requirements, so pin each one to the version
   against which the app was tested.
 - **Binary files**, such as weights or test audio, go through Git LFS, as the
-  [Binary Files](https://github.com/TEAMuP-dev/pyharp#binary-files) section of the README of PyHARP
+  [Binary Files](https://github.com/TEAMuP-dev/pyharp#binary-files) section of the PyHARP README
   describes. `hf upload` from the `huggingface_hub` package handles them without Git.
 - **Keys and tokens** belong in the secrets of the Space, under `Settings`, which reach the app as
   environment variables. Never commit them.
@@ -169,8 +170,8 @@ that needs a GPU there has to pay for one.
 
 HARP lists the public Spaces of the [TEAMuP organization](https://huggingface.co/teamup-tech) on its
 Home tab, and describes each with the `short_description` and `tags` of its README until it is
-loaded. A Space under any other account opens as a custom path. To propose a model for the Home tab,
-open an [issue](https://github.com/TEAMuP-dev/HARP/issues).
+loaded. A Space under any other account opens as a custom path. To have a model featured there,
+contact us.
 
 ## Hosting Elsewhere
 
@@ -178,5 +179,5 @@ An app also runs on any machine with Python, such as a lab workstation with a GP
 private weights and audio on your own hardware. Run it there on a fixed port, and reach it from HARP
 over an SSH tunnel as `http://localhost:<PORT>`, as the
 [Self-Hosted Endpoints](https://github.com/TEAMuP-dev/pyharp#self-hosted-endpoints) section of the
-README of PyHARP describes. HARP treats a local address as your own machine, and sends it your
-Hugging Face key, so tunnel only to a server you trust with it.
+PyHARP README describes. HARP sends your Hugging Face key to any app at `localhost`, including
+one reached through a tunnel, so tunnel only to a server you trust with the key.

@@ -138,7 +138,7 @@ and lists the taxonomy. The conventions:
 
 The Space `README.md` carries YAML frontmatter that decides how the Space builds and how it
 appears on the Hugging Face Hub.
-[UI-Tester](https://huggingface.co/spaces/teamup-tech/UI-Tester) is the reference:
+[UI-Tester](https://huggingface.co/spaces/teamup-tech/UI-Tester) is a reference:
 
 ```yaml
 ---
@@ -217,7 +217,7 @@ git+https://github.com/TEAMuP-dev/pyharp.git@<TAG>
 ```
 
 A branch such as `develop` moves under the Space, so a rebuild can change how it behaves with
-nothing in the repository having changed. **A released tag never moves**: a fix ships as a new patch
+nothing in the repository having changed. **A released tag never moves**: a fix is released as a new patch
 release instead. pip caches the wheel it built for a URL, so a Space pinned to a tag that is later
 moved goes on installing whatever the tag named when the Space was last built, through rebuilds and
 factory reboots alike, and nothing in the installed metadata disagrees.
@@ -379,9 +379,9 @@ to write itself `audio.wav`.
 
 **Return labels as a `LabelList`, over a track.** HARP reads every `gr.JSON` output as a PyHARP
 `LabelList` and fails the whole request on anything else, so a plain dictionary of results shows
-the user an error after the model has done its work. It also draws labels only over an audio, MIDI
+the user an error after the model has done its work. It also shows labels only over an audio, MIDI,
 or file output the model returns. An analysis model therefore returns its input as an audio output
-alongside the labels, as Beat-This and S-KEY do, and a whole-clip result such as a tag, a score or
+alongside the labels, as Beat-This and S-KEY do, and a whole-clip result such as a tag, a score, or
 a loudness reading becomes a label spanning the clip.
 
 PyHARP's README covers the rest of the interface:
@@ -391,7 +391,7 @@ lists the components HARP supports as controls and documents marking an input op
 [MIDI Inputs & Outputs](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#midi-inputs--outputs)
 covers MIDI tracks, and
 [Output Labels](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#output-labels)
-covers drawing labels over a track.
+covers displaying labels over a track.
 
 ## Model Weights
 
@@ -432,7 +432,7 @@ Use `snapshot_download` where a model is several files that must agree with one 
 
 ### Upstream Library
 
-Many projects ship their own downloader, in which case the weights are a side effect of
+Many projects include their own downloader, in which case the weights are a side effect of
 constructing the model:
 
 ```python
@@ -765,7 +765,7 @@ account at all, and HARP opens it by its URL.
 
 On a paid plan, the `cpu-basic` hardware, with 2 vCPUs and 16 GB of memory, runs at no cost, and
 sleeps after 48 hours without a request. Upgraded hardware is billed by the minute while the Space
-runs. An allowance resets 24 hours after its first use. The
+runs. A ZeroGPU allowance resets 24 hours after its first use. The
 [pricing page](https://huggingface.co/pricing) of Hugging Face has the current terms.
 <!-- #endregion hugging-face-plans -->
 
@@ -973,7 +973,7 @@ SoulX-Singer's `app.py` does each of these, so start a new frontend from a copy 
 
   Without it, every call reaches the backend from the server of the frontend, and all users share one
   anonymous allowance. Embedding a token of the organization instead bills every user to that one
-  account. Either way, once that single allowance runs out, the model looks broken to everyone.
+  account. Either way, once that single allowance runs out, the model fails for everyone.
   Forwarding also leaves a quota error from the backend attributable to the caller, which is what
   the validation harness assumes of every Space. See [Calling Spaces from Another
   Space](https://huggingface.co/docs/hub/spaces-api-endpoints#calling-spaces-from-another-space).
@@ -985,7 +985,7 @@ SoulX-Singer's `app.py` does each of these, so start a new frontend from a copy 
   what puts the ZeroGPU badge in HARP (see [Tags](#tags)).
 - **Say in the description where the work happens** and whose allowance pays for it.
 - **Check the API signature of the backend at startup,** so that an upstream change surfaces as a build
-  failure rather than as a puzzle on every request.
+  failure rather than as an unexplained failure on every request.
 
 ## Lightweight Spaces
 

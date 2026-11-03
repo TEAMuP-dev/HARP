@@ -8,12 +8,12 @@ repositories.
 
 There are three ways to contribute:
 
-- **A model for others to use.** [Deploying Models with PyHARP](/content/pyharp_docs/setup) ends
-  in a hosted app that any user of HARP can open. To propose it for the Home tab, open an
-  [issue](https://github.com/TEAMuP-dev/HARP/issues).
+- **A model for others to use.** [Deploying Models with PyHARP](/pyharp/setup) ends
+  in a hosted app that any user of HARP can open by its path. If you would like to have your model
+  featured on the Home tab, please contact us.
 - **A change to the application.** This page covers building, debugging, and releasing HARP.
 - **Support for a new service.** A service with an API of its own is reached through a client class
-  of its own, as [Adding an API Provider](/content/contributing/add_provider) describes.
+  of its own, as [Adding an API Provider](/contributing/add_provider) describes.
 
 Reports of bugs and requests for features are welcome as
 [issues](https://github.com/TEAMuP-dev/HARP/issues). Attach the log to a bug report, which
@@ -45,7 +45,7 @@ HARP is a [JUCE](https://juce.com) application in C++20, under
 - **`Model`** holds the state of a model, parses its interface, and builds each request.
 - **`Client`** and its subclasses translate requests into the API of a provider: `GradioClient` for
   any Gradio app, and `StabilityClient` for Stability AI.
-- **`media/`** draws audio, MIDI, and file tracks, and the labels over them.
+- **`media/`** displays audio, MIDI, and file tracks, and the labels over them.
 
 ## Building
 
@@ -64,17 +64,18 @@ Add `-G Ninja` to the configure command to build with [Ninja](https://ninja-buil
 <!--@include: @/../README.md#debug-->
 
 HARP logs every request, every change in the state of a model, and every error to `main.log`, which
-explains most failures the interface reports. HARP runs as a single instance, so a second launch
-hands its file arguments to the open window and exits. Close any running copy before starting one
-under the debugger.
+explains most failures the interface reports. HARP allows one instance per user
+(`moreThanOneInstanceAllowed` in `Main.cpp`), so a second launch hands its file arguments to the
+running one, which asks whether to open them in a new window, and then exits. Close any running copy
+before starting one under the debugger.
 
 ## Distribution
 
 <!--@include: @/../README.md#distribution-->
 
 To release a version, update `VERSION` and `RELEASE.md`, name the PyHARP it pairs with in the root
-`README.md`, which [Setting Up PyHARP](/content/pyharp_docs/setup#versions) includes, and push a tag
-such as `v4.0.0`. The [install page](/content/install/) builds its download links from `VERSION`,
+`README.md`, which [Setting Up PyHARP](/pyharp/setup#versions) includes, and push a tag
+such as `v4.0.0`. The [download page](/download/) builds its download links from `VERSION`,
 so they lead to the packages of the new release once the workflow publishes them. The demo files it
 links are an asset of the 4.0.0 release. To change them, attach a new `HARP-demo-files.zip` to the
-latest release, and point the install page at that release.
+latest release, and point the download page at that release.

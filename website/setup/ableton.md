@@ -7,16 +7,16 @@ Ableton Live opens samples in HARP as an external sample editor.
 
 ## Link HARP
 
-1. Open the settings of Live (`Live > Settings` on macOS, `Options > Settings` on Windows), and
+1. Open Live's settings (`Live > Settings` on macOS, `Options > Settings` on Windows), and
    select the `File & Folder` tab.
 2. Beside `Sample Editor`, click `Browse`, and select HARP, _e.g._, `/Applications/HARP.app` on
    macOS.
 
-<!-- TODO: screenshot. The File & Folder settings of Live, with HARP chosen as the sample editor.
-![The File & Folder settings of Live, with HARP chosen as the sample editor](/images/ableton-sample-editor.png)
+<!-- TODO: screenshot. Live's File & Folder settings, with HARP chosen as the sample editor.
+![Live's File & Folder settings, with HARP chosen as the sample editor](/images/ableton-sample-editor.png)
 -->
 
-The manual of Live describes the setting under
+The Live manual describes the setting under
 [Destructive Sample Editing](https://www.ableton.com/en/live-manual/12/clip-view/).
 
 ## Open Audio in HARP
@@ -34,7 +34,7 @@ The manual of Live describes the setting under
    -->
 
 4. Process the DAW-linked track and send the result back, as in
-   [The Round Trip](/content/setup/#the-round-trip). Live keeps the warp markers of the clip only if
+   [The Round Trip](/setup/#the-round-trip). Live keeps the warp markers of the clip only if
    the length of the sample has not changed.
 
 To process part of a clip, split it (`Ctrl+E` on Windows, `Cmd+E` on macOS) and consolidate the

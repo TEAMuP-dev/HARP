@@ -85,7 +85,7 @@ runs on CPU, since ZeroGPU fails to start a Space without one.
 
 **Response.** [Choosing the Hardware](DEPLOYMENT.md#choosing-the-hardware) lists what each account
 can host, [Hardware Portability](DEPLOYMENT.md#hardware-portability) keeps the decorator where a free
-account hosts the Space, and the [hosting page](https://harp.tools/content/hosting/spaces.html) of
+account hosts the Space, and the [hosting page](https://harp.tools/hosting/spaces.html) of
 the website deploys its example on ZeroGPU, which a free account can host.
 
 **Sources.** [Docker SDK now marked as paid](https://discuss.huggingface.co/t/docker-sdk-now-marked-as-paid-when-creating-a-new-space/177580)
@@ -124,8 +124,9 @@ with three consequences:
 
 **Effect.** Every ZeroGPU Space of the fleet still on an older PyTorch broke, and with it the model
 in HARP for every user, until the Space was repinned. Repins went on Space by Space from June into
-October. A request now needs half its declared duration in the allowance of the caller, so a
-free account, with 5 minutes a day, cannot be admitted to a call declaring more than 200 s.
+October. A request now needs one and a half times its declared duration in the allowance of the
+caller, so a free account, with 5 minutes a day, cannot be admitted to a call declaring more than
+200 s.
 
 **Response.** Each Space moved to an accepted `torch`, with `torchaudio` to match, and reservations
 were sized to each request. [Choosing the Hardware](DEPLOYMENT.md#choosing-the-hardware) lists the

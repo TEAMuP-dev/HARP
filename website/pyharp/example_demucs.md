@@ -2,10 +2,10 @@
 
 This example walks through the app behind our
 [Demucs](https://huggingface.co/spaces/teamup-tech/Demucs) model, which separates a song into
-drums, bass, vocals, and other, and which [Using Hosted Models](/content/usage/models) runs in HARP.
-It adds what larger models need to [Example 1](/content/pyharp_docs/example_skey): weights read from
-a mirror on the Hub, a choice among several models built as the app starts, a GPU reserved for each request in proportion to its
-length, and results in the format of the input.
+drums, bass, vocals, and other, and which [Using Hosted Models](/usage/models) runs in HARP.
+It adds what larger models need to [Example 1](/pyharp/example_skey): weights read from
+a mirror on the Hub, a choice among several models built as the app starts, a GPU reserved for each
+request in proportion to its length, and results in the format of the input.
 
 The code shown is the deployed app, at revision
 [`50db79a`](https://huggingface.co/spaces/teamup-tech/Demucs/tree/50db79a84aaaa0fe3346f23fe1b00f21f3b6526f).
@@ -80,7 +80,6 @@ def gpu_seconds(audio_file_path: str, model_name: str) -> float:
 # Separation Logic
 @spaces.GPU(duration=gpu_seconds)
 def separate_all_stems(audio_file_path: str, model_name: str):
-    model = LOADED_MODELS[model_name]
 ```
 
 `duration` is the longest a call may run, and takes either a number or a function of the same
@@ -121,7 +120,14 @@ allowance of the caller.
 
 ## 5. Keep the Input Format
 
+Inside `separate_all_stems`, the input is converted to what the model expects before separation,
+and each stem is converted back afterward. The call to the model itself is left out here:
+
 ```python
+@spaces.GPU(duration=gpu_seconds)
+def separate_all_stems(audio_file_path: str, model_name: str):
+    model = LOADED_MODELS[model_name]
+
     signal = AudioSignal(audio_file_path)
     original_sr = signal.sample_rate
     signal = signal.resample(44100)  # expects 44.1kHz
@@ -148,9 +154,13 @@ allowance of the caller.
     drums, bass, other, vocals = output_signals
 
     return [drums, bass, vocals, other]
+```
 
-# ...
+`process_fn` then continues from the call that ended step 4, and writes each stem in the container
+of the input:
 
+```python
+        output_signals = separate_all_stems(audio_file_path, model_name)
         # A lossless input keeps its container. A lossy one comes back as WAV, since encoding the
         # stems lossily again would expose the artifacts of the first encode and add a second set.
         input_ext = Path(audio_file_path).suffix.lower()
@@ -167,7 +177,7 @@ allowance of the caller.
 Demucs runs on 44.1 kHz stereo, so the app resamples the input for the model, and duplicates a mono
 input across two channels. It then returns each stem at the sample rate and channel count of the
 input, and in the container of the input if that is WAV or FLAC. A result in the format of its input
-drops back into the session unchanged.
+replaces the original in a DAW session without conversion.
 [Preserving the Input Format](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#preserving-the-input-format)
 explains why a lossy or AIFF input comes back as WAV.
 
@@ -244,7 +254,7 @@ The other models we host show the rest of what an app can do, and each Space sho
   left empty.
 - **Other files**: [Whisper](https://huggingface.co/spaces/teamup-tech/Whisper) returns its
   transcript as a text file, through a generic `gr.File`.
-- **Every component**: the [UI Tester](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester)
-  of PyHARP exercises every control, track, and label type HARP supports.
+- **Every component**: PyHARP's [UI Tester](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester)
+  exercises every control, track, and label type HARP supports.
 
-**Next:** [host the app](/content/hosting/spaces), so that it runs without your machine.
+**Next:** [host the app](/hosting/spaces), so that it runs independently of your machine.

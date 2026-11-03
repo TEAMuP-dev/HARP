@@ -2,10 +2,11 @@
 import { data as release } from './release.data.mjs'
 </script>
 
-# Installing HARP
+# Downloading HARP
 
-Download the package for your platform, then follow the steps for it below. Earlier versions are on
-[GitHub](https://github.com/TEAMuP-dev/HARP/releases).
+Download the package for your platform, then follow the steps for it below. The
+[releases page](https://github.com/TEAMuP-dev/HARP/releases) on GitHub has the notes of each
+version.
 
 <DownloadButtons :release="release" />
 
@@ -16,7 +17,7 @@ Download the package for your platform, then follow the steps for it below. Earl
 1. Download <a :href="release.macOS.url">{{ release.macOS.name }}</a>.
 2. Open the disk image, and drag `HARP.app` onto the `Applications` folder beside it:
 
-   <img src="/content/images/macos-install.png" alt="The HARP disk image, with HARP.app and a link to the Applications folder" style="display:block;margin:1rem auto;max-width:480px;width:100%;">
+   <img src="/images/macos-install.png" alt="The HARP disk image, with HARP.app and a link to the Applications folder" style="display:block;margin:1rem auto;max-width:480px;width:100%;">
 
 3. Eject the disk image, then open HARP from `Applications`.
 
@@ -63,7 +64,7 @@ shows it again.
 -->
 
 The <a :href="release.demoFiles.url">demo files</a> are short clips, MIDI files, and a score for
-trying the models, with a note on which models suit each. Next, [set up HARP](/content/setup/) on
+trying the models, with a note on which models suit each. Next, [set up HARP](/setup/) on
 its own or with your DAW.
 
 ## Updating

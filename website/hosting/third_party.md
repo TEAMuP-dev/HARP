@@ -13,9 +13,9 @@ ways, which differ in whose key pays for each request, and in whether HARP itsel
 
 ## Wrapping an API
 
-A PyHARP app can do anything in `process_fn`, including sending the input to a web API and
-returning what comes back. HARP sees an ordinary model, with the controls and tracks the app
-declares, and the app can be hosted anywhere an app can.
+A PyHARP app can run arbitrary code in `process_fn`, including a request that sends the input to a
+web API and returns the response. HARP sees an ordinary model, with the controls and tracks the app
+declares, and the app can be hosted like any other.
 
 The sketch below sends audio to a hypothetical service at `api.example.com`. Most services follow
 the same shape, or provide a Python package that wraps it:
@@ -95,14 +95,14 @@ covers the cases where it is the right choice, and what such an app owes HARP.
 
 ## Adding a Provider
 
-HARP can also call a service directly, without an app in between, as it does for the Stable Audio
-models of Stability AI. Each user adds their own key under `File > Settings > API Keys`, HARP sends
+HARP can also call a service directly, without an app in between, as it does for Stability AI's Stable
+Audio models. Each user adds their own key under `File > Settings > API Keys`, HARP sends
 it only to that service, and each request is billed to that user. The controls of each model are
-described in a file that ships with HARP, so the model appears on the Home tab of every user without
+described in a file built into HARP, so the model appears on the Home tab of every user without
 being hosted anywhere.
 
 This route takes a change to HARP itself: a client class that translates requests from HARP into
 the API of the service, released with a new version of HARP. It is the route for a model that is
 closed-source but offered through an API, since nothing else can reach it, and it suits a service
 with which many users already have an account.
-[Adding an API Provider](/content/contributing/add_provider) describes the steps.
+[Adding an API Provider](/contributing/add_provider) describes the steps.

@@ -1,4 +1,4 @@
-// The downloads of the install page, built from the version that the root VERSION file names.
+// The downloads of the download page, built from the version that the root VERSION file names.
 //
 // VitePress runs this when it builds the site. For a tag v<VERSION>, the release workflow
 // (.github/workflows/build.yml) attaches the packages to the GitHub release of that tag, named
@@ -11,7 +11,7 @@ const repository = 'https://github.com/TEAMuP-dev/HARP'
 
 export default {
   load() {
-    const version = readFileSync(new URL('../../../VERSION', import.meta.url), 'utf-8').trim()
+    const version = readFileSync(new URL('../../VERSION', import.meta.url), 'utf-8').trim()
 
     const asset = (tag, name) => ({ name, url: `${repository}/releases/download/${tag}/${name}` })
     const harpPackage = (platform, extension) =>

@@ -16,6 +16,6 @@ Drag the output track from HARP into an empty area of the Edit window, which pla
 track, or into the Clips List, which imports it without placing it. Saving the result and choosing
 `File > Import > Audio` works as well.
 
-<!-- TODO: screenshot. An output track being dragged from HARP into the Edit window of Pro Tools.
-![Dragging a result from HARP into the Edit window of Pro Tools](/images/protools-drag-result.png)
+<!-- TODO: screenshot. An output track being dragged from HARP into the Pro Tools Edit window.
+![Dragging a result from HARP into the Pro Tools Edit window](/images/protools-drag-result.png)
 -->

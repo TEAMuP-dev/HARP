@@ -25,10 +25,12 @@ commit of its own and add the hash of that commit to `.git-blame-ignore-revs`.
 
 ### Owning Collections
 
-When working with collections of objects created with `new`, such as UI components or other heap-allocated data, avoid storing raw pointers (`T*`) directly in standard containers like `juce::Array<T*>` or `std::vector<T*>`.
-This requires manual `delete` calls, and can easily lead to memory leaks or crashes if handled imperfectly (_e.g._, in destructors, during removal, with exceptions, etc.).
+Do not store owning raw pointers (`T*`) to heap-allocated objects, such as UI components, in a
+container like `juce::Array<T*>` or `std::vector<T*>`. Each object then needs a matching `delete` on
+every path that removes it, including destructors, removal, and exceptions, and a path that misses
+one leaks the object or deletes it twice.
 
-**Problem Example:**
+**Example to avoid:**
 
 ```cpp
 // DON'T DO THIS: Requires manual deletion
@@ -57,15 +59,18 @@ NoteGridComponent::~NoteGridComponent() {
 }
 ```
 
-This pattern is risky. If `resetNotes` is not called, or if a note is removed from `midiNotes` without a corresponding call to `delete`, memory leaks occur.
+If `resetNotes` is not called, or a note is removed from `midiNotes` without a matching `delete`,
+the note leaks.
 
-**Preferred Solutions:**
+**Alternatives:**
 
-Choose one of the following approaches to ensure automatic memory management (RAII):
+Either container below owns its elements, and deletes each one when it is removed or when the
+container is destroyed (RAII).
 
 **Option 1: Use `juce::OwnedArray<T>` (Idiomatic JUCE)**
 
-`juce::OwnedArray` is specifically designed to take ownership of raw pointers allocated with `new`. It automatically calls `delete` on the objects it holds when they are removed or when the `OwnedArray` itself is destroyed.
+`juce::OwnedArray` takes ownership of pointers allocated with `new`, and calls `delete` on each
+object it holds.
 
 *   **Declaration:**
     ```cpp
@@ -100,7 +105,8 @@ Choose one of the following approaches to ensure automatic memory management (RA
 
 **Option 2: Use `juce::Array<std::unique_ptr<T>>` (Modern C++)**
 
-Use standard C++ smart pointers (`std::unique_ptr`) within a standard container. `std::unique_ptr` guarantees deletion when it goes out of scope.
+A `std::unique_ptr` deletes its object when it is destroyed, so a container of them deletes each
+element along with it.
 
 *   **Declaration:**
     ```cpp
@@ -125,7 +131,7 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
         midiNotes.add(std::move(note));
     }
     ```
-*   **Cleanup:** Automatic! `std::unique_ptr` handles deletion.
+*   **Removing Elements:**
     ```cpp
     void NoteGridComponent::resetNotes()
     {
@@ -144,8 +150,9 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 
 **Recommendation:**
 
-*   For JUCE projects, `juce::OwnedArray` is often the simplest and most idiomatic choice for managing collections of heap-allocated JUCE objects.
-*   `juce::Array<std::unique_ptr<T>>` (or `std::vector`) is the standard C++ approach and is excellent for ensuring RAII, especially in non-JUCE specific contexts or when integrating with other modern C++ code.
+*   `juce::OwnedArray` is the idiomatic choice for collections of JUCE objects, such as components.
+*   `juce::Array<std::unique_ptr<T>>`, or `std::vector<std::unique_ptr<T>>`, suits code that does
+    not depend on JUCE, or that passes ownership to standard C++ interfaces.
 
 ## HARP Conventions
 
@@ -155,7 +162,7 @@ Use standard C++ smart pointers (`std::unique_ptr`) within a standard container.
 - If a change touches many unrelated areas, it is usually a sign to introduce an abstraction (_e.g._ `SharedResourcePointer`, service objects).
 - Avoid hard-coded conditionals that branch on specific models, modes (_e.g._, Gradio vs. Stability), or UI states. Favor extensibility.
 - Support for a new service belongs in a `Client` subclass of its own, as [PROVIDERS.md](PROVIDERS.md) describes.
-- Good design should feel “boring”: things fall neatly into place with minimal glue code.
+- Prefer designs in which new code fits the existing structure with minimal glue code.
 
 ### Efficiency
 - Avoid unnecessary or repeated calls to `resized()`, `repaint()`, and layout invalidation. This can significantly slow down the application.

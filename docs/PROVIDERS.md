@@ -1,28 +1,18 @@
 # Adding an API Provider
 
-HARP reaches every model through a _client_, which translates the requests of HARP into the API of a
+HARP reaches every model through a _client_, which translates HARP's requests into the API of a
 provider. [`GradioClient`](https://github.com/TEAMuP-dev/HARP/blob/main/src/clients/GradioClient.h)
 serves any Gradio app, wherever it is hosted, and
 [`StabilityClient`](https://github.com/TEAMuP-dev/HARP/blob/main/src/clients/providers/stability/StabilityClient.h)
 calls Stability AI's REST API. A service with an API of its own needs a client of its own. This
-guide describes what one involves, with `StabilityClient` as the reference.
+guide describes what one involves, with `StabilityClient` as a reference.
 
 A client of its own is for a model that is closed-source but offered through an API, as the Stable
 Audio models are. Such a model cannot be deployed as a [PyHARP](https://github.com/TEAMuP-dev/pyharp)
 app, so HARP calls the API itself, with a key each user adds, so that their requests are billed to
 them. Where one host can hold the key instead, a PyHARP app can call the API from its processing
 function, and HARP needs no change to use it (see
-[Using Third-Party APIs](https://harp.tools/content/hosting/third_party.html)).
-
-## Table of Contents
-
-- [How HARP Uses a Client](#how-harp-uses-a-client)
-- [Name the Provider](#name-the-provider)
-- [Describe the Models](#describe-the-models)
-- [Write the Client](#write-the-client)
-- [Register the Client](#register-the-client)
-- [Generalize the Stability AI Branches](#generalize-the-stability-ai-branches)
-- [Test It](#test-it)
+[Using Third-Party APIs](https://harp.tools/hosting/third_party.html)).
 
 ## How HARP Uses a Client
 
@@ -32,22 +22,22 @@ path of the model, and calls it in this order:
 1. `resolveCanonicalPath` reduces the path the user entered to the one form by which the provider
    knows the model.
 2. `queryControls` returns the interface of the model: its card, its input tracks and controls, and its
-   output tracks. `Model` parses it into the components HARP draws.
-3. On `Process`, `uploadFile` is called for each input file, and `wrapPayloadElement` for each value,
-   in the order of the inputs. `process` then sends the request, and returns the output files and
-   labels.
-4. On `Cancel`, `cancel` asks the provider to stop the job.
+   output tracks. `Model` parses it into the components HARP displays.
+3. When the user selects the `Process` button, `uploadFile` is called for each input file, and
+   `wrapPayloadElement` for each value, in the order of the inputs. `process` then sends the request,
+   and returns the output files and labels.
+4. When the user selects the `Cancel` button, `cancel` asks the provider to stop the job.
 
-![The stages of HARP and its calls to a client: validating an API token from the settings, loading a model from the Home tab, staging controls and inputs, processing, canceling, and retrieving outputs, each answered by a success or failure response](https://harp.tools/images/harp-api.svg)
+![HARP's stages and its calls to a client: validating an API token from the settings, loading a model from the Home tab, staging controls and inputs, processing, canceling, and retrieving outputs, each answered by a success or failure response](https://harp.tools/images/harp-api.svg)
 
 _Black lines are actions the user takes, and gray lines are automatic actions. Dashed lines are
 optional. Green and red lines are success and failure responses from the client._
 
 These calls run on the worker threads of the model tab, never on the message thread, so a client may
-block on the network. The exception is `getBuiltInModelCards`, which calls `queryControls` for each
-built-in model when the catalog of the Home tab is created, so for those models it has to answer from
-embedded data (see [Describe the Models](#describe-the-models)). Every call that can fail returns an
-`OpResult`.
+wait for a response rather than return at once. The exception is `getBuiltInModelCards`, which calls
+`queryControls` for each built-in model when the catalog of the Home tab is created, so for those
+models it has to answer from embedded data (see [Describe the Models](#describe-the-models)). Every
+call that can fail returns an `OpResult`.
 
 ## Name the Provider
 
@@ -59,9 +49,9 @@ that name.
 ## Describe the Models
 
 A Gradio app describes its own interface, but most APIs do not, so the description of each model
-ships with HARP as JSON, in the same form a PyHARP app returns from its `controls` endpoint.
+is built into HARP as JSON, in the same form a PyHARP app returns from its `controls` endpoint.
 [`text-to-audio.json`](https://github.com/TEAMuP-dev/HARP/blob/main/src/clients/providers/stability/models/text-to-audio.json)
-is the reference:
+is a reference, shown here in full:
 
 ```json
 {
@@ -69,7 +59,17 @@ is the reference:
     "name": "Stable Audio 2.0 (Text to Audio)",
     "description": "Generates 44.1 kHz stereo audio from a text prompt with Stability AI's Stable Audio 2.0. Requires a Stability AI API key, added under Settings > API Keys, and each request spends credits from that account.",
     "author": "Stability AI",
-    "tags": ["category:generation", "subcategory:holistic", "input:text", "output:audio/wav|mp3", "license:other"]
+    "tags": [
+      "category:generation",
+      "subcategory:holistic",
+      "input:text",
+      "output:audio/wav|mp3",
+      "sample-rate:44100",
+      "channels:stereo",
+      "license:other",
+      "stable-audio",
+      "stability"
+    ]
   },
   "inputs": [
     {
@@ -80,6 +80,46 @@ is the reference:
       "step": 1,
       "value": 10,
       "type": "slider"
+    },
+    {
+      "label": "Steps",
+      "info": "Number of diffusion steps. Higher values improve quality but take longer to process.",
+      "minimum": 30,
+      "maximum": 100,
+      "step": 1,
+      "value": 50,
+      "type": "slider"
+    },
+    {
+      "label": "Guidance Scale",
+      "info": "Classifier-free guidance (cfg_scale). Higher values make the output follow the prompt more strictly.",
+      "minimum": 1,
+      "maximum": 25,
+      "step": 1,
+      "value": 7,
+      "type": "slider"
+    },
+    {
+      "label": "Output Format",
+      "info": "File format of the generated audio.",
+      "choices": [
+        [
+          "wav",
+          "wav"
+        ],
+        [
+          "mp3",
+          "mp3"
+        ]
+      ],
+      "value": "wav",
+      "type": "dropdown"
+    },
+    {
+      "label": "Text Prompt",
+      "info": "Description of the audio to generate.",
+      "value": "A song in the 3/4 time signature that features cheerful acoustic guitar, live recorded drums, and rhythmic claps, The mood is happy and up-lifting.",
+      "type": "text_box"
     }
   ],
   "outputs": [
@@ -101,10 +141,11 @@ is the reference:
   class in the [`core.py`](https://github.com/TEAMuP-dev/pyharp/blob/main/pyharp/core.py)
   of PyHARP, _e.g._, `HarpSlider`.
 
-Put the files under `src/clients/providers/<name>/models/`, and embed them with a binary data target
-of their own in [`CMakeLists.txt`](https://github.com/TEAMuP-dev/HARP/blob/main/CMakeLists.txt),
-linked to the application. Give the target its own `HEADER_NAME` and `NAMESPACE`, as
-`model_taxonomy` does, so that its symbols cannot collide with those of `stability_controls`.
+Put the files under `src/clients/providers/<name>/models/`, and embed them with a `juce_add_binary_data`
+target of their own in [`CMakeLists.txt`](https://github.com/TEAMuP-dev/HARP/blob/main/CMakeLists.txt),
+linked to the application. That command writes a `BinaryData.h` in the `BinaryData` namespace unless
+told otherwise, and `stability_controls` already takes those defaults, so give the new target a
+`HEADER_NAME` and `NAMESPACE` of its own, as `model_taxonomy` does with `TaxonomyData`.
 
 ## Write the Client
 
@@ -136,7 +177,8 @@ Subclass [`Client`](https://github.com/TEAMuP-dev/HARP/blob/main/src/clients/Cli
   apart.
 - `process`, which sends the request and writes each result to a file. Name the file with
   `createResultFile`, which stamps it with the time it arrived, and append it to `outputFiles`. Fill
-  `labels` if the provider returns annotations.
+  `labels` if the provider returns annotations. A provider that returns a URL rather than the file
+  itself needs a download step, for which `GradioClient::downloadFile` is a reference.
 
 **Override where the provider needs it:**
 
@@ -199,10 +241,12 @@ There are no C++ unit tests, so build HARP and run it:
 
 - Open each model from the Home tab, and by a custom path, and check that its card, controls, and
   tracks match its JSON.
-- Add a valid key under `File > Settings > API Keys`, and check that the page reports it as valid.
-  Add an invalid one, and check that it is refused.
-- Process with a valid key, without a key, and with an invalid one. A refused request should offer
-  to open the settings page of the provider, and the error should name the provider.
+- Enter a valid key under `File > Settings > API Keys`, and check that the page reports it as valid
+  and saves it. Enter an invalid one, and check that the page reports it as invalid and does not
+  save it.
+- Process with a valid key and without one. Then revoke the key at the provider and process again,
+  since a saved key can stop working. A refused request should offer to open the settings page of
+  the provider, and the error should name the provider.
 - Cancel a request in progress, close the tab of the model during one, and process with the network
   disconnected.
 - Read the log, and check that no key appears in it.

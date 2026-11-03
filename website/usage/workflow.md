@@ -1,23 +1,27 @@
 # Walkthrough
 
-This page tours the interface of HARP. The welcome tutorial, under `Help > Welcome Tutorial`, covers
-the same ground inside the app.
+This page describes HARP's interface. The welcome tutorial, under `Help > Welcome Tutorial`, covers
+the same material within HARP.
 
 <!-- TODO: screenshot. The whole window with a model tab open and the media clipboard showing,
-     annotated with the five regions named below.
-![The HARP window, with its main regions labeled](/images/window-overview.png)
+     annotated with the parts named below.
+![The HARP window, with its main parts labeled](/images/window-overview.png)
 -->
 
-The window has five regions:
+The window has these parts:
 
 - **The menu bar.** `File` adds files to the media clipboard (`Open`), saves the selected one
   (`Save As`), and opens `Settings`. `View` shows or hides the status area, the media clipboard, and
   the preview pane. `Help` opens `About HARP` and the `Welcome Tutorial`.
-- **The tab bar.** The `Home` tab lists the models, and each model you open gets a tab of its own.
-- **The open tab**, which fills most of the window.
-- **The media clipboard**, on the right, which holds files independently of any model.
+- **The tab bar.** The `Home` tab comes first, and each model you open adds a tab beside it, which
+  the X button on the tab closes. The selected tab fills the rest of the window.
+- **The Home tab** lists the models by category, with a search box, a toggle that hides the models
+  that need an API key, and `Custom Path...` for a model that is not listed.
+- **A model tab** shows the model card, then the controls, then the input and output tracks, with
+  `Process` beneath them.
+- **The media clipboard**, on the right, holds files independently of any model.
 - **The status area**, at the bottom. Its left half is a history of what each model has done, and
-  its right half explains whatever is under the mouse.
+  its right half describes the component under the mouse pointer.
 
 ## Finding and Running Models
 
@@ -28,9 +32,8 @@ The window has five regions:
 
 <!--@include: @/../README.md#workflow-->
 
-A model tab shows the model card at the top, then the controls, then the input and output tracks.
-Hover over a control to see what it does. [Using Hosted Models](/content/usage/models) explains the
-badges on each card and the API keys some models need.
+Hover over a control to read what it does. [Using Hosted Models](/usage/models) explains
+the badges on each card and the API keys some models need.
 
 <!-- TODO: screenshot. A model tab after processing, such as Demucs, showing the model card, its
      controls, an input track, its output tracks, and the Process button.
@@ -41,9 +44,9 @@ badges on each card and the API keys some models need.
 
 <!--@include: @/../README.md#tracks-->
 
-<!-- TODO: screenshot. An output track with labels drawn over it, such as from S-KEY, with the mouse
+<!-- TODO: screenshot. An output track with labels shown over it, such as from S-KEY, with the mouse
      over a label and its description shown in the status area.
-![Labels drawn over an output track](/images/output-labels.png)
+![Labels shown over an output track](/images/output-labels.png)
 -->
 
 ## Media Clipboard

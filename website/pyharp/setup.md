@@ -1,44 +1,9 @@
 # Setting Up PyHARP
 
-HARP can run any [Gradio](https://www.gradio.app) app that follows a few conventions, and
+HARP can load any [Gradio](https://www.gradio.app) app that follows a few conventions, and
 [PyHARP](https://github.com/TEAMuP-dev/pyharp) is the Python library that applies them. This page
-explains how HARP talks to such an app, installs PyHARP, and runs one of its examples in HARP.
-
-## How It Works
-
-HARP reaches an app through the Gradio API, at three endpoints that PyHARP creates:
-
-- **`controls`** returns the model card (name, author, description, and tags) and a description
-  of each component, which HARP draws as controls and tracks.
-- **`process`** receives the input files and control values, runs the processing function of the
-  app, and returns the output files and labels.
-- **`cancel`** stops the job that the same copy of HARP started.
-
-PyHARP provides the pieces of such an app:
-
-- **`ModelCard`**, which describes the model.
-- **`build_endpoint`**, which connects the Gradio components to a processing function,
-  `process_fn`, and creates the three endpoints. It runs `process_fn` in a worker process, so that
-  `Cancel` in HARP stops the work, and names each returned file after the model and the output.
-- **Helpers** for audio (`load_audio`, `save_audio`), MIDI (`load_midi`, `save_midi`), and labels
-  (`LabelList`, `AudioLabel`, `MidiLabel`).
-- **Tags** that place a model in the taxonomy of HARP: `Category`, `Subcategory`, `SampleRate`,
-  and `Channels`.
-
-Each Gradio component becomes part of the model tab in HARP:
-
-- `gr.Audio(type="filepath")` is an audio track, and
-  `gr.File(type="filepath", file_types=[".mid", ".midi"])` a MIDI track, as an input or an output.
-- `gr.File(type="filepath")` with other file types is a file picker as an input, and a file as an
-  output.
-- `gr.Slider`, `gr.Number`, `gr.Dropdown` (a multiselect with `multiselect=True`), `gr.Checkbox`,
-  and `gr.Textbox` are a slider, a number box, a dropdown, a toggle, and a text box, as inputs
-  alone.
-- `gr.JSON`, returning a `LabelList`, draws labels over an output track.
-
-The [README](https://github.com/TEAMuP-dev/pyharp#readme) of PyHARP documents the library in full,
-and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
-describe the conventions the models we host follow.
+installs PyHARP, runs one of its examples, and opens the example in HARP, then describes how HARP
+and an app communicate.
 
 ## Install
 
@@ -51,7 +16,7 @@ source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install "git+https://github.com/TEAMuP-dev/pyharp.git@v0.4.2"
 ```
 
-This also installs Gradio, the [audiotools](https://github.com/descriptinc/audiotools) of Descript
+This also installs Gradio, Descript's [audiotools](https://github.com/descriptinc/audiotools)
 (which brings PyTorch and librosa), and [symusic](https://github.com/Yikai-Liao/symusic) for MIDI.
 Install [FFmpeg](https://ffmpeg.org) as well, _e.g._, with `brew install ffmpeg` on macOS or
 `sudo apt install ffmpeg` on Ubuntu, since several audio libraries decode compressed formats
@@ -67,18 +32,18 @@ Gradio 5.x loads, but cannot tell HARP why a job failed.
 
 ## Run an Example
 
-PyHARP ships with four examples, minimal templates for each combination of input and output media,
-and a tester of every component:
+PyHARP includes four examples: minimal templates for each combination of input and output media,
+and a tester of every component.
 
 - [`pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/pitch_shifter) is
-  audio in and audio out: one track in, one control, and one track out.
+  audio in and audio out: one input track, one control, and one output track.
 - [`midi_pitch_shifter`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_pitch_shifter)
   is the same shape, on MIDI tracks.
 - [`midi_synthesizer`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/midi_synthesizer)
   takes MIDI and returns audio, so its tracks differ in media type.
-- [`ui_tester`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester) takes anything
-  and returns audio, MIDI, and a file: every control, track, and label type, with no real
-  processing.
+- [`ui_tester`](https://github.com/TEAMuP-dev/pyharp/tree/main/examples/ui_tester) declares every
+  control, track, and label type, and returns audio, MIDI, and a file without processing its
+  inputs.
 
 To run the MIDI synthesizer, which renders a MIDI file to audio with a soundfont, clone PyHARP and
 install it in editable mode, which covers everything the examples import:
@@ -122,11 +87,49 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 HARP reads the interface of an app when it loads the model, so after changing a component, close
 the tab of the model and open it again from its card. Stop the app with `Ctrl+C`.
 
+## How It Works
+
+HARP reaches an app through the Gradio API, at three endpoints that PyHARP creates:
+
+- **`controls`** returns the model card (name, author, description, and tags) and a description
+  of each component, which HARP displays as controls and tracks.
+- **`process`** receives the input files and control values, runs the processing function of the
+  app, and returns the output files and labels.
+- **`cancel`** stops the running job.
+
+PyHARP provides the pieces of such an app:
+
+- **`ModelCard`**, which describes the model.
+- **`build_endpoint`**, which connects the Gradio components to a processing function,
+  `process_fn`, and creates the three endpoints. It runs `process_fn` in a worker process, so that
+  the `Cancel` button in HARP stops the work, and names each returned file after the model and the
+  output.
+- **Helpers** for audio (`load_audio`, `save_audio`), MIDI (`load_midi`, `save_midi`), and labels
+  (`LabelList`, `AudioLabel`, `MidiLabel`).
+- **Tags.** `Category` and `Subcategory` place a model in HARP's taxonomy, `SampleRate` and
+  `Channels` declare the format in which it works, and any other string is a custom tag, which
+  HARP searches like the rest.
+
+Each Gradio component becomes part of the model tab in HARP:
+
+- `gr.Audio(type="filepath")` is an audio track, and
+  `gr.File(type="filepath", file_types=[".mid", ".midi"])` a MIDI track, as an input or an output.
+- `gr.File(type="filepath")` with other file types is a file picker as an input, and a file as an
+  output.
+- `gr.Slider`, `gr.Number`, `gr.Dropdown` (a multiselect with `multiselect=True`), `gr.Checkbox`,
+  and `gr.Textbox` are a slider, a number box, a dropdown, a toggle, and a text box, as inputs
+  alone.
+- `gr.JSON`, returning a `LabelList`, shows labels over an output track.
+
+The PyHARP [README](https://github.com/TEAMuP-dev/pyharp#readme) documents the library in full,
+and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
+describe the conventions the models we host follow.
+
 ## Next Steps
 
-- [Example 1](/content/pyharp_docs/example_skey) walks through a small model that detects the key
+- [Example 1](/pyharp/example_skey) walks through a small model that detects the key
   of a song.
-- [Example 2](/content/pyharp_docs/example_demucs) walks through a larger one that separates stems
+- [Example 2](/pyharp/example_demucs) walks through a larger one that separates stems
   on a GPU.
-- [Hosting Models](/content/hosting/spaces) puts an app online, so that it runs without your
-  machine.
+- [Hosting Models](/hosting/spaces) puts an app online, so that it runs independently of
+  your machine.

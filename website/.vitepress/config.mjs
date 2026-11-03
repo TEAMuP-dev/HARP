@@ -27,9 +27,9 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/content/intro' },
-      { text: 'Deploy a Model', link: '/content/pyharp_docs/setup' },
-      { text: 'Contribute', link: '/content/contributing/overview' },
+      { text: 'Guide', link: '/intro' },
+      { text: 'Deploy a Model', link: '/pyharp/setup' },
+      { text: 'Contribute', link: '/contributing/overview' },
     ],
 
     footer: {
@@ -56,59 +56,59 @@ export default defineConfig({
       {
         text: 'Introduction',
         items: [
-          { text: 'Overview', link: '/content/intro' },
+          { text: 'Overview', link: '/intro' },
         ]
       },
       {
         text: 'Using HARP',
         items: [
-          { text: 'Installing HARP', link: '/content/install/' },
+          { text: 'Downloading HARP', link: '/download/' },
           {
             text: 'Setting Up HARP',
-            link: '/content/setup/',
+            link: '/setup/',
             collapsed: false,
             items: [
-              { text: 'Standalone', link: '/content/setup/standalone' },
-              { text: 'REAPER', link: '/content/setup/reaper' },
-              { text: 'Logic Pro', link: '/content/setup/logic' },
-              { text: 'Pro Tools', link: '/content/setup/protools' },
-              { text: 'Ableton Live', link: '/content/setup/ableton' },
-              { text: 'Cubase', link: '/content/setup/cubase' },
-              { text: 'Audacity', link: '/content/setup/audacity' },
-              { text: 'FL Studio', link: '/content/setup/flstudio' },
-              { text: 'Adobe Audition', link: '/content/setup/audition' },
+              { text: 'Standalone', link: '/setup/standalone' },
+              { text: 'REAPER', link: '/setup/reaper' },
+              { text: 'Logic Pro', link: '/setup/logic' },
+              { text: 'Pro Tools', link: '/setup/protools' },
+              { text: 'Ableton Live', link: '/setup/ableton' },
+              { text: 'Cubase', link: '/setup/cubase' },
+              { text: 'Audacity', link: '/setup/audacity' },
+              { text: 'FL Studio', link: '/setup/flstudio' },
+              { text: 'Adobe Audition', link: '/setup/audition' },
             ]
           },
-          { text: 'Walkthrough', link: '/content/usage/workflow' },
-          { text: 'Using Hosted Models', link: '/content/usage/models' },
+          { text: 'Walkthrough', link: '/usage/workflow' },
+          { text: 'Using Hosted Models', link: '/usage/models' },
         ]
       },
       {
         text: 'Deploying Models with PyHARP',
         items: [
-          { text: 'Setting Up PyHARP', link: '/content/pyharp_docs/setup' },
-          { text: 'Example 1: Key Detection', link: '/content/pyharp_docs/example_skey' },
-          { text: 'Example 2: Stem Separation', link: '/content/pyharp_docs/example_demucs' },
+          { text: 'Setting Up PyHARP', link: '/pyharp/setup' },
+          { text: 'Example 1: Key Detection', link: '/pyharp/example_skey' },
+          { text: 'Example 2: Stem Separation', link: '/pyharp/example_demucs' },
         ]
       },
       {
         text: 'Hosting Models',
         items: [
-          { text: 'Hugging Face Spaces', link: '/content/hosting/spaces' },
-          { text: 'Third-Party APIs', link: '/content/hosting/third_party' },
+          { text: 'Hugging Face Spaces', link: '/hosting/spaces' },
+          { text: 'Third-Party APIs', link: '/hosting/third_party' },
         ]
       },
       {
         text: 'Contributing to HARP',
         items: [
-          { text: 'Building and Releasing', link: '/content/contributing/overview' },
-          { text: 'Adding an API Provider', link: '/content/contributing/add_provider' },
+          { text: 'Building and Releasing', link: '/contributing/overview' },
+          { text: 'Adding an API Provider', link: '/contributing/add_provider' },
         ]
       },
       {
         text: 'Reference',
         items: [
-          { text: 'Limitations', link: '/content/limitations' },
+          { text: 'Limitations', link: '/limitations' },
         ]
       },
     ],

@@ -21,4 +21,4 @@ On its own, HARP is an editor for audio and MIDI files.
 ![HARP used standalone, with a file processed by a model](/images/standalone.png)
 -->
 
-The [Walkthrough](/content/usage/workflow) covers the interface in detail.
+The [Walkthrough](/usage/workflow) covers the interface in detail.

@@ -24,7 +24,7 @@ public:
         addAndMakeVisible(aboutText);
 
         modelGlossaryButton.setButtonText("Model Glossary");
-        modelGlossaryButton.setURL(URL("https://harp.tools/content/usage/models.html"));
+        modelGlossaryButton.setURL(URL("https://harp.tools/usage/models.html"));
         modelGlossaryButton.setSize(380, 24);
         modelGlossaryButton.setTopLeftPosition(10, 110);
         modelGlossaryButton.setColour(HyperlinkButton::textColourId, Colours::blue);
