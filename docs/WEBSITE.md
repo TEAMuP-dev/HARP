@@ -62,7 +62,8 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 - **The download page** links the packages that the release workflow attaches to the GitHub release
   named by the root `VERSION`. `website/download/release.data.mjs` builds the links when the
   site is built, and the `DownloadButtons` component of the theme shows them, with the platform of
-  the visitor highlighted. The site holds no copy of the packages.
+  the visitor highlighted, and a button for the demo files beneath them. The site holds no copy of
+  the packages or of the demo files.
 
 ### Screenshots
 

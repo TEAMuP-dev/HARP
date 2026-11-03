@@ -63,8 +63,8 @@ shows it again.
 ![HARP on first launch, with the welcome tutorial open over the Home tab](/images/first-launch-tutorial.png)
 -->
 
-The <a :href="release.demoFiles.url">demo files</a> are short clips, MIDI files, and a score for
-trying the models, with a note on which models suit each. Next, [set up HARP](/setup/) on
+To try a model, drag one of the <a :href="release.demoFiles.url">demo files</a> onto its input
+track. A README among them names the models that suit each file. Next, [set up HARP](/setup/) on
 its own or with your DAW.
 
 ## Updating

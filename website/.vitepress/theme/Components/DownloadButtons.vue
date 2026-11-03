@@ -1,6 +1,7 @@
 <script setup>
-// Large download buttons, one for each platform, for the packages of one release. The platform of
-// the visitor is highlighted once the page loads, since the server that renders it cannot know it.
+// Large download buttons, one for each platform, for the packages of one release, and one beneath
+// them for the demo files. The platform of the visitor is highlighted once the page loads, since the
+// server that renders it cannot know it.
 
 import { VPButton } from 'vitepress/theme'
 import { onMounted, ref } from 'vue'
@@ -23,6 +24,10 @@ const icons = {
   windows: {
     viewBox: '0 0 448 512',
     path: 'M0 93.7l183.6-25.3 0 177.4-183.6 0 0-152.1zM0 418.3l183.6 25.3 0-175.2-183.6 0 0 149.9zm203.8 28l244.2 33.7 0-211.6-244.2 0 0 177.9zm0-380.6l0 180.1 244.2 0 0-213.8-244.2 33.7z',
+  },
+  demoFiles: {
+    viewBox: '0 0 512 512',
+    path: 'M468 7c7.6 6.1 12 15.3 12 25l0 304c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6l0-116.7-224 49.8 0 206.3c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6L128 96c0-15 10.4-28 25.1-31.2l288-64c9.5-2.1 19.4 .2 27 6.3z',
   },
   linux: {
     viewBox: '0 0 448 512',
@@ -101,6 +106,24 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    <div class="demo">
+      <svg class="icon" :viewBox="icons.demoFiles.viewBox" aria-hidden="true">
+        <path :d="icons.demoFiles.path" />
+      </svg>
+      <div class="text">
+        <div class="name">Demo Files</div>
+        <div class="detail">Short clips, MIDI files, and a score for trying the models</div>
+      </div>
+      <VPButton
+        size="big"
+        theme="alt"
+        text="Download"
+        :href="release.demoFiles.url"
+        target="_self"
+        :title="release.demoFiles.name"
+        :aria-label="`Download ${release.demoFiles.name}`"
+      />
+    </div>
   </div>
 </template>
 
@@ -176,12 +199,50 @@ onMounted(() => {
 }
 
 /* The links of doc pages are underlined, which a button is not */
-.buttons :deep(.VPButton) {
+.buttons :deep(.VPButton),
+.demo :deep(.VPButton) {
   text-decoration: none;
 }
 
 /* Narrower, so that two fit side by side in a card a third of the column wide */
 .buttons.several :deep(.VPButton) {
   padding: 0 16px;
+}
+
+/* The demo files span the width beneath the platforms, stacked like a platform on a phone */
+.demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background-color: var(--vp-c-bg-soft);
+  text-align: center;
+}
+
+.demo .icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 0;
+}
+
+.demo .name {
+  font-size: 18px;
+}
+
+@container (min-width: 540px) {
+  .demo {
+    flex-direction: row;
+    gap: 20px;
+    padding: 16px 24px;
+    text-align: left;
+  }
+
+  .demo :deep(.VPButton) {
+    margin-left: auto;
+  }
 }
 </style>
