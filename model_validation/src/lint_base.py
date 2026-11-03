@@ -34,7 +34,9 @@ RULES = {
     "show-error": (ERROR, "error-reporting"),
     "queue": (ERROR, "structure-of-apppy"),
     "input-format": (ERROR, "structure-of-apppy"),
+    "ssr-mode": (ERROR, "structure-of-apppy"),
     "aiff-container": (ERROR, "container"),
+    "partial-download": (ERROR, "model-weights"),
     "info-warning": (ERROR, "error-reporting"),
     "unpinned-revision": (WARNING, "upstream-hub-repository"),
     # Requirements

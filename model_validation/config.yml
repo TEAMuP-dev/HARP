@@ -274,6 +274,9 @@ exclude:
   - teamup-tech/improvnet
   # Retired in favor of teamup-tech/BeatNet, and kept private for reference
   - teamup-tech/BeatNet-Legacy
+  # Withdrawn because its weights became gated, and their owners serve no
+  # deployment to call instead (see docs/DEPLOYMENT.md)
+  - teamup-tech/MIDI-GPT
 
 include_extra: []
 
@@ -1204,6 +1207,9 @@ overrides:
             max_rms_db: -60
 
   teamup-tech/LoopGen:
+    # The default case runs for about 115 s on ZeroGPU, close to the 120 s that a
+    # ZeroGPU model is allowed by default
+    process_timeout: 240
     test_cases:
       - name: default
         controls:

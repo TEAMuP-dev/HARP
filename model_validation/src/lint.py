@@ -25,7 +25,7 @@ import re
 import time
 from pathlib import Path
 
-from lint_app import LocalModules, lint_app, lint_containers, lint_revisions
+from lint_app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
 from lint_base import ERROR, RULES, Finding, SpaceFiles
 from lint_requirements import (find_python_file, find_uv, read_dockerfile, read_requirements,
                                requirement_findings)
@@ -64,7 +64,8 @@ def lint_files(space: SpaceFiles, uv: str | None = None) -> list:
         findings.append(Finding("app-file", f"no app file ({space.app_file}) to check"))
         imports_spaces = False
     else:
-        findings += lint_app(app, space.app_file, LocalModules(space.files), space.zerogpu)
+        findings += lint_app(app, space.app_file, LocalModules(space.files), space.zerogpu,
+                             gradio_sdk=space.sdk != "docker")
         imports_spaces = bool(re.search(r"^\s*(import spaces|from spaces import)", app,
                                         re.MULTILINE))
 
@@ -72,6 +73,7 @@ def lint_files(space: SpaceFiles, uv: str | None = None) -> list:
         if name.endswith(".py") and "/" not in name:
             findings += lint_revisions(text, name, space.listing)
             findings += lint_containers(text, name)
+            findings += lint_downloads(text, name)
 
     specs = []
     if space.sdk == "docker":

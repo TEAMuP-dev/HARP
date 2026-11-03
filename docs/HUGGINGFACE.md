@@ -47,10 +47,10 @@ something breaks without a change of our own:
 
 ## Adding an Entry
 
-Add an entry, newest first, whenever part of the project breaks for a reason outside this repository
-and the Spaces. Say what changed and when, with the earliest evidence found, how it affected the
-project, and what we did. Quote the error the change produces, so that searching for it finds the
-entry.
+Add an entry, newest first, whenever a change to Hugging Face, ZeroGPU, or Gradio breaks part of the
+project or forces a change to it. Say what changed and when, with the earliest evidence found, how
+it affected the project, and what we did. Quote the error the change produces, so that searching for
+it finds the entry.
 
 ## Log
 

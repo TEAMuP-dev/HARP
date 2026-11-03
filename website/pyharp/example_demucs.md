@@ -8,7 +8,7 @@ a mirror on the Hub, a choice among several models built as the app starts, a GP
 request in proportion to its length, and results in the format of the input.
 
 The code shown is the deployed app, at revision
-[`50db79a`](https://huggingface.co/spaces/teamup-tech/Demucs/tree/50db79a84aaaa0fe3346f23fe1b00f21f3b6526f).
+[`cf386f1`](https://huggingface.co/spaces/teamup-tech/Demucs/tree/cf386f15ccde5e0fd7dc332b8e6509d3f22d7ec8).
 
 ## 1. Get the Code
 
@@ -18,7 +18,7 @@ python3 -m venv .venv
 source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install huggingface_hub
 hf download teamup-tech/Demucs --repo-type space --local-dir . \
-    --revision 50db79a84aaaa0fe3346f23fe1b00f21f3b6526f
+    --revision cf386f15ccde5e0fd7dc332b8e6509d3f22d7ec8
 pip install -r requirements.txt
 ```
 
@@ -222,7 +222,7 @@ if __name__ == "__main__":
             process_fn=process_fn
         )
 
-    demo.queue().launch(pwa=True, show_error=True)
+    demo.queue().launch(pwa=True, show_error=True, ssr_mode=False)
 ```
 
 - **The dropdown** offers the three variants, and describes each in `info`, which HARP shows on

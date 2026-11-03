@@ -78,9 +78,9 @@ what it permits before deploying.
 - **No-derivatives** licenses (`cc-by-nd-4.0`) call for confirming what is permitted before
   deploying. Redistribution is allowed only unmodified, so the weights cannot be converted or
   repackaged and then hosted.
-- **Community and gated** licenses (`llama3.x`, `gemma`) are acceptable, but do not mirror the
-  weights. Download from the gated upstream repository, so that the terms are accepted by whoever
-  runs it.
+- **Community** licenses (`llama3.x`, `gemma`) are acceptable, but the weights under them are
+  usually **gated**, and gated weights cannot be served from here (see
+  [Upstream Hub Repository](#upstream-hub-repository)).
 - **No license at all** means **do not deploy** (see above).
 
 ## Model Card
@@ -279,6 +279,10 @@ The requirements that are easy to miss, on all of which HARP depends:
   `output_components` matches its return values.
 - `demo.queue()` is called, or a running job cannot be canceled from HARP.
 - `show_error=True` is set. See [Error Reporting](#error-reporting).
+- `ssr_mode=False` is set. Hugging Face turns server-side rendering on for a Gradio Space, which
+  puts a Node proxy in front of the app. Gradio checks its own page through that proxy as it
+  launches, with a three-second timeout, and a check that times out while the worker loads the
+  model crashes the app. HARP calls the API alone, so nothing is lost without it.
 - A `gr.Audio` output sets `format` only where the model fixes the output format, since Gradio
   converts the result to it. Leaving it unset returns whatever `process_fn` wrote, which is the
   behavior [Preserving the Input Format](#preserving-the-input-format) requires.
@@ -290,10 +294,10 @@ The requirements that are easy to miss, on all of which HARP depends:
 
 ### Worker Processes
 
-PyHARP runs `process_fn` in a separate worker process, so that Cancel in HARP stops the work rather
-than leaving it to finish on the Space. The worker reaches `process_fn` by importing `app.py`,
-which runs everything at module scope a second time. That is why step 5 above puts the Gradio code
-behind `if __name__ == "__main__":`, with `process_fn` defined above it. PyHARP's
+PyHARP runs `process_fn` in a separate worker process, so that the `Cancel` button in HARP stops the
+work rather than leaving it to finish on the Space. The worker reaches `process_fn` by importing
+`app.py`, which runs everything at module scope a second time. That is why step 5 above puts the
+Gradio code behind `if __name__ == "__main__":`, with `process_fn` defined above it. PyHARP's
 [Worker Processes](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#worker-processes)
 section covers what this asks of `process_fn`. What it changes for a deployment:
 
@@ -409,11 +413,15 @@ that loads them at module scope in both the app and the worker holds the model t
 in either case, and device memory as well on a dedicated GPU, where `.to(device)` also runs in both.
 Size such a Space's hardware for two copies.
 
+**A download that a later start skips has to be complete or absent.** Write it beside its final
+path and move it into place with `os.replace` once it has finished, or use `hf_hub_download`, which
+does this itself. A file written at its final path is left behind when the download is cut short,
+as a restart of the Space cuts it, and every later start then takes it for the weights.
+
 ### Upstream Hub Repository
 
 The default when the model is published on the Hub. Fetch from the original repository rather than
-copying it, so that the publisher stays authoritative and a gated model is obtained under the terms
-its publisher set:
+copying it, so that the publisher stays authoritative:
 
 ```python
 from huggingface_hub import hf_hub_download
@@ -429,6 +437,14 @@ MODEL_PATH = hf_hub_download(
 which is invisible until a result changes. Prefer a commit SHA to a tag, since a tag can be moved.
 
 Use `snapshot_download` where a model is several files that must agree with one another.
+
+**A gated repository is not a source.** It serves its files only to an account that has accepted its
+terms. A Space that downloads them, with a token of the organization or any other, serves the model
+to every caller, including those who never accepted the terms. Where the owners serve the model
+themselves, call their deployment instead (see [Calling Another Space](#calling-another-space)).
+Otherwise, do not deploy the model. A repository can become gated at any time, after which an
+anonymous download fails at every revision, pinned or not, so make a Space private once its upstream
+is gated, and exclude it from validation.
 
 ### Upstream Library
 
@@ -922,8 +938,8 @@ Two things are easy to get wrong:
 ## Calling Another Space
 
 A Space can forward inference to another Space rather than running the model itself. The fleet runs
-one, SoulX-Singer, and no other should be built for a model that can be installed here. Before
-building one, check whether the model can be installed after all:
+three, SoulX-Singer, Stable-Audio-3, and SonicMaster, and no other should be built for a model that
+can be installed here. Before building one, check whether the model can be installed after all:
 
 - **Check what the authors' own Space installs.** A Space that already runs on ZeroGPU has solved
   the constraints of the platform, often by vendoring a fork of a package whose release conflicts
@@ -938,8 +954,8 @@ building one, check whether the model can be installed after all:
 
 Calling another Space is the right deployment only where the model cannot be hosted here at all:
 
-- **Its code or weights cannot be redistributed,** and their owners serve the model themselves, so
-  calling that deployment is the only lawful route to it.
+- **Its code or weights cannot be redistributed,** or are gated, and their owners serve the model
+  themselves, so calling that deployment is the only lawful route to it.
 - **It needs hardware ZeroGPU cannot provide,** such as more GPU memory or a longer job than ZeroGPU
   allows, and its owners run that hardware.
 - **Running it here has been tried and failed, while its owners run it.** SoulX-Singer is the one

@@ -7,7 +7,7 @@ which leaves the steps every deployment shares in plain view: describing the mod
 processing a request, and declaring the interface.
 
 The code shown is the deployed app, at revision
-[`6f6a4e1`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/6f6a4e1581f6178af3ea03937b04df32cd21c05b).
+[`10274b3`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/10274b3ecff836b60521c5cc4d53fb9501df898f).
 
 ## 1. Get the Code
 
@@ -20,7 +20,7 @@ python3 -m venv .venv
 source .venv/bin/activate        # On Windows: .venv\Scripts\activate
 pip install huggingface_hub
 hf download teamup-tech/S-KEY --repo-type space --local-dir . \
-    --revision 6f6a4e1581f6178af3ea03937b04df32cd21c05b
+    --revision 10274b3ecff836b60521c5cc4d53fb9501df898f
 pip install -r requirements.txt
 ```
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         )
 
 
-    demo.queue().launch(pwa=True, show_error=True)
+    demo.queue().launch(pwa=True, show_error=True, ssr_mode=False)
 ```
 
 - **`if __name__ == "__main__":`** keeps the worker, which imports `app.py`, from building the

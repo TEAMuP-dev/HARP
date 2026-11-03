@@ -683,7 +683,7 @@ def is_gpu_decorator(node) -> bool:
 
 
 def lint_app(text: str, file: str, modules: LocalModules | None = None,
-             zerogpu: bool = False) -> list:
+             zerogpu: bool = False, gradio_sdk: bool = True) -> list:
     """
     Check an app file against the structural rules of docs/DEPLOYMENT.md.
 
@@ -694,6 +694,8 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
             which to follow the calls of the app, or None to read the app alone.
         zerogpu (bool): Whether the Space runs on ZeroGPU, where a GPU
             function that loads repeats it on every call.
+        gradio_sdk (bool): Whether the Space runs on the Gradio SDK, for which
+            Hugging Face turns server-side rendering on.
 
     Returns:
         findings (list): Finding objects, in no particular order.
@@ -834,6 +836,13 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
             find("show-error", "launch() is not given show_error=True, so HARP receives "
                                "no reason when a job fails with anything but a gr.Error",
                  call)
+        ssr_off = any(kw.arg == "ssr_mode" and isinstance(kw.value, ast.Constant)
+                      and kw.value.value is False for kw in call.keywords)
+        if gradio_sdk and not ssr_off:
+            find("ssr-mode", "launch() leaves server-side rendering on, which Hugging Face "
+                             "turns on for a Gradio Space. Gradio checks its page through the "
+                             "Node proxy as it launches, with a three-second timeout, and a "
+                             "check that times out crashes the app. Set ssr_mode=False", call)
 
     if launches and not any(isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
                             and call.func.attr == "queue" for call in ast.walk(tree)):
@@ -886,6 +895,204 @@ def lint_containers(text: str, file: str) -> list:
             for node in ast.walk(tree) if isinstance(node, ast.Set)
             and any(isinstance(element, ast.Constant) and element.value in (".aiff", ".aif")
                     for element in node.elts)]
+
+
+# What a function calls to test whether a file is already there, and so skip fetching it
+EXISTENCE_TESTS = {"exists", "isfile", "is_file"}
+
+# What moves a finished file into place, which makes a write beside the final path safe
+ATOMIC_MOVES = {"replace", "rename", "move"}
+
+# Methods of a filesystem client that write the remote file named first to the local path named
+# second, as HfFileSystem.download does
+FETCH_METHODS = {"download", "get_file"}
+
+# What marks a function as reading over the network, so that a file it opens for writing holds a
+# download rather than something it computed
+NETWORK_CALLS = {"urlopen", "copyfileobj", "iter_content", "iter_bytes", "stream"}
+NETWORK_DOTTED = {"requests.get", "httpx.get"}
+
+
+def path_key(node) -> str:
+    """
+    The path an expression names, for comparing a check against a write.
+
+    Args:
+        node (ast.AST): The expression.
+
+    Returns:
+        key (str): Its source, with str() and Path() wrappers stripped, so that
+            `Path(path).exists()` and `open(path, "wb")` name the same path.
+    """
+
+    while (isinstance(node, ast.Call) and len(node.args) == 1 and not node.keywords
+           and dotted(node.func).split(".")[-1] in ("str", "Path", "PurePath")):
+        node = node.args[0]
+
+    return ast.unparse(node)
+
+
+def scope_calls(body: list) -> list:
+    """The calls the statements of one scope make, outside any function they define."""
+
+    return [call for stmt in body
+            if not isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            for call in calls_in(stmt)]
+
+
+def checked_paths(calls: list) -> set:
+    """The paths whose existence the calls test, as path_key renders them."""
+
+    paths = set()
+
+    for call in calls:
+        if dotted(call.func).split(".")[-1] not in EXISTENCE_TESTS:
+            continue
+        if call.args:
+            paths.add(path_key(call.args[0]))           # os.path.exists(path)
+        elif isinstance(call.func, ast.Attribute):
+            paths.add(path_key(call.func.value))        # path.is_file()
+
+    return paths
+
+
+def final_path_writes(calls: list) -> list:
+    """
+    The calls that write a fetched file straight to the path it will be read from.
+
+    Args:
+        calls (list): The calls of one scope.
+
+    Returns:
+        writes (list): (call, path key, description) per write.
+    """
+
+    networked = any(dotted(call.func).split(".")[-1] in NETWORK_CALLS
+                    or dotted(call.func) in NETWORK_DOTTED for call in calls)
+    writes = []
+
+    for call in calls:
+        name = dotted(call.func)
+        last = name.split(".")[-1]
+        keywords = {kw.arg: kw.value for kw in call.keywords}
+        positional = call.args
+        target = None
+
+        if last == "urlretrieve":
+            target = keywords.get("filename", positional[1] if len(positional) > 1 else None)
+            what = "urlretrieve()"
+        elif last in FETCH_METHODS and isinstance(call.func, ast.Attribute) \
+                and len(positional) == 2:
+            target, what = positional[1], f"{name}()"
+        elif last == "open" and networked:
+            mode = keywords.get("mode", positional[1] if len(positional) > 1 else None)
+            if not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
+                    and "w" in mode.value and "b" in mode.value):
+                continue
+            if isinstance(call.func, ast.Attribute):
+                target = call.func.value                                   # path.open("wb")
+            else:
+                target = positional[0] if positional else keywords.get("file")
+            what = 'open(..., "wb")'
+        elif last in ("run", "check_call", "call", "Popen") and positional \
+                and isinstance(positional[0], ast.List):
+            words = positional[0].elts
+            tool = next((word.value for word in words if isinstance(word, ast.Constant)
+                         and word.value in ("wget", "curl")), None)
+            if tool is None:
+                continue
+            for index, word in enumerate(words[:-1]):
+                if isinstance(word, ast.Constant) and word.value in ("-O", "-o", "--output"):
+                    target = words[index + 1]
+            what = "wget -O" if tool == "wget" else "curl -o"
+
+        if target is not None:
+            writes.append((call, path_key(target), what))
+
+    return writes
+
+
+def moves_into_place(calls: list) -> bool:
+    """Whether the calls include a rename or move, which finishes a write made beside the path."""
+
+    for call in calls:
+        if dotted(call.func).split(".")[-1] not in ATOMIC_MOVES:
+            continue
+        if len(call.args) == 2:                                            # os.replace(a, b)
+            return True
+        if (isinstance(call.func, ast.Attribute) and len(call.args) == 1
+                and not isinstance(call.func.value, ast.Constant)):        # partial.replace(b)
+            return True
+
+    return False
+
+
+def lint_downloads(text: str, file: str) -> list:
+    """
+    Flag a download written straight to the path whose existence skips it.
+
+    A file written at its final path is left behind when the download is cut
+    short, and a later start, finding it there, takes it for complete. A write
+    beside the path that is moved into place once finished, or hf_hub_download,
+    which does the same, leaves nothing to find. The check and the write may
+    sit in one scope, or the check in a caller of a helper that writes to the
+    path it is handed.
+
+    Args:
+        text (str): The contents of a Python file.
+        file (str): Its name, for reporting.
+
+    Returns:
+        findings (list): Finding objects.
+    """
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+
+    functions = {node.name: node for node in ast.walk(tree)
+                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+    # The parameters each helper writes a download to, by position and name
+    helper_targets = {}
+    for name, function in functions.items():
+        calls = scope_calls(function.body)
+        if moves_into_place(calls):
+            continue
+        written = {key for _, key, _ in final_path_writes(calls)}
+        hits = [(index, arg.arg) for index, arg in enumerate(function.args.args)
+                if arg.arg in written]
+        if hits:
+            helper_targets[name] = hits
+
+    findings = []
+
+    def report(call, key, what):
+        findings.append(Finding("partial-download",
+                                f"{what} writes {key} at its final path, which the check that "
+                                f"it exists then takes for complete, so a download cut short "
+                                f"is kept for every later start. Write beside it and move it "
+                                f"into place once finished, or use hf_hub_download",
+                                call.lineno, file))
+
+    for body in [tree.body] + [function.body for function in functions.values()]:
+        calls = scope_calls(body)
+        checked = checked_paths(calls)
+        if not checked or moves_into_place(calls):
+            continue
+        for call, key, what in final_path_writes(calls):
+            if key in checked:
+                report(call, key, what)
+        for call in calls:
+            for index, param in helper_targets.get(dotted(call.func).split(".")[-1], []):
+                argument = (call.args[index] if index < len(call.args)
+                            else next((kw.value for kw in call.keywords if kw.arg == param),
+                                      None))
+                if argument is not None and path_key(argument) in checked:
+                    report(call, path_key(argument), f"{dotted(call.func)}()")
+
+    return findings
 
 
 def lint_revisions(text: str, file: str, listing: list) -> list:

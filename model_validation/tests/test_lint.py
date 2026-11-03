@@ -16,7 +16,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from lint import apply_exceptions, check_lint_exceptions, lint_files
-from lint_app import LocalModules, lint_app, lint_containers, lint_revisions
+from lint_app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
 from lint_base import WARNING, Finding, SpaceFiles
 from lint_requirements import (find_python_file, matching_torchaudio, read_dockerfile,
                                url_reference_pinned)
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         output_components = [gr.Audio(type="filepath", format="wav", label="Output")]
         build_endpoint(model_card=model_card, input_components=input_components,
                        output_components=output_components, process_fn=process_fn)
-    demo.queue().launch(show_error=True)
+    demo.queue().launch(show_error=True, ssr_mode=False)
 '''
 
 
@@ -143,8 +143,19 @@ class AppRulesTest(unittest.TestCase):
             "    with gr.Blocks() as demo:", "    " + card + "    with gr.Blocks() as demo:")
         self.assertIn("card-order", self.check(source))
 
+    def test_launch_with_server_side_rendering_left_on(self):
+        source = GOOD_APP.replace("launch(show_error=True, ssr_mode=False)",
+                                  "launch(show_error=True)")
+        self.assertIn("ssr-mode", self.check(source))
+
+    def test_server_side_rendering_is_not_asked_of_a_docker_space(self):
+        source = GOOD_APP.replace("launch(show_error=True, ssr_mode=False)",
+                                  "launch(show_error=True)")
+        self.assertNotIn("ssr-mode", rules(lint_app(source, "app.py", gradio_sdk=False)))
+
     def test_launch_without_show_error(self):
-        source = GOOD_APP.replace("launch(show_error=True)", "launch()")
+        source = GOOD_APP.replace("launch(show_error=True, ssr_mode=False)",
+                                  "launch(ssr_mode=False)")
         self.assertIn("show-error", self.check(source))
 
     def test_launch_without_a_queue(self):
@@ -273,6 +284,94 @@ class ContainerTest(unittest.TestCase):
     def test_wav_and_flac_alone_are_allowed(self):
         source = 'LOSSLESS = {".wav", ".flac"}\n'
         self.assertEqual(lint_containers(source, "app.py"), [])
+
+
+class DownloadTest(unittest.TestCase):
+
+    def check(self, source):
+        return rules(lint_downloads(source, "app.py"))
+
+    def test_a_filesystem_download_to_the_path_checked(self):
+        source = '''
+def download(filename):
+    path = f"{MODELS_DIR}/{filename}"
+    if not Path(path).exists():
+        FS.download(f"{REPO}@{REVISION}/{filename}", path)
+    return path
+'''
+        self.assertEqual(self.check(source), ["partial-download"])
+
+    def test_urlretrieve_to_the_path_checked(self):
+        source = '''
+def fetch():
+    if sf_path.is_file():
+        return
+    urllib.request.urlretrieve(URL, sf_path)
+'''
+        self.assertEqual(self.check(source), ["partial-download"])
+
+    def test_wget_to_the_path_checked(self):
+        source = '''
+def fetch(target):
+    if not os.path.exists(target):
+        subprocess.run(["wget", URL, "-O", str(target)], check=True)
+'''
+        self.assertEqual(self.check(source), ["partial-download"])
+
+    def test_a_helper_that_writes_to_the_path_it_is_handed(self):
+        source = '''
+def _download(url, dest):
+    with open(dest, "wb") as f:
+        f.write(urllib.request.urlopen(url).read())
+
+def asset():
+    if not path.is_file():
+        _download(URL, path)
+    return path
+'''
+        findings = lint_downloads(source, "app.py")
+        self.assertEqual(rules(findings), ["partial-download"])
+        self.assertEqual(findings[0].line, 8)
+
+    def test_a_download_beside_the_path_and_moved_into_place(self):
+        source = '''
+def fetch():
+    if sf_path.is_file():
+        return
+    partial = sf_path.with_name(sf_path.name + ".part")
+    urllib.request.urlretrieve(URL, partial)
+    os.replace(partial, sf_path)
+'''
+        self.assertEqual(self.check(source), [])
+
+    def test_an_archive_written_beside_the_directory_checked(self):
+        source = '''
+def source_dir():
+    if SOURCE_DIR.exists() and (SOURCE_DIR / "render.py").is_file():
+        return SOURCE_DIR
+    with urllib.request.urlopen(URL) as response, archive_path.open("wb") as f:
+        shutil.copyfileobj(response, f)
+    extract(archive_path, SOURCE_DIR)
+    return SOURCE_DIR
+'''
+        self.assertEqual(self.check(source), [])
+
+    def test_a_file_computed_rather_than_fetched(self):
+        source = '''
+def cache():
+    if not os.path.exists(path):
+        with open(path, "wb") as f:
+            f.write(render())
+'''
+        self.assertEqual(self.check(source), [])
+
+    def test_hf_hub_download_is_atomic(self):
+        source = '''
+def fetch():
+    if not Path(path).exists():
+        return hf_hub_download(REPO, FILE, local_dir=MODELS_DIR, revision=REVISION)
+'''
+        self.assertEqual(self.check(source), [])
 
 
 class RevisionTest(unittest.TestCase):

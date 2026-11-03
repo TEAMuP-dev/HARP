@@ -189,6 +189,10 @@ last:
   and `process_fn`.
 - `show-error`, `queue`: `launch` is given `show_error=True`, and
   `demo.queue()` is called.
+- `ssr-mode`: `launch` is given `ssr_mode=False`. Hugging Face turns
+  server-side rendering on for a Gradio Space, and Gradio's launch check of
+  its page through the Node proxy can time out and crash the app. Not asked of
+  a Docker Space, which runs without it.
 - `info-warning`: no `gr.Warning` or `gr.Info`, which never reach HARP.
 - `input-format`: no `gr.Audio` input sets `format`, which converts every
   upload before `process_fn` sees it.
@@ -196,6 +200,11 @@ last:
   converts an AIFF output to 16-bit WAV, and soundfile cannot write a file
   named `.aif` at all, so an AIFF input comes back as WAV. This one reads every
   top-level module.
+- `partial-download`: no download is written straight to the path whose
+  existence skips it, by `urlretrieve`, a filesystem client, `wget`, or a
+  helper handed the path, unless the function moves a finished file into
+  place. A download cut short is otherwise kept for every later start. This
+  one reads every top-level module too.
 - `unpinned-revision` (warning): weights fetched from a Hub repository named
   in the code pin a `revision`.
 
