@@ -63,7 +63,7 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
   named by the root `VERSION`. `website/download/release.data.mjs` builds the links when the
   site is built, and the `DownloadButtons` component of the theme shows them, with the platform of
   the visitor highlighted, and a button for the demo files beneath them. The site holds no copy of
-  the packages or of the demo files.
+  the packages or of the demo files, whose contents and sources `docs/DEMO_FILES.md` lists.
 
 ### Screenshots
 
