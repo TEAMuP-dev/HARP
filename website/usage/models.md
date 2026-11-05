@@ -26,10 +26,7 @@ everything else. It runs on a GPU through ZeroGPU, which allocates one to each r
    clipboard to use as the input of another model, _e.g._, the vocals into Whisper for a
    transcript.
 
-<!-- TODO: screenshot. The Demucs tab after processing a song, with all four stems rendered in their
-     output tracks.
 ![Demucs after separating a song into four stems](/images/demucs-stems.png)
--->
 
 [Example 2](/pyharp/example_demucs) walks through the code of this model.
 
@@ -46,10 +43,7 @@ Each model card carries badges that state its license, its hardware, and its ava
 - **Availability**: `Sleeping` or `Starting` for a Space that has to start before it loads, and
   `Unavailable`, `Try again`, or `Failed to load` once a load has failed.
 
-<!-- TODO: screenshot. A row of model cards on the Home tab, showing a license badge, a ZeroGPU
-     badge, a Sleeping badge, and the Stability AI badge.
 ![Model cards with license, ZeroGPU, Sleeping, and Stability AI badges](/images/model-badges.png)
--->
 
 <!--@include: @/../README.md#licenses-->
 
@@ -62,10 +56,7 @@ The allowance for each kind of account is listed under
 private Space that its account can see. `File > Settings > API Keys` links to where each service
 issues keys, and checks a key when it is added.
 
-<!-- TODO: screenshot. File > Settings > API Keys, with the Hugging Face page selected and a key
-     entered (obscured).
 ![The API Keys settings, with a Hugging Face key entered](/images/settings-api-keys.png)
--->
 
 ## Sleeping Spaces and Errors
 

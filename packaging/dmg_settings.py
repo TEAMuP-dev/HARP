@@ -9,9 +9,9 @@ format = "UDZO"
 files = [app]
 symlinks = {"Applications": "/Applications"}
 
-window_rect = ((100, 100), (730, 520))
+window_rect = ((200, 120), (480, 280))
 icon_size = 80
 icon_locations = {
-    os.path.basename(app): (250, 405),
-    "Applications": (480, 405),
+    os.path.basename(app): (125, 120),
+    "Applications": (355, 120),
 }

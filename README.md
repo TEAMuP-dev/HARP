@@ -5,11 +5,7 @@
 
 # HARP
 
-<!-- TODO: screenshot. A DAW session with HARP open beside it, mid-process on a region the DAW
-     opened in it, so that the relationship between the two is clear at a glance. The figure this
-     replaces shows an interface that no longer exists.
 ![HARP processing a region opened from a DAW session](website/public/images/hero.png)
--->
 
 <!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main) -->
 <!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/teamup-harp/deploys) -->
@@ -83,11 +79,7 @@ As a standalone application, open a file, open a model, process, and save the re
 open the clip to process in HARP, process it, and either return the result with the
 _Send-to-DAW_ icon of the media clipboard or write it to disk with the _Save_ icon.
 
-<!-- TODO: screenshot. A model tab after processing, showing the model card, its controls, an input
-     track, a rendered output track, and the status area reporting the result. The figure this
-     replaces predates the tabbed interface.
 ![A model tab after processing, with its controls, input track, and output track](website/public/images/model-tab.png)
--->
 
 ## Warning
 
@@ -154,10 +146,7 @@ its own when a file is added with `File > Open`.
   which brings the result back into the DAW project.
 <!-- #endregion media-clipboard -->
 
-<!-- TODO: screenshot. The media clipboard with two tracks in it, one being dragged onto an input
-     track of a model, which is the part of the workflow hardest to describe in prose.
 ![Dragging a track from the media clipboard onto an input track of a model](website/public/images/media-clipboard.png)
--->
 
 ## API Keys
 

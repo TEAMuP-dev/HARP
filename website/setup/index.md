@@ -27,10 +27,7 @@ and the page for each uses its own term.
    result over the file of the clip, converting it to the format of that file.
 4. **Return to the DAW**, which picks up the changed file.
 
-<!-- TODO: screenshot. The media clipboard holding a purple DAW-linked track and a processed result,
-     with the "Send to DAW" dialog open and the DAW-linked track chosen in its dropdown.
 ![Sending a result back to the DAW from the media clipboard](/images/send-to-daw.png)
--->
 
 ## Exchanging Files
 

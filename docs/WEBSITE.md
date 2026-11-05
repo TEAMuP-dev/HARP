@@ -67,14 +67,21 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 
 ### Screenshots
 
-- **Images** go in `website/public/images/`, which the site serves at `/images/<name>.png`. The
-  README refers to the ones it shares with the site as `website/public/images/<name>.png`, and the
-  README of PyHARP as `https://harp.tools/images/<name>.png`, so that one file serves all three.
-- **Figures**, such as the teaser on the introduction page, are draw.io exports kept under
-  `website/public/images/` with the diagram embedded, so that they open in draw.io for editing.
-  Export them with a white background and `color-scheme: light`, since draw.io writes its colors
-  as `light-dark()` pairs, which turn black text white in a dark theme. The HARP mark in the
-  teaser embeds `resources/icons/harp_logo.png`, scaled to 200 px.
+- **Images** go in `website/public/images/`, served at `/images/<name>.png`. The README links the
+  ones it shares with the site as `website/public/images/<name>.png`, and the README of PyHARP as
+  `https://harp.tools/images/<name>.png`, so that one file serves all three.
+- **Screenshots** are macOS window captures at Retina scale, with the HARP window about 1000 by
+  780 points, published as captured, shadow included. Every image is shown at the width of the
+  text column, so a detail, such as a card or a labeled track, is cropped out of a capture rather
+  than captured larger. `website/scripts/process_screenshots.py` makes such crops, finds the edges
+  of a window in a full-screen capture by the color of its title bar, cuts it out with the same
+  shadow, and draws the outlines and tags of the overview on the walkthrough page over
+  `model-tab.png`, so redo both when the model tab changes.
+- **Figures**, such as the teaser on the introduction page, are draw.io exports with the diagram
+  embedded, so that they open in draw.io for editing. Export them with a white background and
+  `color-scheme: light`, since draw.io writes its colors as `light-dark()` pairs, which turn black
+  text white in a dark theme. The HARP mark in the teaser embeds `resources/icons/harp_logo.png`,
+  scaled to 200 px.
 
 ### Moving a Page
 

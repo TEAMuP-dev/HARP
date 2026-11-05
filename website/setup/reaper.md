@@ -11,9 +11,7 @@ REAPER opens items in HARP as an external editor.
 4. Click `Browse...` beside `Primary Editor`, and select HARP, _e.g._, `/Applications/HARP.app` on
    macOS. Click `OK` in both windows.
 
-<p align="center">
-   <img width="1023" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/b828a2fd-5378-490c-be37-11f7404eb127" alt="REAPER's External Editors preferences, with HARP set as the primary editor">
-</p>
+![REAPER's External Editors preferences, with HARP set as the primary editor](/images/reaper-preferences.png)
 
 ## Open Audio in HARP
 
@@ -22,9 +20,7 @@ REAPER opens items in HARP as an external editor.
    copy of the item, which leaves the original untouched, while `Open items in 'HARP.app'` opens
    the original.
 
-   <p align="center">
-      <img width="1531" src="https://github.com/TEAMuP-dev/HARP/assets/33099118/7f26857f-61de-4765-9671-fb69c4264dc4" alt="REAPER's item context menu, open at Open items in editor">
-   </p>
+   ![REAPER's item context menu, open at Open items in editor](/images/reaper-launch.png)
 
 2. Process the DAW-linked track and send the result back, as in
    [The Round Trip](/setup/#the-round-trip).

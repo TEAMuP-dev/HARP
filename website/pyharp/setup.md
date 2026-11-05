@@ -62,10 +62,7 @@ addresses:
 * Running on public URL: https://<RANDOM_ID>.gradio.live
 ```
 
-<!-- TODO: screenshot. A terminal after starting the MIDI synthesizer example, showing the local
-     and public URLs.
 ![The terminal after starting an example, showing its local and public URLs](/images/example-terminal.png)
--->
 
 The local URL serves the app to your own machine, on the next free port if `7860` is taken. The
 public URL is a Gradio share link, which forwards to the app from anywhere until it expires after a
@@ -79,10 +76,7 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 3. Drag a MIDI file onto the `Input MIDI` track, and select `Process`. The rendered audio appears
    in the `Synthesized Audio` track.
 
-<!-- TODO: screenshot. The MIDI synthesizer open in HARP, with a MIDI file in its input track and
-     the rendered audio in its output track.
 ![The MIDI synthesizer in HARP, after rendering a MIDI file](/images/example-in-harp.png)
--->
 
 HARP reads the interface of an app when it loads the model, so after changing a component, close
 the tab of the model and open it again from its card. Stop the app with `Ctrl+C`.

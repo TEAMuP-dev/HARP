@@ -59,9 +59,7 @@ HARP opens on its Home tab, which lists the available models. The first time, a 
 walks through the interface, highlighting each part as it describes it. `Help > Welcome Tutorial`
 shows it again.
 
-<!-- TODO: screenshot. HARP on first launch, with the welcome tutorial open over the Home tab.
 ![HARP on first launch, with the welcome tutorial open over the Home tab](/images/first-launch-tutorial.png)
--->
 
 To try a model, drag one of the <a :href="release.demoFiles.url">demo files</a> onto its input
 track. A README among them names the models that suit each file. Next, [set up HARP](/setup/) on

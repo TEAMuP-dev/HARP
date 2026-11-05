@@ -1,10 +1,6 @@
 # Overview
 
-<!-- TODO: screenshot. A DAW session with HARP open beside it, mid-process on a region the DAW
-     opened in it, so that the relationship between the two is clear at a glance. Use the same
-     image as the README.
 ![HARP processing a region opened from a DAW session](/images/hero.png)
--->
 
 <!--@include: @/../README.md#overview-->
 

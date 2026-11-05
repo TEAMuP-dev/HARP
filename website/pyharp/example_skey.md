@@ -197,10 +197,7 @@ Open `http://localhost:7860` in HARP as a custom path, as in
 [Setting Up PyHARP](/pyharp/setup#open-it-in-harp). Drag a song of at least three
 seconds onto `Input Audio`, and select `Process`. The key appears as a label over `Audio with Key`.
 
-<!-- TODO: screenshot. S-KEY open in HARP after processing a song, with the detected key shown as a
-     label over the output track.
 ![The key of a song, shown as a label by S-KEY in HARP](/images/skey-in-harp.png)
--->
 
 To deploy a model of your own from this app, replace the `skey` package and the body of `find_key`
 with your own inference code, and change the model card and components to match.

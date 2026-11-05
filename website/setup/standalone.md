@@ -16,9 +16,6 @@ On its own, HARP is an editor for audio and MIDI files.
    clipboard and choose `File > Save As`. Saving over an input replaces it, so choose a new name to
    keep the original.
 
-<!-- TODO: screenshot. HARP used standalone, with a file from the media clipboard dragged onto the
-     input track of a model and the result in its output track.
-![HARP used standalone, with a file processed by a model](/images/standalone.png)
--->
+![HARP used standalone, with a file processed by a model](/images/model-tab.png)
 
 The [Walkthrough](/usage/workflow) covers the interface in detail.

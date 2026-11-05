@@ -24,10 +24,7 @@ account can host it too.
    name such as `demucs`, the `mit` license, the `Gradio` SDK with the blank template, `ZeroGPU`
    hardware, and public visibility, so that HARP can reach the Space without a key.
 
-   <!-- TODO: screenshot. The "Create a new Space" form, filled in as listed above, with ZeroGPU
-        selected as the hardware.
    ![Creating a Space with the Gradio SDK on ZeroGPU hardware](/images/space-create.png)
-   -->
 
 2. **Add the app.** Clone the Space, and copy `app.py`, `requirements.txt`, and `README.md` from
    Example 2 into it, replacing the generated `README.md`:
@@ -51,9 +48,7 @@ account can host it too.
    output of installing the requirements and starting `app.py`, which is where an error appears if
    the Space fails to start. Once the status reads `Running`, try the app on the page.
 
-   <!-- TODO: screenshot. The page of a running Space, with the Logs panel open on the container log.
    ![The page of a Space, with its logs open](/images/space-logs.png)
-   -->
 
 5. **Open it in HARP.** On the `Home` tab, click `Custom Path...`, enter `<USERNAME>/demucs`, and
    click `Load`.
