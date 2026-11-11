@@ -6,15 +6,17 @@ These run locally with no network and no Hugging Face token:
     python -m unittest discover -s model_validation/tests -v
 """
 
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import numpy
 import soundfile
+
 from assets import Assets, check_synthesized_inputs
 
 
@@ -29,8 +31,7 @@ class SourceTest(unittest.TestCase):
 
         # One second of stereo at 22.05 kHz, the channels told apart by level
         left = numpy.full(22050, 0.25, dtype=numpy.float32)
-        soundfile.write(str(self.dir / "stereo.wav"),
-                        numpy.stack([left, 2 * left], axis=1), 22050)
+        soundfile.write(str(self.dir / "stereo.wav"), numpy.stack([left, 2 * left], axis=1), 22050)
 
     def build(self, **props):
         """Build an audio input from the stereo source with these properties."""
@@ -63,9 +64,17 @@ class SourceTest(unittest.TestCase):
 
     def test_an_aif_input_is_written_as_aiff(self):
         # soundfile cannot tell the format from .aif, the extension Logic Pro uses
-        path = self.assets.audio({"audio": {"source": "stereo.wav", "duration": 1.0,
-                                            "sample_rate": 22050, "num_channels": 2,
-                                            "ext": ".aif"}})
+        path = self.assets.audio(
+            {
+                "audio": {
+                    "source": "stereo.wav",
+                    "duration": 1.0,
+                    "sample_rate": 22050,
+                    "num_channels": 2,
+                    "ext": ".aif",
+                }
+            }
+        )
         self.assertEqual(path.suffix, ".aif")
         self.assertEqual(soundfile.info(str(path)).format, "AIFF")
 
@@ -85,8 +94,7 @@ class SourceConfigTest(unittest.TestCase):
         self.dir = Path(self.temp.name)
 
     def check(self, kind, source):
-        check_synthesized_inputs({"synthesized_inputs": {kind: {"source": source}}},
-                                 self.dir)
+        check_synthesized_inputs({"synthesized_inputs": {kind: {"source": source}}}, self.dir)
 
     def test_a_missing_source_is_rejected(self):
         with self.assertRaises(ValueError) as caught:
@@ -106,8 +114,8 @@ class SourceConfigTest(unittest.TestCase):
     def test_the_repository_sources_are_accepted(self):
         test_data = Path(__file__).resolve().parents[1]
         check_synthesized_inputs(
-            {"synthesized_inputs": {"audio": {"source": "test_data/test_piano_20s.wav"}}},
-            test_data)
+            {"synthesized_inputs": {"audio": {"source": "test_data/test_piano_20s.wav"}}}, test_data
+        )
 
 
 if __name__ == "__main__":

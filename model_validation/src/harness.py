@@ -22,33 +22,35 @@ from pathlib import Path
 from gradio_client import Client
 
 from assets import Assets, input_kind, merge_specs
-from cases import (synthesize_default_args, apply_case, validate_outputs,
-                   inspect_outputs, measure_outputs, fed_kinds)
-from refusals import install as install_refusals, judge_refusal
-from results import ModelResult, CaseResult, PASS, FAIL, SKIP
-from utils import run_with_timeout, describe_exception
+from cases import (
+    apply_case,
+    fed_kinds,
+    inspect_outputs,
+    measure_outputs,
+    synthesize_default_args,
+    validate_outputs,
+)
+from refusals import install as install_refusals
+from refusals import judge_refusal
+from results import FAIL, PASS, SKIP, CaseResult, ModelResult
+from utils import describe_exception, run_with_timeout
 
 
 # Lets a case expecting an error tell a gr.Error from any other exception
 install_refusals()
 
 
-__all__ = [
-    'run_endpoint_tests',
-    'call_with_retries',
-    'close_client',
-    'is_quota_exhausted'
-]
+__all__ = ["run_endpoint_tests", "call_with_retries", "close_client", "is_quota_exhausted"]
 
 
 # Fixed sub-timeouts and intervals, in seconds. Unlike connect_timeout /
 # process_timeout, these bound quick calls whose duration does not vary by
 # model, so they are module constants rather than per-model config.
-CONTROLS_TIMEOUT = 120        # fetch the /controls spec (model already loaded)
-CLIENT_CLOSE_TIMEOUT = 10     # best-effort gradio_client shutdown
-CONNECT_RETRY_INTERVAL = 15   # wait between connection attempts to a model
-LOADING_RETRY_INTERVAL = 15   # wait between retries while a model warms up
-JOB_POLL_INTERVAL = 1         # cadence for polling the status of a /process job
+CONTROLS_TIMEOUT = 120  # fetch the /controls spec (model already loaded)
+CLIENT_CLOSE_TIMEOUT = 10  # best-effort gradio_client shutdown
+CONNECT_RETRY_INTERVAL = 15  # wait between connection attempts to a model
+LOADING_RETRY_INTERVAL = 15  # wait between retries while a model warms up
+JOB_POLL_INTERVAL = 1  # cadence for polling the status of a /process job
 
 # gradio job status codes that mean the job is still waiting in the ZeroGPU
 # queue (not yet executing on the GPU)
@@ -57,8 +59,13 @@ QUEUE_STATUS_CODES = {"IN_QUEUE", "JOINING_QUEUE", "QUEUE_FULL"}
 # Substrings marking a "model is still loading" response. A ZeroGPU space
 # waking its GPU worker returns this immediately rather than blocking, so it
 # is retried (within connect_timeout) instead of treated as a failure.
-LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
-                   "currently loading", "warming up")
+LOADING_MARKERS = (
+    "still loading",
+    "loading, please wait",
+    "is loading",
+    "currently loading",
+    "warming up",
+)
 
 # The following are substrings marking an infrastructure fault rather than a
 # fault in the model. These come from the connection or the GPU host. The same
@@ -75,18 +82,19 @@ LOADING_MARKERS = ("still loading", "loading, please wait", "is loading",
 # the connection in exactly the same way. The specific disconnect message below
 # stays, since it was the one seen in practice. Extend this only with a fault
 # confirmed to succeed on a retry.
-TRANSIENT_MARKERS = ("read operation timed out",           # httpx ReadTimeout
-                     "uncorrectable ecc error",            # GPU host fault
-                     "server disconnected without sending a response")
-TRANSIENT_RETRY_LIMIT = 3    # attempts after the first failure
+TRANSIENT_MARKERS = (
+    "read operation timed out",  # httpx ReadTimeout
+    "uncorrectable ecc error",  # GPU host fault
+    "server disconnected without sending a response",
+)
+TRANSIENT_RETRY_LIMIT = 3  # attempts after the first failure
 TRANSIENT_RETRY_INTERVAL = 5  # seconds between them
 
 # Substrings marking a ZeroGPU quota-exhausted response. Matching one skips
 # every remaining ZeroGPU model, so these pair "quota" with an exhaustion verb
 # rather than matching "gpu quota" anywhere: a model whose own error merely
 # mentions a quota must not halt the rest of the run.
-QUOTA_EXHAUSTED_MARKERS = ("exceeded your gpu quota", "gpu quota exceeded",
-                           "quota exceeded")
+QUOTA_EXHAUSTED_MARKERS = ("exceeded your gpu quota", "gpu quota exceeded", "quota exceeded")
 
 
 def matches_markers(exc: Exception, markers: tuple) -> bool:
@@ -149,12 +157,16 @@ def call_with_retries(fn, deadline: float):
         try:
             return fn()
         except Exception as exc:  # noqa: BLE001 - inspected below, else re-raised
-            if matches_markers(exc, LOADING_MARKERS) and \
-                    time.time() + LOADING_RETRY_INTERVAL < deadline:
+            if (
+                matches_markers(exc, LOADING_MARKERS)
+                and time.time() + LOADING_RETRY_INTERVAL < deadline
+            ):
                 time.sleep(LOADING_RETRY_INTERVAL)
                 continue
-            if matches_markers(exc, TRANSIENT_MARKERS) and \
-                    transient_attempts < TRANSIENT_RETRY_LIMIT:
+            if (
+                matches_markers(exc, TRANSIENT_MARKERS)
+                and transient_attempts < TRANSIENT_RETRY_LIMIT
+            ):
                 transient_attempts += 1
                 time.sleep(TRANSIENT_RETRY_INTERVAL)
                 continue
@@ -202,8 +214,7 @@ def wait_out_queue(job, queue_deadline: float, api_name: str) -> None:
     while not job.done() and job_status_code(job) in QUEUE_STATUS_CODES:
         if time.time() >= queue_deadline:
             job.cancel()
-            raise TimeoutError(f"{api_name} still queued after waiting for the "
-                               f"connect timeout")
+            raise TimeoutError(f"{api_name} still queued after waiting for the connect timeout")
         time.sleep(JOB_POLL_INTERVAL)
 
 
@@ -240,9 +251,16 @@ def corrupted_kinds(assets: Assets, synth: dict) -> set:
     return {kind for kind in ("audio", "midi") if assets.resolve(kind, synth).get("content")}
 
 
-def run_case(client: Client, case: dict, controls: dict, assets: Assets,
-             overrides: dict, config_dir: Path, process_timeout: float,
-             connect_timeout: float) -> CaseResult:
+def run_case(
+    client: Client,
+    case: dict,
+    controls: dict,
+    assets: Assets,
+    overrides: dict,
+    config_dir: Path,
+    process_timeout: float,
+    connect_timeout: float,
+) -> CaseResult:
     """
     Run one /process test case and check its outputs.
 
@@ -277,8 +295,7 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
     state = {"gpu_calls": 0}
 
     try:
-        synth = merge_specs(overrides.get("synthesized_inputs"),
-                            case.get("synthesized_inputs"))
+        synth = merge_specs(overrides.get("synthesized_inputs"), case.get("synthesized_inputs"))
         default_args, missing = synthesize_default_args(controls, assets, synth)
 
         # An input to refuse replaces every input of its kind, so the files a
@@ -286,16 +303,22 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
         corrupted = corrupted_kinds(assets, synth)
         if corrupted:
             kinds = {spec.get("label"): input_kind(spec) for spec in controls.get("inputs", [])}
-            case = dict(case, files={label: path for label, path
-                                     in (case.get("files") or {}).items()
-                                     if kinds.get(label) not in corrupted})
+            case = dict(
+                case,
+                files={
+                    label: path
+                    for label, path in (case.get("files") or {}).items()
+                    if kinds.get(label) not in corrupted
+                },
+            )
 
         # Inputs we could not synthesize are fine if this case supplies them
         supplied = set(case.get("controls") or {}) | set(case.get("files") or {})
         unsatisfied = {k: v for k, v in missing.items() if k not in supplied}
         if unsatisfied:
             case_result.error = "skipped: " + "; ".join(
-                f"'{k}': {v}" for k, v in unsatisfied.items())
+                f"'{k}': {v}" for k, v in unsatisfied.items()
+            )
             return case_result
 
         args = apply_case(default_args, controls, case, config_dir)
@@ -315,15 +338,15 @@ def run_case(client: Client, case: dict, controls: dict, assets: Assets,
                 # running, as gradio can only call off a job still in the queue.
                 job.cancel()
                 # Future.result() raises with no message, so say what timed out
-                raise TimeoutError(f"/process did not return within "
-                                   f"{int(process_timeout)}s") from None
+                raise TimeoutError(
+                    f"/process did not return within {int(process_timeout)}s"
+                ) from None
 
         if expected_error:
             try:
                 call_with_retries(run_process, time.time() + connect_timeout)
             except Exception as exc:  # noqa: BLE001 - judged as the expected refusal
-                case_result.ok, case_result.error, reached_gpu = \
-                    judge_refusal(exc, expected_error)
+                case_result.ok, case_result.error, reached_gpu = judge_refusal(exc, expected_error)
                 # A refusal raised by the checks of the model reserved nothing
                 if not reached_gpu:
                     state["gpu_calls"] = 0
@@ -419,8 +442,7 @@ def merge_common_cases(common_cases: list, own_cases: list) -> list:
         # The rules of the model are applied over the shared ones, per output
         # for `expect` so that a shared rule on one output survives a model
         # rule on another
-        expect = {label: dict(rules or {})
-                  for label, rules in shared_expect.items()}
+        expect = {label: dict(rules or {}) for label, rules in shared_expect.items()}
         for label, rules in (case.get("expect") or {}).items():
             expect.setdefault(label, {}).update(rules or {})
         if expect:
@@ -432,8 +454,9 @@ def merge_common_cases(common_cases: list, own_cases: list) -> list:
         merged.append(case)
 
     cases = scenarios + merged
-    return ([case for case in cases if not case.get("expect_error")]
-            + [case for case in cases if case.get("expect_error")])
+    return [case for case in cases if not case.get("expect_error")] + [
+        case for case in cases if case.get("expect_error")
+    ]
 
 
 def readme_problems(readme: dict | None, card: dict) -> str:
@@ -464,8 +487,9 @@ def readme_problems(readme: dict | None, card: dict) -> str:
     if carried - declared:
         problems.append(f"the README lacks the card's tags {sorted(carried - declared)}")
     if declared - carried:
-        problems.append(f"the README declares tags the card does not carry "
-                        f"{sorted(declared - carried)}")
+        problems.append(
+            f"the README declares tags the card does not carry {sorted(declared - carried)}"
+        )
 
     title, name = readme.get("title"), card.get("name")
     if title and name and title != name:
@@ -474,9 +498,14 @@ def readme_problems(readme: dict | None, card: dict) -> str:
     return "; ".join(problems)
 
 
-def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
-                       overrides: dict, opts: argparse.Namespace,
-                       readme: dict | None = None) -> ModelResult:
+def run_endpoint_tests(
+    client: Client,
+    result: ModelResult,
+    assets: Assets,
+    overrides: dict,
+    opts: argparse.Namespace,
+    readme: dict | None = None,
+) -> ModelResult:
     """
     Verify /controls and run every configured /process test case.
 
@@ -498,9 +527,9 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
 
     # ZeroGPU models default to a lower process timeout, since their jobs are
     # short once running. A per-model process_timeout override still wins.
-    default_process_timeout = (opts.zerogpu_process_timeout
-                               if result.zerogpu
-                               else opts.process_timeout)
+    default_process_timeout = (
+        opts.zerogpu_process_timeout if result.zerogpu else opts.process_timeout
+    )
     process_timeout = overrides.get("process_timeout", default_process_timeout)
     connect_timeout = overrides.get("connect_timeout", opts.connect_timeout)
     load_only = opts.load_only or overrides.get("load_only", False)
@@ -510,15 +539,19 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     endpoints = client.view_api(return_format="dict", print_info=False) or {}
     named = endpoints.get("named_endpoints", {})
     if "/controls" not in named or "/process" not in named:
-        result.error = (f"missing HARP endpoints (found: {sorted(named)}). "
-                        f"The deployment may use an outdated pyharp")
+        result.error = (
+            f"missing HARP endpoints (found: {sorted(named)}). "
+            f"The deployment may use an outdated pyharp"
+        )
         return result
 
     # --- /controls (retry through a warming-up model) ------------------------
     controls = call_with_retries(
         lambda: run_with_timeout(
-            lambda: client.predict(api_name="/controls"), CONTROLS_TIMEOUT, "/controls"),
-        time.time() + connect_timeout)
+            lambda: client.predict(api_name="/controls"), CONTROLS_TIMEOUT, "/controls"
+        ),
+        time.time() + connect_timeout,
+    )
     if not isinstance(controls, dict) or "card" not in controls or "inputs" not in controls:
         result.error = f"/controls returned malformed data: {str(controls)[:200]}"
         return result
@@ -544,30 +577,50 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
     # `skip_common_cases: true`, or of the ones it names in a list.
     own_cases = overrides.get("test_cases") or [{"name": "default"}]
     skipped = overrides.get("skip_common_cases") or []
-    common_cases = ([] if skipped is True else
-                    [case for case in opts.common_test_cases or []
-                     if case.get("name") not in skipped])
+    common_cases = (
+        []
+        if skipped is True
+        else [case for case in opts.common_test_cases or [] if case.get("name") not in skipped]
+    )
     cases = merge_common_cases(common_cases, own_cases)
 
     # A case sending an input to refuse applies only to a model that takes an
     # input of that kind, like a "*" rule that matches no output
     fed = fed_kinds(controls)
-    cases = [case for case in cases
-             if not (kinds := corrupted_kinds(assets, merge_specs(
-                 overrides.get("synthesized_inputs"), case.get("synthesized_inputs"))))
-             or kinds & fed]
+    cases = [
+        case
+        for case in cases
+        if not (
+            kinds := corrupted_kinds(
+                assets,
+                merge_specs(overrides.get("synthesized_inputs"), case.get("synthesized_inputs")),
+            )
+        )
+        or kinds & fed
+    ]
 
     # --cases narrows the run to the cases it names, for one run
     wanted = getattr(opts, "cases", None)
     if wanted:
-        cases = [case for case in cases
-                 if case.get("name") in wanted
-                 or case.get("name", "").removeprefix("common:") in wanted]
+        cases = [
+            case
+            for case in cases
+            if case.get("name") in wanted or case.get("name", "").removeprefix("common:") in wanted
+        ]
 
     for case in cases:
-        result.cases.append(run_case(
-            client, case, controls, assets, overrides, config_dir,
-            process_timeout, connect_timeout))
+        result.cases.append(
+            run_case(
+                client,
+                case,
+                controls,
+                assets,
+                overrides,
+                config_dir,
+                process_timeout,
+                connect_timeout,
+            )
+        )
 
     if readme_case:
         result.cases.append(readme_case)
@@ -576,8 +629,7 @@ def run_endpoint_tests(client: Client, result: ModelResult, assets: Assets,
         result.error = f"skipped: no case named {', '.join(wanted)} applies"
         result.status = SKIP
     elif any(c.ok is False for c in result.cases):
-        result.error = "; ".join(
-            f"[{c.name}] {c.error}" for c in result.cases if c.ok is False)
+        result.error = "; ".join(f"[{c.name}] {c.error}" for c in result.cases if c.ok is False)
         result.status = FAIL
     elif not any(c.ok for c in result.cases):
         # Every case was skipped, so /process was never called. Passing here

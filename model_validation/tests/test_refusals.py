@@ -7,10 +7,11 @@ These run locally with no network and no Hugging Face token:
     python -m unittest discover -s model_validation/tests -v
 """
 
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -18,6 +19,7 @@ import gradio_client.client
 import mido
 import numpy
 import soundfile
+
 from assets import Assets, check_synthesized_inputs
 from cases import apply_case, fed_kinds, generated_text
 from harness import merge_common_cases, readme_problems
@@ -37,36 +39,40 @@ def plain_error(message):
 
 
 class JudgeRefusalTest(unittest.TestCase):
-
     def test_a_gr_error_saying_what_was_wrong_is_a_refusal(self):
         refused, problem, reached = judge_refusal(
-            gr_error("Could not read the audio file: Format not recognised."), True)
+            gr_error("Could not read the audio file: Format not recognised."), True
+        )
         self.assertTrue(refused)
         self.assertEqual(problem, "")
         self.assertFalse(reached)
 
     def test_an_uncaught_exception_is_not(self):
         refused, problem, reached = judge_refusal(
-            plain_error("zero-size array to reduction operation maximum"), True)
+            plain_error("zero-size array to reduction operation maximum"), True
+        )
         self.assertFalse(refused)
         self.assertIn("uncaught exception", problem)
         self.assertFalse(reached)
 
     def test_an_error_inside_the_gpu_call_is_not(self):
         refused, problem, reached = judge_refusal(
-            gr_error("RuntimeError", title="ZeroGPU worker error"), True)
+            gr_error("RuntimeError", title="ZeroGPU worker error"), True
+        )
         self.assertFalse(refused)
         self.assertTrue(reached)
 
     def test_a_quota_error_shows_the_request_got_past_the_checks(self):
         refused, _, reached = judge_refusal(
-            gr_error("You have exceeded your GPU quota", title="ZeroGPU quota exceeded"), True)
+            gr_error("You have exceeded your GPU quota", title="ZeroGPU quota exceeded"), True
+        )
         self.assertFalse(refused)
         self.assertTrue(reached)
 
     def test_a_worker_that_died_is_not(self):
         refused, _, _ = judge_refusal(
-            gr_error("Processing stopped unexpectedly", title="Processing failed"), True)
+            gr_error("Processing stopped unexpectedly", title="Processing failed"), True
+        )
         self.assertFalse(refused)
 
     def test_a_gr_error_carrying_only_a_type_name_is_not(self):
@@ -80,8 +86,9 @@ class JudgeRefusalTest(unittest.TestCase):
         self.assertFalse(judge_refusal(error, "seconds")[0])
 
     def test_no_answer_in_time_is_not(self):
-        refused, _, reached = judge_refusal(TimeoutError("/process did not return within 60s"),
-                                            True)
+        refused, _, reached = judge_refusal(
+            TimeoutError("/process did not return within 60s"), True
+        )
         self.assertFalse(refused)
         self.assertTrue(reached)
 
@@ -91,7 +98,6 @@ class JudgeRefusalTest(unittest.TestCase):
 
 
 class RefusalInputsTest(unittest.TestCase):
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -104,8 +110,7 @@ class RefusalInputsTest(unittest.TestCase):
             soundfile.info(str(path))
 
     def test_an_empty_audio_file_is_valid_and_holds_nothing(self):
-        path = self.assets.audio({"audio": {"content": "empty", "ext": ".flac",
-                                            "num_channels": 2}})
+        path = self.assets.audio({"audio": {"content": "empty", "ext": ".flac", "num_channels": 2}})
         info = soundfile.info(str(path))
         self.assertEqual((info.frames, info.channels), (0, 2))
 
@@ -124,16 +129,18 @@ class RefusalInputsTest(unittest.TestCase):
             check_synthesized_inputs(config, Path(self.temp.name))
 
     def test_which_kinds_a_model_is_fed(self):
-        controls = {"inputs": [
-            {"type": "audio_track", "required": True},
-            {"type": "midi_track", "required": False},
-            {"type": "generic_file", "required": True, "file_types": [".txt"]},
-            {"type": "slider"}]}
+        controls = {
+            "inputs": [
+                {"type": "audio_track", "required": True},
+                {"type": "midi_track", "required": False},
+                {"type": "generic_file", "required": True, "file_types": [".txt"]},
+                {"type": "slider"},
+            ]
+        }
         self.assertEqual(fed_kinds(controls), {"audio"})
 
 
 class GeneratedTextTest(unittest.TestCase):
-
     def test_text_of_an_exact_length(self):
         for length in (1, 150, 5001):
             with self.subTest(length=length):
@@ -141,18 +148,21 @@ class GeneratedTextTest(unittest.TestCase):
 
     def test_a_case_asks_for_it_by_length(self):
         controls = {"inputs": [{"label": "Text", "type": "text_box"}]}
-        args = apply_case(["short"], controls, {"name": "long",
-                                                "controls": {"Text": {"text_length": 5001}}},
-                          Path("."))
+        args = apply_case(
+            ["short"],
+            controls,
+            {"name": "long", "controls": {"Text": {"text_length": 5001}}},
+            Path("."),
+        )
         self.assertEqual(len(args[0]), 5001)
 
 
 class ConfigValuesTest(unittest.TestCase):
-
     def check(self, case=None, model=None, common=None):
-        config = {"common_test_cases": common or [{"name": "audio-decodes"}],
-                  "overrides": {"teamup-tech/x": dict(model or {},
-                                                      test_cases=[case] if case else [])}}
+        config = {
+            "common_test_cases": common or [{"name": "audio-decodes"}],
+            "overrides": {"teamup-tech/x": dict(model or {}, test_cases=[case] if case else [])},
+        }
         check_config_values(config)
 
     def test_a_refusal_has_no_outputs_to_check(self):
@@ -177,26 +187,29 @@ class ConfigValuesTest(unittest.TestCase):
 
 
 class MergeRefusalsTest(unittest.TestCase):
-
     def test_refusals_run_last_and_inherit_no_checks(self):
-        common = [{"name": "signal", "expect": {"*": {"min_rms_db": -80}}},
-                  {"name": "refuses", "synthesized_inputs": {"audio": {"content": "empty"}},
-                   "expect_error": True}]
+        common = [
+            {"name": "signal", "expect": {"*": {"min_rms_db": -80}}},
+            {
+                "name": "refuses",
+                "synthesized_inputs": {"audio": {"content": "empty"}},
+                "expect_error": True,
+            },
+        ]
         own = [{"name": "too-long", "expect_error": "minutes"}, {"name": "default"}]
         cases = merge_common_cases(common, own)
-        self.assertEqual([case["name"] for case in cases],
-                         ["default", "common:refuses", "too-long"])
+        self.assertEqual(
+            [case["name"] for case in cases], ["default", "common:refuses", "too-long"]
+        )
         self.assertNotIn("expect", cases[2])
         self.assertIn("expect", cases[0])
 
 
 class ReadmeTest(unittest.TestCase):
-
     CARD = {"name": "Demucs", "tags": ["category:separation", "input:audio", "output:audio"]}
 
     def test_a_readme_repeating_the_card(self):
-        readme = {"title": "Demucs", "tags": ["output:audio", "input:audio",
-                                              "category:separation"]}
+        readme = {"title": "Demucs", "tags": ["output:audio", "input:audio", "category:separation"]}
         self.assertEqual(readme_problems(readme, self.CARD), "")
 
     def test_tags_and_a_title_that_disagree(self):
@@ -211,7 +224,6 @@ class ReadmeTest(unittest.TestCase):
 
 
 class DeclaredFormatTest(unittest.TestCase):
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -219,9 +231,11 @@ class DeclaredFormatTest(unittest.TestCase):
         soundfile.write(self.path, numpy.zeros((2400, 1)) + 0.1, 24000)
 
     def check(self, tags, inputs=None):
-        controls = {"card": {"tags": tags},
-                    "inputs": inputs or [{"label": "Text", "type": "text_box"}],
-                    "outputs": [{"label": "Speech", "type": "audio_track"}]}
+        controls = {
+            "card": {"tags": tags},
+            "inputs": inputs or [{"label": "Text", "type": "text_box"}],
+            "outputs": [{"label": "Speech", "type": "audio_track"}],
+        }
         VALIDATORS["declared_format"]({"Speech": self.path}, controls, {})
 
     def test_a_declaration_matching_the_audio(self):

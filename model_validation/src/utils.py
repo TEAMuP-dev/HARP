@@ -13,34 +13,47 @@ import yaml
 
 
 __all__ = [
-    'get_token',
-    'check_token',
-    'scrub',
-    'describe_exception',
-    'run_with_timeout',
-    'load_config',
-    'config_levels',
-    'check_config_keys',
-    'check_config_values',
-    'check_model_names',
-    'qualify',
-    'qualify_keys',
-    'Exclusions',
-    'get_excluded',
-    'discover_spaces'
+    "get_token",
+    "check_token",
+    "scrub",
+    "describe_exception",
+    "run_with_timeout",
+    "load_config",
+    "config_levels",
+    "check_config_keys",
+    "check_config_values",
+    "check_model_names",
+    "qualify",
+    "qualify_keys",
+    "Exclusions",
+    "get_excluded",
+    "discover_spaces",
 ]
 
 
 # The settings each level of the configuration accepts, mirroring the
 # reference in config.yml. Anything else is a mistake and is reported
 # instead of being read by nothing at all.
-CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases",
-               "synthesized_inputs", "overrides"}
-MODEL_KEYS = {"connect_timeout", "process_timeout", "load_only",
-              "skip_common_cases", "synthesized_inputs", "test_cases",
-              "lint_exceptions"}
-CASE_KEYS = {"name", "process_timeout", "controls", "files",
-             "synthesized_inputs", "expect", "validators", "expect_error"}
+CONFIG_KEYS = {"exclude", "include_extra", "common_test_cases", "synthesized_inputs", "overrides"}
+MODEL_KEYS = {
+    "connect_timeout",
+    "process_timeout",
+    "load_only",
+    "skip_common_cases",
+    "synthesized_inputs",
+    "test_cases",
+    "lint_exceptions",
+}
+CASE_KEYS = {
+    "name",
+    "process_timeout",
+    "controls",
+    "files",
+    "synthesized_inputs",
+    "expect",
+    "validators",
+    "expect_error",
+}
 
 # The settings each kind of configuration level accepts (see config_levels)
 LEVEL_KEYS = {"config": CONFIG_KEYS, "model": MODEL_KEYS, "case": CASE_KEYS}
@@ -143,8 +156,9 @@ def get_token(required: bool) -> str:
 
     if required and not token:
         print("ERROR: HF_TOKEN environment variable is not set.", file=sys.stderr)
-        print("Set it locally (export HF_TOKEN=...) or as a GitHub Actions secret.",
-              file=sys.stderr)
+        print(
+            "Set it locally (export HF_TOKEN=...) or as a GitHub Actions secret.", file=sys.stderr
+        )
         sys.exit(2)
 
     return token
@@ -180,8 +194,10 @@ def has_write_access(info: dict, org: str) -> bool | None:
         if ((entry.get("entity") or {}).get("name")) == org:
             # Restarting a space is a repo write. Other write permissions a
             # token may carry, such as discussion.write, do not grant it
-            return any(str(perm).startswith("repo.") and str(perm).endswith("write")
-                       for perm in entry.get("permissions") or [])
+            return any(
+                str(perm).startswith("repo.") and str(perm).endswith("write")
+                for perm in entry.get("permissions") or []
+            )
 
     return None
 
@@ -212,19 +228,20 @@ def check_token(token: str, org: str, need_write: bool) -> bool:
         # The head of the chain carries the reason. What follows it is the
         # HTTP status and request id, which say nothing a reader can act on
         reason = scrub(describe_exception(exc), token).split(" | ")[0]
-        print(f"ERROR: HF_TOKEN was rejected. {' '.join(reason.split())}",
-              file=sys.stderr)
-        print("Check the token at https://huggingface.co/settings/tokens.",
-              file=sys.stderr)
+        print(f"ERROR: HF_TOKEN was rejected. {' '.join(reason.split())}", file=sys.stderr)
+        print("Check the token at https://huggingface.co/settings/tokens.", file=sys.stderr)
         return False
 
     role = ((info.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
     print(f"Token accepted for {info.get('name', 'unknown')} (role: {role})")
 
     if need_write and has_write_access(info, org) is False:
-        print(f"WARNING: this token cannot restart spaces in {org}, so a crashed "
-              f"or stopped space will be reported rather than recovered. Pass "
-              f"--no-restart-failed to skip the attempt.", file=sys.stderr)
+        print(
+            f"WARNING: this token cannot restart spaces in {org}, so a crashed "
+            f"or stopped space will be reported rather than recovered. Pass "
+            f"--no-restart-failed to skip the attempt.",
+            file=sys.stderr,
+        )
 
     return True
 
@@ -319,10 +336,13 @@ class UniqueKeyLoader(yaml.SafeLoader):
             key = self.construct_object(key_node, deep=deep)
             if key in seen:
                 raise yaml.constructor.ConstructorError(
-                    None, None,
+                    None,
+                    None,
                     f"duplicate key '{key}'. The settings under the first "
                     f"entry would be discarded, so write one entry holding "
-                    f"everything that applies", key_node.start_mark)
+                    f"everything that applies",
+                    key_node.start_mark,
+                )
             seen.add(key)
 
         return super().construct_mapping(node, deep)
@@ -367,9 +387,11 @@ def check_keys(mapping: dict | None, allowed: set, where: str) -> None:
     unknown = sorted(set(mapping or {}) - allowed)
 
     if unknown:
-        raise ValueError(f"unknown setting{'s' if len(unknown) > 1 else ''} "
-                         f"{unknown} in {where}. Valid settings: "
-                         f"{sorted(allowed)}")
+        raise ValueError(
+            f"unknown setting{'s' if len(unknown) > 1 else ''} "
+            f"{unknown} in {where}. Valid settings: "
+            f"{sorted(allowed)}"
+        )
 
 
 def config_levels(config: dict):
@@ -394,14 +416,12 @@ def config_levels(config: dict):
     yield "config.yml", "config", config
 
     for case in config.get("common_test_cases") or []:
-        yield (f"common test case '{(case or {}).get('name', 'unnamed')}'",
-               "case", case)
+        yield (f"common test case '{(case or {}).get('name', 'unnamed')}'", "case", case)
 
     for model, entry in (config.get("overrides") or {}).items():
         yield f"'{model}'", "model", entry
         for case in (entry or {}).get("test_cases") or []:
-            yield (f"'{model}' test case '{(case or {}).get('name', 'unnamed')}'",
-                   "case", case)
+            yield (f"'{model}' test case '{(case or {}).get('name', 'unnamed')}'", "case", case)
 
 
 def check_config_keys(config: dict) -> None:
@@ -447,34 +467,45 @@ def check_config_values(config: dict) -> None:
         if level == "case" and "expect_error" in mapping:
             expected = mapping["expect_error"]
             if not (expected is True or (isinstance(expected, str) and expected.strip())):
-                raise ValueError(f"expect_error in {where} must be true, or text the "
-                                 f"error message has to contain")
+                raise ValueError(
+                    f"expect_error in {where} must be true, or text the "
+                    f"error message has to contain"
+                )
             clashing = [key for key in ("expect", "validators") if mapping.get(key)]
             if clashing:
-                raise ValueError(f"{where} expects an error, so there are no outputs for "
-                                 f"its {' and '.join(clashing)} to check")
+                raise ValueError(
+                    f"{where} expects an error, so there are no outputs for "
+                    f"its {' and '.join(clashing)} to check"
+                )
 
         if level == "case":
             for label, value in (mapping.get("controls") or {}).items():
                 if isinstance(value, dict) and not (
-                        set(value) == {"text_length"}
-                        and isinstance(value["text_length"], int)
-                        and not isinstance(value["text_length"], bool)
-                        and value["text_length"] > 0):
-                    raise ValueError(f"control '{label}' in {where} is a mapping, which is "
-                                     f"read only as {{text_length: <characters>}}")
+                    set(value) == {"text_length"}
+                    and isinstance(value["text_length"], int)
+                    and not isinstance(value["text_length"], bool)
+                    and value["text_length"] > 0
+                ):
+                    raise ValueError(
+                        f"control '{label}' in {where} is a mapping, which is "
+                        f"read only as {{text_length: <characters>}}"
+                    )
 
         if level == "model":
             skipped = mapping.get("skip_common_cases", False)
             if isinstance(skipped, list):
                 unknown = sorted(set(skipped) - common)
                 if unknown:
-                    raise ValueError(f"skip_common_cases in {where} names {unknown}, which "
-                                     f"are not common test cases (available: "
-                                     f"{sorted(name for name in common if name)})")
+                    raise ValueError(
+                        f"skip_common_cases in {where} names {unknown}, which "
+                        f"are not common test cases (available: "
+                        f"{sorted(name for name in common if name)})"
+                    )
             elif not isinstance(skipped, bool):
-                raise ValueError(f"skip_common_cases in {where} must be true, or a list "
-                                 f"of the common test cases to skip")
+                raise ValueError(
+                    f"skip_common_cases in {where} must be true, or a list "
+                    f"of the common test cases to skip"
+                )
 
 
 def check_model_names(config: dict, *cli_names) -> None:
@@ -495,15 +526,18 @@ def check_model_names(config: dict, *cli_names) -> None:
         ValueError: If a name looks like a path rather than a model name.
     """
 
-    named = (list(config.get("exclude") or [])
-             + list(config.get("include_extra") or [])
-             + list(config.get("overrides") or {}))
+    named = (
+        list(config.get("exclude") or [])
+        + list(config.get("include_extra") or [])
+        + list(config.get("overrides") or {})
+    )
 
     for group in cli_names:
         named += list(group or [])
 
-    bad = sorted({str(name) for name in named
-                  if str(name).startswith("/") or str(name).count("/") > 1})
+    bad = sorted(
+        {str(name) for name in named if str(name).startswith("/") or str(name).count("/") > 1}
+    )
 
     if bad:
         subject = "model names" if len(bad) > 1 else "model name"
@@ -512,7 +546,8 @@ def check_model_names(config: dict, *cli_names) -> None:
             f"{subject} {bad} {verb}. Name a model `<name>` or "
             f"`<owner>/<name>`, such as 'teamup-tech/pitch_shifter' or "
             f"'examples/pitch_shifter'. An example is named by its directory "
-            f"alone, wherever it lives")
+            f"alone, wherever it lives"
+        )
 
 
 def qualify_keys(overrides: dict, owner: str) -> dict:
@@ -536,8 +571,9 @@ def qualify_keys(overrides: dict, owner: str) -> dict:
     for model, entry in (overrides or {}).items():
         key = qualify(model, owner)
         if key in qualified:
-            raise ValueError(f"config `overrides` names '{key}' twice (via "
-                             f"'{model}'). Remove one of the entries")
+            raise ValueError(
+                f"config `overrides` names '{key}' twice (via '{model}'). Remove one of the entries"
+            )
         qualified[key] = entry
 
     return qualified
@@ -588,9 +624,9 @@ def get_excluded(config: dict, cli_exclude: list | None, owner: str) -> Exclusio
     """
 
     return Exclusions(
-        config=frozenset(qualify(model, owner)
-                         for model in (config.get("exclude") or [])),
-        cli=frozenset(qualify(model, owner) for model in (cli_exclude or [])))
+        config=frozenset(qualify(model, owner) for model in (config.get("exclude") or [])),
+        cli=frozenset(qualify(model, owner) for model in (cli_exclude or [])),
+    )
 
 
 def discover_spaces(api, org: str, config: dict, exclusions: Exclusions) -> list:
@@ -610,7 +646,10 @@ def discover_spaces(api, org: str, config: dict, exclusions: Exclusions) -> list
     """
 
     spaces = [s.id for s in api.list_spaces(author=org)]
-    spaces += [qualify(s, org) for s in (config.get("include_extra") or [])
-               if qualify(s, org) not in spaces]
+    spaces += [
+        qualify(s, org)
+        for s in (config.get("include_extra") or [])
+        if qualify(s, org) not in spaces
+    ]
 
     return sorted(s for s in spaces if not exclusions.excludes(s))

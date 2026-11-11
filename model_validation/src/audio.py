@@ -16,12 +16,7 @@ import numpy
 import soundfile
 
 
-__all__ = [
-    'read_audio_props',
-    'supported_formats',
-    'clipped_fraction',
-    'FULL_SCALE'
-]
+__all__ = ["read_audio_props", "supported_formats", "clipped_fraction", "FULL_SCALE"]
 
 
 # The level of a sample at full scale: the largest positive value 16 bits can
@@ -92,7 +87,7 @@ def bit_depth_from_subtype(subtype: str):
     """
 
     if subtype.startswith("PCM_"):
-        tail = subtype[len("PCM_"):]
+        tail = subtype[len("PCM_") :]
         if tail in ("S8", "U8"):
             return 8
         if tail.isdigit():
@@ -133,7 +128,8 @@ def read_audio_props(label: str, path: str) -> dict:
         ext = os.path.splitext(path)[1] or "(no extension)"
         raise AssertionError(
             f"output '{label}' could not be decoded as audio (format {ext}): "
-            f"{exc}. Decodable formats: {', '.join(supported_formats())}")
+            f"{exc}. Decodable formats: {', '.join(supported_formats())}"
+        )
 
     frames = data.shape[0]
     assert frames, f"output '{label}' contains no audio frames"

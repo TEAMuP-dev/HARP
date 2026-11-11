@@ -18,18 +18,16 @@ from pathlib import Path
 from gradio_client import Client
 
 from assets import Assets
-from harness import run_endpoint_tests, close_client
+from harness import close_client, run_endpoint_tests
 from results import ModelResult
 from utils import describe_exception
 
 
-__all__ = [
-    'test_local_example'
-]
+__all__ = ["test_local_example"]
 
 
-SERVER_PROBE_INTERVAL = 2       # poll cadence while a local example boots
-SERVER_PROBE_TIMEOUT = 5        # per-probe HTTP timeout against a local example
+SERVER_PROBE_INTERVAL = 2  # poll cadence while a local example boots
+SERVER_PROBE_TIMEOUT = 5  # per-probe HTTP timeout against a local example
 PROCESS_TERMINATE_TIMEOUT = 15  # grace period before killing a local example
 
 
@@ -84,14 +82,18 @@ def read_app_traceback(log_path: Path, max_chars: int = 400) -> str:
     starts = [i for i, line in enumerate(lines) if line.startswith("Traceback")]
     if not starts:
         return ""
-    tail = [line for line in lines[starts[-1] + 1:]
-            if line.strip() and not line.startswith((" ", "\t"))]
+    tail = [
+        line
+        for line in lines[starts[-1] + 1 :]
+        if line.strip() and not line.startswith((" ", "\t"))
+    ]
 
     return tail[-1].strip()[:max_chars] if tail else ""
 
 
-def test_local_example(app_dir: Path, port: int, assets: Assets,
-                       opts: argparse.Namespace, overrides: dict) -> ModelResult:
+def test_local_example(
+    app_dir: Path, port: int, assets: Assets, opts: argparse.Namespace, overrides: dict
+) -> ModelResult:
     """
     Validate one pyharp example app by launching it locally.
 
@@ -135,15 +137,17 @@ def test_local_example(app_dir: Path, port: int, assets: Assets,
         with open(log_path, "w") as log:
             proc = subprocess.Popen(
                 [sys.executable, str((app_dir / "app.py").resolve())],
-                cwd=work_dir, env=env, stdout=log, stderr=subprocess.STDOUT)
-        wait_for_local_server(port, proc, overrides.get(
-            "connect_timeout", opts.connect_timeout))
+                cwd=work_dir,
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+        wait_for_local_server(port, proc, overrides.get("connect_timeout", opts.connect_timeout))
         client = Client(f"http://127.0.0.1:{port}", verbose=False)
         run_endpoint_tests(client, result, assets, overrides, opts)
         return result
     except Exception as exc:  # noqa: BLE001 - any failure means invalid
-        result.error = (f"{describe_exception(exc)} "
-                        f"(see examples/{work_dir.name}/{log_path.name})")
+        result.error = f"{describe_exception(exc)} (see examples/{work_dir.name}/{log_path.name})"
         if opts.verbose:
             traceback.print_exc()
         return result

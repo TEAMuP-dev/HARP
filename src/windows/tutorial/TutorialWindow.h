@@ -498,8 +498,7 @@ private:
         ToggleButton dontShowAgainToggle { "Don't show again" };
 
         Label pageIndicator;
-        HyperlinkButton learnMoreLink { "Learn more",
-                                        URL("https://harp.tools/intro.html") };
+        HyperlinkButton learnMoreLink { "Learn more", URL("https://harp.tools/intro.html") };
         Label copyrightLabel;
 
         TextButton showDetailsButton;

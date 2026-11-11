@@ -17,16 +17,13 @@ import httpx
 from gradio_client import Client
 
 from assets import Assets
-from harness import (run_endpoint_tests, close_client, is_quota_exhausted,
-                     CONNECT_RETRY_INTERVAL)
+from harness import CONNECT_RETRY_INTERVAL, close_client, is_quota_exhausted, run_endpoint_tests
 from quota import spends_zerogpu
-from results import ModelResult, FAIL, SKIP
-from utils import run_with_timeout, scrub, describe_exception
+from results import FAIL, SKIP, ModelResult
+from utils import describe_exception, run_with_timeout, scrub
 
 
-__all__ = [
-    'test_space'
-]
+__all__ = ["test_space"]
 
 
 # Stages in which a space answers requests: RUNNING serves immediately, SLEEPING
@@ -36,23 +33,19 @@ SERVABLE_STAGES = {"RUNNING", "SLEEPING"}
 # since a sleeping space only starts once something asks it to (see wake_space).
 # RUNNING_APP_STARTING is a new revision starting while the old one serves, so
 # waiting it out validates the revision just deployed
-TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING",
-                    "RUNNING_APP_STARTING"}
+TRANSIENT_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING", "RUNNING_APP_STARTING"}
 # Stages from which a restart can recover. DELETING is excluded, as there is
 # nothing left to restart
-RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR",
-                      "STOPPED", "PAUSED"}
+RESTARTABLE_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR", "STOPPED", "PAUSED"}
 
 # gradio_client renamed the Client's token argument from hf_token to token in
 # 2.0, and both spellings are in use, so ask this install which it accepts
-TOKEN_KWARG = ("token"
-               if "token" in inspect.signature(Client.__init__).parameters
-               else "hf_token")
+TOKEN_KWARG = "token" if "token" in inspect.signature(Client.__init__).parameters else "hf_token"
 
-RUNTIME_POLL_INTERVAL = 10   # cadence for polling the runtime stage of a space
-WAKE_MIN_TIMEOUT = 60        # never give a wake request less than this
-WAKE_ATTEMPTS = 3            # asks before giving up on a space that stays asleep
-CONNECT_RESERVE = 60         # budget held back from the wake, to connect with
+RUNTIME_POLL_INTERVAL = 10  # cadence for polling the runtime stage of a space
+WAKE_MIN_TIMEOUT = 60  # never give a wake request less than this
+WAKE_ATTEMPTS = 3  # asks before giving up on a space that stays asleep
+CONNECT_RESERVE = 60  # budget held back from the wake, to connect with
 
 # How much of the run log of a failed space the report carries, and for how long it
 # is read. The log is a live stream that never ends, so it is read for a fixed
@@ -62,13 +55,21 @@ LOG_LISTEN_SECONDS = 8
 
 # Shutdown noise that nearly every space logs, from asyncio closing an event
 # loop, which says nothing about why a case failed
-LOG_NOISE = ("Invalid file descriptor", "BaseEventLoop.__del__", "Exception ignored in",
-             "selectors.py", "_close_self_pipe", "_remove_reader", "_fileobj_to_fd",
-             "_fileobj_lookup", "return mapping[fileobj]", "key = self._selector")
+LOG_NOISE = (
+    "Invalid file descriptor",
+    "BaseEventLoop.__del__",
+    "Exception ignored in",
+    "selectors.py",
+    "_close_self_pipe",
+    "_remove_reader",
+    "_fileobj_to_fd",
+    "_fileobj_lookup",
+    "return mapping[fileobj]",
+    "key = self._selector",
+)
 
 
-def wait_for_runtime(api, space_id: str, deadline: float,
-                     unsettled: set = TRANSIENT_STAGES):
+def wait_for_runtime(api, space_id: str, deadline: float, unsettled: set = TRANSIENT_STAGES):
     """
     Poll the runtime of a space until its stage settles or the deadline passes.
 
@@ -146,8 +147,10 @@ def space_metadata(api, space_id: str) -> tuple:
 
     card = info.card_data
 
-    return info.host, {"tags": list(getattr(card, "tags", None) or []),
-                       "title": getattr(card, "title", None)}
+    return info.host, {
+        "tags": list(getattr(card, "tags", None) or []),
+        "title": getattr(card, "title", None),
+    }
 
 
 def wake_space(host: str, timeout: float) -> tuple:
@@ -277,15 +280,18 @@ def recent_log_lines(space_id: str, token: str) -> list:
     deadline = time.time() + LOG_LISTEN_SECONDS
 
     try:
-        with httpx.stream("GET", f"https://huggingface.co/api/spaces/{space_id}/logs/run",
-                          headers={"Authorization": f"Bearer {token}"},
-                          timeout=httpx.Timeout(LOG_LISTEN_SECONDS, read=2.0)) as response:
+        with httpx.stream(
+            "GET",
+            f"https://huggingface.co/api/spaces/{space_id}/logs/run",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=httpx.Timeout(LOG_LISTEN_SECONDS, read=2.0),
+        ) as response:
             if response.status_code != 200:
                 return []
             for raw in response.iter_lines():
                 if raw.startswith("data:"):
                     try:
-                        text = json.loads(raw[len("data:"):])["data"]
+                        text = json.loads(raw[len("data:") :])["data"]
                     except (ValueError, KeyError, TypeError):
                         text = ""
                     for line in text.splitlines():
@@ -296,14 +302,20 @@ def recent_log_lines(space_id: str, token: str) -> list:
                 if time.time() > deadline:
                     break
     except Exception:  # noqa: BLE001 - a read timeout is how the replay ends,
-        pass           # and a diagnostic must never fail the run
+        pass  # and a diagnostic must never fail the run
 
     return lines[-LOG_TAIL_LINES:]
 
 
-def test_space(space_id: str, token: str, assets: Assets,
-               opts: argparse.Namespace, overrides: dict,
-               quota_exhausted=None, zerogpu_limiter=None) -> ModelResult:
+def test_space(
+    space_id: str,
+    token: str,
+    assets: Assets,
+    opts: argparse.Namespace,
+    overrides: dict,
+    quota_exhausted=None,
+    zerogpu_limiter=None,
+) -> ModelResult:
     """
     Validate one remote Hugging Face Space end-to-end.
 
@@ -375,7 +387,9 @@ def test_space(space_id: str, token: str, assets: Assets,
                 except Exception as exc:  # noqa: BLE001 - e.g. read-only token
                     result.error = scrub(
                         f"space is not running (stage={stage}) and restart "
-                        f"failed: {describe_exception(exc)}", token)
+                        f"failed: {describe_exception(exc)}",
+                        token,
+                    )
                     return result
                 stage = follow_runtime(time.time() + connect_timeout).stage
             if stage not in SERVABLE_STAGES:
@@ -389,8 +403,7 @@ def test_space(space_id: str, token: str, assets: Assets,
         deadline = time.time() + connect_timeout
         wake_problem = ""
         if stage == "SLEEPING":
-            stage, wake_problem = start_space(api, space_id,
-                                              deadline - CONNECT_RESERVE, host)
+            stage, wake_problem = start_space(api, space_id, deadline - CONNECT_RESERVE, host)
             result.stage = stage
         if stage == "SLEEPING" and wake_problem:
             # A space stuck this way does not answer requests, so fall back to
@@ -402,7 +415,8 @@ def test_space(space_id: str, token: str, assets: Assets,
                 except Exception as exc:  # noqa: BLE001 - e.g. read-only token
                     raise RuntimeError(
                         f"space would not start: {wake_problem}, and the "
-                        f"restart failed: {describe_exception(exc)}") from None
+                        f"restart failed: {describe_exception(exc)}"
+                    ) from None
                 # Give the stage a moment to reflect the restart before
                 # following it, since it reads as SLEEPING for a beat
                 time.sleep(RUNTIME_POLL_INTERVAL)
@@ -418,9 +432,10 @@ def test_space(space_id: str, token: str, assets: Assets,
         while time.time() < deadline:
             try:
                 client = run_with_timeout(
-                    lambda: Client(space_id, verbose=False,
-                                   **{TOKEN_KWARG: token}),
-                    max(10.0, deadline - time.time()), "connect")
+                    lambda: Client(space_id, verbose=False, **{TOKEN_KWARG: token}),
+                    max(10.0, deadline - time.time()),
+                    "connect",
+                )
                 break
             except TypeError:
                 # The call itself is wrong rather than the space, so retrying
@@ -457,8 +472,11 @@ def test_space(space_id: str, token: str, assets: Assets,
         # Serialize ZeroGPU models: concurrent GPU calls each reserve their
         # declared duration, so overlapping them ties up allowance that is not
         # being used
-        limiter = zerogpu_limiter if (throttle and zerogpu_limiter is not None) \
+        limiter = (
+            zerogpu_limiter
+            if (throttle and zerogpu_limiter is not None)
             else contextlib.nullcontext()
+        )
         with limiter:
             # The allowance may have run out while waiting for a slot
             if zerogpu and quota_exhausted is not None and quota_exhausted.is_set():
@@ -470,8 +488,12 @@ def test_space(space_id: str, token: str, assets: Assets,
 
         # If a ZeroGPU model failed because the allowance is gone, trip the
         # guard so the remaining ZeroGPU models are skipped
-        if zerogpu and quota_exhausted is not None and result.status == FAIL \
-                and is_quota_exhausted(result.error):
+        if (
+            zerogpu
+            and quota_exhausted is not None
+            and result.status == FAIL
+            and is_quota_exhausted(result.error)
+        ):
             quota_exhausted.set()
 
         return result

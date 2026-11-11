@@ -19,15 +19,15 @@ from lint_base import Finding, SpaceFiles
 
 
 __all__ = [
-    'Spec',
-    'DockerBuild',
-    'url_reference_pinned',
-    'read_requirements',
-    'read_dockerfile',
-    'find_python_file',
-    'find_uv',
-    'matching_torchaudio',
-    'requirement_findings'
+    "Spec",
+    "DockerBuild",
+    "url_reference_pinned",
+    "read_requirements",
+    "read_dockerfile",
+    "find_python_file",
+    "find_uv",
+    "matching_torchaudio",
+    "requirement_findings",
 ]
 
 
@@ -54,8 +54,12 @@ DEFAULT_PYTHON = "3.13"
 
 
 # What the Gradio SDK image installs beside a Space's own requirements
-GRADIO_SDK_PACKAGES = ("gradio[oauth,mcp]=={sdk_version}", "uvicorn>=0.14.0",
-                       "websockets>=10.4", "spaces")
+GRADIO_SDK_PACKAGES = (
+    "gradio[oauth,mcp]=={sdk_version}",
+    "uvicorn>=0.14.0",
+    "websockets>=10.4",
+    "spaces",
+)
 
 
 # The platform a Space builds on, for resolving its requirements
@@ -77,13 +81,13 @@ PYHARP_REPOSITORY = "github.com/teamup-dev/pyharp"
 class Spec:
     """One requirement, as a requirements file or a pip command names it."""
 
-    text: str                        # the requirement, without comment or options
+    text: str  # the requirement, without comment or options
     line: int | None = None
     file: str = ""
-    name: str = ""                   # normalized project name, when known
-    url: str = ""                    # for a direct reference
-    exact: str = ""                  # the version of an exact pin, or empty
-    commented: bool = False          # a comment explains it, inline or above
+    name: str = ""  # normalized project name, when known
+    url: str = ""  # for a direct reference
+    exact: str = ""  # the version of an exact pin, or empty
+    commented: bool = False  # a comment explains it, inline or above
 
 
 def url_reference_pinned(url: str) -> bool:
@@ -106,16 +110,23 @@ def url_reference_pinned(url: str) -> bool:
 
     # An archive or file URL is pinned when its path names a commit or a version
     parts = [part for part in re.split(r"[/#?]", lowered) if part]
-    if any(part in BRANCH_REFS or part.startswith(tuple(f"{b}." for b in BRANCH_REFS))
-           for part in parts) or "refs/heads" in lowered:
+    if (
+        any(
+            part in BRANCH_REFS or part.startswith(tuple(f"{b}." for b in BRANCH_REFS))
+            for part in parts
+        )
+        or "refs/heads" in lowered
+    ):
         return False
 
-    return any(re.fullmatch(r"[0-9a-f]{7,40}(\.(zip|tar\.gz))?", part) for part in parts) \
-        or bool(re.search(r"\d+\.\d+", parts[-1] if parts else ""))
+    return any(re.fullmatch(r"[0-9a-f]{7,40}(\.(zip|tar\.gz))?", part) for part in parts) or bool(
+        re.search(r"\d+\.\d+", parts[-1] if parts else "")
+    )
 
 
-def parse_spec(text: str, line: int | None = None, file: str = "",
-               commented: bool = False) -> Spec | None:
+def parse_spec(
+    text: str, line: int | None = None, file: str = "", commented: bool = False
+) -> Spec | None:
     """
     Parse one requirement into a Spec.
 
@@ -136,8 +147,11 @@ def parse_spec(text: str, line: int | None = None, file: str = "",
     if re.match(r"^(git\+)?[a-z]+://", text, re.IGNORECASE):
         spec.url = text
         stem = text.split("://", 1)[1].split("@")[0].rstrip("/").split("/")[-1]
-        spec.name = canonicalize_name(stem.removesuffix(".git").split("#")[0]) \
-            if stem and "." not in stem.removesuffix(".git") else ""
+        spec.name = (
+            canonicalize_name(stem.removesuffix(".git").split("#")[0])
+            if stem and "." not in stem.removesuffix(".git")
+            else ""
+        )
         if "egg=" in text:
             spec.name = canonicalize_name(text.split("egg=")[1].split("&")[0])
         return spec
@@ -150,8 +164,11 @@ def parse_spec(text: str, line: int | None = None, file: str = "",
     spec.name = canonicalize_name(parsed.name)
     spec.url = parsed.url or ""
     specifiers = list(parsed.specifier)
-    if len(specifiers) == 1 and specifiers[0].operator in ("==", "===") \
-            and "*" not in specifiers[0].version:
+    if (
+        len(specifiers) == 1
+        and specifiers[0].operator in ("==", "===")
+        and "*" not in specifiers[0].version
+    ):
         spec.exact = specifiers[0].version
 
     return spec
@@ -202,27 +219,53 @@ def read_requirements(text: str, file: str) -> list:
 
 # Options of `pip install` that take a value, so that the value is not read as
 # a package
-PIP_VALUE_OPTIONS = {"-r", "--requirement", "-c", "--constraint", "-i", "--index-url",
-                     "--extra-index-url", "-f", "--find-links", "-t", "--target",
-                     "--prefix", "--root", "--trusted-host", "--platform",
-                     "--python-version", "--implementation", "--abi", "--cache-dir",
-                     "--src", "--upgrade-strategy", "-C", "--config-settings",
-                     "--global-option", "--no-binary", "--only-binary", "-e",
-                     "--editable", "--progress-bar", "--log", "--report"}
+PIP_VALUE_OPTIONS = {
+    "-r",
+    "--requirement",
+    "-c",
+    "--constraint",
+    "-i",
+    "--index-url",
+    "--extra-index-url",
+    "-f",
+    "--find-links",
+    "-t",
+    "--target",
+    "--prefix",
+    "--root",
+    "--trusted-host",
+    "--platform",
+    "--python-version",
+    "--implementation",
+    "--abi",
+    "--cache-dir",
+    "--src",
+    "--upgrade-strategy",
+    "-C",
+    "--config-settings",
+    "--global-option",
+    "--no-binary",
+    "--only-binary",
+    "-e",
+    "--editable",
+    "--progress-bar",
+    "--log",
+    "--report",
+}
 
 
 @dataclasses.dataclass
 class DockerBuild:
     """What a Dockerfile installs, and on which Python."""
 
-    python: str = ""                 # the X.Y of a python:X.Y base image
+    python: str = ""  # the X.Y of a python:X.Y base image
     specs: list = dataclasses.field(default_factory=list)
-                                     # Spec per package a `pip install` names
+    # Spec per package a `pip install` names
     requirement_files: list = dataclasses.field(default_factory=list)
-                                     # files installed with `pip install -r`
+    # files installed with `pip install -r`
     base_requirement_files: list = dataclasses.field(default_factory=list)
-                                     # those installed by the pip of the base image
-    command: str = ""                # what the CMD or ENTRYPOINT runs
+    # those installed by the pip of the base image
+    command: str = ""  # what the CMD or ENTRYPOINT runs
 
 
 def pip_arguments(tokens: list) -> tuple:
@@ -244,12 +287,18 @@ def pip_arguments(tokens: list) -> tuple:
     while tokens and re.match(r"^\w+=", tokens[0]):
         tokens = tokens[1:]
 
-    if len(tokens) >= 2 and re.fullmatch(r"(.*/)?pip(\d(\.\d+)?)?", tokens[0]) \
-            and tokens[1] == "install":
+    if (
+        len(tokens) >= 2
+        and re.fullmatch(r"(.*/)?pip(\d(\.\d+)?)?", tokens[0])
+        and tokens[1] == "install"
+    ):
         return tokens[2:], "/" not in tokens[0] and "$" not in tokens[0]
 
-    if len(tokens) >= 4 and re.fullmatch(r"(.*/)?python(\d(\.\d+)?)?", tokens[0]) \
-            and tokens[1:4] == ["-m", "pip", "install"]:
+    if (
+        len(tokens) >= 4
+        and re.fullmatch(r"(.*/)?python(\d(\.\d+)?)?", tokens[0])
+        and tokens[1:4] == ["-m", "pip", "install"]
+    ):
         return tokens[4:], tokens[0] in ("python", "python3")
 
     return None, False
@@ -284,7 +333,7 @@ def read_dockerfile(text: str) -> DockerBuild:
         if keyword != "RUN":
             continue
 
-        for command in re.split(r"&&|\|\||;", stripped[len("RUN"):]):
+        for command in re.split(r"&&|\|\||;", stripped[len("RUN") :]):
             try:
                 tokens = shlex.split(command)
             except ValueError:
@@ -346,6 +395,7 @@ def find_uv() -> str | None:
 
     try:
         from uv import find_uv_bin
+
         return find_uv_bin()
     except Exception:  # noqa: BLE001 - not installed
         return None
@@ -372,18 +422,34 @@ def resolve(lines: list, python: str, uv: str) -> tuple:
         path.write_text("\n".join(lines) + "\n")
         try:
             completed = subprocess.run(
-                [uv, "pip", "compile", str(path), "--python-version", python,
-                 "--python-platform", RESOLVE_PLATFORM, "--no-header", "--no-annotate",
-                 "--quiet", "--index-strategy", "unsafe-best-match"],
-                capture_output=True, text=True, timeout=RESOLVE_TIMEOUT)
+                [
+                    uv,
+                    "pip",
+                    "compile",
+                    str(path),
+                    "--python-version",
+                    python,
+                    "--python-platform",
+                    RESOLVE_PLATFORM,
+                    "--no-header",
+                    "--no-annotate",
+                    "--quiet",
+                    "--index-strategy",
+                    "unsafe-best-match",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=RESOLVE_TIMEOUT,
+            )
         except subprocess.TimeoutExpired:
             return None, f"resolution did not finish within {RESOLVE_TIMEOUT}s"
 
     if completed.returncode:
         # uv explains a failure over wrapped lines, then offers a hint, which
         # suggests flags rather than saying what is wrong
-        explanation = " ".join(line.strip() for line in
-                               completed.stderr.split("hint:")[0].splitlines())
+        explanation = " ".join(
+            line.strip() for line in completed.stderr.split("hint:")[0].splitlines()
+        )
         explanation = re.sub(r"\s+", " ", re.sub(r"\b(error|cause):\s*", "", explanation))
         return None, explanation.strip() or f"uv exited with {completed.returncode}"
 
@@ -431,12 +497,16 @@ def matching_torchaudio(torch: str, torchaudio: str) -> str:
     if audio_minor == LAST_TORCHAUDIO and torch_minor >= LAST_TORCHAUDIO:
         return ""
 
-    return torch if torch_minor < LAST_TORCHAUDIO else \
-        ".".join(str(part) for part in LAST_TORCHAUDIO) + ".0"
+    return (
+        torch
+        if torch_minor < LAST_TORCHAUDIO
+        else ".".join(str(part) for part in LAST_TORCHAUDIO) + ".0"
+    )
 
 
-def requirement_findings(space: SpaceFiles, specs: list, imports_spaces: bool,
-                         uv: str | None) -> list:
+def requirement_findings(
+    space: SpaceFiles, specs: list, imports_spaces: bool, uv: str | None
+) -> list:
     """
     Check what a Space installs.
 
@@ -458,64 +528,103 @@ def requirement_findings(space: SpaceFiles, specs: list, imports_spaces: bool,
         by_name.setdefault(spec.name, spec)
 
     # --- pyharp, at a release --------------------------------------------------
-    pyharp = [spec for spec in specs
-              if spec.name == "pyharp" or "/pyharp" in spec.url.lower()]
+    pyharp = [spec for spec in specs if spec.name == "pyharp" or "/pyharp" in spec.url.lower()]
     if not pyharp:
         findings.append(Finding("pyharp-pin", "pyharp is not installed"))
     for spec in pyharp:
         if PYHARP_REPOSITORY not in spec.url.lower().replace("www.", ""):
-            findings.append(Finding("pyharp-pin", f"pyharp comes from {spec.text} rather "
-                                                  f"than the TEAMuP-dev repository",
-                                    spec.line, spec.file))
+            findings.append(
+                Finding(
+                    "pyharp-pin",
+                    f"pyharp comes from {spec.text} rather than the TEAMuP-dev repository",
+                    spec.line,
+                    spec.file,
+                )
+            )
         elif not url_reference_pinned(spec.url):
-            findings.append(Finding("pyharp-pin", f"{spec.text} names a branch or no "
-                                                  f"reference, so a rebuild can install a "
-                                                  f"different pyharp", spec.line, spec.file))
+            findings.append(
+                Finding(
+                    "pyharp-pin",
+                    f"{spec.text} names a branch or no "
+                    f"reference, so a rebuild can install a "
+                    f"different pyharp",
+                    spec.line,
+                    spec.file,
+                )
+            )
 
     # --- Gradio from sdk_version, spaces beside it ----------------------------
     if gradio_sdk and "gradio" in by_name:
         spec = by_name["gradio"]
-        findings.append(Finding("gradio-listed", "gradio is listed, though sdk_version in "
-                                                 "the README is what pins it",
-                                spec.line, spec.file))
+        findings.append(
+            Finding(
+                "gradio-listed",
+                "gradio is listed, though sdk_version in the README is what pins it",
+                spec.line,
+                spec.file,
+            )
+        )
 
     if imports_spaces and "spaces" not in by_name:
-        findings.append(Finding("spaces-listed", "the app imports spaces, which nothing "
-                                                 "installs"))
+        findings.append(Finding("spaces-listed", "the app imports spaces, which nothing installs"))
 
     if "spaces" in by_name and by_name["spaces"].exact:
         spec = by_name["spaces"]
-        findings.append(Finding("spaces-exact", f"{spec.text} is an exact pin. Give spaces a "
-                                                f"lower bound, since it talks to a ZeroGPU "
-                                                f"service that changes with the platform",
-                                spec.line, spec.file))
+        findings.append(
+            Finding(
+                "spaces-exact",
+                f"{spec.text} is an exact pin. Give spaces a "
+                f"lower bound, since it talks to a ZeroGPU "
+                f"service that changes with the platform",
+                spec.line,
+                spec.file,
+            )
+        )
 
     # --- torch for ZeroGPU, and torchaudio beside it --------------------------
     torch = by_name.get("torch")
-    if space.zerogpu and torch is not None and torch.exact \
-            and torch.exact not in ZEROGPU_TORCH:
+    if space.zerogpu and torch is not None and torch.exact and torch.exact not in ZEROGPU_TORCH:
         accepted = ", ".join(sorted(ZEROGPU_TORCH, key=version_tuple))
-        findings.append(Finding("zerogpu-torch", f"torch=={torch.exact} is not a release "
-                                                 f"ZeroGPU accepts ({accepted})",
-                                torch.line, torch.file))
+        findings.append(
+            Finding(
+                "zerogpu-torch",
+                f"torch=={torch.exact} is not a release ZeroGPU accepts ({accepted})",
+                torch.line,
+                torch.file,
+            )
+        )
 
     # --- direct references, at a commit or release ----------------------------
     for spec in specs:
-        if spec.url and spec not in pyharp and not spec.commented \
-                and not url_reference_pinned(spec.url):
-            findings.append(Finding("url-unpinned", f"{spec.text} names a branch or no "
-                                                    f"reference, and no comment says why",
-                                    spec.line, spec.file))
+        if (
+            spec.url
+            and spec not in pyharp
+            and not spec.commented
+            and not url_reference_pinned(spec.url)
+        ):
+            findings.append(
+                Finding(
+                    "url-unpinned",
+                    f"{spec.text} names a branch or no reference, and no comment says why",
+                    spec.line,
+                    spec.file,
+                )
+            )
 
     # spaces takes a lower bound, and the build tools a Dockerfile upgrades
     # before installing are not what the app runs on
-    unpinned = [spec.text for spec in specs
-                if not spec.exact and not spec.url and not spec.commented
-                and spec.name not in ("spaces", "pyharp", "gradio", "pip", "setuptools",
-                                      "wheel")]
+    unpinned = [
+        spec.text
+        for spec in specs
+        if not spec.exact
+        and not spec.url
+        and not spec.commented
+        and spec.name not in ("spaces", "pyharp", "gradio", "pip", "setuptools", "wheel")
+    ]
     if unpinned:
-        findings.append(Finding("unpinned", "not pinned to one version: " +
-                                ", ".join(dict.fromkeys(unpinned))))
+        findings.append(
+            Finding("unpinned", "not pinned to one version: " + ", ".join(dict.fromkeys(unpinned)))
+        )
 
     # --- the requirements resolve ---------------------------------------------
     resolved = None
@@ -525,8 +634,12 @@ def requirement_findings(space: SpaceFiles, specs: list, imports_spaces: bool,
         if python:
             resolved, problem = resolve(lines, python, uv)
             if resolved is None:
-                findings.append(Finding("resolves", f"the requirements do not resolve for "
-                                                    f"Python {python}: {problem}"))
+                findings.append(
+                    Finding(
+                        "resolves",
+                        f"the requirements do not resolve for Python {python}: {problem}",
+                    )
+                )
 
     # pyharp installs torchaudio through descript-audiotools, so every
     # environment with pyharp has one, and an unpinned one resolves to the
@@ -535,24 +648,31 @@ def requirement_findings(space: SpaceFiles, specs: list, imports_spaces: bool,
     pyharp_files = {spec.file for spec in pyharp}
     if resolved and "torch" in resolved and "torchaudio" in resolved:
         installed_torch, installed_audio = resolved["torch"], resolved["torchaudio"]
-    elif resolved is None and torch is not None and torch.exact \
-            and torch.file in pyharp_files:
+    elif resolved is None and torch is not None and torch.exact and torch.file in pyharp_files:
         audio = by_name.get("torchaudio")
         installed_torch = torch.exact
-        installed_audio = audio.exact if audio is not None and audio.exact else \
-            ".".join(str(part) for part in LAST_TORCHAUDIO) + ".0"
+        installed_audio = (
+            audio.exact
+            if audio is not None and audio.exact
+            else ".".join(str(part) for part in LAST_TORCHAUDIO) + ".0"
+        )
     else:
         installed_torch = installed_audio = ""
 
     wanted = matching_torchaudio(installed_torch, installed_audio) if installed_torch else ""
     if wanted:
-        findings.append(Finding("torchaudio-match",
-                                f"torch {installed_torch} is installed beside torchaudio "
-                                f"{installed_audio}, which does not load with it. Pin "
-                                f"torchaudio=={wanted}, since pyharp installs it through "
-                                f"descript-audiotools and an unpinned one resolves to the "
-                                f"newest release", getattr(torch, "line", None),
-                                getattr(torch, "file", "")))
+        findings.append(
+            Finding(
+                "torchaudio-match",
+                f"torch {installed_torch} is installed beside torchaudio "
+                f"{installed_audio}, which does not load with it. Pin "
+                f"torchaudio=={wanted}, since pyharp installs it through "
+                f"descript-audiotools and an unpinned one resolves to the "
+                f"newest release",
+                getattr(torch, "line", None),
+                getattr(torch, "file", ""),
+            )
+        )
 
     return findings
 
@@ -616,7 +736,8 @@ def resolution_lines(space: SpaceFiles) -> list | None:
             return None
         return [line for name in installed for line in file_lines(name)]
 
-    sdk = [package.format(sdk_version=space.sdk_version or "6.24.0")
-           for package in GRADIO_SDK_PACKAGES]
+    sdk = [
+        package.format(sdk_version=space.sdk_version or "6.24.0") for package in GRADIO_SDK_PACKAGES
+    ]
 
     return file_lines("pre-requirements.txt") + file_lines("requirements.txt") + sdk

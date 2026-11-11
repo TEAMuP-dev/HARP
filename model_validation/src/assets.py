@@ -26,33 +26,33 @@ from utils import config_levels
 
 
 __all__ = [
-    'Assets',
-    'AUDIO_DEFAULTS',
-    'MIDI_DEFAULTS',
-    'SYNTHESIZED_DEFAULTS',
-    'merge_specs',
-    'check_synthesized_inputs',
-    'input_kind'
+    "Assets",
+    "AUDIO_DEFAULTS",
+    "MIDI_DEFAULTS",
+    "SYNTHESIZED_DEFAULTS",
+    "merge_specs",
+    "check_synthesized_inputs",
+    "input_kind",
 ]
 
 
 # Configurable properties of synthesized inputs, with their default values
 AUDIO_DEFAULTS = {
-    "sample_rate": 44100,   # Hz
-    "num_channels": 1,      # 1 = mono, 2 = stereo, ...
-    "duration": 2.0,        # seconds
-    "ext": ".wav",          # container/format to write
-    "source": None,         # recording to build the clip from, or a sine sweep
-    "content": None,        # an input to refuse instead (see CONTENTS)
+    "sample_rate": 44100,  # Hz
+    "num_channels": 1,  # 1 = mono, 2 = stereo, ...
+    "duration": 2.0,  # seconds
+    "ext": ".wav",  # container/format to write
+    "source": None,  # recording to build the clip from, or a sine sweep
+    "content": None,  # an input to refuse instead (see CONTENTS)
 }
 MIDI_DEFAULTS = {
-    "num_notes": 2,         # ascending notes from middle C
-    "note_duration": 0.5,   # seconds per note (at the default 120 BPM)
-    "instrument": 0,        # General MIDI program number (0 = grand piano)
-    "channel": 0,           # MIDI channel (see MIDI_DRUM_CHANNEL)
+    "num_notes": 2,  # ascending notes from middle C
+    "note_duration": 0.5,  # seconds per note (at the default 120 BPM)
+    "instrument": 0,  # General MIDI program number (0 = grand piano)
+    "channel": 0,  # MIDI channel (see MIDI_DRUM_CHANNEL)
     "ext": ".mid",
-    "source": None,         # MIDI file to pass as it is, or synthesized notes
-    "content": None,        # an input to refuse instead (see CONTENTS)
+    "source": None,  # MIDI file to pass as it is, or synthesized notes
+    "content": None,  # an input to refuse instead (see CONTENTS)
 }
 
 # The inputs a model should refuse, which `content` selects in place of a real
@@ -62,8 +62,9 @@ MIDI_DEFAULTS = {
 CONTENTS = ("unreadable", "empty")
 
 # What an unreadable input holds instead of audio or MIDI
-UNREADABLE_BYTES = (b"This file is not audio or MIDI. HARP model validation sends "
-                    b"it to check that it is refused.\n") * 16
+UNREADABLE_BYTES = (
+    b"This file is not audio or MIDI. HARP model validation sends it to check that it is refused.\n"
+) * 16
 
 # Channels are numbered 0 to 15 throughout validation, as they are on the
 # wire and in mido, rather than the 1 to 16 a DAW displays. The two namings
@@ -78,8 +79,7 @@ MIDI_DRUM_CHANNEL = 9
 # for a limited range, so an out-of-range value corrupts the stream rather
 # than failing on the way out, which is why they are checked as configuration.
 MIDI_RANGES = {
-    "instrument": (0, 127, "a General MIDI program number (0 is a grand "
-                           "piano, 24 a nylon guitar)"),
+    "instrument": (0, 127, "a General MIDI program number (0 is a grand piano, 24 a nylon guitar)"),
     "channel": (0, 15, "a MIDI channel counted from 0"),
 }
 
@@ -91,8 +91,21 @@ SYNTHESIZED_DEFAULTS = {"audio": AUDIO_DEFAULTS, "midi": MIDI_DEFAULTS}
 # Extensions understood as audio. A component accepting one of these gets a
 # synthesized clip in that format (written via soundfile, so only formats this
 # libsndfile build supports can be produced).
-AUDIO_EXTS = {".wav", ".flac", ".ogg", ".oga", ".opus", ".aiff", ".aif",
-              ".aifc", ".au", ".snd", ".w64", ".caf", ".mp3"}
+AUDIO_EXTS = {
+    ".wav",
+    ".flac",
+    ".ogg",
+    ".oga",
+    ".opus",
+    ".aiff",
+    ".aif",
+    ".aifc",
+    ".au",
+    ".snd",
+    ".w64",
+    ".caf",
+    ".mp3",
+}
 
 MIDI_EXTS = {".mid", ".midi"}
 
@@ -157,8 +170,7 @@ def can_write_audio(ext: str) -> bool:
     with tempfile.TemporaryDirectory() as probe_dir:
         try:
             probe = Path(probe_dir) / f"probe{ext}"
-            soundfile.write(str(probe), numpy.zeros((1, 1)), 44100,
-                            format=audio_format(probe))
+            soundfile.write(str(probe), numpy.zeros((1, 1)), 44100, format=audio_format(probe))
         except Exception:  # noqa: BLE001 - the format is not writable here
             return False
 
@@ -181,8 +193,11 @@ def synthesized_input_blocks(config: dict) -> list:
             for reporting.
     """
 
-    return [(where, block) for where, _, mapping in config_levels(config)
-            if (block := (mapping or {}).get("synthesized_inputs"))]
+    return [
+        (where, block)
+        for where, _, mapping in config_levels(config)
+        if (block := (mapping or {}).get("synthesized_inputs"))
+    ]
 
 
 def check_midi_number(prop: str, value, where: str) -> None:
@@ -202,11 +217,11 @@ def check_midi_number(prop: str, value, where: str) -> None:
 
     # bool is a subclass of int, so `channel: true` would otherwise pass as
     # channel 1 rather than being reported as the mistake it is
-    if isinstance(value, bool) or not isinstance(value, int) \
-            or not low <= value <= high:
+    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
         raise ValueError(
             f"synthesized_inputs midi {prop} {value!r} (set in {where}) is "
-            f"not {description}. Give a whole number from {low} to {high}")
+            f"not {description}. Give a whole number from {low} to {high}"
+        )
 
 
 def check_source(kind: str, source, where: str, base_dir: Path) -> None:
@@ -226,20 +241,24 @@ def check_source(kind: str, source, where: str, base_dir: Path) -> None:
     path = (base_dir / str(source)).resolve()
 
     if not path.is_file():
-        raise ValueError(f"synthesized_inputs {kind} source '{source}' (set in "
-                         f"{where}) is not a file. Give a path relative to "
-                         f"config.yml")
+        raise ValueError(
+            f"synthesized_inputs {kind} source '{source}' (set in "
+            f"{where}) is not a file. Give a path relative to "
+            f"config.yml"
+        )
 
     if kind == "midi" and path.suffix.lower() not in MIDI_EXTS:
-        raise ValueError(f"synthesized_inputs midi source '{source}' (set in "
-                         f"{where}) is not a MIDI file")
+        raise ValueError(
+            f"synthesized_inputs midi source '{source}' (set in {where}) is not a MIDI file"
+        )
 
     if kind == "audio":
         try:
             soundfile.info(str(path))
         except Exception as exc:  # noqa: BLE001 - any read failure is fatal
-            raise ValueError(f"synthesized_inputs audio source '{source}' (set "
-                             f"in {where}) cannot be read: {exc}") from exc
+            raise ValueError(
+                f"synthesized_inputs audio source '{source}' (set in {where}) cannot be read: {exc}"
+            ) from exc
 
 
 def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
@@ -272,7 +291,8 @@ def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
                 raise ValueError(
                     f"unknown synthesized_inputs kind '{kind}' (set in "
                     f"{where}). Only {' and '.join(SYNTHESIZED_DEFAULTS)} "
-                    f"inputs are generated from properties")
+                    f"inputs are generated from properties"
+                )
 
             unknown = sorted(set(props or {}) - set(SYNTHESIZED_DEFAULTS[kind]))
             if unknown:
@@ -280,7 +300,8 @@ def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
                     f"unknown synthesized_inputs {kind} propert"
                     f"{'ies' if len(unknown) > 1 else 'y'} {unknown} (set in "
                     f"{where}). Valid properties: "
-                    f"{sorted(SYNTHESIZED_DEFAULTS[kind])}")
+                    f"{sorted(SYNTHESIZED_DEFAULTS[kind])}"
+                )
 
             if kind == "audio" and (props or {}).get("ext"):
                 exts.setdefault(str(props["ext"]), where)
@@ -292,21 +313,25 @@ def check_synthesized_inputs(config: dict, base_dir: Path) -> None:
 
             content = (props or {}).get("content")
             if content is not None and content not in CONTENTS:
-                raise ValueError(f"synthesized_inputs {kind} content {content!r} (set in "
-                                 f"{where}) is not one of {list(CONTENTS)}")
+                raise ValueError(
+                    f"synthesized_inputs {kind} content {content!r} (set in "
+                    f"{where}) is not one of {list(CONTENTS)}"
+                )
 
             if (props or {}).get("source"):
                 check_source(kind, props["source"], where, base_dir)
 
-    unwritable = {ext: where for ext, where in exts.items()
-                  if not can_write_audio(ext)}
+    unwritable = {ext: where for ext, where in exts.items() if not can_write_audio(ext)}
 
     if unwritable:
-        settings = ", ".join(f"'{ext}' (set in {where})"
-                             for ext, where in sorted(unwritable.items()))
-        raise ValueError(f"cannot write synthesized audio as {settings}. "
-                         f"This installation writes: "
-                         f"{', '.join(sorted(soundfile.available_formats()))}")
+        settings = ", ".join(
+            f"'{ext}' (set in {where})" for ext, where in sorted(unwritable.items())
+        )
+        raise ValueError(
+            f"cannot write synthesized audio as {settings}. "
+            f"This installation writes: "
+            f"{', '.join(sorted(soundfile.available_formats()))}"
+        )
 
 
 class Assets:
@@ -327,8 +352,7 @@ class Assets:
             a `source` path is resolved. The working directory if None.
     """
 
-    def __init__(self, workdir: Path, defaults: dict | None = None,
-                 base_dir: Path | None = None):
+    def __init__(self, workdir: Path, defaults: dict | None = None, base_dir: Path | None = None):
         self.workdir = workdir
         self.defaults = defaults or {}
         self.base_dir = base_dir or Path.cwd()
@@ -340,15 +364,18 @@ class Assets:
     def text(self) -> Path:
         """Placeholder file for a generic file input accepting .txt."""
 
-        return self.cached(("text",), lambda: write_bytes(
-            self.workdir / "test_input.txt", b"HARP model validation\n"))
+        return self.cached(
+            ("text",),
+            lambda: write_bytes(self.workdir / "test_input.txt", b"HARP model validation\n"),
+        )
 
     @property
     def json(self) -> Path:
         """Placeholder file for a generic file input accepting .json."""
 
-        return self.cached(("json",), lambda: write_bytes(
-            self.workdir / "test_input.json", b"{}\n"))
+        return self.cached(
+            ("json",), lambda: write_bytes(self.workdir / "test_input.json", b"{}\n")
+        )
 
     def cached(self, key: tuple, generate) -> Path | None:
         """
@@ -437,32 +464,36 @@ class Assets:
 
         if props["content"] == "unreadable":
             path = self.workdir / f"test_input_unreadable{ext}"
-            return self.cached(("audio", "unreadable", ext),
-                               lambda: write_bytes(path, UNREADABLE_BYTES))
+            return self.cached(
+                ("audio", "unreadable", ext), lambda: write_bytes(path, UNREADABLE_BYTES)
+            )
 
         # Written as WAV whatever the configured format, since a FLAC file of
         # no frames cannot even be opened, which would make it unreadable
         # rather than empty
         if props["content"] == "empty":
             path = self.workdir / f"test_input_empty_{sample_rate}hz_{num_channels}ch.wav"
-            return self.cached(("audio", "empty", sample_rate, num_channels),
-                               lambda: write_audio(path, 0, sample_rate, num_channels))
+            return self.cached(
+                ("audio", "empty", sample_rate, num_channels),
+                lambda: write_audio(path, 0, sample_rate, num_channels),
+            )
 
         if props["source"]:
             source = (self.base_dir / str(props["source"])).resolve()
-            path = (self.workdir / f"{source.stem}_{sample_rate}hz"
-                                   f"_{num_channels}ch_{duration:g}s{ext}")
+            path = (
+                self.workdir / f"{source.stem}_{sample_rate}hz_{num_channels}ch_{duration:g}s{ext}"
+            )
             return self.cached(
                 ("audio", str(source), sample_rate, num_channels, duration, ext),
-                lambda: write_audio_from(path, source, duration, sample_rate,
-                                         num_channels))
+                lambda: write_audio_from(path, source, duration, sample_rate, num_channels),
+            )
 
-        path = (self.workdir / f"test_input_{sample_rate}hz_{num_channels}ch"
-                               f"_{duration:g}s{ext}")
+        path = self.workdir / f"test_input_{sample_rate}hz_{num_channels}ch_{duration:g}s{ext}"
 
-        return self.cached(("audio", sample_rate, num_channels, duration, ext),
-                           lambda: write_audio(path, duration, sample_rate,
-                                               num_channels))
+        return self.cached(
+            ("audio", sample_rate, num_channels, duration, ext),
+            lambda: write_audio(path, duration, sample_rate, num_channels),
+        )
 
     def midi(self, overrides: dict | None = None, ext: str | None = None) -> Path:
         """
@@ -481,8 +512,9 @@ class Assets:
 
         if props["content"] == "unreadable":
             path = self.workdir / f"test_input_unreadable{ext}"
-            return self.cached(("midi", "unreadable", ext),
-                               lambda: write_bytes(path, UNREADABLE_BYTES))
+            return self.cached(
+                ("midi", "unreadable", ext), lambda: write_bytes(path, UNREADABLE_BYTES)
+            )
 
         if props["content"] == "empty":
             path = self.workdir / f"test_input_empty{ext}"
@@ -493,25 +525,26 @@ class Assets:
         if props["source"]:
             source = (self.base_dir / str(props["source"])).resolve()
             path = self.workdir / f"{source.stem}{ext}"
-            return self.cached(("midi", str(source), ext),
-                               lambda: write_bytes(path, source.read_bytes()))
+            return self.cached(
+                ("midi", str(source), ext), lambda: write_bytes(path, source.read_bytes())
+            )
 
         num_notes = int(props["num_notes"])
         note_duration = float(props["note_duration"])
         instrument = int(props["instrument"])
         channel = int(props["channel"])
 
-        path = (self.workdir /
-                f"test_input_{num_notes}n_{note_duration:g}s"
-                f"_inst{instrument}_ch{channel}{ext}")
+        path = (
+            self.workdir / f"test_input_{num_notes}n_{note_duration:g}s"
+            f"_inst{instrument}_ch{channel}{ext}"
+        )
 
         return self.cached(
             ("midi", num_notes, note_duration, instrument, channel, ext),
-            lambda: write_midi(path, num_notes, note_duration, instrument,
-                               channel))
+            lambda: write_midi(path, num_notes, note_duration, instrument, channel),
+        )
 
-    def for_file_types(self, file_types: list,
-                       overrides: dict | None = None) -> Path | None:
+    def for_file_types(self, file_types: list, overrides: dict | None = None) -> Path | None:
         """
         Pick a synthesized file whose format matches the accepted types.
 
@@ -542,8 +575,9 @@ class Assets:
         accepted_audio = types & AUDIO_EXTS
         if accepted_audio:
             preferred = self.resolve("audio", overrides)["ext"].lower()
-            order = ([preferred] if preferred in accepted_audio else []) + \
-                sorted(accepted_audio - {preferred})
+            order = ([preferred] if preferred in accepted_audio else []) + sorted(
+                accepted_audio - {preferred}
+            )
             for candidate in order:
                 clip = self.audio(overrides, ext=candidate)
                 if clip is not None:
@@ -552,9 +586,9 @@ class Assets:
         accepted_midi = types & MIDI_EXTS
         if accepted_midi:
             preferred = self.resolve("midi", overrides)["ext"].lower()
-            return self.midi(overrides,
-                             ext=preferred if preferred in accepted_midi
-                             else sorted(accepted_midi)[0])
+            return self.midi(
+                overrides, ext=preferred if preferred in accepted_midi else sorted(accepted_midi)[0]
+            )
 
         if ".json" in types:
             return self.json
@@ -583,8 +617,9 @@ def input_kind(spec: dict) -> str | None:
     ctype = spec.get("type")
     types = {str(t).lower() for t in (spec.get("file_types") or [])}
 
-    if ctype == "audio_track" or (ctype == "generic_file" and
-                                  (not types or "audio" in types or types & AUDIO_EXTS)):
+    if ctype == "audio_track" or (
+        ctype == "generic_file" and (not types or "audio" in types or types & AUDIO_EXTS)
+    ):
         return "audio"
     if ctype == "midi_track" or (ctype == "generic_file" and types & MIDI_EXTS):
         return "midi"
@@ -609,8 +644,7 @@ def write_bytes(path: Path, data: bytes) -> Path:
     return path
 
 
-def write_audio(path: Path, duration: float, sample_rate: int,
-                num_channels: int) -> Path:
+def write_audio(path: Path, duration: float, sample_rate: int, num_channels: int) -> Path:
     """
     Write a sine sweep, which is a valid input for any audio model.
 
@@ -626,8 +660,9 @@ def write_audio(path: Path, duration: float, sample_rate: int,
     """
 
     if duration <= 0:
-        soundfile.write(str(path), numpy.zeros((0, num_channels)), sample_rate,
-                        format=audio_format(path))
+        soundfile.write(
+            str(path), numpy.zeros((0, num_channels)), sample_rate, format=audio_format(path)
+        )
         return path
 
     n = max(1, int(duration * sample_rate))
@@ -635,14 +670,19 @@ def write_audio(path: Path, duration: float, sample_rate: int,
     # Sweep from 220 Hz up one octave over the clip
     freq = 220.0 + 220.0 * numpy.arange(n) / n
     mono = 0.5 * numpy.sin(2 * numpy.pi * freq * t)
-    soundfile.write(str(path), numpy.tile(mono[:, None], (1, num_channels)),
-                    sample_rate, format=audio_format(path))
+    soundfile.write(
+        str(path),
+        numpy.tile(mono[:, None], (1, num_channels)),
+        sample_rate,
+        format=audio_format(path),
+    )
 
     return path
 
 
-def write_audio_from(path: Path, source: Path, duration: float,
-                     sample_rate: int, num_channels: int) -> Path:
+def write_audio_from(
+    path: Path, source: Path, duration: float, sample_rate: int, num_channels: int
+) -> Path:
     """
     Write a clip of a recording with the requested properties.
 
@@ -672,11 +712,14 @@ def write_audio_from(path: Path, source: Path, duration: float,
             data = numpy.tile(data.mean(axis=1, keepdims=True), (1, num_channels))
 
     if rate != sample_rate:
-        positions = numpy.arange(int(round(len(data) * sample_rate / rate))) \
-            * (rate / sample_rate)
-        data = numpy.stack([numpy.interp(positions, numpy.arange(len(data)),
-                                         data[:, channel])
-                            for channel in range(data.shape[1])], axis=1)
+        positions = numpy.arange(int(round(len(data) * sample_rate / rate))) * (rate / sample_rate)
+        data = numpy.stack(
+            [
+                numpy.interp(positions, numpy.arange(len(data)), data[:, channel])
+                for channel in range(data.shape[1])
+            ],
+            axis=1,
+        )
 
     n = max(1, int(duration * sample_rate))
     if len(data) < n:
@@ -686,8 +729,9 @@ def write_audio_from(path: Path, source: Path, duration: float,
     return path
 
 
-def write_midi(path: Path, num_notes: int, note_duration: float,
-               instrument: int = 0, channel: int = 0) -> Path:
+def write_midi(
+    path: Path, num_notes: int, note_duration: float, instrument: int = 0, channel: int = 0
+) -> Path:
     """
     Write a standard MIDI file (format 0) of ascending notes from middle C.
 
@@ -714,12 +758,12 @@ def write_midi(path: Path, num_notes: int, note_duration: float,
         return bytes(out)
 
     # The channel numbering matches the low nibble of a status byte directly
-    events = bytearray([0x00, 0xC0 | channel, instrument])   # program change
+    events = bytearray([0x00, 0xC0 | channel, instrument])  # program change
     for i in range(max(0, num_notes)):
-        pitch = 60 + (i * 2) % 24                            # from middle C
+        pitch = 60 + (i * 2) % 24  # from middle C
         events += bytes([0x00, 0x90 | channel, pitch, 0x64])  # note on
         events += delta(ticks) + bytes([0x80 | channel, pitch, 0x40])
-    events += bytes([0x00, 0xFF, 0x2F, 0x00])                # end of track
+    events += bytes([0x00, 0xFF, 0x2F, 0x00])  # end of track
 
     header = b"MThd" + struct.pack(">IHHH", 6, 0, 1, MIDI_TICKS_PER_BEAT)
     track = b"MTrk" + struct.pack(">I", len(events)) + bytes(events)
