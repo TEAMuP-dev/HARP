@@ -94,25 +94,33 @@ public:
 
     /**
      * Get a boolean value with an optional default.
+     *
+     * PropertiesFile::getBoolValue reads a value as a number, which takes "true" for false.
+     * HARP wrote booleans as "true" and "false" up to 4.0.0, so both spellings are read here.
      */
     static bool getBoolValue(const String& keyName, bool defaultValue = false)
     {
         if (auto* settings = getUserSettings())
         {
-            return settings->getBoolValue(keyName, defaultValue);
+            if (settings->containsKey(keyName))
+            {
+                const String value = settings->getValue(keyName).trim();
+
+                return value.equalsIgnoreCase("true") || value.getIntValue() != 0;
+            }
         }
 
         return defaultValue;
     }
 
     /**
-     * Set a boolean value as a string.
+     * Set a boolean value, written as "1" or "0" as PropertiesFile writes one.
      */
     static void setValue(const String& keyName, bool value, bool saveImmediately = false)
     {
         if (auto* settings = getUserSettings())
         {
-            settings->setValue(keyName, value ? "true" : "false");
+            settings->setValue(keyName, value ? "1" : "0");
 
             if (saveImmediately)
             {

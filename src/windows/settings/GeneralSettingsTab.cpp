@@ -16,7 +16,7 @@ GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestore)
     addAndMakeVisible(openSettingsButton);
 
     // Set up button to clear logs
-    clearLogsButton.setButtonText("Clear Logs");
+    clearLogsButton.setButtonText("Clear Log");
     clearLogsButton.onClick = [this] { handleClearLogs(); };
     addAndMakeVisible(clearLogsButton);
 
@@ -59,19 +59,18 @@ void GeneralSettingsTab::handleClearLogs()
 {
     OpResult result = HARPLogger::getInstance()->clearLog();
 
+    DBG_AND_LOG("GeneralSettingsTab::handleClearLogs: The log was cleared from the settings.");
+
     if (result.failed())
     {
         AlertWindow::showMessageBoxAsync(
-            AlertWindow::WarningIcon, "Clear Logs Failed", toUserMessage(result.getError()), "Ok");
+            AlertWindow::WarningIcon, "Clear Log Failed", toUserMessage(result.getError()), "Ok");
 
         return;
     }
 
     AlertWindow::showMessageBoxAsync(
-        AlertWindow::InfoIcon,
-        "Logs Cleared",
-        "All logs (main.log and launch.log) have been successfully cleared.",
-        "Ok");
+        AlertWindow::InfoIcon, "Log Cleared", "The log has been cleared.", "Ok");
 }
 
 void GeneralSettingsTab::handleRestoreDefaults()
@@ -98,6 +97,8 @@ void GeneralSettingsTab::handleRestoreDefaults()
 
         saved = settings->saveIfNeeded();
     }
+
+    DBG_AND_LOG("GeneralSettingsTab::handleRestoreDefaults: Settings restored to their defaults.");
 
     if (onRestoreDefaults)
         onRestoreDefaults();

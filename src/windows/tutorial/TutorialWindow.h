@@ -341,9 +341,8 @@ private:
 
     void finish()
     {
-        Settings::setValue("view.showWelcomePopup",
-                           content->dontShowAgainToggle.getToggleState() ? "0" : "1",
-                           true);
+        Settings::setValue(
+            "view.showWelcomePopup", ! content->dontShowAgainToggle.getToggleState(), true);
 
         // Close the tab the tutorial opened on the user's behalf. Resetting it in place would
         // leave a blank tab behind, since models are chosen on the Home tab.

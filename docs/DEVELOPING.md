@@ -177,7 +177,8 @@ element along with it.
 - `jassertfalse` is acceptable for truly unreachable states (logic errors, violated invariants).
 
 ### Logging & Debugging
-- Use the `DBG_AND_LOG` macro to log to console and file simultaneously.
+- Use the `DBG_AND_LOG` macro to log to console and file simultaneously. The logger adds the time
+  to each message, and everything goes to the one `main.log`.
 - Log at system boundaries: network calls, job lifecycle changes, model execution, and cancellation.
 - Prefer structured log messages and include any contextual information (_e.g._ `"ModelTab::cancelCallback: Canceling process \"" + String(currentProcessID) + "\"."`).
 
@@ -229,3 +230,11 @@ No HARP code depends on that mapping any more, and new code should avoid it:
 
 Prefer one of those two approaches over reading the index passed to an
 `AlertWindow::showAsync` callback.
+
+### Window State on Linux
+
+`ResizableWindow::getWindowStateAsString` records the frame the window manager adds, which
+`restoreWindowStateFromString` needs to put a window back where it was. Saving and restoring the
+bounds alone moves the window down by the height of its title bar on every launch. With JUCE 8.0.12
+the state restores exactly. With JUCE 8.0.17 and 9.0.5 the restored window was smaller by the size
+of the frame on each launch under Openbox, so check this when updating JUCE.
