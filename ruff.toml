@@ -4,7 +4,7 @@
 line-length = 100
 target-version = "py310"
 # Code blocks in Markdown are fragments, which a formatter reads as whole statements
-extend-exclude = ["JUCE", "pyharp", "website", "*.md"]
+extend-exclude = ["JUCE", "pyharp", "*.md"]
 
 # The harness modules and packages import one another from src/, which is on the path
 src = ["model_validation/src"]
